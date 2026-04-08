@@ -5,4 +5,5 @@ export type Game = {
   category: string;
   points: number;
   icon: string;
+  slug: string;
 };

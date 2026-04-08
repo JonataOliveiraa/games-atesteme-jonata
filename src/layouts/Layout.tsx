@@ -4,7 +4,7 @@ export default function Layout() {
   const location = useLocation();
 
   return (
-    <div className="app">
+    <div>
       <header className="header">
         <div className="container header-content">
           <div className="logo">
@@ -13,26 +13,18 @@ export default function Layout() {
           </div>
 
           <nav className="nav">
-            <Link
-              to="/"
-              className={location.pathname === "/" ? "nav-link active" : "nav-link"}
-            >
+            <Link to="/" className={location.pathname === "/" ? "nav-link active" : "nav-link"}>
               Jogos
             </Link>
 
-            <Link
-              to="/recursos"
-              className={
-                location.pathname === "/recursos" ? "nav-link active" : "nav-link"
-              }
-            >
+            <Link to="/recursos" className={location.pathname === "/recursos" ? "nav-link active" : "nav-link"}>
               Recursos
             </Link>
           </nav>
         </div>
       </header>
 
-      <main className="container page-content">
+      <main className="container">
         <Outlet />
       </main>
     </div>

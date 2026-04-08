@@ -10,6 +10,7 @@ const games: Game[] = [
     category: "Trivia",
     points: 50,
     icon: "🧠",
+    slug: "quiz-de-conhecimentos",
   },
   {
     id: 2,
@@ -18,6 +19,7 @@ const games: Game[] = [
     category: "Memória",
     points: 30,
     icon: "🧩",
+    slug: "jogo-da-memoria",
   },
   {
     id: 3,
@@ -26,6 +28,7 @@ const games: Game[] = [
     category: "Reflexo",
     points: 40,
     icon: "🎯",
+    slug: "acerte-o-alvo",
   },
   {
     id: 4,
@@ -34,6 +37,7 @@ const games: Game[] = [
     category: "Lógica",
     points: 35,
     icon: "🔤",
+    slug: "palavra-secreta",
   },
   {
     id: 5,
@@ -42,6 +46,7 @@ const games: Game[] = [
     category: "Perguntas",
     points: 45,
     icon: "🏁",
+    slug: "corrida-do-saber",
   },
   {
     id: 6,
@@ -50,6 +55,7 @@ const games: Game[] = [
     category: "Matemática",
     points: 60,
     icon: "➗",
+    slug: "desafio-matematico",
   },
   {
     id: 7,
@@ -58,6 +64,7 @@ const games: Game[] = [
     category: "Atenção",
     points: 25,
     icon: "🔢",
+    slug: "caca-ao-numero",
   },
   {
     id: 8,
@@ -66,6 +73,7 @@ const games: Game[] = [
     category: "Raciocínio",
     points: 55,
     icon: "🧩",
+    slug: "sequencia-logica",
   },
   {
     id: 9,
@@ -74,6 +82,7 @@ const games: Game[] = [
     category: "Percepção",
     points: 20,
     icon: "🎨",
+    slug: "desafio-das-cores",
   },
   {
     id: 10,
@@ -82,6 +91,7 @@ const games: Game[] = [
     category: "Português",
     points: 40,
     icon: "✍️",
+    slug: "montando-palavras",
   },
   {
     id: 11,
@@ -90,6 +100,7 @@ const games: Game[] = [
     category: "Cálculo",
     points: 35,
     icon: "🧮",
+    slug: "conta-rapida",
   },
   {
     id: 12,
@@ -98,6 +109,7 @@ const games: Game[] = [
     category: "Estratégia",
     points: 50,
     icon: "🌀",
+    slug: "labirinto-inteligente",
   },
 ];
 
@@ -107,10 +119,8 @@ export default function GamesPage() {
   const [currentPage, setCurrentPage] = useState(1);
 
   const totalPages = Math.ceil(games.length / ITEMS_PER_PAGE);
-
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
   const endIndex = startIndex + ITEMS_PER_PAGE;
-
   const currentGames = games.slice(startIndex, endIndex);
 
   const goToNextPage = () => {

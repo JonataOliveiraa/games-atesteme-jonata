@@ -1,78 +1,102 @@
+import { useGame } from "../context/useGame";
+
+const TOTAL_GAMES = 12;
+
 export default function ResourcesPage() {
+  const {
+    coins,
+    lives,
+    currentGameSlug,
+    usedHintsByGame,
+    buyLife,
+  } = useGame();
+
+  const currentGameHintUsed =
+    currentGameSlug ? usedHintsByGame.includes(currentGameSlug) : false;
+
+  const currentGameHintStatus = currentGameSlug
+    ? currentGameHintUsed
+      ? "Usada"
+      : "Disponível"
+    : "Nenhum jogo em andamento";
+
+  const usedHintsInOtherGames = currentGameSlug
+    ? usedHintsByGame.filter((slug) => slug !== currentGameSlug).length
+    : usedHintsByGame.length;
+
+  const remainingHintsInOtherGames = currentGameSlug
+    ? Math.max(TOTAL_GAMES - 1 - usedHintsInOtherGames, 0)
+    : Math.max(TOTAL_GAMES - usedHintsInOtherGames, 0);
+
+  const handleBuyLife = () => {
+    const success = buyLife();
+
+    if (!success) {
+      alert("Você não tem moedas suficientes para comprar uma vida.");
+    }
+  };
+
   return (
     <section>
       <h1 className="page-title">Recursos</h1>
       <p className="page-subtitle">
-        Acompanhe sua pontuação e troque por recompensas.
+        Acompanhe seus recursos e o status das dicas nos jogos.
       </p>
 
       <div className="stats-grid">
         <div className="stat-card">
-          <div className="stat-icon">🏆</div>
+          <div className="stat-icon">🪙</div>
           <div>
-            <h3>Pontuação Total</h3>
-            <strong>0</strong>
-            <p>pontos acumulados</p>
-          </div>
-        </div>
-
-        <div className="stat-card">
-          <div className="stat-icon">💡</div>
-          <div>
-            <h3>Dicas</h3>
-            <strong>0</strong>
-            <p>disponíveis</p>
+            <h3>Moedas</h3>
+            <strong>{coins}</strong>
+            <p>acumuladas</p>
           </div>
         </div>
 
         <div className="stat-card">
           <div className="stat-icon">💗</div>
           <div>
-            <h3>Vidas Extra</h3>
-            <strong>0</strong>
+            <h3>Vidas</h3>
+            <strong>{lives}</strong>
             <p>disponíveis</p>
+          </div>
+        </div>
+
+        <div className="stat-card">
+          <div className="stat-icon">💡</div>
+          <div>
+            <h3>Dica do jogo atual</h3>
+            <strong>{currentGameHintStatus}</strong>
+            <p>
+              {currentGameSlug
+                ? `Jogo atual: ${currentGameSlug}`
+                : "Abra um jogo para acompanhar"}
+            </p>
+          </div>
+        </div>
+
+        <div className="stat-card">
+          <div className="stat-icon">🧩</div>
+          <div>
+            <h3>Dicas em outros jogos</h3>
+            <strong>{remainingHintsInOtherGames}</strong>
+            <p>ainda disponíveis</p>
           </div>
         </div>
       </div>
 
       <div className="section-title-row">
-        <h2>⭐ Troque seus pontos</h2>
+        <h2>⭐ Troque suas moedas</h2>
       </div>
 
       <div className="rewards-grid">
         <div className="reward-card">
           <div className="reward-top">
-            <div className="reward-icon">💡</div>
-            <div>
-              <h3>Dica</h3>
-              <p>
-                Receba uma dica para te ajudar a avançar nos jogos. Use quando
-                estiver em dúvida!
-              </p>
-            </div>
-          </div>
-
-          <div className="reward-bottom">
-            <div>
-              <span className="reward-label">Custo</span>
-              <div className="reward-cost">100 pts</div>
-            </div>
-
-            <div className="reward-action">
-              <span>Possui: 0</span>
-              <button>Trocar</button>
-            </div>
-          </div>
-        </div>
-
-        <div className="reward-card">
-          <div className="reward-top">
             <div className="reward-icon">💗</div>
             <div>
-              <h3>Vida Extra</h3>
+              <h3>Vida</h3>
               <p>
-                Ganhe mais uma chance nos jogos. Ideal para quando você está quase
-                vencendo!
+                Compre 1 vida extra para continuar jogando quando precisar.
               </p>
             </div>
           </div>
@@ -80,12 +104,12 @@ export default function ResourcesPage() {
           <div className="reward-bottom">
             <div>
               <span className="reward-label">Custo</span>
-              <div className="reward-cost">150 pts</div>
+              <div className="reward-cost">20 moedas</div>
             </div>
 
             <div className="reward-action">
-              <span>Possui: 0</span>
-              <button>Trocar</button>
+              <span>Possui: {lives}</span>
+              <button onClick={handleBuyLife}>Trocar</button>
             </div>
           </div>
         </div>
