@@ -1,6 +1,8 @@
 import { useGame } from "../context/useGame";
+import { games } from "../data/games";
+import { useBeepSound } from "../hooks/useBeepSound";
 
-const TOTAL_GAMES = 12;
+const TOTAL_GAMES = games.length;
 
 export default function ResourcesPage() {
   const {
@@ -9,16 +11,20 @@ export default function ResourcesPage() {
     currentGameSlug,
     usedHintsByGame,
     buyLife,
+    activateGameHint,
   } = useGame();
 
-  const currentGameHintUsed =
-    currentGameSlug ? usedHintsByGame.includes(currentGameSlug) : false;
+  const { playBeep } = useBeepSound({
+    frequency: 720,
+    duration: 80,
+    volume: 0.14,
+    type: "sine",
+  });
 
-  const currentGameHintStatus = currentGameSlug
-    ? currentGameHintUsed
-      ? "Usada"
-      : "Disponível"
-    : "Nenhum jogo em andamento";
+  const currentGame = games.find((game) => game.slug === currentGameSlug);
+
+  const currentGameHintAvailable =
+    currentGameSlug && !usedHintsByGame.includes(currentGameSlug) ? 1 : 0;
 
   const usedHintsInOtherGames = currentGameSlug
     ? usedHintsByGame.filter((slug) => slug !== currentGameSlug).length
@@ -28,13 +34,59 @@ export default function ResourcesPage() {
     ? Math.max(TOTAL_GAMES - 1 - usedHintsInOtherGames, 0)
     : Math.max(TOTAL_GAMES - usedHintsInOtherGames, 0);
 
-  const handleBuyLife = () => {
-    const success = buyLife();
+  const handleBuyHintForCurrentGame = () => {
+    if (!currentGameSlug) {
+      alert("Abra um jogo primeiro para usar a dica do jogo atual.");
+      return;
+    }
 
-    if (!success) {
-      alert("Você não tem moedas suficientes para comprar uma vida.");
+    playBeep();
+
+    const result = activateGameHint(currentGameSlug);
+
+    if (result.success) {
+      alert("Dica do jogo atual ativada com sucesso por 10 moedas.");
+      return;
+    }
+
+    if (result.reason === "already_used") {
+      alert("A dica deste jogo já foi usada.");
+      return;
+    }
+
+    if (result.reason === "not_enough_coins") {
+      alert("Você não tem moedas suficientes para usar a dica deste jogo.");
     }
   };
+
+  const handleBuyLife = () => {
+  if (lives > 0) {
+    alert("Você só pode comprar uma vida por aqui quando suas vidas estiverem zeradas.");
+    return;
+  }
+
+  const confirmed = window.confirm(
+    "Deseja trocar 20 moedas por 1 vida?"
+  );
+
+  if (!confirmed) return;
+
+  playBeep();
+
+  const success = buyLife();
+
+  if (!success) {
+    alert("Você não tem moedas suficientes para comprar uma vida.");
+    return;
+  }
+
+  alert("Vida comprada com sucesso.");
+};
+
+  const canBuyHint =
+    Boolean(currentGameSlug) && currentGameHintAvailable === 1 && coins >= 10;
+
+  const canBuyLife = lives === 0 && coins >= 20;
 
   return (
     <section>
@@ -45,7 +97,7 @@ export default function ResourcesPage() {
 
       <div className="stats-grid">
         <div className="stat-card">
-          <div className="stat-icon">🪙</div>
+          <div className="stat-icon">💰</div>
           <div>
             <h3>Moedas</h3>
             <strong>{coins}</strong>
@@ -66,10 +118,10 @@ export default function ResourcesPage() {
           <div className="stat-icon">💡</div>
           <div>
             <h3>Dica do jogo atual</h3>
-            <strong>{currentGameHintStatus}</strong>
+            <strong>{currentGame ? currentGameHintAvailable : "--"}</strong>
             <p>
-              {currentGameSlug
-                ? `Jogo atual: ${currentGameSlug}`
+              {currentGame
+                ? `Jogo atual: ${currentGame.title}`
                 : "Abra um jogo para acompanhar"}
             </p>
           </div>
@@ -92,11 +144,41 @@ export default function ResourcesPage() {
       <div className="rewards-grid">
         <div className="reward-card">
           <div className="reward-top">
+            <div className="reward-icon">💡</div>
+            <div>
+              <h3>Dica do jogo atual</h3>
+              <p>
+                Troque 10 moedas para liberar a dica do jogo que está aberto no
+                momento.
+              </p>
+            </div>
+          </div>
+
+          <div className="reward-bottom">
+            <div>
+              <span className="reward-label">Custo</span>
+              <div className="reward-cost">10 moedas</div>
+            </div>
+
+            <div className="reward-action">
+              <span>
+                Disponível: {currentGame ? currentGameHintAvailable : "--"}
+              </span>
+              <button onClick={handleBuyHintForCurrentGame} disabled={!canBuyHint}>
+                Trocar
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="reward-card">
+          <div className="reward-top">
             <div className="reward-icon">💗</div>
             <div>
               <h3>Vida</h3>
               <p>
-                Compre 1 vida extra para continuar jogando quando precisar.
+                Compre 1 vida extra por 20 moedas. Esta troca só fica disponível
+                quando suas vidas estiverem zeradas.
               </p>
             </div>
           </div>
@@ -109,7 +191,9 @@ export default function ResourcesPage() {
 
             <div className="reward-action">
               <span>Possui: {lives}</span>
-              <button onClick={handleBuyLife}>Trocar</button>
+              <button onClick={handleBuyLife} disabled={!canBuyLife}>
+                Trocar
+              </button>
             </div>
           </div>
         </div>

@@ -1,4 +1,10 @@
-import { useEffect, useState, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
 import { GameContext } from "./gameContextInstance";
 
 type GameState = {
@@ -59,7 +65,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   }, [state]);
 
-  const buyHint = (): boolean => {
+  const buyHint = useCallback((): boolean => {
     if (state.coins < 10) return false;
 
     setState((prev) => ({
@@ -69,9 +75,9 @@ export function GameProvider({ children }: { children: ReactNode }) {
     }));
 
     return true;
-  };
+  }, [state.coins]);
 
-  const buyLife = (): boolean => {
+  const buyLife = useCallback((): boolean => {
     if (state.coins < 20) return false;
 
     setState((prev) => ({
@@ -81,9 +87,9 @@ export function GameProvider({ children }: { children: ReactNode }) {
     }));
 
     return true;
-  };
+  }, [state.coins]);
 
-  const consumeLife = (): boolean => {
+  const consumeLife = useCallback((): boolean => {
     if (state.lives <= 0) return false;
 
     setState((prev) => ({
@@ -92,16 +98,16 @@ export function GameProvider({ children }: { children: ReactNode }) {
     }));
 
     return true;
-  };
+  }, [state.lives]);
 
-  const addCoins = (amount: number): void => {
+  const addCoins = useCallback((amount: number): void => {
     setState((prev) => ({
       ...prev,
       coins: prev.coins + amount,
     }));
-  };
+  }, []);
 
-  const loseLifeOnFailure = (): boolean => {
+  const loseLifeOnFailure = useCallback((): boolean => {
     if (state.lives <= 0) return false;
 
     setState((prev) => ({
@@ -110,9 +116,9 @@ export function GameProvider({ children }: { children: ReactNode }) {
     }));
 
     return true;
-  };
+  }, [state.lives]);
 
-  const ensureLivesForGame = (slug: string): void => {
+  const ensureLivesForGame = useCallback((slug: string): void => {
     setState((prev) => {
       const isFirstGameEver = prev.playedGames.length === 0;
       const alreadyVisited = prev.playedGames.includes(slug);
@@ -136,51 +142,72 @@ export function GameProvider({ children }: { children: ReactNode }) {
           : [...prev.playedGames, slug],
       };
     });
-  };
+  }, []);
 
-  const setCurrentGame = (slug: string | null): void => {
+  const setCurrentGame = useCallback((slug: string | null): void => {
     setState((prev) => ({
       ...prev,
       currentGameSlug: slug,
     }));
-  };
+  }, []);
 
-  const activateGameHint = (
-    slug: string
-  ): { success: boolean; reason?: "already_used" | "not_enough_coins" } => {
-    if (state.usedHintsByGame.includes(slug)) {
-      return { success: false, reason: "already_used" };
-    }
+  const activateGameHint = useCallback(
+    (
+      slug: string
+    ): { success: boolean; reason?: "already_used" | "not_enough_coins" } => {
+      if (state.usedHintsByGame.includes(slug)) {
+        return { success: false, reason: "already_used" };
+      }
 
-    if (state.coins < 10) {
-      return { success: false, reason: "not_enough_coins" };
-    }
+      if (state.coins < 10) {
+        return { success: false, reason: "not_enough_coins" };
+      }
 
-    setState((prev) => ({
-      ...prev,
-      coins: prev.coins - 10,
-      usedHintsByGame: [...prev.usedHintsByGame, slug],
-    }));
+      setState((prev) => ({
+        ...prev,
+        coins: prev.coins - 10,
+        usedHintsByGame: [...prev.usedHintsByGame, slug],
+      }));
 
-    return { success: true };
-  };
+      return { success: true };
+    },
+    [state.usedHintsByGame, state.coins]
+  );
 
-  const value: GameContextType = {
-    coins: state.coins,
-    hints: state.hints,
-    lives: state.lives,
-    playedGames: state.playedGames,
-    usedHintsByGame: state.usedHintsByGame,
-    currentGameSlug: state.currentGameSlug,
-    buyHint,
-    buyLife,
-    consumeLife,
-    addCoins,
-    loseLifeOnFailure,
-    ensureLivesForGame,
-    setCurrentGame,
-    activateGameHint,
-  };
+  const value = useMemo<GameContextType>(
+    () => ({
+      coins: state.coins,
+      hints: state.hints,
+      lives: state.lives,
+      playedGames: state.playedGames,
+      usedHintsByGame: state.usedHintsByGame,
+      currentGameSlug: state.currentGameSlug,
+      buyHint,
+      buyLife,
+      consumeLife,
+      addCoins,
+      loseLifeOnFailure,
+      ensureLivesForGame,
+      setCurrentGame,
+      activateGameHint,
+    }),
+    [
+      state.coins,
+      state.hints,
+      state.lives,
+      state.playedGames,
+      state.usedHintsByGame,
+      state.currentGameSlug,
+      buyHint,
+      buyLife,
+      consumeLife,
+      addCoins,
+      loseLifeOnFailure,
+      ensureLivesForGame,
+      setCurrentGame,
+      activateGameHint,
+    ]
+  );
 
   return <GameContext.Provider value={value}>{children}</GameContext.Provider>;
 }
