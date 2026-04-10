@@ -2,11 +2,13 @@ import { useState } from "react";
 import GameCard from "../components/GameCard";
 import { useBeepSound } from "../hooks/useBeepSound";
 import { games } from "../data/games";
+import { useGame } from "../context/useGame";
 
 const ITEMS_PER_PAGE = 6;
 
 export default function GamesPage() {
   const [currentPage, setCurrentPage] = useState(1);
+  const { canPlay, blockedUntil } = useGame();
 
   const { playBeep } = useBeepSound({
     frequency: 760,
@@ -45,6 +47,19 @@ export default function GamesPage() {
       <p className="page-subtitle">
         Escolha um jogo, divirta-se e acumule pontos!
       </p>
+
+      {!canPlay && (
+        <div className="blocked-banner">
+          Você está bloqueada para jogar no momento.
+          {blockedUntil && (
+            <span>
+              {" "}
+              Liberação automática em:{" "}
+              <strong>{new Date(blockedUntil).toLocaleString("pt-BR")}</strong>
+            </span>
+          )}
+        </div>
+      )}
 
       <div className="games-grid">
         {currentGames.map((game) => (

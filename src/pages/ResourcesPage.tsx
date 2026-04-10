@@ -2,16 +2,14 @@ import { useGame } from "../context/useGame";
 import { games } from "../data/games";
 import { useBeepSound } from "../hooks/useBeepSound";
 
-const TOTAL_GAMES = games.length;
-
 export default function ResourcesPage() {
   const {
-    coins,
-    lives,
-    currentGameSlug,
-    usedHintsByGame,
-    buyLife,
-    activateGameHint,
+    points,
+    isBlocked,
+    blockedUntil,
+    unlockCost,
+    history,
+    unlockAccess,
   } = useGame();
 
   const { playBeep } = useBeepSound({
@@ -21,135 +19,112 @@ export default function ResourcesPage() {
     type: "sine",
   });
 
-  const currentGame = games.find((game) => game.slug === currentGameSlug);
+  const handleUnlock = () => {
+    const confirmed = window.confirm(
+      `Deseja trocar ${unlockCost} pontos para desbloquear o acesso agora?`
+    );
 
-  const currentGameHintAvailable =
-    currentGameSlug && !usedHintsByGame.includes(currentGameSlug) ? 1 : 0;
-
-  const usedHintsInOtherGames = currentGameSlug
-    ? usedHintsByGame.filter((slug) => slug !== currentGameSlug).length
-    : usedHintsByGame.length;
-
-  const remainingHintsInOtherGames = currentGameSlug
-    ? Math.max(TOTAL_GAMES - 1 - usedHintsInOtherGames, 0)
-    : Math.max(TOTAL_GAMES - usedHintsInOtherGames, 0);
-
-  const handleBuyHintForCurrentGame = () => {
-    if (!currentGameSlug) {
-      alert("Abra um jogo primeiro para usar a dica do jogo atual.");
-      return;
-    }
+    if (!confirmed) return;
 
     playBeep();
 
-    const result = activateGameHint(currentGameSlug);
+    const success = unlockAccess();
 
-    if (result.success) {
-      alert("Dica do jogo atual ativada com sucesso por 10 moedas.");
+    if (!success) {
+      alert("Você não possui pontos suficientes ou já está liberada.");
       return;
     }
 
-    if (result.reason === "already_used") {
-      alert("A dica deste jogo já foi usada.");
-      return;
-    }
-
-    if (result.reason === "not_enough_coins") {
-      alert("Você não tem moedas suficientes para usar a dica deste jogo.");
-    }
+    alert("Acesso desbloqueado com sucesso.");
   };
 
-  const handleBuyLife = () => {
-  if (lives > 0) {
-    alert("Você só pode comprar uma vida por aqui quando suas vidas estiverem zeradas.");
-    return;
-  }
+  const recentHistory = history.slice(0, 8);
 
-  const confirmed = window.confirm(
-    "Deseja trocar 20 moedas por 1 vida?"
-  );
+  const getGameTitle = (gameId: string) => {
+    if (gameId === "platform") return "Plataforma";
 
-  if (!confirmed) return;
+    const game = games.find((item) => item.slug === gameId);
+    return game ? game.title : gameId;
+  };
 
-  playBeep();
-
-  const success = buyLife();
-
-  if (!success) {
-    alert("Você não tem moedas suficientes para comprar uma vida.");
-    return;
-  }
-
-  alert("Vida comprada com sucesso.");
-};
-
-  const canBuyHint =
-    Boolean(currentGameSlug) && currentGameHintAvailable === 1 && coins >= 10;
-
-  const canBuyLife = lives === 0 && coins >= 20;
+  const getHistoryLabel = (eventType: string) => {
+    switch (eventType) {
+      case "GAME_OVER":
+        return "Game over";
+      case "PHASE_COMPLETED":
+        return "Fase concluída";
+      case "GAME_COMPLETED":
+        return "Jogo concluído";
+      case "CORRECT_ANSWER":
+        return "Acerto";
+      case "STREAK_BONUS":
+        return "Bônus de sequência";
+      case "NO_ERROR_BONUS":
+        return "Bônus sem erros";
+      case "BLOCKED":
+        return "Usuária bloqueada";
+      case "UNLOCKED_BY_POINTS":
+        return "Desbloqueio por pontos";
+      case "UNLOCKED_BY_TIME":
+        return "Desbloqueio por tempo";
+      default:
+        return eventType;
+    }
+  };
 
   return (
     <section>
       <h1 className="page-title">Recursos</h1>
       <p className="page-subtitle">
-        Acompanhe seus recursos e o status das dicas nos jogos.
+        Acompanhe seus pontos, status de acesso e histórico da plataforma.
       </p>
 
       <div className="stats-grid">
         <div className="stat-card">
-          <div className="stat-icon">💰</div>
+          <div className="stat-icon">⭐</div>
           <div>
-            <h3>Moedas</h3>
-            <strong>{coins}</strong>
-            <p>acumuladas</p>
+            <h3>Pontos</h3>
+            <strong>{points}</strong>
+            <p>acumulados</p>
           </div>
         </div>
 
         <div className="stat-card">
-          <div className="stat-icon">💗</div>
+          <div className="stat-icon">🔓</div>
           <div>
-            <h3>Vidas</h3>
-            <strong>{lives}</strong>
-            <p>disponíveis</p>
-          </div>
-        </div>
-
-        <div className="stat-card">
-          <div className="stat-icon">💡</div>
-          <div>
-            <h3>Dica do jogo atual</h3>
-            <strong>{currentGame ? currentGameHintAvailable : "--"}</strong>
+            <h3>Status</h3>
+            <strong>{isBlocked ? "Bloqueada" : "Liberada"}</strong>
             <p>
-              {currentGame
-                ? `Jogo atual: ${currentGame.title}`
-                : "Abra um jogo para acompanhar"}
+              {isBlocked && blockedUntil
+                ? `Até ${new Date(blockedUntil).toLocaleString("pt-BR")}`
+                : "Você pode jogar normalmente"}
             </p>
           </div>
         </div>
 
         <div className="stat-card">
-          <div className="stat-icon">🧩</div>
+          <div className="stat-icon">💸</div>
           <div>
-            <h3>Dicas em outros jogos</h3>
-            <strong>{remainingHintsInOtherGames}</strong>
-            <p>ainda disponíveis</p>
+            <h3>Custo de desbloqueio</h3>
+            <strong>{unlockCost}</strong>
+            <p>pontos necessários</p>
           </div>
         </div>
       </div>
 
       <div className="section-title-row">
-        <h2>⭐ Troque suas moedas</h2>
+        <h2>⭐ Troque seus pontos</h2>
       </div>
 
       <div className="rewards-grid">
         <div className="reward-card">
           <div className="reward-top">
-            <div className="reward-icon">💡</div>
+            <div className="reward-icon">🔓</div>
             <div>
-              <h3>Dica do jogo atual</h3>
+              <h3>Desbloquear acesso</h3>
               <p>
-                Troque 10 moedas para liberar a dica do jogo que está aberto no
-                momento.
+                Use seus pontos para desbloquear a plataforma antes do prazo de 2
+                dias terminar.
               </p>
             </div>
           </div>
@@ -157,46 +132,47 @@ export default function ResourcesPage() {
           <div className="reward-bottom">
             <div>
               <span className="reward-label">Custo</span>
-              <div className="reward-cost">10 moedas</div>
+              <div className="reward-cost">{unlockCost} pontos</div>
             </div>
 
             <div className="reward-action">
-              <span>
-                Disponível: {currentGame ? currentGameHintAvailable : "--"}
-              </span>
-              <button onClick={handleBuyHintForCurrentGame} disabled={!canBuyHint}>
+              <span>Status: {isBlocked ? "Bloqueada" : "Liberada"}</span>
+              <button
+                onClick={handleUnlock}
+                disabled={!isBlocked || points < unlockCost}
+              >
                 Trocar
               </button>
             </div>
           </div>
         </div>
+      </div>
 
-        <div className="reward-card">
-          <div className="reward-top">
-            <div className="reward-icon">💗</div>
-            <div>
-              <h3>Vida</h3>
-              <p>
-                Compre 1 vida extra por 20 moedas. Esta troca só fica disponível
-                quando suas vidas estiverem zeradas.
-              </p>
-            </div>
+      <div className="section-title-row">
+        <h2>📜 Histórico recente</h2>
+      </div>
+
+      <div className="history-list">
+        {recentHistory.length === 0 ? (
+          <div className="history-empty">
+            Nenhum evento registrado ainda.
           </div>
+        ) : (
+          recentHistory.map((item, index) => (
+            <div key={`${item.createdAt}-${index}`} className="history-card">
+              <div className="history-main">
+                <strong>{getGameTitle(item.gameId)}</strong>
+                <span>{getHistoryLabel(item.eventType)}</span>
+              </div>
 
-          <div className="reward-bottom">
-            <div>
-              <span className="reward-label">Custo</span>
-              <div className="reward-cost">20 moedas</div>
+              <div className="history-meta">
+                <span>Fase: {item.stage}</span>
+                <span>Pontos: +{item.pointsEarned}</span>
+                <span>{new Date(item.createdAt).toLocaleString("pt-BR")}</span>
+              </div>
             </div>
-
-            <div className="reward-action">
-              <span>Possui: {lives}</span>
-              <button onClick={handleBuyLife} disabled={!canBuyLife}>
-                Trocar
-              </button>
-            </div>
-          </div>
-        </div>
+          ))
+        )}
       </div>
     </section>
   );

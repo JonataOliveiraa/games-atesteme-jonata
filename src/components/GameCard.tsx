@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { useBeepSound } from "../hooks/useBeepSound";
+import { useGame } from "../context/useGame";
 import type { Game } from "../types/game";
 
 type Props = {
@@ -14,13 +15,27 @@ export default function GameCard({ game }: Props) {
     type: "sine",
   });
 
+  const { canPlay, blockedUntil } = useGame();
+
+  const handleClick: React.MouseEventHandler<HTMLAnchorElement> = (event) => {
+    if (!canPlay) {
+      event.preventDefault();
+      alert(
+        `Você está bloqueada para jogar no momento.${
+          blockedUntil ? ` Liberação automática em: ${new Date(blockedUntil).toLocaleString("pt-BR")}.` : ""
+        }`
+      );
+    }
+  };
+
   return (
     <Link
       to={`/jogos/${game.slug}`}
       className="game-card-link"
       onMouseEnter={playBeep}
+      onClick={handleClick}
     >
-      <div className="game-card">
+      <div className={`game-card ${!canPlay ? "game-card-disabled" : ""}`}>
         <div className="game-card-top">
           <div className="game-icon-box">{game.icon}</div>
         </div>

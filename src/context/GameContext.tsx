@@ -6,206 +6,201 @@ import {
   type ReactNode,
 } from "react";
 import { GameContext } from "./gameContextInstance";
+import type { GameEventPayload, UserGameHistory } from "../types/platform";
 
-type GameState = {
-  coins: number;
-  hints: number;
-  lives: number;
-  playedGames: string[];
-  usedHintsByGame: string[];
-  currentGameSlug: string | null;
+type PlatformState = {
+  points: number;
+  isBlocked: boolean;
+  blockedUntil: string | null;
+  unlockCost: number;
+  history: UserGameHistory[];
 };
 
 export type GameContextType = {
-  coins: number;
-  hints: number;
-  lives: number;
-  playedGames: string[];
-  usedHintsByGame: string[];
-  currentGameSlug: string | null;
-  buyHint: () => boolean;
-  buyLife: () => boolean;
-  consumeLife: () => boolean;
-  addCoins: (amount: number) => void;
-  loseLifeOnFailure: () => boolean;
-  ensureLivesForGame: (slug: string) => void;
-  setCurrentGame: (slug: string | null) => void;
-  activateGameHint: (
-    slug: string
-  ) => { success: boolean; reason?: "already_used" | "not_enough_coins" };
+  points: number;
+  isBlocked: boolean;
+  blockedUntil: string | null;
+  unlockCost: number;
+  history: UserGameHistory[];
+  canPlay: boolean;
+  handleGameEvent: (event: GameEventPayload) => void;
+  unlockAccess: () => boolean;
 };
 
-const STORAGE_KEY = "atesteme-game-data";
+const STORAGE_KEY = "atesteme-platform-data-v2";
 
-const initialState: GameState = {
-  coins: 0,
-  hints: 0,
-  lives: 3,
-  playedGames: [],
-  usedHintsByGame: [],
-  currentGameSlug: null,
+const initialState: PlatformState = {
+  points: 0,
+  isBlocked: false,
+  blockedUntil: null,
+  unlockCost: 30,
+  history: [],
 };
 
-function getInitialState(): GameState {
+function isBlockStillActive(blockedUntil: string | null): boolean {
+  if (!blockedUntil) return false;
+  return new Date(blockedUntil).getTime() > Date.now();
+}
+
+function getBlockedUntilAfterTwoDays(): string {
+  const date = new Date();
+  date.setDate(date.getDate() + 2);
+  return date.toISOString();
+}
+
+function createHistoryItem(params: {
+  gameId: string;
+  stage: number;
+  eventType: UserGameHistory["eventType"];
+  pointsEarned: number;
+}): UserGameHistory {
+  return {
+    gameId: params.gameId,
+    stage: params.stage,
+    eventType: params.eventType,
+    pointsEarned: params.pointsEarned,
+    createdAt: new Date().toISOString(),
+  };
+}
+
+function normalizeState(state: PlatformState): PlatformState {
+  if (state.isBlocked && !isBlockStillActive(state.blockedUntil)) {
+    return {
+      ...state,
+      isBlocked: false,
+      blockedUntil: null,
+      history: [
+        createHistoryItem({
+          gameId: "platform",
+          stage: 0,
+          eventType: "UNLOCKED_BY_TIME",
+          pointsEarned: 0,
+        }),
+        ...state.history,
+      ],
+    };
+  }
+
+  return state;
+}
+
+function getInitialState(): PlatformState {
   const savedData = localStorage.getItem(STORAGE_KEY);
 
   if (!savedData) return initialState;
 
   try {
-    return JSON.parse(savedData) as GameState;
+    const parsed = JSON.parse(savedData) as PlatformState;
+    return normalizeState(parsed);
   } catch {
     return initialState;
   }
 }
 
 export function GameProvider({ children }: { children: ReactNode }) {
-  const [state, setState] = useState<GameState>(getInitialState);
+  const [state, setState] = useState<PlatformState>(getInitialState);
+
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      setState((prev) => normalizeState(prev));
+    }, 60000);
+
+    return () => window.clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   }, [state]);
 
-  const buyHint = useCallback((): boolean => {
-    if (state.coins < 10) return false;
+  const canPlay = !state.isBlocked || !isBlockStillActive(state.blockedUntil);
 
-    setState((prev) => ({
-      ...prev,
-      coins: prev.coins - 10,
-      hints: prev.hints + 1,
-    }));
-
-    return true;
-  }, [state.coins]);
-
-  const buyLife = useCallback((): boolean => {
-    if (state.coins < 20) return false;
-
-    setState((prev) => ({
-      ...prev,
-      coins: prev.coins - 20,
-      lives: prev.lives + 1,
-    }));
-
-    return true;
-  }, [state.coins]);
-
-  const consumeLife = useCallback((): boolean => {
-    if (state.lives <= 0) return false;
-
-    setState((prev) => ({
-      ...prev,
-      lives: prev.lives - 1,
-    }));
-
-    return true;
-  }, [state.lives]);
-
-  const addCoins = useCallback((amount: number): void => {
-    setState((prev) => ({
-      ...prev,
-      coins: prev.coins + amount,
-    }));
-  }, []);
-
-  const loseLifeOnFailure = useCallback((): boolean => {
-    if (state.lives <= 0) return false;
-
-    setState((prev) => ({
-      ...prev,
-      lives: prev.lives - 1,
-    }));
-
-    return true;
-  }, [state.lives]);
-
-  const ensureLivesForGame = useCallback((slug: string): void => {
+  const handleGameEvent = useCallback((event: GameEventPayload) => {
     setState((prev) => {
-      const isFirstGameEver = prev.playedGames.length === 0;
-      const alreadyVisited = prev.playedGames.includes(slug);
+      const historyItems: UserGameHistory[] = [
+        createHistoryItem({
+          gameId: event.gameId,
+          stage: event.stage,
+          eventType: event.type,
+          pointsEarned: event.pointsEarned,
+        }),
+      ];
 
-      let updatedLives = prev.lives;
-
-      if (isFirstGameEver && prev.lives < 3) {
-        updatedLives = 3;
-      }
-
-      if (!alreadyVisited && prev.lives <= 0) {
-        updatedLives = 1;
-      }
-
-      return {
+      const nextState: PlatformState = {
         ...prev,
-        currentGameSlug: slug,
-        lives: updatedLives,
-        playedGames: alreadyVisited
-          ? prev.playedGames
-          : [...prev.playedGames, slug],
+        points: prev.points + event.pointsEarned,
+        history: [...historyItems, ...prev.history],
       };
+
+      if (event.type === "GAME_OVER") {
+        nextState.isBlocked = true;
+        nextState.blockedUntil = getBlockedUntilAfterTwoDays();
+
+        nextState.history = [
+          createHistoryItem({
+            gameId: event.gameId,
+            stage: event.stage,
+            eventType: "BLOCKED",
+            pointsEarned: 0,
+          }),
+          ...nextState.history,
+        ];
+      }
+
+      return normalizeState(nextState);
     });
   }, []);
 
-  const setCurrentGame = useCallback((slug: string | null): void => {
+  const unlockAccess = useCallback((): boolean => {
+    if (!state.isBlocked || !isBlockStillActive(state.blockedUntil)) {
+      return false;
+    }
+
+    if (state.points < state.unlockCost) {
+      return false;
+    }
+
     setState((prev) => ({
       ...prev,
-      currentGameSlug: slug,
+      points: prev.points - prev.unlockCost,
+      isBlocked: false,
+      blockedUntil: null,
+      history: [
+        createHistoryItem({
+          gameId: "platform",
+          stage: 0,
+          eventType: "UNLOCKED_BY_POINTS",
+          pointsEarned: 0,
+        }),
+        ...prev.history,
+      ],
     }));
-  }, []);
 
-  const activateGameHint = useCallback(
-    (
-      slug: string
-    ): { success: boolean; reason?: "already_used" | "not_enough_coins" } => {
-      if (state.usedHintsByGame.includes(slug)) {
-        return { success: false, reason: "already_used" };
-      }
-
-      if (state.coins < 10) {
-        return { success: false, reason: "not_enough_coins" };
-      }
-
-      setState((prev) => ({
-        ...prev,
-        coins: prev.coins - 10,
-        usedHintsByGame: [...prev.usedHintsByGame, slug],
-      }));
-
-      return { success: true };
-    },
-    [state.usedHintsByGame, state.coins]
-  );
+    return true;
+  }, [state.isBlocked, state.blockedUntil, state.points, state.unlockCost]);
 
   const value = useMemo<GameContextType>(
     () => ({
-      coins: state.coins,
-      hints: state.hints,
-      lives: state.lives,
-      playedGames: state.playedGames,
-      usedHintsByGame: state.usedHintsByGame,
-      currentGameSlug: state.currentGameSlug,
-      buyHint,
-      buyLife,
-      consumeLife,
-      addCoins,
-      loseLifeOnFailure,
-      ensureLivesForGame,
-      setCurrentGame,
-      activateGameHint,
+      points: state.points,
+      isBlocked: state.isBlocked && isBlockStillActive(state.blockedUntil),
+      blockedUntil:
+        state.isBlocked && isBlockStillActive(state.blockedUntil)
+          ? state.blockedUntil
+          : null,
+      unlockCost: state.unlockCost,
+      history: state.history,
+      canPlay,
+      handleGameEvent,
+      unlockAccess,
     }),
     [
-      state.coins,
-      state.hints,
-      state.lives,
-      state.playedGames,
-      state.usedHintsByGame,
-      state.currentGameSlug,
-      buyHint,
-      buyLife,
-      consumeLife,
-      addCoins,
-      loseLifeOnFailure,
-      ensureLivesForGame,
-      setCurrentGame,
-      activateGameHint,
+      state.points,
+      state.isBlocked,
+      state.blockedUntil,
+      state.unlockCost,
+      state.history,
+      canPlay,
+      handleGameEvent,
+      unlockAccess,
     ]
   );
 

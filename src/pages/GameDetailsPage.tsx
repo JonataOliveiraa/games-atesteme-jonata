@@ -8,18 +8,7 @@ export default function GameDetailsPage() {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
 
-  const {
-    coins,
-    lives,
-    consumeLife,
-    buyLife,
-    addCoins,
-    loseLifeOnFailure,
-    ensureLivesForGame,
-    setCurrentGame,
-    activateGameHint,
-    usedHintsByGame,
-  } = useGame();
+  const { points, canPlay, blockedUntil, handleGameEvent } = useGame();
 
   const { playBeep } = useBeepSound({
     frequency: 700,
@@ -30,101 +19,77 @@ export default function GameDetailsPage() {
 
   const game = games.find((item) => item.slug === slug);
 
-  const hintAvailable = slug && !usedHintsByGame.includes(slug) ? 1 : 0;
-
   useEffect(() => {
-    if (slug) {
-      ensureLivesForGame(slug);
-      setCurrentGame(slug);
+    if (!canPlay) {
+      navigate("/", { replace: true });
     }
+  }, [canPlay, navigate]);
 
-    return () => {
-      setCurrentGame(null);
-    };
-  }, [slug, ensureLivesForGame, setCurrentGame]);
-
-  const handleHintClick = () => {
-    if (!slug) return;
-
+  const handleCorrectAnswer = () => {
     playBeep();
-
-    const result = activateGameHint(slug);
-
-    if (result.success) {
-      alert("Mostre a dica. Dica usada com sucesso por 10 moedas.");
-      return;
-    }
-
-    if (result.reason === "already_used") {
-      alert("A dica deste jogo já foi usada.");
-      return;
-    }
-
-    if (result.reason === "not_enough_coins") {
-      alert("Você não tem moedas suficientes para usar a dica deste jogo.");
-    }
+    handleGameEvent({
+      type: "CORRECT_ANSWER",
+      gameId: slug ?? "unknown-game",
+      stage: 1,
+      pointsEarned: 10,
+    });
+    alert("Acerto registrado. +10 pontos.");
   };
 
-  const handleLifeClick = () => {
+  const handleStreakBonus = () => {
     playBeep();
-
-    if (lives > 0) {
-      const confirmedUse = window.confirm("Deseja usar 1 vida agora?");
-
-      if (!confirmedUse) return;
-
-      const consumed = consumeLife();
-
-      if (!consumed) {
-        alert("Você ganhou mais uma vida!");
-        return;
-      }
-
-      alert("Vida consumida com sucesso.");
-      return;
-    }
-
-    const confirmedBuy = window.confirm(
-      "Você está sem vidas. Deseja trocar 20 moedas por 1 vida e usá-la agora?"
-    );
-
-    if (!confirmedBuy) return;
-
-    const bought = buyLife();
-
-    if (!bought) {
-      alert("Você não tem moedas suficientes para comprar uma vida.");
-      return;
-    }
-
-    const consumed = consumeLife();
-
-    if (!consumed) {
-      alert("Você ganhou mais uma vida!");
-      return;
-    }
-
-    alert("Vida comprada e consumida com sucesso.");
+    handleGameEvent({
+      type: "STREAK_BONUS",
+      gameId: slug ?? "unknown-game",
+      stage: 1,
+      pointsEarned: 10,
+    });
+    alert("Bônus de sequência registrado. +10 pontos.");
   };
 
-  const handleSingleCorrect = () => {
+  const handleNoErrorBonus = () => {
     playBeep();
-    addCoins(10);
+    handleGameEvent({
+      type: "NO_ERROR_BONUS",
+      gameId: slug ?? "unknown-game",
+      stage: 1,
+      pointsEarned: 10,
+    });
+    alert("Bônus por jogo sem erros registrado. +10 pontos.");
   };
 
-  const handleCombo = () => {
+  const handlePhaseCompleted = () => {
     playBeep();
-    addCoins(10);
+    handleGameEvent({
+      type: "PHASE_COMPLETED",
+      gameId: slug ?? "unknown-game",
+      stage: 1,
+      pointsEarned: 0,
+    });
+    alert("Fase concluída registrada.");
   };
 
-  const handlePerfectGame = () => {
+  const handleGameCompleted = () => {
     playBeep();
-    addCoins(10);
+    handleGameEvent({
+      type: "GAME_COMPLETED",
+      gameId: slug ?? "unknown-game",
+      stage: 1,
+      pointsEarned: 0,
+    });
+    alert("Conclusão do jogo registrada.");
   };
 
-  const handleFailure = () => {
+  const handleGameOver = () => {
     playBeep();
-    loseLifeOnFailure();
+    handleGameEvent({
+      type: "GAME_OVER",
+      gameId: slug ?? "unknown-game",
+      stage: 1,
+      pointsEarned: 0,
+    });
+    alert("Game over registrado. A plataforma foi bloqueada por 2 dias.");
+    navigate("/", { replace: true });
   };
 
   if (!game) {
@@ -141,6 +106,32 @@ export default function GameDetailsPage() {
         <h1 className="page-title">Jogo não encontrado</h1>
         <p className="page-subtitle">
           Não encontramos um jogo com esse identificador.
+        </p>
+      </section>
+    );
+  }
+
+  if (!canPlay) {
+    return (
+      <section>
+        <button
+          type="button"
+          className="back-link"
+          onClick={() => navigate("/")}
+        >
+          {"<"} Voltar
+        </button>
+
+        <h1 className="page-title">Acesso bloqueado</h1>
+        <p className="page-subtitle">
+          Você não pode abrir jogos agora.
+          {blockedUntil && (
+            <>
+              {" "}
+              Liberação automática em{" "}
+              <strong>{new Date(blockedUntil).toLocaleString("pt-BR")}</strong>.
+            </>
+          )}
         </p>
       </section>
     );
@@ -172,27 +163,19 @@ export default function GameDetailsPage() {
         </div>
 
         <div className="game-resources">
-          <button className="resource-button" onClick={handleHintClick}>
-            <span className="resource-icon">💡</span>
+          <div className="resource-card">
+            <span className="resource-icon">⭐</span>
             <div className="resource-text">
-              <span>Dica</span>
-              <strong>{hintAvailable}</strong>
+              <span>Pontos</span>
+              <strong>{points}</strong>
             </div>
-          </button>
-
-          <button className="resource-button" onClick={handleLifeClick}>
-            <span className="resource-icon">💗</span>
-            <div className="resource-text">
-              <span>Vidas</span>
-              <strong>{lives}</strong>
-            </div>
-          </button>
+          </div>
 
           <div className="resource-card">
-            <span className="resource-icon">💰</span>
+            <span className="resource-icon">🎮</span>
             <div className="resource-text">
-              <span>Moedas</span>
-              <strong>{coins}</strong>
+              <span>Status</span>
+              <strong>Liberado</strong>
             </div>
           </div>
         </div>
@@ -201,23 +184,34 @@ export default function GameDetailsPage() {
       <div className="game-area">
         <div className="game-screen">
           <h2>Área do jogo</h2>
-          <p>O jogo vai rodar centralizado aqui.</p>
+          <p>
+            Aqui o Phaser vai rodar o jogo. Por enquanto, os botões abaixo
+            simulam os eventos que o jogo vai enviar para a plataforma.
+          </p>
 
           <div className="game-actions">
-            <button onClick={handleSingleCorrect}>
-              Simular acerto (+10 moedas)
+            <button onClick={handleCorrectAnswer}>
+              Simular acerto (+10 pontos)
             </button>
 
-            <button onClick={handleCombo}>
-              Simular 3 acertos seguidos (+10 moedas)
+            <button onClick={handleStreakBonus}>
+              Simular 3 acertos seguidos (+10 pontos)
             </button>
 
-            <button onClick={handlePerfectGame}>
-              Simular jogo sem erros (+5 moedas)
+            <button onClick={handleNoErrorBonus}>
+              Simular jogo sem erros (+10 pontos)
             </button>
 
-            <button onClick={handleFailure}>
-              Simular erro (-1 vida)
+            <button onClick={handlePhaseCompleted}>
+              Simular conclusão de fase
+            </button>
+
+            <button onClick={handleGameCompleted}>
+              Simular conclusão do jogo
+            </button>
+
+            <button onClick={handleGameOver}>
+              Simular game over
             </button>
           </div>
         </div>
