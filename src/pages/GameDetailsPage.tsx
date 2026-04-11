@@ -1,12 +1,24 @@
-import { useEffect } from "react";
-import { useNavigate, useParams } from "react-router-dom";
-import { useGame } from "../context/useGame";
-import { games } from "../data/games";
-import { useBeepSound } from "../hooks/useBeepSound";
+import { useEffect, useState } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
+import { useGame } from '../context/useGame'
+import { games } from '../data/games'
+import GameLauncher from '../platform/components/GameLauncher'
+import type { GameLevel, RoundResult } from '../shared/types/game'
+
+// Mapa de slug → código BNCC — expandir conforme jogos forem implementados
+const SLUG_TO_CODE: Record<string, string> = {
+  'base-dos-classificadores': 'EF01CO01',
+}
+
+// Importação dinâmica dos GameConfigs implementados
+// Cada entry retorna { default: Phaser.Types.Core.GameConfig }
+const GAME_CONFIG_LOADERS: Record<string, () => Promise<{ default: Phaser.Types.Core.GameConfig }>> = {
+  EF01CO01: () => import('../games/EF01CO01/index'),
+}
 
 export default function GameDetailsPage() {
-  const { slug } = useParams<{ slug: string }>();
-  const navigate = useNavigate();
+  const { slug } = useParams<{ slug: string }>()
+  const navigate = useNavigate()
 
   const {
     coins,
@@ -19,148 +31,77 @@ export default function GameDetailsPage() {
     setCurrentGame,
     activateGameHint,
     usedHintsByGame,
-  } = useGame();
+  } = useGame()
 
-  const { playBeep } = useBeepSound({
-    frequency: 700,
-    duration: 80,
-    volume: 0.14,
-    type: "sine",
-  });
+  const [gameConfig, setGameConfig] = useState<Phaser.Types.Core.GameConfig | null>(null)
+  const [currentLevel] = useState<GameLevel>(1)
 
-  const game = games.find((item) => item.slug === slug);
-
-  const hintAvailable = slug && !usedHintsByGame.includes(slug) ? 1 : 0;
+  const hintAvailable = slug && !usedHintsByGame.includes(slug) ? 1 : 0
+  const gameCode = slug ? SLUG_TO_CODE[slug] : undefined
+  const game = games.find(g => g.slug === slug)
 
   useEffect(() => {
     if (slug) {
-      ensureLivesForGame(slug);
-      setCurrentGame(slug);
+      ensureLivesForGame(slug)
+      setCurrentGame(slug)
     }
-
     return () => {
-      setCurrentGame(null);
-    };
-  }, [slug, ensureLivesForGame, setCurrentGame]);
+      setCurrentGame(null)
+    }
+  }, [slug, ensureLivesForGame, setCurrentGame])
+
+  useEffect(() => {
+    if (!gameCode) return
+    const loader = GAME_CONFIG_LOADERS[gameCode]
+    if (!loader) return
+    loader().then(mod => setGameConfig(mod.default)).catch(console.error)
+  }, [gameCode])
 
   const handleHintClick = () => {
-    if (!slug) return;
-
-    playBeep();
-
-    const result = activateGameHint(slug);
-
+    if (!slug) return
+    const result = activateGameHint(slug)
     if (result.success) {
-      alert("Mostre a dica. Dica usada com sucesso por 10 moedas.");
-      return;
+      alert('Dica usada com sucesso por 10 moedas.')
+      return
     }
-
-    if (result.reason === "already_used") {
-      alert("A dica deste jogo já foi usada.");
-      return;
+    if (result.reason === 'already_used') {
+      alert('A dica deste jogo já foi usada.')
+      return
     }
-
-    if (result.reason === "not_enough_coins") {
-      alert("Você não tem moedas suficientes para usar a dica deste jogo.");
+    if (result.reason === 'not_enough_coins') {
+      alert('Você não tem moedas suficientes para usar a dica deste jogo.')
     }
-  };
+  }
 
   const handleLifeClick = () => {
-    playBeep();
-
-    if (lives > 0) {
-      const confirmedUse = window.confirm("Deseja usar 1 vida agora?");
-
-      if (!confirmedUse) return;
-
-      const consumed = consumeLife();
-
-      if (!consumed) {
-        alert("Você ganhou mais uma vida!");
-        return;
+    const success = consumeLife()
+    if (!success) {
+      const bought = buyLife()
+      if (!bought) {
+        alert('Você não tem vidas e também não possui 20 moedas para comprar uma nova vida.')
+        return
       }
-
-      alert("Vida consumida com sucesso.");
-      return;
+      alert('Você estava sem vidas. Compramos 1 vida por 20 moedas.')
+      return
     }
+    alert('Vida consumida com sucesso.')
+  }
 
-    const confirmedBuy = window.confirm(
-      "Você está sem vidas. Deseja trocar 20 moedas por 1 vida e usá-la agora?"
-    );
+  const handleRoundComplete = (result: RoundResult) => {
+    addCoins(result.hits * 5)
+  }
 
-    if (!confirmedBuy) return;
-
-    const bought = buyLife();
-
-    if (!bought) {
-      alert("Você não tem moedas suficientes para comprar uma vida.");
-      return;
-    }
-
-    const consumed = consumeLife();
-
-    if (!consumed) {
-      alert("Você ganhou mais uma vida!");
-      return;
-    }
-
-    alert("Vida comprada e consumida com sucesso.");
-  };
-
-  const handleSingleCorrect = () => {
-    playBeep();
-    addCoins(10);
-  };
-
-  const handleCombo = () => {
-    playBeep();
-    addCoins(10);
-  };
-
-  const handlePerfectGame = () => {
-    playBeep();
-    addCoins(10);
-  };
-
-  const handleFailure = () => {
-    playBeep();
-    loseLifeOnFailure();
-  };
-
-  if (!game) {
-    return (
-      <section>
-        <button
-          type="button"
-          className="back-link"
-          onClick={() => navigate("/")}
-        >
-          {"<"} Voltar
-        </button>
-
-        <h1 className="page-title">Jogo não encontrado</h1>
-        <p className="page-subtitle">
-          Não encontramos um jogo com esse identificador.
-        </p>
-      </section>
-    );
+  const handleExit = () => {
+    navigate(-1)
   }
 
   return (
     <section>
-      <button
-        type="button"
-        className="back-link"
-        onClick={() => navigate("/")}
-      >
-        {"<"} Voltar
+      <button className="back-link" onClick={() => navigate(-1)}>
+        {'<'} Voltar
       </button>
 
-      <h1 className="page-title">{game.title}</h1>
-
-      <p className="page-subtitle">
-        Categoria: <strong>{game.category}</strong>
-      </p>
+      <h1 className="page-title">{game?.title ?? slug}</h1>
 
       <div className="game-topbar">
         <div className="player-box">
@@ -189,7 +130,7 @@ export default function GameDetailsPage() {
           </button>
 
           <div className="resource-card">
-            <span className="resource-icon">💰</span>
+            <span className="resource-icon">🪙</span>
             <div className="resource-text">
               <span>Moedas</span>
               <strong>{coins}</strong>
@@ -199,29 +140,30 @@ export default function GameDetailsPage() {
       </div>
 
       <div className="game-area">
-        <div className="game-screen">
-          <h2>Área do jogo</h2>
-          <p>O jogo vai rodar centralizado aqui.</p>
-
-          <div className="game-actions">
-            <button onClick={handleSingleCorrect}>
-              Simular acerto (+10 moedas)
-            </button>
-
-            <button onClick={handleCombo}>
-              Simular 3 acertos seguidos (+10 moedas)
-            </button>
-
-            <button onClick={handlePerfectGame}>
-              Simular jogo sem erros (+5 moedas)
-            </button>
-
-            <button onClick={handleFailure}>
-              Simular erro (-1 vida)
-            </button>
+        {gameConfig ? (
+          <GameLauncher
+            gameCode={gameCode as import('../shared/types/game').GameCode}
+            level={currentLevel}
+            config={gameConfig}
+            onComplete={handleRoundComplete}
+            onExit={handleExit}
+          />
+        ) : gameCode && !gameConfig ? (
+          <div className="game-screen">
+            <p style={{ color: 'var(--muted)' }}>Carregando jogo...</p>
           </div>
-        </div>
+        ) : (
+          <div className="game-screen">
+            <h2>Em breve</h2>
+            <p>Este jogo ainda está sendo desenvolvido.</p>
+            <div className="game-actions" style={{ marginTop: 24 }}>
+              <button onClick={() => addCoins(5)}>Simular acerto (+5 moedas)</button>
+              <button onClick={() => addCoins(10)}>Simular 3 acertos (+10 moedas)</button>
+              <button onClick={() => loseLifeOnFailure()}>Simular erro (-1 vida)</button>
+            </div>
+          </div>
+        )}
       </div>
     </section>
-  );
+  )
 }
