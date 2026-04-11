@@ -2,6 +2,15 @@ import type { Game } from "../types/game";
 
 export const games: Game[] = [
   {
+    id: 0,
+    title: "Base dos Classificadores",
+    description: "Arraste figuras e personagens para as bases certas, separando por cor, forma ou tamanho.",
+    category: "Pensamento Computacional",
+    points: 60,
+    icon: "🗂️",
+    slug: "base-dos-classificadores",
+  },
+  {
     id: 1,
     title: "Quiz de Conhecimentos",
     description: "Teste seus conhecimentos com perguntas de diversas categorias.",
