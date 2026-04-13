@@ -157,8 +157,8 @@ export default function GameDetailsPage() {
         <div className="player-box">
           <div className="player-avatar">H</div>
           <div className="player-info">
-            <span className="player-label">Jogadora</span>
-            <strong>Helena</strong>
+            <span className="player-label">Jogador(a)</span>
+            <strong>Nome do usuário</strong>
           </div>
         </div>
 

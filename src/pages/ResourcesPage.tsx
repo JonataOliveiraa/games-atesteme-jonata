@@ -105,7 +105,7 @@ export default function ResourcesPage() {
         <div className="stat-card">
           <div className="stat-icon">💸</div>
           <div>
-            <h3>Custo de desbloqueio</h3>
+            <h3>Desbloqueio</h3>
             <strong>{unlockCost}</strong>
             <p>pontos necessários</p>
           </div>
