@@ -519,6 +519,24 @@ button {
   justify-content: center;
 }
 
+/* Container do canvas Phaser — ocupa toda a largura disponível */
+.phaser-container {
+  width: 100%;
+  max-width: 1280px;
+  aspect-ratio: 16 / 9;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  background: #1a1a2e;
+}
+
+/* O canvas gerado pelo Phaser dentro do container */
+.phaser-container canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+}
+
 .game-screen {
   width: 100%;
   max-width: 900px;

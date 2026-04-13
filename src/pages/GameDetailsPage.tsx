@@ -1,8 +1,21 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useGame } from "../context/useGame";
 import { games } from "../data/games";
-import { useBeepSound } from "../hooks/useBeepSound";
+import GameLauncher from "../platform/components/GameLauncher";
+import type { GameCode, GameLevel, RoundResult } from "../shared/types/game";
+
+// Mapa de slug -> código BNCC
+const SLUG_TO_CODE: Record<string, GameCode> = {
+  "base-dos-classificadores": "EF01CO01",
+};
+
+// Só os jogos já implementados
+const GAME_CONFIG_LOADERS: Partial<
+  Record<GameCode, () => Promise<{ default: Phaser.Types.Core.GameConfig }>>
+> = {
+  EF01CO01: () => import("../games/EF01CO01/index"),
+};
 
 export default function GameDetailsPage() {
   const { slug } = useParams<{ slug: string }>();
@@ -10,27 +23,56 @@ export default function GameDetailsPage() {
 
   const { points, canPlay, blockedUntil, handleGameEvent } = useGame();
 
-  const { playBeep } = useBeepSound({
-    frequency: 700,
-    duration: 80,
-    volume: 0.14,
-    type: "sine",
-  });
+  const [gameConfig, setGameConfig] =
+    useState<Phaser.Types.Core.GameConfig | null>(null);
+  const [currentLevel] = useState<GameLevel>(1);
 
   const game = games.find((item) => item.slug === slug);
+  const gameCode = slug ? SLUG_TO_CODE[slug] : undefined;
 
   useEffect(() => {
-    if (!canPlay) {
-      navigate("/", { replace: true });
+    let cancelled = false;
+
+    async function loadGameConfig() {
+      if (!gameCode) return;
+
+      const loader = GAME_CONFIG_LOADERS[gameCode];
+      if (!loader) return;
+
+      try {
+        const mod = await loader();
+        if (!cancelled) {
+          setGameConfig(mod.default);
+        }
+      } catch (error) {
+        console.error("Erro ao carregar configuração do jogo:", error);
+      }
     }
-  }, [canPlay, navigate]);
+
+    loadGameConfig();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [gameCode]);
+
+  const playBeep = () => {
+    try {
+      const audio = new Audio(
+        "data:audio/wav;base64,UklGRlQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YTAAAAAA"
+      );
+      void audio.play();
+    } catch (error) {
+      console.error("Erro ao tocar som:", error);
+    }
+  };
 
   const handleCorrectAnswer = () => {
     playBeep();
     handleGameEvent({
       type: "CORRECT_ANSWER",
       gameId: slug ?? "unknown-game",
-      stage: 1,
+      stage: currentLevel,
       pointsEarned: 10,
     });
     alert("Acerto registrado. +10 pontos.");
@@ -41,7 +83,7 @@ export default function GameDetailsPage() {
     handleGameEvent({
       type: "STREAK_BONUS",
       gameId: slug ?? "unknown-game",
-      stage: 1,
+      stage: currentLevel,
       pointsEarned: 10,
     });
     alert("Bônus de sequência registrado. +10 pontos.");
@@ -52,7 +94,7 @@ export default function GameDetailsPage() {
     handleGameEvent({
       type: "NO_ERROR_BONUS",
       gameId: slug ?? "unknown-game",
-      stage: 1,
+      stage: currentLevel,
       pointsEarned: 10,
     });
     alert("Bônus por jogo sem erros registrado. +10 pontos.");
@@ -63,7 +105,7 @@ export default function GameDetailsPage() {
     handleGameEvent({
       type: "PHASE_COMPLETED",
       gameId: slug ?? "unknown-game",
-      stage: 1,
+      stage: currentLevel,
       pointsEarned: 0,
     });
     alert("Fase concluída registrada.");
@@ -74,7 +116,7 @@ export default function GameDetailsPage() {
     handleGameEvent({
       type: "GAME_COMPLETED",
       gameId: slug ?? "unknown-game",
-      stage: 1,
+      stage: currentLevel,
       pointsEarned: 0,
     });
     alert("Conclusão do jogo registrada.");
@@ -85,11 +127,28 @@ export default function GameDetailsPage() {
     handleGameEvent({
       type: "GAME_OVER",
       gameId: slug ?? "unknown-game",
-      stage: 1,
+      stage: currentLevel,
       pointsEarned: 0,
     });
     alert("Game over registrado. A plataforma foi bloqueada por 2 dias.");
     navigate("/", { replace: true });
+  };
+
+  const handleRoundComplete = (result: RoundResult) => {
+    const earnedPoints = result.hits * 5;
+
+    if (earnedPoints > 0) {
+      handleGameEvent({
+        type: "CORRECT_ANSWER",
+        gameId: slug ?? "unknown-game",
+        stage: currentLevel,
+        pointsEarned: earnedPoints,
+      });
+    }
+  };
+
+  const handleExit = () => {
+    navigate(-1);
   };
 
   if (!game) {
@@ -139,19 +198,11 @@ export default function GameDetailsPage() {
 
   return (
     <section>
-      <button
-        type="button"
-        className="back-link"
-        onClick={() => navigate("/")}
-      >
+      <button className="back-link" onClick={() => navigate(-1)}>
         {"<"} Voltar
       </button>
 
       <h1 className="page-title">{game.title}</h1>
-
-      <p className="page-subtitle">
-        Categoria: <strong>{game.category}</strong>
-      </p>
 
       <div className="game-topbar">
         <div className="player-box">
@@ -182,39 +233,51 @@ export default function GameDetailsPage() {
       </div>
 
       <div className="game-area">
-        <div className="game-screen">
-          <h2>Área do jogo</h2>
-          <p>
-            Aqui o Phaser vai rodar o jogo. Por enquanto, os botões abaixo
-            simulam os eventos que o jogo vai enviar para a plataforma.
-          </p>
-
-          <div className="game-actions">
-            <button onClick={handleCorrectAnswer}>
-              Simular acerto (+10 pontos)
-            </button>
-
-            <button onClick={handleStreakBonus}>
-              Simular 3 acertos seguidos (+10 pontos)
-            </button>
-
-            <button onClick={handleNoErrorBonus}>
-              Simular jogo sem erros (+10 pontos)
-            </button>
-
-            <button onClick={handlePhaseCompleted}>
-              Simular conclusão de fase
-            </button>
-
-            <button onClick={handleGameCompleted}>
-              Simular conclusão do jogo
-            </button>
-
-            <button onClick={handleGameOver}>
-              Simular game over
-            </button>
+        {gameCode && gameConfig ? (
+          <GameLauncher
+            gameCode={gameCode}
+            level={currentLevel}
+            config={gameConfig}
+            onComplete={handleRoundComplete}
+            onExit={handleExit}
+          />
+        ) : gameCode ? (
+          <div className="game-screen">
+            <p style={{ color: "var(--muted)" }}>Carregando jogo...</p>
           </div>
-        </div>
+        ) : (
+          <div className="game-screen">
+            <h2>Área do jogo</h2>
+            <p>
+              Aqui o Phaser vai rodar o jogo. Por enquanto, os botões abaixo
+              simulam os eventos que o jogo vai enviar para a plataforma.
+            </p>
+
+            <div className="game-actions">
+              <button onClick={handleCorrectAnswer}>
+                Simular acerto (+10 pontos)
+              </button>
+
+              <button onClick={handleStreakBonus}>
+                Simular 3 acertos seguidos (+10 pontos)
+              </button>
+
+              <button onClick={handleNoErrorBonus}>
+                Simular jogo sem erros (+10 pontos)
+              </button>
+
+              <button onClick={handlePhaseCompleted}>
+                Simular conclusão de fase
+              </button>
+
+              <button onClick={handleGameCompleted}>
+                Simular conclusão do jogo
+              </button>
+
+              <button onClick={handleGameOver}>Simular game over</button>
+            </div>
+          </div>
+        )}
       </div>
     </section>
   );
