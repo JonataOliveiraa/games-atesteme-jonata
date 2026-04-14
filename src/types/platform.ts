@@ -3,6 +3,7 @@ export type GameEventType =
   | "PHASE_COMPLETED"
   | "GAME_COMPLETED"
   | "CORRECT_ANSWER"
+  | "WRONG_ANSWER"
   | "STREAK_BONUS"
   | "NO_ERROR_BONUS"
   | "BLOCKED"
@@ -15,6 +16,7 @@ export type GameEventPayload = {
     | "PHASE_COMPLETED"
     | "GAME_COMPLETED"
     | "CORRECT_ANSWER"
+    | "WRONG_ANSWER"
     | "STREAK_BONUS"
     | "NO_ERROR_BONUS";
   gameId: string;

@@ -57,6 +57,8 @@ export default function ResourcesPage() {
         return "Jogo concluído";
       case "CORRECT_ANSWER":
         return "Acerto";
+      case "WRONG_ANSWER":
+        return "Erro";
       case "STREAK_BONUS":
         return "Bônus de sequência";
       case "NO_ERROR_BONUS":

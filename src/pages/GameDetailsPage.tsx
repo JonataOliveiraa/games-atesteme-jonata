@@ -3,7 +3,8 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useGame } from "../context/useGame";
 import { games } from "../data/games";
 import GameLauncher from "../platform/components/GameLauncher";
-import type { GameCode, GameLevel, RoundResult } from "../shared/types/game";
+import type { GameCode, GameLevel } from "../shared/types/game";
+import type { GameEventPayload } from "../types/platform";
 
 // Mapa de slug -> código BNCC
 const SLUG_TO_CODE: Record<string, GameCode> = {
@@ -73,9 +74,9 @@ export default function GameDetailsPage() {
       type: "CORRECT_ANSWER",
       gameId: slug ?? "unknown-game",
       stage: currentLevel,
-      pointsEarned: 10,
+      pointsEarned: 5,
     });
-    alert("Acerto registrado. +10 pontos.");
+    alert("Acerto registrado. +5 pontos.");
   };
 
   const handleStreakBonus = () => {
@@ -84,9 +85,9 @@ export default function GameDetailsPage() {
       type: "STREAK_BONUS",
       gameId: slug ?? "unknown-game",
       stage: currentLevel,
-      pointsEarned: 10,
+      pointsEarned: 5,
     });
-    alert("Bônus de sequência registrado. +10 pontos.");
+    alert("Bônus de sequência registrado. +5 pontos.");
   };
 
   const handleNoErrorBonus = () => {
@@ -95,9 +96,9 @@ export default function GameDetailsPage() {
       type: "NO_ERROR_BONUS",
       gameId: slug ?? "unknown-game",
       stage: currentLevel,
-      pointsEarned: 10,
+      pointsEarned: 5,
     });
-    alert("Bônus por jogo sem erros registrado. +10 pontos.");
+    alert("Bônus por jogo sem erros registrado. +5 pontos.");
   };
 
   const handlePhaseCompleted = () => {
@@ -123,7 +124,7 @@ export default function GameDetailsPage() {
   };
 
   const handleGameOver = () => {
-    playBeep();
+    playBeep(); 
     handleGameEvent({
       type: "GAME_OVER",
       gameId: slug ?? "unknown-game",
@@ -134,16 +135,12 @@ export default function GameDetailsPage() {
     navigate("/", { replace: true });
   };
 
-  const handleRoundComplete = (result: RoundResult) => {
-    const earnedPoints = result.hits * 5;
+  const handleGameEventFromPhaser = (event: GameEventPayload) => {
+    handleGameEvent(event);
 
-    if (earnedPoints > 0) {
-      handleGameEvent({
-        type: "CORRECT_ANSWER",
-        gameId: slug ?? "unknown-game",
-        stage: currentLevel,
-        pointsEarned: earnedPoints,
-      });
+    if (event.type === "GAME_OVER") {
+      alert("Game over registrado. A plataforma foi bloqueada por 2 dias.");
+      navigate("/", { replace: true });
     }
   };
 
@@ -237,8 +234,9 @@ export default function GameDetailsPage() {
           <GameLauncher
             gameCode={gameCode}
             level={currentLevel}
+            points={points}
             config={gameConfig}
-            onComplete={handleRoundComplete}
+            onComplete={handleGameEventFromPhaser}
             onExit={handleExit}
           />
         ) : gameCode ? (
@@ -255,15 +253,15 @@ export default function GameDetailsPage() {
 
             <div className="game-actions">
               <button onClick={handleCorrectAnswer}>
-                Simular acerto (+10 pontos)
+                Simular acerto (+5 pontos)
               </button>
 
               <button onClick={handleStreakBonus}>
-                Simular 3 acertos seguidos (+10 pontos)
+                Simular 3 acertos seguidos (+5 pontos)
               </button>
 
               <button onClick={handleNoErrorBonus}>
-                Simular jogo sem erros (+10 pontos)
+                Simular jogo sem erros (+5 pontos)
               </button>
 
               <button onClick={handlePhaseCompleted}>

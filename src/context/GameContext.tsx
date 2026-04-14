@@ -112,7 +112,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   }, [state]);
 
-  const canPlay = !state.isBlocked || !isBlockStillActive(state.blockedUntil);
+  const canPlay = !state.isBlocked
 
   const handleGameEvent = useCallback((event: GameEventPayload) => {
     setState((prev) => {
@@ -125,12 +125,13 @@ export function GameProvider({ children }: { children: ReactNode }) {
         }),
       ];
 
-      const nextState: PlatformState = {
-        ...prev,
-        points: prev.points + event.pointsEarned,
-        history: [...historyItems, ...prev.history],
-      };
+      const nextPoints = Math.max(0, prev.points + event.pointsEarned);
 
+      const nextState: PlatformState = {
+       ...prev,
+      points: nextPoints,
+       history: [...historyItems, ...prev.history],
+      };
       if (event.type === "GAME_OVER") {
         nextState.isBlocked = true;
         nextState.blockedUntil = getBlockedUntilAfterTwoDays();

@@ -29,6 +29,8 @@ export class GameScene extends Phaser.Scene {
   private hits = 0
   private errors = 0
   private startTime = 0
+  private streak = 0
+  private currentPoints = 0
   private timerText?: Phaser.GameObjects.Text
   private timerEvent?: Phaser.Time.TimerEvent
   private remainingSeconds = 0
@@ -37,34 +39,34 @@ export class GameScene extends Phaser.Scene {
     super({ key: 'GameScene' })
   }
 
-  init(data: { level?: number }) {
-    const lvl = (data?.level ?? 1) as 1 | 2 | 3
-    this.levelConfig = LEVELS.find(l => l.level === lvl) ?? LEVELS[0]
-    this.hits   = 0
-    this.errors = 0
-  }
+ init(data: { level?: number; points?: number }) {
+  const lvl = (data?.level ?? 1) as 1 | 2 | 3
+  this.levelConfig = LEVELS.find((l) => l.level === lvl) ?? LEVELS[0]
+  this.hits = 0
+  this.errors = 0
+  this.streak = 0
+  this.currentPoints = data?.points ?? 0
+}
 
   create() {
-    this.startTime = Date.now()
+  this.startTime = Date.now()
 
-    this.createBackground()
-    this.createConveyor()
-    this.createBases()
-    this.createItems()
-    this.setupDrag()
+  this.createBackground()
+  this.createConveyor()
+  this.createBases()
+  this.createItems()
+  this.setupDrag()
 
-    if (this.levelConfig.timeLimit) {
-      this.startTimer(this.levelConfig.timeLimit)
-    }
+  EventBus.on(
+    "set-level",
+    (data: { level: number; points: number }) => {
+      this.scene.restart({ level: data.level, points: data.points })
+    },
+    this,
+  )
 
-    // Informa UIScene que esta Scene está pronta, passando a config do nível
-    EventBus.emit('scene-ready', { levelConfig: this.levelConfig })
-
-    // Ouve mudança de nível vinda do React (GameLauncher)
-    EventBus.on('set-level', (lvl: number) => {
-      this.scene.restart({ level: lvl })
-    }, this)
-  }
+  EventBus.emit("scene-ready", { levelConfig: this.levelConfig })
+}
 
   update() {
     // Anima a esteira movendo a textura para a direita
@@ -193,24 +195,75 @@ export class GameScene extends Phaser.Scene {
   }
 
   private validateDrop(
-    item: DraggableItem,
-    baseContainer: Phaser.GameObjects.Container,
-    base: ClassifierBase,
-  ) {
-    const attrValue = this.getItemAttrValue(item.itemData, base.rule.attribute)
-    const correct   = attrValue === base.rule.value
+  item: DraggableItem,
+  baseContainer: Phaser.GameObjects.Container,
+  base: ClassifierBase,
+) {
+  const attrValue = this.getItemAttrValue(item.itemData, base.rule.attribute)
+  const correct = attrValue === base.rule.value
 
-    if (correct) {
-      this.hits++
-      this.onCorrectDrop(item, baseContainer)
-    } else {
-      this.errors++
-      this.onWrongDrop(item, baseContainer)
+  if (correct) {
+    this.hits++
+    this.streak++
+    this.currentPoints += 5
+
+    EventBus.emit("game-event", {
+      type: "CORRECT_ANSWER",
+      gameId: "EF01CO01",
+      stage: this.levelConfig.level,
+      pointsEarned: 5,
+    })
+
+    if (this.streak > 0 && this.streak % 3 === 0) {
+      this.currentPoints += 5
+
+      EventBus.emit("game-event", {
+        type: "STREAK_BONUS",
+        gameId: "EF01CO01",
+        stage: this.levelConfig.level,
+        pointsEarned: 5,
+      })
     }
+
+    this.onCorrectDrop(item, baseContainer)
+  } else {
+    this.errors++
+    this.streak = 0
+
+    if (this.currentPoints <= 5) {
+      this.currentPoints = 0
+
+      EventBus.emit("game-event", {
+        type: "WRONG_ANSWER",
+        gameId: "EF01CO01",
+        stage: this.levelConfig.level,
+        pointsEarned: -5,
+      })
+
+      EventBus.emit("game-event", {
+        type: "GAME_OVER",
+        gameId: "EF01CO01",
+        stage: this.levelConfig.level,
+        pointsEarned: 0,
+      })
+
+      return
+    }
+
+    this.currentPoints -= 5
+
+    EventBus.emit("game-event", {
+      type: "WRONG_ANSWER",
+      gameId: "EF01CO01",
+      stage: this.levelConfig.level,
+      pointsEarned: -5,
+    })
+
+    this.onWrongDrop(item, baseContainer)
   }
+}
 
   private onCorrectDrop(item: DraggableItem, baseContainer: Phaser.GameObjects.Container) {
-    // Esconde o item
     item.setVisible(false)
     item.disableInteractive()
 
@@ -309,21 +362,33 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
-  private endRound() {
-    this.timerEvent?.destroy()
+private endRound() {
+  const remaining = this.itemSprites.filter(s => s.visible).length
+  const completedSuccessfully = remaining === 0
 
-    const result: RoundResult = {
-      gameCode: 'EF01CO01',
-      level: this.levelConfig.level,
-      criterion: this.levelConfig.criterion,
-      hits: this.hits,
-      errors: this.errors,
-      durationMs: Date.now() - this.startTime,
-      timestamp: Date.now(),
-    }
+  if (completedSuccessfully && this.errors === 0) {
+    this.currentPoints += 5
 
-    EventBus.emit('round-complete', result)
+    EventBus.emit("game-event", {
+      type: "NO_ERROR_BONUS",
+      gameId: "EF01CO01",
+      stage: this.levelConfig.level,
+      pointsEarned: 5,
+    })
   }
+
+  const result: RoundResult = {
+    gameCode: "EF01CO01",
+    level: this.levelConfig.level,
+    criterion: this.levelConfig.criterion,
+    hits: this.hits,
+    errors: this.errors,
+    durationMs: Date.now() - this.startTime,
+    timestamp: Date.now(),
+  }
+
+  EventBus.emit("round-complete", result)
+}
 
   private emitProgress() {
     const total     = this.itemSprites.length
