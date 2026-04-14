@@ -28,6 +28,9 @@ export default function Layout() {
             >
               Recursos
             </Link>
+                   <Link to="/ranking" className={location.pathname === "/ranking" ? "nav-link active" : "nav-link"}>
+              Ranking
+            </Link>
           </nav>
         </div>
       </header>
