@@ -28,12 +28,9 @@ export class GameScene extends Phaser.Scene {
   private itemSprites: DraggableItem[] = []
   private hits = 0
   private errors = 0
-  private startTime = 0
   private streak = 0
   private currentPoints = 0
-  private timerText?: Phaser.GameObjects.Text
-  private timerEvent?: Phaser.Time.TimerEvent
-  private remainingSeconds = 0
+  
 
   constructor() {
     super({ key: 'GameScene' })
@@ -49,7 +46,7 @@ export class GameScene extends Phaser.Scene {
 }
 
   create() {
-  this.startTime = Date.now()
+
 
   this.createBackground()
   this.createConveyor()
@@ -77,7 +74,6 @@ export class GameScene extends Phaser.Scene {
 
   shutdown() {
     EventBus.off('set-level', undefined, this)
-    this.timerEvent?.destroy()
   }
 
   // ─── Criação de elementos ─────────────────────────────────────────────────
@@ -322,36 +318,6 @@ export class GameScene extends Phaser.Scene {
     })
   }
 
-  // ─── Timer ────────────────────────────────────────────────────────────────
-
-  private startTimer(seconds: number) {
-    this.remainingSeconds = seconds
-
-    this.timerText = this.add.text(1220, 40, this.formatTime(seconds), {
-      fontSize: '24px',
-      color: '#ffffff',
-      fontFamily: 'Arial',
-      fontStyle: 'bold',
-    }).setOrigin(1, 0.5)
-
-    this.timerEvent = this.time.addEvent({
-      delay: 1000,
-      repeat: seconds - 1,
-      callback: () => {
-        this.remainingSeconds--
-        this.timerText?.setText(this.formatTime(this.remainingSeconds))
-        if (this.remainingSeconds <= 0) {
-          this.endRound()
-        }
-      },
-    })
-  }
-
-  private formatTime(s: number): string {
-    const m = Math.floor(s / 60)
-    const sec = s % 60
-    return `${m}:${sec.toString().padStart(2, '0')}`
-  }
 
   // ─── Fim de rodada ────────────────────────────────────────────────────────
 
@@ -363,12 +329,7 @@ export class GameScene extends Phaser.Scene {
   }
 
 private endRound() {
-  const remaining = this.itemSprites.filter(s => s.visible).length
-  const completedSuccessfully = remaining === 0
-
-  if (completedSuccessfully && this.errors === 0) {
-    this.currentPoints += 5
-
+  if (this.errors === 0) {
     EventBus.emit("game-event", {
       type: "NO_ERROR_BONUS",
       gameId: "EF01CO01",
@@ -383,7 +344,7 @@ private endRound() {
     criterion: this.levelConfig.criterion,
     hits: this.hits,
     errors: this.errors,
-    durationMs: Date.now() - this.startTime,
+    durationMs: Date.now(),
     timestamp: Date.now(),
   }
 

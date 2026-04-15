@@ -29,5 +29,4 @@ export interface LevelConfig {
   criterion: Attribute
   items: GameItem[]
   bases: ClassifierBase[]
-  timeLimit?: number // em segundos — só nível 3
 }

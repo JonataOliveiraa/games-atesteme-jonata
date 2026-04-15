@@ -4,13 +4,13 @@ import { ALL_ITEMS } from './items'
 /**
  * Configuração dos 3 níveis do jogo Base dos Classificadores.
  *
- * Nível 1 — Critério único (cor), 4 itens, 2 bases, sem timer
+ * Nível 1 — Critério único (cor), 4 itens, 2 bases
  *   Scaffolding máximo: cada base aceita apenas uma cor, regra bem visível.
  *
- * Nível 2 — Dois critérios alternados (cor e forma), 8 itens, 4 bases, sem timer
+ * Nível 2 — Dois critérios alternados (cor e forma), 8 itens, 4 bases
  *   Itens visualmente parecidos para aumentar o desafio da discriminação.
  *
- * Nível 3 — Critério forma com exceção por tamanho, 10 itens, 3 bases, timer 60s
+ * Nível 3 — Critério forma com exceção por tamanho, 10 itens, 3 bases, 
  *   A regra de classificação é forma, mas há bases com restrição de tamanho.
  */
 
@@ -105,7 +105,6 @@ export const LEVELS: LevelConfig[] = [
   {
     level: 3,
     criterion: 'forma',
-    timeLimit: 60,
     items: [
       itemById('r-cir-m'),
       itemById('a-cir-g'),
