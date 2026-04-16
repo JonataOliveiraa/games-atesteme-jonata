@@ -180,7 +180,6 @@ export default function ResourcesPage() {
         >
           Resetar progresso
         </button>
-63af44d2f1b28675d03b61ae945c8f3a
       </div>
 
       <div className="rewards-grid">
