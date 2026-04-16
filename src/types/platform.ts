@@ -31,3 +31,5 @@ export type UserGameHistory = {
   pointsEarned: number;
   createdAt: string;
 };
+
+export type BlockedGamesMap = Record<string, string>;
