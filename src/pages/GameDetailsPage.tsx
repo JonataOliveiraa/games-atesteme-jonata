@@ -269,7 +269,9 @@ export default function GameDetailsPage() {
             <GameLauncher
               gameCode={gameCode}
               level={currentLevel}
-              points={points}
+              gameName={game.title}
+              gameDescription={game.description}
+              gameIcon={game.icon}
               config={gameConfig}
               onComplete={handleGameEventFromPhaser}
               onExit={handleExit}
@@ -334,56 +336,5 @@ export default function GameDetailsPage() {
         onCancel={() => setFeedbackMessage(null)}
       />
     </>
-      <div className="game-area">
-        {gameCode && gameConfig ? (
-          <GameLauncher
-            gameCode={gameCode}
-            level={currentLevel}
-            gameName={game.title}
-            gameDescription={game.description}
-            gameIcon={game.icon}
-            config={gameConfig}
-            onComplete={handleGameEventFromPhaser}
-            onExit={handleExit}
-          />
-        ) : gameCode ? (
-          <div className="game-screen">
-            <p style={{ color: "var(--muted)" }}>Carregando jogo...</p>
-          </div>
-        ) : (
-          <div className="game-screen">
-            <h2>Área do jogo</h2>
-            <p>
-              Aqui o Phaser vai rodar o jogo. Por enquanto, os botões abaixo
-              simulam os eventos que o jogo vai enviar para a plataforma.
-            </p>
-
-            <div className="game-actions">
-              <button onClick={handleCorrectAnswer}>
-                Simular acerto (+5 pontos)
-              </button>
-
-              <button onClick={handleStreakBonus}>
-                Simular 3 acertos seguidos (+5 pontos)
-              </button>
-
-              <button onClick={handleNoErrorBonus}>
-                Simular jogo sem erros (+5 pontos)
-              </button>
-
-              <button onClick={handlePhaseCompleted}>
-                Simular conclusão de fase
-              </button>
-
-              <button onClick={handleGameCompleted}>
-                Simular conclusão do jogo
-              </button>
-
-              <button onClick={handleGameOver}>Simular game over</button>
-            </div>
-          </div>
-        )}
-      </div>
-    </section>
   );
 }
