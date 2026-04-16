@@ -5,152 +5,170 @@ import type { LevelConfig } from '../types'
 /**
  * UIScene — HUD paralelo sobreposto à GameScene.
  *
- * Responsabilidades:
- * - Cartão de regra ativa (qual atributo classificar + botão repetir narração)
- * - Barra de progresso de itens entregues
- * - Contador de acertos e erros
- * - Botão mute (futuro: quando áudio existir)
+ * Layout:
+ *   ┌─────────────────────────────────────────────────────────────────────┐
+ *   │ 📋 Regra: [texto]     [ícones de exemplo]    ★★☆ Nível   🔊  │ y=0-90
+ *   ├─────────────────────────────────────────────────────────────────────┤
+ *   │                        ÁREA DE JOGO                                  │
+ *   ├─────────────────────────────────────────────────────────────────────┤
+ *   │ ✅ 0   ✖ 0          [=== Progresso ===]               Nível 1   │ y=640-720
+ *   └─────────────────────────────────────────────────────────────────────┘
  *
- * Roda em paralelo com GameScene — nunca pausar a GameScene a partir daqui.
+ * Neurodivergência:
+ *  - Regra visível o tempo todo no topo
+ *  - Ícones de cada base listados ao lado da regra
+ *  - Cores de alto contraste (texto escuro em fundo claro)
+ *  - Nível indicado por estrelas preenchidas (★★☆)
  */
 export class UIScene extends Phaser.Scene {
-  private progressBar!: Phaser.GameObjects.Rectangle
-  private ruleText!: Phaser.GameObjects.Text
-  private hitsText!: Phaser.GameObjects.Text
-  private errorsText!: Phaser.GameObjects.Text
-  private levelConfig?: LevelConfig
+  private progressBar!:  Phaser.GameObjects.Rectangle
+  private ruleText!:     Phaser.GameObjects.Text
+  private hitsText!:     Phaser.GameObjects.Text
+  private errorsText!:   Phaser.GameObjects.Text
+  private levelStars!:   Phaser.GameObjects.Text
+  private exampleIcons!: Phaser.GameObjects.Text
+  private levelConfig?:  LevelConfig
 
   constructor() {
     super({ key: 'UIScene' })
   }
 
   create() {
-    this.createRuleCard()
-    this.createProgressBar()
-    this.createCounters()
-    this.createMuteButton()
+    this.createTopBar()
+    this.createBottomBar()
     this.registerEventListeners()
   }
 
   shutdown() {
-    EventBus.off('scene-ready',      undefined, this)
-    EventBus.off('update-progress',  undefined, this)
-    EventBus.off('mute-audio',       undefined, this)
+    EventBus.off('scene-ready',     undefined, this)
+    EventBus.off('update-progress', undefined, this)
+    EventBus.off('mute-audio',      undefined, this)
   }
 
-  // ─── Cartão de regra ──────────────────────────────────────────────────────
+  // ── Barra superior ────────────────────────────────────────────────────────
 
-  private createRuleCard() {
-    // Fundo do cartão
-    this.add.rectangle(220, 650, 380, 100, 0x2d1b69, 0.95)
-      .setStrokeStyle(2, 0x7c3aed)
+  private createTopBar() {
+    // Fundo creme semi-transparente
+    this.add.rectangle(640, 45, 1280, 90, 0xFFF8F0, 0.94)
+      .setStrokeStyle(3, 0xDEB887)
 
-    this.add.text(60, 620, 'Regra:', {
-      fontSize: '16px',
-      color: '#a78bfa',
-      fontFamily: 'Arial',
-      fontStyle: 'bold',
-    })
+    // Rótulo "Regra:"
+    this.add.text(18, 45, '📋', { fontSize: '24px' }).setOrigin(0, 0.5)
+    this.add.text(52, 45, 'Regra:', {
+      fontSize: '18px',
+      fontFamily: 'Arial, sans-serif',
+      color: '#7F8C8D',
+    }).setOrigin(0, 0.5)
 
-    this.ruleText = this.add.text(60, 642, 'Aguardando…', {
-      fontSize: '20px',
-      color: '#ffffff',
-      fontFamily: 'Arial',
-      fontStyle: 'bold',
-      wordWrap: { width: 300 },
-    })
+    // Texto da regra (atualizado no scene-ready)
+    this.ruleText = this.add.text(140, 45, '…', {
+      fontSize: '26px',
+      fontFamily: 'Arial Black, Arial',
+      color: '#1A1A2E',
+    }).setOrigin(0, 0.5)
 
-    // Botão de repetir narração
-    const repeatBtn = this.add.rectangle(390, 650, 44, 44, 0x7c3aed)
-      .setStrokeStyle(2, 0xc4b5fd)
-      .setInteractive({ useHandCursor: true })
+    // Ícones de exemplo das bases (atualizado no scene-ready)
+    this.exampleIcons = this.add.text(520, 45, '', {
+      fontSize: '26px',
+    }).setOrigin(0, 0.5)
 
-    this.add.text(390, 650, '🔊', { fontSize: '20px' }).setOrigin(0.5)
-
-    repeatBtn.on('pointerdown', () => {
-      // TODO: this.sound.play(this.levelConfig?.bases[0]?.audioKey ?? '')
-    })
-
-    repeatBtn.on('pointerover',  () => repeatBtn.setFillStyle(0x9c3aed))
-    repeatBtn.on('pointerout',   () => repeatBtn.setFillStyle(0x7c3aed))
-  }
-
-  // ─── Barra de progresso ───────────────────────────────────────────────────
-
-  private createProgressBar() {
-    const x = 640
-    const y = 695
-    const w = 500
-    const h = 18
-
-    this.add.text(x, y - 20, 'Progresso', {
-      fontSize: '14px',
-      color: '#a78bfa',
-      fontFamily: 'Arial',
+    // Estrelas de nível
+    this.add.text(1060, 26, 'Nível', {
+      fontSize: '14px', color: '#95A5A6', fontFamily: 'Arial',
+    }).setOrigin(0.5)
+    this.levelStars = this.add.text(1060, 58, '★☆☆', {
+      fontSize: '28px', color: '#F1C40F',
     }).setOrigin(0.5)
 
-    this.add.rectangle(x, y, w, h, 0x333344)
-    this.progressBar = this.add.rectangle(x - w / 2, y, 0, h, 0x7c3aed)
-    this.progressBar.setOrigin(0, 0.5)
+    // Botão mute
+    this.createMuteButton()
   }
 
-  // ─── Contadores ───────────────────────────────────────────────────────────
-
-  private createCounters() {
-    this.add.text(1020, 620, '✅ Acertos:', {
-      fontSize: '16px', color: '#86efac', fontFamily: 'Arial',
-    })
-    this.hitsText = this.add.text(1150, 620, '0', {
-      fontSize: '20px', color: '#86efac', fontFamily: 'Arial', fontStyle: 'bold',
-    })
-
-    this.add.text(1020, 650, '❌ Erros:', {
-      fontSize: '16px', color: '#fca5a5', fontFamily: 'Arial',
-    })
-    this.errorsText = this.add.text(1150, 650, '0', {
-      fontSize: '20px', color: '#fca5a5', fontFamily: 'Arial', fontStyle: 'bold',
-    })
-  }
-
-  // ─── Botão Mute ───────────────────────────────────────────────────────────
+  // ── Botão mute ────────────────────────────────────────────────────────────
 
   private createMuteButton() {
     let muted = false
 
-    const btn = this.add.rectangle(1240, 695, 52, 36, 0x333344)
-      .setStrokeStyle(2, 0x7c3aed)
+    const btn = this.add.rectangle(1232, 45, 60, 52, 0xECF0F1, 0.9)
+      .setStrokeStyle(2, 0xBDC3C7)
       .setInteractive({ useHandCursor: true })
 
-    const icon = this.add.text(1240, 695, '🔊', { fontSize: '18px' }).setOrigin(0.5)
+    const icon = this.add.text(1232, 45, '🔊', { fontSize: '26px' }).setOrigin(0.5)
 
     btn.on('pointerdown', () => {
       muted = !muted
       icon.setText(muted ? '🔇' : '🔊')
       EventBus.emit('mute-audio', muted)
     })
-
-    btn.on('pointerover', () => btn.setFillStyle(0x4a3f6b))
-    btn.on('pointerout',  () => btn.setFillStyle(0x333344))
+    btn.on('pointerover', () => btn.setFillStyle(0xD5D8DC))
+    btn.on('pointerout',  () => btn.setFillStyle(0xECF0F1))
   }
 
-  // ─── Listeners do EventBus ────────────────────────────────────────────────
+  // ── Barra inferior ────────────────────────────────────────────────────────
+
+  private createBottomBar() {
+    const BAR_Y = 680
+
+    // Fundo creme
+    this.add.rectangle(640, BAR_Y, 1280, 80, 0xFFF8F0, 0.94)
+      .setStrokeStyle(3, 0xDEB887)
+
+    // Acertos
+    this.add.text(28, BAR_Y, '✅', { fontSize: '22px' }).setOrigin(0, 0.5)
+    this.hitsText = this.add.text(58, BAR_Y, '0', {
+      fontSize: '26px',
+      fontFamily: 'Arial Black, Arial',
+      color: '#27AE60',
+    }).setOrigin(0, 0.5)
+
+    // Erros
+    this.add.text(110, BAR_Y, '✖', {
+      fontSize: '22px', color: '#E74C3C',
+    }).setOrigin(0, 0.5)
+    this.errorsText = this.add.text(140, BAR_Y, '0', {
+      fontSize: '26px',
+      fontFamily: 'Arial Black, Arial',
+      color: '#E74C3C',
+    }).setOrigin(0, 0.5)
+
+    // Rótulo Progresso
+    this.add.text(310, BAR_Y - 16, 'Progresso', {
+      fontSize: '13px', color: '#95A5A6', fontFamily: 'Arial',
+    }).setOrigin(0.5)
+
+    // Barra de progresso
+    const barX = 310
+    const barW = 640
+    this.add.rectangle(barX, BAR_Y + 4, barW, 22, 0xDFE6E9)
+      .setStrokeStyle(1, 0xBDC3C7)
+    this.progressBar = this.add.rectangle(barX - barW / 2, BAR_Y + 4, 0, 22, 0x2ECC71)
+      .setOrigin(0, 0.5)
+
+    // Indicador de nível (texto simples, lado direito)
+    this.add.text(660, BAR_Y - 16, 'Fase', {
+      fontSize: '13px', color: '#95A5A6', fontFamily: 'Arial',
+    }).setOrigin(0, 0.5)
+  }
+
+  // ── Listeners ─────────────────────────────────────────────────────────────
 
   private registerEventListeners() {
     EventBus.on('scene-ready', (data: { levelConfig: LevelConfig }) => {
       this.levelConfig = data.levelConfig
       this.updateRuleText()
+      this.updateLevelStars()
+      this.updateExampleIcons()
+      // Reseta barra de progresso e contadores no início de cada nível
+      this.progressBar.setSize(0, 22)
+      this.hitsText.setText('0')
+      this.errorsText.setText('0')
     }, this)
 
-    EventBus.on('update-progress', (pct: number) => {
-      const w = 500
-      this.progressBar.setSize(w * pct, 18)
-
-      // Atualiza contadores ouvindo hits/errors via progresso
-      const gameScene = this.scene.get('GameScene') as unknown as { hits: number; errors: number }
-      if (gameScene) {
-        this.hitsText.setText(String(gameScene.hits ?? 0))
-        this.errorsText.setText(String(gameScene.errors ?? 0))
-      }
+    EventBus.on('update-progress', (data: { pct: number; hits: number; errors: number }) => {
+      const barW = 640
+      this.progressBar.setSize(barW * data.pct, 22)
+      this.hitsText.setText(String(data.hits))
+      this.errorsText.setText(String(data.errors))
     }, this)
 
     EventBus.on('mute-audio', (_muted: boolean) => {
@@ -158,13 +176,46 @@ export class UIScene extends Phaser.Scene {
     }, this)
   }
 
+  // ── Atualizações de UI ────────────────────────────────────────────────────
+
   private updateRuleText() {
     if (!this.levelConfig) return
-    const attrLabel: Record<string, string> = {
-      cor:     'Separe por COR',
-      forma:   'Separe por FORMA',
-      tamanho: 'Separe por TAMANHO',
+    const map: Record<string, string> = {
+      cor:     'Separe por  COR',
+      forma:   'Separe por  FORMA',
+      tamanho: 'Separe por  TAMANHO',
     }
-    this.ruleText.setText(attrLabel[this.levelConfig.criterion] ?? '')
+    this.ruleText.setText(map[this.levelConfig.criterion] ?? '')
+  }
+
+  private updateLevelStars() {
+    if (!this.levelConfig) return
+    const filled = this.levelConfig.level
+    this.levelStars.setText('★'.repeat(filled) + '☆'.repeat(3 - filled))
+  }
+
+  /** Mostra os ícones das bases ao lado da regra (ex: 🔴 🔵 para cor) */
+  private updateExampleIcons() {
+    if (!this.levelConfig) return
+    const icons = this.levelConfig.bases
+      .map(b => this.getBaseIcon(b.rule.attribute, b.rule.value))
+      .join('  ')
+    this.exampleIcons.setText(icons)
+  }
+
+  private getBaseIcon(attribute: string, value: string): string {
+    if (attribute === 'cor') {
+      const m: Record<string, string> = {
+        vermelho: '🔴', azul: '🔵', verde: '🟢', amarelo: '🟡',
+      }
+      return m[value] ?? '⬜'
+    }
+    if (attribute === 'forma') {
+      const m: Record<string, string> = {
+        circulo: '⭕', quadrado: '⬛', triangulo: '🔺', retangulo: '▬',
+      }
+      return m[value] ?? '?'
+    }
+    return '?'
   }
 }

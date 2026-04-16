@@ -4,14 +4,19 @@ import { ALL_ITEMS } from './items'
 /**
  * Configuração dos 3 níveis do jogo Base dos Classificadores.
  *
- * Nível 1 — Critério único (cor), 4 itens, 2 bases
- *   Scaffolding máximo: cada base aceita apenas uma cor, regra bem visível.
+ * Nível 1 — Critério cor, 4 itens, 2 bases (vermelho / azul), sem timer.
+ *   Scaffolding máximo: apenas 2 cores, regra sempre visível.
  *
- * Nível 2 — Dois critérios alternados (cor e forma), 8 itens, 4 bases
- *   Itens visualmente parecidos para aumentar o desafio da discriminação.
+ * Nível 2 — Critério cor, 8 itens, 4 bases (todas as cores), sem timer.
+ *   Maior volume e mais opções, itens mais parecidos.
  *
- * Nível 3 — Critério forma com exceção por tamanho, 10 itens, 3 bases, 
- *   A regra de classificação é forma, mas há bases com restrição de tamanho.
+ * Nível 3 — Critério forma, 10 itens, 3 bases, timer 90 s.
+ *   Critério muda de cor para forma; temporizador visível.
+ *
+ * Posições das bases (canvas 1280×720, y=570 fixo):
+ *   2 bases → x: 380, 900
+ *   4 bases → x: 190, 450, 710, 970   (gap 20px entre bases de 240px)
+ *   3 bases → x: 280, 640, 1000       (gap 40px entre bases de 200px)
  */
 
 const itemById = (id: string) => {
@@ -21,7 +26,7 @@ const itemById = (id: string) => {
 }
 
 export const LEVELS: LevelConfig[] = [
-  // NÍVEL 1
+  // ── NÍVEL 1 ──────────────────────────────────────────────────────────
   {
     level: 1,
     criterion: 'cor',
@@ -37,21 +42,21 @@ export const LEVELS: LevelConfig[] = [
         rule: { attribute: 'cor', value: 'vermelho' },
         labelKey: 'Vermelho',
         audioKey: 'narr-cor-vermelho',
-        x: 320,
-        y: 560,
+        x: 380,
+        y: 570,
       },
       {
         id: 'base-azul',
         rule: { attribute: 'cor', value: 'azul' },
         labelKey: 'Azul',
         audioKey: 'narr-cor-azul',
-        x: 960,
-        y: 560,
+        x: 900,
+        y: 570,
       },
     ],
   },
 
-  // NÍVEL 2
+  // ── NÍVEL 2 ──────────────────────────────────────────────────────────
   {
     level: 2,
     criterion: 'cor',
@@ -71,40 +76,41 @@ export const LEVELS: LevelConfig[] = [
         rule: { attribute: 'cor', value: 'vermelho' },
         labelKey: 'Vermelho',
         audioKey: 'narr-cor-vermelho',
-        x: 200,
-        y: 560,
+        x: 190,
+        y: 570,
       },
       {
         id: 'base-azul',
         rule: { attribute: 'cor', value: 'azul' },
         labelKey: 'Azul',
         audioKey: 'narr-cor-azul',
-        x: 520,
-        y: 560,
+        x: 450,
+        y: 570,
       },
       {
         id: 'base-verde',
         rule: { attribute: 'cor', value: 'verde' },
         labelKey: 'Verde',
         audioKey: 'narr-cor-verde',
-        x: 760,
-        y: 560,
+        x: 830,
+        y: 570,
       },
       {
         id: 'base-amarelo',
         rule: { attribute: 'cor', value: 'amarelo' },
         labelKey: 'Amarelo',
         audioKey: 'narr-cor-amarelo',
-        x: 1080,
-        y: 560,
+        x: 1090,
+        y: 570,
       },
     ],
   },
 
-  // NÍVEL 3
+  // ── NÍVEL 3 ──────────────────────────────────────────────────────────
   {
     level: 3,
     criterion: 'forma',
+    timeLimit: 90,
     items: [
       itemById('r-cir-m'),
       itemById('a-cir-g'),
@@ -124,7 +130,7 @@ export const LEVELS: LevelConfig[] = [
         labelKey: 'Círculo',
         audioKey: 'narr-forma-circulo',
         x: 280,
-        y: 560,
+        y: 570,
       },
       {
         id: 'base-quadrado',
@@ -132,7 +138,7 @@ export const LEVELS: LevelConfig[] = [
         labelKey: 'Quadrado',
         audioKey: 'narr-forma-quadrado',
         x: 640,
-        y: 560,
+        y: 570,
       },
       {
         id: 'base-triangulo',
@@ -140,7 +146,7 @@ export const LEVELS: LevelConfig[] = [
         labelKey: 'Triângulo',
         audioKey: 'narr-forma-triangulo',
         x: 1000,
-        y: 560,
+        y: 570,
       },
     ],
   },

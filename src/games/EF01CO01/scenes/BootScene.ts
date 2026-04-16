@@ -1,17 +1,21 @@
 import Phaser from 'phaser'
 
 /**
- * BootScene — carrega todos os assets do jogo antes de iniciar.
+ * BootScene — carrega todos os assets e gera texturas programáticas.
  *
- * Como ainda não temos arquivos de áudio/imagem reais, esta Scene:
- * - Exibe uma barra de progresso programática
- * - Marca os loads de áudio como TODO para quando os arquivos existirem
- * - Gera as texturas dos itens programaticamente via Graphics
- *   (formas geométricas coloridas desenhadas diretamente no canvas)
+ * Texturas geradas: `item-{cor}-{forma}-{tamanho}`
+ *   ex: `item-vermelho-circulo-medio`
  *
- * TODO: substituir os blocos marcados por assets reais em:
- *   public/assets/audio/  (.ogg + .mp3)
- *   public/assets/images/ (atlas PNG + JSON)
+ * Cada textura tem:
+ *   1. Sombra (cor escura, deslocamento +5, +5)
+ *   2. Preenchimento sólido com a cor do item
+ *   3. Contorno preto espesso (4 px)
+ *   4. Brilho branco semi-transparente (canto superior-esquerdo)
+ *
+ * Tamanhos base (px no canvas 1280×720):
+ *   pequeno → 56 | medio → 76 | grande → 100
+ *
+ * TODO: substituir por atlas real em public/assets/images/ quando disponível.
  */
 export class BootScene extends Phaser.Scene {
   constructor() {
@@ -21,19 +25,19 @@ export class BootScene extends Phaser.Scene {
   preload() {
     this.createLoadingBar()
 
-    // TODO: carregar atlas de itens quando existir
+    // TODO: atlas de itens
     // this.load.atlas('items', 'assets/images/items.png', 'assets/images/items.json')
 
-    // TODO: carregar áudios quando os arquivos existirem
-    // this.load.audio('sfx-hit',            ['assets/audio/hit.ogg',            'assets/audio/hit.mp3'])
-    // this.load.audio('sfx-miss',           ['assets/audio/miss.ogg',           'assets/audio/miss.mp3'])
-    // this.load.audio('sfx-level',          ['assets/audio/level.ogg',          'assets/audio/level.mp3'])
-    // this.load.audio('narr-cor-vermelho',  ['assets/audio/narr-cor-vermelho.ogg',  'assets/audio/narr-cor-vermelho.mp3'])
-    // this.load.audio('narr-cor-azul',      ['assets/audio/narr-cor-azul.ogg',      'assets/audio/narr-cor-azul.mp3'])
-    // this.load.audio('narr-cor-verde',     ['assets/audio/narr-cor-verde.ogg',     'assets/audio/narr-cor-verde.mp3'])
-    // this.load.audio('narr-cor-amarelo',   ['assets/audio/narr-cor-amarelo.ogg',   'assets/audio/narr-cor-amarelo.mp3'])
-    // this.load.audio('narr-forma-circulo', ['assets/audio/narr-forma-circulo.ogg', 'assets/audio/narr-forma-circulo.mp3'])
-    // this.load.audio('narr-forma-quadrado',['assets/audio/narr-forma-quadrado.ogg','assets/audio/narr-forma-quadrado.mp3'])
+    // TODO: áudios (.ogg + .mp3) — descomentar quando os arquivos existirem
+    // this.load.audio('sfx-hit',             ['assets/audio/hit.ogg',             'assets/audio/hit.mp3'])
+    // this.load.audio('sfx-miss',            ['assets/audio/miss.ogg',            'assets/audio/miss.mp3'])
+    // this.load.audio('sfx-level',           ['assets/audio/level.ogg',           'assets/audio/level.mp3'])
+    // this.load.audio('narr-cor-vermelho',   ['assets/audio/narr-cor-vermelho.ogg',   'assets/audio/narr-cor-vermelho.mp3'])
+    // this.load.audio('narr-cor-azul',       ['assets/audio/narr-cor-azul.ogg',       'assets/audio/narr-cor-azul.mp3'])
+    // this.load.audio('narr-cor-verde',      ['assets/audio/narr-cor-verde.ogg',      'assets/audio/narr-cor-verde.mp3'])
+    // this.load.audio('narr-cor-amarelo',    ['assets/audio/narr-cor-amarelo.ogg',    'assets/audio/narr-cor-amarelo.mp3'])
+    // this.load.audio('narr-forma-circulo',  ['assets/audio/narr-forma-circulo.ogg',  'assets/audio/narr-forma-circulo.mp3'])
+    // this.load.audio('narr-forma-quadrado', ['assets/audio/narr-forma-quadrado.ogg', 'assets/audio/narr-forma-quadrado.mp3'])
     // this.load.audio('narr-forma-triangulo',['assets/audio/narr-forma-triangulo.ogg','assets/audio/narr-forma-triangulo.mp3'])
   }
 
@@ -42,110 +46,181 @@ export class BootScene extends Phaser.Scene {
     this.scene.start('GameScene')
   }
 
-  // ─── Barra de loading ──────────────────────────────────────────────────────
+  // ── Barra de carregamento ────────────────────────────────────────────────
 
   private createLoadingBar() {
     const cx = 640
     const cy = 360
-    const w  = 400
-    const h  = 20
+    const w  = 500
+    const h  = 28
 
-    const bg  = this.add.rectangle(cx, cy, w, h, 0x333344)
-    const bar = this.add.rectangle(cx - w / 2, cy, 0, h, 0x7c3aed)
+    // Fundo amigável (céu claro)
+    this.add.rectangle(640, 360, 1280, 720, 0xB0E8FF)
+
+    // Sol decorativo
+    this.add.circle(100, 100, 55, 0xFFD700)
+    for (let i = 0; i < 8; i++) {
+      const angle = (i / 8) * Math.PI * 2
+      const x1 = 100 + Math.cos(angle) * 65
+      const y1 = 100 + Math.sin(angle) * 65
+      const x2 = 100 + Math.cos(angle) * 85
+      const y2 = 100 + Math.sin(angle) * 85
+      const ray = this.add.graphics()
+      ray.lineStyle(4, 0xFFD700)
+      ray.lineBetween(x1, y1, x2, y2)
+    }
+
+    // Barra de loading
+    this.add.rectangle(cx, cy, w + 8, h + 8, 0x2C3E50, 0.6).setStrokeStyle(3, 0x3498DB)
+    this.add.rectangle(cx - w / 2, cy, 0, h, 0xECF0F1).setOrigin(0, 0.5)  // placeholder
+    const bar = this.add.rectangle(cx - w / 2, cy, 4, h, 0x2ECC71)
     bar.setOrigin(0, 0.5)
 
-    this.add.text(cx, cy - 40, 'Carregando…', {
-      fontSize: '20px',
-      color: '#ffffff',
-      fontFamily: 'Arial',
+    this.add.text(cx, cy - 36, '🎮 Preparando o jogo...', {
+      fontSize: '24px',
+      color: '#2C3E50',
+      fontFamily: 'Arial Black, Arial',
+      stroke: '#FFFFFF',
+      strokeThickness: 4,
     }).setOrigin(0.5)
 
-    bg.setVisible(true)
-
     this.load.on('progress', (value: number) => {
-      bar.setSize(w * value, h)
+      bar.setSize(Math.max(4, w * value), h)
     })
   }
 
-  // ─── Texturas programáticas ────────────────────────────────────────────────
+  // ── Texturas de itens ────────────────────────────────────────────────────
 
   /**
-   * Gera texturas para cada combinação cor×forma×tamanho via Graphics.
-   * Chave de textura: `item-{cor}-{forma}-{tamanho}` (ex: `item-vermelho-circulo-medio`)
+   * Gera textura para cada combinação cor × forma × tamanho.
+   * Chave: `item-{cor}-{forma}-{tamanho}`
    *
-   * Tamanhos em pixels no canvas 1280×720:
-   *   pequeno → 60px | medio → 80px | grande → 104px
+   * Tamanho do canvas de textura = baseSize + 20
+   *   (5 px pad + 5 px shadow + 5 px margin em cada lado)
    */
   private generateItemTextures() {
     const colorMap: Record<string, number> = {
-      vermelho: 0xe53935,
-      azul:     0x1e88e5,
-      verde:    0x43a047,
-      amarelo:  0xfdd835,
+      vermelho: 0xE53935,
+      azul:     0x1E88E5,
+      verde:    0x43A047,
+      amarelo:  0xFDD835,
     }
 
     const sizeMap: Record<string, number> = {
-      pequeno: 60,
-      medio:   80,
-      grande:  104,
+      pequeno: 56,
+      medio:   76,
+      grande:  100,
     }
 
-    const cores   = ['vermelho', 'azul', 'verde', 'amarelo']
-    const formas  = ['circulo', 'quadrado', 'triangulo', 'retangulo']
+    const cores    = ['vermelho', 'azul', 'verde', 'amarelo']
+    const formas   = ['circulo', 'quadrado', 'triangulo', 'retangulo']
     const tamanhos = ['pequeno', 'medio', 'grande']
 
     for (const cor of cores) {
       for (const forma of formas) {
         for (const tamanho of tamanhos) {
           const key  = `item-${cor}-${forma}-${tamanho}`
-          const size = sizeMap[tamanho]
-          const fill = colorMap[cor]
-
           if (this.textures.exists(key)) continue
 
+          const size    = sizeMap[tamanho]
+          const fill    = colorMap[cor]
+          const canvasW = size + 20
+          const canvasH = size + 20
+
           const gfx = this.add.graphics()
-          gfx.fillStyle(fill, 1)
-          gfx.lineStyle(3, 0x000000, 0.3)
-
-          this.drawShape(gfx, forma, size)
-
-          gfx.generateTexture(key, size + 10, size + 10)
+          this.drawEnhancedShape(gfx, forma, size, fill)
+          gfx.generateTexture(key, canvasW, canvasH)
           gfx.destroy()
         }
       }
     }
   }
 
-  private drawShape(gfx: Phaser.GameObjects.Graphics, forma: string, size: number) {
-    const half = size / 2
-    const pad  = 5 // margem interna
+  // ── Desenho de formas ────────────────────────────────────────────────────
+
+  /**
+   * Desenha uma forma com:
+   *   1. Sombra escura (offset +5, +5)
+   *   2. Preenchimento com a cor recebida
+   *   3. Contorno preto espesso
+   *   4. Brilho branco superior-esquerdo
+   *
+   * Coordenada central: (cx, cy) = (size/2 + 7, size/2 + 7)
+   * Isso garante que sombra (cx+5, cy+5) + meio raio caibam no canvas.
+   */
+  private drawEnhancedShape(
+    gfx: Phaser.GameObjects.Graphics,
+    forma: string,
+    size: number,
+    fill: number,
+  ) {
+    const half   = size / 2
+    const cx     = half + 7
+    const cy     = half + 7
+    const shadow = 0x000000
 
     switch (forma) {
-      case 'circulo':
-        gfx.fillCircle(half + pad, half + pad, half)
-        gfx.strokeCircle(half + pad, half + pad, half)
-        break
-
-      case 'quadrado':
-        gfx.fillRect(pad, pad, size, size)
-        gfx.strokeRect(pad, pad, size, size)
-        break
-
-      case 'triangulo': {
-        const pts = [
-          { x: half + pad, y: pad },
-          { x: pad,        y: size + pad },
-          { x: size + pad, y: size + pad },
-        ]
-        gfx.fillTriangle(pts[0].x, pts[0].y, pts[1].x, pts[1].y, pts[2].x, pts[2].y)
-        gfx.strokeTriangle(pts[0].x, pts[0].y, pts[1].x, pts[1].y, pts[2].x, pts[2].y)
+      case 'circulo': {
+        // Sombra
+        gfx.fillStyle(shadow, 0.28)
+        gfx.fillCircle(cx + 5, cy + 5, half)
+        // Corpo
+        gfx.fillStyle(fill, 1)
+        gfx.fillCircle(cx, cy, half)
+        // Contorno
+        gfx.lineStyle(4, 0x000000, 0.55)
+        gfx.strokeCircle(cx, cy, half)
+        // Brilho
+        gfx.fillStyle(0xFFFFFF, 0.45)
+        gfx.fillCircle(cx - half * 0.28, cy - half * 0.28, half * 0.22)
         break
       }
 
-      case 'retangulo':
-        gfx.fillRect(pad, pad + size * 0.2, size, size * 0.6)
-        gfx.strokeRect(pad, pad + size * 0.2, size, size * 0.6)
+      case 'quadrado': {
+        const x0 = cx - half
+        const y0 = cy - half
+        gfx.fillStyle(shadow, 0.28)
+        gfx.fillRect(x0 + 5, y0 + 5, size, size)
+        gfx.fillStyle(fill, 1)
+        gfx.fillRect(x0, y0, size, size)
+        gfx.lineStyle(4, 0x000000, 0.55)
+        gfx.strokeRect(x0, y0, size, size)
+        gfx.fillStyle(0xFFFFFF, 0.45)
+        gfx.fillRect(x0 + 5, y0 + 5, size * 0.32, size * 0.32)
         break
+      }
+
+      case 'triangulo': {
+        const t = [
+          { x: cx,        y: cy - half },
+          { x: cx - half, y: cy + half },
+          { x: cx + half, y: cy + half },
+        ]
+        gfx.fillStyle(shadow, 0.28)
+        gfx.fillTriangle(t[0].x+5, t[0].y+5, t[1].x+5, t[1].y+5, t[2].x+5, t[2].y+5)
+        gfx.fillStyle(fill, 1)
+        gfx.fillTriangle(t[0].x, t[0].y, t[1].x, t[1].y, t[2].x, t[2].y)
+        gfx.lineStyle(4, 0x000000, 0.55)
+        gfx.strokeTriangle(t[0].x, t[0].y, t[1].x, t[1].y, t[2].x, t[2].y)
+        gfx.fillStyle(0xFFFFFF, 0.45)
+        gfx.fillCircle(cx, cy - half * 0.1, half * 0.2)
+        break
+      }
+
+      case 'retangulo': {
+        const rh = size * 0.55
+        const rx = cx - half
+        const ry = cy - rh / 2
+        gfx.fillStyle(shadow, 0.28)
+        gfx.fillRect(rx + 5, ry + 5, size, rh)
+        gfx.fillStyle(fill, 1)
+        gfx.fillRect(rx, ry, size, rh)
+        gfx.lineStyle(4, 0x000000, 0.55)
+        gfx.strokeRect(rx, ry, size, rh)
+        gfx.fillStyle(0xFFFFFF, 0.45)
+        gfx.fillRect(rx + 5, ry + 5, size * 0.32, rh * 0.38)
+        break
+      }
     }
   }
 }

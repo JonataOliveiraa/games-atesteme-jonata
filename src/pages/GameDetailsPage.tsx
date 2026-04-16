@@ -234,7 +234,9 @@ export default function GameDetailsPage() {
           <GameLauncher
             gameCode={gameCode}
             level={currentLevel}
-            points={points}
+            gameName={game.title}
+            gameDescription={game.description}
+            gameIcon={game.icon}
             config={gameConfig}
             onComplete={handleGameEventFromPhaser}
             onExit={handleExit}
