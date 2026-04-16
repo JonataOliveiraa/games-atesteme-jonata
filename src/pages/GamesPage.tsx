@@ -8,7 +8,7 @@ const ITEMS_PER_PAGE = 6;
 
 export default function GamesPage() {
   const [currentPage, setCurrentPage] = useState(1);
-  const { canPlay, blockedUntil } = useGame();
+  const { blockedGamesCount } = useGame();
 
   const { playBeep } = useBeepSound({
     frequency: 760,
@@ -48,16 +48,11 @@ export default function GamesPage() {
         Escolha um jogo, divirta-se e acumule pontos!
       </p>
 
-      {!canPlay && (
+      {blockedGamesCount > 0 && (
         <div className="blocked-banner">
-          Você está bloqueada para jogar no momento.
-          {blockedUntil && (
-            <span>
-              {" "}
-              Liberação automática em:{" "}
-              <strong>{new Date(blockedUntil).toLocaleString("pt-BR")}</strong>
-            </span>
-          )}
+          Você possui {blockedGamesCount} jogo
+          {blockedGamesCount > 1 ? "s" : ""} bloqueado
+          {blockedGamesCount > 1 ? "s" : ""}. Os outros continuam liberados.
         </div>
       )}
 

@@ -1,3 +1,5 @@
+import { games } from "../data/games";
+
 import {
   useCallback,
   useEffect,
@@ -5,203 +7,298 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { GameContext } from "./gameContextInstance";
-import type { GameEventPayload, UserGameHistory } from "../types/platform";
+import { GameContext } from "./gameContextInstance"
+import type {
+  BlockedGamesMap,
+  GameEventPayload,
+  UserGameHistory,
+} from "../types/platform";
+
+const STORAGE_KEY = "platform-state-v2";
 
 type PlatformState = {
   points: number;
-  isBlocked: boolean;
-  blockedUntil: string | null;
   unlockCost: number;
+  blockedGames: BlockedGamesMap;
   history: UserGameHistory[];
 };
 
 export type GameContextType = {
   points: number;
-  isBlocked: boolean;
-  blockedUntil: string | null;
   unlockCost: number;
   history: UserGameHistory[];
-  canPlay: boolean;
+  blockedGames: BlockedGamesMap;
+  blockedGamesCount: number;
   handleGameEvent: (event: GameEventPayload) => void;
-  unlockAccess: () => boolean;
+  isGameBlocked: (gameId: string) => boolean;
+  getGameBlockedUntil: (gameId: string) => string | null;
+  getBlockedGames: () => BlockedGamesMap;
+  unlockGameAccess: (gameId: string) => boolean;
+  resetProgress: () => void;
 };
 
-const STORAGE_KEY = "atesteme-platform-data-v2";
+type Props = {
+  children: ReactNode;
+};
 
-const initialState: PlatformState = {
+const INITIAL_STATE: PlatformState = {
   points: 0,
-  isBlocked: false,
-  blockedUntil: null,
   unlockCost: 30,
+  blockedGames: {},
   history: [],
 };
 
-function isBlockStillActive(blockedUntil: string | null): boolean {
-  if (!blockedUntil) return false;
-  return new Date(blockedUntil).getTime() > Date.now();
+const GAME_CODE_TO_SLUG: Record<string, string> = {
+  EF01CO01: "base-dos-classificadores",
+};
+
+function normalizeGameId(gameId: string): string {
+  const gameBySlug = games.find((game) => game.slug === gameId);
+  if (gameBySlug) return gameBySlug.slug;
+
+  return GAME_CODE_TO_SLUG[gameId] ?? gameId;
 }
 
 function getBlockedUntilAfterTwoDays(): string {
-  const date = new Date();
-  date.setDate(date.getDate() + 2);
-  return date.toISOString();
+  const now = new Date();
+  now.setDate(now.getDate() + 2);
+  return now.toISOString();
 }
 
-function createHistoryItem(params: {
-  gameId: string;
-  stage: number;
-  eventType: UserGameHistory["eventType"];
-  pointsEarned: number;
-}): UserGameHistory {
+function createHistoryItem(
+  gameId: string,
+  stage: number,
+  eventType: UserGameHistory["eventType"],
+  pointsEarned: number
+): UserGameHistory {
   return {
-    gameId: params.gameId,
-    stage: params.stage,
-    eventType: params.eventType,
-    pointsEarned: params.pointsEarned,
+    gameId: normalizeGameId(gameId),
+    stage,
+    eventType,
+    pointsEarned,
     createdAt: new Date().toISOString(),
   };
 }
 
-function normalizeState(state: PlatformState): PlatformState {
-  if (state.isBlocked && !isBlockStillActive(state.blockedUntil)) {
+function isBlockStillActive(blockedUntil: string | null | undefined): boolean {
+  if (!blockedUntil) return false;
+  return new Date(blockedUntil).getTime() > Date.now();
+}
+
+function normalizeBlockedGames(
+  blockedGames: BlockedGamesMap,
+  history: UserGameHistory[]
+): { blockedGames: BlockedGamesMap; history: UserGameHistory[] } {
+  const nextBlockedGames: BlockedGamesMap = {};
+  const newHistoryItems: UserGameHistory[] = [];
+
+  Object.entries(blockedGames).forEach(([gameId, blockedUntil]) => {
+    if (isBlockStillActive(blockedUntil)) {
+      nextBlockedGames[gameId] = blockedUntil;
+      return;
+    }
+
+    newHistoryItems.push(
+      createHistoryItem(gameId, 0, "UNLOCKED_BY_TIME", 0)
+    );
+  });
+
+  if (newHistoryItems.length === 0) {
     return {
-      ...state,
-      isBlocked: false,
-      blockedUntil: null,
-      history: [
-        createHistoryItem({
-          gameId: "platform",
-          stage: 0,
-          eventType: "UNLOCKED_BY_TIME",
-          pointsEarned: 0,
-        }),
-        ...state.history,
-      ],
+      blockedGames: nextBlockedGames,
+      history,
     };
   }
 
-  return state;
+  return {
+    blockedGames: nextBlockedGames,
+    history: [...newHistoryItems, ...history],
+  };
 }
 
-function getInitialState(): PlatformState {
-  const savedData = localStorage.getItem(STORAGE_KEY);
+function normalizeState(state: PlatformState): PlatformState {
+  const normalized = normalizeBlockedGames(state.blockedGames, state.history);
 
-  if (!savedData) return initialState;
+  return {
+    ...state,
+    blockedGames: normalized.blockedGames,
+    history: normalized.history,
+  };
+}
+
+function loadInitialState(): PlatformState {
+  const raw = localStorage.getItem(STORAGE_KEY);
+
+  if (!raw) {
+    return INITIAL_STATE;
+  }
 
   try {
-    const parsed = JSON.parse(savedData) as PlatformState;
-    return normalizeState(parsed);
+    const parsed = JSON.parse(raw) as Partial<PlatformState>;
+
+    return normalizeState({
+      points: parsed.points ?? INITIAL_STATE.points,
+      unlockCost: parsed.unlockCost ?? INITIAL_STATE.unlockCost,
+      blockedGames: parsed.blockedGames ?? {},
+      history: parsed.history ?? [],
+    });
   } catch {
-    return initialState;
+    return INITIAL_STATE;
   }
 }
 
-export function GameProvider({ children }: { children: ReactNode }) {
-  const [state, setState] = useState<PlatformState>(getInitialState);
-
-  useEffect(() => {
-    const interval = window.setInterval(() => {
-      setState((prev) => normalizeState(prev));
-    }, 60000);
-
-    return () => window.clearInterval(interval);
-  }, []);
+export function GameProvider({ children }: Props) {
+  const [state, setState] = useState<PlatformState>(loadInitialState);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   }, [state]);
 
-  const canPlay = !state.isBlocked
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      setState((prev) => normalizeState(prev));
+    }, 30_000);
 
-  const handleGameEvent = useCallback((event: GameEventPayload) => {
-    setState((prev) => {
-      const historyItems: UserGameHistory[] = [
-        createHistoryItem({
-          gameId: event.gameId,
-          stage: event.stage,
-          eventType: event.type,
-          pointsEarned: event.pointsEarned,
-        }),
-      ];
-
-      const nextPoints = Math.max(0, prev.points + event.pointsEarned);
-
-      const nextState: PlatformState = {
-       ...prev,
-      points: nextPoints,
-       history: [...historyItems, ...prev.history],
-      };
-      if (event.type === "GAME_OVER") {
-        nextState.isBlocked = true;
-        nextState.blockedUntil = getBlockedUntilAfterTwoDays();
-
-        nextState.history = [
-          createHistoryItem({
-            gameId: event.gameId,
-            stage: event.stage,
-            eventType: "BLOCKED",
-            pointsEarned: 0,
-          }),
-          ...nextState.history,
-        ];
-      }
-
-      return normalizeState(nextState);
-    });
+    return () => {
+      window.clearInterval(interval);
+    };
   }, []);
 
-  const unlockAccess = useCallback((): boolean => {
-    if (!state.isBlocked || !isBlockStillActive(state.blockedUntil)) {
-      return false;
+  const handleGameEvent = useCallback((event: GameEventPayload) => {
+  setState((prev) => {
+    const normalizedGameId = normalizeGameId(event.gameId);
+
+    const historyItems: UserGameHistory[] = [
+      createHistoryItem(
+        normalizedGameId,
+        event.stage,
+        event.type,
+        event.pointsEarned
+      ),
+    ];
+
+    const nextPoints = Math.max(0, prev.points + event.pointsEarned);
+
+    const nextBlockedGames = { ...prev.blockedGames };
+
+    if (event.type === "GAME_OVER") {
+      const blockedUntil = getBlockedUntilAfterTwoDays();
+
+      nextBlockedGames[normalizedGameId] = blockedUntil;
+
+      historyItems.unshift(
+        createHistoryItem(normalizedGameId, event.stage, "BLOCKED", 0)
+      );
     }
 
-    if (state.points < state.unlockCost) {
-      return false;
+    return normalizeState({
+      ...prev,
+      points: nextPoints,
+      blockedGames: nextBlockedGames,
+      history: [...historyItems, ...prev.history],
+    });
+  });
+}, []);
+
+  const isGameBlocked = useCallback(
+    (gameId: string) => {
+    const normalizedGameId = normalizeGameId(gameId);
+    const blockedUntil = state.blockedGames[normalizedGameId];
+    return isBlockStillActive(blockedUntil);
+  },
+  [state.blockedGames]
+);
+
+  const getGameBlockedUntil = useCallback(
+    (gameId: string) => {
+    const normalizedGameId = normalizeGameId(gameId);
+    const blockedUntil = state.blockedGames[normalizedGameId];
+    return isBlockStillActive(blockedUntil) ? blockedUntil : null;
+  },
+  [state.blockedGames]
+);
+
+  const getBlockedGames = useCallback(() => {
+    return state.blockedGames;
+  }, [state.blockedGames]);
+
+  const unlockGameAccess = useCallback((gameId: string) => {
+  const normalizedGameId = normalizeGameId(gameId);
+  let unlocked = false;
+
+  setState((prev) => {
+    const blockedUntil = prev.blockedGames[normalizedGameId];
+
+    if (!isBlockStillActive(blockedUntil)) {
+      return prev;
     }
 
-    setState((prev) => ({
+    if (prev.points < prev.unlockCost) {
+      return prev;
+    }
+
+    const nextBlockedGames = { ...prev.blockedGames };
+    delete nextBlockedGames[normalizedGameId];
+
+    unlocked = true;
+
+    return normalizeState({
       ...prev,
       points: prev.points - prev.unlockCost,
-      isBlocked: false,
-      blockedUntil: null,
+      blockedGames: nextBlockedGames,
       history: [
-        createHistoryItem({
-          gameId: "platform",
-          stage: 0,
-          eventType: "UNLOCKED_BY_POINTS",
-          pointsEarned: 0,
-        }),
+        createHistoryItem(
+          normalizedGameId,
+          0,
+          "UNLOCKED_BY_POINTS",
+          -prev.unlockCost
+        ),
         ...prev.history,
       ],
-    }));
+    });
+  });
 
-    return true;
-  }, [state.isBlocked, state.blockedUntil, state.points, state.unlockCost]);
+  return unlocked;
+}, []);
+
+  const blockedGamesCount = useMemo(() => {
+    return Object.values(state.blockedGames).filter((blockedUntil) =>
+      isBlockStillActive(blockedUntil)
+    ).length;
+  }, [state.blockedGames]);
+
+  /*botão reset para teste*/
+  const resetProgress = useCallback(() => {
+    setState(INITIAL_STATE);
+    localStorage.removeItem(STORAGE_KEY);
+  }, []);
 
   const value = useMemo<GameContextType>(
     () => ({
       points: state.points,
-      isBlocked: state.isBlocked && isBlockStillActive(state.blockedUntil),
-      blockedUntil:
-        state.isBlocked && isBlockStillActive(state.blockedUntil)
-          ? state.blockedUntil
-          : null,
       unlockCost: state.unlockCost,
       history: state.history,
-      canPlay,
+      blockedGames: state.blockedGames,
+      blockedGamesCount,
       handleGameEvent,
-      unlockAccess,
+      isGameBlocked,
+      getGameBlockedUntil,
+      getBlockedGames,
+      unlockGameAccess,
+      resetProgress,
     }),
     [
       state.points,
-      state.isBlocked,
-      state.blockedUntil,
       state.unlockCost,
       state.history,
-      canPlay,
+      state.blockedGames,
+      blockedGamesCount,
       handleGameEvent,
-      unlockAccess,
+      isGameBlocked,
+      getGameBlockedUntil,
+      getBlockedGames,
+      unlockGameAccess,
+      resetProgress,
     ]
   );
 

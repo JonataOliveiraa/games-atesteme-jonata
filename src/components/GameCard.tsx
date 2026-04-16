@@ -1,4 +1,6 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
+import ConfirmModal from "./ConfirmModal";
 import { useBeepSound } from "../hooks/useBeepSound";
 import { useGame } from "../context/useGame";
 import type { Game } from "../types/game";
@@ -15,41 +17,89 @@ export default function GameCard({ game }: Props) {
     type: "sine",
   });
 
-  const { canPlay, blockedUntil } = useGame();
+  const { isGameBlocked, getGameBlockedUntil, unlockGameAccess, unlockCost } =
+    useGame();
+
+  const [showUnlockModal, setShowUnlockModal] = useState(false);
+  const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
+
+  const blocked = isGameBlocked(game.slug);
+  const blockedUntil = getGameBlockedUntil(game.slug);
 
   const handleClick: React.MouseEventHandler<HTMLAnchorElement> = (event) => {
-    if (!canPlay) {
-      event.preventDefault();
-      alert(
-        `Você está bloqueada para jogar no momento.${
-          blockedUntil ? ` Liberação automática em: ${new Date(blockedUntil).toLocaleString("pt-BR")}.` : ""
-        }`
+    if (!blocked) return;
+
+    event.preventDefault();
+    setShowUnlockModal(true);
+  };
+
+  const handleConfirmUnlock = () => {
+    const success = unlockGameAccess(game.slug);
+
+    if (!success) {
+      setFeedbackMessage(
+        "Você não possui pontos suficientes para liberar este jogo."
       );
+      setShowUnlockModal(false);
+      return;
     }
+
+    setFeedbackMessage(`O jogo "${game.title}" foi desbloqueado com sucesso.`);
+    setShowUnlockModal(false);
   };
 
   return (
-    <Link
-      to={`/jogos/${game.slug}`}
-      className="game-card-link"
-      onMouseEnter={playBeep}
-      onClick={handleClick}
-    >
-      <div className={`game-card ${!canPlay ? "game-card-disabled" : ""}`}>
-        <div className="game-card-top">
-          <div className="game-icon-box">{game.icon}</div>
-        </div>
+    <>
+      <Link
+        to={`/jogos/${game.slug}`}
+        className="game-card-link"
+        onMouseEnter={playBeep}
+        onClick={handleClick}
+      >
+        <div className={`game-card ${blocked ? "game-card-disabled" : ""}`}>
+          <div className="game-card-top">
+            <div className="game-icon-box">{game.icon}</div>
+          </div>
 
-        <div className="game-card-content">
-          <h3>{game.title}</h3>
-          <p>{game.description}</p>
+          <div className="game-card-content">
+            <h3>{game.title}</h3>
+            <p>{game.description}</p>
 
-          <div className="game-meta">
-            <span>{game.category}</span>
-            <span>+{game.points} pts</span>
+            <div className="game-meta">
+              <span>{game.category}</span>
+              <span>{blocked ? "Bloqueado" : `+${game.points} pts`}</span>
+            </div>
           </div>
         </div>
-      </div>
-    </Link>
+      </Link>
+
+      <ConfirmModal
+        isOpen={showUnlockModal}
+        title="Jogo bloqueado"
+        message={
+          blockedUntil
+            ? `O jogo "${game.title}" está bloqueado até ${new Date(
+                blockedUntil
+              ).toLocaleString(
+                "pt-BR"
+              )} porque suas tentativas foram esgotadas. Deseja liberar o acesso por ${unlockCost} pontos?`
+            : `O jogo "${game.title}" está bloqueado porque suas tentativas foram esgotadas. Deseja liberar o acesso por ${unlockCost} pontos?`
+        }
+        confirmText="Confirmar"
+        cancelText="Cancelar"
+        onConfirm={handleConfirmUnlock}
+        onCancel={() => setShowUnlockModal(false)}
+      />
+
+      <ConfirmModal
+        isOpen={!!feedbackMessage}
+        title="Aviso"
+        message={feedbackMessage ?? ""}
+        confirmText="Fechar"
+        cancelText=""
+        onConfirm={() => setFeedbackMessage(null)}
+        onCancel={() => setFeedbackMessage(null)}
+      />
+    </>
   );
 }
