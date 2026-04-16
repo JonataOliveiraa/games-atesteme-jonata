@@ -283,6 +283,7 @@ button {
   border-radius: 16px;
   padding: 2rem;
   box-shadow: var(--shadow);
+  border: 1px solid var(--border);
 }
 
 .reward-top {
@@ -596,6 +597,7 @@ button {
   border-radius: 16px;
   padding: 18px 20px;
   box-shadow: var(--shadow);
+  border: 1px solid var(--border);
 }
 
 .history-main {
@@ -1084,4 +1086,139 @@ button {
   .ranking-user-card {
     align-items: flex-start;
   }
+}
+
+/* ============================================ */
+/* MODAL */
+
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.42);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 9999;
+}
+
+.modal-card {
+  width: 100%;
+  max-width: 460px;
+  background: var(--white);
+  border-radius: 18px;
+  box-shadow: var(--shadow);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.modal-header {
+  padding: 22px 22px 10px;
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: 1.3rem;
+  color: var(--text);
+}
+
+.modal-body {
+  padding: 0 22px 22px;
+}
+
+.modal-body p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.6;
+  font-size: 1rem;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 0 22px 22px;
+}
+
+.modal-button {
+  border: none;
+  border-radius: 12px;
+  padding: 12px 18px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.modal-button:hover {
+  transform: translateY(-1px);
+}
+
+.modal-button-secondary {
+  background: #f3f4f6;
+  color: var(--text);
+}
+
+.modal-button-primary {
+  background: linear-gradient(135deg, var(--primary-dark), var(--primary));
+  color: white;
+}
+
+.modal-button-danger {
+  background: #dc2626;
+  color: white;
+}
+
+/* ============================================ */
+/* STATUS TAGS */
+
+.status-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.status-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: var(--primary-soft);
+  color: var(--primary-dark);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.stat-sub {
+  margin-top: 8px;
+  font-size: 0.92rem;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.stat-main {
+  display: block;
+  font-size: 1.9rem;
+  font-weight: 800;
+  color: var(--text);
+  line-height: 1.1;
+  margin-top: 4px;
+}
+
+/*botão reset*/
+.reset-dev-button {
+  background: transparent;
+  border: 1px solid var(--primary);
+  color: var(--primary);
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.reset-dev-button:hover {
+  background: var(--primary);
+  color: white;
 }
