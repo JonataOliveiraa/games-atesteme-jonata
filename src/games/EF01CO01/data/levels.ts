@@ -120,8 +120,8 @@ export const LEVELS: LevelConfig[] = [
       itemById('v-qua-g'),
       itemById('r-tri-p'),
       itemById('a-tri-g'),
-      itemById('r-ret-m'),
-      itemById('a-ret-p'),
+      itemById('v-tri-m'),
+      itemById('am-tri-p'),
     ],
     bases: [
       {

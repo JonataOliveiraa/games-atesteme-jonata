@@ -91,6 +91,7 @@ export class GameScene extends Phaser.Scene {
   // ── Listener arrow (permite remover com referência exata) ───────────────
 
   private handleSetLevel = (data: { level: number }) => {
+    if (data.level === this.levelConfig.level) return
     this.scene.restart({ level: data.level })
   }
 
