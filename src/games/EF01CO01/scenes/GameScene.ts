@@ -317,45 +317,106 @@ export class GameScene extends Phaser.Scene {
   private createBase(baseData: ClassifierBase): Phaser.GameObjects.Container {
     const w = 210
     const h = 145
-
     const borderColor = this.getBaseColor(baseData)
+    const headerY = -h / 2 + 22
 
-    // Sombra da base
     const shadow = this.add.rectangle(5, 5, w, h, 0x000000, 0.18)
 
-    // Painel principal: fundo levemente tintado + borda colorida
-    const panel = this.add.rectangle(0, 0, w, h, 0xFFFFFF, 0.92)
+    const panel = this.add.rectangle(0, 0, w, h, 0xFFFFFF, 0.95)
     panel.setStrokeStyle(6, borderColor)
 
-    // Topo colorido (faixa de cor)
-    const header = this.add.rectangle(0, -h / 2 + 22, w, 44, borderColor, 0.85)
+    // Cabeçalho totalmente opaco (sem alpha)
+    const header = this.add.rectangle(0, headerY, w, 44, borderColor)
 
-    // Ícone grande
-    const icon = this.add.text(0, -h / 2 + 22, this.getAttributeIcon(baseData.rule.attribute, baseData.rule.value), {
-      fontSize: '32px',
-    }).setOrigin(0.5)
-
-    // Rótulo
-    const label = this.add.text(0, 22, baseData.labelKey, {
-      fontSize: '22px',
+    // Rótulo no cabeçalho (texto branco sobre cor viva)
+    const headerLabel = this.add.text(0, headerY, baseData.labelKey, {
+      fontSize: '19px',
       fontFamily: 'Arial Black, Arial',
-      color: '#1A1A2E',
-      stroke: '#FFFFFF',
+      color: '#FFFFFF',
+      stroke: '#000000',
       strokeThickness: 3,
     }).setOrigin(0.5)
 
-    // Seta "coloque aqui" (▼)
-    const arrow = this.add.text(0, h / 2 - 16, '▼', {
-      fontSize: '18px', color: '#888888'
+    // Ícone desenhado com Graphics no painel branco
+    const iconGfx = this.drawBaseIcon(baseData)
+    iconGfx.setPosition(0, 10)
+
+    const arrow = this.add.text(0, h / 2 - 14, '▼', {
+      fontSize: '16px', color: '#888888',
     }).setOrigin(0.5)
 
-    // Zona de drop
     const zone = this.add.zone(0, 0, w, h)
     zone.setRectangleDropZone(w, h)
 
-    const container = this.add.container(baseData.x, baseData.y, [shadow, panel, header, icon, label, arrow, zone])
+    const container = this.add.container(baseData.x, baseData.y, [shadow, panel, header, headerLabel, iconGfx, arrow, zone])
     container.setData('baseData', baseData)
     return container
+  }
+
+  private drawBaseIcon(baseData: ClassifierBase): Phaser.GameObjects.Graphics {
+    const gfx = this.add.graphics()
+    const { attribute, value } = baseData.rule
+    const sz = 18
+    const themeColor = this.getBaseColor(baseData)
+
+    if (attribute === 'cor') {
+      const colorMap: Record<string, number> = {
+        vermelho: 0xE53935, azul: 0x1E88E5, verde: 0x43A047, amarelo: 0xFDD835,
+      }
+      const fill = colorMap[value] ?? 0x9E9E9E
+      // Mini item idêntico aos itens do jogo: sombra + preenchimento + contorno + brilho
+      gfx.fillStyle(0x000000, 0.22)
+      gfx.fillCircle(3, 3, sz)
+      gfx.fillStyle(fill, 1)
+      gfx.fillCircle(0, 0, sz)
+      gfx.lineStyle(3, 0x000000, 0.5)
+      gfx.strokeCircle(0, 0, sz)
+      gfx.fillStyle(0xFFFFFF, 0.45)
+      gfx.fillCircle(-sz * 0.28, -sz * 0.28, sz * 0.25)
+      return gfx
+    }
+
+    if (attribute === 'forma') {
+      // Forma desenhada com a cor temática da base
+      const fill = themeColor
+      switch (value) {
+        case 'circulo':
+          gfx.fillStyle(0x000000, 0.22)
+          gfx.fillCircle(3, 3, sz)
+          gfx.fillStyle(fill, 1)
+          gfx.fillCircle(0, 0, sz)
+          gfx.lineStyle(3, 0x000000, 0.5)
+          gfx.strokeCircle(0, 0, sz)
+          gfx.fillStyle(0xFFFFFF, 0.45)
+          gfx.fillCircle(-sz * 0.28, -sz * 0.28, sz * 0.25)
+          break
+
+        case 'quadrado':
+          gfx.fillStyle(0x000000, 0.22)
+          gfx.fillRect(3 - sz, 3 - sz, sz * 2, sz * 2)
+          gfx.fillStyle(fill, 1)
+          gfx.fillRect(-sz, -sz, sz * 2, sz * 2)
+          gfx.lineStyle(3, 0x000000, 0.5)
+          gfx.strokeRect(-sz, -sz, sz * 2, sz * 2)
+          gfx.fillStyle(0xFFFFFF, 0.45)
+          gfx.fillRect(-sz + 4, -sz + 4, sz * 0.55, sz * 0.55)
+          break
+
+        case 'triangulo': {
+          gfx.fillStyle(0x000000, 0.22)
+          gfx.fillTriangle(3, -sz + 3, -sz + 3, sz + 3, sz + 3, sz + 3)
+          gfx.fillStyle(fill, 1)
+          gfx.fillTriangle(0, -sz, -sz, sz, sz, sz)
+          gfx.lineStyle(3, 0x000000, 0.5)
+          gfx.strokeTriangle(0, -sz, -sz, sz, sz, sz)
+          gfx.fillStyle(0xFFFFFF, 0.45)
+          gfx.fillCircle(0, -sz * 0.1, sz * 0.22)
+          break
+        }
+      }
+    }
+
+    return gfx
   }
 
   // ── Itens arrastáveis ────────────────────────────────────────────────────
@@ -717,25 +778,4 @@ export class GameScene extends Phaser.Scene {
     return 0xFFB300
   }
 
-  private getAttributeIcon(attribute: string, value: string): string {
-    if (attribute === 'cor') {
-      const map: Record<string, string> = {
-        vermelho: '🔴', azul: '🔵', verde: '🟢', amarelo: '🟡',
-      }
-      return map[value] ?? '⬜'
-    }
-    if (attribute === 'forma') {
-      const map: Record<string, string> = {
-        circulo: '⭕', quadrado: '⬛', triangulo: '🔺', retangulo: '▬',
-      }
-      return map[value] ?? '?'
-    }
-    if (attribute === 'tamanho') {
-      const map: Record<string, string> = {
-        pequeno: '🔹', medio: '🔷', grande: '💠',
-      }
-      return map[value] ?? '?'
-    }
-    return '?'
-  }
 }
