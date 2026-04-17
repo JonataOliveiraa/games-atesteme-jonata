@@ -423,7 +423,7 @@ export class GameScene extends Phaser.Scene {
 
   private createItems() {
     this.itemSprites = []
-    const items  = this.levelConfig.items
+    const items  = Phaser.Utils.Array.Shuffle([...this.levelConfig.items])
     const n      = items.length
     const gap    = Math.min(125, Math.floor(1100 / Math.max(1, n - 1)))
     const startX = 640 - ((n - 1) * gap) / 2
