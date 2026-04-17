@@ -79,6 +79,10 @@ export default function GameDetailsPage() {
       setCameFromGameOver(true);
       setShowGameOverModal(true);
     }
+
+    if (event.type === "GAME_COMPLETED") {
+      navigate("/", { replace: true });
+    }
   };
 
   const handleUnlockAfterGameOver = () => {

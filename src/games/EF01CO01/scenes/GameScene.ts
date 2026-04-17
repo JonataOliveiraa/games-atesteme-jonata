@@ -473,7 +473,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private onTimeUp() {
-    this.endRound()
+    this.endRound('timeout')
   }
 
   // ── Drag & Drop ───────────────────────────────────────────────────────────
@@ -640,9 +640,14 @@ export class GameScene extends Phaser.Scene {
     if (remaining === 0) this.endRound()
   }
 
-  private endRound() {
+  private endRound(reason: 'complete' | 'timeout' = 'complete') {
     this.input.enabled = false
     this.timerEvent?.destroy()
+
+    if (reason === 'timeout') {
+      this.showTimeUp()
+      return
+    }
 
     if (this.errors === 0) {
       EventBus.emit('game-event', {
@@ -653,7 +658,6 @@ export class GameScene extends Phaser.Scene {
 
     this.showRoundComplete()
 
-    // Emite o resultado após a animação de celebração
     this.time.delayedCall(1800, () => {
       const result: RoundResult = {
         gameCode: 'EF01CO01',
@@ -665,6 +669,47 @@ export class GameScene extends Phaser.Scene {
         timestamp: Date.now(),
       }
       EventBus.emit('round-complete', result)
+    })
+  }
+
+  // ── Mensagem de tempo esgotado ────────────────────────────────────────────
+
+  private showTimeUp() {
+    const overlay = this.add.rectangle(640, 360, 1280, 720, 0x000000, 0.6).setDepth(45)
+
+    const mainText = this.add.text(640, 260, '⏰  Tempo esgotado!', {
+      fontSize: '68px',
+      fontFamily: 'Arial Black, Arial',
+      color: '#FF6B35',
+      stroke: '#000000',
+      strokeThickness: 8,
+    }).setOrigin(0.5).setDepth(46).setAlpha(0)
+
+    this.tweens.add({
+      targets:  mainText,
+      alpha:    1,
+      scaleX:   { from: 0.4, to: 1 },
+      scaleY:   { from: 0.4, to: 1 },
+      duration: 380,
+      ease:     'Back.Out',
+    })
+
+    const subText = this.add.text(640, 380, 'Não foi dessa vez... 😊\nTente de novo!', {
+      fontSize: '36px',
+      fontFamily: 'Arial, sans-serif',
+      color: '#FFF9C4',
+      stroke: '#000000',
+      strokeThickness: 4,
+      align: 'center',
+    }).setOrigin(0.5).setDepth(46).setAlpha(0)
+
+    this.tweens.add({ targets: subText, alpha: 1, delay: 400, duration: 350 })
+
+    this.time.delayedCall(2800, () => {
+      overlay.destroy()
+      mainText.destroy()
+      subText.destroy()
+      EventBus.emit('request-exit')
     })
   }
 
