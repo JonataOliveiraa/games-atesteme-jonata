@@ -1,10 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import ConfirmModal from "../components/ConfirmModal";
+import Toast from "../components/Toast";
 import { useGame } from "../context/useGame";
 import { games } from "../data/games";
 import GameLauncher from "../platform/components/GameLauncher";
-import type { GameCode, GameLevel } from "../shared/types/game";
+import type { GameCode } from "../shared/types/game";
+import type { PlatformEvent } from "../shared/contracts/platformEvents";
 import type { GameEventPayload } from "../types/platform";
 
 const SLUG_TO_CODE: Record<string, GameCode> = {
@@ -23,20 +25,35 @@ export default function GameDetailsPage() {
 
   const {
     points,
+    extraLifeCost,
     unlockCost,
     handleGameEvent,
     isGameBlocked,
     getGameBlockedUntil,
+    getGameLives,
+    buyExtraLife,
     unlockGameAccess,
   } = useGame();
 
   const [gameConfig, setGameConfig] =
     useState<Phaser.Types.Core.GameConfig | null>(null);
-  const [currentLevel] = useState<GameLevel>(1);
+
+  const [hasStartedGame, setHasStartedGame] = useState(false);
+  const [currentLevel, setCurrentLevel] = useState<1 | 2 | 3>(1);
+
   const [showGameOverModal, setShowGameOverModal] = useState(false);
   const [showUnlockModal, setShowUnlockModal] = useState(false);
-  const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
-  const [cameFromGameOver, setCameFromGameOver] = useState(false);
+  const [showNoLivesModal, setShowNoLivesModal] = useState(false);
+  const [showPostUnlockLifeModal, setShowPostUnlockLifeModal] =
+    useState(false);
+
+  const [toast, setToast] = useState<{
+    message: string;
+    type: "success" | "error" | "info";
+  } | null>(null);
+
+  const streakRef = useRef(0);
+  const errorCountRef = useRef(0);
 
   const game = games.find((item) => item.slug === slug);
   const gameCode = slug ? SLUG_TO_CODE[slug] : undefined;
@@ -67,64 +84,6 @@ export default function GameDetailsPage() {
     };
   }, [gameCode]);
 
-  const handleGameEventFromPhaser = (event: GameEventPayload) => {
-    if (!game) return;
-
-    handleGameEvent({
-      ...event,
-      gameId: game.slug,
-    });
-
-    if (event.type === "GAME_OVER") {
-      setCameFromGameOver(true);
-      setShowGameOverModal(true);
-    }
-
-    if (event.type === "GAME_COMPLETED") {
-      navigate("/", { replace: true });
-    }
-  };
-
-  const handleUnlockAfterGameOver = () => {
-    if (!game) return;
-
-    const success = unlockGameAccess(game.slug);
-
-    if (!success) {
-      setFeedbackMessage(
-        "Você não possui pontos suficientes para liberar este jogo."
-      );
-      setShowUnlockModal(false);
-      return;
-    }
-
-    setFeedbackMessage(`O jogo "${game.title}" foi desbloqueado com sucesso.`);
-    setShowUnlockModal(false);
-    setShowGameOverModal(false);
-    setCameFromGameOver(false);
-  };
-
-  const handleUnlockBlockedGame = () => {
-    if (!game) return;
-
-    const success = unlockGameAccess(game.slug);
-
-    if (!success) {
-      setFeedbackMessage(
-        "Você não possui pontos suficientes para liberar este jogo."
-      );
-      setShowUnlockModal(false);
-      return;
-    }
-
-    setFeedbackMessage(`O jogo "${game.title}" foi desbloqueado com sucesso.`);
-    setShowUnlockModal(false);
-  };
-
-  const handleExit = () => {
-    navigate(-1);
-  };
-
   if (!game) {
     return (
       <section>
@@ -144,10 +103,164 @@ export default function GameDetailsPage() {
     );
   }
 
+  const gameLives = getGameLives(game.slug);
   const blocked = isGameBlocked(game.slug);
   const blockedUntil = getGameBlockedUntil(game.slug);
 
-  if (blocked && !cameFromGameOver) {
+  const dispatchPlatformGameEvent = (event: {
+    type:
+      | "GAME_OVER"
+      | "GAME_COMPLETED"
+      | "CORRECT_ANSWER"
+      | "WRONG_ANSWER";
+    gameId: string;
+    stage: number;
+    pointsEarned?: number;
+  }) => {
+    const payload: GameEventPayload = {
+      type: event.type,
+      gameId: event.gameId,
+      stage: event.stage,
+      pointsEarned: event.pointsEarned ?? 0,
+    };
+
+    handleGameEvent(payload);
+  };
+
+  const showToast = (
+    message: string,
+    type: "success" | "error" | "info" = "info"
+  ) => {
+    setToast({ message, type });
+  };
+
+  const handlePlatformEvent = (event: PlatformEvent) => {
+    switch (event.type) {
+      case "GAME_READY":
+      case "CHECKPOINT":
+        return;
+
+      case "CORRECT_ANSWER": {
+        dispatchPlatformGameEvent({
+          type: "CORRECT_ANSWER",
+          gameId: event.gameId,
+          stage: event.stage,
+          pointsEarned: event.pointsEarned,
+        });
+
+        streakRef.current += 1;
+
+        if (streakRef.current > 0 && streakRef.current % 3 === 0) {
+          showToast("+5 pontos • +5 bônus 🔥 x3 sequência", "success");
+        } else {
+          showToast("+5 pontos", "success");
+        }
+
+        return;
+      }
+
+      case "WRONG_ANSWER": {
+        dispatchPlatformGameEvent({
+          type: "WRONG_ANSWER",
+          gameId: event.gameId,
+          stage: event.stage,
+          pointsEarned: event.pointsEarned,
+        });
+
+        streakRef.current = 0;
+        errorCountRef.current += 1;
+
+        setTimeout(() => {
+          const livesAfterError = getGameLives(event.gameId);
+
+          showToast(
+            `-5 pontos • -1 vida (${livesAfterError} restante${
+              livesAfterError === 1 ? "" : "s"
+            })`,
+            "error"
+          );
+
+          if (livesAfterError === 0) {
+            setShowNoLivesModal(true);
+          }
+        }, 0);
+
+        return;
+      }
+
+      case "GAME_COMPLETED": {
+        dispatchPlatformGameEvent({
+          type: "GAME_COMPLETED",
+          gameId: event.gameId,
+          stage: event.stage,
+          pointsEarned: 0,
+        });
+
+        if (errorCountRef.current === 0) {
+          showToast("⭐ +5 bônus sem erros", "success");
+        } else {
+          showToast("Fase concluída!", "success");
+        }
+
+        if (currentLevel < 3) {
+          setCurrentLevel((prev) => (prev + 1) as 1 | 2 | 3);
+        } else {
+          setHasStartedGame(false);
+        }
+
+        streakRef.current = 0;
+        errorCountRef.current = 0;
+        return;
+      }
+
+      case "GAME_OVER": {
+        dispatchPlatformGameEvent({
+          type: "GAME_OVER",
+          gameId: event.gameId,
+          stage: event.stage,
+          pointsEarned: 0,
+        });
+
+        streakRef.current = 0;
+        setShowNoLivesModal(false);
+        setShowGameOverModal(true);
+        return;
+      }
+    }
+  };
+
+  const handleBuyLife = () => {
+    const success = buyExtraLife(game.slug);
+
+    if (!success) {
+      showToast("Pontos insuficientes para comprar uma vida.", "error");
+      return;
+    }
+
+    showToast("+1 vida adquirida ❤️", "success");
+    setShowNoLivesModal(false);
+    setShowPostUnlockLifeModal(false);
+  };
+
+  const handleUnlock = () => {
+    const success = unlockGameAccess(game.slug);
+
+    if (!success) {
+      showToast("Pontos insuficientes para desbloquear este jogo.", "error");
+      return;
+    }
+
+    setShowUnlockModal(false);
+    setShowGameOverModal(false);
+    setShowPostUnlockLifeModal(true);
+    showToast("Jogo desbloqueado com sucesso.", "success");
+  };
+
+  const handleExit = () => {
+    navigate(-1);
+  };
+
+  if (blocked && !showGameOverModal && !showUnlockModal) {
     return (
       <>
         <section>
@@ -161,7 +274,7 @@ export default function GameDetailsPage() {
 
           <h1 className="page-title">{game.title}</h1>
           <p className="page-subtitle">
-            Este jogo está bloqueado porque suas tentativas foram esgotadas.
+            Este jogo está bloqueado porque houve game over.
             {blockedUntil && (
               <>
                 {" "}
@@ -173,7 +286,7 @@ export default function GameDetailsPage() {
 
           <div
             className="rewards-grid"
-            style={{ marginTop: "24px", maxWidth: 680 }}
+            style={{ marginTop: "24px", maxWidth: 760 }}
           >
             <div className="reward-card">
               <div className="reward-top">
@@ -181,8 +294,8 @@ export default function GameDetailsPage() {
                 <div>
                   <h3>Desbloquear este jogo</h3>
                   <p>
-                    Você pode aguardar o prazo de 2 dias ou liberar agora usando
-                    seus pontos.
+                    Você pode aguardar o prazo ou desbloquear agora usando{" "}
+                    {unlockCost} pontos.
                   </p>
                 </div>
               </div>
@@ -200,7 +313,38 @@ export default function GameDetailsPage() {
                     onClick={() => setShowUnlockModal(true)}
                     disabled={points < unlockCost}
                   >
-                    Liberar acesso
+                    Desbloquear jogo
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="reward-card">
+              <div className="reward-top">
+                <div className="reward-icon">❤️</div>
+                <div>
+                  <h3>Vidas atuais</h3>
+                  <p>
+                    Depois do desbloqueio, você pode escolher comprar vidas
+                    extras para voltar mais segura ao jogo.
+                  </p>
+                </div>
+              </div>
+
+              <div className="reward-bottom">
+                <div>
+                  <span className="reward-label">Vidas</span>
+                  <div className="reward-cost">{gameLives}</div>
+                </div>
+
+                <div className="reward-action">
+                  <span>Comprar vida: {extraLifeCost} pontos</span>
+                  <button
+                    type="button"
+                    onClick={handleBuyLife}
+                    disabled={points < extraLifeCost}
+                  >
+                    Comprar vida
                   </button>
                 </div>
               </div>
@@ -210,23 +354,31 @@ export default function GameDetailsPage() {
 
         <ConfirmModal
           isOpen={showUnlockModal}
-          title="Liberar jogo"
-          message={`Deseja liberar o jogo "${game.title}" por ${unlockCost} pontos?`}
+          title="Desbloquear jogo"
+          message={`Deseja desbloquear o jogo "${game.title}" por ${unlockCost} pontos?`}
           confirmText="Confirmar"
           cancelText="Cancelar"
-          onConfirm={handleUnlockBlockedGame}
+          onConfirm={handleUnlock}
           onCancel={() => setShowUnlockModal(false)}
         />
 
         <ConfirmModal
-          isOpen={!!feedbackMessage}
-          title="Aviso"
-          message={feedbackMessage ?? ""}
-          confirmText="Fechar"
-          cancelText=""
-          onConfirm={() => setFeedbackMessage(null)}
-          onCancel={() => setFeedbackMessage(null)}
+          isOpen={showPostUnlockLifeModal}
+          title="Jogo desbloqueado"
+          message={`O jogo "${game.title}" foi desbloqueado e está com 0 vidas. Deseja comprar +1 vida por ${extraLifeCost} pontos agora?`}
+          confirmText="Comprar vida"
+          cancelText="Depois"
+          onConfirm={handleBuyLife}
+          onCancel={() => setShowPostUnlockLifeModal(false)}
         />
+
+        {toast && (
+          <Toast
+            message={toast.message}
+            type={toast.type}
+            onClose={() => setToast(null)}
+          />
+        )}
       </>
     );
   }
@@ -234,7 +386,7 @@ export default function GameDetailsPage() {
   return (
     <>
       <section>
-        <button className="back-link" onClick={() => navigate(-1)}>
+        <button className="back-link" onClick={handleExit}>
           {"<"} Voltar
         </button>
 
@@ -259,10 +411,26 @@ export default function GameDetailsPage() {
             </div>
 
             <div className="resource-card">
+              <span className="resource-icon">❤️</span>
+              <div className="resource-text">
+                <span>Vidas</span>
+                <strong>{gameLives}</strong>
+              </div>
+            </div>
+
+            <div className="resource-card">
               <span className="resource-icon">🎮</span>
               <div className="resource-text">
                 <span>Status</span>
-                <strong>Liberado</strong>
+                <strong>{blocked ? "Bloqueado" : "Liberado"}</strong>
+              </div>
+            </div>
+
+            <div className="resource-card">
+              <span className="resource-icon">🏁</span>
+              <div className="resource-text">
+                <span>Nível</span>
+                <strong>{currentLevel}</strong>
               </div>
             </div>
           </div>
@@ -270,16 +438,41 @@ export default function GameDetailsPage() {
 
         <div className="game-area">
           {gameCode && gameConfig ? (
-            <GameLauncher
-              gameCode={gameCode}
-              level={currentLevel}
-              gameName={game.title}
-              gameDescription={game.description}
-              gameIcon={game.icon}
-              config={gameConfig}
-              onComplete={handleGameEventFromPhaser}
-              onExit={handleExit}
-            />
+            hasStartedGame ? (
+              <GameLauncher
+                key={`${game.slug}-level-${currentLevel}`}
+                gameId={game.slug}
+                level={currentLevel}
+                points={points}
+                lives={gameLives}
+                config={gameConfig}
+                onPlatformEvent={handlePlatformEvent}
+              />
+            ) : (
+              <div className="game-screen">
+                <h2>{game.title}</h2>
+                <p>
+                  Prepare-se para começar. Você está com <strong>{gameLives}</strong>{" "}
+                  vida{gameLives !== 1 ? "s" : ""}.
+                </p>
+
+                <div className="game-actions">
+                  <button type="button" onClick={() => setHasStartedGame(true)}>
+                    {currentLevel === 1
+                      ? "Iniciar jogo"
+                      : `Continuar no nível ${currentLevel}`}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleBuyLife}
+                    disabled={points < extraLifeCost}
+                  >
+                    Comprar +1 vida
+                  </button>
+                </div>
+              </div>
+            )
           ) : gameCode ? (
             <div className="game-screen">
               <p style={{ color: "var(--muted)" }}>Carregando jogo...</p>
@@ -297,22 +490,29 @@ export default function GameDetailsPage() {
       </section>
 
       <ConfirmModal
+        isOpen={showNoLivesModal}
+        title="Você ficou sem vidas"
+        message={`Você está com 0 vidas. Deseja comprar +1 vida por ${extraLifeCost} pontos ou continuar mesmo assim?`}
+        confirmText="Comprar vida"
+        cancelText="Continuar assim"
+        onConfirm={handleBuyLife}
+        onCancel={() => setShowNoLivesModal(false)}
+      />
+
+      <ConfirmModal
         isOpen={showGameOverModal}
         title="Game over"
         message={
           blockedUntil
-            ? `Você esgotou suas tentativas em "${game.title}". Este jogo foi bloqueado até ${new Date(
+            ? `Você errou novamente sem vidas disponíveis. O jogo "${game.title}" foi bloqueado até ${new Date(
                 blockedUntil
-              ).toLocaleString(
-                "pt-BR"
-              )}. Os outros jogos continuam liberados.`
-            : `Você esgotou suas tentativas em "${game.title}". Este jogo foi bloqueado por 2 dias. Os outros jogos continuam liberados.`
+              ).toLocaleString("pt-BR")}.`
+            : `Você errou novamente sem vidas disponíveis. O jogo "${game.title}" foi bloqueado.`
         }
         confirmText="Voltar para jogos"
         cancelText="Desbloquear agora"
         onConfirm={() => {
           setShowGameOverModal(false);
-          setCameFromGameOver(false);
           navigate("/", { replace: true });
         }}
         onCancel={() => {
@@ -322,23 +522,21 @@ export default function GameDetailsPage() {
 
       <ConfirmModal
         isOpen={showUnlockModal}
-        title="Liberar jogo"
-        message={`Deseja liberar o jogo "${game.title}" por ${unlockCost} pontos?`}
+        title="Desbloquear jogo"
+        message={`Deseja desbloquear o jogo "${game.title}" por ${unlockCost} pontos?`}
         confirmText="Confirmar"
         cancelText="Cancelar"
-        onConfirm={handleUnlockAfterGameOver}
+        onConfirm={handleUnlock}
         onCancel={() => setShowUnlockModal(false)}
       />
 
-      <ConfirmModal
-        isOpen={!!feedbackMessage}
-        title="Aviso"
-        message={feedbackMessage ?? ""}
-        confirmText="Fechar"
-        cancelText=""
-        onConfirm={() => setFeedbackMessage(null)}
-        onCancel={() => setFeedbackMessage(null)}
-      />
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
     </>
   );
 }

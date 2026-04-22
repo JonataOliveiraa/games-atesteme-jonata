@@ -9,13 +9,21 @@ type UnlockTarget = {
   title: string;
 } | null;
 
+type LifeTarget = {
+  slug: string;
+  title: string;
+} | null;
+
 export default function ResourcesPage() {
   const {
     points,
+    extraLifeCost,
     unlockCost,
     history,
     isGameBlocked,
     getGameBlockedUntil,
+    getGameLives,
+    buyExtraLife,
     unlockGameAccess,
     resetProgress,
   } = useGame();
@@ -28,6 +36,7 @@ export default function ResourcesPage() {
   });
 
   const [unlockTarget, setUnlockTarget] = useState<UnlockTarget>(null);
+  const [lifeTarget, setLifeTarget] = useState<LifeTarget>(null);
   const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
   const [showResetModal, setShowResetModal] = useState(false);
 
@@ -65,6 +74,10 @@ export default function ResourcesPage() {
         return "Desbloqueio por pontos";
       case "UNLOCKED_BY_TIME":
         return "Desbloqueio por tempo";
+      case "BOUGHT_EXTRA_LIFE":
+        return "Vida comprada";
+      case "LOST_LIFE":
+        return "Perdeu vida";
       default:
         return eventType;
     }
@@ -81,6 +94,17 @@ export default function ResourcesPage() {
     setUnlockTarget(null);
   };
 
+  const openLifeModal = (gameSlug: string, gameTitle: string) => {
+    setLifeTarget({
+      slug: gameSlug,
+      title: gameTitle,
+    });
+  };
+
+  const closeLifeModal = () => {
+    setLifeTarget(null);
+  };
+
   const handleConfirmUnlock = () => {
     if (!unlockTarget) return;
 
@@ -90,7 +114,7 @@ export default function ResourcesPage() {
 
     if (!success) {
       setFeedbackMessage(
-        "Você não possui pontos suficientes para liberar este jogo."
+        "Você não possui pontos suficientes para desbloquear este jogo."
       );
       setUnlockTarget(null);
       return;
@@ -100,6 +124,27 @@ export default function ResourcesPage() {
       `O jogo "${unlockTarget.title}" foi desbloqueado com sucesso.`
     );
     setUnlockTarget(null);
+  };
+
+  const handleConfirmBuyLife = () => {
+    if (!lifeTarget) return;
+
+    playBeep();
+
+    const success = buyExtraLife(lifeTarget.slug);
+
+    if (!success) {
+      setFeedbackMessage(
+        "Você não possui pontos suficientes para comprar uma vida extra."
+      );
+      setLifeTarget(null);
+      return;
+    }
+
+    setFeedbackMessage(
+      `Você comprou +1 vida para o jogo "${lifeTarget.title}".`
+    );
+    setLifeTarget(null);
   };
 
   const handleConfirmReset = () => {
@@ -112,8 +157,7 @@ export default function ResourcesPage() {
     <section>
       <h1 className="page-title">Recursos</h1>
       <p className="page-subtitle">
-        Acompanhe seus pontos, o status dos jogos e use seus pontos para liberar
-        jogos bloqueados.
+        Acompanhe seus pontos, vidas e bloqueios dos jogos.
       </p>
 
       <div className="stats-grid">
@@ -122,7 +166,7 @@ export default function ResourcesPage() {
           <div>
             <h3>Pontos</h3>
             <strong>{points}</strong>
-            <p>acumulados</p>
+            <p>disponíveis</p>
           </div>
         </div>
 
@@ -162,17 +206,22 @@ export default function ResourcesPage() {
         </div>
 
         <div className="stat-card">
-          <div className="stat-icon">🌟</div>
+          <div className="stat-icon">❤️</div>
           <div>
-            <h3>Desbloqueio</h3>
-            <strong>{unlockCost}</strong>
-            <p>pontos por jogo</p>
+            <h3>Custos</h3>
+            <p>
+              <strong>Vida: {extraLifeCost} pontos</strong>
+            </p>
+            <p>
+              <strong>Desbloqueio: {unlockCost} pontos</strong>
+            </p>
           </div>
         </div>
       </div>
 
       <div className="section-title-row">
         <h2>⭐ Troque seus pontos</h2>
+
         <button
           type="button"
           className="reset-dev-button"
@@ -190,9 +239,7 @@ export default function ResourcesPage() {
               <div>
                 <h3>Nenhum jogo bloqueado</h3>
                 <p>
-                  No momento, todos os jogos estão liberados. Quando algum jogo
-                  for bloqueado, ele aparecerá aqui com a opção de liberar por
-                  pontos.
+                  No momento, não há jogos bloqueados para desbloquear.
                 </p>
               </div>
             </div>
@@ -208,8 +255,7 @@ export default function ResourcesPage() {
                   <div>
                     <h3>{game.title}</h3>
                     <p>
-                      Este jogo está bloqueado porque as tentativas foram
-                      esgotadas.
+                      Este jogo está bloqueado no momento.
                       {blockedUntil && (
                         <>
                           {" "}
@@ -237,7 +283,7 @@ export default function ResourcesPage() {
                       onClick={() => openUnlockModal(game.slug, game.title)}
                       disabled={points < unlockCost}
                     >
-                      Liberar acesso
+                      Desbloquear
                     </button>
                   </div>
                 </div>
@@ -255,6 +301,7 @@ export default function ResourcesPage() {
         {games.map((game) => {
           const blocked = isGameBlocked(game.slug);
           const blockedUntil = getGameBlockedUntil(game.slug);
+          const lives = getGameLives(game.slug);
 
           return (
             <div key={game.slug} className="history-card">
@@ -267,6 +314,7 @@ export default function ResourcesPage() {
 
               <div className="history-meta">
                 <span>Categoria: {game.category}</span>
+                <span>Vidas: {lives}</span>
                 {blocked ? (
                   <span>
                     Bloqueado até{" "}
@@ -277,6 +325,16 @@ export default function ResourcesPage() {
                 ) : (
                   <span>Disponível para jogar normalmente</span>
                 )}
+              </div>
+
+              <div className="history-meta" style={{ marginTop: 8 }}>
+                <button
+                  type="button"
+                  onClick={() => openLifeModal(game.slug, game.title)}
+                  disabled={points < extraLifeCost}
+                >
+                  Comprar vida
+                </button>
               </div>
             </div>
           );
@@ -312,11 +370,25 @@ export default function ResourcesPage() {
       </div>
 
       <ConfirmModal
+        isOpen={!!lifeTarget}
+        title="Comprar vida"
+        message={
+          lifeTarget
+            ? `Deseja comprar +1 vida para o jogo "${lifeTarget.title}" por ${extraLifeCost} pontos?`
+            : ""
+        }
+        confirmText="Confirmar"
+        cancelText="Cancelar"
+        onConfirm={handleConfirmBuyLife}
+        onCancel={closeLifeModal}
+      />
+
+      <ConfirmModal
         isOpen={!!unlockTarget}
-        title="Liberar jogo"
+        title="Desbloquear jogo"
         message={
           unlockTarget
-            ? `Deseja liberar o jogo "${unlockTarget.title}" por ${unlockCost} pontos?`
+            ? `Deseja desbloquear o jogo "${unlockTarget.title}" por ${unlockCost} pontos?`
             : ""
         }
         confirmText="Confirmar"
@@ -328,7 +400,7 @@ export default function ResourcesPage() {
       <ConfirmModal
         isOpen={showResetModal}
         title="Resetar progresso"
-        message="Deseja resetar todo o progresso? Isso vai zerar pontos, remover bloqueios e limpar o histórico."
+        message="Deseja resetar todo o progresso? Isso vai zerar pontos, vidas, bloqueios e limpar o histórico."
         confirmText="Resetar"
         cancelText="Cancelar"
         onConfirm={handleConfirmReset}

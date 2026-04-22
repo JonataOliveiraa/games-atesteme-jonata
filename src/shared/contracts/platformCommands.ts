@@ -4,6 +4,7 @@ export type PlatformCommand =
       gameId: string;
       points: number;
       stage: number;
+      lives: number;
     }
   | {
       type: "PAUSE_GAME";
@@ -15,4 +16,3 @@ export type PlatformCommand =
       type: "UNLOCK_GAME";
       gameId: string;
     };
-

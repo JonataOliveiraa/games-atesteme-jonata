@@ -1,155 +1,60 @@
-import { useEffect, useRef, useState } from "react";
-import type { GameCode, GameLevel, RoundResult } from "../../shared/types/game";
-import type { GameEventPayload } from "../../types/platform";
-import { EventBus } from "../../shared/EventBus";
-import { progressStore } from "../../shared/utils/progressStore";
+import { useEffect, useRef } from "react";
 import PhaserCanvas from "./PhaserCanvas";
+import { gameBridge } from "../../shared/bridge/gameBridge";
+import type { PlatformEvent } from "../../shared/contracts/platformEvents";
+import type { PlatformCommand } from "../../shared/contracts/platformCommands";
 import type Phaser from "phaser";
 
 interface GameLauncherProps {
-  gameCode: GameCode;
-  level: GameLevel;
-  /** Nome do jogo exibido na tela de início */
-  gameName?: string;
-  /** Descrição breve exibida na tela de início */
-  gameDescription?: string;
-  /** Emoji/ícone do jogo exibido na tela de início */
-  gameIcon?: string;
+  gameId: string;
+  level: 1 | 2 | 3;
+  points: number;
+  lives: number;
   config: Phaser.Types.Core.GameConfig;
-  onComplete: (event: GameEventPayload) => void;
-  onExit: () => void;
+  onPlatformEvent: (event: PlatformEvent) => void;
 }
 
-/**
- * Componente React responsável por:
- * 1. Exibir tela de início ("Vamos Jogar!") antes de inicializar o Phaser
- * 2. Renderizar <PhaserCanvas> com o GameConfig do jogo após o clique
- * 3. Ouvir eventos do EventBus vindos das Scenes Phaser
- * 4. Persistir progresso via progressStore
- * 5. Gerenciar progressão de níveis (1 → 2 → 3) autonomamente
- * 6. Notificar o pai nos eventos de pontuação e saída
- *
- * Fluxo de progressão de nível:
- *   scene-ready  → emite set-level (apenas na primeira vez)
- *   round-complete → salva progresso → após 800 ms emite set-level com próximo nível
- *                    (ou GAME_COMPLETED quando nível 3 termina)
- *   set-level    → GameScene faz scene.restart({ level }) → scene-ready dispara novamente
- *                  (hasInitializedRef continua true → sem re-emissão desnecessária)
- */
 export default function GameLauncher({
-  gameCode,
+  gameId,
   level,
-  gameName,
-  gameDescription,
-  gameIcon,
+  points,
+  lives,
   config,
-  onComplete,
-  onExit,
+  onPlatformEvent,
 }: GameLauncherProps) {
-  /** Controla se o jogo já foi iniciado pelo jogador */
-  const [started, setStarted] = useState(false);
-
-  /** Impede dupla inicialização (React StrictMode / remounts) */
-  const hasInitializedRef = useRef(false);
-
-  /** Nível atual rastreado internamente — começa no nível passado pela prop */
-  const currentLevelRef = useRef<GameLevel>(level);
-
-  /** Timer de transição entre níveis — limpo no unmount */
-  const transitionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const latestHandlerRef = useRef(onPlatformEvent);
 
   useEffect(() => {
-    if (!started) return;
+    latestHandlerRef.current = onPlatformEvent;
+  }, [onPlatformEvent]);
 
-    const handleSceneReady = () => {
-      if (hasInitializedRef.current) return;
-      hasInitializedRef.current = true;
-      EventBus.emit("set-level", { level: currentLevelRef.current });
-    };
-
-    const handleGameEvent = (event: GameEventPayload) => {
-      onComplete(event);
-    };
-
-    const handleRoundComplete = (result: RoundResult) => {
-      progressStore.saveRound(result);
-
-      // Aguarda animação de celebração no Phaser (≈800 ms) antes de trocar nível
-      transitionTimerRef.current = setTimeout(() => {
-        if (currentLevelRef.current < 3) {
-          const nextLevel = (currentLevelRef.current + 1) as GameLevel;
-          currentLevelRef.current = nextLevel;
-          EventBus.emit("set-level", { level: nextLevel });
-        } else {
-          // Todos os 3 níveis concluídos!
-          onComplete({
-            type: "GAME_COMPLETED",
-            gameId: gameCode,
-            stage: 3,
-            pointsEarned: 0,
-          });
-        }
-      }, 800);
-    };
-
-    const handleRequestExit = () => {
-      onExit();
-    };
-
-    EventBus.on("scene-ready",    handleSceneReady);
-    EventBus.on("game-event",     handleGameEvent);
-    EventBus.on("round-complete", handleRoundComplete);
-    EventBus.on("request-exit",   handleRequestExit);
+  useEffect(() => {
+    const unsubscribe = gameBridge.onGameEvent((event) => {
+      if (event.gameId !== gameId) return;
+      latestHandlerRef.current(event);
+    });
 
     return () => {
-      if (transitionTimerRef.current) {
-        clearTimeout(transitionTimerRef.current);
-      }
-      EventBus.off("scene-ready",    handleSceneReady);
-      EventBus.off("game-event",     handleGameEvent);
-      EventBus.off("round-complete", handleRoundComplete);
-      EventBus.off("request-exit",   handleRequestExit);
+      unsubscribe();
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [started, gameCode, onComplete, onExit]);
+  }, [gameId]);
 
-  // ── Tela de início ──────────────────────────────────────────────────────
-  if (!started) {
-    return (
-      <div className="game-start-screen">
-        {gameIcon && <span className="game-start-icon">{gameIcon}</span>}
+  // envia START_GAME só quando o launcher entra ou quando muda o nível
+  useEffect(() => {
+    const startCommand: PlatformCommand = {
+      type: "START_GAME",
+      gameId,
+      points,
+      stage: level,
+      lives,
+    };
 
-        <h1 className="game-start-title">
-          {gameName ?? "Pronto para jogar?"}
-        </h1>
+    const id = window.setTimeout(() => {
+      gameBridge.send(startCommand);
+    }, 0);
 
-        {gameDescription && (
-          <p className="game-start-description">{gameDescription}</p>
-        )}
+    return () => window.clearTimeout(id);
+  }, [gameId, level]);
 
-        <div className="game-start-levels">
-          <span>⭐</span>
-          <span>⭐</span>
-          <span>⭐</span>
-          <span className="game-start-levels-label">3 Níveis de Desafio</span>
-        </div>
-
-        <div className="game-start-tip">
-          <span className="game-start-tip-icon">💡</span>
-          Arraste cada peça para a base com a mesma característica!
-        </div>
-
-        <button
-          type="button"
-          className="game-start-btn"
-          onClick={() => setStarted(true)}
-        >
-          ▶&nbsp;&nbsp;Vamos Jogar!
-        </button>
-      </div>
-    );
-  }
-
-  // ── Jogo ativo ──────────────────────────────────────────────────────────
-  return <PhaserCanvas config={config} />;
+  return <PhaserCanvas key={`${gameId}-${level}`} config={config} />;
 }

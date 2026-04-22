@@ -2,8 +2,8 @@ import { Routes, Route } from "react-router-dom";
 import Layout from "./layouts/Layout";
 import GamesPage from "./pages/GamesPage";
 import ResourcesPage from "./pages/ResourcesPage";
-import GameDetailsPage from "./pages/GameDetailsPage";
 import RankingPage from "./pages/RankingPage";
+import GameDetailsPageRoute from "./pages/GameDetailsPageRoute";
 
 export default function App() {
   return (
@@ -12,7 +12,7 @@ export default function App() {
         <Route index element={<GamesPage />} />
         <Route path="recursos" element={<ResourcesPage />} />
         <Route path="ranking" element={<RankingPage />} />
-        <Route path="jogos/:slug" element={<GameDetailsPage />} />
+        <Route path="jogos/:slug" element={<GameDetailsPageRoute />} />
       </Route>
     </Routes>
   );

@@ -1,12 +1,17 @@
-import { gameBridge } from "../bridge/gameBridge";
+import { gameBridge } from "../bridge/gameBridge"
 
-
-export function startGameCommand(gameId: string, points: number, stage: number) {
+export function startGameCommand(
+  gameId: string,
+  points: number,
+  stage: number,
+  lives: number
+) {
   gameBridge.send({
     type: "START_GAME",
     gameId,
     points,
     stage,
+    lives,
   });
 }
 

@@ -8,7 +8,9 @@ export type GameEventType =
   | "NO_ERROR_BONUS"
   | "BLOCKED"
   | "UNLOCKED_BY_POINTS"
-  | "UNLOCKED_BY_TIME";
+  | "UNLOCKED_BY_TIME"
+  | "BOUGHT_EXTRA_LIFE"
+  | "LOST_LIFE";
 
 export type GameEventPayload = {
   type:
@@ -33,3 +35,4 @@ export type UserGameHistory = {
 };
 
 export type BlockedGamesMap = Record<string, string>;
+export type GameLivesMap = Record<string, number>;
