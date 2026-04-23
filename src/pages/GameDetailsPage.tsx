@@ -223,6 +223,7 @@ export default function GameDetailsPage() {
         if (currentLevel < 3) {
           setCurrentLevel((prev) => (prev + 1) as 1 | 2 | 3);
         } else {
+          setCurrentLevel(1);
           setHasStartedGame(false);
         }
 
@@ -458,14 +459,12 @@ export default function GameDetailsPage() {
           {gameCode && gameConfig ? (
             hasStartedGame ? (
               <GameFrame
-                 gameId={game.slug}
-                  level={currentLevel}
-                  points={points}
-                  lives={gameLives}
-                  config={gameConfig}
-                  onPlatformEvent={handlePlatformEvent}
-                  mode="iframe"
-                  src="/games/base-dos-classificadores"
+                gameId={game.slug}
+                level={currentLevel}
+                points={points}
+                lives={gameLives}
+                config={gameConfig}
+                onPlatformEvent={handlePlatformEvent}
               />
             ) : (
               <div className="game-screen">

@@ -4,19 +4,19 @@ import { ALL_ITEMS } from './items'
 /**
  * Configuração dos 3 níveis do jogo Base dos Classificadores.
  *
- * Nível 1 — Critério cor, 4 itens, 2 bases (vermelho / azul), sem timer.
- *   Scaffolding máximo: apenas 2 cores, regra sempre visível.
+ * Nível 1 — Critério cor, 6 itens (3 formas × 2 cores), 2 bases, timer 30 s.
+ *   Formas variadas dificultam classificação visual por forma acidental.
  *
  * Nível 2 — Critério cor, 8 itens, 4 bases (todas as cores), sem timer.
- *   Maior volume e mais opções, itens mais parecidos.
+ *   Maior volume e mais opções de cor.
  *
  * Nível 3 — Critério forma, 10 itens, 3 bases, timer 90 s.
  *   Critério muda de cor para forma; temporizador visível.
  *
  * Posições das bases (canvas 1280×720, y=570 fixo):
  *   2 bases → x: 380, 900
- *   4 bases → x: 190, 450, 710, 970   (gap 20px entre bases de 240px)
- *   3 bases → x: 280, 640, 1000       (gap 40px entre bases de 200px)
+ *   4 bases → x: 190, 450, 830, 1090
+ *   3 bases → x: 280, 640, 1000
  */
 
 const itemById = (id: string) => {
@@ -30,11 +30,14 @@ export const LEVELS: LevelConfig[] = [
   {
     level: 1,
     criterion: 'cor',
+    timeLimit: 30,
     items: [
       itemById('r-cir-m'),
-      itemById('r-qua-m'),
-      itemById('a-cir-m'),
+      itemById('r-qua-p'),
+      itemById('r-tri-p'),
+      itemById('a-cir-g'),
       itemById('a-qua-m'),
+      itemById('a-tri-g'),
     ],
     bases: [
       {
