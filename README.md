@@ -226,6 +226,7 @@ Os `load.audio(...)` e `load.atlas(...)` já estão comentados em cada `BootScen
 Jogo de drag & drop onde o aluno classifica formas geométricas por cor, forma ou tamanho arrastando-as para a base correta.
 
 - **3 níveis de progressão**: cor, 6 itens, 30s (N1) → cor, 12 itens, 45s (N2) → forma, 12 itens, 60s (N3)
+- **Áudio sintético**: sons gerados via Web Audio API (acerto, erro, countdown, fanfarra, aviso de timer) — sem arquivos externos
 - **Interface adaptada**: alto contraste, ícones grandes, feedback visual e sonoro a cada ação
 - **Texturas programáticas**: círculo, quadrado, triângulo e retângulo em 4 cores × 3 tamanhos (sem assets externos)
 - **Tela de início** com apresentação antes de inicializar o Phaser
