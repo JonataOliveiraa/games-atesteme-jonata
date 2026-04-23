@@ -99,10 +99,21 @@ src/
 ├── platform/                  # Componentes React da plataforma
 │   └── components/
 │       ├── PhaserCanvas.tsx   # Monta/desmonta instância Phaser.Game
-│       └── GameLauncher.tsx   # Conecta React ↔ Phaser via EventBus
+│       ├── GameLauncher.tsx   # Tela de início + envia START_GAME via bridge
+│       ├── GameFrame.tsx      # Roteia entre GameLauncher (local) e IframeGameFrame
+│       └── IframeGameFrame.tsx # Renderiza <iframe> e comunica via postMessage
 │
 ├── shared/                    # Código compartilhado React ↔ Phaser
-│   ├── EventBus.ts            # Singleton de comunicação (Phaser.Events)
+│   ├── EventBus.ts            # Singleton Phaser.Events (uso interno de cenas)
+│   ├── bridge/
+│   │   ├── runtimeGameBridge.ts  # Auto-detecta contexto e roteia (local/iframe)
+│   │   ├── gameBridge.ts         # Lado React: assina eventos do jogo
+│   │   ├── localBridge.ts        # Implementação via CustomEvent
+│   │   └── iframeBridge.ts       # Implementação via postMessage
+│   ├── contracts/
+│   │   ├── platformEvents.ts     # Tipos de eventos Phaser → React
+│   │   ├── platformCommands.ts   # Tipos de comandos React → Phaser
+│   │   └── iframeMessages.ts     # Wrappers para postMessage
 │   ├── types/
 │   │   └── game.ts            # GameCode, GameLevel, RoundResult, GameProgress
 │   └── utils/
@@ -129,13 +140,14 @@ src/
 
 ```
 GameDetailsPage (React)
-└── GameLauncher (React)          ← tela "Vamos Jogar!", ouve EventBus, gerencia níveis
-    ├── [Tela de início]          ← exibida antes de inicializar o Phaser
-    └── PhaserCanvas (React)      ← cria Phaser.Game no useEffect (após clique)
-        └── Phaser.Game
-            ├── BootScene         ← preload de assets
-            ├── GameScene         ← lógica + render + drag & drop
-            └── UIScene           ← HUD paralelo (roda ao mesmo tempo)
+└── GameFrame (React)             ← roteia entre modo local e iframe
+    └── GameLauncher (React)      ← tela "Vamos Jogar!", gerencia níveis via bridge
+        ├── [Tela de início]      ← exibida antes de inicializar o Phaser
+        └── PhaserCanvas (React)  ← cria Phaser.Game no useEffect (após clique)
+            └── Phaser.Game
+                ├── BootScene     ← preload de assets
+                ├── GameScene     ← lógica + render + drag & drop
+                └── UIScene       ← HUD paralelo (roda ao mesmo tempo)
 ```
 
 ### Tela de início ("Vamos Jogar!")
@@ -143,30 +155,35 @@ GameDetailsPage (React)
 Antes de inicializar o Phaser, o `GameLauncher` exibe uma tela de apresentação com o nome, descrição e ícone do jogo. O Phaser só é criado após o clique em "Vamos Jogar!" — isso respeita a política de autoplay de áudio dos navegadores e dá tempo ao jogador para se preparar.
 
 ```tsx
-<GameLauncher
-  gameCode="EF01CO01"
-  level={1}
-  gameName="Base dos Classificadores"
-  gameDescription="Arraste cada peça para a base com a mesma característica!"
-  gameIcon="🔷"
+<GameFrame
+  gameId="base-dos-classificadores"
+  level={currentLevel}
+  points={points}
+  lives={lives}
   config={gameConfig}
-  onComplete={handleEvent}
-  onExit={handleExit}
+  onPlatformEvent={handlePlatformEvent}
 />
 ```
 
-**React → Phaser** (via EventBus):
+### Bridge de comunicação (React ↔ Phaser)
+
+A comunicação usa um sistema de bridge tipado com detecção automática de contexto:
+
+**Phaser → React** (via `runtimeGameBridge.emit`):
 ```ts
-EventBus.emit('set-level', 2)     // troca o nível
-EventBus.emit('mute-audio', true) // silencia o jogo
+runtimeGameBridge.emit({ type: 'GAME_COMPLETED', gameId, stage })
+runtimeGameBridge.emit({ type: 'CORRECT_ANSWER', gameId, pointsEarned, stage })
+runtimeGameBridge.emit({ type: 'WRONG_ANSWER', gameId, pointsEarned, stage })
+runtimeGameBridge.emit({ type: 'GAME_OVER', gameId, stage })
 ```
 
-**Phaser → React** (via EventBus):
+**React → Phaser** (via `GameLauncher` + `gameBridge`):
 ```ts
-EventBus.emit('round-complete', result) // React salva progresso
-EventBus.emit('game-over', result)      // React exibe tela de conclusão
-EventBus.emit('request-exit')           // React navega ao menu
+// GameLauncher envia automaticamente quando `level` muda:
+{ type: 'START_GAME', gameId, stage, points, lives }
 ```
+
+O `runtimeGameBridge` detecta automaticamente se o jogo está rodando diretamente no DOM (usa `CustomEvent`) ou dentro de um `<iframe>` (usa `postMessage`). O código do jogo não muda entre os dois modos.
 
 ---
 
