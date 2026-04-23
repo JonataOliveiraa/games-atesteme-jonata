@@ -394,14 +394,17 @@ export class GameScene extends Phaser.Scene {
     this.itemSprites = []
     const items = Phaser.Utils.Array.Shuffle([...this.levelConfig.items])
     const n = items.length
-    const gap = Math.min(125, Math.floor(1100 / Math.max(1, n - 1)))
+    const gap = Math.min(130, Math.floor(1100 / Math.max(1, n - 1)))
     const startX = 640 - ((n - 1) * gap) / 2
+    // Largest texture is 120px; scale so it fits within gap with 10px breathing room
+    const displayScale = Math.min(1.0, (gap - 10) / 120)
 
     items.forEach((item, i) => {
       const x = startX + i * gap
       const key = `item-${item.color}-${item.shape}-${item.size}`
 
       const sprite = this.add.image(x, ITEM_Y, key) as DraggableItem
+      sprite.setScale(displayScale)
       sprite.itemData = item
       sprite.originX_ = x
       sprite.originY_ = ITEM_Y

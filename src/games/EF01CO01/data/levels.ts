@@ -10,8 +10,8 @@ import { ALL_ITEMS } from './items'
  * Nível 2 — Critério cor, 12 itens (3 formas × 4 cores), 4 bases, timer 45 s.
  *   3 formas por cor (círculo, quadrado, triângulo) dificultam classificação visual por forma.
  *
- * Nível 3 — Critério forma, 10 itens, 3 bases, timer 90 s.
- *   Critério muda de cor para forma; temporizador visível.
+ * Nível 3 — Critério forma, 12 itens (4 itens × 3 formas, todas as 4 cores por forma), 3 bases, timer 60 s.
+ *   Todas as 4 cores distribuídas igualmente em cada forma — cor não serve como pista secundária.
  *
  * Posições das bases (canvas 1280×720, y=570 fixo):
  *   2 bases → x: 380, 900
@@ -118,14 +118,19 @@ export const LEVELS: LevelConfig[] = [
   {
     level: 3,
     criterion: 'forma',
-    timeLimit: 90,
+    timeLimit: 60,
     items: [
+      // círculos — 4 cores
       itemById('r-cir-m'),
       itemById('a-cir-g'),
       itemById('v-cir-g'),
+      itemById('am-cir-g'),
+      // quadrados — 4 cores
       itemById('r-qua-p'),
       itemById('a-qua-g'),
       itemById('v-qua-g'),
+      itemById('am-qua-m'),
+      // triângulos — 4 cores
       itemById('r-tri-p'),
       itemById('a-tri-g'),
       itemById('v-tri-m'),
