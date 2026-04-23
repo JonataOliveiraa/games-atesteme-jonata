@@ -32,6 +32,9 @@ export class GameScene extends Phaser.Scene {
   private timerBar?: Phaser.GameObjects.Rectangle
   private timerBarBg?: Phaser.GameObjects.Rectangle
 
+  private isMuted = false
+  private lastWarningBeat = -1
+
   constructor() {
     super({ key: 'GameScene' })
   }
@@ -60,6 +63,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     EventBus.on('set-level', this.handleSetLevel, this)
+    EventBus.on('mute-audio', this.handleMuteAudio, this)
     this.showLevelIntro()
   }
 
@@ -74,17 +78,30 @@ export class GameScene extends Phaser.Scene {
       if (pct > 0.5) this.timerBar.setFillStyle(0x2ecc71)
       else if (pct > 0.25) this.timerBar.setFillStyle(0xf39c12)
       else this.timerBar.setFillStyle(0xe74c3c)
+
+      if (pct < 0.25 && pct > 0) {
+        const beat = Math.ceil(remaining / 1000)
+        if (beat !== this.lastWarningBeat) {
+          this.lastWarningBeat = beat
+          this.playTimerWarning()
+        }
+      }
     }
   }
 
   shutdown() {
     EventBus.off('set-level', this.handleSetLevel, this)
+    EventBus.off('mute-audio', this.handleMuteAudio, this)
     this.timerEvent?.destroy()
 
     if (this.unsubscribePlatformCommands) {
       this.unsubscribePlatformCommands()
       this.unsubscribePlatformCommands = undefined
     }
+  }
+
+  private handleMuteAudio = (muted: boolean) => {
+    this.isMuted = muted
   }
 
   private handleSetLevel = (data: { level: number }) => {
@@ -141,6 +158,8 @@ export class GameScene extends Phaser.Scene {
       .setOrigin(0.5)
       .setDepth(51)
 
+    this.playCountdownTick()
+
     let count = 3
     const countText = this.add
       .text(640, 490, '3', {
@@ -176,6 +195,7 @@ export class GameScene extends Phaser.Scene {
             yoyo: true,
             duration: 400,
           })
+          this.playCountdownTick()
           return
         }
 
@@ -190,6 +210,7 @@ export class GameScene extends Phaser.Scene {
             countdownEvent.destroy()
             this.input.enabled = true
             this.revealItems()
+            this.playGo()
 
             EventBus.emit('scene-ready', { levelConfig: this.levelConfig })
 
@@ -444,6 +465,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private onTimeUp() {
+    this.playTimeUp()
     runtimeGameBridge.emit({
       type: 'GAME_OVER',
       gameId: GAME_ID,
@@ -571,12 +593,14 @@ export class GameScene extends Phaser.Scene {
       duration: 140,
     })
 
+    this.playCorrect()
     this.showCorrectEffect(item.originX_, item.originY_)
     this.emitProgress()
     this.checkRoundComplete()
   }
 
   private onWrongDrop(item: DraggableItem, baseContainer: Phaser.GameObjects.Container) {
+    this.playWrong()
     this.returnItem(item)
 
     const origX = (baseContainer.getData('baseData') as ClassifierBase).x
@@ -704,6 +728,8 @@ export class GameScene extends Phaser.Scene {
   }
 
   private showRoundComplete() {
+    this.playRoundComplete()
+
     const overlay = this.add
       .rectangle(640, 360, 1280, 720, 0x000000, 0.55)
       .setDepth(45)
@@ -883,6 +909,78 @@ export class GameScene extends Phaser.Scene {
 
     return 0xffb300
   }
+
+  // ── Áudio sintético (Web Audio API) ─────────────────────────────────────────
+
+  private getAudioContext(): AudioContext | null {
+    if (!('context' in this.sound)) return null
+    return (this.sound as Phaser.Sound.WebAudioSoundManager).context
+  }
+
+  private playTone(
+    frequency: number,
+    duration: number,
+    type: OscillatorType = 'sine',
+    volume = 0.25,
+    delaySeconds = 0,
+  ) {
+    if (this.isMuted) return
+    const ctx = this.getAudioContext()
+    if (!ctx) return
+
+    const osc = ctx.createOscillator()
+    const gain = ctx.createGain()
+    osc.connect(gain)
+    gain.connect(ctx.destination)
+
+    osc.type = type
+    osc.frequency.setValueAtTime(frequency, ctx.currentTime + delaySeconds)
+    gain.gain.setValueAtTime(volume, ctx.currentTime + delaySeconds)
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delaySeconds + duration)
+
+    osc.start(ctx.currentTime + delaySeconds)
+    osc.stop(ctx.currentTime + delaySeconds + duration + 0.01)
+  }
+
+  private playCorrect() {
+    this.playTone(523, 0.12, 'sine', 0.28, 0.00)  // C5
+    this.playTone(659, 0.12, 'sine', 0.28, 0.10)  // E5
+    this.playTone(784, 0.20, 'sine', 0.32, 0.20)  // G5
+  }
+
+  private playWrong() {
+    this.playTone(220, 0.10, 'square', 0.18, 0.00)
+    this.playTone(196, 0.10, 'square', 0.14, 0.10)
+    this.playTone(165, 0.18, 'square', 0.10, 0.20)
+  }
+
+  private playRoundComplete() {
+    const notes = [262, 330, 392, 523]  // C4-E4-G4-C5
+    notes.forEach((freq, i) => {
+      this.playTone(freq, 0.20, 'sine', 0.30, i * 0.13)
+    })
+  }
+
+  private playTimeUp() {
+    this.playTone(392, 0.15, 'sine', 0.24, 0.00)  // G4
+    this.playTone(349, 0.15, 'sine', 0.20, 0.18)  // F4
+    this.playTone(294, 0.30, 'sine', 0.18, 0.36)  // D4
+  }
+
+  private playCountdownTick() {
+    this.playTone(880, 0.07, 'sine', 0.20)  // A5 — tick
+  }
+
+  private playGo() {
+    this.playTone(784, 0.10, 'sine', 0.28, 0.00)  // G5
+    this.playTone(1046, 0.20, 'sine', 0.32, 0.10) // C6
+  }
+
+  private playTimerWarning() {
+    this.playTone(440, 0.07, 'sine', 0.12)  // A4 — beep sutil
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────────
 
   private getAttributeIcon(attribute: string, value: string): string {
     if (attribute === 'cor') {
