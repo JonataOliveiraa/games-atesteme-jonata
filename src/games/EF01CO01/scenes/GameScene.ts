@@ -1,6 +1,6 @@
 import Phaser from 'phaser'
 import { EventBus } from '../../../shared/EventBus'
-import { gameBridge } from '../../../shared/bridge/gameBridge'
+import { runtimeGameBridge } from '../../../shared/bridge/runtimeGameBridge'
 import type { PlatformCommand } from '../../../shared/contracts/platformCommands'
 import type { RoundResult } from '../../../shared/types/game'
 import type { GameItem, LevelConfig, ClassifierBase } from '../types'
@@ -89,7 +89,7 @@ export class GameScene extends Phaser.Scene {
 
   private handleSetLevel = (data: { level: number }) => {
     this.scene.restart({
-      level: data.level,
+      level: data.level as 1 | 2 | 3,
       points: this.currentPoints,
       lives: this.currentLives,
     })
@@ -193,7 +193,7 @@ export class GameScene extends Phaser.Scene {
 
             EventBus.emit('scene-ready', { levelConfig: this.levelConfig })
 
-            gameBridge.emit({
+            runtimeGameBridge.emit({
               type: 'GAME_READY',
               gameId: GAME_ID,
             })
@@ -441,7 +441,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private onTimeUp() {
-    gameBridge.emit({
+    runtimeGameBridge.emit({
       type: 'GAME_OVER',
       gameId: GAME_ID,
       stage: this.levelConfig.level,
@@ -497,7 +497,7 @@ export class GameScene extends Phaser.Scene {
       this.hits += 1
       this.currentPoints += 5
 
-      gameBridge.emit({
+      runtimeGameBridge.emit({
         type: 'CORRECT_ANSWER',
         gameId: GAME_ID,
         pointsEarned: 5,
@@ -512,7 +512,7 @@ export class GameScene extends Phaser.Scene {
       this.errors += 1
       this.currentPoints = Math.max(0, this.currentPoints - 5)
 
-      gameBridge.emit({
+      runtimeGameBridge.emit({
         type: 'WRONG_ANSWER',
         gameId: GAME_ID,
         pointsEarned: -5,
@@ -521,7 +521,7 @@ export class GameScene extends Phaser.Scene {
 
       this.onWrongDrop(item, baseContainer)
 
-      gameBridge.emit({
+      runtimeGameBridge.emit({
         type: 'GAME_OVER',
         gameId: GAME_ID,
         stage: this.levelConfig.level,
@@ -535,7 +535,7 @@ export class GameScene extends Phaser.Scene {
     this.currentPoints = Math.max(0, this.currentPoints - 5)
     this.currentLives = Math.max(0, this.currentLives - 1)
 
-    gameBridge.emit({
+    runtimeGameBridge.emit({
       type: 'WRONG_ANSWER',
       gameId: GAME_ID,
       pointsEarned: -5,
@@ -669,7 +669,7 @@ export class GameScene extends Phaser.Scene {
     const remaining = this.itemSprites.filter((s) => s.visible).length
 
     if (remaining === 0) {
-      gameBridge.emit({
+      runtimeGameBridge.emit({
         type: 'GAME_COMPLETED',
         gameId: GAME_ID,
         stage: this.levelConfig.level,
@@ -794,7 +794,7 @@ export class GameScene extends Phaser.Scene {
     const answered = total - remaining
     const progress = total > 0 ? Math.round((answered / total) * 100) : 0
 
-    gameBridge.emit({
+    runtimeGameBridge.emit({
       type: 'CHECKPOINT',
       gameId: GAME_ID,
       progress,
@@ -806,47 +806,47 @@ export class GameScene extends Phaser.Scene {
   }
 
   private registerPlatformCommands() {
-  this.unsubscribePlatformCommands = gameBridge.onPlatformCommand(
-    (command: PlatformCommand) => {
-      switch (command.type) {
-        case 'START_GAME': {
-          if (command.gameId !== GAME_ID) return
+    this.unsubscribePlatformCommands = runtimeGameBridge.onCommand(
+      (command: PlatformCommand) => {
+        switch (command.type) {
+          case 'START_GAME': {
+            if (command.gameId !== GAME_ID) return
 
-          const shouldRestart = command.stage !== this.levelConfig.level
+            const shouldRestart = command.stage !== this.levelConfig.level
 
-          if (shouldRestart) {
-            this.scene.restart({
-              level: command.stage as 1 | 2 | 3,
-              points: command.points,
-              lives: command.lives,
-            })
+            if (shouldRestart) {
+              this.scene.restart({
+                level: command.stage as 1 | 2 | 3,
+                points: command.points,
+                lives: command.lives,
+              })
+            }
+
+            return
           }
 
-          return
-        }
-
-        case 'PAUSE_GAME': {
-          if (!this.scene.isPaused()) {
-            this.scene.pause()
+          case 'PAUSE_GAME': {
+            if (!this.scene.isPaused()) {
+              this.scene.pause()
+            }
+            return
           }
-          return
-        }
 
-        case 'RESUME_GAME': {
-          if (this.scene.isPaused()) {
-            this.scene.resume()
+          case 'RESUME_GAME': {
+            if (this.scene.isPaused()) {
+              this.scene.resume()
+            }
+            return
           }
-          return
-        }
 
-        case 'UNLOCK_GAME': {
-          if (command.gameId !== GAME_ID) return
-          return
+          case 'UNLOCK_GAME': {
+            if (command.gameId !== GAME_ID) return
+            return
+          }
         }
-      }
-    },
-  )
-}
+      },
+    )
+  }
 
   private getItemAttrValue(item: GameItem, attribute: string): string {
     if (attribute === 'cor') return item.color

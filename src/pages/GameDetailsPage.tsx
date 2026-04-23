@@ -4,7 +4,7 @@ import ConfirmModal from "../components/ConfirmModal";
 import Toast from "../components/Toast";
 import { useGame } from "../context/useGame";
 import { games } from "../data/games";
-import GameLauncher from "../platform/components/GameLauncher";
+import GameFrame from "../platform/components/GameFrame";
 import type { GameCode } from "../shared/types/game";
 import type { PlatformEvent } from "../shared/contracts/platformEvents";
 import type { GameEventPayload } from "../types/platform";
@@ -51,6 +51,14 @@ export default function GameDetailsPage() {
     message: string;
     type: "success" | "error" | "info";
   } | null>(null);
+
+  const [, setCheckpoint] = useState<{
+  progress: number;
+  score: number;
+  stage: number;
+  hits?: number;
+  errors?: number;
+} | null>(null);
 
   const streakRef = useRef(0);
   const errorCountRef = useRef(0);
@@ -137,8 +145,18 @@ export default function GameDetailsPage() {
   const handlePlatformEvent = (event: PlatformEvent) => {
     switch (event.type) {
       case "GAME_READY":
-      case "CHECKPOINT":
         return;
+
+      case "CHECKPOINT": {
+        setCheckpoint({
+          progress: event.progress,
+          score: event.score,
+          stage: event.stage,
+          hits: event.hits,
+          errors: event.errors,
+        });
+        return;
+      }
 
       case "CORRECT_ANSWER": {
         dispatchPlatformGameEvent({
@@ -439,14 +457,15 @@ export default function GameDetailsPage() {
         <div className="game-area">
           {gameCode && gameConfig ? (
             hasStartedGame ? (
-              <GameLauncher
-                key={`${game.slug}-level-${currentLevel}`}
-                gameId={game.slug}
-                level={currentLevel}
-                points={points}
-                lives={gameLives}
-                config={gameConfig}
-                onPlatformEvent={handlePlatformEvent}
+              <GameFrame
+                 gameId={game.slug}
+                  level={currentLevel}
+                  points={points}
+                  lives={gameLives}
+                  config={gameConfig}
+                  onPlatformEvent={handlePlatformEvent}
+                  mode="iframe"
+                  src="/games/base-dos-classificadores"
               />
             ) : (
               <div className="game-screen">
@@ -504,7 +523,7 @@ export default function GameDetailsPage() {
         title="Game over"
         message={
           blockedUntil
-            ? `Você errou novamente sem vidas disponíveis. O jogo "${game.title}" foi bloqueado até ${new Date(
+            ? `Você errou novamente e está sem vidas disponíveis. O jogo "${game.title}" foi bloqueado até ${new Date(
                 blockedUntil
               ).toLocaleString("pt-BR")}.`
             : `Você errou novamente sem vidas disponíveis. O jogo "${game.title}" foi bloqueado.`

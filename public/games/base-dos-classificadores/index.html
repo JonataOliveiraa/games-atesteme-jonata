@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Base dos Classificadores</title>
+  </head>
+
+  <body>
+    <div id="game"></div>
+
+    <script type="module">
+      import Phaser from "phaser"
+      import config from "/src/games/EF01CO01/index.ts"
+
+      new Phaser.Game({
+        ...config,
+        parent: document.getElementById("game")
+      })
+    </script>
+  </body>
+</html>
