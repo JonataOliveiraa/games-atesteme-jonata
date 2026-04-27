@@ -76,12 +76,15 @@ export default function IframeGameFrame({
   }, [sendStartCommand]);
 
   useEffect(() => {
-    const id = window.setTimeout(() => {
-      sendStartCommand();
-    }, 100);
+  const win = iframeRef.current?.contentWindow;
+  if (!win) return;
 
-    return () => window.clearTimeout(id);
-  }, [sendStartCommand]);
+  const id = window.setTimeout(() => {
+    sendStartCommand();
+  }, 150);
+
+  return () => window.clearTimeout(id);
+}, [level, points, lives, sendStartCommand]);
 
   return (
     <iframe
