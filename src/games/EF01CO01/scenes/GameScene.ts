@@ -12,7 +12,9 @@ interface DraggableItem extends Phaser.GameObjects.Image {
   originY_: number
 }
 
-const ITEM_Y = 270
+const ITEM_Y = 270       // linha única (n ≤ 9)
+const ITEM_Y_ROW1 = 205  // primeira linha (n > 9)
+const ITEM_Y_ROW2 = 320  // segunda linha  (n > 9)
 const TIMER_BAR_Y = 100
 const TIMER_BAR_W = 900
 const GAME_ID = 'base-dos-classificadores'
@@ -329,27 +331,32 @@ export class GameScene extends Phaser.Scene {
   }
 
   private createItemTray() {
-    const trayY = ITEM_Y + 40
+    const n = this.levelConfig.items.length
+    const rows = n > 9 ? [ITEM_Y_ROW1, ITEM_Y_ROW2] : [ITEM_Y]
     const gfx = this.add.graphics()
 
-    gfx.fillStyle(0x000000, 0.15)
-    gfx.fillRect(30, trayY + 6, 1220, 30)
+    for (const rowY of rows) {
+      const trayY = rowY + 40
 
-    gfx.fillStyle(0xa0522d, 1)
-    gfx.fillRect(30, trayY, 1220, 28)
+      gfx.fillStyle(0x000000, 0.15)
+      gfx.fillRect(30, trayY + 6, 1220, 30)
 
-    gfx.fillStyle(0xc4813a, 1)
-    gfx.fillRect(30, trayY, 1220, 8)
+      gfx.fillStyle(0xa0522d, 1)
+      gfx.fillRect(30, trayY, 1220, 28)
 
-    gfx.fillStyle(0x7b3f1a, 1)
-    gfx.fillRect(30, trayY + 22, 1220, 6)
+      gfx.fillStyle(0xc4813a, 1)
+      gfx.fillRect(30, trayY, 1220, 8)
 
-    gfx.fillStyle(0x8b6914, 1)
-    for (let x = 80; x < 1220; x += 160) {
-      gfx.fillCircle(x, trayY + 14, 6)
-      gfx.fillStyle(0xd4af37, 0.6)
-      gfx.fillCircle(x, trayY + 14, 4)
+      gfx.fillStyle(0x7b3f1a, 1)
+      gfx.fillRect(30, trayY + 22, 1220, 6)
+
       gfx.fillStyle(0x8b6914, 1)
+      for (let x = 80; x < 1220; x += 160) {
+        gfx.fillCircle(x, trayY + 14, 6)
+        gfx.fillStyle(0xd4af37, 0.6)
+        gfx.fillCircle(x, trayY + 14, 4)
+        gfx.fillStyle(0x8b6914, 1)
+      }
     }
   }
 
@@ -415,20 +422,31 @@ export class GameScene extends Phaser.Scene {
     this.itemSprites = []
     const items = Phaser.Utils.Array.Shuffle([...this.levelConfig.items])
     const n = items.length
+
+    if (n > 9) {
+      const mid = Math.ceil(n / 2)
+      this.createItemRow(items.slice(0, mid), ITEM_Y_ROW1)
+      this.createItemRow(items.slice(mid), ITEM_Y_ROW2)
+    } else {
+      this.createItemRow(items, ITEM_Y)
+    }
+  }
+
+  private createItemRow(items: typeof this.levelConfig.items, rowY: number) {
+    const n = items.length
     const gap = Math.min(130, Math.floor(1100 / Math.max(1, n - 1)))
     const startX = 640 - ((n - 1) * gap) / 2
-    // Largest texture is 120px; scale so it fits within gap with 10px breathing room
     const displayScale = Math.min(1.0, (gap - 10) / 120)
 
     items.forEach((item, i) => {
       const x = startX + i * gap
       const key = `item-${item.color}-${item.shape}-${item.size}`
 
-      const sprite = this.add.image(x, ITEM_Y, key) as DraggableItem
+      const sprite = this.add.image(x, rowY, key) as DraggableItem
       sprite.setScale(displayScale)
       sprite.itemData = item
       sprite.originX_ = x
-      sprite.originY_ = ITEM_Y
+      sprite.originY_ = rowY
       sprite.setAlpha(0)
       sprite.setInteractive()
       this.input.setDraggable(sprite)

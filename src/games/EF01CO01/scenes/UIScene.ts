@@ -171,8 +171,8 @@ export class UIScene extends Phaser.Scene {
       this.errorsText.setText(String(data.errors))
     }, this)
 
-    EventBus.on('mute-audio', (_muted: boolean) => {
-      // TODO: this.sound.setMute(muted) quando áudio existir
+    EventBus.on('mute-audio', () => {
+      // áudio gerenciado pelo GameScene via handleMuteAudio
     }, this)
   }
 

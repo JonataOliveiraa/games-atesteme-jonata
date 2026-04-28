@@ -4,14 +4,14 @@ import { ALL_ITEMS } from './items'
 /**
  * Configuração dos 3 níveis do jogo Base dos Classificadores.
  *
- * Nível 1 — Critério cor, 6 itens (círculos em 3 tamanhos × 2 cores), 2 bases, timer 30 s.
+ * Nível 1 — Critério cor, 6 itens (círculos em 3 tamanhos × 2 cores), 2 bases, timer 20 s.
  *   Forma idêntica em todos os itens — única variável é a cor (scaffolding máximo).
  *
- * Nível 2 — Critério cor, 12 itens (3 formas × 4 cores), 4 bases, timer 45 s.
+ * Nível 2 — Critério cor, 12 itens (3 formas × 4 cores), 4 bases, timer 25 s.
  *   3 formas por cor (círculo, quadrado, triângulo) dificultam classificação visual por forma.
  *
- * Nível 3 — Critério forma, 12 itens (4 itens × 3 formas, todas as 4 cores por forma), 3 bases, timer 60 s.
- *   Todas as 4 cores distribuídas igualmente em cada forma — cor não serve como pista secundária.
+ * Nível 3 — Critério forma, 18 itens em 2 linhas (6 × 3 formas, todas as 4 cores por forma), 3 bases, timer 30 s.
+ *   Segunda linha com itens extras. Cor distribuída igualmente — não serve como pista secundária.
  *
  * Posições das bases (canvas 1280×720, y=570 fixo):
  *   2 bases → x: 380, 900
@@ -30,7 +30,7 @@ export const LEVELS: LevelConfig[] = [
   {
     level: 1,
     criterion: 'cor',
-    timeLimit: 30,
+    timeLimit: 20,
     items: [
       itemById('r-cir-p'),
       itemById('r-cir-m'),
@@ -63,7 +63,7 @@ export const LEVELS: LevelConfig[] = [
   {
     level: 2,
     criterion: 'cor',
-    timeLimit: 45,
+    timeLimit: 25,
     items: [
       itemById('r-cir-p'),
       itemById('r-qua-m'),
@@ -118,23 +118,29 @@ export const LEVELS: LevelConfig[] = [
   {
     level: 3,
     criterion: 'forma',
-    timeLimit: 60,
+    timeLimit: 30,
     items: [
-      // círculos — 4 cores
+      // círculos — 6 (4 cores + 2 tamanhos extras)
       itemById('r-cir-m'),
       itemById('a-cir-g'),
       itemById('v-cir-g'),
       itemById('am-cir-g'),
-      // quadrados — 4 cores
+      itemById('r-cir-g'),
+      itemById('a-cir-m'),
+      // quadrados — 6
       itemById('r-qua-p'),
       itemById('a-qua-g'),
       itemById('v-qua-g'),
       itemById('am-qua-m'),
-      // triângulos — 4 cores
+      itemById('r-qua-m'),
+      itemById('v-qua-p'),
+      // triângulos — 6
       itemById('r-tri-p'),
       itemById('a-tri-g'),
       itemById('v-tri-m'),
       itemById('am-tri-p'),
+      itemById('r-tri-m'),
+      itemById('am-tri-m'),
     ],
     bases: [
       {
