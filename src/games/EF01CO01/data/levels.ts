@@ -4,8 +4,8 @@ import { ALL_ITEMS } from './items'
 /**
  * Configuração dos 3 níveis do jogo Base dos Classificadores.
  *
- * Nível 1 — Critério cor, 6 itens (3 formas × 2 cores), 2 bases, timer 30 s.
- *   Formas variadas dificultam classificação visual por forma acidental.
+ * Nível 1 — Critério cor, 6 itens (círculos em 3 tamanhos × 2 cores), 2 bases, timer 30 s.
+ *   Forma idêntica em todos os itens — única variável é a cor (scaffolding máximo).
  *
  * Nível 2 — Critério cor, 12 itens (3 formas × 4 cores), 4 bases, timer 45 s.
  *   3 formas por cor (círculo, quadrado, triângulo) dificultam classificação visual por forma.
@@ -32,12 +32,12 @@ export const LEVELS: LevelConfig[] = [
     criterion: 'cor',
     timeLimit: 30,
     items: [
+      itemById('r-cir-p'),
       itemById('r-cir-m'),
-      itemById('r-qua-p'),
-      itemById('r-tri-p'),
+      itemById('r-cir-g'),
+      itemById('a-cir-p'),
+      itemById('a-cir-m'),
       itemById('a-cir-g'),
-      itemById('a-qua-m'),
-      itemById('a-tri-g'),
     ],
     bases: [
       {
