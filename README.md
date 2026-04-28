@@ -215,6 +215,58 @@ Os `load.audio(...)` e `load.atlas(...)` já estão comentados em cada `BootScen
 
 ---
 
+## Referência Rápida dos 45 Jogos
+
+| Código | Nome do Jogo | Ano | Eixo |
+|--------|-------------|-----|------|
+| EF01CO01 | Base dos Classificadores | 1º | PC |
+| EF01CO02 | Trilha do Passo a Passo | 1º | PC |
+| EF01CO03 | Oficina dos Algoritmos | 1º | PC |
+| EF01CO04 | Correio Multimídia | 1º | MD |
+| EF01CO05 | Pixel Secreto | 1º | MD |
+| EF01CO06 | Desktop Digital Infantil | 1º | CD |
+| EF01CO07 | Guardiões dos Dados | 1º | CD |
+| EF02CO01 | Hangar dos Modelos | 2º | PC |
+| EF02CO02 | Desfile do Robô Repetidor | 2º | PC |
+| EF02CO03 | Fábrica de Máquinas | 2º | MD |
+| EF02CO04 | Museu Vivo do Computador | 2º | MD |
+| EF02CO05 | Cidade das Tecnologias | 2º | CD |
+| EF02CO06 | Checklist do Jogador Seguro | 2º | CD |
+| EF03CO01 | Tribunal do Verdadeiro ou Falso | 3º | PC |
+| EF03CO02 | Labirinto do Enquanto | 3º | PC |
+| EF03CO03 | Chef dos Subproblemas | 3º | PC |
+| EF03CO04 | Montador de Informações | 3º | MD |
+| EF03CO05 | Formato Certo | 3º | MD |
+| EF03CO06 | Central de Entrada e Saída | 3º | MD |
+| EF03CO07 | Detetives da Busca | 3º | CD |
+| EF03CO08 | Estúdio Multiformato | 3º | CD |
+| EF03CO09 | Investigação: Dados em Risco | 3º | CD |
+| EF04CO01 | Batalha das Coordenadas | 4º | PC |
+| EF04CO02 | Arquivo dos Registros | 4º | PC |
+| EF04CO03 | Prédio dos Laços | 4º | PC |
+| EF04CO04 | Tradutor da Máquina | 4º | MD |
+| EF04CO05 | Ateliê de Códigos Digitais | 4º | MD |
+| EF04CO06 | Estúdio de Produção Digital | 4º | CD |
+| EF04CO07 | Missão Ética Digital | 4º | CD |
+| EF04CO08 | Caça à Fonte Confiável | 4º | CD |
+| EF05CO01 | Baralho das Listas | 5º | PC |
+| EF05CO02 | Mapas em Rede | 5º | PC |
+| EF05CO03 | Arena da Lógica | 5º | PC |
+| EF05CO04 | Cidade das Decisões | 5º | PC |
+| EF05CO05 | Monte seu Computador | 5º | MD |
+| EF05CO06 | Missão Arquivo Seguro | 5º | MD |
+| EF05CO07 | Controlador do Sistema | 5º | MD |
+| EF05CO08 | Radar de Confiabilidade | 5º | CD |
+| EF05CO09 | Curadoria com Créditos | 5º | CD |
+| EF05CO10 | Futuro em Cena | 5º | CD |
+| EF05CO11 | Escolha a Ferramenta Certa | 5º | CD |
+| EF15CO01 | Museu das Estruturas | 1º–5º | PC |
+| EF15CO02 | Academia dos Algoritmos | 1º–5º | PC |
+| EF15CO03 | Circuito da Verdade | 1º–5º | PC |
+| EF15CO04 | Arquiteto das Missões | 1º–5º | PC |
+
+> PC = Pensamento Computacional | MD = Mundo Digital | CD = Cultura Digital
+
 ## Jogos implementados
 
 | Código | Nome | Ano | Eixo | Status |
