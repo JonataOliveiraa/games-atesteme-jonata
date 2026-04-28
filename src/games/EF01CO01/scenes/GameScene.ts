@@ -849,6 +849,9 @@ export class GameScene extends Phaser.Scene {
                 points: command.points,
                 lives: command.lives,
               })
+            } else {
+              this.currentPoints = command.points
+              this.currentLives = command.lives
             }
 
             return

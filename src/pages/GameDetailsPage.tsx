@@ -271,6 +271,8 @@ export default function GameDetailsPage() {
 
     setShowUnlockModal(false);
     setShowGameOverModal(false);
+    setCurrentLevel(1);
+    setHasStartedGame(false);
     setShowPostUnlockLifeModal(true);
     showToast("Jogo desbloqueado com sucesso.", "success");
   };

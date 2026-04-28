@@ -39,7 +39,7 @@ export default function GameLauncher({
     };
   }, [gameId]);
 
-  // envia START_GAME só quando o launcher entra ou quando muda o nível
+  // envia START_GAME quando o launcher entra, quando muda o nível ou quando muda as vidas
   useEffect(() => {
     const startCommand: PlatformCommand = {
       type: "START_GAME",
@@ -54,7 +54,7 @@ export default function GameLauncher({
     }, 0);
 
     return () => window.clearTimeout(id);
-  }, [gameId, level]);
+  }, [gameId, level, lives]);
 
   return <PhaserCanvas key={`${gameId}-${level}`} config={config} />;
 }
