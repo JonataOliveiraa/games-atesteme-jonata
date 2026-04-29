@@ -483,14 +483,90 @@ export class GameScene extends Phaser.Scene {
   }
 
   private onTimeUp() {
+    this.input.enabled = false
+    this.timerEvent?.destroy()
     this.playTimeUp()
-    runtimeGameBridge.emit({
-      type: 'GAME_OVER',
-      gameId: GAME_ID,
-      stage: this.levelConfig.level,
+
+    const isGameOver = this.currentLives <= 0
+
+    if (!isGameOver) {
+      this.errors += 1
+      this.currentPoints = Math.max(0, this.currentPoints - 5)
+      this.currentLives -= 1
+
+      runtimeGameBridge.emit({
+        type: 'WRONG_ANSWER',
+        gameId: GAME_ID,
+        pointsEarned: -5,
+        stage: this.levelConfig.level,
+      })
+    }
+
+    this.showTimeUpOverlay(isGameOver)
+
+    if (isGameOver) {
+      runtimeGameBridge.emit({
+        type: 'GAME_OVER',
+        gameId: GAME_ID,
+        stage: this.levelConfig.level,
+      })
+    } else {
+      this.time.delayedCall(2200, () => {
+        this.scene.restart({
+          level: this.levelConfig.level,
+          points: this.currentPoints,
+          lives: this.currentLives,
+        })
+      })
+    }
+  }
+
+  private showTimeUpOverlay(isGameOver: boolean) {
+    this.add.rectangle(640, 360, 1280, 720, 0x000000, 0.65).setDepth(45)
+
+    const timeText = this.add
+      .text(640, 290, '⏰  Tempo esgotado!', {
+        fontSize: '62px',
+        fontFamily: 'Arial Black, Arial',
+        color: '#FF6B35',
+        stroke: '#000000',
+        strokeThickness: 8,
+      })
+      .setOrigin(0.5)
+      .setDepth(46)
+      .setAlpha(0)
+
+    this.tweens.add({
+      targets: timeText,
+      alpha: 1,
+      scaleX: { from: 0.4, to: 1 },
+      scaleY: { from: 0.4, to: 1 },
+      duration: 350,
+      ease: 'Back.Out',
     })
 
-    this.endRound()
+    const lives = this.currentLives
+    const subMsg = isGameOver
+      ? 'Sem vidas disponíveis…'
+      : `−1 vida  •  ${lives} vida${lives !== 1 ? 's' : ''} restante${lives !== 1 ? 's' : ''}`
+
+    const subText = this.add
+      .text(640, 395, subMsg, {
+        fontSize: '28px',
+        color: '#FFFFFF',
+        stroke: '#000',
+        strokeThickness: 4,
+      })
+      .setOrigin(0.5)
+      .setDepth(46)
+      .setAlpha(0)
+
+    this.tweens.add({
+      targets: subText,
+      alpha: 1,
+      delay: 300,
+      duration: 300,
+    })
   }
 
   private setupDrag() {
