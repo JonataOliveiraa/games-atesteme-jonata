@@ -62,6 +62,7 @@ export default function GameDetailsPage() {
 
   const streakRef = useRef(0);
   const errorCountRef = useRef(0);
+  const lifePurchasePendingRef = useRef(false);
 
   const game = games.find((item) => item.slug === slug);
   const gameCode = slug ? SLUG_TO_CODE[slug] : undefined;
@@ -249,12 +250,17 @@ export default function GameDetailsPage() {
   };
 
   const handleBuyLife = () => {
+    if (lifePurchasePendingRef.current) return;
+
     const success = buyExtraLife(game.slug);
 
     if (!success) {
       showToast("Pontos insuficientes para comprar uma vida.", "error");
       return;
     }
+
+    lifePurchasePendingRef.current = true;
+    window.setTimeout(() => { lifePurchasePendingRef.current = false; }, 2000);
 
     showToast("+1 vida adquirida ❤️", "success");
     setShowNoLivesModal(false);
