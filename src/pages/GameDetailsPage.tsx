@@ -8,15 +8,18 @@ import GameFrame from "../platform/components/GameFrame";
 import type { GameCode } from "../shared/types/game";
 import type { PlatformEvent } from "../shared/contracts/platformEvents";
 import type { GameEventPayload } from "../types/platform";
+import Phaser from "phaser"
 
 const SLUG_TO_CODE: Record<string, GameCode> = {
   "base-dos-classificadores": "EF01CO01",
+  "oficina-dos-algoritmos": "EF01CO03",
 };
 
 const GAME_CONFIG_LOADERS: Partial<
   Record<GameCode, () => Promise<{ default: Phaser.Types.Core.GameConfig }>>
 > = {
   EF01CO01: () => import("../games/EF01CO01/index"),
+  EF01CO03: () => import("../games/EF01CO03/index"),
 };
 
 export default function GameDetailsPage() {

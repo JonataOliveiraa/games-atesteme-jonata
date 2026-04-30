@@ -21,12 +21,13 @@ export const games: Game[] = [
   },
   {
     id: 2,
-    title: "Jogo da Memória",
-    description: "Encontre todos os pares de cartas no menor tempo possível.",
-    category: "Memória",
-    points: 30,
-    icon: "🧩",
-    slug: "jogo-da-memoria",
+    title: "Oficina dos Algoritmos",
+    description: "Monte a ordem correta dos passos e teste o algoritmo para ver a sequência funcionando.",
+    category: "Pensamento Computacional",
+    points: 50,
+    icon: "🛠️",
+    slug: "oficina-dos-algoritmos",
+
   },
   {
     id: 3,
