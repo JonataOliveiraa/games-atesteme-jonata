@@ -13,6 +13,7 @@ import Phaser from "phaser"
 const SLUG_TO_CODE: Record<string, GameCode> = {
   "base-dos-classificadores": "EF01CO01",
   "quiz-de-conhecimentos": "EF01CO02",
+  "oficina-dos-algoritmos": "EF01CO03",
 };
 
 const GAME_CONFIG_LOADERS: Partial<
