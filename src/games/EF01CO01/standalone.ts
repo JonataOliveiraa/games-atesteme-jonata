@@ -1,4 +1,4 @@
-import Phaser from "phaser";
+import * as Phaser from "phaser";
 import config from "./index";
 
 const root = document.getElementById("game-root");

@@ -5,6 +5,7 @@ import type { PlatformCommand } from "../../../shared/contracts/platformCommands
 import { LEVELS } from "../data/levels";
 import type { AlgorithmCard, AlgorithmLevel } from "../types";
 
+
 interface CardSprite extends Phaser.GameObjects.Container {
   cardData: AlgorithmCard;
   originX_: number;
@@ -33,7 +34,8 @@ export class GameScene extends Phaser.Scene {
   constructor() {
     super({ key: "GameScene" });
   }
-
+  
+  
   init(data: { level?: number }) {
     const lvl = (data?.level ?? 1) as 1 | 2 | 3;
     this.levelConfig = LEVELS.find((item) => item.level === lvl) ?? LEVELS[0];
@@ -371,63 +373,66 @@ export class GameScene extends Phaser.Scene {
   }
 
   private placeCardInSlot(card: CardSprite, slotIndex: number) {
-    const oldSlotIndex = this.placedCards.findIndex((item) => item === card);
+  const oldSlotIndex = this.placedCards.findIndex((item) => item === card);
 
-    if (oldSlotIndex >= 0) {
-      this.placedCards[oldSlotIndex] = null;
-    }
-
-    const currentCard = this.placedCards[slotIndex];
-
-    if (currentCard && currentCard !== card) {
-      this.returnCard(currentCard);
-    }
-
-    this.placedCards[slotIndex] = card;
-
-    const slot = this.slots[slotIndex];
-    const isCorrect = card.cardData.id === this.levelConfig.correctOrder[slotIndex];
-
-    this.tweens.add({
-      targets: card,
-      x: slot.x,
-      y: slot.y,
-      scaleX: 0.9,
-      scaleY: 0.9,
-      duration: 220,
-      ease: "Back.Out",
-      onComplete: () => {
-        if (isCorrect) {
-          this.showSlotCorrect(slot);
-
-          if (!this.scoredCorrectCards.has(card.cardData.id)) {
-            this.scoredCorrectCards.add(card.cardData.id);
-            this.hits += 1;
-
-            runtimeGameBridge.emit({
-              type: "CORRECT_ANSWER",
-              gameId: GAME_ID,
-              stage: this.levelConfig.level,
-              pointsEarned: 5,
-            });
-          }
-        } else {
-          this.errors += 1;
-
-          runtimeGameBridge.emit({
-            type: "WRONG_ANSWER",
-            gameId: GAME_ID,
-            stage: this.levelConfig.level,
-            pointsEarned: -5,
-          });
-
-          this.showSlotWrong(slot);
-        }
-
-        this.emitProgress();
-      },
-    });
+  if (oldSlotIndex >= 0) {
+    this.placedCards[oldSlotIndex] = null;
   }
+
+  const currentCard = this.placedCards[slotIndex];
+
+  if (currentCard && currentCard !== card) {
+    this.returnCard(currentCard);
+  }
+
+  const slot = this.slots[slotIndex];
+  const isCorrect = card.cardData.id === this.levelConfig.correctOrder[slotIndex];
+
+  if (!isCorrect) {
+    this.errors += 1;
+
+    runtimeGameBridge.emit({
+      type: "WRONG_ANSWER",
+      gameId: GAME_ID,
+      stage: this.levelConfig.level,
+      pointsEarned: -5,
+    });
+
+    this.showSlotWrong(slot);
+    this.returnCard(card);
+    this.emitProgress();
+    return;
+  }
+
+  this.placedCards[slotIndex] = card;
+
+  this.tweens.add({
+    targets: card,
+    x: slot.x,
+    y: slot.y,
+    scaleX: 0.9,
+    scaleY: 0.9,
+    duration: 220,
+    ease: "Back.Out",
+    onComplete: () => {
+      this.showSlotCorrect(slot);
+
+      if (!this.scoredCorrectCards.has(card.cardData.id)) {
+        this.scoredCorrectCards.add(card.cardData.id);
+        this.hits += 1;
+
+        runtimeGameBridge.emit({
+          type: "CORRECT_ANSWER",
+          gameId: GAME_ID,
+          stage: this.levelConfig.level,
+          pointsEarned: 5,
+        });
+      }
+
+      this.emitProgress();
+    },
+  });
+}
 
   private returnCard(card: CardSprite) {
     const oldSlotIndex = this.placedCards.findIndex((item) => item === card);
@@ -470,22 +475,40 @@ export class GameScene extends Phaser.Scene {
   }
 
   private handleSuccess() {
+  this.showSuccessAnimation();
+  this.emitProgress();
+
   const nextLevel = this.levelConfig.level + 1;
 
+  // 👉 níveis 1 e 2
   if (nextLevel <= 3) {
-    this.time.delayedCall(800, () => {
+    runtimeGameBridge.emit({
+      type: "CHECKPOINT",
+      gameId: GAME_ID,
+      stage: nextLevel,
+      progress: 0,
+      score: this.hits * 5 - this.errors * 5,
+      hits: this.hits,
+      errors: this.errors,
+    });
+
+    this.time.delayedCall(1500, () => {
       this.scene.restart({ level: nextLevel });
     });
-  } else {
-    // terminou o jogo
-    runtimeGameBridge.send({
-      type: "GAME_COMPLETED",
-      payload: {
-        gameId: "oficina-dos-algoritmos",
-        score: this.hits * 5,
-      },
-    });
+
+    return;
   }
+
+  // 👉 nível 3 (final)
+  this.time.delayedCall(1500, () => {
+    runtimeGameBridge.emit({
+      type: "GAME_COMPLETED",
+      gameId: GAME_ID,
+      stage: this.levelConfig.level,
+    });
+
+    this.input.enabled = false;
+  });
 }
 
   private handleFailure(wrongIndex: number) {

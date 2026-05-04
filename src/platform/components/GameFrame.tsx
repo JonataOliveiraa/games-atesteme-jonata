@@ -39,7 +39,7 @@ export default function GameFrame({
 
   return (
     <GameLauncher
-      key={`${gameId}-level-${level}`}
+      key={gameId}
       gameId={gameId}
       level={level}
       points={points}

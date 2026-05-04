@@ -5,7 +5,7 @@ export const LEVELS: AlgorithmLevel[] = [
     level: 1,
     title: "Fazer um sanduíche",
     objective: "Organize os passos para preparar o sanduíche.",
-    timeLimit: 45,
+    timeLimit: 15,
     cards: [
       {
         id: "pegar-pao",
@@ -36,7 +36,7 @@ export const LEVELS: AlgorithmLevel[] = [
     level: 2,
     title: "Plantar uma flor",
     objective: "Organize os passos para plantar uma florzinha.",
-    timeLimit: 60,
+    timeLimit: 18,
     cards: [
       {
         id: "pegar-vaso",
@@ -87,7 +87,7 @@ export const LEVELS: AlgorithmLevel[] = [
   level: 3,
   title: "Escovar os dentes",
   objective: "Organize os passos para escovar os dentes na ordem correta.",
-  timeLimit: 90,
+  timeLimit: 23,
   cards: [
     {
       id: "pegar-escova",

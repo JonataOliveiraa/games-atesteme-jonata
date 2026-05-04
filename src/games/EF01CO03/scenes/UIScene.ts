@@ -1,4 +1,4 @@
-import Phaser from "phaser";
+import * as Phaser from "phaser";
 import { EventBus } from "../../../shared/EventBus";
 
 export class UIScene extends Phaser.Scene {
@@ -15,7 +15,6 @@ export class UIScene extends Phaser.Scene {
   }
 
   private handleMuteAudio = () => {
-    // Mantido para seguir o padrão do projeto.
-    // Neste jogo, não exibimos HUD de nível, acertos, erros ou progresso.
+    // sem HUD
   };
 }

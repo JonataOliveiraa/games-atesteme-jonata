@@ -39,22 +39,22 @@ export default function GameLauncher({
     };
   }, [gameId]);
 
-  // envia START_GAME quando o launcher entra, quando muda o nível ou quando muda as vidas
+// envia START_GAME apenas quando o launcher entra
   useEffect(() => {
-    const startCommand: PlatformCommand = {
-      type: "START_GAME",
-      gameId,
-      points,
-      stage: level,
-      lives,
-    };
+  const startCommand: PlatformCommand = {
+    type: "START_GAME",
+    gameId,
+    points,
+    stage: level,
+    lives,
+  };
 
-    const id = window.setTimeout(() => {
-      gameBridge.send(startCommand);
-    }, 0);
+  const id = window.setTimeout(() => {
+    gameBridge.send(startCommand);
+  }, 0);
 
-    return () => window.clearTimeout(id);
-  }, [gameId, level, lives]);
+  return () => window.clearTimeout(id);
+}, [gameId]);
 
-  return <PhaserCanvas key={`${gameId}-${level}`} config={config} />;
+return <PhaserCanvas key={gameId} config={config} />;
 }

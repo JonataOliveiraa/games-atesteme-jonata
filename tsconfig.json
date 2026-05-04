@@ -5,9 +5,11 @@
     "module": "ESNext",
     "moduleResolution": "bundler",
     "lib": ["ES2020", "DOM"],
-    "types": [],
     "strict": false,
     "skipLibCheck": true,
-    "esModuleInterop": true
-  }
+    "esModuleInterop": true,
+    "noEmit": true,
+    "types": ["vite/client"]
+  },
+  "include": ["src", "node_modules/phaser/types/index.d.ts"]
 }
