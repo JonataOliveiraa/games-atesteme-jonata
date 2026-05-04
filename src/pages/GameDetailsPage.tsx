@@ -20,6 +20,7 @@ const GAME_CONFIG_LOADERS: Partial<
 > = {
   EF01CO01: () => import("../games/EF01CO01/index"),
   EF01CO02: () => import("../games/EF01CO02/index"), 
+  EF01CO03: () => import("../games/EF01CO03/index")
 
 };
 
