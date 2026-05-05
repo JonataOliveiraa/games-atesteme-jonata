@@ -155,22 +155,15 @@ export default function GameDetailsPage() {
         return;
 
       case "CHECKPOINT": {
-  setCheckpoint({
-    progress: event.progress,
-    score: event.score,
-    stage: event.stage,
-    hits: event.hits,
-    errors: event.errors,
-  });
-
-  const nextStage = event.stage as 1 | 2 | 3;
-
-  if (nextStage === 1 || nextStage === 2 || nextStage === 3) {
-    setCurrentLevel(nextStage);
-  }
-
-  return;
-}
+        setCheckpoint({
+          progress: event.progress,
+          score: event.score,
+          stage: event.stage,
+          hits: event.hits,
+          errors: event.errors,
+        });
+        return;
+      }
 
       case "CORRECT_ANSWER": {
         dispatchPlatformGameEvent({

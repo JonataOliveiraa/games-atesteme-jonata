@@ -487,45 +487,36 @@ export class GameScene extends Phaser.Scene {
     this.timerEvent?.destroy()
     this.playTimeUp()
 
-    const isGameOver = this.currentLives <= 0
+    // Sempre emite WRONG_ANSWER — deixa o React deduzir a vida e decidir se é
+    // GAME_OVER. Não usamos this.currentLives aqui porque ele pode estar
+    // dessincronizado com a plataforma (START_GAME inicial pode chegar antes
+    // de registerPlatformCommands estar pronto).
+    this.errors += 1
+    this.currentPoints = Math.max(0, this.currentPoints - 5)
 
-    if (!isGameOver) {
-      this.errors += 1
-      this.currentPoints = Math.max(0, this.currentPoints - 5)
-      this.currentLives -= 1
+    runtimeGameBridge.emit({
+      type: 'WRONG_ANSWER',
+      gameId: GAME_ID,
+      pointsEarned: -5,
+      stage: this.levelConfig.level,
+    })
 
-      runtimeGameBridge.emit({
-        type: 'WRONG_ANSWER',
-        gameId: GAME_ID,
-        pointsEarned: -5,
-        stage: this.levelConfig.level,
+    this.showTimeUpOverlay()
+
+    this.time.delayedCall(2200, () => {
+      this.scene.restart({
+        level: this.levelConfig.level,
+        points: this.currentPoints,
+        lives: this.currentLives,
       })
-    }
-
-    this.showTimeUpOverlay(isGameOver)
-
-    if (isGameOver) {
-      runtimeGameBridge.emit({
-        type: 'GAME_OVER',
-        gameId: GAME_ID,
-        stage: this.levelConfig.level,
-      })
-    } else {
-      this.time.delayedCall(2200, () => {
-        this.scene.restart({
-          level: this.levelConfig.level,
-          points: this.currentPoints,
-          lives: this.currentLives,
-        })
-      })
-    }
+    })
   }
 
-  private showTimeUpOverlay(isGameOver: boolean) {
+  private showTimeUpOverlay() {
     this.add.rectangle(640, 360, 1280, 720, 0x000000, 0.65).setDepth(45)
 
     const timeText = this.add
-      .text(640, 290, '⏰  Tempo esgotado!', {
+      .text(640, 340, '⏰  Tempo esgotado!', {
         fontSize: '62px',
         fontFamily: 'Arial Black, Arial',
         color: '#FF6B35',
@@ -545,13 +536,8 @@ export class GameScene extends Phaser.Scene {
       ease: 'Back.Out',
     })
 
-    const lives = this.currentLives
-    const subMsg = isGameOver
-      ? 'Sem vidas disponíveis…'
-      : `−1 vida  •  ${lives} vida${lives !== 1 ? 's' : ''} restante${lives !== 1 ? 's' : ''}`
-
     const subText = this.add
-      .text(640, 395, subMsg, {
+      .text(640, 420, '−1 vida', {
         fontSize: '28px',
         color: '#FFFFFF',
         stroke: '#000',
@@ -586,7 +572,18 @@ export class GameScene extends Phaser.Scene {
     this.input.on('dragend', (_: Phaser.Input.Pointer, obj: DraggableItem, dropped: boolean) => {
       obj.setDepth(0).setAngle(0)
       this.tweens.add({ targets: obj, scaleX: 1, scaleY: 1, duration: 120 })
-      if (!dropped) this.returnItem(obj)
+
+      if (!dropped) {
+        // Fallback para touch: o evento `drop` pode não disparar se o dedo
+        // levantar levemente fora do zone. Verificamos manualmente por proximidade.
+        const hitBase = this.findBaseAtPosition(obj.x, obj.y)
+        if (hitBase) {
+          const baseData = hitBase.getData('baseData') as ClassifierBase
+          this.validateDrop(obj, hitBase, baseData)
+        } else {
+          this.returnItem(obj)
+        }
+      }
     })
 
     this.input.on(
@@ -602,6 +599,21 @@ export class GameScene extends Phaser.Scene {
         this.validateDrop(obj, container, baseData)
       },
     )
+  }
+
+  private findBaseAtPosition(x: number, y: number): Phaser.GameObjects.Container | null {
+    const HW = 118  // metade da largura da base (210/2) + margem de toque
+    const HH = 82   // metade da altura da base (145/2) + margem de toque
+
+    for (const container of this.bases) {
+      if (
+        x >= container.x - HW && x <= container.x + HW &&
+        y >= container.y - HH && y <= container.y + HH
+      ) {
+        return container
+      }
+    }
+    return null
   }
 
   private validateDrop(
@@ -819,6 +831,19 @@ export class GameScene extends Phaser.Scene {
 
       EventBus.emit('round-complete', result)
     })
+
+    // Para níveis 1 e 2, a cena avança automaticamente após a animação.
+    // No nível 3, o React desmonta o GameFrame via setHasStartedGame(false).
+    if (this.levelConfig.level < 3) {
+      const nextLevel = (this.levelConfig.level + 1) as 1 | 2 | 3
+      this.time.delayedCall(2300, () => {
+        this.scene.restart({
+          level: nextLevel,
+          points: this.currentPoints,
+          lives: this.currentLives,
+        })
+      })
+    }
   }
 
   private showRoundComplete() {
