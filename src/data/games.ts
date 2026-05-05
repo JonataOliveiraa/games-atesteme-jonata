@@ -40,13 +40,14 @@ export const games: Game[] = [
   },
   {
     id: 4,
-    title: "Palavra Secreta",
-    description: "Descubra a palavra correta com base nas dicas recebidas.",
-    category: "Lógica",
-    points: 35,
-    icon: "🔤",
-    slug: "palavra-secreta",
-  },
+    title: "Pixel Secreto",
+    description: "Descubra imagens escondidas preenchendo grades com códigos de cor.",
+    category: "Pensamento Computacional",
+    points: 50,
+    icon: "🎨",
+    slug: "pixel-secreto",
+}
+,
   {
     id: 5,
     title: "Corrida do Saber",

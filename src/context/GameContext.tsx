@@ -69,6 +69,7 @@ const INITIAL_STATE: PlatformState = {
 const GAME_CODE_TO_SLUG: Record<string, string> = {
   EF01CO01: "base-dos-classificadores",
   EF01CO03: "oficina-dos-algoritmos",
+  EF01CO05: "pixel-secreto",
 };
 
 function normalizeGameId(gameId: string): string {

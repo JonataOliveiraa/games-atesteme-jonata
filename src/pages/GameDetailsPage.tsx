@@ -12,14 +12,18 @@ import type Phaser from "phaser";
 
 const SLUG_TO_CODE: Record<string, GameCode> = {
   "base-dos-classificadores": "EF01CO01",
+  "quiz-de-conhecimentos": "EF01CO02",
   "oficina-dos-algoritmos": "EF01CO03",
+  "pixel-secreto": "EF01CO05",
 };
 
 const GAME_CONFIG_LOADERS: Partial<
   Record<GameCode, () => Promise<{ default: Phaser.Types.Core.GameConfig }>>
 > = {
   EF01CO01: () => import("../games/EF01CO01/index"),
+  EF01CO02: () => import("../games/EF01CO02/index"),
   EF01CO03: () => import("../games/EF01CO03/index"),
+  EF01CO05: () => import("../games/EF01CO05/index"),
 };
 
 export default function GameDetailsPage() {
@@ -207,8 +211,8 @@ export default function GameDetailsPage() {
           );
 
           if (livesAfterError === 0 && !alreadyOfferedExtraLifeRef.current) {
-          alreadyOfferedExtraLifeRef.current = true;
-           setShowNoLivesModal(true);
+            alreadyOfferedExtraLifeRef.current = true;
+            setShowNoLivesModal(true);
           }
         }, 0);
 
@@ -216,35 +220,34 @@ export default function GameDetailsPage() {
       }
 
       case "GAME_COMPLETED": {
-  dispatchPlatformGameEvent({
-    type: "GAME_COMPLETED",
-    gameId: event.gameId,
-    stage: event.stage,
-    pointsEarned: 0,
-  });
+        dispatchPlatformGameEvent({
+          type: "GAME_COMPLETED",
+          gameId: event.gameId,
+          stage: event.stage,
+          pointsEarned: 0,
+        });
 
-  if (errorCountRef.current === 0) {
-    showToast("⭐ +5 bônus sem erros", "success");
-  } else {
-    showToast("Fase concluída!", "success");
-  }
+        if (errorCountRef.current === 0) {
+          showToast("⭐ +5 bônus sem erros", "success");
+        } else {
+          showToast("Fase concluída!", "success");
+        }
 
-  if (currentLevel < 3) {
-    setCurrentLevel((prev) => (prev + 1) as 1 | 2 | 3);
-  } else {
-    setCurrentLevel(1);
+        if (currentLevel < 3) {
+          setCurrentLevel((prev) => (prev + 1) as 1 | 2 | 3);
+        } else {
+          setCurrentLevel(1);
 
-    // Aguarda a animação do Phaser antes de mostrar o modal
-    window.setTimeout(() => {
-      setHasStartedGame(false);
-      setShowCongratsModal(true);
-    }, 2400);
-  }
+          window.setTimeout(() => {
+            setHasStartedGame(false);
+            setShowCongratsModal(true);
+          }, 2400);
+        }
 
-  streakRef.current = 0;
-  errorCountRef.current = 0;
-  return;
-}
+        streakRef.current = 0;
+        errorCountRef.current = 0;
+        return;
+      }
 
       case "GAME_OVER": {
         dispatchPlatformGameEvent({
@@ -304,15 +307,16 @@ export default function GameDetailsPage() {
   };
 
   const handleCongratsPlayAgain = () => {
-  setShowCongratsModal(false);
-  setCurrentLevel(1);
-};
+    setShowCongratsModal(false);
+    setCurrentLevel(1);
+    setHasStartedGame(false);
+  };
 
-const handleCongratsExit = () => {
-  setShowCongratsModal(false);
-  setCurrentLevel(1);
-  navigate("/");
-};
+  const handleCongratsExit = () => {
+    setShowCongratsModal(false);
+    setCurrentLevel(1);
+    navigate("/");
+  };
 
   const handleExit = () => {
     navigate(-1);
@@ -429,16 +433,6 @@ const handleCongratsExit = () => {
           onConfirm={handleBuyLife}
           onCancel={() => setShowPostUnlockLifeModal(false)}
         />
-        
-        <ConfirmModal
-  isOpen={showCongratsModal}
-  title="🏆 Parabéns! Você concluiu o jogo!"
-  message={`Você completou todos os 3 níveis de "${game.title}". Excelente trabalho! Deseja jogar novamente ou voltar aos jogos?`}
-  confirmText="Jogar novamente"
-  cancelText="Voltar aos jogos"
-  onConfirm={handleCongratsPlayAgain}
-  onCancel={handleCongratsExit}
-/>
 
         {toast && (
           <Toast
@@ -525,12 +519,12 @@ const handleCongratsExit = () => {
 
                 <div className="game-actions">
                   <button
-                      type="button"
-                      onClick={() => {
-                        alreadyOfferedExtraLifeRef.current = false;
-                        setHasStartedGame(true);
-                      }}
-                    >
+                    type="button"
+                    onClick={() => {
+                      alreadyOfferedExtraLifeRef.current = false;
+                      setHasStartedGame(true);
+                    }}
+                  >
                     {currentLevel === 1
                       ? "Iniciar jogo"
                       : `Continuar no nível ${currentLevel}`}
@@ -603,6 +597,16 @@ const handleCongratsExit = () => {
         onCancel={() => setShowUnlockModal(false)}
       />
 
+      <ConfirmModal
+        isOpen={showCongratsModal}
+        title="🏆 Parabéns! Você concluiu o jogo!"
+        message={`Você completou todos os 3 níveis de "${game.title}". Excelente trabalho! Deseja jogar novamente ou voltar aos jogos?`}
+        confirmText="Jogar novamente"
+        cancelText="Voltar aos jogos"
+        onConfirm={handleCongratsPlayAgain}
+        onCancel={handleCongratsExit}
+      />
+
       {toast && (
         <Toast
           message={toast.message}
@@ -613,4 +617,3 @@ const handleCongratsExit = () => {
     </>
   );
 }
-
