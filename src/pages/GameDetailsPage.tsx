@@ -52,6 +52,7 @@ export default function GameDetailsPage() {
   const [showNoLivesModal, setShowNoLivesModal] = useState(false);
   const [showPostUnlockLifeModal, setShowPostUnlockLifeModal] =
     useState(false);
+  const [showCongratsModal, setShowCongratsModal] = useState(false);
 
   const [toast, setToast] = useState<{
     message: string;
@@ -230,8 +231,11 @@ export default function GameDetailsPage() {
         if (currentLevel < 3) {
           setCurrentLevel((prev) => (prev + 1) as 1 | 2 | 3);
         } else {
-          setCurrentLevel(1);
-          setHasStartedGame(false);
+          // Aguarda a animação "INCRÍVEL!" do Phaser antes de desmontar
+          window.setTimeout(() => {
+            setHasStartedGame(false);
+            setShowCongratsModal(true);
+          }, 2400);
         }
 
         streakRef.current = 0;
@@ -287,6 +291,17 @@ export default function GameDetailsPage() {
     setHasStartedGame(false);
     setShowPostUnlockLifeModal(true);
     showToast("Jogo desbloqueado com sucesso.", "success");
+  };
+
+  const handleCongratsPlayAgain = () => {
+    setShowCongratsModal(false);
+    setCurrentLevel(1);
+  };
+
+  const handleCongratsExit = () => {
+    setShowCongratsModal(false);
+    setCurrentLevel(1);
+    navigate("/");
   };
 
   const handleExit = () => {
@@ -560,6 +575,16 @@ export default function GameDetailsPage() {
         cancelText="Cancelar"
         onConfirm={handleUnlock}
         onCancel={() => setShowUnlockModal(false)}
+      />
+
+      <ConfirmModal
+        isOpen={showCongratsModal}
+        title="🏆 Parabéns! Você concluiu o jogo!"
+        message={`Você completou todos os 3 níveis de "${game.title}". Excelente trabalho! Deseja jogar novamente ou voltar aos jogos?`}
+        confirmText="Jogar novamente"
+        cancelText="Voltar aos jogos"
+        onConfirm={handleCongratsPlayAgain}
+        onCancel={handleCongratsExit}
       />
 
       {toast && (
