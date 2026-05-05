@@ -48,6 +48,7 @@ export default function GameDetailsPage() {
   const [showUnlockModal, setShowUnlockModal] = useState(false);
   const [showNoLivesModal, setShowNoLivesModal] = useState(false);
   const [showPostUnlockLifeModal, setShowPostUnlockLifeModal] = useState(false);
+  const [showCongratsModal, setShowCongratsModal] = useState(false);
 
   const [toast, setToast] = useState<{
     message: string;
@@ -215,30 +216,35 @@ export default function GameDetailsPage() {
       }
 
       case "GAME_COMPLETED": {
-        dispatchPlatformGameEvent({
-          type: "GAME_COMPLETED",
-          gameId: event.gameId,
-          stage: event.stage,
-          pointsEarned: 0,
-        });
+  dispatchPlatformGameEvent({
+    type: "GAME_COMPLETED",
+    gameId: event.gameId,
+    stage: event.stage,
+    pointsEarned: 0,
+  });
 
-        if (errorCountRef.current === 0) {
-          showToast("⭐ +5 bônus sem erros", "success");
-        } else {
-          showToast("Fase concluída!", "success");
-        }
+  if (errorCountRef.current === 0) {
+    showToast("⭐ +5 bônus sem erros", "success");
+  } else {
+    showToast("Fase concluída!", "success");
+  }
 
-        if (currentLevel < 3) {
-          setCurrentLevel((prev) => (prev + 1) as 1 | 2 | 3);
-        } else {
-          setCurrentLevel(1);
-          setHasStartedGame(false);
-        }
+  if (currentLevel < 3) {
+    setCurrentLevel((prev) => (prev + 1) as 1 | 2 | 3);
+  } else {
+    setCurrentLevel(1);
 
-        streakRef.current = 0;
-        errorCountRef.current = 0;
-        return;
-      }
+    // Aguarda a animação do Phaser antes de mostrar o modal
+    window.setTimeout(() => {
+      setHasStartedGame(false);
+      setShowCongratsModal(true);
+    }, 2400);
+  }
+
+  streakRef.current = 0;
+  errorCountRef.current = 0;
+  return;
+}
 
       case "GAME_OVER": {
         dispatchPlatformGameEvent({
@@ -296,6 +302,17 @@ export default function GameDetailsPage() {
     setShowPostUnlockLifeModal(true);
     showToast("Jogo desbloqueado com sucesso.", "success");
   };
+
+  const handleCongratsPlayAgain = () => {
+  setShowCongratsModal(false);
+  setCurrentLevel(1);
+};
+
+const handleCongratsExit = () => {
+  setShowCongratsModal(false);
+  setCurrentLevel(1);
+  navigate("/");
+};
 
   const handleExit = () => {
     navigate(-1);
@@ -412,6 +429,16 @@ export default function GameDetailsPage() {
           onConfirm={handleBuyLife}
           onCancel={() => setShowPostUnlockLifeModal(false)}
         />
+        
+        <ConfirmModal
+  isOpen={showCongratsModal}
+  title="🏆 Parabéns! Você concluiu o jogo!"
+  message={`Você completou todos os 3 níveis de "${game.title}". Excelente trabalho! Deseja jogar novamente ou voltar aos jogos?`}
+  confirmText="Jogar novamente"
+  cancelText="Voltar aos jogos"
+  onConfirm={handleCongratsPlayAgain}
+  onCancel={handleCongratsExit}
+/>
 
         {toast && (
           <Toast
