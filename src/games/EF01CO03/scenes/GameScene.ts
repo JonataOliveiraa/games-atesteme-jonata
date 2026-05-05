@@ -1,10 +1,9 @@
-import Phaser from "phaser";
+import * as Phaser from "phaser";
 import { EventBus } from "../../../shared/EventBus";
 import { runtimeGameBridge } from "../../../shared/bridge/runtimeGameBridge";
 import type { PlatformCommand } from "../../../shared/contracts/platformCommands";
 import { LEVELS } from "../data/levels";
 import type { AlgorithmCard, AlgorithmLevel } from "../types";
-
 
 interface CardSprite extends Phaser.GameObjects.Container {
   cardData: AlgorithmCard;
@@ -24,7 +23,9 @@ export class GameScene extends Phaser.Scene {
 
   private hits = 0;
   private errors = 0;
+  private currentLives = 1;
   private scoredCorrectCards = new Set<string>();
+
 
   private timerEvent?: Phaser.Time.TimerEvent;
   private timerBar?: Phaser.GameObjects.Rectangle;
@@ -34,19 +35,20 @@ export class GameScene extends Phaser.Scene {
   constructor() {
     super({ key: "GameScene" });
   }
-  
-  
-  init(data: { level?: number }) {
-    const lvl = (data?.level ?? 1) as 1 | 2 | 3;
-    this.levelConfig = LEVELS.find((item) => item.level === lvl) ?? LEVELS[0];
 
-    this.cardSprites = [];
-    this.slots = [];
-    this.placedCards = [];
-    this.hits = 0;
-    this.errors = 0;
-    this.scoredCorrectCards = new Set<string>();
-  }
+  init(data: { level?: number; lives?: number }) {
+  const lvl = (data?.level ?? 1) as 1 | 2 | 3;
+  this.levelConfig = LEVELS.find((item) => item.level === lvl) ?? LEVELS[0];
+
+  this.currentLives = data?.lives ?? 1;
+
+  this.cardSprites = [];
+  this.slots = [];
+  this.placedCards = [];
+  this.hits = 0;
+  this.errors = 0;
+  this.scoredCorrectCards = new Set<string>();
+}
 
   create() {
     this.createBackground();
@@ -107,7 +109,7 @@ export class GameScene extends Phaser.Scene {
         Phaser.Math.Between(85, 680),
         Phaser.Math.Between(20, 56),
         Phaser.Utils.Array.GetRandom(colors),
-        0.22,
+        0.22
       );
 
       this.tweens.add({
@@ -183,6 +185,7 @@ export class GameScene extends Phaser.Scene {
     this.input.enabled = false;
     this.timerEvent?.destroy();
 
+    this.playWrong();
     this.showFloatingMessage("Tempo esgotado!", 0xef4444);
 
     runtimeGameBridge.emit({
@@ -322,17 +325,26 @@ export class GameScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
 
-    button.on("pointerdown", () => this.testAlgorithm());
+    button.on("pointerdown", () => {
+      this.playClick();
+      this.testAlgorithm();
+    });
+
     button.on("pointerover", () => button.setFillStyle(0x9d4edd));
     button.on("pointerout", () => button.setFillStyle(0x7b2ff7));
 
     text.setInteractive({ useHandCursor: true });
-    text.on("pointerdown", () => this.testAlgorithm());
+    text.on("pointerdown", () => {
+      this.playClick();
+      this.testAlgorithm();
+    });
   }
 
   private setupDrag() {
     this.input.on("dragstart", (_: Phaser.Input.Pointer, obj: CardSprite) => {
       obj.setDepth(30);
+      this.playClick();
+
       this.tweens.add({
         targets: obj,
         scaleX: 1.08,
@@ -345,7 +357,7 @@ export class GameScene extends Phaser.Scene {
       "drag",
       (_: Phaser.Input.Pointer, obj: CardSprite, dragX: number, dragY: number) => {
         obj.setPosition(dragX, dragY);
-      },
+      }
     );
 
     this.input.on("dragend", (_: Phaser.Input.Pointer, obj: CardSprite) => {
@@ -373,66 +385,79 @@ export class GameScene extends Phaser.Scene {
   }
 
   private placeCardInSlot(card: CardSprite, slotIndex: number) {
-  const oldSlotIndex = this.placedCards.findIndex((item) => item === card);
+    const oldSlotIndex = this.placedCards.findIndex((item) => item === card);
 
-  if (oldSlotIndex >= 0) {
-    this.placedCards[oldSlotIndex] = null;
-  }
+    if (oldSlotIndex >= 0) {
+      this.placedCards[oldSlotIndex] = null;
+    }
 
-  const currentCard = this.placedCards[slotIndex];
+    const currentCard = this.placedCards[slotIndex];
 
-  if (currentCard && currentCard !== card) {
-    this.returnCard(currentCard);
-  }
+    if (currentCard && currentCard !== card) {
+      this.returnCard(currentCard);
+    }
 
-  const slot = this.slots[slotIndex];
-  const isCorrect = card.cardData.id === this.levelConfig.correctOrder[slotIndex];
+    const slot = this.slots[slotIndex];
+    const isCorrect = card.cardData.id === this.levelConfig.correctOrder[slotIndex];
 
-  if (!isCorrect) {
-    this.errors += 1;
+    if (!isCorrect) {
+      this.errors += 1;
+      this.playWrong();
 
-    runtimeGameBridge.emit({
-      type: "WRONG_ANSWER",
-      gameId: GAME_ID,
-      stage: this.levelConfig.level,
-      pointsEarned: -5,
-    });
-
-    this.showSlotWrong(slot);
-    this.returnCard(card);
-    this.emitProgress();
-    return;
-  }
-
-  this.placedCards[slotIndex] = card;
-
-  this.tweens.add({
-    targets: card,
-    x: slot.x,
-    y: slot.y,
-    scaleX: 0.9,
-    scaleY: 0.9,
-    duration: 220,
-    ease: "Back.Out",
-    onComplete: () => {
-      this.showSlotCorrect(slot);
-
-      if (!this.scoredCorrectCards.has(card.cardData.id)) {
-        this.scoredCorrectCards.add(card.cardData.id);
-        this.hits += 1;
-
-        runtimeGameBridge.emit({
-          type: "CORRECT_ANSWER",
-          gameId: GAME_ID,
-          stage: this.levelConfig.level,
-          pointsEarned: 5,
-        });
-      }
-
-      this.emitProgress();
-    },
+      if (this.currentLives <= 0) {
+  runtimeGameBridge.emit({
+    type: "GAME_OVER",
+    gameId: GAME_ID,
+    stage: this.levelConfig.level,
   });
+  return;
 }
+
+this.currentLives -= 1;
+
+      runtimeGameBridge.emit({
+        type: "WRONG_ANSWER",
+        gameId: GAME_ID,
+        stage: this.levelConfig.level,
+        pointsEarned: -5,
+      });
+
+      this.showSlotWrong(slot);
+      this.returnCard(card);
+      this.emitProgress();
+      return;
+    }
+
+    this.placedCards[slotIndex] = card;
+
+    this.tweens.add({
+      targets: card,
+      x: slot.x,
+      y: slot.y,
+      scaleX: 0.9,
+      scaleY: 0.9,
+      duration: 220,
+      ease: "Back.Out",
+      onComplete: () => {
+        this.showSlotCorrect(slot);
+
+        if (!this.scoredCorrectCards.has(card.cardData.id)) {
+          this.scoredCorrectCards.add(card.cardData.id);
+          this.hits += 1;
+          this.playCorrect();
+
+          runtimeGameBridge.emit({
+            type: "CORRECT_ANSWER",
+            gameId: GAME_ID,
+            stage: this.levelConfig.level,
+            pointsEarned: 5,
+          });
+        }
+
+        this.emitProgress();
+      },
+    });
+  }
 
   private returnCard(card: CardSprite) {
     const oldSlotIndex = this.placedCards.findIndex((item) => item === card);
@@ -458,12 +483,13 @@ export class GameScene extends Phaser.Scene {
     const selectedOrder = this.placedCards.map((card) => card?.cardData.id ?? null);
 
     if (selectedOrder.some((id) => id === null)) {
+      this.playWrong();
       this.showFloatingMessage("Complete todos os passos primeiro", 0xf59e0b);
       return;
     }
 
     const wrongIndex = selectedOrder.findIndex(
-      (id, index) => id !== this.levelConfig.correctOrder[index],
+      (id, index) => id !== this.levelConfig.correctOrder[index]
     );
 
     if (wrongIndex === -1) {
@@ -475,45 +501,45 @@ export class GameScene extends Phaser.Scene {
   }
 
   private handleSuccess() {
-  this.showSuccessAnimation();
-  this.emitProgress();
+    this.playWin();
+    this.showSuccessAnimation();
+    this.emitProgress();
 
-  const nextLevel = this.levelConfig.level + 1;
+    const nextLevel = this.levelConfig.level + 1;
 
-  // 👉 níveis 1 e 2
-  if (nextLevel <= 3) {
-    runtimeGameBridge.emit({
-      type: "CHECKPOINT",
-      gameId: GAME_ID,
-      stage: nextLevel,
-      progress: 0,
-      score: this.hits * 5 - this.errors * 5,
-      hits: this.hits,
-      errors: this.errors,
-    });
+    if (nextLevel <= 3) {
+      runtimeGameBridge.emit({
+        type: "CHECKPOINT",
+        gameId: GAME_ID,
+        stage: nextLevel,
+        progress: 0,
+        score: this.hits * 5 - this.errors * 5,
+        hits: this.hits,
+        errors: this.errors,
+      });
+
+      this.time.delayedCall(1500, () => {
+        this.scene.restart({ level: nextLevel });
+      });
+
+      return;
+    }
 
     this.time.delayedCall(1500, () => {
-      this.scene.restart({ level: nextLevel });
-    });
+      runtimeGameBridge.emit({
+        type: "GAME_COMPLETED",
+        gameId: GAME_ID,
+        stage: this.levelConfig.level,
+      });
 
-    return;
+      this.input.enabled = false;
+    });
   }
-
-  // 👉 nível 3 (final)
-  this.time.delayedCall(1500, () => {
-    runtimeGameBridge.emit({
-      type: "GAME_COMPLETED",
-      gameId: GAME_ID,
-      stage: this.levelConfig.level,
-    });
-
-    this.input.enabled = false;
-  });
-}
 
   private handleFailure(wrongIndex: number) {
     const slot = this.slots[wrongIndex];
 
+    this.playWrong();
     slot.setStrokeStyle(7, 0xef4444);
 
     this.time.delayedCall(700, () => {
@@ -666,7 +692,6 @@ export class GameScene extends Phaser.Scene {
       (command: PlatformCommand) => {
         if (command.type !== "START_GAME") return;
         if (command.gameId !== GAME_ID) return;
-
         if (command.stage === this.levelConfig.level) return;
 
         this.time.delayedCall(100, () => {
@@ -674,8 +699,64 @@ export class GameScene extends Phaser.Scene {
             level: command.stage as 1 | 2 | 3,
           });
         });
-      },
+      }
     );
+  }
+
+  private getAudioContext(): AudioContext | null {
+    if (!("context" in this.sound)) return null;
+    return (this.sound as Phaser.Sound.WebAudioSoundManager).context;
+  }
+
+  private playTone(
+    frequency: number,
+    duration: number,
+    type: OscillatorType = "sine",
+    volume = 0.25,
+    delaySeconds = 0
+  ) {
+    const ctx = this.getAudioContext();
+    if (!ctx) return;
+
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+
+    osc.type = type;
+    osc.frequency.setValueAtTime(frequency, ctx.currentTime + delaySeconds);
+    gain.gain.setValueAtTime(volume, ctx.currentTime + delaySeconds);
+
+    gain.gain.exponentialRampToValueAtTime(
+      0.001,
+      ctx.currentTime + delaySeconds + duration
+    );
+
+    osc.start(ctx.currentTime + delaySeconds);
+    osc.stop(ctx.currentTime + delaySeconds + duration + 0.01);
+  }
+
+  private playClick() {
+    this.playTone(440, 0.05, "sine", 0.12);
+  }
+
+  private playCorrect() {
+    this.playTone(523, 0.12, "sine", 0.28, 0);
+    this.playTone(659, 0.12, "sine", 0.28, 0.1);
+    this.playTone(784, 0.2, "sine", 0.32, 0.2);
+  }
+
+  private playWrong() {
+    this.playTone(220, 0.1, "square", 0.18, 0);
+    this.playTone(196, 0.1, "square", 0.14, 0.1);
+    this.playTone(165, 0.18, "square", 0.1, 0.2);
+  }
+
+  private playWin() {
+    [262, 330, 392, 523].forEach((freq, index) => {
+      this.playTone(freq, 0.2, "sine", 0.3, index * 0.13);
+    });
   }
 
   private getCardColor(type: string): number {

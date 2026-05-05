@@ -8,11 +8,10 @@ import GameFrame from "../platform/components/GameFrame";
 import type { GameCode } from "../shared/types/game";
 import type { PlatformEvent } from "../shared/contracts/platformEvents";
 import type { GameEventPayload } from "../types/platform";
-import Phaser from "phaser"
+import type Phaser from "phaser";
 
 const SLUG_TO_CODE: Record<string, GameCode> = {
   "base-dos-classificadores": "EF01CO01",
-  "quiz-de-conhecimentos": "EF01CO02",
   "oficina-dos-algoritmos": "EF01CO03",
 };
 
@@ -20,9 +19,7 @@ const GAME_CONFIG_LOADERS: Partial<
   Record<GameCode, () => Promise<{ default: Phaser.Types.Core.GameConfig }>>
 > = {
   EF01CO01: () => import("../games/EF01CO01/index"),
-  EF01CO02: () => import("../games/EF01CO02/index"), 
-  EF01CO03: () => import("../games/EF01CO03/index")
-
+  EF01CO03: () => import("../games/EF01CO03/index"),
 };
 
 export default function GameDetailsPage() {
@@ -50,9 +47,7 @@ export default function GameDetailsPage() {
   const [showGameOverModal, setShowGameOverModal] = useState(false);
   const [showUnlockModal, setShowUnlockModal] = useState(false);
   const [showNoLivesModal, setShowNoLivesModal] = useState(false);
-  const [showPostUnlockLifeModal, setShowPostUnlockLifeModal] =
-    useState(false);
-  const [showCongratsModal, setShowCongratsModal] = useState(false);
+  const [showPostUnlockLifeModal, setShowPostUnlockLifeModal] = useState(false);
 
   const [toast, setToast] = useState<{
     message: string;
@@ -60,16 +55,17 @@ export default function GameDetailsPage() {
   } | null>(null);
 
   const [, setCheckpoint] = useState<{
-  progress: number;
-  score: number;
-  stage: number;
-  hits?: number;
-  errors?: number;
-} | null>(null);
+    progress: number;
+    score: number;
+    stage: number;
+    hits?: number;
+    errors?: number;
+  } | null>(null);
 
   const streakRef = useRef(0);
   const errorCountRef = useRef(0);
   const lifePurchasePendingRef = useRef(false);
+  const alreadyOfferedExtraLifeRef = useRef(false);
 
   const game = games.find((item) => item.slug === slug);
   const gameCode = slug ? SLUG_TO_CODE[slug] : undefined;
@@ -124,11 +120,7 @@ export default function GameDetailsPage() {
   const blockedUntil = getGameBlockedUntil(game.slug);
 
   const dispatchPlatformGameEvent = (event: {
-    type:
-      | "GAME_OVER"
-      | "GAME_COMPLETED"
-      | "CORRECT_ANSWER"
-      | "WRONG_ANSWER";
+    type: "GAME_OVER" | "GAME_COMPLETED" | "CORRECT_ANSWER" | "WRONG_ANSWER";
     gameId: string;
     stage: number;
     pointsEarned?: number;
@@ -163,6 +155,13 @@ export default function GameDetailsPage() {
           hits: event.hits,
           errors: event.errors,
         });
+
+        const nextStage = event.stage as 1 | 2 | 3;
+
+        if (nextStage === 1 || nextStage === 2 || nextStage === 3) {
+          setCurrentLevel(nextStage);
+        }
+
         return;
       }
 
@@ -206,8 +205,9 @@ export default function GameDetailsPage() {
             "error"
           );
 
-          if (livesAfterError === 0) {
-            setShowNoLivesModal(true);
+          if (livesAfterError === 0 && !alreadyOfferedExtraLifeRef.current) {
+          alreadyOfferedExtraLifeRef.current = true;
+           setShowNoLivesModal(true);
           }
         }, 0);
 
@@ -231,11 +231,8 @@ export default function GameDetailsPage() {
         if (currentLevel < 3) {
           setCurrentLevel((prev) => (prev + 1) as 1 | 2 | 3);
         } else {
-          // Aguarda a animação "INCRÍVEL!" do Phaser antes de desmontar
-          window.setTimeout(() => {
-            setHasStartedGame(false);
-            setShowCongratsModal(true);
-          }, 2400);
+          setCurrentLevel(1);
+          setHasStartedGame(false);
         }
 
         streakRef.current = 0;
@@ -270,7 +267,9 @@ export default function GameDetailsPage() {
     }
 
     lifePurchasePendingRef.current = true;
-    window.setTimeout(() => { lifePurchasePendingRef.current = false; }, 2000);
+    window.setTimeout(() => {
+      lifePurchasePendingRef.current = false;
+    }, 2000);
 
     showToast("+1 vida adquirida ❤️", "success");
     setShowNoLivesModal(false);
@@ -278,10 +277,15 @@ export default function GameDetailsPage() {
   };
 
   const handleUnlock = () => {
+    if (points < unlockCost) {
+      showToast("Pontos insuficientes para desbloquear este jogo.", "error");
+      return;
+    }
+
     const success = unlockGameAccess(game.slug);
 
     if (!success) {
-      showToast("Pontos insuficientes para desbloquear este jogo.", "error");
+      showToast("Não foi possível desbloquear este jogo agora.", "error");
       return;
     }
 
@@ -291,17 +295,6 @@ export default function GameDetailsPage() {
     setHasStartedGame(false);
     setShowPostUnlockLifeModal(true);
     showToast("Jogo desbloqueado com sucesso.", "success");
-  };
-
-  const handleCongratsPlayAgain = () => {
-    setShowCongratsModal(false);
-    setCurrentLevel(1);
-  };
-
-  const handleCongratsExit = () => {
-    setShowCongratsModal(false);
-    setCurrentLevel(1);
-    navigate("/");
   };
 
   const handleExit = () => {
@@ -504,7 +497,13 @@ export default function GameDetailsPage() {
                 </p>
 
                 <div className="game-actions">
-                  <button type="button" onClick={() => setHasStartedGame(true)}>
+                  <button
+                      type="button"
+                      onClick={() => {
+                        alreadyOfferedExtraLifeRef.current = false;
+                        setHasStartedGame(true);
+                      }}
+                    >
                     {currentLevel === 1
                       ? "Iniciar jogo"
                       : `Continuar no nível ${currentLevel}`}
@@ -577,16 +576,6 @@ export default function GameDetailsPage() {
         onCancel={() => setShowUnlockModal(false)}
       />
 
-      <ConfirmModal
-        isOpen={showCongratsModal}
-        title="🏆 Parabéns! Você concluiu o jogo!"
-        message={`Você completou todos os 3 níveis de "${game.title}". Excelente trabalho! Deseja jogar novamente ou voltar aos jogos?`}
-        confirmText="Jogar novamente"
-        cancelText="Voltar aos jogos"
-        onConfirm={handleCongratsPlayAgain}
-        onCancel={handleCongratsExit}
-      />
-
       {toast && (
         <Toast
           message={toast.message}
@@ -597,3 +586,4 @@ export default function GameDetailsPage() {
     </>
   );
 }
+
