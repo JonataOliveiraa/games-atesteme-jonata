@@ -11,10 +11,11 @@ import type { GameEventPayload } from "../types/platform";
 import type Phaser from "phaser";
 
 const SLUG_TO_CODE: Record<string, GameCode> = {
-  "base-dos-classificadores": "EF01CO01",
-  "quiz-de-conhecimentos": "EF01CO02",
-  "oficina-dos-algoritmos": "EF01CO03",
-  "pixel-secreto": "EF01CO05",
+  "base-dos-classificadores":  "EF01CO01",
+  "quiz-de-conhecimentos":     "EF01CO02",
+  "oficina-dos-algoritmos":    "EF01CO03",
+  "pixel-secreto":             "EF01CO05",
+  "desktop-digital-infantil":  "EF01CO06",
 };
 
 const GAME_CONFIG_LOADERS: Partial<
@@ -24,6 +25,7 @@ const GAME_CONFIG_LOADERS: Partial<
   EF01CO02: () => import("../games/EF01CO02/index"),
   EF01CO03: () => import("../games/EF01CO03/index"),
   EF01CO05: () => import("../games/EF01CO05/index"),
+  EF01CO06: () => import("../games/EF01CO06/index"),
 };
 
 export default function GameDetailsPage() {
