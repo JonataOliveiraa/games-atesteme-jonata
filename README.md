@@ -85,15 +85,25 @@ npm run lint
 ```
 src/
 ├── games/                     # Jogos individuais (Phaser 3)
-│   └── EF01CO01/              # Base dos Classificadores (1º ano)
+│   ├── EF01CO01/              # Base dos Classificadores (1º ano)
+│   │   ├── index.ts           # GameConfig exportado
+│   │   ├── types.ts           # Tipos TypeScript do jogo
+│   │   ├── scenes/
+│   │   │   ├── BootScene.ts   # Preload de assets
+│   │   │   ├── GameScene.ts   # Lógica principal + drag & drop
+│   │   │   └── UIScene.ts     # HUD paralelo (regra, progresso, mute)
+│   │   └── data/
+│   │       ├── items.ts       # Dataset de itens classificáveis
+│   │       └── levels.ts      # Configuração dos 3 níveis
+│   └── EF01CO06/              # Desktop Digital Infantil (1º ano)
 │       ├── index.ts           # GameConfig exportado
-│       ├── types.ts           # Tipos TypeScript do jogo
+│       ├── types.ts           # AppId, AppDef, Mission, LevelConfig
 │       ├── scenes/
-│       │   ├── BootScene.ts   # Preload de assets
-│       │   ├── GameScene.ts   # Lógica principal + drag & drop
-│       │   └── UIScene.ts     # HUD paralelo (regra, progresso, mute)
+│       │   ├── BootScene.ts   # Texturas programáticas (ícones, wallpaper)
+│       │   ├── GameScene.ts   # Desktop, janelas arrastáveis, 6 mini-apps
+│       │   └── UIScene.ts     # HUD: missão ativa, passo atual, dots progresso
 │       └── data/
-│           ├── items.ts       # Dataset de itens classificáveis
+│           ├── missions.ts    # Missões dos 3 níveis
 │           └── levels.ts      # Configuração dos 3 níveis
 │
 ├── platform/                  # Componentes React da plataforma
@@ -269,16 +279,31 @@ Os `load.audio(...)` e `load.atlas(...)` já estão comentados em cada `BootScen
 
 ## Jogos implementados
 
-| Código | Nome | Ano | Eixo | Status |
-|--------|------|-----|------|--------|
-| EF01CO01 | Base dos Classificadores | 1º | Pensamento Computacional | ✅ Implementado |
+| Código | Nome | Ano | Eixo | Slug |
+|--------|------|-----|------|------|
+| EF01CO01 | Base dos Classificadores | 1º | Pensamento Computacional | `base-dos-classificadores` |
+| EF01CO06 | Desktop Digital Infantil | 1º | Cultura Digital | `desktop-digital-infantil` |
+
+---
 
 ### EF01CO01 — Base dos Classificadores
 
 Jogo de drag & drop onde o aluno classifica formas geométricas por cor, forma ou tamanho arrastando-as para a base correta.
 
-- **3 níveis de progressão**: cor, 6 círculos, 20s (N1) → cor, 12 itens, 25s (N2) → forma, 18 itens em 2 linhas, 30s (N3)
-- **Áudio sintético**: sons gerados via Web Audio API (acerto, erro, countdown, fanfarra, aviso de timer) — sem arquivos externos
-- **Interface adaptada**: alto contraste, ícones grandes, feedback visual e sonoro a cada ação
-- **Texturas programáticas**: círculo, quadrado, triângulo e retângulo em 4 cores × 3 tamanhos (sem assets externos)
+- **3 níveis**: cor + 6 círculos + 20 s (N1) → cor + 12 itens + 25 s (N2) → forma + 18 itens em 2 linhas + 30 s (N3)
+- **Áudio sintético**: Web Audio API — acerto, erro, countdown, fanfarra, aviso de timer — sem arquivos externos
+- **Texturas programáticas**: círculo, quadrado, triângulo e retângulo × 4 cores × 3 tamanhos
 - **Tela de início** com apresentação antes de inicializar o Phaser
+
+---
+
+### EF01CO06 — Desktop Digital Infantil
+
+Simulador de desktop infantil onde o aluno recebe missões narradas e precisa identificar e usar o app correto para completá-las.
+
+- **6 mini-apps funcionais**: Câmera (flash + foto), Gravador (gravar → parar → salvar), Desenho (canvas livre + paleta de 5 cores), Calculadora (pad numérico + avaliação de expressão), Navegador (links clicáveis), Player (play/pause com barra de progresso)
+- **Sistema de janelas**: `Container` Phaser com header arrastável via `pointermove`, `setDepth` para z-order, animação de abertura/fechamento
+- **3 níveis**: 2 apps + 2 missões (N1) → 4 apps + 3 missões com passos encadeados (N2) → 6 apps + 3 missões multi-step (N3)
+- **Double-tap** nos ícones para abrir apps (400 ms), conforme especificação pedagógica
+- **Áudio sintético**: Web Audio API — abertura/fechamento de janela, acerto, progresso — sem arquivos externos
+- **Texturas programáticas**: ícones coloridos com rounded rect + wallpaper gradiente + taskbar
