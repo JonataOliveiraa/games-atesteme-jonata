@@ -46,10 +46,19 @@ export const games: Game[] = [
     points: 50,
     icon: "🎨",
     slug: "pixel-secreto",
-}
-,
+  }
+  ,
   {
     id: 5,
+    title: "Desktop Digital Infantil",
+    description: "Explore apps de um desktop infantil e complete missões usando câmera, calculadora, gravador e muito mais!",
+    category: "Cultura Digital",
+    points: 60,
+    icon: "🖥️",
+    slug: "desktop-digital-infantil",
+  },
+  {
+    id: 6,
     title: "Corrida do Saber",
     description: "Avance casas ao acertar perguntas e complete o percurso.",
     category: "Perguntas",
@@ -58,7 +67,7 @@ export const games: Game[] = [
     slug: "corrida-do-saber",
   },
   {
-    id: 6,
+    id: 7,
     title: "Desafio Matemático",
     description: "Resolva contas e problemas no menor tempo possível.",
     category: "Matemática",
@@ -67,7 +76,7 @@ export const games: Game[] = [
     slug: "desafio-matematico",
   },
   {
-    id: 7,
+    id: 8,
     title: "Caça ao Número",
     description: "Encontre os números corretos antes do tempo acabar.",
     category: "Atenção",
@@ -76,7 +85,7 @@ export const games: Game[] = [
     slug: "caca-ao-numero",
   },
   {
-    id: 8,
+    id: 9,
     title: "Sequência Lógica",
     description: "Complete as sequências corretamente para avançar.",
     category: "Raciocínio",
@@ -85,7 +94,7 @@ export const games: Game[] = [
     slug: "sequencia-logica",
   },
   {
-    id: 9,
+    id: 10,
     title: "Desafio das Cores",
     description: "Associe cores e padrões corretamente para vencer.",
     category: "Percepção",
@@ -94,7 +103,7 @@ export const games: Game[] = [
     slug: "desafio-das-cores",
   },
   {
-    id: 10,
+    id: 11,
     title: "Montando Palavras",
     description: "Organize letras para formar as palavras corretas.",
     category: "Português",
@@ -103,7 +112,7 @@ export const games: Game[] = [
     slug: "montando-palavras",
   },
   {
-    id: 11,
+    id: 12,
     title: "Conta Rápida",
     description: "Resolva operações matemáticas com rapidez.",
     category: "Cálculo",
@@ -112,7 +121,7 @@ export const games: Game[] = [
     slug: "conta-rapida",
   },
   {
-    id: 12,
+    id: 13,
     title: "Labirinto Inteligente",
     description: "Encontre o melhor caminho até a saída.",
     category: "Estratégia",
@@ -120,13 +129,5 @@ export const games: Game[] = [
     icon: "🌀",
     slug: "labirinto-inteligente",
   },
-  {
-    id: 13,
-    title: "Desktop Digital Infantil",
-    description: "Explore apps de um desktop infantil e complete missões usando câmera, calculadora, gravador e muito mais!",
-    category: "Cultura Digital",
-    points: 60,
-    icon: "🖥️",
-    slug: "desktop-digital-infantil",
-  },
+  
 ];
