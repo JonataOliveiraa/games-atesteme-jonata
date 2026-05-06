@@ -12,6 +12,12 @@ export default function PhaserCanvas({ config }: PhaserCanvasProps) {
   useEffect(() => {
     if (!containerRef.current) return;
 
+    // Se já existir um jogo, destruímos ele antes de criar o novo com a nova config
+    if (gameRef.current) {
+      gameRef.current.destroy(true);
+      gameRef.current = null;
+    }
+
     gameRef.current = new Phaser.Game({
       ...config,
       parent: containerRef.current,
@@ -23,7 +29,14 @@ export default function PhaserCanvas({ config }: PhaserCanvasProps) {
         gameRef.current = null;
       }
     };
-  }, [config]);
+  }, [config]); // O React vai rodar isso toda vez que a 'config' (fase/jogo) mudar
 
-  return <div ref={containerRef} className="phaser-container" />;
+  return (
+    <div 
+      id="game-root" 
+      ref={containerRef} 
+      className="phaser-container" 
+      style={{ width: '100%', height: '100%', minHeight: '720px' }} 
+    />
+  );
 }

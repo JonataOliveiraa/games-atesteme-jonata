@@ -1,459 +1,214 @@
-import Phaser from 'phaser'
-import { EventBus } from '../../../shared/EventBus'
-import { runtimeGameBridge } from '../../../shared/bridge/runtimeGameBridge'
-import type { PlatformCommand } from '../../../shared/contracts/platformCommands'
-import type { RoundResult } from '../../../shared/types/game'
-import type { LevelConfig, InteractiveObject, GameStep } from '../types'
-import { LEVELS } from '../data/missions'
+import Phaser from 'phaser';
+import { runtimeGameBridge } from '../../../shared/bridge/runtimeGameBridge';
+import { LEVELS } from '../data/levels';
 
-const GAME_ID = 'trilha-do-passo-a-passo'
+const GAME_ID = "EF01CO02";
+const TIMER_BAR_Y = 45;
+const TIMER_BAR_W = 700;
 
 export class GameScene extends Phaser.Scene {
-  private levelConfig!: LevelConfig
-  private currentStepIndex = 0
-  private interactiveObjects: Map<string, Phaser.GameObjects.Image> = new Map()
-  private stepCards: Phaser.GameObjects.Container[] = []
-  private startTime = 0
-  private currentPoints = 0
-  private currentLives = 1
-  private unsubscribePlatformCommands?: () => void
-  private timerEvent?: Phaser.Time.TimerEvent
-  private isMuted = false
-  private audioAllowed = false
+    private currentLevelIdx = 0;
+    private nextStepRequired = 1;
+    private hasExtraLife = true;
+    
+    private timerBar?: Phaser.GameObjects.Rectangle;
+    private timerEvent?: Phaser.Time.TimerEvent;
+    private placedCount = 0;
 
-  constructor() {
-    super({ key: 'GameScene' })
-    // Registra uma vez o listener de interação para permitir áudio
-    if (typeof window !== 'undefined' && !window.__ef01co02_audio_init) {
-      window.addEventListener('pointerdown', () => this.allowAudio(), { once: true })
-      window.addEventListener('touchstart', () => this.allowAudio(), { once: true })
-      window.__ef01co02_audio_init = true
-    }
-  }
-
-  private allowAudio() {
-    if (!this.audioAllowed) {
-      this.audioAllowed = true
-      // Não tenta retomar contexto aqui — playTone cria o dele quando necessário.
-    }
-  }
-
-  init(data?: { level?: number; points?: number; lives?: number }) {
-    const lvl = data?.level ?? 1
-    this.levelConfig = LEVELS.find(l => l.level === lvl) ?? LEVELS[0]
-    this.currentStepIndex = 0
-    this.startTime = Date.now()
-    this.currentPoints = data?.points ?? 0
-    this.currentLives = data?.lives ?? 1
-  }
-
-  create() {
-    this.createBackground()
-    this.createInteractiveObjects()
-    this.createStepCards()
-    this.updateActiveStepDisplay()
-    this.setupInteraction()
-    this.registerPlatformCommands()
-
-    if (this.levelConfig.mission.timeLimit) {
-      this.startTimer()
+    constructor() {
+        super('GameScene');
     }
 
-    EventBus.on('set-level', this.handleSetLevel, this)
-    EventBus.on('mute-audio', this.handleMuteAudio, this)
+    // 1. O método init recebe os dados do restart. 
+    // É fundamental que a variável local mude aqui.
+    init(data: { levelIndex?: number }) {
+        this.currentLevelIdx = data.levelIndex ?? 0;
+        this.nextStepRequired = 1;
+        this.hasExtraLife = true;
+        this.placedCount = 0;
+    }
 
-    this.showLevelIntro()
-  }
+    create() {
+        const width = this.scale.width;
+        const height = this.scale.height;
 
-  private handleMuteAudio = (muted: boolean) => {
-    this.isMuted = muted
-  }
+        this.createBackground(width, height);
+        this.createTitle(width);
+        this.createTimerBar(width);
+        this.setupBoard(width);
+        this.startTimer();
 
-  private handleSetLevel = (data: { level: number }) => {
-    this.scene.restart({
-      level: data.level,
-      points: this.currentPoints,
-      lives: this.currentLives,
-    })
-  }
+        // 2. CORREÇÃO DA BARRA: Enviamos o stage atualizado para a plataforma
+        // O stage é sempre o índice + 1 (Nível 1, 2 ou 3)
+        runtimeGameBridge.emit({ 
+            type: "GAME_READY", 
+            gameId: GAME_ID, 
+            stage: this.currentLevelIdx + 1 
+        });
+    }
 
-  private showLevelIntro() {
-    const overlay = this.add.rectangle(640, 360, 1280, 720, 0x000000, 0.7).setDepth(100)
-    const lvlLabel = this.add.text(640, 300, `missão ${this.levelConfig.level}`, {
-      fontSize: '48px',
-      fontFamily: 'Arial Black, Arial',
-      color: '#FFF9C4',
-      stroke: '#000000',
-      strokeThickness: 8,
-    }).setOrigin(0.5).setDepth(101)
+    update() {
+        if (!this.timerEvent || !this.timerBar) return;
+        const remaining = this.timerEvent.getRemaining();
+        const total = (LEVELS[this.currentLevelIdx].timeLimit) * 1000;
+        const pct = Math.max(0, remaining / total);
 
-    const missionName = this.add.text(640, 380, this.levelConfig.mission.name, {
-      fontSize: '36px',
-      fontFamily: 'Arial, sans-serif',
-      color: '#E0E0E0',
-      stroke: '#000000',
-      strokeThickness: 5,
-    }).setOrigin(0.5).setDepth(101)
+        this.timerBar.setSize(TIMER_BAR_W * pct, 15);
+        
+        if (pct > 0.5) this.timerBar.setFillStyle(0x22c55e);
+        else if (pct > 0.25) this.timerBar.setFillStyle(0xf59e0b);
+        else this.timerBar.setFillStyle(0xef4444);
+    }
 
-    const missionDesc = this.add.text(640, 430, this.levelConfig.mission.description, {
-      fontSize: '24px',
-      fontFamily: 'Arial, sans-serif',
-      color: '#BBDEFB',
-      stroke: '#000000',
-      strokeThickness: 3,
-    }).setOrigin(0.5).setDepth(101)
+    private createBackground(width: number, height: number) {
+        this.add.rectangle(width / 2, height / 2, width, height, 0xf3e8ff); 
+        this.add.rectangle(width / 2, height * 0.25, width, height * 0.5, 0xdbeafe, 0.7); 
+        this.add.rectangle(width / 2, height * 0.8, width, height * 0.4, 0xfef3c7, 0.6); 
 
-    const goText = this.add.text(640, 500, 'VAMOS LÁ!', {
-      fontSize: '64px',
-      fontFamily: 'Arial Black, Arial',
-      color: '#4CAF50',
-      stroke: '#000000',
-      strokeThickness: 8,
-    }).setOrigin(0.5).setDepth(101)
-
-    this.tweens.add({
-      targets: [lvlLabel, missionName, missionDesc, goText],
-      scaleX: 1.1,
-      scaleY: 1.1,
-      yoyo: true,
-      duration: 800,
-      repeat: -1,
-      ease: 'Sine.easeInOut'
-    })
-
-    this.input.once('pointerdown', () => {
-      this.tweens.killAll()
-      this.tweens.add({
-        targets: [overlay, lvlLabel, missionName, missionDesc, goText],
-        alpha: 0,
-        duration: 350,
-        onComplete: () => {
-          overlay.destroy()
-          lvlLabel.destroy()
-          missionName.destroy()
-          missionDesc.destroy()
-          goText.destroy()
-          EventBus.emit('scene-ready', { levelConfig: this.levelConfig })
-          EventBus.emit('update-progress', {
-            pct: 0,
-            hits: 0,
-            errors: 0,
-            currentStep: this.currentStepIndex + 1,
-            totalSteps: this.levelConfig.mission.steps.length
-          })
+        const colors = [0xc4b5fd, 0x93c5fd, 0xf9a8d4, 0xfcd34d, 0x86efac];
+        for (let i = 0; i < 8; i++) {
+            this.add.circle(
+                Phaser.Math.Between(50, width - 50),
+                Phaser.Math.Between(50, height - 50),
+                Phaser.Math.Between(30, 60),
+                Phaser.Utils.Array.GetRandom(colors),
+                0.25
+            );
         }
-      })
-    })
-  }
-
-  private createBackground() {
-    const theme = this.levelConfig.mission.theme
-    this.add.rectangle(640, 360, 1280, 720, 0x87CEEB)
-
-    switch (theme) {
-      case 'cozinha': this.add.rectangle(640, 500, 800, 200, 0xD2B48C); break
-      case 'origami': this.add.rectangle(640, 400, 600, 400, 0xFAFAD2); break
-      case 'tabuleiro': this.add.rectangle(640, 400, 800, 600, 0x8FBC8F); break
-    }
-  }
-
-  private createInteractiveObjects() {
-    this.interactiveObjects.clear()
-    this.levelConfig.mission.objects.forEach(obj => {
-      const sprite = this.add.image(obj.x, obj.y, obj.frame)
-      sprite.setInteractive()
-      sprite.setData('objectId', obj.id)
-      sprite.setData('objectState', obj.state)
-      this.interactiveObjects.set(obj.id, sprite)
-    })
-  }
-
-  private createStepCards() {
-    const startX = 100
-    const y = 80
-    const spacing = 140
-
-    this.stepCards = []
-    this.levelConfig.mission.steps.forEach((step, index) => {
-      const card = this.add.container(startX + index * spacing, y)
-      const bg = this.add.rectangle(0, 0, 120, 60, 0xD3D3D3, 0.8).setStrokeStyle(2, 0xA9A9A9)
-      const numText = this.add.text(0, -15, `${step.stepNumber}`, { fontSize: '24px', fontFamily: 'Arial Black' }).setOrigin(0.5)
-      const descText = this.add.text(0, 15, '...', { fontSize: '10px', wordWrap: { width: 110 } }).setOrigin(0.5)
-      card.add([bg, numText, descText])
-      card.setData('stepIndex', index)
-      card.setVisible(true)
-      this.stepCards.push(card)
-      descText.setText(step.action.description.substring(0, 15) + (step.action.description.length > 15 ? '...' : ''))
-    })
-  }
-
-  private updateActiveStepDisplay() {
-    this.stepCards.forEach((card, index) => {
-      const bg = card.list[0] as Phaser.GameObjects.Rectangle
-      if (index === this.currentStepIndex) {
-        bg.setFillStyle(0x90EE90, 0.9)
-        bg.setStrokeStyle(3, 0x006400)
-        this.tweens.add({
-          targets: card,
-          scaleX: 1.1,
-          scaleY: 1.1,
-          duration: 500,
-          yoyo: true,
-          repeat: -1,
-          ease: 'Sine.easeInOut'
-        })
-      } else {
-        bg.setFillStyle(0xD3D3D3, 0.8)
-        bg.setStrokeStyle(2, 0xA9A9A9)
-        this.tweens.killTweensOf(card)
-        card.setScale(1)
-      }
-    })
-  }
-
-  private setupInteraction() {
-    this.input.on('gameobjectdown', (pointer, gameObject) => {
-      const objectId = gameObject.getData('objectId')
-      const currentStep = this.levelConfig.mission.steps[this.currentStepIndex]
-
-      if (objectId === currentStep.action.targetObjectId) {
-        this.onCorrectAction(objectId)
-      } else {
-        this.onWrongAction(objectId)
-      }
-    })
-  }
-
-  private onCorrectAction(objectId: string) {
-    const objSprite = this.interactiveObjects.get(objectId)
-    if (objSprite) {
-      this.playCorrectSound()
-      this.showSuccessEffect(objSprite.x, objSprite.y)
     }
 
-    this.currentStepIndex++
-    if (this.currentStepIndex >= this.levelConfig.mission.steps.length) {
-      this.onMissionComplete()
-      return
+    private createTitle(width: number) {
+        const level = LEVELS[this.currentLevelIdx];
+        this.add.text(width / 2, 105, (level.title || level.name).toUpperCase(), {
+            fontSize: "34px", fontFamily: "Arial Black", color: "#5b21b6",
+            stroke: "#ffffff", strokeThickness: 4
+        }).setOrigin(0.5);
+
+        this.add.text(width / 2, 150, level.objective || "Organize os passos na ordem correta.", {
+            fontSize: "18px", fontFamily: "Arial", color: "#334155", fontWeight: 'bold'
+        }).setOrigin(0.5);
     }
 
-    this.updateActiveStepDisplay()
-    this.emitCheckpoint()
-  }
-
-  private onWrongAction(objectId: string) {
-    const objSprite = this.interactiveObjects.get(objectId)
-    if (objSprite) {
-      this.tweens.add({
-        targets: objSprite,
-        x: objSprite.x - 10,
-        y: objSprite.y - 10,
-        duration: 100,
-        yoyo: true,
-        repeat: 1
-      })
-      this.playWrongSound()
+    private createTimerBar(width: number) {
+        this.add.rectangle(width / 2, TIMER_BAR_Y, TIMER_BAR_W + 8, 26, 0x334155, 0.3).setDepth(5);
+        this.timerBar = this.add.rectangle(width / 2 - TIMER_BAR_W / 2, TIMER_BAR_Y, TIMER_BAR_W, 15, 0x22c55e)
+            .setOrigin(0, 0.5).setDepth(6);
     }
 
-    if (this.currentLives <= 0) {
-      this.currentPoints = Math.max(0, this.currentPoints - 5)
-      runtimeGameBridge.emit({ type: 'GAME_OVER', gameId: GAME_ID, stage: this.levelConfig.level })
-      this.endRound()
-      return
+    private setupBoard(width: number) {
+        const level = LEVELS[this.currentLevelIdx];
+        const cardW = 110;
+        const cardH = 135;
+        const spacing = level.steps.length > 4 ? 125 : 145;
+        const totalWidth = (level.steps.length - 1) * spacing;
+        const startX = (width - totalWidth) / 2;
+
+        level.steps.forEach((step, index) => {
+            const x = startX + (index * spacing);
+            const y = 285;
+            const slot = this.add.rectangle(x, y, cardW, cardH, 0xffffff, 0.95).setStrokeStyle(4, 0x8b5cf6);
+            this.add.text(x, y - 20, `${step.id}`, { fontSize: '42px', color: '#8b5cf6', fontFamily: 'Arial Black' }).setOrigin(0.5);
+            this.add.text(x, y + 35, step.label.toUpperCase(), { fontSize: '11px', color: '#5b21b6', align: 'center', wordWrap: { width: 100 }, fontWeight: 'bold' }).setOrigin(0.5);
+            slot.setData('stepId', step.id).setInteractive().input.dropZone = true;
+        });
+
+        const shuffled = [...level.steps].sort(() => Math.random() - 0.5);
+        shuffled.forEach((step, index) => {
+            const x = startX + (index * spacing);
+            const container = this.add.container(x, 520);
+            const bg = this.add.rectangle(0, 0, cardW, cardH, 0xffffff).setStrokeStyle(4, 0xf59e0b);
+            const sprite = this.add.sprite(0, -15, step.assetKey).setDisplaySize(80, 80);
+            const txt = this.add.text(0, 40, step.label, { fontSize: '11px', color: '#334155', fontWeight: 'bold' }).setOrigin(0.5);
+            container.add([bg, sprite, txt]);
+            container.setData('stepId', step.id);
+            bg.setInteractive({ draggable: true, useHandCursor: true });
+            this.setupDrag(bg, container);
+        });
     }
 
-    this.currentLives--
-    this.currentPoints = Math.max(0, this.currentPoints - 5)
-    runtimeGameBridge.emit({ type: 'WRONG_ANSWER', gameId: GAME_ID, pointsEarned: -5, stage: this.levelConfig.level })
-  }
+    private setupDrag(handle: Phaser.GameObjects.Rectangle, container: Phaser.GameObjects.Container) {
+        this.input.setDraggable(handle);
+        handle.on('drag', (p: any) => { container.setPosition(p.x, p.y); });
+        handle.on('dragend', (p: any, dropped: boolean) => {
+            if (!dropped) this.tweens.add({ targets: container, x: container.input?.dragStartX, y: container.input?.dragStartY, duration: 300 });
+        });
 
-  private onMissionComplete() {
-    this.currentPoints += 20
-    runtimeGameBridge.emit({ type: 'GAME_COMPLETED', gameId: GAME_ID, stage: this.levelConfig.level })
-    this.endRound()
-  }
+        this.input.on('drop', (pointer: any, gameObject: any, dropZone: any) => {
+            if (gameObject !== handle) return;
+            const pieceId = container.getData('stepId');
+            const slotId = dropZone.getData('stepId');
 
-  private endRound() {
-    this.input.enabled = false
-    this.timerEvent?.destroy()
-    this.showRoundComplete()
+            if (slotId === this.nextStepRequired && pieceId === this.nextStepRequired) {
+                container.setPosition(dropZone.x, dropZone.y);
+                handle.disableInteractive();
+                this.nextStepRequired++;
+                this.placedCount++;
+                this.emitProgress(); // Atualiza a barra de progresso superior
+                if (this.placedCount === LEVELS[this.currentLevelIdx].steps.length) this.handleLevelWin();
+            } else {
+                this.handleError(container);
+            }
+        });
+    }
 
-    this.time.delayedCall(1800, () => {
-      const result: RoundResult = {
-        gameCode: 'EF01CO02',
-        level: this.levelConfig.level,
-        hits: this.levelConfig.mission.steps.length,
-        errors: (this.levelConfig.mission.steps.length - this.currentStepIndex) + (2 - this.currentLives),
-        durationMs: Date.now() - this.startTime,
-        timestamp: Date.now(),
-      }
-      EventBus.emit('round-complete', result)
-    })
-  }
+    private handleLevelWin() {
+        if (this.timerEvent) this.timerEvent.remove();
+        this.showFloatingMessage("SEQUÊNCIA COMPLETA!", 0x22c55e);
 
-  private showRoundComplete() {
-    const overlay = this.add.rectangle(640, 360, 1280, 720, 0x000000, 0.8).setDepth(200)
-    const successText = this.add.text(640, 300, 'missão completada!', {
-      fontSize: '64px',
-      fontFamily: 'Arial Black, Arial',
-      color: '#4CAF50',
-      stroke: '#000000',
-      strokeThickness: 8,
-    }).setOrigin(0.5).setDepth(201)
+        this.time.delayedCall(1500, () => {
+            if (this.currentLevelIdx + 1 < LEVELS.length) {
+                // 3. Reinicia passando o novo index. 
+                // Isso disparará o init() e consequentemente o create() com GAME_READY
+                this.scene.restart({ levelIndex: this.currentLevelIdx + 1 });
+            } else {
+                runtimeGameBridge.emit({ 
+                    type: "GAME_COMPLETED", 
+                    gameId: GAME_ID, 
+                    stage: this.currentLevelIdx + 1 
+                });
+            }
+        });
+    }
 
-    const stars = this.add.text(640, 380, '⭐⭐⭐', {
-      fontSize: '48px',
-      color: '#FFD700',
-    }).setOrigin(0.5).setDepth(201)
-
-    const continueText = this.add.text(640, 450, 'clique para continuar', {
-      fontSize: '28px',
-      fontFamily: 'Arial, sans-serif',
-      color: '#E0E0E0',
-      stroke: '#000000',
-      strokeThickness: 4,
-    }).setOrigin(0.5).setDepth(201)
-
-    this.tweens.add({
-      targets: [successText, stars, continueText],
-      scaleX: 1.05,
-      scaleY: 1.05,
-      yoyo: true,
-      duration: 1000,
-      repeat: -1,
-      ease: 'Sine.easeInOut'
-    })
-
-    this.input.once('pointerdown', () => {
-      this.tweens.killAll()
-      this.tweens.add({
-        targets: [overlay, successText, stars, continueText],
-        alpha: 0,
-        duration: 350,
-        onComplete: () => {
-          overlay.destroy()
-          successText.destroy()
-          stars.destroy()
-          continueText.destroy()
+    private handleError(container: Phaser.GameObjects.Container) {
+        this.cameras.main.shake(200, 0.01);
+        if (this.hasExtraLife) {
+            this.hasExtraLife = false;
+            this.showFloatingMessage("! ATENÇÃO", 0xf59e0b);
+            this.tweens.add({ targets: container, x: container.input?.dragStartX, y: container.input?.dragStartY, duration: 300 });
+        } else {
+            runtimeGameBridge.emit({ type: "GAME_OVER", gameId: GAME_ID, stage: this.currentLevelIdx + 1 });
         }
-      })
-    })
-  }
-
-  private startTimer() {
-    if (!this.levelConfig.mission.timeLimit) return
-    const timeLimit = this.levelConfig.mission.timeLimit!
-    this.timerEvent = this.time.addEvent({
-      delay: timeLimit * 1000,
-      callback: () => {
-        this.playTimeUp()
-        runtimeGameBridge.emit({ type: 'GAME_OVER', gameId: GAME_ID, stage: this.levelConfig.level })
-        this.endRound()
-      },
-      callbackScope: this,
-    })
-  }
-
-  private emitCheckpoint() {
-    const totalSteps = this.levelConfig.mission.steps.length
-    const completedSteps = this.currentStepIndex
-    const progress = totalSteps > 0 ? Math.round((completedSteps / totalSteps) * 100) : 0
-    runtimeGameBridge.emit({
-      type: 'CHECKPOINT',
-      gameId: GAME_ID,
-      progress,
-      score: this.currentPoints,
-      stage: this.levelConfig.level,
-      hits: completedSteps,
-      errors: (totalSteps - completedSteps) + (2 - this.currentLives),
-    })
-
-    EventBus.emit('update-progress', {
-      pct: progress / 100,
-      hits: completedSteps,
-      errors: (totalSteps - completedSteps) + (2 - this.currentLives),
-      currentStep: completedSteps + 1,
-      totalSteps: totalSteps
-    })
-  }
-
-  private registerPlatformCommands() {
-    if (typeof runtimeGameBridge.onCommand === 'function') {
-      this.unsubscribePlatformCommands = runtimeGameBridge.onCommand(
-        (command: PlatformCommand) => {
-          if (command.type === 'START_GAME' && command.gameId === GAME_ID) {
-            this.currentPoints = command.points
-            this.currentLives = command.lives
-          }
-        }
-      )
-    } else {
-      console.warn('runtimeGameBridge.onCommand não disponível — EF01CO02 usa onCommand')
     }
-  }
 
-  // --- ÁUDIO SEGURO (Web Audio API local) ---
-  private playCorrectSound() {
-    if (!this.isMuted && this.audioAllowed) {
-      this.playTone(880, 0.2, '#4CAF50') // A5, 200ms, verde
+    private startTimer() {
+        this.timerEvent = this.time.addEvent({
+            delay: LEVELS[this.currentLevelIdx].timeLimit * 1000,
+            callback: () => {
+                runtimeGameBridge.emit({ type: "GAME_OVER", gameId: GAME_ID, stage: this.currentLevelIdx + 1 });
+            }
+        });
     }
-  }
 
-  private playWrongSound() {
-    if (!this.isMuted && this.audioAllowed) {
-      this.playTone(440, 0.2, '#F44336') // A4, 200ms, vermelho
+    private showFloatingMessage(msg: string, color: number) {
+        const txt = this.add.text(this.scale.width / 2, this.scale.height / 2, msg, {
+            fontSize: '42px', fontFamily: 'Arial Black', color: '#fff',
+            backgroundColor: Phaser.Display.Color.IntegerToColor(color).rgba,
+            padding: { x: 20, y: 10 }
+        }).setOrigin(0.5).setDepth(200);
+        this.tweens.add({ targets: txt, alpha: 0, delay: 1000, duration: 500, onComplete: () => txt.destroy() });
     }
-  }
 
-  private playTimeUp() {
-    if (!this.isMuted && this.audioAllowed) {
-      this.playTone(330, 0.5, '#FF9800') // E4, 500ms, laranja
+    private emitProgress() {
+        const steps = LEVELS[this.currentLevelIdx].steps;
+        const progress = Math.round((this.placedCount / steps.length) * 100);
+        
+        // 4. CHECKPOINT também precisa do stage atualizado para manter a barra sincronizada
+        runtimeGameBridge.emit({ 
+            type: "CHECKPOINT", 
+            gameId: GAME_ID, 
+            progress, 
+            stage: this.currentLevelIdx + 1 
+        });
     }
-  }
-
-  private playTone(frequency: number, duration: number, color: string) {
-    if (typeof window === 'undefined' || !this.audioAllowed) return
-    try {
-      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)()
-      const osc = ctx.createOscillator()
-      const gain = ctx.createGain()
-      osc.connect(gain)
-      gain.connect(ctx.destination)
-      osc.frequency.value = frequency
-      gain.gain.value = 0.3
-      osc.start()
-      osc.stop(ctx.currentTime + duration)
-    } catch (e) {
-      console.warn('Falha ao tocar tom:', e)
-    }
-  }
-
-  // --- FUNÇÃO CORRIGIDA: showSuccessEffect ---
-  private showSuccessEffect(x: number, y: number) {
-    const check = this.add.text(x, y, '✅', {
-      fontSize: '32px',
-      color: '#27AE60',
-      stroke: '#000000',
-      strokeThickness: 4,
-    }).setOrigin(0.5).setDepth(20)
-
-    this.tweens.add({
-      targets: check,
-      y: y - 60,
-      alpha: 0,
-      duration: 700,
-      ease: 'Power2',
-      onComplete: () => check.destroy()
-    })
-  }
-
-  shutdown() {
-    EventBus.off('set-level', this.handleSetLevel, this)
-    EventBus.off('mute-audio', this.handleMuteAudio, this)
-    this.timerEvent?.destroy()
-    if (this.unsubscribePlatformCommands) {
-      this.unsubscribePlatformCommands()
-      this.unsubscribePlatformCommands = undefined
-    }
-  }
 }

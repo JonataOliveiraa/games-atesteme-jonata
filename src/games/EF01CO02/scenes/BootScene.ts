@@ -1,83 +1,94 @@
-import Phaser from 'phaser'
+import Phaser from 'phaser';
 
 export class BootScene extends Phaser.Scene {
-  constructor() {
-    super({ key: 'BootScene' })
-  }
+    constructor() { super('BootScene'); }
 
-  preload() {
-    this.createLoadingBar()
-    // Áudios e atlas serão carregados quando disponíveis
-    // this.load.audio('narr-step-1', ['assets/audio/narr-step-1.ogg', 'assets/audio/narr-step-1.mp3']);
-    // this.load.atlas('kitchen-items', 'assets/images/kitchen-items.png', 'assets/images/kitchen-items.json');
-  }
+    preload() {
+        this.generateOrigamiTextures();
+    }
 
-  create() {
-    this.generateThematicTextures()
-    this.scene.start('GameScene')
-  }
+    private generateOrigamiTextures() {
+        const graphics = this.make.graphics({ x: 0, y: 0, add: false });
 
-  private createLoadingBar() {
-    const cx = 640
-    const cy = 360
-    const w = 500
-    const h = 24
+        // --- FIGURAS DO BARCO (NÍVEL 1) ---
+        // Base
+        graphics.clear();
+        graphics.fillStyle(0xffd700);
+        graphics.fillRect(0, 0, 100, 100);
+        graphics.lineStyle(2, 0xb8860b, 0.5);
+        graphics.lineBetween(0, 50, 100, 50);
+        graphics.generateTexture('origami_base', 100, 100);
 
-    this.add.rectangle(cx, cy, w + 8, h + 8, 0x2C3E50, 0.6).setStrokeStyle(3, 0x3498DB)
-    this.add.rectangle(cx - w / 2, cy, 0, h, 0xECF0F1).setOrigin(0, 0.5)
-    const bar = this.add.rectangle(cx - w / 2, cy, 4, h, 0x2ECC71).setOrigin(0, 0.5)
+        // Dobra Central
+        graphics.clear();
+        graphics.fillStyle(0xffd700);
+        graphics.fillTriangle(0, 100, 50, 0, 100, 100);
+        graphics.generateTexture('origami_center', 100, 100);
 
-    this.add.text(cx, cy - 36, '🎮 Preparando o jogo...', {
-      fontSize: '24px',
-      color: '#2C3E50',
-      fontFamily: 'Arial Black, Arial',
-      stroke: '#FFFFFF',
-      strokeThickness: 4,
-    }).setOrigin(0.5)
+        // Pontas
+        graphics.clear();
+        graphics.fillStyle(0xffd700);
+        graphics.fillPoints([new Phaser.Geom.Point(50, 0), new Phaser.Geom.Point(100, 50), new Phaser.Geom.Point(50, 100), new Phaser.Geom.Point(0, 50)], true);
+        graphics.generateTexture('origami_tips', 100, 100);
 
-    this.tweens.add({
-      targets: bar,
-      width: w,
-      duration: 1200,
-      ease: 'Power2',
-    })
-  }
+        // Barco Final
+        graphics.clear();
+        graphics.fillStyle(0xffd700);
+        graphics.fillPoints([new Phaser.Geom.Point(10, 60), new Phaser.Geom.Point(90, 60), new Phaser.Geom.Point(80, 90), new Phaser.Geom.Point(20, 90)], true);
+        graphics.fillTriangle(50, 10, 50, 60, 80, 60);
+        graphics.generateTexture('origami_boat', 100, 100);
 
-  private generateThematicTextures() {
-    // ── TEXTURA: 'paper' (folha de papel) ──
-    const gfxPaper = this.add.graphics()
-    gfxPaper.fillStyle(0xFFFFF0) // creme claro
-    gfxPaper.fillRect(0, 0, 100, 100)
-    gfxPaper.lineStyle(3, 0x000000) // borda preta
-    gfxPaper.strokeRect(0, 0, 100, 100)
-    gfxPaper.generateTexture('paper', 100, 100)
-    gfxPaper.destroy()
+        // --- FIGURAS DO AVIÃO (NÍVEL 2) ---
+        // Usaremos cores levemente diferentes para distinguir os níveis
+        const planeColor = 0x4ade80; // Verde água moderno
 
-    // ── TEXTURA: 'pan' (panela) ──
-    const gfxPan = this.add.graphics()
-    gfxPan.fillStyle(0x8B4513) // marrom
-    gfxPan.fillRoundedRect(0, 0, 80, 40, 12)
-    gfxPan.lineStyle(4, 0x000000)
-    gfxPan.strokeRoundedRect(0, 0, 80, 40, 12)
-    gfxPan.generateTexture('pan', 80, 40)
-    gfxPan.destroy()
+        for (let i = 1; i <= 6; i++) {
+            graphics.clear();
+            graphics.fillStyle(planeColor);
+            
+            if (i === 1) graphics.fillRect(20, 10, 60, 80); // Papel Retangular
+            else if (i === 2) graphics.fillTriangle(20, 10, 80, 10, 50, 40); // Pontas dobradas
+            else if (i === 3) graphics.fillTriangle(50, 10, 50, 90, 10, 90); // Dobra ao meio
+            else if (i === 4) graphics.fillTriangle(10, 50, 90, 30, 90, 70); // Asa 1
+            else if (i === 5) graphics.fillTriangle(10, 50, 95, 20, 95, 80); // Asa 2
+            else graphics.fillPoints([new Phaser.Geom.Point(10, 50), new Phaser.Geom.Point(90, 20), new Phaser.Geom.Point(80, 50), new Phaser.Geom.Point(90, 80)], true); // Avião pronto
+            
+            graphics.lineStyle(2, 0x166534);
+            graphics.strokePath();
+            graphics.generateTexture(`plane_step_${i}`, 100, 100);
 
-    // ── TEXTURA: 'fire-off' (fogo apagado) ──
-    const gfxFireOff = this.add.graphics()
-    gfxFireOff.fillStyle(0x999999) // cinza
-    gfxFireOff.fillTriangle(0, 0, 40, 0, 20, -40)
-    gfxFireOff.lineStyle(2, 0x666666)
-    gfxFireOff.strokeTriangle(0, 0, 40, 0, 20, -40)
-    gfxFireOff.generateTexture('fire-off', 40, 40)
-    gfxFireOff.destroy()
+            // --- FIGURAS DO CACHORRO (NÍVEL 3) ---
+const dogColor = 0xf97316; // Laranja/Marrom para o cachorro
 
-    // ── TEXTURA: 'fold-line' (linha de dobra) ──
-    const gfxFold = this.add.graphics()
-    gfxFold.fillStyle(0x3498DB) // azul claro
-    gfxFold.fillRect(0, 0, 60, 4)
-    gfxFold.lineStyle(2, 0x2980B9)
-    gfxFold.strokeRect(0, 0, 60, 4)
-    gfxFold.generateTexture('fold-line', 60, 4)
-    gfxFold.destroy()
-  }
+for (let i = 1; i <= 6; i++) {
+    graphics.clear();
+    graphics.fillStyle(dogColor);
+    
+    if (i === 1) {
+        graphics.fillRect(20, 20, 60, 60); // Quadrado inicial
+    } else if (i === 2) {
+        graphics.fillTriangle(10, 10, 90, 10, 50, 60); // Triângulo base
+    } else if (i === 3) {
+        graphics.fillPoints([new Phaser.Geom.Point(10, 10), new Phaser.Geom.Point(40, 10), new Phaser.Geom.Point(20, 50)], true); // Uma orelha
+    } else if (i === 4) {
+        graphics.fillPoints([new Phaser.Geom.Point(10, 10), new Phaser.Geom.Point(90, 10), new Phaser.Geom.Point(20, 50), new Phaser.Geom.Point(80, 50)], true); // Duas orelhas
+    } else if (i === 5) {
+        graphics.fillPoints([new Phaser.Geom.Point(10, 10), new Phaser.Geom.Point(90, 10), new Phaser.Geom.Point(50, 50), new Phaser.Geom.Point(50, 40)], true); // Queixo dobrado
+    } else {
+        // Rosto pronto com olhos (detalhe simples)
+        graphics.fillCircle(50, 40, 40);
+        graphics.fillStyle(0x000000);
+        graphics.fillCircle(35, 35, 5);
+        graphics.fillCircle(65, 35, 5);
+        graphics.fillTriangle(45, 50, 55, 50, 50, 60);
+    }
+    
+    graphics.lineStyle(2, 0x7c2d12);
+    graphics.strokePath();
+    graphics.generateTexture(`dog_step_${i}`, 100, 100);
+}
+        }
+    }
+
+    create() { this.scene.start('GameScene'); }
 }
