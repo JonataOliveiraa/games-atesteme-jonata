@@ -202,21 +202,26 @@ export default function GameDetailsPage() {
         streakRef.current = 0;
         errorCountRef.current += 1;
 
-        setTimeout(() => {
-          const livesAfterError = getGameLives(event.gameId);
+       setTimeout(() => {
+  const livesAfterError = Math.max(gameLives - 1, 0);
 
-          showToast(
-            `-5 pontos • -1 vida (${livesAfterError} restante${
-              livesAfterError === 1 ? "" : "s"
-            })`,
-            "error"
-          );
+  showToast(
+    `-5 pontos • -1 vida (${livesAfterError} restante${
+      livesAfterError === 1 ? "" : "s"
+    })`,
+    "error"
+  );
 
-          if (livesAfterError === 0 && !alreadyOfferedExtraLifeRef.current) {
-            alreadyOfferedExtraLifeRef.current = true;
-            setShowNoLivesModal(true);
-          }
-        }, 0);
+  if (gameLives === 1 && !alreadyOfferedExtraLifeRef.current) {
+    alreadyOfferedExtraLifeRef.current = true;
+    setShowNoLivesModal(true);
+  }
+}, 100);
+
+if (gameLives <= 0) {
+  setShowNoLivesModal(false);
+  setShowGameOverModal(true);
+}
 
         return;
       }
@@ -268,24 +273,24 @@ export default function GameDetailsPage() {
   };
 
   const handleBuyLife = () => {
-    if (lifePurchasePendingRef.current) return;
+  if (lifePurchasePendingRef.current) return;
 
-    const success = buyExtraLife(game.slug);
+  if (points < extraLifeCost) {
+    showToast("Pontos insuficientes para comprar uma vida.", "error");
+    return;
+  }
 
-    if (!success) {
-      showToast("Pontos insuficientes para comprar uma vida.", "error");
-      return;
-    }
+  buyExtraLife(game.slug);
 
-    lifePurchasePendingRef.current = true;
-    window.setTimeout(() => {
-      lifePurchasePendingRef.current = false;
-    }, 2000);
+  lifePurchasePendingRef.current = true;
+  window.setTimeout(() => {
+    lifePurchasePendingRef.current = false;
+  }, 2000);
 
-    showToast("+1 vida adquirida ❤️", "success");
-    setShowNoLivesModal(false);
-    setShowPostUnlockLifeModal(false);
-  };
+  showToast("+1 vida adquirida ❤️", "success");
+  setShowNoLivesModal(false);
+  setShowPostUnlockLifeModal(false);
+};
 
   const handleUnlock = () => {
     if (points < unlockCost) {

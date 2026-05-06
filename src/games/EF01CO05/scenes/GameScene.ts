@@ -22,8 +22,6 @@ export class GameScene extends Phaser.Scene {
   private cells: CellObject[] = [];
   private hits = 0;
   private errors = 0;
-  private currentLives = 1;
-  private alreadyUsedZeroLifeChance = false;
   private timerEvent?: Phaser.Time.TimerEvent;
   private timerBar?: Phaser.GameObjects.Rectangle;
   private unsubscribePlatformCommands?: () => void;
@@ -39,8 +37,6 @@ export class GameScene extends Phaser.Scene {
     this.cells = [];
     this.hits = 0;
     this.errors = 0;
-    this.currentLives = data?.lives ?? 1;
-    this.alreadyUsedZeroLifeChance = false;
   }
 
   create() {
@@ -285,11 +281,12 @@ export class GameScene extends Phaser.Scene {
     const gap = 4;
     const totalW = cols * cellSize + (cols - 1) * gap;
     const totalH = rows * cellSize + (rows - 1) * gap;
+    const gridCenterY = rows >= 8 ? 420 : 395;
     const startX = 500 - totalW / 2 + cellSize / 2;
-    const startY = 395 - totalH / 2 + cellSize / 2;
+    const startY = gridCenterY - totalH / 2 + cellSize / 2;
 
     this.add
-      .rectangle(500, 395, totalW + 80, totalH + 80, 0xffffff, 0.82)
+      .rectangle(500, gridCenterY, totalW + 80, totalH + 80, 0xffffff, 0.82)
       .setStrokeStyle(4, 0xf0abfc);
 
     this.levelConfig.grid.forEach((row, rowIndex) => {
@@ -348,22 +345,6 @@ export class GameScene extends Phaser.Scene {
 
       this.showFloatingMessage("Código incorreto!", 0xef4444);
       this.emitProgress();
-
-      if (this.currentLives > 0) {
-        this.currentLives -= 1;
-        return;
-      }
-
-      if (!this.alreadyUsedZeroLifeChance) {
-        this.alreadyUsedZeroLifeChance = true;
-        return;
-      }
-
-      runtimeGameBridge.emit({
-        type: "GAME_OVER",
-        gameId: GAME_ID,
-        stage: this.levelConfig.level,
-      });
       return;
     }
 
@@ -402,6 +383,7 @@ export class GameScene extends Phaser.Scene {
     this.playWin();
     this.showSuccessAnimation();
     this.emitProgress();
+    this.timerEvent?.remove(false);
 
     const nextLevel = this.levelConfig.level + 1;
 
@@ -416,8 +398,8 @@ export class GameScene extends Phaser.Scene {
         errors: this.errors,
       });
 
-      this.time.delayedCall(1500, () => {
-        this.scene.restart({ level: nextLevel, lives: this.currentLives });
+      this.time.delayedCall(1200, () => {
+        this.showNextLevelButton(nextLevel as 1 | 2 | 3);
       });
 
       return;
@@ -432,6 +414,36 @@ export class GameScene extends Phaser.Scene {
 
       this.input.enabled = false;
     });
+  }
+
+  private showNextLevelButton(nextLevel: 1 | 2 | 3) {
+    const button = this.add
+      .rectangle(500, 650, 420, 58, 0x9333ea, 1)
+      .setStrokeStyle(4, 0xffffff)
+      .setInteractive({ useHandCursor: true })
+      .setDepth(120);
+
+    const text = this.add
+      .text(500, 650, "Avançar para o próximo nível", {
+        fontSize: "22px",
+        fontFamily: "Arial Black, Arial",
+        color: "#ffffff",
+      })
+      .setOrigin(0.5)
+      .setDepth(121);
+
+    const goNext = () => {
+      this.playClick();
+
+      this.scene.restart({
+        level: nextLevel,
+      });
+    };
+
+    button.on("pointerdown", goNext);
+
+    text.setInteractive({ useHandCursor: true });
+    text.on("pointerdown", goNext);
   }
 
   private startTimer() {
@@ -491,7 +503,6 @@ export class GameScene extends Phaser.Scene {
         this.time.delayedCall(100, () => {
           this.scene.restart({
             level: command.stage as 1 | 2 | 3,
-            lives: command.lives,
           });
         });
       }
@@ -626,5 +637,3 @@ export class GameScene extends Phaser.Scene {
     });
   }
 }
-
-

@@ -245,12 +245,29 @@ export function GameProvider({ children }: Props) {
           nextGameErrorCounts[normalizedGameId] =
             (nextGameErrorCounts[normalizedGameId] ?? 0) + 1;
 
-          const updatedLives = Math.max(0, currentLives - 1);
-          nextGameLives[normalizedGameId] = updatedLives;
+          if (currentLives <= 0) {
+  const blockedUntil = getBlockedUntilAfterTwoDays();
 
-          historyItems.unshift(
-            createHistoryItem(normalizedGameId, event.stage, "LOST_LIFE", 0)
-          );
+  nextBlockedGames[normalizedGameId] = blockedUntil;
+  nextGameLives[normalizedGameId] = 0;
+
+  historyItems.unshift(
+    createHistoryItem(normalizedGameId, event.stage, "GAME_OVER", 0),
+    createHistoryItem(normalizedGameId, event.stage, "BLOCKED", 0)
+  );
+
+  nextGameStreaks[normalizedGameId] = 0;
+  nextGameErrorCounts[normalizedGameId] = 0;
+
+  break;
+}
+
+const updatedLives = Math.max(0, currentLives - 1);
+nextGameLives[normalizedGameId] = updatedLives;
+
+historyItems.unshift(
+  createHistoryItem(normalizedGameId, event.stage, "LOST_LIFE", 0)
+);
 
           break;
         }

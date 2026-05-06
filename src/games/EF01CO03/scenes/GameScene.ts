@@ -23,9 +23,7 @@ export class GameScene extends Phaser.Scene {
 
   private hits = 0;
   private errors = 0;
-  private currentLives = 1;
   private scoredCorrectCards = new Set<string>();
-
 
   private timerEvent?: Phaser.Time.TimerEvent;
   private timerBar?: Phaser.GameObjects.Rectangle;
@@ -36,19 +34,17 @@ export class GameScene extends Phaser.Scene {
     super({ key: "GameScene" });
   }
 
-  init(data: { level?: number; lives?: number }) {
-  const lvl = (data?.level ?? 1) as 1 | 2 | 3;
-  this.levelConfig = LEVELS.find((item) => item.level === lvl) ?? LEVELS[0];
+  init(data: { level?: number }) {
+    const lvl = (data?.level ?? 1) as 1 | 2 | 3;
+    this.levelConfig = LEVELS.find((item) => item.level === lvl) ?? LEVELS[0];
 
-  this.currentLives = data?.lives ?? 1;
-
-  this.cardSprites = [];
-  this.slots = [];
-  this.placedCards = [];
-  this.hits = 0;
-  this.errors = 0;
-  this.scoredCorrectCards = new Set<string>();
-}
+    this.cardSprites = [];
+    this.slots = [];
+    this.placedCards = [];
+    this.hits = 0;
+    this.errors = 0;
+    this.scoredCorrectCards = new Set<string>();
+  }
 
   create() {
     this.createBackground();
@@ -398,35 +394,6 @@ export class GameScene extends Phaser.Scene {
     }
 
     const slot = this.slots[slotIndex];
-    const isCorrect = card.cardData.id === this.levelConfig.correctOrder[slotIndex];
-
-    if (!isCorrect) {
-      this.errors += 1;
-      this.playWrong();
-
-      if (this.currentLives <= 0) {
-  runtimeGameBridge.emit({
-    type: "GAME_OVER",
-    gameId: GAME_ID,
-    stage: this.levelConfig.level,
-  });
-  return;
-}
-
-this.currentLives -= 1;
-
-      runtimeGameBridge.emit({
-        type: "WRONG_ANSWER",
-        gameId: GAME_ID,
-        stage: this.levelConfig.level,
-        pointsEarned: -5,
-      });
-
-      this.showSlotWrong(slot);
-      this.returnCard(card);
-      this.emitProgress();
-      return;
-    }
 
     this.placedCards[slotIndex] = card;
 
@@ -439,21 +406,6 @@ this.currentLives -= 1;
       duration: 220,
       ease: "Back.Out",
       onComplete: () => {
-        this.showSlotCorrect(slot);
-
-        if (!this.scoredCorrectCards.has(card.cardData.id)) {
-          this.scoredCorrectCards.add(card.cardData.id);
-          this.hits += 1;
-          this.playCorrect();
-
-          runtimeGameBridge.emit({
-            type: "CORRECT_ANSWER",
-            gameId: GAME_ID,
-            stage: this.levelConfig.level,
-            pointsEarned: 5,
-          });
-        }
-
         this.emitProgress();
       },
     });
@@ -480,7 +432,9 @@ this.currentLives -= 1;
   }
 
   private testAlgorithm() {
-    const selectedOrder = this.placedCards.map((card) => card?.cardData.id ?? null);
+    const selectedOrder = this.placedCards.map(
+      (card) => card?.cardData.id ?? null
+    );
 
     if (selectedOrder.some((id) => id === null)) {
       this.playWrong();
@@ -488,22 +442,44 @@ this.currentLives -= 1;
       return;
     }
 
-    const wrongIndex = selectedOrder.findIndex(
-      (id, index) => id !== this.levelConfig.correctOrder[index]
+    const isCorrect = selectedOrder.every(
+      (id, index) => id === this.levelConfig.correctOrder[index]
     );
 
-    if (wrongIndex === -1) {
+    if (isCorrect) {
+      this.hits += 1;
+      this.playCorrect();
+
+      runtimeGameBridge.emit({
+        type: "CORRECT_ANSWER",
+        gameId: GAME_ID,
+        stage: this.levelConfig.level,
+        pointsEarned: 5,
+      });
+
       this.handleSuccess();
       return;
     }
 
-    this.handleFailure(wrongIndex);
+    this.errors += 1;
+    this.playWrong();
+
+    runtimeGameBridge.emit({
+      type: "WRONG_ANSWER",
+      gameId: GAME_ID,
+      stage: this.levelConfig.level,
+      pointsEarned: -5,
+    });
+
+    this.showFloatingMessage("Sequência incorreta! Você perdeu uma vida.", 0xef4444);
+    this.emitProgress();
   }
 
   private handleSuccess() {
     this.playWin();
     this.showSuccessAnimation();
     this.emitProgress();
+    this.timerEvent?.remove(false);
 
     const nextLevel = this.levelConfig.level + 1;
 

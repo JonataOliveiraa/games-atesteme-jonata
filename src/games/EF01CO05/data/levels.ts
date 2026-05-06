@@ -5,7 +5,7 @@ export const LEVELS: PixelLevel[] = [
     level: 1,
     title: "Coração Secreto",
     objective: "Use a legenda para revelar a imagem escondida.",
-    timeLimit: 60,
+    timeLimit: 30,
     imageName: "coração",
     palette: [
       { code: "A", label: "Rosa", color: 0xf472b6 },
@@ -27,7 +27,7 @@ export const LEVELS: PixelLevel[] = [
     level: 2,
     title: "Flor Codificada",
     objective: "Decodifique a matriz usando 3 códigos de cor.",
-    timeLimit: 75,
+    timeLimit: 40,
     imageName: "flor",
     palette: [
       { code: "A", label: "Amarelo", color: 0xfacc15 },
@@ -47,7 +47,7 @@ export const LEVELS: PixelLevel[] = [
     level: 3,
     title: "Robô Pixel",
     objective: "Revele a imagem sem dicas e complete a decodificação.",
-    timeLimit: 90,
+    timeLimit: 50,
     imageName: "robô",
     palette: [
       { code: "A", label: "Azul", color: 0x38bdf8 },
