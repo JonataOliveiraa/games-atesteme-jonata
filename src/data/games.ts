@@ -120,4 +120,13 @@ export const games: Game[] = [
     icon: "🌀",
     slug: "labirinto-inteligente",
   },
+  {
+    id: 13,
+    title: "Desktop Digital Infantil",
+    description: "Explore apps de um desktop infantil e complete missões usando câmera, calculadora, gravador e muito mais!",
+    category: "Cultura Digital",
+    points: 60,
+    icon: "🖥️",
+    slug: "desktop-digital-infantil",
+  },
 ];
