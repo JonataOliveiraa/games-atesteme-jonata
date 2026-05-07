@@ -58,14 +58,15 @@ export const games: Game[] = [
     slug: "desktop-digital-infantil",
   },
   {
-    id: 6,
-    title: "Hangar dos Modelos",
-    description: "Explore um showroom de veículos, use filtros para agrupá-los e descubra o que eles têm em comum!",
-    category: "Pensamento Computacional",
-    points: 60,
-    icon: "✈️",
-    slug: "hangar-dos-modelos",
-  },
+    id: 7,
+  title: "Guardiões dos Dados",
+  description: "Escolha atitudes seguras em situações com celular, tablet, computador, jogos e aplicativos.",
+  category: "Pensamento Computacional",
+  points: 50,
+  icon: "🛡️",
+  slug: "guardioes-dos-dados",
+}
+,
   {
     id: 7,
     title: "Corrida do Saber",

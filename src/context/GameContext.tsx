@@ -70,6 +70,8 @@ const GAME_CODE_TO_SLUG: Record<string, string> = {
   EF01CO01: "base-dos-classificadores",
   EF01CO03: "oficina-dos-algoritmos",
   EF01CO05: "pixel-secreto",
+  EF01CO07: "guardioes-dos-dados",
+
 };
 
 function normalizeGameId(gameId: string): string {

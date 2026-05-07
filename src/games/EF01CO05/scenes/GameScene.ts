@@ -25,6 +25,11 @@ export class GameScene extends Phaser.Scene {
   private timerEvent?: Phaser.Time.TimerEvent;
   private timerBar?: Phaser.GameObjects.Rectangle;
   private unsubscribePlatformCommands?: () => void;
+  private tutorialStep = 0;
+  private tutorialContainer?: Phaser.GameObjects.Container;
+  private nextTutorialButton?: Phaser.GameObjects.Container;
+  private hasStartedTimer = false;
+
 
   constructor() {
     super({ key: "GameScene" });
@@ -39,6 +44,13 @@ export class GameScene extends Phaser.Scene {
     this.errors = 0;
   }
 
+  private startTimerOnce() {
+  if (this.hasStartedTimer) return;
+
+  this.hasStartedTimer = true;
+  this.startTimer();
+}
+
   create() {
     this.createBackground();
     this.createTitle();
@@ -46,7 +58,7 @@ export class GameScene extends Phaser.Scene {
     this.createPalette();
     this.createGrid();
     this.registerPlatformCommands();
-    this.startTimer();
+  
 
     runtimeGameBridge.emit({
       type: "GAME_READY",
@@ -85,83 +97,138 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
-  private createTutorialAnimation() {
-    const overlay = this.add
-      .rectangle(640, 360, 1280, 720, 0x000000, 0.4)
-      .setDepth(200);
+private createTutorialAnimation() {
+  this.tutorialStep = 0;
 
-    const panel = this.add
-      .rectangle(640, 135, 880, 110, 0xffffff, 0.96)
-      .setStrokeStyle(4, 0xc084fc)
-      .setDepth(201);
+  this.showTutorialStep();
+}
 
-    const text = this.add
-      .text(640, 135, "", {
-        fontSize: "28px",
-        fontFamily: "Arial Black, Arial",
-        color: "#7e22ce",
-        align: "center",
-        wordWrap: { width: 780 },
-      })
-      .setOrigin(0.5)
-      .setDepth(202);
+private showTutorialStep() {
+  this.tutorialContainer?.destroy();
+  this.nextTutorialButton?.destroy();
 
-    const firstCode = this.levelConfig.palette[0]?.code;
-    const secondCode = this.levelConfig.palette[1]?.code;
+  const steps = [
+    {
+      text: "Clique na legenda A = ROSA",
+      color: 0xff66b3,
+      label: "A",
+    },
+    {
+      text: "Depois clique nos espaços com a letra A",
+      color: 0xffffff,
+      label: "A",
+    },
+    {
+      text: "Clique na legenda B = BRANCO",
+      color: 0xffffff,
+      label: "B",
+    },
+    {
+      text: "Depois clique nos espaços com a letra B",
+      color: 0xffffff,
+      label: "B",
+    },
+    {
+      text: "Complete o desenho para avançar de nível",
+      color: 0x86efac,
+      label: "✓",
+    },
+  ];
 
-    if (!firstCode) {
-      overlay.destroy();
-      panel.destroy();
-      text.destroy();
+  const step = steps[this.tutorialStep];
+
+  const panel = this.add
+    .rectangle(640, 210, 760, 150, 0xffffff, 0.97)
+    .setStrokeStyle(4, 0xa855f7)
+    .setDepth(200);
+
+  const numberBadge = this.add
+    .circle(300, 160, 24, 0x2563eb, 1)
+    .setStrokeStyle(3, 0xffffff)
+    .setDepth(201);
+
+  const numberText = this.add
+    .text(300, 160, String(this.tutorialStep + 1), {
+      fontSize: "24px",
+      fontFamily: "Arial Black, Arial",
+      color: "#ffffff",
+    })
+    .setOrigin(0.5)
+    .setDepth(202);
+
+  const text = this.add
+    .text(640, 160, step.text, {
+      fontSize: "26px",
+      fontFamily: "Arial Black, Arial",
+      color: "#7e22ce",
+      align: "center",
+      wordWrap: { width: 620 },
+    })
+    .setOrigin(0.5)
+    .setDepth(202);
+
+  const square = this.add
+    .rectangle(640, 230, 70, 70, step.color, 1)
+    .setStrokeStyle(4, 0x111827)
+    .setDepth(202);
+
+  const label = this.add
+    .text(640, 230, step.label, {
+      fontSize: "32px",
+      fontFamily: "Arial Black, Arial",
+      color: "#111827",
+    })
+    .setOrigin(0.5)
+    .setDepth(203);
+
+  this.tutorialContainer = this.add.container(0, 0, [
+    panel,
+    numberBadge,
+    numberText,
+    text,
+    square,
+    label,
+  ]);
+
+  this.createNextTutorialButton();
+}
+
+private createNextTutorialButton() {
+  const buttonBg = this.add
+    .rectangle(1035, 210, 64, 64, 0xa855f7, 1)
+    .setStrokeStyle(4, 0xffffff)
+    .setInteractive({ useHandCursor: true })
+    .setDepth(210);
+
+  const arrow = this.add
+    .text(1035, 210, "➜", {
+      fontSize: "34px",
+      fontFamily: "Arial Black, Arial",
+      color: "#ffffff",
+    })
+    .setOrigin(0.5)
+    .setDepth(211);
+
+  const goNext = () => {
+    this.playClick();
+
+    this.tutorialStep++;
+
+    if (this.tutorialStep >= 5) {
+      this.tutorialContainer?.destroy();
+      this.nextTutorialButton?.destroy();
       return;
     }
 
-    const highlightCells = (code: PixelCode) => {
-      this.cells.forEach((cell) => {
-        if (cell.code === code && !cell.filled) {
-          this.tweens.add({
-            targets: cell,
-            scaleX: 1.18,
-            scaleY: 1.18,
-            yoyo: true,
-            repeat: 2,
-            duration: 180,
-          });
-        }
-      });
-    };
+    this.showTutorialStep();
+  };
 
-    text.setText(`1. Clique na legenda: ${firstCode}`);
+  buttonBg.on("pointerdown", goNext);
+  arrow.setInteractive({ useHandCursor: true });
+  arrow.on("pointerdown", goNext);
 
-    this.time.delayedCall(1200, () => {
-      text.setText(`2. Agora clique nos quadradinhos com ${firstCode}`);
-      highlightCells(firstCode);
-    });
-
-    this.time.delayedCall(3200, () => {
-      if (!secondCode) return;
-      text.setText(`3. Depois escolha ${secondCode} na legenda`);
-    });
-
-    this.time.delayedCall(4400, () => {
-      if (!secondCode) return;
-      text.setText(`4. Pinte os quadradinhos com ${secondCode}`);
-      highlightCells(secondCode);
-    });
-
-    this.time.delayedCall(6800, () => {
-      this.tweens.add({
-        targets: [overlay, panel, text],
-        alpha: 0,
-        duration: 400,
-        onComplete: () => {
-          overlay.destroy();
-          panel.destroy();
-          text.destroy();
-        },
-      });
-    });
-  }
+  this.nextTutorialButton = this.add.container(0, 0, [buttonBg, arrow]);
+}
 
   private createBackground() {
     this.add.rectangle(640, 360, 1280, 720, 0xfdf2f8);
@@ -267,6 +334,7 @@ export class GameScene extends Phaser.Scene {
         .setOrigin(0, 0.5);
 
       button.on("pointerdown", () => {
+        this.startTimerOnce();
         this.playClick();
         this.selectedCode = item.code;
         this.createPalette();
@@ -330,6 +398,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private handleCellClick(cell: CellObject) {
+    this.startTimerOnce();
     if (cell.filled) return;
 
     if (this.selectedCode !== cell.code) {
