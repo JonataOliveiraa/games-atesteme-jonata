@@ -283,6 +283,7 @@ Os `load.audio(...)` e `load.atlas(...)` já estão comentados em cada `BootScen
 |--------|------|-----|------|------|
 | EF01CO01 | Base dos Classificadores | 1º | Pensamento Computacional | `base-dos-classificadores` |
 | EF01CO06 | Desktop Digital Infantil | 1º | Cultura Digital | `desktop-digital-infantil` |
+| EF02CO01 | Hangar dos Modelos | 2º | Pensamento Computacional | `hangar-dos-modelos` |
 
 ---
 
@@ -307,3 +308,19 @@ Simulador de desktop infantil onde o aluno recebe missões narradas e precisa id
 - **Double-tap** nos ícones para abrir apps (400 ms), conforme especificação pedagógica
 - **Áudio sintético**: Web Audio API — abertura/fechamento de janela, acerto, progresso — sem arquivos externos
 - **Texturas programáticas**: ícones coloridos com rounded rect + wallpaper gradiente + taskbar
+
+---
+
+### EF02CO01 — Hangar dos Modelos
+
+Showroom de veículos onde o aluno usa filtros para agrupá-los e descobre padrões e atributos em comum — trabalhando modelagem de objetos e pensamento computacional.
+
+- **3 níveis com mecânicas distintas**:
+  - **N1 — Filtro binário**: 6 veículos em grid, painel de filtro "Voa?", veículos animam para zonas match/non-match, MCQ de contagem valida
+  - **N2 — Comparação lado a lado**: 2 veículos exibidos com tabela de 4 atributos; aluno marca cada um como "IGUAL" ou "DIFERENTE"
+  - **N3 — Descoberta do atributo**: 12 veículos com um grupo destacado em dourado; aluno identifica qual atributo une o grupo via MCQ
+- **12 veículos**: avião, helicóptero, foguete, balão, carro, ônibus, bicicleta, trem, barco, lancha, patinete, submarino — com atributos `voa`, `temRodas`, `temMotor`, `meio`
+- **MissionPhase state machine**: controla `intro → waiting-filter → animating → question → feedback → next-mission → level-complete`
+- **Progressão em-cena**: missões avançam dentro da mesma Scene (sem restart) — veículos voltam para posição home via tween
+- **Áudio sintético**: Web Audio API — tick, acerto (arpejo C-E-G), erro (buzz descendente), fanfarra — sem arquivos externos
+- **Texturas programáticas**: cartões de veículo com rounded rect colorido + emoji + nome
