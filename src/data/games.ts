@@ -59,6 +59,15 @@ export const games: Game[] = [
   },
   {
     id: 6,
+    title: "Hangar dos Modelos",
+    description: "Explore um showroom de veículos, use filtros para agrupá-los e descubra o que eles têm em comum!",
+    category: "Pensamento Computacional",
+    points: 60,
+    icon: "✈️",
+    slug: "hangar-dos-modelos",
+  },
+  {
+    id: 7,
     title: "Corrida do Saber",
     description: "Avance casas ao acertar perguntas e complete o percurso.",
     category: "Perguntas",
@@ -67,7 +76,7 @@ export const games: Game[] = [
     slug: "corrida-do-saber",
   },
   {
-    id: 7,
+    id: 8,
     title: "Desafio Matemático",
     description: "Resolva contas e problemas no menor tempo possível.",
     category: "Matemática",
@@ -76,7 +85,7 @@ export const games: Game[] = [
     slug: "desafio-matematico",
   },
   {
-    id: 8,
+    id: 9,
     title: "Caça ao Número",
     description: "Encontre os números corretos antes do tempo acabar.",
     category: "Atenção",
@@ -85,7 +94,7 @@ export const games: Game[] = [
     slug: "caca-ao-numero",
   },
   {
-    id: 9,
+    id: 10,
     title: "Sequência Lógica",
     description: "Complete as sequências corretamente para avançar.",
     category: "Raciocínio",
@@ -94,7 +103,7 @@ export const games: Game[] = [
     slug: "sequencia-logica",
   },
   {
-    id: 10,
+    id: 11,
     title: "Desafio das Cores",
     description: "Associe cores e padrões corretamente para vencer.",
     category: "Percepção",
@@ -103,7 +112,7 @@ export const games: Game[] = [
     slug: "desafio-das-cores",
   },
   {
-    id: 11,
+    id: 12,
     title: "Montando Palavras",
     description: "Organize letras para formar as palavras corretas.",
     category: "Português",
@@ -112,7 +121,7 @@ export const games: Game[] = [
     slug: "montando-palavras",
   },
   {
-    id: 12,
+    id: 13,
     title: "Conta Rápida",
     description: "Resolva operações matemáticas com rapidez.",
     category: "Cálculo",
@@ -121,7 +130,7 @@ export const games: Game[] = [
     slug: "conta-rapida",
   },
   {
-    id: 13,
+    id: 14,
     title: "Labirinto Inteligente",
     description: "Encontre o melhor caminho até a saída.",
     category: "Estratégia",

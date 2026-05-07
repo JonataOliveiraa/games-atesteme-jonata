@@ -16,6 +16,7 @@ const SLUG_TO_CODE: Record<string, GameCode> = {
   "oficina-dos-algoritmos":    "EF01CO03",
   "pixel-secreto":             "EF01CO05",
   "desktop-digital-infantil":  "EF01CO06",
+  "hangar-dos-modelos":        "EF02CO01",
 };
 
 const GAME_CONFIG_LOADERS: Partial<
@@ -26,6 +27,7 @@ const GAME_CONFIG_LOADERS: Partial<
   EF01CO03: () => import("../games/EF01CO03/index"),
   EF01CO05: () => import("../games/EF01CO05/index"),
   EF01CO06: () => import("../games/EF01CO06/index"),
+  EF02CO01: () => import("../games/EF02CO01/index"),
 };
 
 export default function GameDetailsPage() {
