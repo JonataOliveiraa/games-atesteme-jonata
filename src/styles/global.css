@@ -525,13 +525,13 @@ button {
   overflow: hidden;
   box-shadow: var(--shadow);
   background: #1a1a2e;
+  margin: 0 auto;
 }
 
-/* O canvas gerado pelo Phaser dentro do container */
 .phaser-container canvas {
-  display: block;
   width: 100% !important;
   height: 100% !important;
+  display: block;
 }
 
 .game-screen {
