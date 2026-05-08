@@ -11,13 +11,12 @@ import type { GameEventPayload } from "../types/platform";
 import type Phaser from "phaser";
 
 const SLUG_TO_CODE: Record<string, GameCode> = {
-  "base-dos-classificadores":  "EF01CO01",
-  "quiz-de-conhecimentos":     "EF01CO02",
-  "oficina-dos-algoritmos":    "EF01CO03",
-  "pixel-secreto":             "EF01CO05",
-  "desktop-digital-infantil":  "EF01CO06",
-  "guardioes-dos-dados":       "EF01CO07",
-  "hangar-dos-modelos":        "EF02CO01",
+  "base-dos-classificadores": "EF01CO01",
+  "quiz-de-conhecimentos": "EF01CO02",
+  "oficina-dos-algoritmos": "EF01CO03",
+  "pixel-secreto": "EF01CO05",
+  "desktop-digital-infantil": "EF01CO06",
+  "guardioes-dos-dados": "EF01CO07",
 };
 
 const GAME_CONFIG_LOADERS: Partial<
@@ -29,7 +28,6 @@ const GAME_CONFIG_LOADERS: Partial<
   EF01CO05: () => import("../games/EF01CO05/index"),
   EF01CO06: () => import("../games/EF01CO06/index"),
   EF01CO07: () => import("../games/EF01CO07/index"),
-  EF02CO01: () => import("../games/EF02CO01/index"),
 };
 
 export default function GameDetailsPage() {
@@ -80,6 +78,7 @@ export default function GameDetailsPage() {
 
   const game = games.find((item) => item.slug === slug);
   const gameCode = slug ? SLUG_TO_CODE[slug] : undefined;
+  const isPixelSecreto = game?.slug === "pixel-secreto";
 
   useEffect(() => {
     let cancelled = false;
@@ -107,6 +106,31 @@ export default function GameDetailsPage() {
     };
   }, [gameCode]);
 
+  useEffect(() => {
+    const openExtraLifeModal = () => {
+      setShowNoLivesModal(true);
+    };
+
+    const openUnlockModal = () => {
+      setShowUnlockModal(true);
+    };
+
+    const exitGame = () => {
+      setHasStartedGame(false);
+      navigate("/", { replace: true });
+    };
+
+    window.addEventListener("pixel-secret-show-extra-life-modal", openExtraLifeModal);
+    window.addEventListener("pixel-secret-open-unlock-modal", openUnlockModal);
+    window.addEventListener("pixel-secret-exit-game", exitGame);
+
+    return () => {
+      window.removeEventListener("pixel-secret-show-extra-life-modal", openExtraLifeModal);
+      window.removeEventListener("pixel-secret-open-unlock-modal", openUnlockModal);
+      window.removeEventListener("pixel-secret-exit-game", exitGame);
+    };
+  }, [navigate]);
+
   if (!game) {
     return (
       <section>
@@ -129,6 +153,33 @@ export default function GameDetailsPage() {
   const gameLives = getGameLives(game.slug);
   const blocked = isGameBlocked(game.slug);
   const blockedUntil = getGameBlockedUntil(game.slug);
+
+  const resumePixelSecreto = () => {
+    if (!isPixelSecreto) return;
+    window.dispatchEvent(new CustomEvent("pixel-secret-resume-game"));
+  };
+
+  const dispatchPixelFinalGameOver = (event: PlatformEvent) => {
+    const blockedDate = new Date(
+      Date.now() + 2 * 24 * 60 * 60 * 1000
+    ).toISOString();
+
+    handleGameEvent({
+      type: "GAME_OVER",
+      gameId: event.gameId,
+      stage: event.stage,
+      pointsEarned: 0,
+    });
+
+    window.dispatchEvent(
+      new CustomEvent("pixel-secret-show-final-game-over", {
+        detail: {
+          blockedUntil: blockedDate,
+          unlockCost,
+        },
+      })
+    );
+  };
 
   const dispatchPlatformGameEvent = (event: {
     type: "GAME_OVER" | "GAME_COMPLETED" | "CORRECT_ANSWER" | "WRONG_ANSWER";
@@ -196,6 +247,8 @@ export default function GameDetailsPage() {
       }
 
       case "WRONG_ANSWER": {
+        const livesBeforeError = gameLives;
+
         dispatchPlatformGameEvent({
           type: "WRONG_ANSWER",
           gameId: event.gameId,
@@ -206,26 +259,36 @@ export default function GameDetailsPage() {
         streakRef.current = 0;
         errorCountRef.current += 1;
 
-       setTimeout(() => {
-  const livesAfterError = Math.max(gameLives - 1, 0);
+        setTimeout(() => {
+          const livesAfterError = Math.max(livesBeforeError - 1, 0);
 
-  showToast(
-    `-5 pontos • -1 vida (${livesAfterError} restante${
-      livesAfterError === 1 ? "" : "s"
-    })`,
-    "error"
-  );
+          showToast(
+            `-5 pontos • -1 vida (${livesAfterError} restante${
+              livesAfterError === 1 ? "" : "s"
+            })`,
+            "error"
+          );
 
-  if (gameLives === 1 && !alreadyOfferedExtraLifeRef.current) {
-    alreadyOfferedExtraLifeRef.current = true;
-    setShowNoLivesModal(true);
-  }
-}, 100);
+          if (livesBeforeError <= 0) {
+            setShowNoLivesModal(false);
 
-if (gameLives <= 0) {
-  setShowNoLivesModal(false);
-  setShowGameOverModal(true);
-}
+            if (isPixelSecreto) {
+              dispatchPixelFinalGameOver(event);
+              return;
+            }
+
+            setShowGameOverModal(true);
+            return;
+          }
+
+          if (livesBeforeError === 1 && !alreadyOfferedExtraLifeRef.current) {
+            alreadyOfferedExtraLifeRef.current = true;
+
+            if (!isPixelSecreto) {
+              setShowNoLivesModal(true);
+            }
+          }
+        }, 100);
 
         return;
       }
@@ -270,31 +333,37 @@ if (gameLives <= 0) {
 
         streakRef.current = 0;
         setShowNoLivesModal(false);
-        setShowGameOverModal(true);
+
+        if (!isPixelSecreto) {
+          setShowGameOverModal(true);
+        }
+
         return;
       }
     }
   };
 
   const handleBuyLife = () => {
-  if (lifePurchasePendingRef.current) return;
+    if (lifePurchasePendingRef.current) return;
 
-  if (points < extraLifeCost) {
-    showToast("Pontos insuficientes para comprar uma vida.", "error");
-    return;
-  }
+    if (points < extraLifeCost) {
+      showToast("Pontos insuficientes para comprar uma vida.", "error");
+      resumePixelSecreto();
+      return;
+    }
 
-  buyExtraLife(game.slug);
+    buyExtraLife(game.slug);
 
-  lifePurchasePendingRef.current = true;
-  window.setTimeout(() => {
-    lifePurchasePendingRef.current = false;
-  }, 2000);
+    lifePurchasePendingRef.current = true;
+    window.setTimeout(() => {
+      lifePurchasePendingRef.current = false;
+    }, 2000);
 
-  showToast("+1 vida adquirida ❤️", "success");
-  setShowNoLivesModal(false);
-  setShowPostUnlockLifeModal(false);
-};
+    showToast("+1 vida adquirida ❤️", "success");
+    setShowNoLivesModal(false);
+    setShowPostUnlockLifeModal(false);
+    resumePixelSecreto();
+  };
 
   const handleUnlock = () => {
     if (points < unlockCost) {
@@ -333,7 +402,7 @@ if (gameLives <= 0) {
     navigate(-1);
   };
 
-  if (blocked && !showGameOverModal && !showUnlockModal) {
+  if (blocked && !hasStartedGame && !showGameOverModal && !showUnlockModal) {
     return (
       <>
         <section>
@@ -574,7 +643,10 @@ if (gameLives <= 0) {
         confirmText="Comprar vida"
         cancelText="Continuar assim"
         onConfirm={handleBuyLife}
-        onCancel={() => setShowNoLivesModal(false)}
+        onCancel={() => {
+          setShowNoLivesModal(false);
+          resumePixelSecreto();
+        }}
       />
 
       <ConfirmModal
@@ -591,6 +663,7 @@ if (gameLives <= 0) {
         cancelText="Desbloquear agora"
         onConfirm={() => {
           setShowGameOverModal(false);
+          setHasStartedGame(false);
           navigate("/", { replace: true });
         }}
         onCancel={() => {
