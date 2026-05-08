@@ -303,11 +303,14 @@ Jogo de drag & drop onde o aluno classifica formas geométricas por cor, forma o
 Simulador de desktop infantil onde o aluno recebe missões narradas e precisa identificar e usar o app correto para completá-las.
 
 - **6 mini-apps funcionais**: Câmera (flash + foto), Gravador (gravar → parar → salvar), Desenho (canvas livre + paleta de 5 cores), Calculadora (pad numérico + avaliação de expressão), Navegador (links clicáveis), Player (play/pause com barra de progresso)
-- **Sistema de janelas**: `Container` Phaser com header arrastável via `pointermove`, `setDepth` para z-order, animação de abertura/fechamento
-- **3 níveis**: 2 apps + 2 missões (N1) → 4 apps + 3 missões com passos encadeados (N2) → 6 apps + 3 missões multi-step (N3)
-- **Double-tap** nos ícones para abrir apps (400 ms), conforme especificação pedagógica
-- **Áudio sintético**: Web Audio API — abertura/fechamento de janela, acerto, progresso — sem arquivos externos
-- **Texturas programáticas**: ícones coloridos com rounded rect + wallpaper gradiente + taskbar
+- **Sistema de janelas**: `Container` Phaser com header arrastável via `pointermove`, `setDepth` para z-order, animação de abertura/fechamento; guard de double-close via `Set<AppId>`
+- **3 níveis**: 2 apps + 2 missões + 20s (N1) → 4 apps + 4 missões + 25s (N2) → 6 apps + 6 missões + 30s (N3)
+- **Timer bar**: barra em y=118 verde→laranja→vermelho, pausa durante animações de missão; beep de aviso quando < 25% do tempo
+- **Double-tap** nos ícones para abrir apps (400ms); hint contextual ao usar app errado: "Use / Comece com / Agora use"
+- **Banner de próxima missão**: ao concluir cada desafio exibe "🌟 Missão Concluída!" e depois "PRÓXIMO DESAFIO: [texto]" antes de liberar o desktop
+- **Ícones desenhados**: formas específicas por app (lente, microfone, paleta, grade de botões, globo, triângulo-play) com realce iOS-style — sem emojis sobrepostos
+- **HUD**: barra superior 112px com texto da missão (26px, centralizado), dica do passo (17px amarelo), dots de progresso, estrelas de nível, botão mute
+- **Áudio sintético**: Web Audio API — sem arquivos externos
 
 ---
 
