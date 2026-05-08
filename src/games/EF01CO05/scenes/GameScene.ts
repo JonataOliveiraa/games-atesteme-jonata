@@ -42,6 +42,7 @@ export class GameScene extends Phaser.Scene {
     this.cells = [];
     this.hits = 0;
     this.errors = 0;
+    this.hasStartedTimer = false;
   }
 
   private startTimerOnce() {
@@ -143,12 +144,12 @@ private showTutorialStep() {
     .setDepth(200);
 
   const numberBadge = this.add
-    .circle(300, 160, 24, 0x2563eb, 1)
+    .circle(300, 175, 24, 0x2563eb, 1)
     .setStrokeStyle(3, 0xffffff)
     .setDepth(201);
 
   const numberText = this.add
-    .text(300, 160, String(this.tutorialStep + 1), {
+    .text(300, 175, String(this.tutorialStep + 1), {
       fontSize: "24px",
       fontFamily: "Arial Black, Arial",
       color: "#ffffff",
