@@ -12,17 +12,19 @@ interface MissionUpdatePayload {
 /**
  * UIScene — HUD paralelo do Desktop Digital Infantil.
  *
- * Layout (canvas 1280×720, y=0–90):
+ * Layout (canvas 1280×720, y=0–112):
  *   ┌──────────────────────────────────────────────────────────────────────┐
- *   │ 💬 [Missão: texto]        [Passo atual: hint]    ●●○  ★★☆   🔊   │
+ *   │              🎯 Texto da missão — centralizado, grande              │  ← y=34
+ *   │                👉 Dica do passo atual — centralizada               │  ← y=80
+ *   │                                              ●●○  ★★☆   🔊       │
  *   └──────────────────────────────────────────────────────────────────────┘
+ *   ━━━━ timer bar (GameScene, y=118) ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
  */
 export class UIScene extends Phaser.Scene {
   private missionText!: Phaser.GameObjects.Text
   private stepHint!: Phaser.GameObjects.Text
   private missionDots: Phaser.GameObjects.Graphics[] = []
   private levelStars!: Phaser.GameObjects.Text
-  private currentLevel = 1
 
   constructor() {
     super({ key: 'UIScene' })
@@ -38,56 +40,57 @@ export class UIScene extends Phaser.Scene {
     EventBus.off('mute-audio', undefined, this)
   }
 
-  // ── Barra superior ────────────────────────────────────────────────────────
+  // ── Barra superior (112px de altura) ─────────────────────────────────────
 
   private createTopBar() {
-    // Fundo escuro translúcido (estilo barra de sistema)
-    this.add.rectangle(640, 45, 1280, 90, 0x0A1628, 0.92)
-      .setStrokeStyle(2, 0x2E86C1)
+    // Fundo escuro
+    this.add.rectangle(640, 56, 1280, 112, 0x0A1628, 0.95)
+    // Linha inferior de separação
+    this.add.rectangle(640, 112, 1280, 2, 0x2E86C1, 0.7)
 
-    // Ícone de missão
-    this.add.text(18, 45, '💬', { fontSize: '28px' }).setOrigin(0, 0.5)
+    // Ícone de missão (esquerda)
+    this.add.text(18, 34, '🎯', { fontSize: '28px' }).setOrigin(0, 0.5)
 
-    // Texto da missão
-    this.missionText = this.add.text(58, 32, 'Carregando...', {
-      fontSize: '17px',
+    // Texto da missão — centralizado, fonte grande
+    this.missionText = this.add.text(640, 34, 'Carregando...', {
+      fontSize: '26px',
       fontFamily: 'Arial Black, Arial',
-      color: '#AED6F1',
-      wordWrap: { width: 480 },
-    }).setOrigin(0, 0.5)
+      color: '#FFFFFF',
+      stroke: '#0A1628',
+      strokeThickness: 4,
+      wordWrap: { width: 860 },
+      align: 'center',
+    }).setOrigin(0.5, 0.5)
 
-    // Separador
-    this.add.rectangle(560, 45, 2, 60, 0x2E86C1, 0.5)
+    // Separador horizontal sutil
+    this.add.rectangle(640, 60, 820, 1, 0x2E86C1, 0.30)
 
-    // Hint do passo atual
-    this.add.text(575, 32, '👉', { fontSize: '18px' }).setOrigin(0, 0.5)
-    this.stepHint = this.add.text(608, 32, '', {
-      fontSize: '16px',
+    // Ícone de passo
+    this.add.text(190, 82, '👉', { fontSize: '18px' }).setOrigin(0.5, 0.5)
+
+    // Dica do passo atual — centralizada, cor amarela
+    this.stepHint = this.add.text(640, 82, '', {
+      fontSize: '17px',
       fontFamily: 'Arial, sans-serif',
       color: '#F9E79F',
-      wordWrap: { width: 380 },
-    }).setOrigin(0, 0.5)
+      stroke: '#0A1628',
+      strokeThickness: 3,
+      wordWrap: { width: 700 },
+      align: 'center',
+    }).setOrigin(0.5, 0.5)
 
-    // Dots de progresso (placeholder — recriados em updateDots)
+    // Dots de progresso (recriados em updateDots)
     this.missionDots = []
-    for (let i = 0; i < 3; i++) {
-      const dot = this.add.graphics()
-      dot.fillStyle(0x4A4A4A, 1)
-      dot.fillCircle(0, 0, 8)
-      dot.setPosition(1020 + i * 26, 45)
-      dot.setAlpha(0)
-      this.missionDots.push(dot)
-    }
 
-    // Estrelas de nível
-    this.add.text(1100, 30, 'Nível', {
-      fontSize: '12px', color: '#7F8C8D', fontFamily: 'Arial',
+    // Estrelas de nível (canto direito)
+    this.add.text(1095, 24, 'Nível', {
+      fontSize: '11px', color: '#7F8C8D', fontFamily: 'Arial',
     }).setOrigin(0.5)
-    this.levelStars = this.add.text(1100, 58, '★☆☆', {
-      fontSize: '22px', color: '#F1C40F',
+    this.levelStars = this.add.text(1095, 48, '★☆☆', {
+      fontSize: '20px', color: '#F1C40F',
     }).setOrigin(0.5)
 
-    // Botão mute
+    // Botão mute (canto direito)
     this.createMuteButton()
   }
 
@@ -96,11 +99,11 @@ export class UIScene extends Phaser.Scene {
   private createMuteButton() {
     let muted = false
 
-    const btn = this.add.rectangle(1248, 45, 56, 56, 0x1A2A3A, 0.9)
-      .setStrokeStyle(2, 0x2E86C1)
+    const btn = this.add.rectangle(1248, 56, 52, 60, 0x1A2A3A, 0.9)
+      .setStrokeStyle(1.5, 0x2E86C1)
       .setInteractive({ useHandCursor: true })
 
-    const icon = this.add.text(1248, 45, '🔊', { fontSize: '24px' }).setOrigin(0.5)
+    const icon = this.add.text(1248, 56, '🔊', { fontSize: '22px' }).setOrigin(0.5)
 
     btn.on('pointerdown', () => {
       muted = !muted
@@ -117,30 +120,30 @@ export class UIScene extends Phaser.Scene {
     EventBus.on('mission-update', (data: MissionUpdatePayload) => {
       this.missionText.setText(data.missionText)
       this.stepHint.setText(data.stepHint)
-      this.currentLevel = data.level
       this.levelStars.setText('★'.repeat(data.level) + '☆'.repeat(3 - data.level))
       this.updateDots(data.missionIndex, data.totalMissions)
     }, this)
   }
 
   private updateDots(completedCount: number, total: number) {
-    // Recria dots conforme o total de missões do nível
     this.missionDots.forEach(d => d.destroy())
     this.missionDots = []
 
-    const startX = 1020
-    const gap = 26
+    const dotR = 7
+    const gap = 20
+    const totalW = total * (dotR * 2) + (total - 1) * (gap - dotR * 2)
+    const startX = 1148 - totalW / 2 + dotR
 
     for (let i = 0; i < total; i++) {
       const dot = this.add.graphics()
       const filled = i < completedCount
-      dot.fillStyle(filled ? 0x2ECC71 : 0x4A4A4A, 1)
-      dot.fillCircle(0, 0, 8)
+      dot.fillStyle(filled ? 0x2ECC71 : 0x394A59, 1)
+      dot.fillCircle(0, 0, dotR)
       if (filled) {
-        dot.lineStyle(2, 0x27AE60)
-        dot.strokeCircle(0, 0, 8)
+        dot.lineStyle(1.5, 0x27AE60)
+        dot.strokeCircle(0, 0, dotR)
       }
-      dot.setPosition(startX + i * gap, 45)
+      dot.setPosition(startX + i * gap, 82)
       this.missionDots.push(dot)
     }
   }

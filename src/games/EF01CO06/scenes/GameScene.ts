@@ -62,6 +62,22 @@ export class GameScene extends Phaser.Scene {
   private calcDisplay = ''
   private calcText: Phaser.GameObjects.Text | null = null
 
+  // Timer
+  private timerBar!: Phaser.GameObjects.Rectangle
+  private timeLeft = 0
+  private timerActive = false
+  private timerWarned = false
+  private warningBeepTimer: Phaser.Time.TimerEvent | null = null
+
+  // Gravador recording timer reference (allows cleanup on window close)
+  private gravadorRecTimerEvent: Phaser.Time.TimerEvent | null = null
+
+  // Guard against double-close (pointerdown fires on closeBg and closeTxt)
+  private closingWindows: Set<AppId> = new Set()
+
+  // Guard against re-entry during mission complete animation
+  private missionEffectActive = false
+
   constructor() {
     super({ key: 'GameScene' })
   }
@@ -84,12 +100,20 @@ export class GameScene extends Phaser.Scene {
     this.gravadorBtnText = null
     this.gravadorStatusText = null
     this.lastTapTime = {}
+    this.gravadorRecTimerEvent = null
+    this.closingWindows = new Set()
+    this.missionEffectActive = false
+    this.timerActive = false
+    this.timerWarned = false
+    this.timeLeft = 0
+    this.warningBeepTimer = null
   }
 
   create() {
     this.createDesktop()
     this.createTaskbar()
     this.createAppIcons()
+    this.createTimerBar()
     this.registerPlatformCommands()
 
     this.input.on('pointerup', () => { this.dragging = null })
@@ -100,13 +124,15 @@ export class GameScene extends Phaser.Scene {
     this.showLevelIntro()
   }
 
-  update() {
+  update(_time: number, delta: number) {
+    if (this.timerActive) this.updateTimer(delta)
+
     // Drag de janela
     if (this.dragging && this.input.activePointer.isDown) {
       const ptr = this.input.activePointer
       this.dragging.container.setPosition(
         Phaser.Math.Clamp(ptr.x + this.dragging.offX, WIN_W / 2, 1280 - WIN_W / 2),
-        Phaser.Math.Clamp(ptr.y + this.dragging.offY, 90 + WIN_H / 2, 660 - WIN_H / 2),
+        Phaser.Math.Clamp(ptr.y + this.dragging.offY, 124 + WIN_H / 2, 660 - WIN_H / 2),
       )
     }
 
@@ -130,6 +156,11 @@ export class GameScene extends Phaser.Scene {
   }
 
   shutdown() {
+    this.timerActive = false
+    this.warningBeepTimer?.destroy()
+    this.warningBeepTimer = null
+    this.gravadorRecTimerEvent?.destroy()
+    this.gravadorRecTimerEvent = null
     EventBus.off('mute-audio', this.handleMuteAudio, this)
     EventBus.off('app-action', this.onAppAction,     this)
     this.unsubscribePlatformCommands?.()
@@ -198,7 +229,6 @@ export class GameScene extends Phaser.Scene {
     const ICON_SIZE = 88
 
     const iconImg = this.add.image(0, 0, `icon-${def.id}`).setDisplaySize(ICON_SIZE, ICON_SIZE)
-    const emoji   = this.add.text(0, -2, def.icon, { fontSize: '36px' }).setOrigin(0.5)
     const label   = this.add.text(0, ICON_SIZE / 2 + 4, def.label, {
       fontSize: '14px', color: '#FFFFFF', fontFamily: 'Arial Black, Arial',
       stroke: '#000000', strokeThickness: 3,
@@ -208,10 +238,10 @@ export class GameScene extends Phaser.Scene {
       .setInteractive({ useHandCursor: true })
 
     hitZone.on('pointerdown', () => this.handleIconTap(def.id))
-    hitZone.on('pointerover',  () => { iconImg.setTint(0xDDEEFF); emoji.setScale(1.1) })
-    hitZone.on('pointerout',   () => { iconImg.clearTint();       emoji.setScale(1) })
+    hitZone.on('pointerover',  () => iconImg.setTint(0xDDEEFF))
+    hitZone.on('pointerout',   () => iconImg.clearTint())
 
-    const container = this.add.container(x, y, [iconImg, emoji, label, hitZone])
+    const container = this.add.container(x, y, [iconImg, label, hitZone])
     container.setDepth(5)
 
     // Animação de entrada
@@ -249,7 +279,7 @@ export class GameScene extends Phaser.Scene {
 
     const def = APP_DEFS.find(a => a.id === appId)!
     const cx = Phaser.Math.Between(320, 840)
-    const cy = Phaser.Math.Between(180, 460)
+    const cy = Phaser.Math.Between(300, 460)
     const win = this.createWindow(def, cx, cy)
 
     this.windowDepth += 10
@@ -322,8 +352,19 @@ export class GameScene extends Phaser.Scene {
   }
 
   private closeWindow(appId: AppId) {
+    // Guard: prevents double-close when both closeBg and closeTxt fire pointerdown
+    if (this.closingWindows.has(appId)) return
     const win = this.openWindows.get(appId)
     if (!win) return
+
+    this.closingWindows.add(appId)
+
+    // Stop gravador recording animation before the container is destroyed
+    if (appId === 'gravador') {
+      this.gravadorRecTimerEvent?.destroy()
+      this.gravadorRecTimerEvent = null
+      this.gravadorState = 'idle'
+    }
 
     this.playWindowClose()
 
@@ -333,6 +374,7 @@ export class GameScene extends Phaser.Scene {
       onComplete: () => {
         win.destroy()
         this.openWindows.delete(appId)
+        this.closingWindows.delete(appId)
         if (appId === 'desenho') {
           this.desenho.container = null
           this.desenho.gfx = null
@@ -340,7 +382,6 @@ export class GameScene extends Phaser.Scene {
           this.desenho.tapCount = 0
         }
         if (appId === 'gravador') {
-          this.gravadorState = 'idle'
           this.gravadorBtnText = null
           this.gravadorStatusText = null
         }
@@ -357,6 +398,93 @@ export class GameScene extends Phaser.Scene {
     if (!win) return
     this.windowDepth += 5
     win.setDepth(this.windowDepth)
+  }
+
+  // ── Timer bar (igual ao EF01CO01) ─────────────────────────────────────────
+
+  private createTimerBar() {
+    // Fundo da barra (abaixo da UIScene, y=118)
+    this.add.rectangle(640, 118, 1280, 10, 0x1A2A3A).setDepth(8)
+    // Barra ativa (origem à esquerda para shrink direita→esquerda)
+    this.timerBar = this.add.rectangle(0, 118, 1280, 10, 0x2ECC71).setOrigin(0, 0.5).setDepth(9)
+  }
+
+  private startTimer() {
+    this.timeLeft = this.levelConfig.timeLimit * 1000
+    this.timerActive = true
+    this.timerWarned = false
+    this.timerBar.setSize(1280, 10)
+    this.timerBar.setFillStyle(0x2ECC71)
+  }
+
+  private updateTimer(delta: number) {
+    this.timeLeft -= delta
+    if (this.timeLeft <= 0) {
+      this.timeLeft = 0
+      this.timerActive = false
+      this.onTimeUp()
+      return
+    }
+
+    const ratio = this.timeLeft / (this.levelConfig.timeLimit * 1000)
+    this.timerBar.setSize(Math.max(0, 1280 * ratio), 10)
+
+    const color = ratio > 0.5 ? 0x2ECC71 : ratio > 0.25 ? 0xF39C12 : 0xE74C3C
+    this.timerBar.setFillStyle(color)
+
+    if (!this.timerWarned && ratio <= 0.25) {
+      this.timerWarned = true
+      this.startWarningBeeps()
+    }
+  }
+
+  private startWarningBeeps() {
+    this.warningBeepTimer = this.time.addEvent({
+      delay: 1000, loop: true, callback: () => {
+        if (!this.timerActive) {
+          this.warningBeepTimer?.destroy()
+          this.warningBeepTimer = null
+          return
+        }
+        this.playTone(880, 0.06, 'sine', 0.12)
+      },
+    })
+  }
+
+  private onTimeUp() {
+    this.timerBar.setSize(0, 10)
+    this.warningBeepTimer?.destroy()
+    this.warningBeepTimer = null
+    this.input.enabled = false
+
+    runtimeGameBridge.emit({
+      type: 'WRONG_ANSWER',
+      gameId: GAME_ID,
+      pointsEarned: 0,
+      stage: this.levelConfig.level,
+    })
+
+    // "Tempo Esgotado!" overlay (interativo para bloquear cliques)
+    const overlay = this.add.rectangle(640, 360, 1280, 720, 0x000000, 0.6).setDepth(70).setInteractive()
+    const txt = this.add.text(640, 360, '⏱ Tempo Esgotado!', {
+      fontSize: '72px', fontFamily: 'Arial Black', color: '#E74C3C',
+      stroke: '#000', strokeThickness: 8,
+    }).setOrigin(0.5).setDepth(71).setAlpha(0)
+
+    this.tweens.add({ targets: txt, alpha: 1, scaleX: { from: 0.5, to: 1 }, scaleY: { from: 0.5, to: 1 }, duration: 350, ease: 'Back.Out' })
+    this.playTone(330, 0.30, 'square', 0.18)
+    this.time.delayedCall(100, () => this.playTone(220, 0.40, 'square', 0.16))
+
+    this.time.delayedCall(1600, () => {
+      this.tweens.add({
+        targets: [overlay, txt], alpha: 0, duration: 300,
+        onComplete: () => {
+          overlay.destroy()
+          txt.destroy()
+          this.scene.restart({ level: this.levelConfig.level, points: this.currentPoints, lives: this.currentLives })
+        },
+      })
+    })
   }
 
   // ── Conteúdo dos apps ─────────────────────────────────────────────────────
@@ -489,10 +617,10 @@ export class GameScene extends Phaser.Scene {
       btnText.setText('⏹  Parar')
       this.gravadorStatusText?.setText('● REC').setColor('#E74C3C')
 
-      // Anima nível de gravação
-      this.time.addEvent({
+      // Anima nível de gravação (referência armazenada para cleanup no close)
+      this.gravadorRecTimerEvent = this.time.addEvent({
         delay: 100, loop: true, callback: () => {
-          if (this.gravadorState !== 'recording') return
+          if (this.gravadorState !== 'recording' || !recLevel.active) return
           recLevel.clear()
           recLevel.fillStyle(0xE74C3C, 0.7)
           for (let i = 0; i < 12; i++) {
@@ -815,7 +943,11 @@ export class GameScene extends Phaser.Scene {
     const step = mission.steps[this.stepIndex]
     if (!step) return
 
-    if (payload.appId !== step.appId || payload.actionKey !== step.actionKey) return
+    if (payload.appId !== step.appId || payload.actionKey !== step.actionKey) {
+      // Feedback visual quando o app errado é usado
+      if (payload.appId !== step.appId) this.showWrongAppHint(step.appId)
+      return
+    }
 
     this.stepIndex++
 
@@ -828,17 +960,22 @@ export class GameScene extends Phaser.Scene {
 
     // Missão completa
     this.completedMissions++
-    this.currentPoints += 10
+    this.currentPoints += 5
     this.playRoundComplete()
 
     runtimeGameBridge.emit({
       type: 'CORRECT_ANSWER',
       gameId: GAME_ID,
-      pointsEarned: 10,
+      pointsEarned: 5,
       stage: this.levelConfig.level,
     })
 
-    this.showMissionCompleteEffect(() => {
+    const nextIdx = this.missionIndex + 1
+    const nextMissionText = nextIdx < this.levelConfig.missions.length
+      ? this.levelConfig.missions[nextIdx].text
+      : null
+
+    this.showMissionCompleteEffect(nextMissionText, () => {
       this.missionIndex++
       this.stepIndex = 0
 
@@ -883,7 +1020,6 @@ export class GameScene extends Phaser.Scene {
       color: '#FFFFFF', stroke: '#000000', strokeThickness: 8,
     }).setOrigin(0.5).setDepth(61)
 
-    const firstMission = this.levelConfig.missions[0]
     this.add.text(640, 380, `🖥️  Desktop da Lua`, {
       fontSize: '34px', color: '#AED6F1', stroke: '#000', strokeThickness: 4,
     }).setOrigin(0.5).setDepth(61)
@@ -920,8 +1056,8 @@ export class GameScene extends Phaser.Scene {
             this.playTone(784, 0.10, 'sine', 0.28)
             this.time.delayedCall(100, () => this.playTone(1046, 0.20, 'sine', 0.32))
 
-            // Destaca primeiro app da missão
-            this.time.delayedCall(500, () => this.highlightTargetApp())
+            // Mostra o primeiro desafio com o mesmo padrão visual das missões seguintes
+            this.showFirstMissionBanner(this.levelConfig.missions[0].text)
           },
         })
 
@@ -929,24 +1065,6 @@ export class GameScene extends Phaser.Scene {
           .filter(o => (o as { depth?: number }).depth === 61 && o !== cntTxt)
           .forEach(o => this.tweens.add({ targets: o, alpha: 0, duration: 350 }))
       },
-    })
-  }
-
-  private highlightTargetApp() {
-    const mission = this.levelConfig.missions[this.missionIndex]
-    if (!mission) return
-    const step = mission.steps[this.stepIndex]
-    if (!step) return
-
-    // Pulsação leve no ícone correspondente (hint visual)
-    const hint = this.add.text(200, 90 + 20, `💡 ${step.hint}`, {
-      fontSize: '16px', color: '#F9E79F', fontFamily: 'Arial',
-      stroke: '#000', strokeThickness: 3,
-    }).setOrigin(0, 0.5).setDepth(6)
-
-    this.tweens.add({
-      targets: hint, alpha: { from: 1, to: 0 }, duration: 2500, delay: 1500,
-      onComplete: () => hint.destroy(),
     })
   }
 
@@ -964,23 +1082,115 @@ export class GameScene extends Phaser.Scene {
     })
   }
 
-  private showMissionCompleteEffect(onDone: () => void) {
-    const overlay = this.add.rectangle(640, 360, 1280, 720, 0x000000, 0.5).setDepth(54)
+  // Mostra "PRIMEIRO DESAFIO" após o countdown, mantendo o mesmo padrão visual das missões seguintes
+  private showFirstMissionBanner(missionText: string) {
+    this.input.enabled = false
 
-    const txt = this.add.text(640, 310, '🌟 Missão Concluída!', {
+    const overlay = this.add.rectangle(640, 360, 1280, 720, 0x000000, 0.55)
+      .setDepth(58).setInteractive()
+
+    const label = this.add.text(640, 280, 'PRIMEIRO DESAFIO:', {
+      fontSize: '30px', fontFamily: 'Arial Black', color: '#AED6F1',
+      stroke: '#000', strokeThickness: 6,
+    }).setOrigin(0.5).setDepth(59).setAlpha(0)
+
+    const missionTxt = this.add.text(640, 370, missionText, {
+      fontSize: '36px', fontFamily: 'Arial Black', color: '#FFFFFF',
+      stroke: '#000', strokeThickness: 7,
+      wordWrap: { width: 900 }, align: 'center',
+    }).setOrigin(0.5).setDepth(59).setAlpha(0)
+
+    const hint = this.add.text(640, 470, '⬆️  Veja a dica na barra acima!', {
+      fontSize: '20px', fontFamily: 'Arial', color: '#F9E79F',
+      stroke: '#000', strokeThickness: 3,
+    }).setOrigin(0.5).setDepth(59).setAlpha(0)
+
+    this.tweens.add({ targets: [label, missionTxt, hint], alpha: 1, duration: 350, ease: 'Power2' })
+    this.playTone(784, 0.10, 'sine', 0.20)
+
+    this.time.delayedCall(2200, () => {
+      this.tweens.add({
+        targets: [overlay, label, missionTxt, hint], alpha: 0, duration: 350,
+        onComplete: () => {
+          overlay.destroy(); label.destroy(); missionTxt.destroy(); hint.destroy()
+          this.input.enabled = true
+          this.startTimer()
+        },
+      })
+    })
+  }
+
+  // Feedback quando o jogador usa o app errado para o passo atual
+  private showWrongAppHint(correctAppId: AppId) {
+    const def = APP_DEFS.find(a => a.id === correctAppId)
+    if (!def) return
+
+    const existing = this.children.list.find(
+      o => (o as Phaser.GameObjects.Text).text?.startsWith('💡')
+    )
+    if (existing) return  // não empilha hints
+
+    const mission = this.levelConfig.missions[this.missionIndex]
+    const isFirstStep  = this.stepIndex === 0
+    const isMultiStep  = (mission?.steps.length ?? 1) > 1
+
+    // Mensagem contextual:
+    //   missão 1 passo  → "Use [app]!"
+    //   1º passo de missão com múltiplos → "Comece com [app]!"
+    //   passo 2+ (já fez o anterior)     → "Agora use [app]!"
+    let message: string
+    if (!isMultiStep) {
+      message = `💡 Use ${def.label}!`
+    } else if (isFirstStep) {
+      message = `💡 Comece com ${def.label}!`
+    } else {
+      message = `💡 Agora use ${def.label}!`
+    }
+
+    const txt = this.add.text(640, 420, message, {
+      fontSize: '28px', fontFamily: 'Arial Black', color: '#F39C12',
+      stroke: '#000', strokeThickness: 5,
+    }).setOrigin(0.5).setDepth(56).setAlpha(0)
+
+    this.tweens.add({
+      targets: txt, alpha: 1, y: 380, duration: 280, ease: 'Back.Out',
+      onComplete: () => this.tweens.add({
+        targets: txt, alpha: 0, duration: 400, delay: 1200,
+        onComplete: () => txt.destroy(),
+      }),
+    })
+
+    this.playTone(440, 0.08, 'sine', 0.12)
+    this.time.delayedCall(60, () => this.playTone(330, 0.10, 'sine', 0.10))
+  }
+
+  private showMissionCompleteEffect(nextMissionText: string | null, onDone: () => void) {
+    if (this.missionEffectActive) return
+    this.missionEffectActive = true
+
+    // Pausa o timer para não conflitar com a animação
+    const wasTimerActive = this.timerActive
+    this.timerActive = false
+
+    const resume = () => {
+      this.missionEffectActive = false
+      if (wasTimerActive) this.timerActive = true
+      onDone()
+    }
+
+    // Overlay interativo (bloqueia cliques durante a animação)
+    const overlay = this.add.rectangle(640, 360, 1280, 720, 0x000000, 0.5)
+      .setDepth(54).setInteractive()
+
+    const txt = this.add.text(640, 330, '🌟 Missão Concluída!', {
       fontSize: '66px', fontFamily: 'Arial Black', color: '#F1C40F',
       stroke: '#000', strokeThickness: 9,
-    }).setOrigin(0.5).setDepth(55).setAlpha(0)
-
-    const pts = this.add.text(640, 400, '+10 pontos', {
-      fontSize: '32px', color: '#FFFFFF', stroke: '#000', strokeThickness: 5,
     }).setOrigin(0.5).setDepth(55).setAlpha(0)
 
     this.tweens.add({
       targets: txt, alpha: 1, scaleX: { from: 0.5, to: 1 }, scaleY: { from: 0.5, to: 1 },
       duration: 380, ease: 'Back.Out',
     })
-    this.tweens.add({ targets: pts, alpha: 1, delay: 300, duration: 300 })
 
     // Estrelas
     for (let i = 0; i < 20; i++) {
@@ -996,17 +1206,47 @@ export class GameScene extends Phaser.Scene {
       })
     }
 
-    this.time.delayedCall(2000, () => {
-      this.tweens.add({
-        targets: [overlay, txt, pts], alpha: 0, duration: 300,
-        onComplete: () => { overlay.destroy(); txt.destroy(); pts.destroy(); onDone() },
+    if (nextMissionText) {
+      // Mostra o próximo desafio antes de continuar
+      this.time.delayedCall(1900, () => {
+        this.tweens.add({ targets: txt, alpha: 0, duration: 250 })
+
+        const nextLabel = this.add.text(640, 290, 'PRÓXIMO DESAFIO:', {
+          fontSize: '28px', fontFamily: 'Arial Black', color: '#AED6F1',
+          stroke: '#000', strokeThickness: 5,
+        }).setOrigin(0.5).setDepth(55).setAlpha(0)
+
+        const nextTxt = this.add.text(640, 370, nextMissionText, {
+          fontSize: '34px', fontFamily: 'Arial Black', color: '#FFFFFF',
+          stroke: '#000', strokeThickness: 6,
+          wordWrap: { width: 900 }, align: 'center',
+        }).setOrigin(0.5).setDepth(55).setAlpha(0)
+
+        this.tweens.add({ targets: [nextLabel, nextTxt], alpha: 1, duration: 300, ease: 'Power2' })
+
+        this.time.delayedCall(1800, () => {
+          this.tweens.add({
+            targets: [overlay, nextLabel, nextTxt, txt], alpha: 0, duration: 300,
+            onComplete: () => { overlay.destroy(); nextLabel.destroy(); nextTxt.destroy(); txt.destroy(); resume() },
+          })
+        })
       })
-    })
+    } else {
+      this.time.delayedCall(1900, () => {
+        this.tweens.add({
+          targets: [overlay, txt], alpha: 0, duration: 300,
+          onComplete: () => { overlay.destroy(); txt.destroy(); resume() },
+        })
+      })
+    }
   }
 
   // ── Fim de rodada ─────────────────────────────────────────────────────────
 
   private endRound() {
+    this.timerActive = false
+    this.warningBeepTimer?.destroy()
+    this.warningBeepTimer = null
     this.input.enabled = false
 
     runtimeGameBridge.emit({
