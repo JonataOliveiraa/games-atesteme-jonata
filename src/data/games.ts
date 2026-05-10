@@ -58,6 +58,15 @@ export const games: Game[] = [
     slug: "desktop-digital-infantil",
   },
   {
+    id: 6,
+    title: "Hangar dos Modelos",
+    description: "Filtre, compare e agrupe meios de transporte por atributos como meio, motor e rodas.",
+    category: "Pensamento Computacional",
+    points: 55,
+    icon: "✈️",
+    slug: "hangar-dos-modelos",
+  },
+  {
     id: 7,
   title: "Guardiões dos Dados",
   description: "Escolha atitudes seguras em situações com celular, tablet, computador, jogos e aplicativos.",

@@ -18,6 +18,7 @@ const SLUG_TO_CODE: Record<string, GameCode> = {
   "pixel-secreto": "EF01CO05",
   "desktop-digital-infantil": "EF01CO06",
   "guardioes-dos-dados": "EF01CO07",
+  "hangar-dos-modelos": "EF02CO01",
 };
 
 const GAME_CONFIG_LOADERS: Partial<
@@ -29,6 +30,7 @@ const GAME_CONFIG_LOADERS: Partial<
   EF01CO05: () => import("../games/EF01CO05/index"),
   EF01CO06: () => import("../games/EF01CO06/index"),
   EF01CO07: () => import("../games/EF01CO07/index"),
+  EF02CO01: () => import("../games/EF02CO01/index"),
 };
 
 export default function GameDetailsPage() {
@@ -121,16 +123,22 @@ export default function GameDetailsPage() {
       navigate("/", { replace: true });
     };
 
+    const backToStart = () => {
+      setHasStartedGame(false);
+    };
+
     window.addEventListener("pixel-secret-show-extra-life-modal", openExtraLifeModal);
     window.addEventListener("pixel-secret-open-unlock-modal", openUnlockModal);
     window.addEventListener("pixel-secret-exit-game", exitGame);
     EventBus.on("exit-game", exitGame);
+    EventBus.on("game-back-to-start", backToStart);
 
     return () => {
       window.removeEventListener("pixel-secret-show-extra-life-modal", openExtraLifeModal);
       window.removeEventListener("pixel-secret-open-unlock-modal", openUnlockModal);
       window.removeEventListener("pixel-secret-exit-game", exitGame);
       EventBus.off("exit-game", exitGame);
+      EventBus.off("game-back-to-start", backToStart);
     };
   }, [navigate]);
 
@@ -272,24 +280,11 @@ export default function GameDetailsPage() {
             "error"
           );
 
-          if (livesBeforeError <= 0) {
-            setShowNoLivesModal(false);
-
-            if (isPixelSecreto) {
-              dispatchPixelFinalGameOver(event);
-              return;
-            }
-
-            setShowGameOverModal(true);
+          // Só exibe modal de "sem vidas" se o jogo não gerencia sua própria tela
+          // de game over (pixel-secreto usa overlay React; outros jogos têm tela Phaser).
+          if (livesBeforeError <= 0 && isPixelSecreto) {
+            dispatchPixelFinalGameOver(event);
             return;
-          }
-
-          if (livesBeforeError === 1 && !alreadyOfferedExtraLifeRef.current) {
-            alreadyOfferedExtraLifeRef.current = true;
-
-            if (!isPixelSecreto) {
-              setShowNoLivesModal(true);
-            }
           }
         }, 100);
 

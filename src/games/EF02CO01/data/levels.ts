@@ -15,7 +15,8 @@ export const LEVELS: LevelConfig[] = [
   // ── NÍVEL 1 ──────────────────────────────────────────────────────────────
   {
     level: 1,
-    vehicleIds: ['aviao', 'helicoptero', 'balao', 'carro', 'onibus', 'bicicleta'],
+    timeLimit: 20,
+    vehicleIds: ['aviao', 'helicoptero', 'foguete', 'carro', 'onibus', 'bicicleta'],
     filterMissions: [
       {
         id: 'l1-m1',
@@ -23,7 +24,7 @@ export const LEVELS: LevelConfig[] = [
         question: 'Quantos veículos VOAM?',
         filterAttribute: 'voa',
         filterValue: true,
-        expectedCount: 3,   // aviao, helicoptero, balao
+        expectedCount: 3,   // aviao, helicoptero, foguete
       },
       {
         id: 'l1-m2',
@@ -39,7 +40,8 @@ export const LEVELS: LevelConfig[] = [
   // ── NÍVEL 2 ──────────────────────────────────────────────────────────────
   {
     level: 2,
-    vehicleIds: ['aviao', 'carro', 'barco', 'foguete', 'bicicleta', 'lancha', 'trem', 'balao'],
+    timeLimit: 25,
+    vehicleIds: ['aviao', 'carro', 'barco', 'foguete', 'bicicleta', 'lancha', 'trem', 'moto'],
     comparisonPairs: [
       {
         vehicleAId: 'aviao',
@@ -57,10 +59,11 @@ export const LEVELS: LevelConfig[] = [
   // ── NÍVEL 3 ──────────────────────────────────────────────────────────────
   {
     level: 3,
+    timeLimit: 30,
     vehicleIds: [
-      'aviao', 'helicoptero', 'foguete', 'balao',
+      'aviao', 'helicoptero', 'foguete', 'moto',
       'carro', 'onibus', 'bicicleta', 'trem',
-      'barco', 'lancha', 'patinete', 'submarino',
+      'barco', 'lancha', 'patinete', 'navio',
     ],
     groupingMissions: [
       {

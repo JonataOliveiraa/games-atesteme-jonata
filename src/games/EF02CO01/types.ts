@@ -48,6 +48,7 @@ export interface GroupingMission {
 export interface LevelConfig {
   level: 1 | 2 | 3
   vehicleIds: string[]
+  timeLimit: number           // segundos
   filterMissions?: FilterMission[]
   comparisonPairs?: ComparisonPair[]
   groupingMissions?: GroupingMission[]
