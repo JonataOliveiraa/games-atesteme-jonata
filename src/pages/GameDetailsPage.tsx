@@ -9,6 +9,7 @@ import type { GameCode } from "../shared/types/game";
 import type { PlatformEvent } from "../shared/contracts/platformEvents";
 import type { GameEventPayload } from "../types/platform";
 import type Phaser from "phaser";
+import { EventBus } from "../shared/EventBus";
 
 const SLUG_TO_CODE: Record<string, GameCode> = {
   "base-dos-classificadores": "EF01CO01",
@@ -123,11 +124,13 @@ export default function GameDetailsPage() {
     window.addEventListener("pixel-secret-show-extra-life-modal", openExtraLifeModal);
     window.addEventListener("pixel-secret-open-unlock-modal", openUnlockModal);
     window.addEventListener("pixel-secret-exit-game", exitGame);
+    EventBus.on("exit-game", exitGame);
 
     return () => {
       window.removeEventListener("pixel-secret-show-extra-life-modal", openExtraLifeModal);
       window.removeEventListener("pixel-secret-open-unlock-modal", openUnlockModal);
       window.removeEventListener("pixel-secret-exit-game", exitGame);
+      EventBus.off("exit-game", exitGame);
     };
   }, [navigate]);
 
