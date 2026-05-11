@@ -1,0 +1,235 @@
+import type { SafetyLevel } from "../types";
+
+export const LEVELS: SafetyLevel[] = [
+  {
+    level: 1,
+    title: "Primeiros Cuidados",
+    objective: "Escolha a atitude mais segura em cada situação.",
+    timeLimit: 40,
+    scenes: [
+      {
+        id: "senha-jogo",
+        title: "Senha do jogo",
+        device: "jogo",
+        emoji: "🎮",
+        situation: "Uma pessoa no jogo pediu sua senha para te dar moedas.",
+        question: "O que você deve fazer?",
+        checklistItem: "Não compartilhar senhas.",
+        choices: [
+          {
+            id: "enviar-senha",
+            text: "Enviar minha senha",
+            isSafe: false,
+            feedback: "Cuidado! Senhas são secretas e protegem sua conta.",
+          },
+          {
+            id: "nao-enviar-senha",
+            text: "Não enviar a senha",
+            isSafe: true,
+            feedback: "Muito bem! Senhas devem ficar em segredo.",
+          },
+        ],
+      },
+      {
+        id: "nome-completo",
+        title: "Nome completo",
+        device: "celular",
+        emoji: "📱",
+        situation: "Uma pessoa no chat perguntou seu nome completo e onde você mora.",
+        question: "É seguro responder?",
+        checklistItem: "Proteger nome completo e endereço.",
+        choices: [
+          {
+            id: "responder-tudo",
+            text: "Responder tudo",
+            isSafe: false,
+            feedback: "Esses são dados pessoais. É melhor pedir ajuda a um adulto.",
+          },
+          {
+            id: "nao-responder",
+            text: "Não responder e chamar um adulto",
+            isSafe: true,
+            feedback: "Ótima escolha! Dados pessoais precisam de cuidado.",
+          },
+        ],
+      },
+      {
+        id: "link-estranho",
+        title: "Link estranho",
+        device: "tablet",
+        emoji: "🔗",
+        situation: "Apareceu um link dizendo: 'Clique aqui para ganhar um prêmio'.",
+        question: "O que fazer?",
+        checklistItem: "Não abrir links desconhecidos.",
+        choices: [
+          {
+            id: "clicar-link",
+            text: "Clicar no link",
+            isSafe: false,
+            feedback: "Links estranhos podem ser perigosos. Peça ajuda a um adulto.",
+          },
+          {
+            id: "ignorar-link",
+            text: "Não clicar no link",
+            isSafe: true,
+            feedback: "Muito bem! Links desconhecidos podem trazer riscos.",
+          },
+        ],
+      },
+    ],
+  },
+  {
+    level: 2,
+    title: "Protegendo Informações",
+    objective: "Observe os detalhes e escolha o que protege melhor seus dados.",
+    timeLimit: 40,
+    scenes: [
+      {
+        id: "foto-escola",
+        title: "Foto na escola",
+        device: "celular",
+        emoji: "📸",
+        situation: "Você quer postar uma foto, mas ela mostra o nome da escola e o uniforme.",
+        question: "Qual é a atitude mais segura?",
+        checklistItem: "Evitar mostrar escola e localização em fotos.",
+        choices: [
+          {
+            id: "postar-com-dados",
+            text: "Postar a foto do jeito que está",
+            isSafe: false,
+            feedback: "A foto mostra dados pessoais. Melhor esconder essas informações.",
+          },
+          {
+            id: "esconder-dados",
+            text: "Esconder escola e uniforme antes de postar",
+            isSafe: true,
+            feedback: "Perfeito! Fotos também podem revelar dados pessoais.",
+          },
+        ],
+      },
+      {
+        id: "cadastro-app",
+        title: "Cadastro no aplicativo",
+        device: "app",
+        emoji: "📝",
+        situation: "Um aplicativo pede nome completo, telefone e endereço para jogar.",
+        question: "O que fazer antes de preencher?",
+        checklistItem: "Pedir ajuda antes de preencher cadastros.",
+        choices: [
+          {
+            id: "preencher-rapido",
+            text: "Preencher tudo sozinho",
+            isSafe: false,
+            feedback: "Cadastros podem pedir dados importantes. Chame um adulto.",
+          },
+          {
+            id: "pedir-ajuda",
+            text: "Pedir ajuda a um adulto",
+            isSafe: true,
+            feedback: "Isso mesmo! Um adulto pode ajudar a decidir o que é seguro.",
+          },
+        ],
+      },
+      {
+        id: "localizacao",
+        title: "Localização ligada",
+        device: "tablet",
+        emoji: "📍",
+        situation: "Um jogo quer saber sua localização para continuar.",
+        question: "Qual escolha é mais segura?",
+        checklistItem: "Cuidar da localização.",
+        choices: [
+          {
+            id: "permitir-localizacao",
+            text: "Permitir sem perguntar",
+            isSafe: false,
+            feedback: "Localização mostra onde você está. Peça ajuda antes.",
+          },
+          {
+            id: "perguntar-adulto",
+            text: "Perguntar a um adulto antes",
+            isSafe: true,
+            feedback: "Muito bem! Localização é uma informação importante.",
+          },
+        ],
+      },
+    ],
+  },
+  {
+    level: 3,
+    title: "Guardião Digital",
+    objective: "Resolva situações com mais de um risco digital.",
+    timeLimit: 40,
+    scenes: [
+      {
+        id: "desconhecido-online",
+        title: "Desconhecido online",
+        device: "computador",
+        emoji: "💬",
+        situation: "Uma pessoa desconhecida pediu sua foto, idade e nome da escola.",
+        question: "O que você deve fazer?",
+        checklistItem: "Não conversar com desconhecidos sobre dados pessoais.",
+        choices: [
+          {
+            id: "mandar-infos",
+            text: "Mandar as informações",
+            isSafe: false,
+            feedback: "Isso pode colocar sua segurança em risco. Não compartilhe dados pessoais.",
+          },
+          {
+            id: "bloquear-contar",
+            text: "Não responder e contar a um adulto",
+            isSafe: true,
+            feedback: "Excelente! Essa é uma atitude de guardião dos dados.",
+          },
+        ],
+      },
+      {
+        id: "permissoes-app",
+        title: "Permissões do app",
+        device: "app",
+        emoji: "⚙️",
+        situation: "Um app de jogo pede câmera, microfone, localização e contatos.",
+        question: "O que é mais seguro?",
+        checklistItem: "Verificar permissões antes de aceitar.",
+        choices: [
+          {
+            id: "aceitar-tudo",
+            text: "Aceitar tudo rapidamente",
+            isSafe: false,
+            feedback: "Algumas permissões podem expor dados. Veja com um adulto antes.",
+          },
+          {
+            id: "verificar-permissoes",
+            text: "Verificar permissões com um adulto",
+            isSafe: true,
+            feedback: "Muito bem! Permissões precisam ser avaliadas com cuidado.",
+          },
+        ],
+      },
+      {
+        id: "jogo-com-chat",
+        title: "Jogo com chat",
+        device: "jogo",
+        emoji: "🕹️",
+        situation: "No chat do jogo, alguém pede seu telefone para mandar dicas secretas.",
+        question: "Qual atitude protege seus dados?",
+        checklistItem: "Não compartilhar telefone em jogos ou chats.",
+        choices: [
+          {
+            id: "mandar-telefone",
+            text: "Mandar meu telefone",
+            isSafe: false,
+            feedback: "Telefone é dado pessoal. Não compartilhe em jogos ou chats.",
+          },
+          {
+            id: "recusar-bloquear",
+            text: "Recusar, bloquear e avisar um adulto",
+            isSafe: true,
+            feedback: "Perfeito! Você protegeu seus dados e sua segurança.",
+          },
+        ],
+      },
+    ],
+  },
+];
