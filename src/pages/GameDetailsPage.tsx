@@ -577,61 +577,199 @@ export default function GameDetailsPage() {
         </div>
 
         <div className="game-area">
-          {gameCode && gameConfig ? (
-            hasStartedGame ? (
-              <GameFrame
-                gameId={game.slug}
-                level={currentLevel}
-                points={points}
-                lives={gameLives}
-                config={gameConfig}
-                onPlatformEvent={handlePlatformEvent}
-              />
-            ) : (
-              <div className="game-screen">
-                <h2>{game.title}</h2>
-                <p>
-                  Prepare-se para começar. Você está com <strong>{gameLives}</strong>{" "}
-                  vida{gameLives !== 1 ? "s" : ""}.
-                </p>
-
-                <div className="game-actions">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      alreadyOfferedExtraLifeRef.current = false;
-                      setHasStartedGame(true);
-                    }}
-                  >
-                    {currentLevel === 1
-                      ? "Iniciar jogo"
-                      : `Continuar no nível ${currentLevel}`}
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={handleBuyLife}
-                    disabled={points < extraLifeCost}
-                  >
-                    Comprar +1 vida
-                  </button>
-                </div>
-              </div>
-            )
-          ) : gameCode ? (
-            <div className="game-screen">
-              <p style={{ color: "var(--muted)" }}>Carregando jogo...</p>
-            </div>
-          ) : (
-            <div className="game-screen">
-              <h2>Área do jogo</h2>
-              <p>
-                Aqui o Phaser vai rodar o jogo. Por enquanto, essa área segue
-                como placeholder para jogos ainda não implementados.
-              </p>
-            </div>
-          )}
+        <div className="game-area">
+  {gameCode && gameConfig ? (
+    hasStartedGame ? (
+      <GameFrame
+        gameId={game.slug}
+        level={currentLevel}
+        points={points}
+        lives={gameLives}
+        config={gameConfig}
+        onPlatformEvent={handlePlatformEvent}
+      />
+    ) : isPixelSecreto ? (
+      <div className="game-screen pixel-secret-cover">
+        <div className="pixel-secret-pixels" aria-hidden="true">
+          <span />
+          <span />
+          <span />
+          <span />
+          <span />
+          <span />
+          <span />
+          <span />
+          <span />
         </div>
+
+        <div className="pixel-secret-overlay">
+          <div className="pixel-secret-badge">🎨 Jogo de pixels</div>
+          <h1>Pixel Secreto</h1>
+          <p>
+            Escolha as cores da legenda, pinte os quadradinhos corretos e revele
+            uma imagem escondida.
+          </p>
+
+          <button
+            type="button"
+            onClick={() => {
+              alreadyOfferedExtraLifeRef.current = false;
+              setHasStartedGame(true);
+            }}
+          >
+            Iniciar jogo
+          </button>
+        </div>
+      </div>
+    ) : game.slug === "guardioes-dos-dados" ? (
+      <div className="game-screen data-guardians-cover">
+        <div className="data-guardians-particles" aria-hidden="true">
+          <span>🛡️</span>
+          <span>🔒</span>
+          <span>💻</span>
+          <span>📱</span>
+          <span>🌐</span>
+          <span>🔐</span>
+          <span>✅</span>
+          <span>⭐</span>
+          <span>👤</span>
+        </div>
+
+        <div className="data-guardians-overlay">
+          <div className="data-guardians-badge">🛡️ Segurança Digital</div>
+          <h1>Guardiões dos Dados</h1>
+          <p>
+            Proteja informações pessoais, identifique situações perigosas e
+            aprenda boas práticas de segurança na internet.
+          </p>
+
+          <button
+            type="button"
+            onClick={() => {
+              alreadyOfferedExtraLifeRef.current = false;
+              setHasStartedGame(true);
+            }}
+          >
+            Iniciar jogo
+          </button>
+        </div>
+      </div>
+    ) : game.slug === "base-dos-classificadores" ? (
+      <div className="game-screen classifiers-cover">
+        <div className="classifiers-shapes" aria-hidden="true">
+          <span>🔺</span>
+          <span>🟦</span>
+          <span>🟢</span>
+          <span>⭐</span>
+          <span>🟨</span>
+          <span>🔵</span>
+          <span>🟥</span>
+          <span>🟣</span>
+          <span>🧩</span>
+        </div>
+
+        <div className="classifiers-overlay">
+          <div className="classifiers-badge">🧠 Lógica e classificação</div>
+          <h1>Base dos Classificadores</h1>
+          <p>
+            Observe formas, cores e padrões para classificar corretamente cada
+            item e completar os desafios.
+          </p>
+
+          <button
+            type="button"
+            onClick={() => {
+              alreadyOfferedExtraLifeRef.current = false;
+              setHasStartedGame(true);
+            }}
+          >
+            Iniciar jogo
+          </button>
+        </div>
+      </div>
+    ) : game.slug === "oficina-dos-algoritmos" ? (
+      <div className="game-screen algorithms-cover">
+        <div className="algorithms-icons" aria-hidden="true">
+          <span>⚙️</span>
+          <span>➡️</span>
+          <span>🧩</span>
+          <span>💡</span>
+          <span>🔁</span>
+          <span>🖥️</span>
+          <span>📦</span>
+          <span>🚀</span>
+          <span>🧠</span>
+        </div>
+
+        <div className="algorithms-overlay">
+          <div className="algorithms-badge">
+            ⚙️ Pensamento computacional
+          </div>
+          <h1>Oficina dos Algoritmos</h1>
+          <p>
+            Resolva desafios usando sequência lógica, organização de passos e
+            raciocínio computacional.
+          </p>
+
+          <button
+            type="button"
+            onClick={() => {
+              alreadyOfferedExtraLifeRef.current = false;
+              setHasStartedGame(true);
+            }}
+          >
+            Iniciar jogo
+          </button>
+        </div>
+      </div>
+    ) : (
+      <div className="game-screen">
+        <h2>{game.title}</h2>
+
+        <p>
+          Prepare-se para começar. Você está com{" "}
+          <strong>{gameLives}</strong> vida
+          {gameLives !== 1 ? "s" : ""}.
+        </p>
+
+        <div className="game-actions">
+          <button
+            type="button"
+            onClick={() => {
+              alreadyOfferedExtraLifeRef.current = false;
+              setHasStartedGame(true);
+            }}
+          >
+            {currentLevel === 1
+              ? "Iniciar jogo"
+              : `Continuar no nível ${currentLevel}`}
+          </button>
+
+          <button
+            type="button"
+            onClick={handleBuyLife}
+            disabled={points < extraLifeCost}
+          >
+            Comprar +1 vida
+          </button>
+        </div>
+      </div>
+    )
+  ) : gameCode ? (
+    <div className="game-screen">
+      <p style={{ color: "var(--muted)" }}>Carregando jogo...</p>
+    </div>
+  ) : (
+    <div className="game-screen">
+      <h2>Área do jogo</h2>
+      <p>
+        Aqui o Phaser vai rodar o jogo. Por enquanto, essa área segue como
+        placeholder para jogos ainda não implementados.
+      </p>
+    </div>
+  )}
+</div>
+</div>
       </section>
 
       <ConfirmModal

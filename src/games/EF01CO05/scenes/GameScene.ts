@@ -216,13 +216,29 @@ export class GameScene extends Phaser.Scene {
     }
 
     const stars = this.addOverlayObject(
-      this.add
-        .text(640, 105, this.getStars(this.levelConfig.level), {
-          fontSize: "48px",
-        })
-        .setOrigin(0.5)
-        .setDepth(301)
-    );
+  this.add.container(640, 105).setDepth(301)
+);
+
+const totalStars = this.levelConfig.level;
+const spacing = 90;
+const startX = -((totalStars - 1) * spacing) / 2;
+
+for (let i = 0; i < totalStars; i++) {
+  const star = this.add
+    .star(startX + i * spacing, 0, 5, 16, 34, 0xffd700)
+    .setStrokeStyle(4, 0x111827);
+
+  stars.add(star);
+
+  this.tweens.add({
+    targets: star,
+    scale: { from: 0.95, to: 1.08 },
+    duration: 800,
+    yoyo: true,
+    repeat: -1,
+    ease: "Sine.easeInOut",
+  });
+}           
 
     const title = this.addOverlayObject(
       this.add
@@ -374,6 +390,11 @@ export class GameScene extends Phaser.Scene {
 
     const step = steps[this.tutorialStep];
 
+    const blocker = this.add
+  .rectangle(640, 360, 1280, 720, 0x111827, 0.82)
+  .setDepth(190)
+  .setInteractive();
+
     const panel = this.add
       .rectangle(640, 210, 760, 150, 0xffffff, 0.97)
       .setStrokeStyle(4, 0xa855f7)
@@ -419,12 +440,13 @@ export class GameScene extends Phaser.Scene {
       .setDepth(203);
 
     this.tutorialContainer = this.add.container(0, 0, [
-      panel,
-      numberBadge,
-      numberText,
-      text,
-      square,
-      label,
+     blocker,
+  panel,
+  numberBadge,
+  numberText,
+  text,
+  square,
+  label,
     ]);
 
     this.createNextTutorialButton();
@@ -963,8 +985,10 @@ export class GameScene extends Phaser.Scene {
       });
 
       this.time.delayedCall(1100, () => {
-        this.showLevelCompleteScreen(nextLevel as 1 | 2 | 3);
-      });
+  this.scene.restart({
+    level: nextLevel as 1 | 2 | 3,
+  });
+});
 
       return;
     }
