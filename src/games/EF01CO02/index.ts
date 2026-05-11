@@ -7,7 +7,7 @@ const EF01CO02Config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
   width: 1280,
   height: 720,
-  backgroundColor: '#1a1a2e', // Cor de fundo
+  backgroundColor: '#1a1a2e', 
   scene: [BootScene, GameScene, UIScene],
   physics: {
     default: 'arcade',
@@ -17,8 +17,12 @@ const EF01CO02Config: Phaser.Types.Core.GameConfig = {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
   },
-  audio: { disableWebAudio: false },
-  dom: { createContainer: false },
+  audio: { 
+    disableWebAudio: false 
+  },
+  dom: { 
+    createContainer: false 
+  },
 }
 
 export default EF01CO02Config
