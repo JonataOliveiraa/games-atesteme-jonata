@@ -32,11 +32,10 @@ export default function PhaserCanvas({ config }: PhaserCanvasProps) {
   }, [config]); // O React vai rodar isso toda vez que a 'config' (fase/jogo) mudar
 
   return (
-    <div 
-      id="game-root" 
-      ref={containerRef} 
-      className="phaser-container" 
-      style={{ width: '100%', height: '100%', minHeight: '720px' }} 
-    />
-  );
+  <div
+    id="game-root"
+    ref={containerRef}
+    className="phaser-container"
+  />
+);
 }

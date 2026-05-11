@@ -62,6 +62,25 @@ export class GameScene extends Phaser.Scene {
   private calcDisplay = ''
   private calcText: Phaser.GameObjects.Text | null = null
 
+  // Timer
+  private timerBar!: Phaser.GameObjects.Rectangle
+  private timeLeft = 0
+  private timerActive = false
+  private timerWarned = false
+  private warningBeepTimer: Phaser.Time.TimerEvent | null = null
+
+  // Gravador recording timer reference (allows cleanup on window close)
+  private gravadorRecTimerEvent: Phaser.Time.TimerEvent | null = null
+
+  // Guard against double-close (pointerdown fires on closeBg and closeTxt)
+  private closingWindows: Set<AppId> = new Set()
+
+  // Guard against re-entry during mission complete animation
+  private missionEffectActive = false
+
+  // Impede que ações de app sejam processadas após fim de tempo ou conclusão do nível
+  private gameEnded = false
+
   constructor() {
     super({ key: 'GameScene' })
   }
@@ -84,12 +103,21 @@ export class GameScene extends Phaser.Scene {
     this.gravadorBtnText = null
     this.gravadorStatusText = null
     this.lastTapTime = {}
+    this.gravadorRecTimerEvent = null
+    this.closingWindows = new Set()
+    this.missionEffectActive = false
+    this.gameEnded = false
+    this.timerActive = false
+    this.timerWarned = false
+    this.timeLeft = 0
+    this.warningBeepTimer = null
   }
 
   create() {
     this.createDesktop()
     this.createTaskbar()
     this.createAppIcons()
+    this.createTimerBar()
     this.registerPlatformCommands()
 
     this.input.on('pointerup', () => { this.dragging = null })
@@ -97,16 +125,18 @@ export class GameScene extends Phaser.Scene {
     EventBus.on('mute-audio',  this.handleMuteAudio, this)
     EventBus.on('app-action',  this.onAppAction,     this)
 
-    this.showLevelIntro()
+    this.showStartScreen()
   }
 
-  update() {
+  update(_time: number, delta: number) {
+    if (this.timerActive) this.updateTimer(delta)
+
     // Drag de janela
     if (this.dragging && this.input.activePointer.isDown) {
       const ptr = this.input.activePointer
       this.dragging.container.setPosition(
         Phaser.Math.Clamp(ptr.x + this.dragging.offX, WIN_W / 2, 1280 - WIN_W / 2),
-        Phaser.Math.Clamp(ptr.y + this.dragging.offY, 90 + WIN_H / 2, 660 - WIN_H / 2),
+        Phaser.Math.Clamp(ptr.y + this.dragging.offY, 124 + WIN_H / 2, 660 - WIN_H / 2),
       )
     }
 
@@ -130,6 +160,11 @@ export class GameScene extends Phaser.Scene {
   }
 
   shutdown() {
+    this.timerActive = false
+    this.warningBeepTimer?.destroy()
+    this.warningBeepTimer = null
+    this.gravadorRecTimerEvent?.destroy()
+    this.gravadorRecTimerEvent = null
     EventBus.off('mute-audio', this.handleMuteAudio, this)
     EventBus.off('app-action', this.onAppAction,     this)
     this.unsubscribePlatformCommands?.()
@@ -198,7 +233,6 @@ export class GameScene extends Phaser.Scene {
     const ICON_SIZE = 88
 
     const iconImg = this.add.image(0, 0, `icon-${def.id}`).setDisplaySize(ICON_SIZE, ICON_SIZE)
-    const emoji   = this.add.text(0, -2, def.icon, { fontSize: '36px' }).setOrigin(0.5)
     const label   = this.add.text(0, ICON_SIZE / 2 + 4, def.label, {
       fontSize: '14px', color: '#FFFFFF', fontFamily: 'Arial Black, Arial',
       stroke: '#000000', strokeThickness: 3,
@@ -208,10 +242,10 @@ export class GameScene extends Phaser.Scene {
       .setInteractive({ useHandCursor: true })
 
     hitZone.on('pointerdown', () => this.handleIconTap(def.id))
-    hitZone.on('pointerover',  () => { iconImg.setTint(0xDDEEFF); emoji.setScale(1.1) })
-    hitZone.on('pointerout',   () => { iconImg.clearTint();       emoji.setScale(1) })
+    hitZone.on('pointerover',  () => iconImg.setTint(0xDDEEFF))
+    hitZone.on('pointerout',   () => iconImg.clearTint())
 
-    const container = this.add.container(x, y, [iconImg, emoji, label, hitZone])
+    const container = this.add.container(x, y, [iconImg, label, hitZone])
     container.setDepth(5)
 
     // Animação de entrada
@@ -249,7 +283,7 @@ export class GameScene extends Phaser.Scene {
 
     const def = APP_DEFS.find(a => a.id === appId)!
     const cx = Phaser.Math.Between(320, 840)
-    const cy = Phaser.Math.Between(180, 460)
+    const cy = Phaser.Math.Between(300, 460)
     const win = this.createWindow(def, cx, cy)
 
     this.windowDepth += 10
@@ -322,8 +356,19 @@ export class GameScene extends Phaser.Scene {
   }
 
   private closeWindow(appId: AppId) {
+    // Guard: prevents double-close when both closeBg and closeTxt fire pointerdown
+    if (this.closingWindows.has(appId)) return
     const win = this.openWindows.get(appId)
     if (!win) return
+
+    this.closingWindows.add(appId)
+
+    // Stop gravador recording animation before the container is destroyed
+    if (appId === 'gravador') {
+      this.gravadorRecTimerEvent?.destroy()
+      this.gravadorRecTimerEvent = null
+      this.gravadorState = 'idle'
+    }
 
     this.playWindowClose()
 
@@ -333,6 +378,7 @@ export class GameScene extends Phaser.Scene {
       onComplete: () => {
         win.destroy()
         this.openWindows.delete(appId)
+        this.closingWindows.delete(appId)
         if (appId === 'desenho') {
           this.desenho.container = null
           this.desenho.gfx = null
@@ -340,7 +386,6 @@ export class GameScene extends Phaser.Scene {
           this.desenho.tapCount = 0
         }
         if (appId === 'gravador') {
-          this.gravadorState = 'idle'
           this.gravadorBtnText = null
           this.gravadorStatusText = null
         }
@@ -357,6 +402,74 @@ export class GameScene extends Phaser.Scene {
     if (!win) return
     this.windowDepth += 5
     win.setDepth(this.windowDepth)
+  }
+
+  // ── Timer bar (igual ao EF01CO01) ─────────────────────────────────────────
+
+  private createTimerBar() {
+    // Fundo da barra (abaixo da UIScene, y=118)
+    this.add.rectangle(640, 118, 1280, 10, 0x1A2A3A).setDepth(8)
+    // Barra ativa (origem à esquerda para shrink direita→esquerda)
+    this.timerBar = this.add.rectangle(0, 118, 1280, 10, 0x2ECC71).setOrigin(0, 0.5).setDepth(9)
+  }
+
+  private startTimer() {
+    this.timeLeft = this.levelConfig.timeLimit * 1000
+    this.timerActive = true
+    this.timerWarned = false
+    this.timerBar.setSize(1280, 10)
+    this.timerBar.setFillStyle(0x2ECC71)
+  }
+
+  private updateTimer(delta: number) {
+    this.timeLeft -= delta
+    if (this.timeLeft <= 0) {
+      this.timeLeft = 0
+      this.timerActive = false
+      this.onTimeUp()
+      return
+    }
+
+    const ratio = this.timeLeft / (this.levelConfig.timeLimit * 1000)
+    this.timerBar.setSize(Math.max(0, 1280 * ratio), 10)
+
+    const color = ratio > 0.5 ? 0x2ECC71 : ratio > 0.25 ? 0xF39C12 : 0xE74C3C
+    this.timerBar.setFillStyle(color)
+
+    if (!this.timerWarned && ratio <= 0.25) {
+      this.timerWarned = true
+      this.startWarningBeeps()
+    }
+  }
+
+  private startWarningBeeps() {
+    this.warningBeepTimer = this.time.addEvent({
+      delay: 1000, loop: true, callback: () => {
+        if (!this.timerActive) {
+          this.warningBeepTimer?.destroy()
+          this.warningBeepTimer = null
+          return
+        }
+        this.playTone(880, 0.06, 'sine', 0.12)
+      },
+    })
+  }
+
+  private onTimeUp() {
+    this.gameEnded = true
+    this.timerBar.setSize(0, 10)
+    this.warningBeepTimer?.destroy()
+    this.warningBeepTimer = null
+    this.input.enabled = false
+
+    runtimeGameBridge.emit({
+      type: 'WRONG_ANSWER',
+      gameId: GAME_ID,
+      pointsEarned: 0,
+      stage: this.levelConfig.level,
+    })
+
+    this.showGameOverScreen()
   }
 
   // ── Conteúdo dos apps ─────────────────────────────────────────────────────
@@ -489,10 +602,10 @@ export class GameScene extends Phaser.Scene {
       btnText.setText('⏹  Parar')
       this.gravadorStatusText?.setText('● REC').setColor('#E74C3C')
 
-      // Anima nível de gravação
-      this.time.addEvent({
+      // Anima nível de gravação (referência armazenada para cleanup no close)
+      this.gravadorRecTimerEvent = this.time.addEvent({
         delay: 100, loop: true, callback: () => {
-          if (this.gravadorState !== 'recording') return
+          if (this.gravadorState !== 'recording' || !recLevel.active) return
           recLevel.clear()
           recLevel.fillStyle(0xE74C3C, 0.7)
           for (let i = 0; i < 12; i++) {
@@ -809,13 +922,18 @@ export class GameScene extends Phaser.Scene {
   // ── Validação de missão ───────────────────────────────────────────────────
 
   private onAppAction = (payload: { appId: AppId; actionKey: string }) => {
+    if (this.gameEnded) return
     const mission = this.levelConfig.missions[this.missionIndex]
     if (!mission) return
 
     const step = mission.steps[this.stepIndex]
     if (!step) return
 
-    if (payload.appId !== step.appId || payload.actionKey !== step.actionKey) return
+    if (payload.appId !== step.appId || payload.actionKey !== step.actionKey) {
+      // Feedback visual quando o app errado é usado
+      if (payload.appId !== step.appId) this.showWrongAppHint(step.appId)
+      return
+    }
 
     this.stepIndex++
 
@@ -828,17 +946,22 @@ export class GameScene extends Phaser.Scene {
 
     // Missão completa
     this.completedMissions++
-    this.currentPoints += 10
+    this.currentPoints += 5
     this.playRoundComplete()
 
     runtimeGameBridge.emit({
       type: 'CORRECT_ANSWER',
       gameId: GAME_ID,
-      pointsEarned: 10,
+      pointsEarned: 5,
       stage: this.levelConfig.level,
     })
 
-    this.showMissionCompleteEffect(() => {
+    const nextIdx = this.missionIndex + 1
+    const nextMissionText = nextIdx < this.levelConfig.missions.length
+      ? this.levelConfig.missions[nextIdx].text
+      : null
+
+    this.showMissionCompleteEffect(nextMissionText, () => {
       this.missionIndex++
       this.stepIndex = 0
 
@@ -868,86 +991,115 @@ export class GameScene extends Phaser.Scene {
 
   // ── Intro de nível ────────────────────────────────────────────────────────
 
-  private showLevelIntro() {
-    this.input.enabled = false
+  private getLevelInstructions(): { objective: string; detail: string; tip: string } {
+    const apps    = this.levelConfig.availableApps.length
+    const missions = this.levelConfig.missions.length
 
-    const overlay = this.add.rectangle(640, 360, 1280, 720, 0x000000, 0.7).setDepth(60)
-
-    const stars = '★'.repeat(this.levelConfig.level) + '☆'.repeat(3 - this.levelConfig.level)
-    this.add.text(640, 200, stars, {
-      fontSize: '52px', color: '#F1C40F',
-    }).setOrigin(0.5).setDepth(61)
-
-    this.add.text(640, 280, `NÍVEL  ${this.levelConfig.level}`, {
-      fontSize: '80px', fontFamily: 'Arial Black, Arial',
-      color: '#FFFFFF', stroke: '#000000', strokeThickness: 8,
-    }).setOrigin(0.5).setDepth(61)
-
-    const firstMission = this.levelConfig.missions[0]
-    this.add.text(640, 380, `🖥️  Desktop da Lua`, {
-      fontSize: '34px', color: '#AED6F1', stroke: '#000', strokeThickness: 4,
-    }).setOrigin(0.5).setDepth(61)
-
-    this.add.text(640, 430, `${this.levelConfig.availableApps.length} apps disponíveis`, {
-      fontSize: '22px', color: '#F9E79F',
-    }).setOrigin(0.5).setDepth(61)
-
-    this.playCountdown()
-
-    let count = 3
-    const cntTxt = this.add.text(640, 520, '3', {
-      fontSize: '96px', fontFamily: 'Arial Black', color: '#FF6B35',
-      stroke: '#000', strokeThickness: 8,
-    }).setOrigin(0.5).setDepth(61)
-
-    const evt = this.time.addEvent({
-      delay: 1000, repeat: 2, callback: () => {
-        count--
-        if (count > 0) { cntTxt.setText(String(count)); this.playTone(880, 0.07); return }
-
-        this.tweens.add({
-          targets: [overlay, cntTxt], alpha: 0, duration: 350,
-          onComplete: () => {
-            overlay.destroy()
-            cntTxt.destroy()
-            evt.destroy()
-            this.input.enabled = true
-
-            runtimeGameBridge.emit({ type: 'GAME_READY', gameId: GAME_ID })
-            EventBus.emit('scene-ready', { levelConfig: this.levelConfig })
-            this.broadcastMissionState()
-            this.emitCheckpoint()
-            this.playTone(784, 0.10, 'sine', 0.28)
-            this.time.delayedCall(100, () => this.playTone(1046, 0.20, 'sine', 0.32))
-
-            // Destaca primeiro app da missão
-            this.time.delayedCall(500, () => this.highlightTargetApp())
-          },
-        })
-
-        this.children.list
-          .filter(o => (o as { depth?: number }).depth === 61 && o !== cntTxt)
-          .forEach(o => this.tweens.add({ targets: o, alpha: 0, duration: 350 }))
-      },
-    })
+    if (this.levelConfig.level === 1) {
+      return {
+        objective: `Complete ${missions} missões usando ${apps} apps disponíveis.`,
+        detail:    'Abra a Câmera e a Calculadora para ajudar a Lua!',
+        tip:       'Dê duplo toque no ícone para abrir um app.',
+      }
+    }
+    if (this.levelConfig.level === 2) {
+      return {
+        objective: `Complete ${missions} missões usando ${apps} apps disponíveis.`,
+        detail:    'Câmera, Calculadora, Desenho e Gravador estão disponíveis.',
+        tip:       'Algumas missões têm dois passos — siga as dicas da barra!',
+      }
+    }
+    return {
+      objective: `Complete ${missions} missões usando ${apps} apps disponíveis.`,
+      detail:    'Todos os 6 apps estão desbloqueados neste nível!',
+      tip:       'Atenção à sequência: algumas missões têm vários passos.',
+    }
   }
 
-  private highlightTargetApp() {
-    const mission = this.levelConfig.missions[this.missionIndex]
-    if (!mission) return
-    const step = mission.steps[this.stepIndex]
-    if (!step) return
+  private showStartScreen() {
+    const info = this.getLevelInstructions()
 
-    // Pulsação leve no ícone correspondente (hint visual)
-    const hint = this.add.text(200, 90 + 20, `💡 ${step.hint}`, {
-      fontSize: '16px', color: '#F9E79F', fontFamily: 'Arial',
-      stroke: '#000', strokeThickness: 3,
-    }).setOrigin(0, 0.5).setDepth(6)
+    // Fundo interativo — absorve cliques dos ícones abaixo (topOnly=true por padrão)
+    const bg = this.add.rectangle(640, 360, 1280, 720, 0x0A1628, 0.97)
+      .setDepth(60).setInteractive()
 
+    // Estrelas de nível
+    const stars = this.add.text(640, 160, '★'.repeat(this.levelConfig.level) + '☆'.repeat(3 - this.levelConfig.level), {
+      fontSize: '44px', color: '#F1C40F',
+    }).setOrigin(0.5).setDepth(61)
+
+    // Título do nível
+    const lvlTitle = this.add.text(640, 237, `Nível ${this.levelConfig.level} — Desktop da Lua`, {
+      fontSize: '38px', fontFamily: 'Arial Black, Arial',
+      color: '#FFFFFF', stroke: '#0A1628', strokeThickness: 6,
+      align: 'center', wordWrap: { width: 900 },
+    }).setOrigin(0.5).setDepth(61)
+
+    // Card de informações
+    const card = this.add.rectangle(640, 395, 900, 240, 0x1A2A3A, 1)
+      .setStrokeStyle(2, 0x2E86C1).setDepth(61)
+
+    const objective = this.add.text(640, 315, `🎯  ${info.objective}`, {
+      fontSize: '24px', fontFamily: 'Arial Black, Arial',
+      color: '#AED6F1', wordWrap: { width: 820 }, align: 'center',
+    }).setOrigin(0.5).setDepth(62)
+
+    const detail = this.add.text(640, 390, `🖥️  ${info.detail}`, {
+      fontSize: '22px', fontFamily: 'Arial',
+      color: '#F9E79F', wordWrap: { width: 820 }, align: 'center',
+    }).setOrigin(0.5).setDepth(62)
+
+    const tip = this.add.text(640, 456, `💡  ${info.tip}`, {
+      fontSize: '20px', fontFamily: 'Arial',
+      color: '#BDC3C7', wordWrap: { width: 820 }, align: 'center',
+    }).setOrigin(0.5).setDepth(62)
+
+    // Botão Iniciar
+    const btnBg = this.add.rectangle(640, 568, 280, 66, 0x2ECC71, 1)
+      .setStrokeStyle(3, 0xFFFFFF)
+      .setInteractive({ useHandCursor: true })
+      .setDepth(62)
+    const btnTxt = this.add.text(640, 568, '▶  Iniciar', {
+      fontSize: '28px', fontFamily: 'Arial Black, Arial', color: '#FFFFFF',
+    }).setOrigin(0.5).setDepth(63)
+
+    const contentItems = [stars, lvlTitle, card, objective, detail, tip, btnBg, btnTxt]
+
+    // Animação de entrada
     this.tweens.add({
-      targets: hint, alpha: { from: 1, to: 0 }, duration: 2500, delay: 1500,
-      onComplete: () => hint.destroy(),
+      targets: contentItems,
+      alpha: { from: 0, to: 1 }, y: '+=6',
+      duration: 400, ease: 'Back.Out',
     })
+    this.tweens.add({
+      targets: [btnBg, btnTxt],
+      scaleX: 1.04, scaleY: 1.04,
+      duration: 750, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+    })
+
+    const start = () => {
+      this.playTone(523, 0.10, 'sine', 0.20)
+      const all = [bg, ...contentItems]
+      this.tweens.add({
+        targets: all, alpha: 0, duration: 300,
+        onComplete: () => {
+          all.forEach(o => o.destroy())
+          runtimeGameBridge.emit({ type: 'GAME_READY', gameId: GAME_ID })
+          EventBus.emit('scene-ready', { levelConfig: this.levelConfig })
+          this.broadcastMissionState()
+          this.emitCheckpoint()
+          this.showFirstMissionBanner(this.levelConfig.missions[0].text)
+        },
+      })
+    }
+
+    btnBg.on('pointerdown', start)
+    btnTxt.setInteractive({ useHandCursor: true })
+    btnTxt.on('pointerdown', start)
+    btnBg.on('pointerover', () => btnBg.setFillStyle(0x27AE60))
+    btnBg.on('pointerout',  () => btnBg.setFillStyle(0x2ECC71))
+
+    void bg
   }
 
   // ── Efeitos visuais ───────────────────────────────────────────────────────
@@ -956,7 +1108,7 @@ export class GameScene extends Phaser.Scene {
     const txt = this.add.text(640, 380, '✅ Passo concluído!', {
       fontSize: '32px', fontFamily: 'Arial Black', color: '#2ECC71',
       stroke: '#000', strokeThickness: 5,
-    }).setOrigin(0.5).setDepth(55).setAlpha(0)
+    }).setOrigin(0.5).setDepth(201).setAlpha(0)
 
     this.tweens.add({
       targets: txt, alpha: { from: 0, to: 1 }, y: 340, duration: 300, ease: 'Back.Out',
@@ -964,30 +1116,123 @@ export class GameScene extends Phaser.Scene {
     })
   }
 
-  private showMissionCompleteEffect(onDone: () => void) {
-    const overlay = this.add.rectangle(640, 360, 1280, 720, 0x000000, 0.5).setDepth(54)
+  // Mostra "PRIMEIRO DESAFIO" após o countdown, mantendo o mesmo padrão visual das missões seguintes
+  private showFirstMissionBanner(missionText: string) {
+    this.input.enabled = false
 
-    const txt = this.add.text(640, 310, '🌟 Missão Concluída!', {
+    const overlay = this.add.rectangle(640, 360, 1280, 720, 0x000000, 0.55)
+      .setDepth(200).setInteractive()
+
+    const label = this.add.text(640, 280, 'PRIMEIRO DESAFIO:', {
+      fontSize: '30px', fontFamily: 'Arial Black', color: '#AED6F1',
+      stroke: '#000', strokeThickness: 6,
+    }).setOrigin(0.5).setDepth(201).setAlpha(0)
+
+    const missionTxt = this.add.text(640, 370, missionText, {
+      fontSize: '36px', fontFamily: 'Arial Black', color: '#FFFFFF',
+      stroke: '#000', strokeThickness: 7,
+      wordWrap: { width: 900 }, align: 'center',
+    }).setOrigin(0.5).setDepth(201).setAlpha(0)
+
+    const hint = this.add.text(640, 470, '⬆️  Veja a dica na barra acima!', {
+      fontSize: '20px', fontFamily: 'Arial', color: '#F9E79F',
+      stroke: '#000', strokeThickness: 3,
+    }).setOrigin(0.5).setDepth(201).setAlpha(0)
+
+    this.tweens.add({ targets: [label, missionTxt, hint], alpha: 1, duration: 350, ease: 'Power2' })
+    this.playTone(784, 0.10, 'sine', 0.20)
+
+    this.time.delayedCall(2200, () => {
+      this.tweens.add({
+        targets: [overlay, label, missionTxt, hint], alpha: 0, duration: 350,
+        onComplete: () => {
+          overlay.destroy(); label.destroy(); missionTxt.destroy(); hint.destroy()
+          this.input.enabled = true
+          this.startTimer()
+        },
+      })
+    })
+  }
+
+  // Feedback quando o jogador usa o app errado para o passo atual
+  private showWrongAppHint(correctAppId: AppId) {
+    const def = APP_DEFS.find(a => a.id === correctAppId)
+    if (!def) return
+
+    const existing = this.children.list.find(
+      o => (o as Phaser.GameObjects.Text).text?.startsWith('💡')
+    )
+    if (existing) return  // não empilha hints
+
+    const mission = this.levelConfig.missions[this.missionIndex]
+    const isFirstStep  = this.stepIndex === 0
+    const isMultiStep  = (mission?.steps.length ?? 1) > 1
+
+    // Mensagem contextual:
+    //   missão 1 passo  → "Use [app]!"
+    //   1º passo de missão com múltiplos → "Comece com [app]!"
+    //   passo 2+ (já fez o anterior)     → "Agora use [app]!"
+    let message: string
+    if (!isMultiStep) {
+      message = `💡 Use ${def.label}!`
+    } else if (isFirstStep) {
+      message = `💡 Comece com ${def.label}!`
+    } else {
+      message = `💡 Agora use ${def.label}!`
+    }
+
+    const txt = this.add.text(640, 420, message, {
+      fontSize: '28px', fontFamily: 'Arial Black', color: '#F39C12',
+      stroke: '#000', strokeThickness: 5,
+    }).setOrigin(0.5).setDepth(201).setAlpha(0)
+
+    this.tweens.add({
+      targets: txt, alpha: 1, y: 380, duration: 280, ease: 'Back.Out',
+      onComplete: () => this.tweens.add({
+        targets: txt, alpha: 0, duration: 400, delay: 1200,
+        onComplete: () => txt.destroy(),
+      }),
+    })
+
+    this.playTone(440, 0.08, 'sine', 0.12)
+    this.time.delayedCall(60, () => this.playTone(330, 0.10, 'sine', 0.10))
+  }
+
+  private showMissionCompleteEffect(nextMissionText: string | null, onDone: () => void) {
+    if (this.missionEffectActive) return
+    this.missionEffectActive = true
+
+    // Pausa o timer para não conflitar com a animação
+    const wasTimerActive = this.timerActive
+    this.timerActive = false
+
+    const resume = () => {
+      this.missionEffectActive = false
+      if (wasTimerActive) this.timerActive = true
+      onDone()
+    }
+
+    // Overlay interativo (bloqueia cliques durante a animação)
+    // Depth 200 — garante que fica acima de qualquer janela de app (windowDepth cresce ~10 por janela)
+    const overlay = this.add.rectangle(640, 360, 1280, 720, 0x000000, 0.5)
+      .setDepth(200).setInteractive()
+
+    const txt = this.add.text(640, 330, '🌟 Missão Concluída!', {
       fontSize: '66px', fontFamily: 'Arial Black', color: '#F1C40F',
       stroke: '#000', strokeThickness: 9,
-    }).setOrigin(0.5).setDepth(55).setAlpha(0)
-
-    const pts = this.add.text(640, 400, '+10 pontos', {
-      fontSize: '32px', color: '#FFFFFF', stroke: '#000', strokeThickness: 5,
-    }).setOrigin(0.5).setDepth(55).setAlpha(0)
+    }).setOrigin(0.5).setDepth(201).setAlpha(0)
 
     this.tweens.add({
       targets: txt, alpha: 1, scaleX: { from: 0.5, to: 1 }, scaleY: { from: 0.5, to: 1 },
       duration: 380, ease: 'Back.Out',
     })
-    this.tweens.add({ targets: pts, alpha: 1, delay: 300, duration: 300 })
 
     // Estrelas
     for (let i = 0; i < 20; i++) {
       const sx = Phaser.Math.Between(60, 1220)
       const sy = Phaser.Math.Between(-60, -10)
       const em = ['⭐', '🌟', '✨', '💫'][i % 4]
-      const star = this.add.text(sx, sy, em, { fontSize: `${Phaser.Math.Between(20, 44)}px` }).setDepth(55)
+      const star = this.add.text(sx, sy, em, { fontSize: `${Phaser.Math.Between(20, 44)}px` }).setDepth(201)
       this.tweens.add({
         targets: star, y: Phaser.Math.Between(350, 650), alpha: { from: 1, to: 0 },
         angle: Phaser.Math.Between(-45, 45),
@@ -996,24 +1241,314 @@ export class GameScene extends Phaser.Scene {
       })
     }
 
-    this.time.delayedCall(2000, () => {
+    if (nextMissionText) {
+      // Mostra o próximo desafio antes de continuar
+      this.time.delayedCall(1900, () => {
+        this.tweens.add({ targets: txt, alpha: 0, duration: 250 })
+
+        const nextLabel = this.add.text(640, 290, 'PRÓXIMO DESAFIO:', {
+          fontSize: '28px', fontFamily: 'Arial Black', color: '#AED6F1',
+          stroke: '#000', strokeThickness: 5,
+        }).setOrigin(0.5).setDepth(201).setAlpha(0)
+
+        const nextTxt = this.add.text(640, 370, nextMissionText, {
+          fontSize: '34px', fontFamily: 'Arial Black', color: '#FFFFFF',
+          stroke: '#000', strokeThickness: 6,
+          wordWrap: { width: 900 }, align: 'center',
+        }).setOrigin(0.5).setDepth(201).setAlpha(0)
+
+        this.tweens.add({ targets: [nextLabel, nextTxt], alpha: 1, duration: 300, ease: 'Power2' })
+
+        this.time.delayedCall(1800, () => {
+          this.tweens.add({
+            targets: [overlay, nextLabel, nextTxt, txt], alpha: 0, duration: 300,
+            onComplete: () => { overlay.destroy(); nextLabel.destroy(); nextTxt.destroy(); txt.destroy(); resume() },
+          })
+        })
+      })
+    } else {
+      this.time.delayedCall(1900, () => {
+        this.tweens.add({
+          targets: [overlay, txt], alpha: 0, duration: 300,
+          onComplete: () => { overlay.destroy(); txt.destroy(); resume() },
+        })
+      })
+    }
+  }
+
+  // ── Tela de Game Over ─────────────────────────────────────────────────────
+
+  private showGameOverScreen() {
+    this.input.enabled = true  // reabilita para os botões desta tela
+
+    // Áudio de derrota
+    this.playTone(330, 0.30, 'square', 0.18)
+    this.time.delayedCall(100, () => this.playTone(220, 0.40, 'square', 0.16))
+
+    // Fundo interativo — absorve cliques dos ícones abaixo
+    const bg = this.add.rectangle(640, 360, 1280, 720, 0x0A1628, 0.97)
+      .setDepth(70).setInteractive()
+
+    const title = this.add.text(640, 218, 'GAME OVER', {
+      fontSize: '80px', fontFamily: 'Arial Black, Arial',
+      color: '#E74C3C', stroke: '#000000', strokeThickness: 10,
+    }).setOrigin(0.5).setDepth(71)
+
+    const timeupTxt = this.add.text(640, 318, '⏱  O tempo acabou!', {
+      fontSize: '34px', fontFamily: 'Arial Black, Arial',
+      color: '#FFFFFF', stroke: '#000000', strokeThickness: 5,
+    }).setOrigin(0.5).setDepth(71)
+
+    const statsTxt = this.add.text(640, 392, `Você completou ${this.completedMissions} de ${this.levelConfig.missions.length} missões.`, {
+      fontSize: '24px', fontFamily: 'Arial',
+      color: '#BDC3C7', wordWrap: { width: 800 }, align: 'center',
+    }).setOrigin(0.5).setDepth(71)
+
+    // Botão Tentar Novamente
+    const retryBg = this.add.rectangle(450, 512, 300, 66, 0x2ECC71, 1)
+      .setStrokeStyle(3, 0xFFFFFF)
+      .setInteractive({ useHandCursor: true })
+      .setDepth(72)
+    const retryTxt = this.add.text(450, 512, '🔄  Tentar Novamente', {
+      fontSize: '20px', fontFamily: 'Arial Black, Arial', color: '#FFFFFF',
+    }).setOrigin(0.5).setDepth(73)
+
+    // Botão Sair
+    const exitBg = this.add.rectangle(830, 512, 220, 66, 0xE74C3C, 1)
+      .setStrokeStyle(3, 0xFFFFFF)
+      .setInteractive({ useHandCursor: true })
+      .setDepth(72)
+    const exitTxt = this.add.text(830, 512, 'Sair', {
+      fontSize: '26px', fontFamily: 'Arial Black, Arial', color: '#FFFFFF',
+    }).setOrigin(0.5).setDepth(73)
+
+    const contentItems = [title, timeupTxt, statsTxt, retryBg, retryTxt, exitBg, exitTxt]
+    this.tweens.add({
+      targets: contentItems,
+      alpha: { from: 0, to: 1 }, y: '+=8',
+      duration: 450, ease: 'Back.Out',
+    })
+
+    const retry = () => {
+      this.playTone(440, 0.05, 'sine', 0.12)
+      this.scene.restart({ level: this.levelConfig.level, points: this.currentPoints, lives: this.currentLives })
+    }
+    const exit = () => {
+      this.playTone(440, 0.05, 'sine', 0.12)
+      EventBus.emit('exit-game')
+    }
+
+    retryBg.on('pointerdown', retry)
+    retryTxt.setInteractive({ useHandCursor: true })
+    retryTxt.on('pointerdown', retry)
+    exitBg.on('pointerdown', exit)
+    exitTxt.setInteractive({ useHandCursor: true })
+    exitTxt.on('pointerdown', exit)
+
+    retryBg.on('pointerover', () => retryBg.setFillStyle(0x27AE60))
+    retryBg.on('pointerout',  () => retryBg.setFillStyle(0x2ECC71))
+    exitBg.on('pointerover', () => exitBg.setFillStyle(0xC0392B))
+    exitBg.on('pointerout',  () => exitBg.setFillStyle(0xE74C3C))
+
+    void bg
+  }
+
+  // ── Tela de Parabéns (conclusão de nível 1 ou 2) ──────────────────────────
+
+  private showLevelCompleteScreen(nextLevel: 1 | 2 | 3) {
+    const bg = this.add.rectangle(640, 360, 1280, 720, 0x0A1628, 0.97).setDepth(70)
+
+    const starsEm = this.add.text(640, 180, '⭐'.repeat(this.levelConfig.level), {
+      fontSize: '60px',
+    }).setOrigin(0.5).setDepth(71)
+
+    const title = this.add.text(640, 285, 'Parabéns!', {
+      fontSize: '72px', fontFamily: 'Arial Black, Arial',
+      color: '#F1C40F', stroke: '#000000', strokeThickness: 8,
+    }).setOrigin(0.5).setDepth(71)
+
+    const subtitle = this.add.text(640, 378, `Você concluiu o Nível ${this.levelConfig.level}!`, {
+      fontSize: '34px', fontFamily: 'Arial Black, Arial',
+      color: '#FFFFFF', stroke: '#000000', strokeThickness: 5,
+      wordWrap: { width: 900 }, align: 'center',
+    }).setOrigin(0.5).setDepth(71)
+
+    const msg = this.add.text(640, 452, 'Prepare-se para o próximo desafio.', {
+      fontSize: '24px', fontFamily: 'Arial', color: '#AED6F1',
+    }).setOrigin(0.5).setDepth(71)
+
+    const contentItems = [starsEm, title, subtitle, msg]
+
+    // Confetti de estrelas caindo
+    for (let i = 0; i < 20; i++) {
+      const em = ['⭐', '🌟', '✨', '💫'][i % 4]
+      const star = this.add.text(
+        Phaser.Math.Between(60, 1220), Phaser.Math.Between(130, 200),
+        em, { fontSize: `${Phaser.Math.Between(20, 44)}px` },
+      ).setDepth(72)
       this.tweens.add({
-        targets: [overlay, txt, pts], alpha: 0, duration: 300,
-        onComplete: () => { overlay.destroy(); txt.destroy(); pts.destroy(); onDone() },
+        targets: star,
+        y: Phaser.Math.Between(400, 680), alpha: 0,
+        angle: Phaser.Math.Between(-45, 45),
+        duration: Phaser.Math.Between(900, 1800), delay: Phaser.Math.Between(0, 500),
+        onComplete: () => star.destroy(),
+      })
+    }
+
+    this.tweens.add({
+      targets: contentItems,
+      alpha: { from: 0, to: 1 }, y: '+=6',
+      duration: 400, ease: 'Back.Out',
+    })
+
+    // Auto-avança para a tela do próximo nível após 1800ms
+    this.time.delayedCall(1800, () => {
+      this.tweens.add({
+        targets: [bg, ...contentItems], alpha: 0, duration: 350,
+        onComplete: () => {
+          bg.destroy()
+          contentItems.forEach(o => o.destroy())
+          this.showNextLevelScreen(nextLevel)
+        },
       })
     })
+  }
+
+  // ── Tela "Próximo Nível" com botão Avançar ────────────────────────────────
+
+  private showNextLevelScreen(nextLevel: 1 | 2 | 3) {
+    this.input.enabled = true  // reabilita para o botão "Avançar"
+
+    const nextConfig = LEVELS.find(l => l.level === nextLevel) ?? LEVELS[nextLevel - 1]
+
+    // Fundo interativo — absorve cliques dos ícones abaixo
+    const bg = this.add.rectangle(640, 360, 1280, 720, 0x0A1628, 0.97)
+      .setDepth(70).setInteractive()
+
+    const stars = this.add.text(640, 165, '★'.repeat(nextLevel) + '☆'.repeat(3 - nextLevel), {
+      fontSize: '44px', color: '#F1C40F',
+    }).setOrigin(0.5).setDepth(71)
+
+    const lvlTitle = this.add.text(640, 248, `Próximo: Nível ${nextLevel}`, {
+      fontSize: '50px', fontFamily: 'Arial Black, Arial',
+      color: '#FFFFFF', stroke: '#000000', strokeThickness: 6,
+    }).setOrigin(0.5).setDepth(71)
+
+    // Card de informações do próximo nível
+    const card = this.add.rectangle(640, 400, 900, 200, 0x1A2A3A, 1)
+      .setStrokeStyle(2, 0x2E86C1).setDepth(71)
+
+    const appsInfo = this.add.text(640, 348, `🖥️  ${nextConfig.availableApps.length} apps disponíveis`, {
+      fontSize: '26px', fontFamily: 'Arial Black, Arial', color: '#AED6F1',
+    }).setOrigin(0.5).setDepth(72)
+
+    const missionsInfo = this.add.text(640, 405, `🎯  ${nextConfig.missions.length} novas missões`, {
+      fontSize: '24px', fontFamily: 'Arial', color: '#F9E79F',
+    }).setOrigin(0.5).setDepth(72)
+
+    const timeInfo = this.add.text(640, 453, `⏱  ${nextConfig.timeLimit} segundos de tempo`, {
+      fontSize: '22px', fontFamily: 'Arial', color: '#BDC3C7',
+    }).setOrigin(0.5).setDepth(72)
+
+    // Botão Avançar
+    const btnBg = this.add.rectangle(640, 568, 280, 66, 0x2E86C1, 1)
+      .setStrokeStyle(3, 0xFFFFFF)
+      .setInteractive({ useHandCursor: true })
+      .setDepth(72)
+    const btnTxt = this.add.text(640, 568, '▶  Avançar', {
+      fontSize: '28px', fontFamily: 'Arial Black, Arial', color: '#FFFFFF',
+    }).setOrigin(0.5).setDepth(73)
+
+    const contentItems = [stars, lvlTitle, card, appsInfo, missionsInfo, timeInfo, btnBg, btnTxt]
+
+    this.tweens.add({
+      targets: contentItems,
+      alpha: { from: 0, to: 1 }, y: '+=6',
+      duration: 400, ease: 'Back.Out',
+    })
+    this.tweens.add({
+      targets: [btnBg, btnTxt],
+      scaleX: 1.04, scaleY: 1.04,
+      duration: 750, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+    })
+
+    const advance = () => {
+      this.playTone(523, 0.10, 'sine', 0.20)
+      this.emitCheckpoint()
+      this.scene.restart({ level: nextLevel, points: this.currentPoints, lives: this.currentLives })
+    }
+
+    btnBg.on('pointerdown', advance)
+    btnTxt.setInteractive({ useHandCursor: true })
+    btnTxt.on('pointerdown', advance)
+    btnBg.on('pointerover', () => btnBg.setFillStyle(0x2471A3))
+    btnBg.on('pointerout',  () => btnBg.setFillStyle(0x2E86C1))
+
+    void bg
+  }
+
+  // ── Tela final (conclusão do Nível 3) ────────────────────────────────────
+
+  private showFinalCompleteScreen() {
+    const bg = this.add.rectangle(640, 360, 1280, 720, 0x0A1628, 0.97).setDepth(70)
+
+    const starsEm = this.add.text(640, 175, '⭐⭐⭐', { fontSize: '70px' })
+      .setOrigin(0.5).setDepth(71)
+
+    const title = this.add.text(640, 285, '🎉  Parabéns!', {
+      fontSize: '68px', fontFamily: 'Arial Black, Arial',
+      color: '#F1C40F', stroke: '#000000', strokeThickness: 8,
+    }).setOrigin(0.5).setDepth(71)
+
+    const subtitle = this.add.text(640, 385, 'Você completou todos os níveis\ndo Desktop da Lua!', {
+      fontSize: '32px', fontFamily: 'Arial Black, Arial',
+      color: '#FFFFFF', stroke: '#000000', strokeThickness: 5,
+      align: 'center', wordWrap: { width: 900 },
+    }).setOrigin(0.5).setDepth(71)
+
+    const msg = this.add.text(640, 476, 'Excelente trabalho! Você conhece todos os apps digitais.', {
+      fontSize: '22px', fontFamily: 'Arial',
+      color: '#AED6F1', wordWrap: { width: 860 }, align: 'center',
+    }).setOrigin(0.5).setDepth(71)
+
+    const contentItems = [starsEm, title, subtitle, msg]
+
+    // Confetti abundante
+    for (let i = 0; i < 24; i++) {
+      const em = ['⭐', '🌟', '✨', '💫', '🎊', '🎉'][i % 6]
+      const star = this.add.text(
+        Phaser.Math.Between(60, 1220), Phaser.Math.Between(130, 200),
+        em, { fontSize: `${Phaser.Math.Between(20, 48)}px` },
+      ).setDepth(72)
+      this.tweens.add({
+        targets: star, y: Phaser.Math.Between(400, 680), alpha: 0,
+        angle: Phaser.Math.Between(-45, 45),
+        duration: Phaser.Math.Between(900, 2000), delay: Phaser.Math.Between(0, 700),
+        onComplete: () => star.destroy(),
+      })
+    }
+
+    this.tweens.add({
+      targets: contentItems,
+      alpha: { from: 0, to: 1 }, y: '+=6',
+      duration: 400, ease: 'Back.Out',
+    })
+    this.tweens.add({
+      targets: [starsEm, title],
+      scaleX: 1.05, scaleY: 1.05, duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+    })
+
+    void bg
   }
 
   // ── Fim de rodada ─────────────────────────────────────────────────────────
 
   private endRound() {
+    this.gameEnded = true
+    this.timerActive = false
+    this.warningBeepTimer?.destroy()
+    this.warningBeepTimer = null
     this.input.enabled = false
-
-    runtimeGameBridge.emit({
-      type: 'GAME_COMPLETED',
-      gameId: GAME_ID,
-      stage: this.levelConfig.level,
-    })
 
     const result: RoundResult = {
       gameCode: 'EF01CO06',
@@ -1024,14 +1559,15 @@ export class GameScene extends Phaser.Scene {
       durationMs: Date.now() - this.startTime,
       timestamp: Date.now(),
     }
-
     EventBus.emit('round-complete', result)
 
     if (this.levelConfig.level < 3) {
       const next = (this.levelConfig.level + 1) as 1 | 2 | 3
-      this.time.delayedCall(2300, () => {
-        this.scene.restart({ level: next, points: this.currentPoints, lives: this.currentLives })
-      })
+      runtimeGameBridge.emit({ type: 'GAME_COMPLETED', gameId: GAME_ID, stage: this.levelConfig.level })
+      this.showLevelCompleteScreen(next)
+    } else {
+      runtimeGameBridge.emit({ type: 'GAME_COMPLETED', gameId: GAME_ID, stage: this.levelConfig.level })
+      this.showFinalCompleteScreen()
     }
   }
 

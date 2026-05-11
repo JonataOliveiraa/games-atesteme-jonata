@@ -9,13 +9,16 @@ import type { GameCode } from "../shared/types/game";
 import type { PlatformEvent } from "../shared/contracts/platformEvents";
 import type { GameEventPayload } from "../types/platform";
 import type Phaser from "phaser";
+import { EventBus } from "../shared/EventBus";
 
 const SLUG_TO_CODE: Record<string, GameCode> = {
-  "base-dos-classificadores":  "EF01CO01",
-  "quiz-de-conhecimentos":     "EF01CO02",
-  "oficina-dos-algoritmos":    "EF01CO03",
-  "pixel-secreto":             "EF01CO05",
-  "desktop-digital-infantil":  "EF01CO06",
+  "base-dos-classificadores": "EF01CO01",
+  "quiz-de-conhecimentos": "EF01CO02",
+  "oficina-dos-algoritmos": "EF01CO03",
+  "pixel-secreto": "EF01CO05",
+  "desktop-digital-infantil": "EF01CO06",
+  "guardioes-dos-dados": "EF01CO07",
+  "hangar-dos-modelos": "EF02CO01",
 };
 
 const GAME_CONFIG_LOADERS: Partial<
@@ -26,6 +29,8 @@ const GAME_CONFIG_LOADERS: Partial<
   EF01CO03: () => import("../games/EF01CO03/index"),
   EF01CO05: () => import("../games/EF01CO05/index"),
   EF01CO06: () => import("../games/EF01CO06/index"),
+  EF01CO07: () => import("../games/EF01CO07/index"),
+  EF02CO01: () => import("../games/EF02CO01/index"),
 };
 
 export default function GameDetailsPage() {
@@ -76,6 +81,7 @@ export default function GameDetailsPage() {
 
   const game = games.find((item) => item.slug === slug);
   const gameCode = slug ? SLUG_TO_CODE[slug] : undefined;
+  const isPixelSecreto = game?.slug === "pixel-secreto";
 
   useEffect(() => {
     let cancelled = false;
@@ -103,6 +109,39 @@ export default function GameDetailsPage() {
     };
   }, [gameCode]);
 
+  useEffect(() => {
+    const openExtraLifeModal = () => {
+      setShowNoLivesModal(true);
+    };
+
+    const openUnlockModal = () => {
+      setShowUnlockModal(true);
+    };
+
+    const exitGame = () => {
+      setHasStartedGame(false);
+      navigate("/", { replace: true });
+    };
+
+    const backToStart = () => {
+      setHasStartedGame(false);
+    };
+
+    window.addEventListener("pixel-secret-show-extra-life-modal", openExtraLifeModal);
+    window.addEventListener("pixel-secret-open-unlock-modal", openUnlockModal);
+    window.addEventListener("pixel-secret-exit-game", exitGame);
+    EventBus.on("exit-game", exitGame);
+    EventBus.on("game-back-to-start", backToStart);
+
+    return () => {
+      window.removeEventListener("pixel-secret-show-extra-life-modal", openExtraLifeModal);
+      window.removeEventListener("pixel-secret-open-unlock-modal", openUnlockModal);
+      window.removeEventListener("pixel-secret-exit-game", exitGame);
+      EventBus.off("exit-game", exitGame);
+      EventBus.off("game-back-to-start", backToStart);
+    };
+  }, [navigate]);
+
   if (!game) {
     return (
       <section>
@@ -125,6 +164,33 @@ export default function GameDetailsPage() {
   const gameLives = getGameLives(game.slug);
   const blocked = isGameBlocked(game.slug);
   const blockedUntil = getGameBlockedUntil(game.slug);
+
+  const resumePixelSecreto = () => {
+    if (!isPixelSecreto) return;
+    window.dispatchEvent(new CustomEvent("pixel-secret-resume-game"));
+  };
+
+  const dispatchPixelFinalGameOver = (event: PlatformEvent) => {
+    const blockedDate = new Date(
+      Date.now() + 2 * 24 * 60 * 60 * 1000
+    ).toISOString();
+
+    handleGameEvent({
+      type: "GAME_OVER",
+      gameId: event.gameId,
+      stage: event.stage,
+      pointsEarned: 0,
+    });
+
+    window.dispatchEvent(
+      new CustomEvent("pixel-secret-show-final-game-over", {
+        detail: {
+          blockedUntil: blockedDate,
+          unlockCost,
+        },
+      })
+    );
+  };
 
   const dispatchPlatformGameEvent = (event: {
     type: "GAME_OVER" | "GAME_COMPLETED" | "CORRECT_ANSWER" | "WRONG_ANSWER";
@@ -192,6 +258,8 @@ export default function GameDetailsPage() {
       }
 
       case "WRONG_ANSWER": {
+        const livesBeforeError = gameLives;
+
         dispatchPlatformGameEvent({
           type: "WRONG_ANSWER",
           gameId: event.gameId,
@@ -202,26 +270,23 @@ export default function GameDetailsPage() {
         streakRef.current = 0;
         errorCountRef.current += 1;
 
-       setTimeout(() => {
-  const livesAfterError = Math.max(gameLives - 1, 0);
+        setTimeout(() => {
+          const livesAfterError = Math.max(livesBeforeError - 1, 0);
 
-  showToast(
-    `-5 pontos • -1 vida (${livesAfterError} restante${
-      livesAfterError === 1 ? "" : "s"
-    })`,
-    "error"
-  );
+          showToast(
+            `-5 pontos • -1 vida (${livesAfterError} restante${
+              livesAfterError === 1 ? "" : "s"
+            })`,
+            "error"
+          );
 
-  if (gameLives === 1 && !alreadyOfferedExtraLifeRef.current) {
-    alreadyOfferedExtraLifeRef.current = true;
-    setShowNoLivesModal(true);
-  }
-}, 100);
-
-if (gameLives <= 0) {
-  setShowNoLivesModal(false);
-  setShowGameOverModal(true);
-}
+          // Só exibe modal de "sem vidas" se o jogo não gerencia sua própria tela
+          // de game over (pixel-secreto usa overlay React; outros jogos têm tela Phaser).
+          if (livesBeforeError <= 0 && isPixelSecreto) {
+            dispatchPixelFinalGameOver(event);
+            return;
+          }
+        }, 100);
 
         return;
       }
@@ -266,31 +331,37 @@ if (gameLives <= 0) {
 
         streakRef.current = 0;
         setShowNoLivesModal(false);
-        setShowGameOverModal(true);
+
+        if (!isPixelSecreto) {
+          setShowGameOverModal(true);
+        }
+
         return;
       }
     }
   };
 
   const handleBuyLife = () => {
-  if (lifePurchasePendingRef.current) return;
+    if (lifePurchasePendingRef.current) return;
 
-  if (points < extraLifeCost) {
-    showToast("Pontos insuficientes para comprar uma vida.", "error");
-    return;
-  }
+    if (points < extraLifeCost) {
+      showToast("Pontos insuficientes para comprar uma vida.", "error");
+      resumePixelSecreto();
+      return;
+    }
 
-  buyExtraLife(game.slug);
+    buyExtraLife(game.slug);
 
-  lifePurchasePendingRef.current = true;
-  window.setTimeout(() => {
-    lifePurchasePendingRef.current = false;
-  }, 2000);
+    lifePurchasePendingRef.current = true;
+    window.setTimeout(() => {
+      lifePurchasePendingRef.current = false;
+    }, 2000);
 
-  showToast("+1 vida adquirida ❤️", "success");
-  setShowNoLivesModal(false);
-  setShowPostUnlockLifeModal(false);
-};
+    showToast("+1 vida adquirida ❤️", "success");
+    setShowNoLivesModal(false);
+    setShowPostUnlockLifeModal(false);
+    resumePixelSecreto();
+  };
 
   const handleUnlock = () => {
     if (points < unlockCost) {
@@ -329,7 +400,7 @@ if (gameLives <= 0) {
     navigate(-1);
   };
 
-  if (blocked && !showGameOverModal && !showUnlockModal) {
+  if (blocked && !hasStartedGame && !showGameOverModal && !showUnlockModal) {
     return (
       <>
         <section>
@@ -506,61 +577,199 @@ if (gameLives <= 0) {
         </div>
 
         <div className="game-area">
-          {gameCode && gameConfig ? (
-            hasStartedGame ? (
-              <GameFrame
-                gameId={game.slug}
-                level={currentLevel}
-                points={points}
-                lives={gameLives}
-                config={gameConfig}
-                onPlatformEvent={handlePlatformEvent}
-              />
-            ) : (
-              <div className="game-screen">
-                <h2>{game.title}</h2>
-                <p>
-                  Prepare-se para começar. Você está com <strong>{gameLives}</strong>{" "}
-                  vida{gameLives !== 1 ? "s" : ""}.
-                </p>
-
-                <div className="game-actions">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      alreadyOfferedExtraLifeRef.current = false;
-                      setHasStartedGame(true);
-                    }}
-                  >
-                    {currentLevel === 1
-                      ? "Iniciar jogo"
-                      : `Continuar no nível ${currentLevel}`}
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={handleBuyLife}
-                    disabled={points < extraLifeCost}
-                  >
-                    Comprar +1 vida
-                  </button>
-                </div>
-              </div>
-            )
-          ) : gameCode ? (
-            <div className="game-screen">
-              <p style={{ color: "var(--muted)" }}>Carregando jogo...</p>
-            </div>
-          ) : (
-            <div className="game-screen">
-              <h2>Área do jogo</h2>
-              <p>
-                Aqui o Phaser vai rodar o jogo. Por enquanto, essa área segue
-                como placeholder para jogos ainda não implementados.
-              </p>
-            </div>
-          )}
+        <div className="game-area">
+  {gameCode && gameConfig ? (
+    hasStartedGame ? (
+      <GameFrame
+        gameId={game.slug}
+        level={currentLevel}
+        points={points}
+        lives={gameLives}
+        config={gameConfig}
+        onPlatformEvent={handlePlatformEvent}
+      />
+    ) : isPixelSecreto ? (
+      <div className="game-screen pixel-secret-cover">
+        <div className="pixel-secret-pixels" aria-hidden="true">
+          <span />
+          <span />
+          <span />
+          <span />
+          <span />
+          <span />
+          <span />
+          <span />
+          <span />
         </div>
+
+        <div className="pixel-secret-overlay">
+          <div className="pixel-secret-badge">🎨 Jogo de pixels</div>
+          <h1>Pixel Secreto</h1>
+          <p>
+            Escolha as cores da legenda, pinte os quadradinhos corretos e revele
+            uma imagem escondida.
+          </p>
+
+          <button
+            type="button"
+            onClick={() => {
+              alreadyOfferedExtraLifeRef.current = false;
+              setHasStartedGame(true);
+            }}
+          >
+            Iniciar jogo
+          </button>
+        </div>
+      </div>
+    ) : game.slug === "guardioes-dos-dados" ? (
+      <div className="game-screen data-guardians-cover">
+        <div className="data-guardians-particles" aria-hidden="true">
+          <span>🛡️</span>
+          <span>🔒</span>
+          <span>💻</span>
+          <span>📱</span>
+          <span>🌐</span>
+          <span>🔐</span>
+          <span>✅</span>
+          <span>⭐</span>
+          <span>👤</span>
+        </div>
+
+        <div className="data-guardians-overlay">
+          <div className="data-guardians-badge">🛡️ Segurança Digital</div>
+          <h1>Guardiões dos Dados</h1>
+          <p>
+            Proteja informações pessoais, identifique situações perigosas e
+            aprenda boas práticas de segurança na internet.
+          </p>
+
+          <button
+            type="button"
+            onClick={() => {
+              alreadyOfferedExtraLifeRef.current = false;
+              setHasStartedGame(true);
+            }}
+          >
+            Iniciar jogo
+          </button>
+        </div>
+      </div>
+    ) : game.slug === "base-dos-classificadores" ? (
+      <div className="game-screen classifiers-cover">
+        <div className="classifiers-shapes" aria-hidden="true">
+          <span>🔺</span>
+          <span>🟦</span>
+          <span>🟢</span>
+          <span>⭐</span>
+          <span>🟨</span>
+          <span>🔵</span>
+          <span>🟥</span>
+          <span>🟣</span>
+          <span>🧩</span>
+        </div>
+
+        <div className="classifiers-overlay">
+          <div className="classifiers-badge">🧠 Lógica e classificação</div>
+          <h1>Base dos Classificadores</h1>
+          <p>
+            Observe formas, cores e padrões para classificar corretamente cada
+            item e completar os desafios.
+          </p>
+
+          <button
+            type="button"
+            onClick={() => {
+              alreadyOfferedExtraLifeRef.current = false;
+              setHasStartedGame(true);
+            }}
+          >
+            Iniciar jogo
+          </button>
+        </div>
+      </div>
+    ) : game.slug === "oficina-dos-algoritmos" ? (
+      <div className="game-screen algorithms-cover">
+        <div className="algorithms-icons" aria-hidden="true">
+          <span>⚙️</span>
+          <span>➡️</span>
+          <span>🧩</span>
+          <span>💡</span>
+          <span>🔁</span>
+          <span>🖥️</span>
+          <span>📦</span>
+          <span>🚀</span>
+          <span>🧠</span>
+        </div>
+
+        <div className="algorithms-overlay">
+          <div className="algorithms-badge">
+            ⚙️ Pensamento computacional
+          </div>
+          <h1>Oficina dos Algoritmos</h1>
+          <p>
+            Resolva desafios usando sequência lógica, organização de passos e
+            raciocínio computacional.
+          </p>
+
+          <button
+            type="button"
+            onClick={() => {
+              alreadyOfferedExtraLifeRef.current = false;
+              setHasStartedGame(true);
+            }}
+          >
+            Iniciar jogo
+          </button>
+        </div>
+      </div>
+    ) : (
+      <div className="game-screen">
+        <h2>{game.title}</h2>
+
+        <p>
+          Prepare-se para começar. Você está com{" "}
+          <strong>{gameLives}</strong> vida
+          {gameLives !== 1 ? "s" : ""}.
+        </p>
+
+        <div className="game-actions">
+          <button
+            type="button"
+            onClick={() => {
+              alreadyOfferedExtraLifeRef.current = false;
+              setHasStartedGame(true);
+            }}
+          >
+            {currentLevel === 1
+              ? "Iniciar jogo"
+              : `Continuar no nível ${currentLevel}`}
+          </button>
+
+          <button
+            type="button"
+            onClick={handleBuyLife}
+            disabled={points < extraLifeCost}
+          >
+            Comprar +1 vida
+          </button>
+        </div>
+      </div>
+    )
+  ) : gameCode ? (
+    <div className="game-screen">
+      <p style={{ color: "var(--muted)" }}>Carregando jogo...</p>
+    </div>
+  ) : (
+    <div className="game-screen">
+      <h2>Área do jogo</h2>
+      <p>
+        Aqui o Phaser vai rodar o jogo. Por enquanto, essa área segue como
+        placeholder para jogos ainda não implementados.
+      </p>
+    </div>
+  )}
+</div>
+</div>
       </section>
 
       <ConfirmModal
@@ -570,7 +779,10 @@ if (gameLives <= 0) {
         confirmText="Comprar vida"
         cancelText="Continuar assim"
         onConfirm={handleBuyLife}
-        onCancel={() => setShowNoLivesModal(false)}
+        onCancel={() => {
+          setShowNoLivesModal(false);
+          resumePixelSecreto();
+        }}
       />
 
       <ConfirmModal
@@ -587,6 +799,7 @@ if (gameLives <= 0) {
         cancelText="Desbloquear agora"
         onConfirm={() => {
           setShowGameOverModal(false);
+          setHasStartedGame(false);
           navigate("/", { replace: true });
         }}
         onCancel={() => {

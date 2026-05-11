@@ -2,29 +2,29 @@ import Phaser from 'phaser'
 import { EventBus } from '../../../shared/EventBus'
 
 interface MissionUpdatePayload {
-  missionText: string
-  stepHint: string
-  missionIndex: number
+  instruction: string   // linha 1 — o que fazer agora
+  hint: string          // linha 2 — dica/pergunta (amarelo)
+  missionIndex: number  // missões concluídas até agora
   totalMissions: number
   level: number
 }
 
 /**
- * UIScene — HUD paralelo do Desktop Digital Infantil.
+ * UIScene — HUD paralelo do Hangar dos Modelos.
  *
  * Layout (canvas 1280×720, y=0–112):
- *   ┌──────────────────────────────────────────────────────────────────────┐
- *   │              🎯 Texto da missão — centralizado, grande              │  ← y=34
- *   │                👉 Dica do passo atual — centralizada               │  ← y=80
- *   │                                              ●●○  ★★☆   🔊       │
- *   └──────────────────────────────────────────────────────────────────────┘
- *   ━━━━ timer bar (GameScene, y=118) ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ *   ┌───────────────────────────────────────────────────────────────────────┐
+ *   │  ✈️  Instrução da missão — centralizada, fonte grande               │  ← y=34
+ *   │     👉 Dica / pergunta — centralizada, amarela                      │  ← y=78
+ *   │                                           ●●○   ★★☆   🔊           │
+ *   └───────────────────────────────────────────────────────────────────────┘
+ *   ━━━━ timer bar (GameScene, y=118) ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
  */
 export class UIScene extends Phaser.Scene {
-  private missionText!: Phaser.GameObjects.Text
-  private stepHint!: Phaser.GameObjects.Text
+  private instructionText!: Phaser.GameObjects.Text
+  private hintText!:        Phaser.GameObjects.Text
+  private levelStars!:      Phaser.GameObjects.Text
   private missionDots: Phaser.GameObjects.Graphics[] = []
-  private levelStars!: Phaser.GameObjects.Text
 
   constructor() {
     super({ key: 'UIScene' })
@@ -32,62 +32,59 @@ export class UIScene extends Phaser.Scene {
 
   create() {
     this.createTopBar()
-    this.registerEventListeners()
+    this.registerListeners()
   }
 
   shutdown() {
     EventBus.off('mission-update', undefined, this)
-    EventBus.off('mute-audio', undefined, this)
+    EventBus.off('mute-audio',     undefined, this)
   }
 
   // ── Barra superior (112px de altura) ─────────────────────────────────────
 
   private createTopBar() {
     // Fundo escuro
-    this.add.rectangle(640, 56, 1280, 112, 0x0A1628, 0.95)
-    // Linha inferior de separação
-    this.add.rectangle(640, 112, 1280, 2, 0x2E86C1, 0.7)
+    this.add.rectangle(640, 56, 1280, 112, 0x0D1B2A, 0.95)
+    // Linha inferior
+    this.add.rectangle(640, 112, 1280, 2, 0x4FC3F7, 0.6)
 
     // Ícone de missão (esquerda)
-    this.add.text(18, 34, '🎯', { fontSize: '28px' }).setOrigin(0, 0.5)
+    this.add.text(18, 34, '✈️', { fontSize: '26px' }).setOrigin(0, 0.5)
 
-    // Texto da missão — centralizado, fonte grande
-    this.missionText = this.add.text(640, 34, 'Carregando...', {
-      fontSize: '26px',
+    // Instrução — linha 1 (centralizada, fonte grande)
+    this.instructionText = this.add.text(640, 34, 'Carregando...', {
+      fontSize: '24px',
       fontFamily: 'Arial Black, Arial',
       color: '#FFFFFF',
-      stroke: '#0A1628',
+      stroke: '#0D1B2A',
       strokeThickness: 4,
-      wordWrap: { width: 860 },
+      wordWrap: { width: 840 },
       align: 'center',
-    }).setOrigin(0.5, 0.5)
+    }).setOrigin(0.5)
 
-    // Separador horizontal sutil
-    this.add.rectangle(640, 60, 820, 1, 0x2E86C1, 0.30)
+    // Separador sutil
+    this.add.rectangle(640, 58, 800, 1, 0x4FC3F7, 0.22)
 
-    // Ícone de passo
-    this.add.text(190, 82, '👉', { fontSize: '18px' }).setOrigin(0.5, 0.5)
+    // Ícone de dica (esquerda da linha 2)
+    this.add.text(186, 80, '👉', { fontSize: '16px' }).setOrigin(0.5)
 
-    // Dica do passo atual — centralizada, cor amarela
-    this.stepHint = this.add.text(640, 82, '', {
+    // Dica / pergunta — linha 2 (amarela, menor)
+    this.hintText = this.add.text(640, 80, '', {
       fontSize: '17px',
       fontFamily: 'Arial, sans-serif',
       color: '#F9E79F',
-      stroke: '#0A1628',
+      stroke: '#0D1B2A',
       strokeThickness: 3,
       wordWrap: { width: 700 },
       align: 'center',
-    }).setOrigin(0.5, 0.5)
-
-    // Dots de progresso (recriados em updateDots)
-    this.missionDots = []
+    }).setOrigin(0.5)
 
     // Estrelas de nível (canto direito)
-    this.add.text(1095, 24, 'Nível', {
-      fontSize: '11px', color: '#7F8C8D', fontFamily: 'Arial',
+    this.add.text(1095, 22, 'Nível', {
+      fontSize: '11px', color: '#607D8B', fontFamily: 'Arial',
     }).setOrigin(0.5)
-    this.levelStars = this.add.text(1095, 48, '★☆☆', {
-      fontSize: '20px', color: '#F1C40F',
+    this.levelStars = this.add.text(1095, 46, '★☆☆', {
+      fontSize: '22px', color: '#FFD700',
     }).setOrigin(0.5)
 
     // Botão mute (canto direito)
@@ -100,7 +97,7 @@ export class UIScene extends Phaser.Scene {
     let muted = false
 
     const btn = this.add.rectangle(1248, 56, 52, 60, 0x1A2A3A, 0.9)
-      .setStrokeStyle(1.5, 0x2E86C1)
+      .setStrokeStyle(1.5, 0x4FC3F7)
       .setInteractive({ useHandCursor: true })
 
     const icon = this.add.text(1248, 56, '🔊', { fontSize: '22px' }).setOrigin(0.5)
@@ -116,10 +113,10 @@ export class UIScene extends Phaser.Scene {
 
   // ── Listeners ─────────────────────────────────────────────────────────────
 
-  private registerEventListeners() {
+  private registerListeners() {
     EventBus.on('mission-update', (data: MissionUpdatePayload) => {
-      this.missionText.setText(data.missionText)
-      this.stepHint.setText(data.stepHint)
+      this.instructionText.setText(data.instruction)
+      this.hintText.setText(data.hint)
       this.levelStars.setText('★'.repeat(data.level) + '☆'.repeat(3 - data.level))
       this.updateDots(data.missionIndex, data.totalMissions)
     }, this)
@@ -129,18 +126,18 @@ export class UIScene extends Phaser.Scene {
     this.missionDots.forEach(d => d.destroy())
     this.missionDots = []
 
-    const dotR = 7
-    const gap = 20
+    const dotR   = 7
+    const gap    = 20
     const totalW = total * (dotR * 2) + (total - 1) * (gap - dotR * 2)
     const startX = 1148 - totalW / 2 + dotR
 
     for (let i = 0; i < total; i++) {
-      const dot = this.add.graphics()
+      const dot    = this.add.graphics()
       const filled = i < completedCount
-      dot.fillStyle(filled ? 0x2ECC71 : 0x394A59, 1)
+      dot.fillStyle(filled ? 0x4FC3F7 : 0x37474F, 1)
       dot.fillCircle(0, 0, dotR)
       if (filled) {
-        dot.lineStyle(1.5, 0x27AE60)
+        dot.lineStyle(1.5, 0x29B6F6)
         dot.strokeCircle(0, 0, dotR)
       }
       dot.setPosition(startX + i * gap, 82)

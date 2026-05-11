@@ -19,6 +19,17 @@ const TIMER_BAR_Y = 100
 const TIMER_BAR_W = 900
 const GAME_ID = 'base-dos-classificadores'
 
+const RULE_MAP: Record<string, string> = {
+  cor: 'Separe por COR!',
+  forma: 'Separe por FORMA!',
+  tamanho: 'Separe por TAMANHO!',
+}
+const ICON_MAP: Record<string, string> = {
+  cor: '🎨',
+  forma: '🔷',
+  tamanho: '📏',
+}
+
 export class GameScene extends Phaser.Scene {
   private levelConfig!: LevelConfig
   private bases: Phaser.GameObjects.Container[] = []
@@ -28,6 +39,7 @@ export class GameScene extends Phaser.Scene {
   private startTime = 0
   private currentPoints = 0
   private currentLives = 1
+  private gameEnded = false
   private unsubscribePlatformCommands?: () => void
 
   private timerEvent?: Phaser.Time.TimerEvent
@@ -49,6 +61,7 @@ export class GameScene extends Phaser.Scene {
     this.startTime = Date.now()
     this.currentPoints = data?.points ?? 0
     this.currentLives = data?.lives ?? 1
+    this.gameEnded = false
   }
 
   create() {
@@ -66,7 +79,7 @@ export class GameScene extends Phaser.Scene {
 
     EventBus.on('set-level', this.handleSetLevel, this)
     EventBus.on('mute-audio', this.handleMuteAudio, this)
-    this.showLevelIntro()
+    this.showStartScreen()
   }
 
   update() {
@@ -114,150 +127,435 @@ export class GameScene extends Phaser.Scene {
     })
   }
 
-  private showLevelIntro() {
-    this.input.enabled = false
+  // ── Telas de fluxo ──────────────────────────────────────────────────────────
 
-    const overlay = this.add
-      .rectangle(640, 360, 1280, 720, 0x000000, 0.65)
-      .setDepth(50)
+  private showStartScreen() {
+    const bg = this.add
+      .rectangle(640, 360, 1280, 720, 0x000000, 0.78)
+      .setDepth(60)
+      .setInteractive()
 
     const starsStr =
       '★'.repeat(this.levelConfig.level) + '☆'.repeat(3 - this.levelConfig.level)
-
-    this.add
-      .text(640, 200, starsStr, {
-        fontSize: '52px',
-        color: '#FFD700',
-      })
+    const starsLbl = this.add
+      .text(640, 155, starsStr, { fontSize: '48px', color: '#FFD700' })
       .setOrigin(0.5)
-      .setDepth(51)
+      .setDepth(61)
 
-    const lvlLabel = this.add
-      .text(640, 280, `NÍVEL  ${this.levelConfig.level}`, {
-        fontSize: '82px',
+    const lvlLbl = this.add
+      .text(640, 235, `NÍVEL ${this.levelConfig.level}`, {
+        fontSize: '72px',
         fontFamily: 'Arial Black, Arial',
         color: '#FFFFFF',
         stroke: '#000000',
         strokeThickness: 8,
       })
       .setOrigin(0.5)
-      .setDepth(51)
+      .setDepth(61)
 
-    const ruleMap: Record<string, string> = {
-      cor: '🎨  Separe por COR!',
-      forma: '🔷  Separe por FORMA!',
-      tamanho: '📏  Separe por TAMANHO!',
-    }
+    const ruleLbl = this.add
+      .text(
+        640,
+        325,
+        `${ICON_MAP[this.levelConfig.criterion] ?? ''}  ${RULE_MAP[this.levelConfig.criterion] ?? ''}`,
+        {
+          fontSize: '34px',
+          fontFamily: 'Arial, sans-serif',
+          color: '#FFF9C4',
+          stroke: '#000000',
+          strokeThickness: 5,
+        },
+      )
+      .setOrigin(0.5)
+      .setDepth(61)
 
-    this.add
-      .text(640, 380, ruleMap[this.levelConfig.criterion] ?? '', {
-        fontSize: '36px',
-        fontFamily: 'Arial, sans-serif',
-        color: '#FFF9C4',
-        stroke: '#000000',
-        strokeThickness: 5,
+    const nItems = this.levelConfig.items.length
+    const timerInfo = this.levelConfig.timeLimit
+      ? `⏱ ${this.levelConfig.timeLimit}s`
+      : 'Sem limite de tempo'
+    const detailsLbl = this.add
+      .text(640, 400, `${nItems} itens  •  ${timerInfo}`, {
+        fontSize: '24px',
+        color: '#B0BEC5',
       })
       .setOrigin(0.5)
-      .setDepth(51)
+      .setDepth(61)
 
-    this.playCountdownTick()
-
-    let count = 3
-    const countText = this.add
-      .text(640, 490, '3', {
-        fontSize: '96px',
+    const btnBg = this.add
+      .rectangle(640, 498, 270, 72, 0x2ecc71)
+      .setStrokeStyle(3, 0x27ae60)
+      .setDepth(61)
+      .setInteractive({ useHandCursor: true })
+    const btnText = this.add
+      .text(640, 498, '▶  Iniciar', {
+        fontSize: '30px',
         fontFamily: 'Arial Black, Arial',
-        color: '#FF6B35',
+        color: '#FFFFFF',
+      })
+      .setOrigin(0.5)
+      .setDepth(62)
+
+    btnBg.on('pointerover', () => btnBg.setFillStyle(0x27ae60))
+    btnBg.on('pointerout', () => btnBg.setFillStyle(0x2ecc71))
+    btnBg.on('pointerdown', () => {
+      ;[bg, starsLbl, lvlLbl, ruleLbl, detailsLbl, btnBg, btnText].forEach((o) => o.destroy())
+      this.emitCheckpoint()
+      runtimeGameBridge.emit({ type: 'GAME_READY', gameId: GAME_ID })
+      EventBus.emit('scene-ready', { levelConfig: this.levelConfig })
+      this.revealItems()
+      this.playGo()
+      if (this.levelConfig.timeLimit) this.startTimer()
+    })
+  }
+
+  private showLevelCompleteScreen(nextLevel: 1 | 2 | 3) {
+    this.playRoundComplete()
+
+    const bg = this.add.rectangle(640, 360, 1280, 720, 0x000000, 0.65).setDepth(60)
+    const starsLbl = this.add
+      .text(640, 228, '⭐  ⭐  ⭐', { fontSize: '60px' })
+      .setOrigin(0.5)
+      .setDepth(61)
+      .setAlpha(0)
+    const mainLbl = this.add
+      .text(640, 320, 'PARABÉNS! 🎉', {
+        fontSize: '64px',
+        fontFamily: 'Arial Black, Arial',
+        color: '#FFD700',
+        stroke: '#000000',
+        strokeThickness: 9,
+      })
+      .setOrigin(0.5)
+      .setDepth(61)
+      .setAlpha(0)
+    const subLbl = this.add
+      .text(640, 405, `Nível ${this.levelConfig.level} concluído!`, {
+        fontSize: '30px',
+        color: '#FFFFFF',
+        stroke: '#000',
+        strokeThickness: 4,
+      })
+      .setOrigin(0.5)
+      .setDepth(61)
+      .setAlpha(0)
+
+    this.tweens.add({
+      targets: starsLbl,
+      alpha: 1,
+      scaleX: { from: 0.3, to: 1 },
+      scaleY: { from: 0.3, to: 1 },
+      duration: 400,
+      ease: 'Back.Out',
+    })
+    this.tweens.add({
+      targets: mainLbl,
+      alpha: 1,
+      scaleX: { from: 0.4, to: 1 },
+      scaleY: { from: 0.4, to: 1 },
+      duration: 380,
+      ease: 'Back.Out',
+      delay: 100,
+    })
+    this.tweens.add({ targets: subLbl, alpha: 1, duration: 300, delay: 300 })
+
+    const emojis = ['⭐', '🌟', '✨', '💫']
+    for (let i = 0; i < 18; i++) {
+      const sx = Phaser.Math.Between(60, 1220)
+      const sy = Phaser.Math.Between(-60, -10)
+      const star = this.add
+        .text(sx, sy, emojis[i % emojis.length], {
+          fontSize: `${Phaser.Math.Between(20, 40)}px`,
+        })
+        .setDepth(61)
+      this.tweens.add({
+        targets: star,
+        y: Phaser.Math.Between(380, 680),
+        x: sx + Phaser.Math.Between(-80, 80),
+        alpha: { from: 1, to: 0.1 },
+        angle: Phaser.Math.Between(-45, 45),
+        duration: Phaser.Math.Between(900, 1800),
+        delay: Phaser.Math.Between(0, 500),
+        onComplete: () => star.destroy(),
+      })
+    }
+
+    this.time.delayedCall(1800, () => {
+      ;[bg, starsLbl, mainLbl, subLbl].forEach((o) => o.destroy())
+      this.showNextLevelScreen(nextLevel)
+    })
+  }
+
+  private showNextLevelScreen(nextLevel: 1 | 2 | 3) {
+    this.input.enabled = true
+
+    const nextConfig = LEVELS.find((l) => l.level === nextLevel) ?? LEVELS[0]
+
+    const bg = this.add
+      .rectangle(640, 360, 1280, 720, 0x000000, 0.78)
+      .setDepth(62)
+      .setInteractive()
+
+    const starsStr = '★'.repeat(nextLevel) + '☆'.repeat(3 - nextLevel)
+    const starsLbl = this.add
+      .text(640, 155, starsStr, { fontSize: '48px', color: '#FFD700' })
+      .setOrigin(0.5)
+      .setDepth(63)
+
+    const titleLbl = this.add
+      .text(640, 238, `PRÓXIMO: NÍVEL ${nextLevel}`, {
+        fontSize: '52px',
+        fontFamily: 'Arial Black, Arial',
+        color: '#FFFFFF',
         stroke: '#000000',
         strokeThickness: 8,
       })
       .setOrigin(0.5)
-      .setDepth(51)
+      .setDepth(63)
 
-    this.tweens.add({
-      targets: countText,
-      scaleX: 1.25,
-      scaleY: 1.25,
-      yoyo: true,
-      duration: 400,
-    })
+    const ruleLbl = this.add
+      .text(
+        640,
+        320,
+        `${ICON_MAP[nextConfig.criterion] ?? ''}  ${RULE_MAP[nextConfig.criterion] ?? ''}`,
+        {
+          fontSize: '30px',
+          color: '#FFF9C4',
+          stroke: '#000',
+          strokeThickness: 5,
+        },
+      )
+      .setOrigin(0.5)
+      .setDepth(63)
 
-    const countdownEvent = this.time.addEvent({
-      delay: 1000,
-      repeat: 2,
-      callback: () => {
-        count--
+    const timerInfo = nextConfig.timeLimit
+      ? `⏱ ${nextConfig.timeLimit}s`
+      : 'Sem limite de tempo'
+    const detailsLbl = this.add
+      .text(640, 385, `${nextConfig.items.length} itens  •  ${timerInfo}`, {
+        fontSize: '24px',
+        color: '#B0BEC5',
+      })
+      .setOrigin(0.5)
+      .setDepth(63)
 
-        if (count > 0) {
-          countText.setText(String(count))
-          this.tweens.add({
-            targets: countText,
-            scaleX: 1.25,
-            scaleY: 1.25,
-            yoyo: true,
-            duration: 400,
-          })
-          this.playCountdownTick()
-          return
-        }
+    const btnBg = this.add
+      .rectangle(640, 480, 270, 72, 0x3498db)
+      .setStrokeStyle(3, 0x2980b9)
+      .setDepth(63)
+      .setInteractive({ useHandCursor: true })
+    const btnText = this.add
+      .text(640, 480, '▶  Avançar', {
+        fontSize: '30px',
+        fontFamily: 'Arial Black, Arial',
+        color: '#FFFFFF',
+      })
+      .setOrigin(0.5)
+      .setDepth(64)
 
-        const introObjects = [overlay, lvlLabel, countText]
-
-        this.tweens.add({
-          targets: introObjects,
-          alpha: 0,
-          duration: 350,
-          onComplete: () => {
-            introObjects.forEach((o) => o.destroy())
-            countdownEvent.destroy()
-            this.input.enabled = true
-            this.revealItems()
-            this.playGo()
-
-            EventBus.emit('scene-ready', { levelConfig: this.levelConfig })
-
-            runtimeGameBridge.emit({
-              type: 'GAME_READY',
-              gameId: GAME_ID,
-            })
-
-            this.emitCheckpoint()
-
-            if (this.levelConfig.timeLimit) {
-              this.startTimer()
-            }
-          },
-        })
-
-        this.children.list
-          .filter(
-            (o) => (o as { depth?: number }).depth === 51 && o !== lvlLabel && o !== countText,
-          )
-          .forEach((o) => {
-            this.tweens.add({
-              targets: o,
-              alpha: 0,
-              duration: 350,
-            })
-          })
-      },
-    })
-  }
-
-  private revealItems() {
-    this.itemSprites.forEach((sprite, i) => {
-      this.tweens.add({
-        targets: sprite,
-        alpha: 1,
-        scaleX: { from: 0.4, to: 1 },
-        scaleY: { from: 0.4, to: 1 },
-        y: { from: sprite.originY_ + 30, to: sprite.originY_ },
-        delay: i * 85,
-        duration: 320,
-        ease: 'Back.Out',
+    btnBg.on('pointerover', () => btnBg.setFillStyle(0x2980b9))
+    btnBg.on('pointerout', () => btnBg.setFillStyle(0x3498db))
+    btnBg.on('pointerdown', () => {
+      this.scene.restart({
+        level: nextLevel,
+        points: this.currentPoints,
+        lives: this.currentLives,
       })
     })
+
+    const objs = [bg, starsLbl, titleLbl, ruleLbl, detailsLbl, btnBg, btnText]
+    objs.forEach((o) => (o as { setAlpha: (n: number) => void }).setAlpha(0))
+    this.tweens.add({ targets: objs, alpha: 1, duration: 320 })
   }
+
+  private showGameOverScreen() {
+    this.input.enabled = true
+
+    const bg = this.add
+      .rectangle(640, 360, 1280, 720, 0x000000, 0.82)
+      .setDepth(60)
+      .setInteractive()
+
+    const mainLbl = this.add
+      .text(640, 210, 'GAME OVER', {
+        fontSize: '84px',
+        fontFamily: 'Arial Black, Arial',
+        color: '#E74C3C',
+        stroke: '#000000',
+        strokeThickness: 10,
+      })
+      .setOrigin(0.5)
+      .setDepth(61)
+      .setAlpha(0)
+
+    const causeLbl = this.add
+      .text(640, 300, '⏰  Tempo esgotado!', {
+        fontSize: '36px',
+        color: '#FF6B35',
+        stroke: '#000',
+        strokeThickness: 5,
+      })
+      .setOrigin(0.5)
+      .setDepth(61)
+      .setAlpha(0)
+
+    const statsLbl = this.add
+      .text(
+        640,
+        368,
+        `✅ ${this.hits} acerto${this.hits !== 1 ? 's' : ''}   ✖ ${this.errors} erro${this.errors !== 1 ? 's' : ''}`,
+        { fontSize: '28px', color: '#FFFFFF', stroke: '#000', strokeThickness: 4 },
+      )
+      .setOrigin(0.5)
+      .setDepth(61)
+      .setAlpha(0)
+
+    this.tweens.add({
+      targets: mainLbl,
+      alpha: 1,
+      scaleX: { from: 0.4, to: 1 },
+      scaleY: { from: 0.4, to: 1 },
+      duration: 380,
+      ease: 'Back.Out',
+    })
+    this.tweens.add({ targets: causeLbl, alpha: 1, duration: 300, delay: 200 })
+    this.tweens.add({ targets: statsLbl, alpha: 1, duration: 300, delay: 350 })
+
+    const retryBg = this.add
+      .rectangle(510, 465, 260, 64, 0x2ecc71)
+      .setStrokeStyle(3, 0x27ae60)
+      .setDepth(61)
+      .setInteractive({ useHandCursor: true })
+    const retryLbl = this.add
+      .text(510, 465, '↺  Tentar novamente', {
+        fontSize: '19px',
+        fontFamily: 'Arial Black, Arial',
+        color: '#FFFFFF',
+      })
+      .setOrigin(0.5)
+      .setDepth(62)
+
+    const exitBg = this.add
+      .rectangle(770, 465, 200, 64, 0x7f8c8d)
+      .setStrokeStyle(3, 0x636e72)
+      .setDepth(61)
+      .setInteractive({ useHandCursor: true })
+    const exitLbl = this.add
+      .text(770, 465, '✕  Sair', {
+        fontSize: '22px',
+        fontFamily: 'Arial Black, Arial',
+        color: '#FFFFFF',
+      })
+      .setOrigin(0.5)
+      .setDepth(62)
+
+    retryBg.on('pointerover', () => retryBg.setFillStyle(0x27ae60))
+    retryBg.on('pointerout', () => retryBg.setFillStyle(0x2ecc71))
+    retryBg.on('pointerdown', () => {
+      this.scene.restart({
+        level: this.levelConfig.level,
+        points: this.currentPoints,
+        lives: this.currentLives,
+      })
+    })
+
+    exitBg.on('pointerover', () => exitBg.setFillStyle(0x636e72))
+    exitBg.on('pointerout', () => exitBg.setFillStyle(0x7f8c8d))
+    exitBg.on('pointerdown', () => {
+      EventBus.emit('exit-game')
+    })
+
+    const btns = [retryBg, retryLbl, exitBg, exitLbl]
+    btns.forEach((o) => (o as { setAlpha: (n: number) => void }).setAlpha(0))
+    this.tweens.add({ targets: btns, alpha: 1, duration: 300, delay: 500 })
+  }
+
+  private showFinalCompleteScreen() {
+    this.playRoundComplete()
+
+    this.add.rectangle(640, 360, 1280, 720, 0x000000, 0.78).setDepth(60)
+
+    const starsLbl = this.add
+      .text(640, 195, '⭐  ⭐  ⭐', { fontSize: '72px' })
+      .setOrigin(0.5)
+      .setDepth(61)
+      .setAlpha(0)
+    const mainLbl = this.add
+      .text(640, 305, 'PARABÉNS! 🏆', {
+        fontSize: '72px',
+        fontFamily: 'Arial Black, Arial',
+        color: '#FFD700',
+        stroke: '#000000',
+        strokeThickness: 10,
+      })
+      .setOrigin(0.5)
+      .setDepth(61)
+      .setAlpha(0)
+    const subLbl = this.add
+      .text(640, 400, 'Você completou todos os níveis!', {
+        fontSize: '30px',
+        color: '#FFFFFF',
+        stroke: '#000',
+        strokeThickness: 4,
+      })
+      .setOrigin(0.5)
+      .setDepth(61)
+      .setAlpha(0)
+
+    this.tweens.add({
+      targets: starsLbl,
+      alpha: 1,
+      scaleX: { from: 0.3, to: 1 },
+      scaleY: { from: 0.3, to: 1 },
+      duration: 450,
+      ease: 'Back.Out',
+    })
+    this.tweens.add({
+      targets: mainLbl,
+      alpha: 1,
+      scaleX: { from: 0.4, to: 1 },
+      scaleY: { from: 0.4, to: 1 },
+      duration: 380,
+      ease: 'Back.Out',
+      delay: 150,
+    })
+    this.tweens.add({ targets: subLbl, alpha: 1, duration: 300, delay: 400 })
+
+    this.time.delayedCall(700, () => {
+      if (!starsLbl.active) return
+      this.tweens.add({
+        targets: starsLbl,
+        scaleX: 1.1,
+        scaleY: 1.1,
+        yoyo: true,
+        repeat: -1,
+        duration: 800,
+        ease: 'Sine.easeInOut',
+      })
+    })
+
+    const emojis = ['⭐', '🌟', '✨', '💫', '🎉', '🎊']
+    for (let i = 0; i < 28; i++) {
+      const sx = Phaser.Math.Between(60, 1220)
+      const sy = Phaser.Math.Between(-80, -10)
+      const star = this.add
+        .text(sx, sy, emojis[i % emojis.length], {
+          fontSize: `${Phaser.Math.Between(22, 48)}px`,
+        })
+        .setDepth(61)
+      this.tweens.add({
+        targets: star,
+        y: Phaser.Math.Between(400, 700),
+        x: sx + Phaser.Math.Between(-100, 100),
+        alpha: { from: 1, to: 0.05 },
+        angle: Phaser.Math.Between(-60, 60),
+        duration: Phaser.Math.Between(1000, 2200),
+        delay: Phaser.Math.Between(0, 800),
+        onComplete: () => star.destroy(),
+      })
+    }
+  }
+
+  // ── Background & Visuals ────────────────────────────────────────────────────
 
   private createBackground() {
     this.add.rectangle(640, 240, 1280, 480, 0x87ceeb)
@@ -482,78 +780,7 @@ export class GameScene extends Phaser.Scene {
     })
   }
 
-  private onTimeUp() {
-    this.input.enabled = false
-    this.timerEvent?.destroy()
-    this.playTimeUp()
-
-    // Sempre emite WRONG_ANSWER — deixa o React deduzir a vida e decidir se é
-    // GAME_OVER. Não usamos this.currentLives aqui porque ele pode estar
-    // dessincronizado com a plataforma (START_GAME inicial pode chegar antes
-    // de registerPlatformCommands estar pronto).
-    this.errors += 1
-    this.currentPoints = Math.max(0, this.currentPoints - 5)
-
-    runtimeGameBridge.emit({
-      type: 'WRONG_ANSWER',
-      gameId: GAME_ID,
-      pointsEarned: -5,
-      stage: this.levelConfig.level,
-    })
-
-    this.showTimeUpOverlay()
-
-    this.time.delayedCall(2200, () => {
-      this.scene.restart({
-        level: this.levelConfig.level,
-        points: this.currentPoints,
-        lives: this.currentLives,
-      })
-    })
-  }
-
-  private showTimeUpOverlay() {
-    this.add.rectangle(640, 360, 1280, 720, 0x000000, 0.65).setDepth(45)
-
-    const timeText = this.add
-      .text(640, 340, '⏰  Tempo esgotado!', {
-        fontSize: '62px',
-        fontFamily: 'Arial Black, Arial',
-        color: '#FF6B35',
-        stroke: '#000000',
-        strokeThickness: 8,
-      })
-      .setOrigin(0.5)
-      .setDepth(46)
-      .setAlpha(0)
-
-    this.tweens.add({
-      targets: timeText,
-      alpha: 1,
-      scaleX: { from: 0.4, to: 1 },
-      scaleY: { from: 0.4, to: 1 },
-      duration: 350,
-      ease: 'Back.Out',
-    })
-
-    const subText = this.add
-      .text(640, 420, '−1 vida', {
-        fontSize: '28px',
-        color: '#FFFFFF',
-        stroke: '#000',
-        strokeThickness: 4,
-      })
-      .setOrigin(0.5)
-      .setDepth(46)
-      .setAlpha(0)
-
-    this.tweens.add({
-      targets: subText,
-      alpha: 1,
-      delay: 300,
-      duration: 300,
-    })
-  }
+  // ── Drag & Drop ─────────────────────────────────────────────────────────────
 
   private setupDrag() {
     this.input.on('dragstart', (_: Phaser.Input.Pointer, obj: Phaser.GameObjects.Image) => {
@@ -574,8 +801,6 @@ export class GameScene extends Phaser.Scene {
       this.tweens.add({ targets: obj, scaleX: 1, scaleY: 1, duration: 120 })
 
       if (!dropped) {
-        // Fallback para touch: o evento `drop` pode não disparar se o dedo
-        // levantar levemente fora do zone. Verificamos manualmente por proximidade.
         const hitBase = this.findBaseAtPosition(obj.x, obj.y)
         if (hitBase) {
           const baseData = hitBase.getData('baseData') as ClassifierBase
@@ -602,13 +827,15 @@ export class GameScene extends Phaser.Scene {
   }
 
   private findBaseAtPosition(x: number, y: number): Phaser.GameObjects.Container | null {
-    const HW = 118  // metade da largura da base (210/2) + margem de toque
-    const HH = 82   // metade da altura da base (145/2) + margem de toque
+    const HW = 118
+    const HH = 82
 
     for (const container of this.bases) {
       if (
-        x >= container.x - HW && x <= container.x + HW &&
-        y >= container.y - HH && y <= container.y + HH
+        x >= container.x - HW &&
+        x <= container.x + HW &&
+        y >= container.y - HH &&
+        y <= container.y + HH
       ) {
         return container
       }
@@ -621,6 +848,8 @@ export class GameScene extends Phaser.Scene {
     baseContainer: Phaser.GameObjects.Container,
     base: ClassifierBase,
   ) {
+    if (this.gameEnded) return
+
     const attrValue = this.getItemAttrValue(item.itemData, base.rule.attribute)
     const correct = attrValue === base.rule.value
 
@@ -639,29 +868,7 @@ export class GameScene extends Phaser.Scene {
       return
     }
 
-    if (this.currentLives <= 0) {
-      this.errors += 1
-      this.currentPoints = Math.max(0, this.currentPoints - 5)
-
-      runtimeGameBridge.emit({
-        type: 'WRONG_ANSWER',
-        gameId: GAME_ID,
-        pointsEarned: -5,
-        stage: this.levelConfig.level,
-      })
-
-      this.onWrongDrop(item, baseContainer)
-
-      runtimeGameBridge.emit({
-        type: 'GAME_OVER',
-        gameId: GAME_ID,
-        stage: this.levelConfig.level,
-      })
-
-      this.endRound()
-      return
-    }
-
+    // Erro — deduz ponto e vida
     this.errors += 1
     this.currentPoints = Math.max(0, this.currentPoints - 5)
     this.currentLives = Math.max(0, this.currentLives - 1)
@@ -674,6 +881,18 @@ export class GameScene extends Phaser.Scene {
     })
 
     this.onWrongDrop(item, baseContainer)
+
+    // Se ficou sem vidas, emite GAME_OVER e congela a cena (React exibe modal bloqueante)
+    if (this.currentLives <= 0) {
+      runtimeGameBridge.emit({
+        type: 'GAME_OVER',
+        gameId: GAME_ID,
+        stage: this.levelConfig.level,
+      })
+      this.gameEnded = true
+      this.input.enabled = false
+      this.timerEvent?.destroy()
+    }
   }
 
   private onCorrectDrop(item: DraggableItem, baseContainer: Phaser.GameObjects.Container) {
@@ -782,9 +1001,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     const check = this.add
-      .text(x, y - 10, '✅', {
-        fontSize: '42px',
-      })
+      .text(x, y - 10, '✅', { fontSize: '42px' })
       .setOrigin(0.5)
       .setDepth(20)
 
@@ -813,111 +1030,63 @@ export class GameScene extends Phaser.Scene {
   }
 
   private endRound() {
+    this.gameEnded = true
     this.input.enabled = false
     this.timerEvent?.destroy()
 
-    this.showRoundComplete()
+    const result: RoundResult = {
+      gameCode: 'EF01CO01',
+      level: this.levelConfig.level,
+      criterion: this.levelConfig.criterion,
+      hits: this.hits,
+      errors: this.errors,
+      durationMs: Date.now() - this.startTime,
+      timestamp: Date.now(),
+    }
 
     this.time.delayedCall(1800, () => {
-      const result: RoundResult = {
-        gameCode: 'EF01CO01',
-        level: this.levelConfig.level,
-        criterion: this.levelConfig.criterion,
-        hits: this.hits,
-        errors: this.errors,
-        durationMs: Date.now() - this.startTime,
-        timestamp: Date.now(),
-      }
-
       EventBus.emit('round-complete', result)
     })
 
-    // Para níveis 1 e 2, a cena avança automaticamente após a animação.
-    // No nível 3, o React desmonta o GameFrame via setHasStartedGame(false).
     if (this.levelConfig.level < 3) {
       const nextLevel = (this.levelConfig.level + 1) as 1 | 2 | 3
-      this.time.delayedCall(2300, () => {
-        this.scene.restart({
-          level: nextLevel,
-          points: this.currentPoints,
-          lives: this.currentLives,
-        })
-      })
+      this.showLevelCompleteScreen(nextLevel)
+    } else {
+      this.showFinalCompleteScreen()
     }
   }
 
-  private showRoundComplete() {
-    this.playRoundComplete()
+  private onTimeUp() {
+    this.gameEnded = true
+    this.input.enabled = false
+    this.timerEvent?.destroy()
+    this.playTimeUp()
 
-    const overlay = this.add
-      .rectangle(640, 360, 1280, 720, 0x000000, 0.55)
-      .setDepth(45)
+    this.errors += 1
+    this.currentPoints = Math.max(0, this.currentPoints - 5)
 
-    const mainText = this.add
-      .text(640, 290, 'INCRÍVEL! 🌟', {
-        fontSize: '78px',
-        fontFamily: 'Arial Black, Arial',
-        color: '#FFD700',
-        stroke: '#000000',
-        strokeThickness: 9,
-      })
-      .setOrigin(0.5)
-      .setDepth(46)
-      .setAlpha(0)
-
-    this.tweens.add({
-      targets: mainText,
-      alpha: 1,
-      scaleX: { from: 0.4, to: 1 },
-      scaleY: { from: 0.4, to: 1 },
-      duration: 380,
-      ease: 'Back.Out',
+    runtimeGameBridge.emit({
+      type: 'WRONG_ANSWER',
+      gameId: GAME_ID,
+      pointsEarned: -5,
+      stage: this.levelConfig.level,
     })
 
-    const resultText = this.add
-      .text(640, 400, `✅  ${this.hits}   ✖  ${this.errors}`, {
-        fontSize: '38px',
-        color: '#FFFFFF',
-        stroke: '#000',
-        strokeThickness: 5,
-      })
-      .setOrigin(0.5)
-      .setDepth(46)
-      .setAlpha(0)
+    this.showGameOverScreen()
+  }
 
-    this.tweens.add({
-      targets: resultText,
-      alpha: 1,
-      delay: 300,
-      duration: 300,
-    })
-
-    const starEmojis = ['⭐', '🌟', '✨', '💫']
-
-    for (let i = 0; i < 22; i++) {
-      const sx = Phaser.Math.Between(60, 1220)
-      const sy = Phaser.Math.Between(-60, -10)
-      const em = starEmojis[i % starEmojis.length]
-      const sz = `${Phaser.Math.Between(20, 44)}px`
-
-      const star = this.add.text(sx, sy, em, { fontSize: sz }).setDepth(46)
-
+  private revealItems() {
+    this.itemSprites.forEach((sprite, i) => {
       this.tweens.add({
-        targets: star,
-        y: Phaser.Math.Between(380, 680),
-        x: sx + Phaser.Math.Between(-80, 80),
-        alpha: { from: 1, to: 0.1 },
-        angle: Phaser.Math.Between(-45, 45),
-        duration: Phaser.Math.Between(900, 1800),
-        delay: Phaser.Math.Between(0, 600),
-        onComplete: () => star.destroy(),
+        targets: sprite,
+        alpha: 1,
+        scaleX: { from: 0.4, to: 1 },
+        scaleY: { from: 0.4, to: 1 },
+        y: { from: sprite.originY_ + 30, to: sprite.originY_ },
+        delay: i * 85,
+        duration: 320,
+        ease: 'Back.Out',
       })
-    }
-
-    this.time.delayedCall(2200, () => {
-      overlay.destroy()
-      mainText.destroy()
-      resultText.destroy()
     })
   }
 
@@ -998,6 +1167,8 @@ export class GameScene extends Phaser.Scene {
       },
     )
   }
+
+  // ── Helpers ─────────────────────────────────────────────────────────────────
 
   private getItemAttrValue(item: GameItem, attribute: string): string {
     if (attribute === 'cor') return item.color
@@ -1087,10 +1258,6 @@ export class GameScene extends Phaser.Scene {
     this.playTone(392, 0.15, 'sine', 0.24, 0.00)  // G4
     this.playTone(349, 0.15, 'sine', 0.20, 0.18)  // F4
     this.playTone(294, 0.30, 'sine', 0.18, 0.36)  // D4
-  }
-
-  private playCountdownTick() {
-    this.playTone(880, 0.07, 'sine', 0.20)  // A5 — tick
   }
 
   private playGo() {

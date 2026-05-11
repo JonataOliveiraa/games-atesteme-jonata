@@ -22,9 +22,37 @@ export class GameScene extends Phaser.Scene {
   private cells: CellObject[] = [];
   private hits = 0;
   private errors = 0;
+  private hasStartedTimer = false;
+  private levelStarted = false;
+  private tutorialStep = 0;
+  private tutorialContainer?: Phaser.GameObjects.Container;
+  private nextTutorialButton?: Phaser.GameObjects.Container;
+  private overlayObjects: Phaser.GameObjects.GameObject[] = [];
   private timerEvent?: Phaser.Time.TimerEvent;
   private timerBar?: Phaser.GameObjects.Rectangle;
   private unsubscribePlatformCommands?: () => void;
+
+  private handleExternalFinalGameOver = (raw: Event) => {
+    const event = raw as CustomEvent<{
+      blockedUntil?: string;
+      unlockCost?: number;
+    }>;
+
+    this.showGameOverScreen(
+      event.detail?.blockedUntil,
+      event.detail?.unlockCost ?? 30
+    );
+  };
+
+  private handleExternalResumeGame = () => {
+    this.clearOverlay();
+    this.input.enabled = true;
+    this.levelStarted = true;
+
+    if (this.timerEvent) {
+      this.timerEvent.paused = false;
+    }
+  };
 
   constructor() {
     super({ key: "GameScene" });
@@ -37,6 +65,10 @@ export class GameScene extends Phaser.Scene {
     this.cells = [];
     this.hits = 0;
     this.errors = 0;
+    this.hasStartedTimer = false;
+    this.levelStarted = false;
+    this.tutorialStep = 0;
+    this.overlayObjects = [];
   }
 
   create() {
@@ -46,7 +78,16 @@ export class GameScene extends Phaser.Scene {
     this.createPalette();
     this.createGrid();
     this.registerPlatformCommands();
-    this.startTimer();
+
+    window.addEventListener(
+      "pixel-secret-show-final-game-over",
+      this.handleExternalFinalGameOver as EventListener
+    );
+
+    window.addEventListener(
+      "pixel-secret-resume-game",
+      this.handleExternalResumeGame
+    );
 
     runtimeGameBridge.emit({
       type: "GAME_READY",
@@ -54,12 +95,7 @@ export class GameScene extends Phaser.Scene {
     });
 
     this.emitProgress();
-
-    if (this.levelConfig.level === 1) {
-      this.time.delayedCall(800, () => {
-        this.createTutorialAnimation();
-      });
-    }
+    this.showStartScreen();
   }
 
   update() {
@@ -79,88 +115,377 @@ export class GameScene extends Phaser.Scene {
   shutdown() {
     this.timerEvent?.destroy();
 
+    window.removeEventListener(
+      "pixel-secret-show-final-game-over",
+      this.handleExternalFinalGameOver as EventListener
+    );
+
+    window.removeEventListener(
+      "pixel-secret-resume-game",
+      this.handleExternalResumeGame
+    );
+
     if (this.unsubscribePlatformCommands) {
       this.unsubscribePlatformCommands();
       this.unsubscribePlatformCommands = undefined;
     }
   }
 
+  private clearOverlay() {
+    this.overlayObjects.forEach((object) => object.destroy());
+    this.overlayObjects = [];
+  }
+
+  private addOverlayObject<T extends Phaser.GameObjects.GameObject>(object: T): T {
+    this.overlayObjects.push(object);
+    return object;
+  }
+
+  private getStars(level: number) {
+    return "⭐".repeat(level);
+  }
+
+  private getLevelInstructions() {
+    if (this.levelConfig.level === 1) {
+      return {
+        objective: "Revele a imagem escondida usando os códigos A e B.",
+        controls:
+          "Clique na legenda para escolher uma cor e depois clique nos quadradinhos com a letra igual.",
+        tip: "No nível 1, algumas partes já aparecem como dica.",
+      };
+    }
+
+    if (this.levelConfig.level === 2) {
+      return {
+        objective: "Use mais códigos para completar a flor escondida.",
+        controls:
+          "Escolha uma cor na legenda e preencha todos os espaços com a letra correspondente.",
+        tip: "Observe bem cada letra antes de pintar.",
+      };
+    }
+
+    return {
+      objective: "Complete a imagem sem dicas e revele o desenho final.",
+      controls: "Escolha o código certo na legenda e pinte a matriz com atenção.",
+      tip: "No nível 3, a grade é maior. Vá por partes.",
+    };
+  }
+
+  private showStartScreen() {
+    this.clearOverlay();
+    this.input.enabled = true;
+
+    const info = this.getLevelInstructions();
+
+    const bg = this.addOverlayObject(
+      this.add.rectangle(640, 360, 1280, 720, 0xfdf2f8, 0.98).setDepth(300)
+    );
+
+    const decorativeSquares: Phaser.GameObjects.Rectangle[] = [];
+
+    for (let i = 0; i < 16; i++) {
+      const square = this.addOverlayObject(
+        this.add
+          .rectangle(
+            Phaser.Math.Between(70, 1210),
+            Phaser.Math.Between(80, 650),
+            Phaser.Math.Between(16, 34),
+            Phaser.Math.Between(16, 34),
+            Phaser.Utils.Array.GetRandom([
+              0xf9a8d4,
+              0xc4b5fd,
+              0x93c5fd,
+              0xfacc15,
+            ]),
+            0.28
+          )
+          .setDepth(300)
+      );
+
+      decorativeSquares.push(square);
+
+      this.tweens.add({
+        targets: square,
+        angle: 360,
+        scaleX: 1.15,
+        scaleY: 1.15,
+        duration: 2500 + i * 120,
+        yoyo: true,
+        repeat: -1,
+      });
+    }
+
+    const stars = this.addOverlayObject(
+  this.add.container(640, 105).setDepth(301)
+);
+
+const totalStars = this.levelConfig.level;
+const spacing = 90;
+const startX = -((totalStars - 1) * spacing) / 2;
+
+for (let i = 0; i < totalStars; i++) {
+  const star = this.add
+    .star(startX + i * spacing, 0, 5, 16, 34, 0xffd700)
+    .setStrokeStyle(4, 0x111827);
+
+  stars.add(star);
+
+  this.tweens.add({
+    targets: star,
+    scale: { from: 0.95, to: 1.08 },
+    duration: 800,
+    yoyo: true,
+    repeat: -1,
+    ease: "Sine.easeInOut",
+  });
+}           
+
+    const title = this.addOverlayObject(
+      this.add
+        .text(640, 175, `Nível ${this.levelConfig.level} - ${this.levelConfig.title}`, {
+          fontSize: "38px",
+          fontFamily: "Arial Black, Arial",
+          color: "#86198f",
+          stroke: "#ffffff",
+          strokeThickness: 5,
+          align: "center",
+          wordWrap: { width: 940 },
+        })
+        .setOrigin(0.5)
+        .setDepth(301)
+    );
+
+    const card = this.addOverlayObject(
+      this.add
+        .rectangle(640, 355, 900, 270, 0xffffff, 0.95)
+        .setStrokeStyle(5, 0xc084fc)
+        .setDepth(301)
+    );
+
+    const objective = this.addOverlayObject(
+      this.add
+        .text(640, 275, `🎯 ${info.objective}`, {
+          fontSize: "26px",
+          fontFamily: "Arial Black, Arial",
+          color: "#334155",
+          align: "center",
+          wordWrap: { width: 780 },
+        })
+        .setOrigin(0.5)
+        .setDepth(302)
+    );
+
+    const controls = this.addOverlayObject(
+      this.add
+        .text(640, 365, `🖱️ ${info.controls}`, {
+          fontSize: "24px",
+          fontFamily: "Arial",
+          color: "#475569",
+          align: "center",
+          wordWrap: { width: 760 },
+        })
+        .setOrigin(0.5)
+        .setDepth(302)
+    );
+
+    const tip = this.addOverlayObject(
+      this.add
+        .text(640, 455, `💡 ${info.tip}`, {
+          fontSize: "23px",
+          fontFamily: "Arial Black, Arial",
+          color: "#7e22ce",
+          align: "center",
+          wordWrap: { width: 760 },
+        })
+        .setOrigin(0.5)
+        .setDepth(302)
+    );
+
+    const button = this.addOverlayObject(
+      this.add
+        .rectangle(640, 585, 300, 68, 0x9333ea, 1)
+        .setStrokeStyle(4, 0xffffff)
+        .setInteractive({ useHandCursor: true })
+        .setDepth(302)
+    );
+
+    const buttonText = this.addOverlayObject(
+      this.add
+        .text(640, 585, "Iniciar", {
+          fontSize: "30px",
+          fontFamily: "Arial Black, Arial",
+          color: "#ffffff",
+        })
+        .setOrigin(0.5)
+        .setDepth(303)
+    );
+
+    const start = () => {
+      this.playClick();
+      this.clearOverlay();
+      this.levelStarted = true;
+
+      if (this.levelConfig.level === 1) {
+        this.time.delayedCall(450, () => {
+          this.createTutorialAnimation();
+        });
+      }
+    };
+
+    button.on("pointerdown", start);
+    buttonText.setInteractive({ useHandCursor: true });
+    buttonText.on("pointerdown", start);
+
+    button.on("pointerover", () => button.setFillStyle(0xa855f7));
+    button.on("pointerout", () => button.setFillStyle(0x9333ea));
+
+    this.tweens.add({
+      targets: [stars, title, card, objective, controls, tip, button, buttonText],
+      alpha: { from: 0, to: 1 },
+      y: "+=8",
+      duration: 450,
+      ease: "Back.Out",
+    });
+
+    this.tweens.add({
+      targets: stars,
+      scaleX: 1.08,
+      scaleY: 1.08,
+      duration: 700,
+      yoyo: true,
+      repeat: -1,
+      ease: "Sine.easeInOut",
+    });
+
+    this.tweens.add({
+      targets: [button, buttonText],
+      scaleX: 1.04,
+      scaleY: 1.04,
+      duration: 750,
+      yoyo: true,
+      repeat: -1,
+      ease: "Sine.easeInOut",
+    });
+
+    void bg;
+    void decorativeSquares;
+  }
+
   private createTutorialAnimation() {
-    const overlay = this.add
-      .rectangle(640, 360, 1280, 720, 0x000000, 0.4)
-      .setDepth(200);
+    this.tutorialStep = 0;
+    this.showTutorialStep();
+  }
+
+  private showTutorialStep() {
+    this.tutorialContainer?.destroy();
+    this.nextTutorialButton?.destroy();
+
+    const steps = [
+      { text: "Clique na legenda A = ROSA", color: 0xff66b3, label: "A" },
+      { text: "Agora clique nos espaços com a letra A", color: 0xffffff, label: "A" },
+      { text: "Clique na legenda B = BRANCO", color: 0xffffff, label: "B" },
+      { text: "Agora clique nos espaços com a letra B", color: 0xffffff, label: "B" },
+      { text: "Complete o desenho para avançar de nível", color: 0x86efac, label: "✓" },
+    ];
+
+    const step = steps[this.tutorialStep];
+
+    const blocker = this.add
+  .rectangle(640, 360, 1280, 720, 0x111827, 0.82)
+  .setDepth(190)
+  .setInteractive();
 
     const panel = this.add
-      .rectangle(640, 135, 880, 110, 0xffffff, 0.96)
-      .setStrokeStyle(4, 0xc084fc)
+      .rectangle(640, 210, 760, 150, 0xffffff, 0.97)
+      .setStrokeStyle(4, 0xa855f7)
+      .setDepth(200);
+
+    const numberBadge = this.add
+      .circle(300, 195, 24, 0x2563eb, 1)
+      .setStrokeStyle(3, 0xffffff)
       .setDepth(201);
 
-    const text = this.add
-      .text(640, 135, "", {
-        fontSize: "28px",
+    const numberText = this.add
+      .text(300, 195, String(this.tutorialStep + 1), {
+        fontSize: "24px",
         fontFamily: "Arial Black, Arial",
-        color: "#7e22ce",
-        align: "center",
-        wordWrap: { width: 780 },
+        color: "#ffffff",
       })
       .setOrigin(0.5)
       .setDepth(202);
 
-    const firstCode = this.levelConfig.palette[0]?.code;
-    const secondCode = this.levelConfig.palette[1]?.code;
+    const text = this.add
+      .text(640, 160, step.text, {
+        fontSize: "26px",
+        fontFamily: "Arial Black, Arial",
+        color: "#7e22ce",
+        align: "center",
+        wordWrap: { width: 620 },
+      })
+      .setOrigin(0.5)
+      .setDepth(202);
 
-    if (!firstCode) {
-      overlay.destroy();
-      panel.destroy();
-      text.destroy();
-      return;
-    }
+    const square = this.add
+      .rectangle(640, 230, 70, 70, step.color, 1)
+      .setStrokeStyle(4, 0x111827)
+      .setDepth(202);
 
-    const highlightCells = (code: PixelCode) => {
-      this.cells.forEach((cell) => {
-        if (cell.code === code && !cell.filled) {
-          this.tweens.add({
-            targets: cell,
-            scaleX: 1.18,
-            scaleY: 1.18,
-            yoyo: true,
-            repeat: 2,
-            duration: 180,
-          });
-        }
-      });
+    const label = this.add
+      .text(640, 230, step.label, {
+        fontSize: "32px",
+        fontFamily: "Arial Black, Arial",
+        color: "#111827",
+      })
+      .setOrigin(0.5)
+      .setDepth(203);
+
+    this.tutorialContainer = this.add.container(0, 0, [
+     blocker,
+  panel,
+  numberBadge,
+  numberText,
+  text,
+  square,
+  label,
+    ]);
+
+    this.createNextTutorialButton();
+  }
+
+  private createNextTutorialButton() {
+    const buttonBg = this.add
+      .rectangle(1035, 210, 64, 64, 0xa855f7, 1)
+      .setStrokeStyle(4, 0xffffff)
+      .setInteractive({ useHandCursor: true })
+      .setDepth(210);
+
+    const arrow = this.add
+      .text(1035, 210, "➜", {
+        fontSize: "34px",
+        fontFamily: "Arial Black, Arial",
+        color: "#ffffff",
+      })
+      .setOrigin(0.5)
+      .setDepth(211);
+
+    const goNext = () => {
+      this.playClick();
+      this.tutorialStep++;
+
+      if (this.tutorialStep >= 5) {
+        this.tutorialContainer?.destroy();
+        this.nextTutorialButton?.destroy();
+        return;
+      }
+
+      this.showTutorialStep();
     };
 
-    text.setText(`1. Clique na legenda: ${firstCode}`);
+    buttonBg.on("pointerdown", goNext);
+    arrow.setInteractive({ useHandCursor: true });
+    arrow.on("pointerdown", goNext);
 
-    this.time.delayedCall(1200, () => {
-      text.setText(`2. Agora clique nos quadradinhos com ${firstCode}`);
-      highlightCells(firstCode);
-    });
-
-    this.time.delayedCall(3200, () => {
-      if (!secondCode) return;
-      text.setText(`3. Depois escolha ${secondCode} na legenda`);
-    });
-
-    this.time.delayedCall(4400, () => {
-      if (!secondCode) return;
-      text.setText(`4. Pinte os quadradinhos com ${secondCode}`);
-      highlightCells(secondCode);
-    });
-
-    this.time.delayedCall(6800, () => {
-      this.tweens.add({
-        targets: [overlay, panel, text],
-        alpha: 0,
-        duration: 400,
-        onComplete: () => {
-          overlay.destroy();
-          panel.destroy();
-          text.destroy();
-        },
-      });
-    });
+    this.nextTutorialButton = this.add.container(0, 0, [buttonBg, arrow]);
   }
 
   private createBackground() {
@@ -267,6 +592,8 @@ export class GameScene extends Phaser.Scene {
         .setOrigin(0, 0.5);
 
       button.on("pointerdown", () => {
+        if (!this.levelStarted) return;
+        this.startTimerOnce();
         this.playClick();
         this.selectedCode = item.code;
         this.createPalette();
@@ -330,7 +657,10 @@ export class GameScene extends Phaser.Scene {
   }
 
   private handleCellClick(cell: CellObject) {
+    if (!this.levelStarted) return;
     if (cell.filled) return;
+
+    this.startTimerOnce();
 
     if (this.selectedCode !== cell.code) {
       this.errors += 1;
@@ -343,7 +673,7 @@ export class GameScene extends Phaser.Scene {
         pointsEarned: -5,
       });
 
-      this.showFloatingMessage("Código incorreto!", 0xef4444);
+      this.showErrorScreen();
       this.emitProgress();
       return;
     }
@@ -370,6 +700,261 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
+  private showErrorScreen() {
+    this.clearOverlay();
+    this.levelStarted = false;
+
+    if (this.timerEvent) {
+      this.timerEvent.paused = true;
+    }
+
+    const bg = this.addOverlayObject(
+      this.add.rectangle(640, 360, 1280, 720, 0x111827, 0.95).setDepth(300)
+    );
+
+    const title = this.addOverlayObject(
+      this.add
+        .text(640, 175, "Você cometeu um erro!", {
+          fontSize: "52px",
+          fontFamily: "Arial Black, Arial",
+          color: "#ffffff",
+          stroke: "#ef4444",
+          strokeThickness: 6,
+        })
+        .setOrigin(0.5)
+        .setDepth(301)
+    );
+
+    const subtitle = this.addOverlayObject(
+      this.add
+        .text(640, 310, "Você perdeu uma vida.\nDeseja tentar novamente?", {
+          fontSize: "30px",
+          fontFamily: "Arial",
+          color: "#ffffff",
+          align: "center",
+          wordWrap: { width: 820 },
+        })
+        .setOrigin(0.5)
+        .setDepth(301)
+    );
+
+    const retryButton = this.addOverlayObject(
+      this.add
+        .rectangle(500, 500, 310, 66, 0x22c55e, 1)
+        .setStrokeStyle(4, 0xffffff)
+        .setInteractive({ useHandCursor: true })
+        .setDepth(302)
+    );
+
+    const retryText = this.addOverlayObject(
+      this.add
+        .text(500, 500, "Tentar novamente", {
+          fontSize: "24px",
+          fontFamily: "Arial Black, Arial",
+          color: "#ffffff",
+        })
+        .setOrigin(0.5)
+        .setDepth(303)
+    );
+
+    const exitButton = this.addOverlayObject(
+      this.add
+        .rectangle(790, 500, 220, 66, 0xef4444, 1)
+        .setStrokeStyle(4, 0xffffff)
+        .setInteractive({ useHandCursor: true })
+        .setDepth(302)
+    );
+
+    const exitText = this.addOverlayObject(
+      this.add
+        .text(790, 500, "Sair", {
+          fontSize: "24px",
+          fontFamily: "Arial Black, Arial",
+          color: "#ffffff",
+        })
+        .setOrigin(0.5)
+        .setDepth(303)
+    );
+
+    const retry = () => {
+      this.playClick();
+      this.clearOverlay();
+      window.dispatchEvent(new CustomEvent("pixel-secret-show-extra-life-modal"));
+    };
+
+    const exit = () => {
+      this.playClick();
+      window.dispatchEvent(new CustomEvent("pixel-secret-exit-game"));
+    };
+
+    retryButton.on("pointerdown", retry);
+    retryText.setInteractive({ useHandCursor: true });
+    retryText.on("pointerdown", retry);
+
+    exitButton.on("pointerdown", exit);
+    exitText.setInteractive({ useHandCursor: true });
+    exitText.on("pointerdown", exit);
+
+    retryButton.on("pointerover", () => retryButton.setFillStyle(0x16a34a));
+    retryButton.on("pointerout", () => retryButton.setFillStyle(0x22c55e));
+    exitButton.on("pointerover", () => exitButton.setFillStyle(0xdc2626));
+    exitButton.on("pointerout", () => exitButton.setFillStyle(0xef4444));
+
+    this.tweens.add({
+      targets: [title, subtitle, retryButton, retryText, exitButton, exitText],
+      alpha: { from: 0, to: 1 },
+      y: "+=10",
+      duration: 450,
+      ease: "Back.Out",
+    });
+
+    void bg;
+  }
+
+  private showGameOverScreen(blockedUntil?: string, unlockCost = 30) {
+  this.clearOverlay();
+  this.levelStarted = false;
+  this.input.enabled = true;
+  this.timerEvent?.remove(false);
+
+  const formattedDate = blockedUntil
+    ? new Date(blockedUntil).toLocaleString("pt-BR")
+    : "em 2 dias";
+
+  const bg = this.addOverlayObject(
+    this.add.rectangle(640, 360, 1280, 720, 0x111827, 0.96).setDepth(300)
+  );
+
+  const title = this.addOverlayObject(
+    this.add
+      .text(640, 120, "GAME OVER", {
+        fontSize: "64px",
+        fontFamily: "Arial Black, Arial",
+        color: "#ffffff",
+        stroke: "#ef4444",
+        strokeThickness: 8,
+      })
+      .setOrigin(0.5)
+      .setDepth(301)
+  );
+
+  const text = this.addOverlayObject(
+    this.add
+      .text(
+        640,
+        270,
+        `Você ficou sem vidas.\n\nO jogo foi bloqueado até:\n${formattedDate}`,
+        {
+          fontSize: "30px",
+          fontFamily: "Arial",
+          color: "#ffffff",
+          align: "center",
+          wordWrap: { width: 900 },
+        }
+      )
+      .setOrigin(0.5)
+      .setDepth(301)
+  );
+
+  const unlockInfo = this.addOverlayObject(
+    this.add
+      .text(640, 430, `Você pode desbloquear agora usando ${unlockCost} pontos.`, {
+        fontSize: "26px",
+        fontFamily: "Arial Black, Arial",
+        color: "#facc15",
+        align: "center",
+        wordWrap: { width: 900 },
+      })
+      .setOrigin(0.5)
+      .setDepth(301)
+  );
+
+  // botão desbloquear
+  const unlockButton = this.addOverlayObject(
+    this.add
+      .rectangle(470, 560, 340, 74, 0x9333ea, 1)
+      .setStrokeStyle(4, 0xffffff)
+      .setInteractive({ useHandCursor: true })
+      .setDepth(302)
+  );
+
+  const unlockText = this.addOverlayObject(
+    this.add
+      .text(470, 560, "Desbloquear jogo", {
+        fontSize: "24px",
+        fontFamily: "Arial Black, Arial",
+        color: "#ffffff",
+      })
+      .setOrigin(0.5)
+      .setDepth(303)
+  );
+
+  // botão sair
+  const exitButton = this.addOverlayObject(
+    this.add
+      .rectangle(820, 560, 320, 74, 0xef4444, 1)
+      .setStrokeStyle(4, 0xffffff)
+      .setInteractive({ useHandCursor: true })
+      .setDepth(302)
+  );
+
+  const exitText = this.addOverlayObject(
+    this.add
+      .text(820, 560, "Voltar aos jogos", {
+        fontSize: "24px",
+        fontFamily: "Arial Black, Arial",
+        color: "#ffffff",
+      })
+      .setOrigin(0.5)
+      .setDepth(303)
+  );
+
+  const unlock = () => {
+    this.playClick();
+
+    window.dispatchEvent(
+      new CustomEvent("pixel-secret-open-unlock-modal")
+    );
+  };
+
+  const exit = () => {
+    this.playClick();
+
+    window.dispatchEvent(
+      new CustomEvent("pixel-secret-exit-game")
+    );
+  };
+
+  unlockButton.on("pointerdown", unlock);
+
+  unlockText.setInteractive({ useHandCursor: true });
+  unlockText.on("pointerdown", unlock);
+
+  exitButton.on("pointerdown", exit);
+
+  exitText.setInteractive({ useHandCursor: true });
+  exitText.on("pointerdown", exit);
+
+  this.tweens.add({
+    targets: [
+      title,
+      text,
+      unlockInfo,
+      unlockButton,
+      unlockText,
+      exitButton,
+      exitText,
+    ],
+    alpha: { from: 0, to: 1 },
+    y: "+=10",
+    duration: 450,
+    ease: "Back.Out",
+  });
+
+  void bg;
+}
+
+
   private hideCellLabel(row: number, col: number) {
     const label = this.children.getByName(`label-${row}-${col}`);
     label?.destroy();
@@ -380,6 +965,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private handleSuccess() {
+    this.levelStarted = false;
     this.playWin();
     this.showSuccessAnimation();
     this.emitProgress();
@@ -398,9 +984,11 @@ export class GameScene extends Phaser.Scene {
         errors: this.errors,
       });
 
-      this.time.delayedCall(1200, () => {
-        this.showNextLevelButton(nextLevel as 1 | 2 | 3);
-      });
+      this.time.delayedCall(1100, () => {
+  this.scene.restart({
+    level: nextLevel as 1 | 2 | 3,
+  });
+});
 
       return;
     }
@@ -416,34 +1004,145 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
-  private showNextLevelButton(nextLevel: 1 | 2 | 3) {
-    const button = this.add
-      .rectangle(500, 650, 420, 58, 0x9333ea, 1)
-      .setStrokeStyle(4, 0xffffff)
-      .setInteractive({ useHandCursor: true })
-      .setDepth(120);
+  private showLevelCompleteScreen(nextLevel: 1 | 2 | 3) {
+    this.clearOverlay();
 
-    const text = this.add
-      .text(500, 650, "Avançar para o próximo nível", {
-        fontSize: "22px",
-        fontFamily: "Arial Black, Arial",
-        color: "#ffffff",
-      })
-      .setOrigin(0.5)
-      .setDepth(121);
+    const bg = this.addOverlayObject(
+      this.add.rectangle(640, 360, 1280, 720, 0xf0fdf4, 0.98).setDepth(300)
+    );
+
+    const stars = this.addOverlayObject(
+      this.add
+        .text(640, 150, this.getStars(this.levelConfig.level), {
+          fontSize: "52px",
+        })
+        .setOrigin(0.5)
+        .setDepth(301)
+    );
+
+    const title = this.addOverlayObject(
+      this.add
+        .text(640, 260, `Parabéns!\nVocê concluiu o nível ${this.levelConfig.level}!`, {
+          fontSize: "42px",
+          fontFamily: "Arial Black, Arial",
+          color: "#16a34a",
+          stroke: "#ffffff",
+          strokeThickness: 5,
+          align: "center",
+          wordWrap: { width: 900 },
+        })
+        .setOrigin(0.5)
+        .setDepth(301)
+    );
+
+    const subtitle = this.addOverlayObject(
+      this.add
+        .text(640, 410, "Prepare-se para o próximo desafio.", {
+          fontSize: "28px",
+          fontFamily: "Arial",
+          color: "#334155",
+        })
+        .setOrigin(0.5)
+        .setDepth(301)
+    );
+
+    void bg;
+    void stars;
+    void title;
+    void subtitle;
+
+    this.time.delayedCall(1700, () => {
+      this.showNextLevelScreen(nextLevel);
+    });
+  }
+
+  private showNextLevelScreen(nextLevel: 1 | 2 | 3) {
+    this.clearOverlay();
+
+    const nextConfig = LEVELS.find((item) => item.level === nextLevel);
+
+    const bg = this.addOverlayObject(
+      this.add.rectangle(640, 360, 1280, 720, 0xfdf2f8, 0.98).setDepth(300)
+    );
+
+    const stars = this.addOverlayObject(
+      this.add
+        .text(640, 140, this.getStars(nextLevel), {
+          fontSize: "52px",
+        })
+        .setOrigin(0.5)
+        .setDepth(301)
+    );
+
+    const title = this.addOverlayObject(
+      this.add
+        .text(640, 240, `Próximo nível: ${nextLevel}`, {
+          fontSize: "42px",
+          fontFamily: "Arial Black, Arial",
+          color: "#86198f",
+          stroke: "#ffffff",
+          strokeThickness: 5,
+        })
+        .setOrigin(0.5)
+        .setDepth(301)
+    );
+
+    const subtitle = this.addOverlayObject(
+      this.add
+        .text(640, 325, nextConfig?.title ?? "Novo desafio", {
+          fontSize: "32px",
+          fontFamily: "Arial Black, Arial",
+          color: "#334155",
+          align: "center",
+          wordWrap: { width: 850 },
+        })
+        .setOrigin(0.5)
+        .setDepth(301)
+    );
+
+    const button = this.addOverlayObject(
+      this.add
+        .rectangle(640, 510, 430, 66, 0x9333ea, 1)
+        .setStrokeStyle(4, 0xffffff)
+        .setInteractive({ useHandCursor: true })
+        .setDepth(302)
+    );
+
+    const buttonText = this.addOverlayObject(
+      this.add
+        .text(640, 510, "Avançar", {
+          fontSize: "30px",
+          fontFamily: "Arial Black, Arial",
+          color: "#ffffff",
+        })
+        .setOrigin(0.5)
+        .setDepth(303)
+    );
 
     const goNext = () => {
       this.playClick();
-
-      this.scene.restart({
-        level: nextLevel,
-      });
+      this.clearOverlay();
+      this.scene.restart({ level: nextLevel });
     };
 
     button.on("pointerdown", goNext);
+    buttonText.setInteractive({ useHandCursor: true });
+    buttonText.on("pointerdown", goNext);
 
-    text.setInteractive({ useHandCursor: true });
-    text.on("pointerdown", goNext);
+    button.on("pointerover", () => button.setFillStyle(0xa855f7));
+    button.on("pointerout", () => button.setFillStyle(0x9333ea));
+
+    void bg;
+    void stars;
+    void title;
+    void subtitle;
+  }
+
+  private startTimerOnce() {
+    if (this.hasStartedTimer) return;
+
+    this.hasStartedTimer = true;
+    this.startTimer();
   }
 
   private startTimer() {
@@ -460,13 +1159,15 @@ export class GameScene extends Phaser.Scene {
     this.input.enabled = false;
     this.timerEvent?.destroy();
     this.playWrong();
-    this.showFloatingMessage("Tempo esgotado!", 0xef4444);
 
     runtimeGameBridge.emit({
-      type: "GAME_OVER",
+      type: "WRONG_ANSWER",
       gameId: GAME_ID,
       stage: this.levelConfig.level,
+      pointsEarned: -5,
     });
+
+    this.showErrorScreen();
   }
 
   private emitProgress() {

@@ -22,10 +22,17 @@ export default function ConfirmModal({
   if (!isOpen) return null;
 
   return (
-    <div className="modal-overlay" onClick={onCancel}>
+    <div
+      className="modal-overlay"
+      onClick={onCancel}
+      onMouseDown={(event) => event.stopPropagation()}
+      onPointerDown={(event) => event.stopPropagation()}
+    >
       <div
         className="modal-card"
         onClick={(event) => event.stopPropagation()}
+        onMouseDown={(event) => event.stopPropagation()}
+        onPointerDown={(event) => event.stopPropagation()}
       >
         <div className="modal-header">
           <h3>{title}</h3>
@@ -40,7 +47,10 @@ export default function ConfirmModal({
             <button
               type="button"
               className="modal-button modal-button-secondary"
-              onClick={onCancel}
+              onClick={(event) => {
+                event.stopPropagation();
+                onCancel();
+              }}
             >
               {cancelText}
             </button>
@@ -53,7 +63,10 @@ export default function ConfirmModal({
                 ? "modal-button modal-button-danger"
                 : "modal-button modal-button-primary"
             }
-            onClick={onConfirm}
+            onClick={(event) => {
+              event.stopPropagation();
+              onConfirm();
+            }}
           >
             {confirmText}
           </button>

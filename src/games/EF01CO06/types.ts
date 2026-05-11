@@ -24,6 +24,7 @@ export interface LevelConfig {
   level: 1 | 2 | 3
   availableApps: AppId[]
   missions: Mission[]
+  timeLimit: number  // seconds
 }
 
 export const APP_DEFS: AppDef[] = [

@@ -40,6 +40,14 @@ export const MISSIONS_L2: Mission[] = [
       { appId: 'calculadora', actionKey: 'calculate',  hint: 'Agora calcule 4 + 2 na Calculadora' },
     ],
   },
+  {
+    id: 'm2-4',
+    text: 'Fotografe um amigo especial e grave uma mensagem para ele!',
+    steps: [
+      { appId: 'camera',   actionKey: 'take-photo',     hint: 'Tire uma foto com a Câmera' },
+      { appId: 'gravador', actionKey: 'save-recording', hint: 'Agora grave uma mensagem no Gravador' },
+    ],
+  },
 ]
 
 export const MISSIONS_L3: Mission[] = [
@@ -56,8 +64,8 @@ export const MISSIONS_L3: Mission[] = [
     id: 'm3-2',
     text: 'Ouça a música favorita da Lua e depois desenhe o que imaginou!',
     steps: [
-      { appId: 'player',  actionKey: 'play-music',        hint: 'Toque a música no Player' },
-      { appId: 'desenho', actionKey: 'confirm-drawing',   hint: 'Desenhe o que imaginou' },
+      { appId: 'player',  actionKey: 'play-music',      hint: 'Toque a música no Player' },
+      { appId: 'desenho', actionKey: 'confirm-drawing', hint: 'Desenhe o que imaginou' },
     ],
   },
   {
@@ -67,6 +75,30 @@ export const MISSIONS_L3: Mission[] = [
       { appId: 'gravador',    actionKey: 'save-recording', hint: 'Grave seu nome' },
       { appId: 'calculadora', actionKey: 'calculate',      hint: 'Calcule 5 + 3 na Calculadora' },
       { appId: 'camera',      actionKey: 'take-photo',     hint: 'Tire uma foto do resultado' },
+    ],
+  },
+  {
+    id: 'm3-4',
+    text: 'Ouça uma música e pesquise sobre ela na biblioteca!',
+    steps: [
+      { appId: 'player',    actionKey: 'play-music', hint: 'Toque a música no Player' },
+      { appId: 'navegador', actionKey: 'navigate',   hint: 'Pesquise na Biblioteca Digital' },
+    ],
+  },
+  {
+    id: 'm3-5',
+    text: 'Desenhe um problema de matemática e resolva-o na calculadora!',
+    steps: [
+      { appId: 'desenho',     actionKey: 'confirm-drawing', hint: 'Desenhe um problema e pressione Pronto!' },
+      { appId: 'calculadora', actionKey: 'calculate',       hint: 'Calcule a resposta na Calculadora' },
+    ],
+  },
+  {
+    id: 'm3-6',
+    text: 'Tire uma foto especial e grave uma mensagem sobre ela!',
+    steps: [
+      { appId: 'camera',   actionKey: 'take-photo',     hint: 'Tire uma foto com a Câmera' },
+      { appId: 'gravador', actionKey: 'save-recording', hint: 'Grave uma mensagem sobre a foto' },
     ],
   },
 ]
