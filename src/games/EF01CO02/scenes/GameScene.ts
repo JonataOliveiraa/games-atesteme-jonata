@@ -19,7 +19,6 @@ export class GameScene extends Phaser.Scene {
         super('GameScene');
     }
 
-    // --- MOTOR DE COMUNICAÇÃO CENTRALIZADO ---
     private emitPlatformEvent(type: "WRONG_ANSWER" | "GAME_OVER" | "FINISH_GAME" | "CHECKPOINT" | "GAME_READY") {
         const levelNumber = this.currentLevelIdx + 1;
         
@@ -30,16 +29,12 @@ export class GameScene extends Phaser.Scene {
                 stage: levelNumber,
             };
 
-            // Se for checkpoint, adiciona o progresso
             if (type === "CHECKPOINT") {
                 const steps = LEVELS[this.currentLevelIdx].steps;
                 payload.progress = Math.round((this.placedCount / steps.length) * 100);
             }
 
             window.runtimeGameBridge.emit(payload);
-            console.log(`[Bridge] Evento enviado: ${type}`, payload);
-        } else {
-            console.warn(`[Local] Evento simulado: ${type} para o nível ${levelNumber}`);
         }
     }
 
@@ -57,7 +52,6 @@ export class GameScene extends Phaser.Scene {
         this.createBackground(width, height);
         this.showStartScreen();
 
-        // Avisa que o jogo carregou
         this.emitPlatformEvent("GAME_READY");
     }
 
@@ -181,7 +175,6 @@ export class GameScene extends Phaser.Scene {
         this.input.on('drop', (pointer: any, gameObject: any, dropZone: any) => {
             if (gameObject !== handle) return;
             
-            // VERIFICAÇÃO DE ACERTO
             if (dropZone.getData('stepId') === this.nextStepRequired && container.getData('stepId') === this.nextStepRequired) {
                 container.setPosition(dropZone.x, dropZone.y);
                 handle.disableInteractive();
@@ -189,14 +182,12 @@ export class GameScene extends Phaser.Scene {
                 this.nextStepRequired++;
                 this.placedCount++;
                 
-                // Envia checkpoint para a plataforma
                 this.emitPlatformEvent("CHECKPOINT");
 
                 if (this.placedCount === LEVELS[this.currentLevelIdx].steps.length) {
                     this.handleLevelWin();
                 }
             } else {
-                // ERRO DETECTADO
                 this.handleError(container);
             }
         });
@@ -231,8 +222,9 @@ export class GameScene extends Phaser.Scene {
             if (!isLastLevel) {
                 this.scene.restart({ levelIndex: this.currentLevelIdx + 1 });
             } else {
-                // AVISA QUE O JOGO TODO TERMINOU
                 this.emitPlatformEvent("FINISH_GAME");
+                // Correção: Redireciona para a raiz do site onde fica o menu de jogos
+                window.location.href = '/';
             }
         });
     }
@@ -240,13 +232,7 @@ export class GameScene extends Phaser.Scene {
     private handleError(container: Phaser.GameObjects.Container) {
         this.cameras.main.shake(250, 0.015);
         this.playWrong();
-        
-        // --- AÇÃO CRÍTICA PARA O BLOQUEIO ---
-        // Avisa a plataforma que o aluno errou. 
-        // Se ele não tiver mais vidas, a plataforma vai sobrepor a tela de bloqueio agora.
         this.emitPlatformEvent("WRONG_ANSWER");
-
-        // Pausa o timer do jogo enquanto o aluno vê a mensagem de erro interna
         if (this.timerEvent) this.timerEvent.paused = true;
         this.showGameOverScreen();
     }
@@ -271,13 +257,11 @@ export class GameScene extends Phaser.Scene {
         this.timerEvent = this.time.addEvent({
             delay: LEVELS[this.currentLevelIdx].timeLimit * 1000,
             callback: () => { 
-                // Avisa que o tempo acabou
                 this.emitPlatformEvent("GAME_OVER"); 
             }
         });
     }
 
-    // --- FUNÇÕES DE ÁUDIO ---
     private getAudioContext(): AudioContext | null {
         if (!("context" in this.sound)) return null;
         return (this.sound as Phaser.Sound.WebAudioSoundManager).context;

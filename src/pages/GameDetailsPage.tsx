@@ -13,7 +13,7 @@ import { EventBus } from "../shared/EventBus";
 
 const SLUG_TO_CODE: Record<string, GameCode> = {
   "base-dos-classificadores": "EF01CO01",
-  "quiz-de-conhecimentos": "EF01CO02",
+  "trilha-do-passo-a-passo": "EF01CO02",
   "oficina-dos-algoritmos": "EF01CO03",
   "pixel-secreto": "EF01CO05",
   "desktop-digital-infantil": "EF01CO06",

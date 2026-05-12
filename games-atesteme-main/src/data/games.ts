@@ -12,12 +12,12 @@ export const games: Game[] = [
   },
   {
     id: 1,
-    title: "Quiz de Conhecimentos",
+    title: "Trilha do Passo a Passo",
     description: "Teste seus conhecimentos com perguntas de diversas categorias.",
     category: "Trivia",
     points: 50,
-    icon: "🧠",
-    slug: "quiz-de-conhecimentos",
+    icon: "👣",
+    slug: "trilha-do-passo-a-passo",
   },
   {
     id: 2,
