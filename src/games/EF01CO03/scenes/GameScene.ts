@@ -16,10 +16,13 @@ const TIMER_BAR_Y = 55;
 const TIMER_BAR_W = 900;
 
 export class GameScene extends Phaser.Scene {
+  private levelStarted = false;
+  private overlayObjects: Phaser.GameObjects.GameObject[] = [];
   private levelConfig!: AlgorithmLevel;
   private cardSprites: CardSprite[] = [];
   private slots: Phaser.GameObjects.Rectangle[] = [];
   private placedCards: Array<CardSprite | null> = [];
+  private hasStartedTimer = false;
 
   private hits = 0;
   private errors = 0;
@@ -30,6 +33,152 @@ export class GameScene extends Phaser.Scene {
 
   private unsubscribePlatformCommands?: () => void;
 
+  private clearOverlay() {
+  this.overlayObjects.forEach((object) => object.destroy());
+  this.overlayObjects = [];
+}
+
+private startTimerOnce() {
+  if (this.hasStartedTimer) return;
+
+  this.hasStartedTimer = true;
+  this.startTimer();
+}
+
+private addOverlayObject<T extends Phaser.GameObjects.GameObject>(object: T): T {
+  this.overlayObjects.push(object);
+  return object;
+}
+
+private getLevelInstructions() {
+  if (this.levelConfig.level === 1) {
+    return {
+      title: "Nível 1 - Primeiros passos",
+      objective: "Organize os comandos na ordem correta.",
+      tip: "Observe a sequência e pense no que deve acontecer primeiro.",
+    };
+  }
+  
+  if (this.levelConfig.level === 2) {
+    return {
+      title: "Nível 2 - Sequência lógica",
+      objective: "Monte um algoritmo com mais etapas.",
+      tip: "A ordem dos comandos muda o resultado final.",
+    };
+  }
+
+  return {
+    title: "Nível 3 - Desafio final",
+    objective: "Resolva uma sequência mais complexa.",
+    tip: "Analise tudo antes de testar o algoritmo.",
+  };
+}
+
+private showStartScreen() {
+  this.clearOverlay();
+  this.levelStarted = false;
+  this.input.enabled = true;
+
+  const info = this.getLevelInstructions();
+
+  this.addOverlayObject(
+    this.add.rectangle(640, 360, 1280, 720, 0xf5f3ff, 0.98).setDepth(300)
+  );
+
+  this.addOverlayObject(
+  this.add
+    .text(640, 115, "⚙️", {
+      fontSize: "64px",
+      fontFamily: "Arial",
+      padding: {
+        top: 18,
+        bottom: 18,
+        left: 18,
+        right: 18,
+      },
+    })
+    .setOrigin(0.5)
+    .setDepth(301)
+);
+
+  this.addOverlayObject(
+    this.add.text(640, 210, info.title, {
+      fontSize: "44px",
+      fontFamily: "Arial Black, Arial",
+      color: "#4338ca",
+      stroke: "#ffffff",
+      strokeThickness: 6,
+      align: "center",
+      wordWrap: { width: 920 },
+    })
+      .setOrigin(0.5)
+      .setDepth(301)
+  );
+
+  this.addOverlayObject(
+    this.add.rectangle(640, 380, 900, 230, 0xffffff, 0.9)
+      .setStrokeStyle(5, 0x818cf8)
+      .setDepth(301)
+  );
+
+  this.addOverlayObject(
+    this.add.text(640, 335, `🎯 ${info.objective}`, {
+      fontSize: "28px",
+      fontFamily: "Arial Black, Arial",
+      color: "#334155",
+      align: "center",
+      wordWrap: { width: 760 },
+    })
+      .setOrigin(0.5)
+      .setDepth(302)
+  );
+
+  this.addOverlayObject(
+    this.add.text(640, 430, `💡 ${info.tip}`, {
+      fontSize: "24px",
+      fontFamily: "Arial",
+      color: "#475569",
+      align: "center",
+      wordWrap: { width: 760 },
+    })
+      .setOrigin(0.5)
+      .setDepth(302)
+  );
+
+  const button = this.addOverlayObject(
+    this.add.rectangle(640, 585, 330, 70, 0x6366f1, 1)
+      .setStrokeStyle(4, 0xffffff)
+      .setInteractive({ useHandCursor: true })
+      .setDepth(302)
+  );
+
+  const buttonText = this.addOverlayObject(
+    this.add.text(640, 585, "Iniciar nível", {
+      fontSize: "28px",
+      fontFamily: "Arial Black, Arial",
+      color: "#ffffff",
+    })
+      .setOrigin(0.5)
+      .setDepth(303)
+  );
+
+  const start = () => {
+    this.playClick();
+  this.clearOverlay();
+
+  if (this.levelConfig.level === 1) {
+    this.showTutorialStep(0);
+    return;
+  }
+
+  this.levelStarted = true;
+};
+
+  button.on("pointerdown", start);
+  buttonText.setInteractive({ useHandCursor: true });
+  buttonText.on("pointerdown", start);
+}
+
   constructor() {
     super({ key: "GameScene" });
   }
@@ -39,36 +188,43 @@ export class GameScene extends Phaser.Scene {
     this.levelConfig = LEVELS.find((item) => item.level === lvl) ?? LEVELS[0];
 
     this.cardSprites = [];
-    this.slots = [];
-    this.placedCards = [];
-    this.hits = 0;
-    this.errors = 0;
-    this.scoredCorrectCards = new Set<string>();
-  }
+this.slots = [];
+this.placedCards = [];
+this.hits = 0;
+this.errors = 0;
+this.levelStarted = false;
+this.hasStartedTimer = false;
+this.timerEvent?.destroy();
+this.timerEvent = undefined;
+this.timerBar = undefined;
+this.scoredCorrectCards = new Set<string>();}
 
   create() {
-    this.createBackground();
-    this.createTitle();
-    this.createTimerBar();
-    this.createSlots();
-    this.createCards();
-    this.createTestButton();
-    this.setupDrag();
-    this.registerPlatformCommands();
-    this.startTimer();
+  this.createBackground();
+  this.createTitle();
+  this.createTimerBar();
+  this.createSlots();
+  this.createCards();
+  this.createTestButton();
+  this.setupDrag();
+  this.registerPlatformCommands();
 
-    EventBus.emit("algorithm-level-ready", {
-      levelConfig: this.levelConfig,
-    });
+  EventBus.emit("algorithm-level-ready", {
+    levelConfig: this.levelConfig,
+  });
 
-    runtimeGameBridge.emit({
-      type: "GAME_READY",
-      gameId: GAME_ID,
-    });
+  runtimeGameBridge.emit({
+    type: "GAME_READY",
+    gameId: GAME_ID,
+  });
 
-    this.emitProgress();
+  this.emitProgress();
+
+this.time.delayedCall(80, () => {
+  this.showStartScreen();
+});
   }
-
+  
   update() {
     if (!this.timerEvent || !this.timerBar) return;
 
@@ -91,6 +247,127 @@ export class GameScene extends Phaser.Scene {
       this.unsubscribePlatformCommands = undefined;
     }
   }
+
+  private showTutorialStep(stepIndex: number) {
+  this.clearOverlay();
+
+  const steps = [
+    {
+      title: "Arraste os cartões",
+      description: "Pegue os cartões e coloque na sequência correta.",
+      emoji: "🖱️",
+    },
+    {
+      title: "Monte o algoritmo",
+      description: "A ordem dos passos é importante para completar a tarefa.",
+      emoji: "⚙️",
+    },
+    {
+      title: "Teste sua sequência",
+      description: "Clique no botão roxo para verificar se o algoritmo está correto.",
+      emoji: "✅",
+    },
+  ];
+
+  const step = steps[stepIndex];
+
+  this.addOverlayObject(
+    this.add.rectangle(640, 360, 1280, 720, 0x000000, 0.72)
+      .setDepth(400)
+  );
+
+  this.addOverlayObject(
+    this.add.rectangle(640, 300, 760, 260, 0xffffff, 1)
+      .setStrokeStyle(6, 0x8b5cf6)
+      .setDepth(401)
+  );
+
+  this.addOverlayObject(
+    this.add.text(640, 225, step.emoji, {
+      fontSize: "70px",
+      fontFamily: "Arial",
+      padding: {
+        top: 12,
+        bottom: 12,
+      },
+    })
+      .setOrigin(0.5)
+      .setDepth(402)
+  );
+
+  this.addOverlayObject(
+    this.add.text(640, 300, step.title, {
+      fontSize: "38px",
+      fontFamily: "Arial Black, Arial",
+      color: "#7c3aed",
+      align: "center",
+    })
+      .setOrigin(0.5)
+      .setDepth(402)
+  );
+
+  this.addOverlayObject(
+    this.add.text(640, 370, step.description, {
+      fontSize: "24px",
+      fontFamily: "Arial",
+      color: "#334155",
+      align: "center",
+      wordWrap: {
+        width: 620,
+      },
+    })
+      .setOrigin(0.5)
+      .setDepth(402)
+  );
+
+  const isLast = stepIndex >= steps.length - 1;
+
+  const button = this.addOverlayObject(
+    this.add.rectangle(
+      930,
+      300,
+      80,
+      80,
+      0x8b5cf6,
+      1
+    )
+      .setStrokeStyle(4, 0xffffff)
+      .setInteractive({ useHandCursor: true })
+      .setDepth(403)
+  );
+
+  const buttonText = this.addOverlayObject(
+    this.add.text(
+      930,
+      300,
+      isLast ? "▶" : "→",
+      {
+        fontSize: "40px",
+        fontFamily: "Arial Black, Arial",
+        color: "#ffffff",
+      }
+    )
+      .setOrigin(0.5)
+      .setDepth(404)
+  );
+
+  const next = () => {
+    this.playClick();
+
+    if (isLast) {
+      this.clearOverlay();
+      this.levelStarted = true;
+      return;
+    }
+
+    this.showTutorialStep(stepIndex + 1);
+  };
+
+  button.on("pointerdown", next);
+
+  buttonText.setInteractive({ useHandCursor: true });
+  buttonText.on("pointerdown", next);
+}
 
   private createBackground() {
     this.add.rectangle(640, 360, 1280, 720, 0xf3e8ff);
@@ -279,27 +556,34 @@ export class GameScene extends Phaser.Scene {
       .setStrokeStyle(4, this.getCardColor(card.type));
 
     const emoji = this.add
-      .text(0, -22, card.emoji, {
-        fontSize: "32px",
-      })
-      .setOrigin(0.5);
+  .text(0, -18, card.emoji, {
+    fontSize: "28px",
+    fontFamily: "Arial",
+    align: "center",
+  })
+  .setOrigin(0.5);
 
-    const label = this.add
-      .text(0, 26, card.label, {
-        fontSize: "14px",
-        fontFamily: "Arial Black, Arial",
-        color: "#1e293b",
-        align: "center",
-        wordWrap: { width: 120 },
-      })
-      .setOrigin(0.5);
+const label = this.add
+  .text(0, 24, card.label, {
+    fontSize: "13px",
+    fontFamily: "Arial Black, Arial",
+    color: "#1e293b",
+    align: "center",
+    wordWrap: { width: 95 },
+    lineSpacing: -4,
+  })
+  .setOrigin(0.5);
 
-    const container = this.add.container(x, y, [shadow, bg, emoji, label]) as CardSprite;
+const container = this.add.container(
+  x,
+  y,
+  [shadow, bg, emoji, label]
+) as CardSprite;
 
     container.cardData = card;
     container.originX_ = x;
     container.originY_ = y;
-    container.setSize(150, 110);
+    container.setSize(150, 130);
     container.setInteractive({ draggable: true, useHandCursor: true });
 
     this.input.setDraggable(container);
@@ -308,67 +592,75 @@ export class GameScene extends Phaser.Scene {
   }
 
   private createTestButton() {
-    const button = this.add
-      .rectangle(640, 470, 320, 58, 0x7b2ff7, 1)
-      .setStrokeStyle(4, 0xffffff)
-      .setInteractive({ useHandCursor: true });
+  const button = this.add
+    .rectangle(640, 470, 320, 58, 0x7b2ff7, 1)
+    .setStrokeStyle(4, 0xffffff)
+    .setInteractive({ useHandCursor: true });
 
-    const text = this.add
-      .text(640, 470, "Testar algoritmo", {
-        fontSize: "24px",
-        fontFamily: "Arial Black, Arial",
-        color: "#ffffff",
-      })
-      .setOrigin(0.5);
+  const text = this.add
+    .text(640, 470, "Testar algoritmo", {
+      fontSize: "24px",
+      fontFamily: "Arial Black, Arial",
+      color: "#ffffff",
+    })
+    .setOrigin(0.5);
 
-    button.on("pointerdown", () => {
-      this.playClick();
-      this.testAlgorithm();
-    });
+  const runTest = () => {
+    if (!this.levelStarted) return;
 
-    button.on("pointerover", () => button.setFillStyle(0x9d4edd));
-    button.on("pointerout", () => button.setFillStyle(0x7b2ff7));
+    this.playClick();
+    this.startTimerOnce();
+    this.testAlgorithm();
+  };
 
-    text.setInteractive({ useHandCursor: true });
-    text.on("pointerdown", () => {
-      this.playClick();
-      this.testAlgorithm();
-    });
-  }
+  button.on("pointerdown", runTest);
+  text.setInteractive({ useHandCursor: true });
+  text.on("pointerdown", runTest);
+
+  button.on("pointerover", () => button.setFillStyle(0x9d4edd));
+  button.on("pointerout", () => button.setFillStyle(0x7b2ff7));
+}
 
   private setupDrag() {
-    this.input.on("dragstart", (_: Phaser.Input.Pointer, obj: CardSprite) => {
-      obj.setDepth(30);
-      this.playClick();
+  this.input.on("dragstart", (_: Phaser.Input.Pointer, obj: CardSprite) => {
+    if (!this.levelStarted) return;
+    this.startTimerOnce();
 
-      this.tweens.add({
-        targets: obj,
-        scaleX: 1.08,
-        scaleY: 1.08,
-        duration: 120,
-      });
+    obj.setDepth(30);
+    this.playClick();
+
+    this.tweens.add({
+      targets: obj,
+      scaleX: 1.08,
+      scaleY: 1.08,
+      duration: 120,
     });
+  });
 
-    this.input.on(
-      "drag",
-      (_: Phaser.Input.Pointer, obj: CardSprite, dragX: number, dragY: number) => {
-        obj.setPosition(dragX, dragY);
-      }
-    );
+  this.input.on(
+    "drag",
+    (_: Phaser.Input.Pointer, obj: CardSprite, dragX: number, dragY: number) => {
+      if (!this.levelStarted) return;
 
-    this.input.on("dragend", (_: Phaser.Input.Pointer, obj: CardSprite) => {
-      obj.setDepth(0);
+      obj.setPosition(dragX, dragY);
+    }
+  );
 
-      const slotIndex = this.findNearestSlotIndex(obj.x, obj.y);
+  this.input.on("dragend", (_: Phaser.Input.Pointer, obj: CardSprite) => {
+    if (!this.levelStarted) return;
 
-      if (slotIndex === null) {
-        this.returnCard(obj);
-        return;
-      }
+    obj.setDepth(0);
 
-      this.placeCardInSlot(obj, slotIndex);
-    });
-  }
+    const slotIndex = this.findNearestSlotIndex(obj.x, obj.y);
+
+    if (slotIndex === null) {
+      this.returnCard(obj);
+      return;
+    }
+
+    this.placeCardInSlot(obj, slotIndex);
+  });
+}
 
   private findNearestSlotIndex(x: number, y: number): number | null {
     for (const slot of this.slots) {
@@ -432,6 +724,8 @@ export class GameScene extends Phaser.Scene {
   }
 
   private testAlgorithm() {
+    if (!this.levelStarted) return;
+
     const selectedOrder = this.placedCards.map(
       (card) => card?.cardData.id ?? null
     );
@@ -479,7 +773,9 @@ export class GameScene extends Phaser.Scene {
     this.playWin();
     this.showSuccessAnimation();
     this.emitProgress();
-    this.timerEvent?.remove(false);
+    this.timerEvent?.destroy();
+    this.timerEvent = undefined;
+    this.hasStartedTimer = false;
 
     const nextLevel = this.levelConfig.level + 1;
 
@@ -495,8 +791,13 @@ export class GameScene extends Phaser.Scene {
       });
 
       this.time.delayedCall(1500, () => {
-        this.scene.restart({ level: nextLevel });
-      });
+  this.levelStarted = false;
+  this.hasStartedTimer = false;
+  this.timerEvent?.destroy();
+  this.timerEvent = undefined;
+
+  this.scene.restart({ level: nextLevel });
+});
 
       return;
     }

@@ -10,6 +10,9 @@ const TIMER_BAR_Y = 55;
 const TIMER_BAR_W = 900;
 
 export class GameScene extends Phaser.Scene {
+  private levelStarted = false;
+  private hasStartedTimer = false;
+  private overlayObjects: Phaser.GameObjects.GameObject[] = [];
   private levelConfig!: SafetyLevel;
   private currentSceneIndex = 0;
   private hits = 0;
@@ -32,13 +35,20 @@ export class GameScene extends Phaser.Scene {
     this.errors = 0;
     this.answeredCurrentScene = false;
     this.checklist = [];
+    this.levelStarted = false;
+this.hasStartedTimer = false;
+
+this.timerEvent?.destroy();
+this.timerEvent = undefined;
+
+this.timerBar = undefined;
+this.overlayObjects = [];
   }
 
   create() {
     this.createBackground();
     this.createTimerBar();
     this.registerPlatformCommands();
-    this.startTimer();
 
     runtimeGameBridge.emit({
       type: "GAME_READY",
@@ -47,6 +57,10 @@ export class GameScene extends Phaser.Scene {
 
     this.renderCurrentScene();
     this.emitProgress();
+
+    this.time.delayedCall(80, () => {
+  this.showStartScreen();
+});
   }
 
   update() {
@@ -71,6 +85,258 @@ export class GameScene extends Phaser.Scene {
       this.unsubscribePlatformCommands = undefined;
     }
   }
+
+  private clearOverlay() {
+  this.overlayObjects.forEach((object) => object.destroy());
+  this.overlayObjects = [];
+}
+
+private addOverlayObject<T extends Phaser.GameObjects.GameObject>(object: T): T {
+  this.overlayObjects.push(object);
+  return object;
+}
+
+private startTimerOnce() {
+  if (this.hasStartedTimer) return;
+
+  this.hasStartedTimer = true;
+  this.startTimer();
+}
+
+private getLevelInstructions() {
+  if (this.levelConfig.level === 1) {
+    return {
+      title: "Nível 1 - Proteja seus dados",
+      objective: "Escolha atitudes seguras em situações digitais.",
+      tip: "Leia com atenção antes de responder.",
+    };
+  }
+
+  if (this.levelConfig.level === 2) {
+    return {
+      title: "Nível 2 - Atenção aos riscos",
+      objective: "Identifique comportamentos perigosos.",
+      tip: "Pense antes de clicar ou compartilhar.",
+    };
+  }
+
+  return {
+    title: "Nível 3 - Guardião especialista",
+    objective: "Resolva situações mais difíceis.",
+    tip: "Proteja informações pessoais.",
+  };
+}
+private showStartScreen() {
+  this.clearOverlay();
+
+  this.levelStarted = false;
+  this.input.enabled = true;
+
+  const info = this.getLevelInstructions();
+
+  this.addOverlayObject(
+    this.add.rectangle(640, 360, 1280, 720, 0xeff6ff, 0.98).setDepth(300)
+  );
+
+  this.addOverlayObject(
+    this.add.text(640, 115, "🛡️", {
+      fontSize: "64px",
+      fontFamily: "Arial",
+      padding: {
+        top: 18,
+        bottom: 18,
+        left: 18,
+        right: 18,
+      },
+    })
+      .setOrigin(0.5)
+      .setDepth(301)
+  );
+
+  this.addOverlayObject(
+    this.add.text(640, 210, info.title, {
+      fontSize: "44px",
+      fontFamily: "Arial Black, Arial",
+      color: "#1d4ed8",
+      stroke: "#ffffff",
+      strokeThickness: 6,
+      align: "center",
+      wordWrap: { width: 920 },
+    })
+      .setOrigin(0.5)
+      .setDepth(301)
+  );
+
+  this.addOverlayObject(
+    this.add.rectangle(640, 380, 900, 230, 0xffffff, 0.92)
+      .setStrokeStyle(5, 0x60a5fa)
+      .setDepth(301)
+  );
+
+  this.addOverlayObject(
+    this.add.text(640, 335, `🎯 ${info.objective}`, {
+      fontSize: "28px",
+      fontFamily: "Arial Black, Arial",
+      color: "#334155",
+      align: "center",
+      wordWrap: { width: 760 },
+    })
+      .setOrigin(0.5)
+      .setDepth(302)
+  );
+
+  this.addOverlayObject(
+    this.add.text(640, 430, `💡 ${info.tip}`, {
+      fontSize: "24px",
+      fontFamily: "Arial",
+      color: "#475569",
+      align: "center",
+      wordWrap: { width: 760 },
+    })
+      .setOrigin(0.5)
+      .setDepth(302)
+  );
+
+  const button = this.addOverlayObject(
+    this.add.rectangle(640, 585, 330, 70, 0x2563eb, 1)
+      .setStrokeStyle(4, 0xffffff)
+      .setInteractive({ useHandCursor: true })
+      .setDepth(302)
+  );
+
+  const buttonText = this.addOverlayObject(
+    this.add.text(640, 585, "Iniciar nível", {
+      fontSize: "28px",
+      fontFamily: "Arial Black, Arial",
+      color: "#ffffff",
+    })
+      .setOrigin(0.5)
+      .setDepth(303)
+  );
+
+  const start = () => {
+    this.playClick();
+    this.clearOverlay();
+
+    if (this.levelConfig.level === 1) {
+      this.showTutorialStep(0);
+      return;
+    }
+
+    this.levelStarted = true;
+  };
+
+  button.on("pointerdown", start);
+
+  buttonText.setInteractive({ useHandCursor: true });
+  buttonText.on("pointerdown", start);
+}
+
+private showTutorialStep(stepIndex: number) {
+  this.clearOverlay();
+
+  const steps = [
+    {
+      title: "Leia a situação",
+      description: "Observe o problema apresentado.",
+      emoji: "👀",
+    },
+    {
+      title: "Escolha com segurança",
+      description: "Escolha a atitude mais segura.",
+      emoji: "🛡️",
+    },
+    {
+      title: "Aprenda com o feedback",
+      description: "Leia a explicação depois da resposta.",
+      emoji: "✅",
+    },
+  ];
+
+  const step = steps[stepIndex];
+  const isLast = stepIndex >= steps.length - 1;
+
+  this.addOverlayObject(
+    this.add.rectangle(640, 360, 1280, 720, 0x000000, 0.72)
+      .setDepth(400)
+  );
+
+  this.addOverlayObject(
+    this.add.rectangle(640, 300, 880, 270, 0xffffff, 1)
+      .setStrokeStyle(6, 0x2563eb)
+      .setDepth(401)
+  );
+
+  this.addOverlayObject(
+    this.add.text(640, 225, step.emoji, {
+      fontSize: "64px",
+      fontFamily: "Arial",
+      padding: {
+        top: 14,
+        bottom: 14,
+      },
+    })
+      .setOrigin(0.5)
+      .setDepth(402)
+  );
+
+  this.addOverlayObject(
+    this.add.text(640, 300, step.title, {
+      fontSize: "38px",
+      fontFamily: "Arial Black, Arial",
+      color: "#1d4ed8",
+      align: "center",
+    })
+      .setOrigin(0.5)
+      .setDepth(402)
+  );
+
+  this.addOverlayObject(
+    this.add.text(640, 370, step.description, {
+      fontSize: "24px",
+      fontFamily: "Arial",
+      color: "#334155",
+      align: "center",
+      wordWrap: { width: 620 },
+    })
+      .setOrigin(0.5)
+      .setDepth(402)
+  );
+
+  const button = this.addOverlayObject(
+    this.add.rectangle(1020, 300, 80, 80, 0x2563eb, 1)
+      .setStrokeStyle(4, 0xffffff)
+      .setInteractive({ useHandCursor: true })
+      .setDepth(403)
+  );
+
+  const buttonText = this.addOverlayObject(
+    this.add.text(1020, 300, isLast ? "▶" : "→", {
+      fontSize: "40px",
+      fontFamily: "Arial Black, Arial",
+      color: "#ffffff",
+    })
+      .setOrigin(0.5)
+      .setDepth(404)
+  );
+
+  const next = () => {
+    this.playClick();
+
+    if (isLast) {
+      this.clearOverlay();
+      this.levelStarted = true;
+      return;
+    }
+
+    this.showTutorialStep(stepIndex + 1);
+  };
+
+  button.on("pointerdown", next);
+
+  buttonText.setInteractive({ useHandCursor: true });
+  buttonText.on("pointerdown", next);
+}
 
   private createBackground() {
     this.add.rectangle(640, 360, 1280, 720, 0xf8fbff);
@@ -272,17 +538,23 @@ export class GameScene extends Phaser.Scene {
     );
 
     this.markDynamic(
-      this.add
-        .text(350, 390, scene.emoji, {
-          fontSize: "72px",
-        })
-        .setOrigin(0.5)
-        .setDepth(13)
-    );
+  this.add
+    .text(350, 390, scene.emoji, {
+      fontSize: "60px",
+      fontFamily: "Arial",
+      padding: {
+        top: 18,
+        bottom: 18,
+        left: 18,
+        right: 18,
+      },
+    })
+    .setOrigin(0.5)
+    .setDepth(13)
+);
 
     this.markDynamic(
-      this.add
-        .text(500, 355, scene.situation, {
+      this.add.text(500, 355, scene.situation, {
           fontSize: "28px",
           fontFamily: "Arial Black, Arial",
           color: "#0f172a",
@@ -374,7 +646,10 @@ export class GameScene extends Phaser.Scene {
   }
 
   private handleChoice(choice: SafetyChoice, scene: SafetyScene) {
-    if (this.answeredCurrentScene) return;
+    if (!this.levelStarted) return;
+if (this.answeredCurrentScene) return;
+
+this.startTimerOnce();
 
     this.answeredCurrentScene = true;
 
@@ -568,8 +843,15 @@ export class GameScene extends Phaser.Scene {
 
     const goNext = () => {
       this.playClick();
-      this.scene.restart({ level: nextLevel });
-    };
+
+  this.levelStarted = false;
+  this.hasStartedTimer = false;
+
+  this.timerEvent?.destroy();
+  this.timerEvent = undefined;
+
+  this.scene.restart({ level: nextLevel });
+};
 
     button.on("pointerdown", goNext);
     button.on("pointerover", () => button.setFillStyle(0x15803d));
