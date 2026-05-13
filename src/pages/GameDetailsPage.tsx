@@ -402,8 +402,33 @@ export default function GameDetailsPage() {
   };
 
   const handleExit = () => {
-    navigate(-1);
+  navigate(-1);
+};
+
+useEffect(() => {
+  const hasBlockingOverlay =
+    showNoLivesModal ||
+    showGameOverModal ||
+    showUnlockModal;
+
+  const elements = document.querySelectorAll(
+    ".phaser-container, .phaser-container canvas, .game-iframe, iframe"
+  );
+
+  elements.forEach((element) => {
+    if (hasBlockingOverlay) {
+      element.classList.add("game-input-blocked");
+    } else {
+      element.classList.remove("game-input-blocked");
+    }
+  });
+
+  return () => {
+    elements.forEach((element) => {
+      element.classList.remove("game-input-blocked");
+    });
   };
+}, [showNoLivesModal, showGameOverModal, showUnlockModal]);
 
   if (blocked && !hasStartedGame && !showGameOverModal && !showUnlockModal) {
     return (
@@ -726,7 +751,78 @@ export default function GameDetailsPage() {
                   </button>
                 </div>
               </div>
-            ) : (
+            ) : game.slug === "desktop-digital-infantil" ? (
+  <div className="game-screen desktop-digital-cover">
+    <div className="desktop-digital-icons" aria-hidden="true">
+      <span>🖥️</span>
+      <span>📷</span>
+      <span>🧮</span>
+      <span>🎙️</span>
+      <span>🎨</span>
+      <span>🌐</span>
+      <span>🎵</span>
+      <span>🌙</span>
+      <span>⭐</span>
+    </div>
+
+    <div className="desktop-digital-overlay">
+      <div className="desktop-digital-badge">
+        🖥️ Uso de aplicativos
+      </div>
+
+      <h1>Desktop Digital Infantil</h1>
+
+      <p>
+        Explore apps, complete missões e ajude a Lua usando câmera,
+        calculadora, desenho, gravador e outros recursos digitais.
+      </p>
+
+      <button
+        type="button"
+        onClick={() => {
+          alreadyOfferedExtraLifeRef.current = false;
+          setHasStartedGame(true);
+        }}
+      >
+        Iniciar jogo
+      </button>
+    </div>
+  </div> ) : game.slug === "hangar-dos-modelos" ? (
+  <div className="game-screen hangar-modelos-cover">
+    <div className="hangar-floating-vehicles" aria-hidden="true">
+      <span>✈️</span>
+      <span>🚁</span>
+      <span>🚀</span>
+      <span>🚗</span>
+      <span>🚌</span>
+      <span>🚲</span>
+    </div>
+
+    <div className="hangar-modelos-overlay">
+      <div className="hangar-modelos-badge">
+        ✈️ Classificação de veículos
+      </div>
+
+      <h1>Hangar dos Modelos</h1>
+
+      <p>
+        Compare veículos, descubra características em comum e aprenda a
+        classificar modelos por atributos como voo, rodas, motor e meio de
+        transporte.
+      </p>
+
+      <button
+        type="button"
+        onClick={() => {
+          alreadyOfferedExtraLifeRef.current = false;
+          setHasStartedGame(true);
+        }}
+      >
+        Iniciar jogo
+      </button>
+    </div>
+  </div>
+) : (
               <div className="game-screen">
                 <h2>{game.title}</h2>
 
@@ -775,9 +871,24 @@ export default function GameDetailsPage() {
         </div>
       </section>
 
+          
       {/* TELA FULLSCREEN - PERDEU VIDA */}
       {showNoLivesModal && (
-        <div className="game-over-overlay">
+        <div
+  className="game-over-overlay"
+  onPointerDown={(e) => {
+  e.stopPropagation();
+}}
+onMouseDown={(e) => {
+  e.stopPropagation();
+}}
+onClick={(e) => {
+  e.stopPropagation();
+}}
+onTouchStart={(e) => {
+  e.stopPropagation();
+}}
+>
           <div className="game-over-modal">
             <h1 className="game-over-title error">Você cometeu um erro!</h1>
 
@@ -816,55 +927,70 @@ export default function GameDetailsPage() {
       )}
 
       {/* TELA FULLSCREEN - GAME OVER */}
-      {showGameOverModal && (
-        <div className="game-over-overlay">
-          <div className="game-over-modal">
-            <h1 className="game-over-title">GAME OVER</h1>
+      {/* TELA FULLSCREEN - GAME OVER */}
+{showGameOverModal && (
+  <div
+    className="game-over-overlay"
+    onPointerDown={(e) => {
+  e.stopPropagation();
+}}
+onMouseDown={(e) => {
+  e.stopPropagation();
+}}
+onClick={(e) => {
+  e.stopPropagation();
+}}
+onTouchStart={(e) => {
+  e.stopPropagation();
+}}
+  >
+    <div className="game-over-modal">
+      <h1 className="game-over-title">GAME OVER</h1>
 
-            <p className="game-over-text">
-              Você errou novamente sem vidas disponíveis.
-              <br />
-              O jogo foi bloqueado.
-              {blockedUntil && (
-                <>
-                  <br />
-                  Liberação automática em:
-                  <br />
-                  <strong>{new Date(blockedUntil).toLocaleString("pt-BR")}</strong>
-                </>
-              )}
-            </p>
+      <p className="game-over-text">
+        Você errou novamente sem vidas disponíveis.
+        <br />
+        O jogo foi bloqueado.
+        {blockedUntil && (
+          <>
+            <br />
+            Liberação automática em:
+            <br />
+            <strong>{new Date(blockedUntil).toLocaleString("pt-BR")}</strong>
+          </>
+        )}
+      </p>
 
-            <p className="game-over-warning">
-              Você pode desbloquear agora usando {unlockCost} pontos.
-            </p>
+      <p className="game-over-warning">
+        Você pode desbloquear agora usando {unlockCost} pontos.
+      </p>
 
-            <div className="game-over-actions">
-              <button
-                type="button"
-                className="game-over-primary-btn"
-                onClick={() => {
-                  setShowUnlockModal(true);
-                }}
-              >
-                Desbloquear jogo
-              </button>
+      <div className="game-over-actions">
+        <button
+          type="button"
+          className="game-over-primary-btn"
+          onClick={() => {
+            setShowUnlockModal(true);
+          }}
+        >
+          Desbloquear jogo
+        </button>
 
-              <button
-                type="button"
-                className="game-over-secondary-btn"
-                onClick={() => {
-                  setShowGameOverModal(false);
-                  setHasStartedGame(false);
-                  navigate("/", { replace: true });
-                }}
-              >
-                Voltar aos jogos
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+        <button
+          type="button"
+          className="game-over-secondary-btn"
+          onClick={() => {
+            setShowGameOverModal(false);
+            setHasStartedGame(false);
+            navigate("/", { replace: true });
+          }}
+        >
+          Voltar aos jogos
+        </button>
+      </div>
+    </div>
+  </div>
+)}
 
       <ConfirmModal
         isOpen={showUnlockModal}

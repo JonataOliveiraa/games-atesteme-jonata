@@ -1664,6 +1664,208 @@ button {
   }
 }
 
+
+/* ================= DESKTOP DIGITAL INFANTIL ================= */
+
+.game-screen.desktop-digital-cover {
+  position: relative;
+  width: 100%;
+  max-width: 1280px;
+  min-height: 720px;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border-radius: 28px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background:
+    radial-gradient(circle at 18% 18%, rgba(14,165,233,.28), transparent 30%),
+    radial-gradient(circle at 82% 20%, rgba(168,85,247,.24), transparent 32%),
+    radial-gradient(circle at 50% 88%, rgba(34,197,94,.22), transparent 34%),
+    linear-gradient(135deg, #eff6ff 0%, #ecfeff 48%, #eef2ff 100%);
+}
+
+.game-screen.desktop-digital-cover::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+
+  background-image:
+    linear-gradient(rgba(255,255,255,.45) 2px, transparent 2px),
+    linear-gradient(90deg, rgba(255,255,255,.45) 2px, transparent 2px);
+
+  background-size: 44px 44px;
+  opacity: .42;
+}
+
+.desktop-digital-icons {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.desktop-digital-icons span {
+  position: absolute;
+
+  width: 76px;
+  height: 76px;
+
+  display: grid;
+  place-items: center;
+
+  border-radius: 22px;
+
+  font-size: 34px;
+
+  background: rgba(255,255,255,.76);
+
+  box-shadow: 0 18px 40px rgba(14,165,233,.18);
+
+  animation: coverFloat 4s ease-in-out infinite;
+}
+
+.desktop-digital-icons span:nth-child(1) {
+  left: 8%;
+  top: 14%;
+}
+
+.desktop-digital-icons span:nth-child(2) {
+  right: 10%;
+  top: 16%;
+  animation-delay: .3s;
+}
+
+.desktop-digital-icons span:nth-child(3) {
+  left: 12%;
+  bottom: 18%;
+  animation-delay: .6s;
+}
+
+.desktop-digital-icons span:nth-child(4) {
+  right: 15%;
+  bottom: 18%;
+  animation-delay: .9s;
+}
+
+.desktop-digital-icons span:nth-child(5) {
+  left: 44%;
+  top: 8%;
+  animation-delay: 1.2s;
+}
+
+.desktop-digital-icons span:nth-child(6) {
+  right: 36%;
+  bottom: 8%;
+  animation-delay: 1.5s;
+}
+
+.desktop-digital-icons span:nth-child(7) {
+  left: 30%;
+  bottom: 10%;
+  animation-delay: 1.8s;
+}
+
+.desktop-digital-icons span:nth-child(8) {
+  right: 24%;
+  top: 45%;
+  animation-delay: 2.1s;
+}
+
+.desktop-digital-icons span:nth-child(9) {
+  left: 22%;
+  top: 45%;
+  animation-delay: 2.4s;
+}
+
+.desktop-digital-overlay {
+  position: relative;
+  z-index: 2;
+
+  width: 82%;
+  max-width: 920px;
+
+  padding: 56px;
+
+  text-align: center;
+
+  border-radius: 32px;
+
+  background: rgba(255,255,255,.82);
+
+  border: 4px solid rgba(255,255,255,.95);
+
+  backdrop-filter: blur(12px);
+
+  box-shadow: 0 30px 70px rgba(14,165,233,.18);
+}
+
+.desktop-digital-badge {
+  display: inline-flex;
+
+  margin-bottom: 18px;
+
+  padding: 12px 20px;
+
+  border-radius: 999px;
+
+  font-weight: 800;
+
+  background: #dbeafe;
+
+  color: #0369a1;
+}
+
+.desktop-digital-overlay h1 {
+  margin: 0 0 18px;
+
+  font-size: 56px;
+
+  line-height: 1.05;
+
+  color: #0369a1;
+}
+
+.desktop-digital-overlay p {
+  max-width: 700px;
+
+  margin: 0 auto 30px;
+
+  color: #475569;
+
+  font-size: 20px;
+
+  line-height: 1.55;
+}
+
+.desktop-digital-overlay button {
+  border: none;
+
+  border-radius: 18px;
+
+  padding: 18px 42px;
+
+  color: white;
+
+  font-size: 18px;
+
+  font-weight: 800;
+
+  cursor: pointer;
+
+  transition: .25s;
+
+  background: linear-gradient(135deg, #0ea5e9, #8b5cf6);
+
+  box-shadow: 0 18px 34px rgba(14,165,233,.24);
+}
+
+.desktop-digital-overlay button:hover {
+  transform: translateY(-2px) scale(1.03);
+}
+
 /* ================= CAPAS NA MESMA LARGURA DO JOGO ================= */
 
 .game-area {
@@ -1713,6 +1915,8 @@ button {
   padding: 24px;
   pointer-events: auto;
   animation: gameOverFadeIn 0.22s ease-out;
+  pointer-events: all;
+touch-action: none;
 }
 
 .game-over-modal {
@@ -1883,5 +2087,246 @@ button {
   .game-over-primary-btn,
   .game-over-secondary-btn {
     width: 100%;
+  }
+}
+
+
+.game-input-blocked {
+  pointer-events: none !important;
+}
+
+.game-over-overlay {
+  pointer-events: auto !important;
+  z-index: 2147483647 !important;
+}
+
+.game-over-modal,
+.game-over-modal * {
+  pointer-events: auto !important;
+}
+
+.game-input-blocked,
+.game-input-blocked canvas,
+.game-input-blocked iframe,
+.phaser-container.game-input-blocked,
+.phaser-container.game-input-blocked canvas {
+  pointer-events: none !important;
+}
+
+/* ================= HANGAR DOS MODELOS ================= */
+
+.game-screen.hangar-modelos-cover {
+  position: relative;
+  width: 100%;
+  max-width: 1280px;
+  min-height: 720px;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border-radius: 28px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background:
+    radial-gradient(circle at 18% 20%, rgba(79,195,247,.24), transparent 30%),
+    radial-gradient(circle at 82% 18%, rgba(255,193,7,.18), transparent 30%),
+    radial-gradient(circle at 50% 88%, rgba(33,150,243,.18), transparent 34%),
+    linear-gradient(180deg, #081524 0%, #0d2137 100%);
+}
+
+.hangar-modelos-cover::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+
+  background-image:
+    linear-gradient(rgba(255,255,255,.03) 2px, transparent 2px),
+    linear-gradient(90deg, rgba(255,255,255,.03) 2px, transparent 2px);
+
+  background-size: 46px 46px;
+}
+
+.hangar-modelos-cover::after {
+  content: "";
+
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+
+  height: 160px;
+
+  background:
+    linear-gradient(to top,
+      rgba(0,0,0,.45),
+      rgba(0,0,0,0)
+    );
+}
+
+.hangar-floating-vehicles {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.hangar-floating-vehicles span {
+  position: absolute;
+
+  width: 92px;
+  height: 92px;
+
+  display: grid;
+  place-items: center;
+
+  border-radius: 24px;
+
+  font-size: 42px;
+
+  background: rgba(255,255,255,.08);
+
+  border: 2px solid rgba(255,255,255,.12);
+
+  backdrop-filter: blur(8px);
+
+  animation: hangarFloat 4s ease-in-out infinite;
+}
+
+.hangar-floating-vehicles span:nth-child(1) {
+  top: 12%;
+  left: 10%;
+}
+
+.hangar-floating-vehicles span:nth-child(2) {
+  top: 18%;
+  right: 12%;
+  animation-delay: .5s;
+}
+
+.hangar-floating-vehicles span:nth-child(3) {
+  bottom: 20%;
+  left: 14%;
+  animation-delay: 1s;
+}
+
+.hangar-floating-vehicles span:nth-child(4) {
+  bottom: 18%;
+  right: 16%;
+  animation-delay: 1.5s;
+}
+
+.hangar-floating-vehicles span:nth-child(5) {
+  top: 42%;
+  left: 24%;
+  animation-delay: 2s;
+}
+
+.hangar-floating-vehicles span:nth-child(6) {
+  top: 48%;
+  right: 26%;
+  animation-delay: 2.5s;
+}
+
+.hangar-modelos-overlay {
+  position: relative;
+  z-index: 2;
+
+  width: 84%;
+  max-width: 940px;
+
+  padding: 60px;
+
+  text-align: center;
+
+  border-radius: 32px;
+
+  background: rgba(7,19,32,.82);
+
+  border: 4px solid rgba(79,195,247,.28);
+
+  backdrop-filter: blur(14px);
+
+  box-shadow: 0 30px 70px rgba(0,0,0,.45);
+}
+
+.hangar-modelos-badge {
+  display: inline-flex;
+
+  margin-bottom: 18px;
+
+  padding: 12px 22px;
+
+  border-radius: 999px;
+
+  font-weight: 800;
+
+  background: rgba(79,195,247,.14);
+
+  color: #81d4fa;
+
+  border: 1px solid rgba(129,212,250,.24);
+}
+
+.hangar-modelos-overlay h1 {
+  margin: 0 0 18px;
+
+  font-size: 58px;
+
+  line-height: 1.04;
+
+  color: #ffffff;
+}
+
+.hangar-modelos-overlay p {
+  max-width: 760px;
+
+  margin: 0 auto 34px;
+
+  font-size: 20px;
+
+  line-height: 1.6;
+
+  color: #cfd8dc;
+}
+
+.hangar-modelos-overlay button {
+  border: none;
+
+  border-radius: 18px;
+
+  padding: 18px 44px;
+
+  font-size: 18px;
+
+  font-weight: 800;
+
+  color: white;
+
+  cursor: pointer;
+
+  transition: .25s;
+
+  background:
+    linear-gradient(135deg,
+      #1565c0,
+      #42a5f5
+    );
+
+  box-shadow:
+    0 18px 36px rgba(21,101,192,.34);
+}
+
+.hangar-modelos-overlay button:hover {
+  transform: translateY(-2px) scale(1.03);
+}
+
+@keyframes hangarFloat {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+
+  50% {
+    transform: translateY(-14px);
   }
 }

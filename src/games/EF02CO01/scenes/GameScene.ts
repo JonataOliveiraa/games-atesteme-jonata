@@ -99,6 +99,9 @@ export class GameScene extends Phaser.Scene {
   private timerWarned = false
   private warningBeepTimer: Phaser.Time.TimerEvent | null = null
 
+  // Timer no padrão da plataforma: só começa na primeira ação real
+  private hasStartedTimer = false
+
   private unsubPlatform?: () => void
 
   constructor() {
@@ -126,6 +129,7 @@ export class GameScene extends Phaser.Scene {
     this.timerWarned  = false
     this.timeLeft     = 0
     this.warningBeepTimer = null
+    this.hasStartedTimer = false
   }
 
   create() {
@@ -243,6 +247,12 @@ export class GameScene extends Phaser.Scene {
           runtimeGameBridge.emit({ type: 'GAME_READY', gameId: GAME_ID })
           this.broadcastMissionState()
           this.emitCheckpoint()
+
+          if (this.levelConfig.level === 1) {
+            this.showTutorialStep(0)
+            return
+          }
+
           this.showFirstMissionBanner()
         },
       })
@@ -254,6 +264,115 @@ export class GameScene extends Phaser.Scene {
     btnBg.on('pointerover', () => btnBg.setFillStyle(0x27AE60))
     btnBg.on('pointerout',  () => btnBg.setFillStyle(0x2ECC71))
     void bg
+  }
+
+  private showTutorialStep(stepIndex: number) {
+    const steps = [
+      {
+        title: 'Observe os veículos',
+        description: 'Veja os veículos na tela e preste atenção nas características de cada um.',
+        emoji: '👀',
+      },
+      {
+        title: 'Use os filtros',
+        description: 'Clique em SIM ou NÃO para separar os veículos que combinam com a regra.',
+        emoji: '🔍',
+      },
+      {
+        title: 'Responda a pergunta',
+        description: 'Depois de classificar, escolha a quantidade correta para concluir o desafio.',
+        emoji: '✅',
+      },
+    ]
+
+    const step = steps[stepIndex]
+    const isLast = stepIndex >= steps.length - 1
+
+    const overlay = this.add
+      .rectangle(640, 360, 1280, 720, 0x000000, 0.72)
+      .setDepth(400)
+      .setInteractive()
+
+    const card = this.add
+      .rectangle(640, 300, 880, 270, 0xffffff, 1)
+      .setStrokeStyle(6, 0x4fc3f7)
+      .setDepth(401)
+
+    const emoji = this.add
+      .text(640, 220, step.emoji, {
+        fontSize: '64px',
+        fontFamily: 'Arial',
+        padding: {
+          top: 14,
+          bottom: 14,
+          left: 14,
+          right: 14,
+        },
+      })
+      .setOrigin(0.5)
+      .setDepth(402)
+
+    const title = this.add
+      .text(640, 305, step.title, {
+        fontSize: '38px',
+        fontFamily: 'Arial Black, Arial',
+        color: '#1565c0',
+        align: 'center',
+      })
+      .setOrigin(0.5)
+      .setDepth(402)
+
+    const description = this.add
+      .text(640, 375, step.description, {
+        fontSize: '24px',
+        fontFamily: 'Arial',
+        color: '#334155',
+        align: 'center',
+        wordWrap: { width: 680 },
+      })
+      .setOrigin(0.5)
+      .setDepth(402)
+
+    const button = this.add
+      .rectangle(1020, 300, 80, 80, 0x1565c0, 1)
+      .setStrokeStyle(4, 0xffffff)
+      .setInteractive({ useHandCursor: true })
+      .setDepth(403)
+
+    const buttonText = this.add
+      .text(1020, 300, isLast ? '▶' : '→', {
+        fontSize: '40px',
+        fontFamily: 'Arial Black, Arial',
+        color: '#ffffff',
+      })
+      .setOrigin(0.5)
+      .setDepth(404)
+
+    const cleanup = () => {
+      overlay.destroy()
+      card.destroy()
+      emoji.destroy()
+      title.destroy()
+      description.destroy()
+      button.destroy()
+      buttonText.destroy()
+    }
+
+    const next = () => {
+      this.playTick()
+      cleanup()
+
+      if (isLast) {
+        this.showFirstMissionBanner()
+        return
+      }
+
+      this.showTutorialStep(stepIndex + 1)
+    }
+
+    button.on('pointerdown', next)
+    buttonText.setInteractive({ useHandCursor: true })
+    buttonText.on('pointerdown', next)
   }
 
   private showFirstMissionBanner() {
@@ -293,7 +412,6 @@ export class GameScene extends Phaser.Scene {
         onComplete: () => {
           overlay.destroy(); label.destroy(); missionTxt.destroy(); hint.destroy()
           this.input.enabled = true
-          this.startTimer()
           switch (this.levelConfig.level) {
             case 1: this.startLevel1(); break
             case 2: this.startLevel2(); break
@@ -319,6 +437,13 @@ export class GameScene extends Phaser.Scene {
     this.timerWarned = false
     this.timerBar.setSize(1280, 10)
     this.timerBar.setFillStyle(0x2ECC71)
+  }
+
+  private startTimerOnFirstInteraction() {
+    if (this.hasStartedTimer) return
+
+    this.hasStartedTimer = true
+    this.startTimer()
   }
 
   private updateTimer(delta: number) {
@@ -809,6 +934,7 @@ export class GameScene extends Phaser.Scene {
   // ── Aplicar filtro ───────────────────────────────────────────────────────
 
   private applyFilter(attribute: FilterAttribute, value: FilterValue | null) {
+    this.startTimerOnFirstInteraction()
     this.phase = 'animating'
 
     if (value === null) {
@@ -947,6 +1073,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private answerCount(correct: boolean) {
+    this.startTimerOnFirstInteraction()
     if (this.phase !== 'question') return
     this.questionOverlay?.disableInteractive()
     this.questionOverlay?.getAll<Phaser.GameObjects.Container>().forEach((c) => {
@@ -1253,7 +1380,7 @@ export class GameScene extends Phaser.Scene {
     layer.add([rowBg, labelTxt, igualBtn, diferenteBtn])
   }
 
-  private makeOptionButton(label: string, color: number, onClick: () => void) {
+  private makeOptionButton(label: string, color: number, onClick: () => void): Phaser.GameObjects.Container {
     const container = this.add.container(0, 0)
     const W = 150, H = 60
 
@@ -1277,6 +1404,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private selectAnswer(attr: FilterAttribute, isIgual: boolean) {
+    this.startTimerOnFirstInteraction()
     this.comparisonAnswers.set(attr, isIgual)
 
     const btns = this.comparisonBtns.get(attr)
@@ -1484,6 +1612,7 @@ export class GameScene extends Phaser.Scene {
       const isCorrect = i === mission.correctOptionIndex
 
       const btn = this.makeGroupOptionButton(opt.label, isCorrect, optW / 2 - 6, 72, () => {
+        this.startTimerOnFirstInteraction()
         if (this.phase !== 'question') return
         overlay.getAll<Phaser.GameObjects.Container>().forEach((c) => {
           if (c instanceof Phaser.GameObjects.Container) c.disableInteractive()
