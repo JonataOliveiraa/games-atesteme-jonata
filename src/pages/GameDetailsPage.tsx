@@ -13,7 +13,7 @@ import { EventBus } from "../shared/EventBus";
 
 const SLUG_TO_CODE: Record<string, GameCode> = {
   "base-dos-classificadores": "EF01CO01",
-  "trilha-do-passo-a-passo": "EF01CO02",
+  "quiz-de-conhecimentos": "EF01CO02",
   "oficina-dos-algoritmos": "EF01CO03",
   "pixel-secreto": "EF01CO05",
   "desktop-digital-infantil": "EF01CO06",
@@ -775,40 +775,96 @@ export default function GameDetailsPage() {
         </div>
       </section>
 
-      <ConfirmModal
-        isOpen={showNoLivesModal}
-        title="Você ficou sem vidas"
-        message={`Você está com 0 vidas. Deseja comprar +1 vida por ${extraLifeCost} pontos ou continuar mesmo assim?`}
-        confirmText="Comprar vida"
-        cancelText="Continuar assim"
-        onConfirm={handleBuyLife}
-        onCancel={() => {
-          setShowNoLivesModal(false);
-          resumePixelSecreto();
-        }}
-      />
+      {/* TELA FULLSCREEN - PERDEU VIDA */}
+      {showNoLivesModal && (
+        <div className="game-over-overlay">
+          <div className="game-over-modal">
+            <h1 className="game-over-title error">Você cometeu um erro!</h1>
 
-      <ConfirmModal
-        isOpen={showGameOverModal}
-        title="Game over"
-        message={
-          blockedUntil
-            ? `Você errou novamente e está sem vidas disponíveis. O jogo "${game.title}" foi bloqueado até ${new Date(
-                blockedUntil
-              ).toLocaleString("pt-BR")}.`
-            : `Você errou novamente sem vidas disponíveis. O jogo "${game.title}" foi bloqueado.`
-        }
-        confirmText="Voltar para jogos"
-        cancelText="Desbloquear agora"
-        onConfirm={() => {
-          setShowGameOverModal(false);
-          setHasStartedGame(false);
-          navigate("/", { replace: true });
-        }}
-        onCancel={() => {
-          setShowUnlockModal(true);
-        }}
-      />
+            <p className="game-over-text">
+              Você perdeu uma vida.
+              <br />
+              Deseja comprar uma vida ou continuar com 0 vidas?
+            </p>
+
+            <p className="game-over-warning">
+              Se você continuar com 0 vidas e errar novamente, será Game Over.
+            </p>
+
+            <div className="game-over-actions">
+              <button
+                type="button"
+                className="game-over-primary-btn"
+                onClick={handleBuyLife}
+              >
+                Comprar vida
+              </button>
+
+              <button
+                type="button"
+                className="game-over-secondary-btn"
+                onClick={() => {
+                  setShowNoLivesModal(false);
+                  resumePixelSecreto();
+                }}
+              >
+                Continuar assim
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TELA FULLSCREEN - GAME OVER */}
+      {showGameOverModal && (
+        <div className="game-over-overlay">
+          <div className="game-over-modal">
+            <h1 className="game-over-title">GAME OVER</h1>
+
+            <p className="game-over-text">
+              Você errou novamente sem vidas disponíveis.
+              <br />
+              O jogo foi bloqueado.
+              {blockedUntil && (
+                <>
+                  <br />
+                  Liberação automática em:
+                  <br />
+                  <strong>{new Date(blockedUntil).toLocaleString("pt-BR")}</strong>
+                </>
+              )}
+            </p>
+
+            <p className="game-over-warning">
+              Você pode desbloquear agora usando {unlockCost} pontos.
+            </p>
+
+            <div className="game-over-actions">
+              <button
+                type="button"
+                className="game-over-primary-btn"
+                onClick={() => {
+                  setShowUnlockModal(true);
+                }}
+              >
+                Desbloquear jogo
+              </button>
+
+              <button
+                type="button"
+                className="game-over-secondary-btn"
+                onClick={() => {
+                  setShowGameOverModal(false);
+                  setHasStartedGame(false);
+                  navigate("/", { replace: true });
+                }}
+              >
+                Voltar aos jogos
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <ConfirmModal
         isOpen={showUnlockModal}
