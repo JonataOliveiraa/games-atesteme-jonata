@@ -281,90 +281,12 @@ export class GameScene extends Phaser.Scene {
 
     this.time.delayedCall(1800, () => {
       ;[bg, starsLbl, mainLbl, subLbl].forEach((o) => o.destroy())
-      this.showNextLevelScreen(nextLevel)
-    })
-  }
-
-  private showNextLevelScreen(nextLevel: 1 | 2 | 3) {
-    this.input.enabled = true
-
-    const nextConfig = LEVELS.find((l) => l.level === nextLevel) ?? LEVELS[0]
-
-    const bg = this.add
-      .rectangle(640, 360, 1280, 720, 0x000000, 0.78)
-      .setDepth(62)
-      .setInteractive()
-
-    const starsStr = '★'.repeat(nextLevel) + '☆'.repeat(3 - nextLevel)
-    const starsLbl = this.add
-      .text(640, 155, starsStr, { fontSize: '48px', color: '#FFD700' })
-      .setOrigin(0.5)
-      .setDepth(63)
-
-    const titleLbl = this.add
-      .text(640, 238, `PRÓXIMO: NÍVEL ${nextLevel}`, {
-        fontSize: '52px',
-        fontFamily: 'Arial Black, Arial',
-        color: '#FFFFFF',
-        stroke: '#000000',
-        strokeThickness: 8,
-      })
-      .setOrigin(0.5)
-      .setDepth(63)
-
-    const ruleLbl = this.add
-      .text(
-        640,
-        320,
-        `${ICON_MAP[nextConfig.criterion] ?? ''}  ${RULE_MAP[nextConfig.criterion] ?? ''}`,
-        {
-          fontSize: '30px',
-          color: '#FFF9C4',
-          stroke: '#000',
-          strokeThickness: 5,
-        },
-      )
-      .setOrigin(0.5)
-      .setDepth(63)
-
-    const timerInfo = nextConfig.timeLimit
-      ? `⏱ ${nextConfig.timeLimit}s`
-      : 'Sem limite de tempo'
-    const detailsLbl = this.add
-      .text(640, 385, `${nextConfig.items.length} itens  •  ${timerInfo}`, {
-        fontSize: '24px',
-        color: '#B0BEC5',
-      })
-      .setOrigin(0.5)
-      .setDepth(63)
-
-    const btnBg = this.add
-      .rectangle(640, 480, 270, 72, 0x3498db)
-      .setStrokeStyle(3, 0x2980b9)
-      .setDepth(63)
-      .setInteractive({ useHandCursor: true })
-    const btnText = this.add
-      .text(640, 480, '▶  Avançar', {
-        fontSize: '30px',
-        fontFamily: 'Arial Black, Arial',
-        color: '#FFFFFF',
-      })
-      .setOrigin(0.5)
-      .setDepth(64)
-
-    btnBg.on('pointerover', () => btnBg.setFillStyle(0x2980b9))
-    btnBg.on('pointerout', () => btnBg.setFillStyle(0x3498db))
-    btnBg.on('pointerdown', () => {
       this.scene.restart({
         level: nextLevel,
         points: this.currentPoints,
         lives: this.currentLives,
       })
     })
-
-    const objs = [bg, starsLbl, titleLbl, ruleLbl, detailsLbl, btnBg, btnText]
-    objs.forEach((o) => (o as { setAlpha: (n: number) => void }).setAlpha(0))
-    this.tweens.add({ targets: objs, alpha: 1, duration: 320 })
   }
 
   private showGameOverScreen() {
