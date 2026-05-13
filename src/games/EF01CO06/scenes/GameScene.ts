@@ -56,7 +56,6 @@ export class GameScene extends Phaser.Scene {
   // Per-app state
   private lastTapTime: Partial<Record<AppId, number>> = {}
   private gravadorState: 'idle' | 'recording' | 'stopped' = 'idle'
-  private gravadorBtnText: Phaser.GameObjects.Text | null = null
   private gravadorStatusText: Phaser.GameObjects.Text | null = null
   private desenho: DesenhoState = { container: null, gfx: null, readyBtn: null, tapCount: 0, drawColor: 0x3498DB }
   private calcDisplay = ''
@@ -100,7 +99,6 @@ export class GameScene extends Phaser.Scene {
     this.desenho = { container: null, gfx: null, readyBtn: null, tapCount: 0, drawColor: 0x3498DB }
     this.calcDisplay = ''
     this.calcText = null
-    this.gravadorBtnText = null
     this.gravadorStatusText = null
     this.lastTapTime = {}
     this.gravadorRecTimerEvent = null
@@ -234,7 +232,7 @@ export class GameScene extends Phaser.Scene {
 
     const iconImg = this.add.image(0, 0, `icon-${def.id}`).setDisplaySize(ICON_SIZE, ICON_SIZE)
     const label   = this.add.text(0, ICON_SIZE / 2 + 4, def.label, {
-      fontSize: '14px', color: '#FFFFFF', fontFamily: 'Arial Black, Arial',
+      fontSize: '18px', color: '#FFFFFF', fontFamily: 'Arial Black, Arial',
       stroke: '#000000', strokeThickness: 3,
     }).setOrigin(0.5, 0)
 
@@ -386,8 +384,7 @@ export class GameScene extends Phaser.Scene {
           this.desenho.tapCount = 0
         }
         if (appId === 'gravador') {
-          this.gravadorBtnText = null
-          this.gravadorStatusText = null
+                this.gravadorStatusText = null
         }
         if (appId === 'calculadora') {
           this.calcDisplay = ''
@@ -521,7 +518,7 @@ export class GameScene extends Phaser.Scene {
     objects.push(mira)
 
     // Botão Tirar Foto
-    const btn = this.createButton(0, CONTENT_CY + 80, 200, 48, '📷  Tirar Foto', 0x1A6B9A, () => {
+    const btn = this.createButton(0, CONTENT_CY + 80, 220, 64, '📷  Tirar Foto', 0x1A6B9A, () => {
       this.flashCamera()
       this.time.delayedCall(400, () => {
         EventBus.emit('app-action', { appId: 'camera', actionKey: 'take-photo' })
@@ -561,14 +558,10 @@ export class GameScene extends Phaser.Scene {
     objects.push(recLevel)
 
     // Botão ação (Gravar / Parar / Salvar)
-    const actionBtn = this.createButton(0, CONTENT_CY + 50, 200, 48, '🎙️  Gravar', 0x922B21, () => {
+    const actionBtn = this.createButton(0, CONTENT_CY + 50, 220, 64, '🎙️  Gravar', 0x922B21, () => {
       this.handleGravadorAction(actionBtn, recLevel)
     })
     objects.push(actionBtn)
-
-    // Guarda referência ao texto do botão
-    const btnText = actionBtn.getAt(2) as Phaser.GameObjects.Text
-    this.gravadorBtnText = btnText
 
     return objects
   }
@@ -673,7 +666,7 @@ export class GameScene extends Phaser.Scene {
     })
 
     // Botão Pronto (desabilitado até o jogador desenhar)
-    const readyBtn = this.createButton(140, CONTENT_CY + 88, 120, 40, '✅ Pronto!', 0x1E8449, () => {
+    const readyBtn = this.createButton(100, CONTENT_CY + 88, 150, 56, '✅ Pronto!', 0x1E8449, () => {
       EventBus.emit('app-action', { appId: 'desenho', actionKey: 'confirm-drawing' })
       this.playSuccess()
     })
@@ -709,7 +702,7 @@ export class GameScene extends Phaser.Scene {
       ['C', '0', '=', '+'],
     ]
 
-    const BTN_W = 72, BTN_H = 46, GAP = 6
+    const BTN_W = 84, BTN_H = 54, GAP = 6
     const gridW = 4 * BTN_W + 3 * GAP
     const startX = -gridW / 2 + BTN_W / 2
     const startY = CONTENT_TOP + 85
@@ -853,7 +846,7 @@ export class GameScene extends Phaser.Scene {
     objects.push(trackBg, trackBar)
 
     // Botão Play/Pause
-    const playBtn = this.createButton(0, CONTENT_CY + 100, 140, 48, '▶  Tocar', 0x1A252F, () => {
+    const playBtn = this.createButton(0, CONTENT_CY + 100, 160, 64, '▶  Tocar', 0x1A252F, () => {
       playing = !playing
       const btnTxt = playBtn.getAt(2) as Phaser.GameObjects.Text
       btnTxt.setText(playing ? '⏸  Pausa' : '▶  Tocar')
@@ -892,7 +885,7 @@ export class GameScene extends Phaser.Scene {
     bg.strokeRoundedRect(-w / 2, -h / 2, w, h, 10)
 
     const txt = this.add.text(0, 0, label, {
-      fontSize: '16px', color: '#FFFFFF',
+      fontSize: '20px', color: '#FFFFFF',
       fontFamily: 'Arial Black, Arial',
     }).setOrigin(0.5)
 
@@ -1045,12 +1038,12 @@ export class GameScene extends Phaser.Scene {
     }).setOrigin(0.5).setDepth(62)
 
     const detail = this.add.text(640, 390, `🖥️  ${info.detail}`, {
-      fontSize: '22px', fontFamily: 'Arial',
+      fontSize: '24px', fontFamily: 'Arial',
       color: '#F9E79F', wordWrap: { width: 820 }, align: 'center',
     }).setOrigin(0.5).setDepth(62)
 
     const tip = this.add.text(640, 456, `💡  ${info.tip}`, {
-      fontSize: '20px', fontFamily: 'Arial',
+      fontSize: '22px', fontFamily: 'Arial',
       color: '#BDC3C7', wordWrap: { width: 820 }, align: 'center',
     }).setOrigin(0.5).setDepth(62)
 
@@ -1401,90 +1394,16 @@ export class GameScene extends Phaser.Scene {
       duration: 400, ease: 'Back.Out',
     })
 
-    // Auto-avança para a tela do próximo nível após 1800ms
+    // Auto-avança diretamente para o próximo nível após 1800ms
     this.time.delayedCall(1800, () => {
       this.tweens.add({
         targets: [bg, ...contentItems], alpha: 0, duration: 350,
         onComplete: () => {
-          bg.destroy()
-          contentItems.forEach(o => o.destroy())
-          this.showNextLevelScreen(nextLevel)
+          this.emitCheckpoint()
+          this.scene.restart({ level: nextLevel, points: this.currentPoints, lives: this.currentLives })
         },
       })
     })
-  }
-
-  // ── Tela "Próximo Nível" com botão Avançar ────────────────────────────────
-
-  private showNextLevelScreen(nextLevel: 1 | 2 | 3) {
-    this.input.enabled = true  // reabilita para o botão "Avançar"
-
-    const nextConfig = LEVELS.find(l => l.level === nextLevel) ?? LEVELS[nextLevel - 1]
-
-    // Fundo interativo — absorve cliques dos ícones abaixo
-    const bg = this.add.rectangle(640, 360, 1280, 720, 0x0A1628, 0.97)
-      .setDepth(70).setInteractive()
-
-    const stars = this.add.text(640, 165, '★'.repeat(nextLevel) + '☆'.repeat(3 - nextLevel), {
-      fontSize: '44px', color: '#F1C40F',
-    }).setOrigin(0.5).setDepth(71)
-
-    const lvlTitle = this.add.text(640, 248, `Próximo: Nível ${nextLevel}`, {
-      fontSize: '50px', fontFamily: 'Arial Black, Arial',
-      color: '#FFFFFF', stroke: '#000000', strokeThickness: 6,
-    }).setOrigin(0.5).setDepth(71)
-
-    // Card de informações do próximo nível
-    const card = this.add.rectangle(640, 400, 900, 200, 0x1A2A3A, 1)
-      .setStrokeStyle(2, 0x2E86C1).setDepth(71)
-
-    const appsInfo = this.add.text(640, 348, `🖥️  ${nextConfig.availableApps.length} apps disponíveis`, {
-      fontSize: '26px', fontFamily: 'Arial Black, Arial', color: '#AED6F1',
-    }).setOrigin(0.5).setDepth(72)
-
-    const missionsInfo = this.add.text(640, 405, `🎯  ${nextConfig.missions.length} novas missões`, {
-      fontSize: '24px', fontFamily: 'Arial', color: '#F9E79F',
-    }).setOrigin(0.5).setDepth(72)
-
-    const timeInfo = this.add.text(640, 453, `⏱  ${nextConfig.timeLimit} segundos de tempo`, {
-      fontSize: '22px', fontFamily: 'Arial', color: '#BDC3C7',
-    }).setOrigin(0.5).setDepth(72)
-
-    // Botão Avançar
-    const btnBg = this.add.rectangle(640, 568, 280, 66, 0x2E86C1, 1)
-      .setStrokeStyle(3, 0xFFFFFF)
-      .setInteractive({ useHandCursor: true })
-      .setDepth(72)
-    const btnTxt = this.add.text(640, 568, '▶  Avançar', {
-      fontSize: '28px', fontFamily: 'Arial Black, Arial', color: '#FFFFFF',
-    }).setOrigin(0.5).setDepth(73)
-
-    const contentItems = [stars, lvlTitle, card, appsInfo, missionsInfo, timeInfo, btnBg, btnTxt]
-
-    this.tweens.add({
-      targets: contentItems,
-      alpha: { from: 0, to: 1 }, y: '+=6',
-      duration: 400, ease: 'Back.Out',
-    })
-    this.tweens.add({
-      targets: [btnBg, btnTxt],
-      scaleX: 1.04, scaleY: 1.04,
-      duration: 750, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
-    })
-
-    const advance = () => {
-      this.playTone(523, 0.10, 'sine', 0.20)
-      this.emitCheckpoint()
-      this.scene.restart({ level: nextLevel, points: this.currentPoints, lives: this.currentLives })
-    }
-
-    btnBg.on('pointerdown', advance)
-    btnTxt.setInteractive({ useHandCursor: true })
-    btnTxt.on('pointerdown', advance)
-    btnBg.on('pointerover', () => btnBg.setFillStyle(0x2471A3))
-    btnBg.on('pointerout',  () => btnBg.setFillStyle(0x2E86C1))
-
-    void bg
   }
 
   // ── Tela final (conclusão do Nível 3) ────────────────────────────────────
@@ -1659,7 +1578,4 @@ export class GameScene extends Phaser.Scene {
     [262, 330, 392, 523].forEach((f, i) => this.playTone(f, 0.20, 'sine', 0.28, i * 0.13))
   }
 
-  private playCountdown() {
-    this.playTone(880, 0.07, 'sine', 0.18)
-  }
 }

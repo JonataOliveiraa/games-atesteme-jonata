@@ -212,11 +212,11 @@ export class GameScene extends Phaser.Scene {
       color: '#607D8B', align: 'center',
     }).setOrigin(0.5).setDepth(62)
 
-    const btnBg = this.add.rectangle(640, 576, 280, 66, 0x2ECC71, 1)
+    const btnBg = this.add.rectangle(640, 574, 300, 88, 0x2ECC71, 1)
       .setStrokeStyle(3, 0xFFFFFF)
       .setInteractive({ useHandCursor: true })
       .setDepth(62)
-    const btnTxt = this.add.text(640, 576, '▶  Iniciar', {
+    const btnTxt = this.add.text(640, 574, '▶  Iniciar', {
       fontSize: '28px', fontFamily: 'Arial Black, Arial', color: '#FFFFFF',
     }).setOrigin(0.5).setDepth(63)
 
@@ -553,88 +553,10 @@ export class GameScene extends Phaser.Scene {
         targets: [bg, ...contentItems], alpha: 0, duration: 350,
         onComplete: () => {
           bg.destroy(); contentItems.forEach(o => o.destroy())
-          if (nextLevel) this.showNextLevelScreen(nextLevel)
+          if (nextLevel) this.scene.restart({ level: nextLevel, points: this.currentPoints, lives: this.currentLives })
         },
       })
     })
-  }
-
-  private showNextLevelScreen(nextLevel: 1 | 2 | 3) {
-    this.input.enabled = true
-
-    const nextConfig = LEVELS.find(l => l.level === nextLevel) ?? LEVELS[nextLevel - 1]
-    const nextInfo   = this.getLevelInstructionsFor(nextLevel)
-
-    const bg = this.add.rectangle(640, 360, 1280, 720, 0x0D1B2A, 0.97)
-      .setDepth(500).setInteractive()
-
-    const stars = this.add.text(640, 160, '★'.repeat(nextLevel) + '☆'.repeat(3 - nextLevel), {
-      fontSize: '44px', color: '#F1C40F',
-    }).setOrigin(0.5).setDepth(501)
-
-    const lvlTitle = this.add.text(640, 244, `Próximo: Nível ${nextLevel}`, {
-      fontSize: '48px', fontFamily: 'Arial Black, Arial',
-      color: '#FFFFFF', stroke: '#000000', strokeThickness: 6,
-    }).setOrigin(0.5).setDepth(501)
-
-    const card = this.add.rectangle(640, 395, 900, 200, 0x1A2A3A, 1)
-      .setStrokeStyle(2, 0x4FC3F7).setDepth(501)
-
-    const obj = this.add.text(640, 340, `🎯  ${nextInfo.objective}`, {
-      fontSize: '22px', fontFamily: 'Arial Black, Arial', color: '#AED6F1',
-      wordWrap: { width: 820 }, align: 'center',
-    }).setOrigin(0.5).setDepth(502)
-
-    const tip = this.add.text(640, 398, `💡  ${nextInfo.tip}`, {
-      fontSize: '18px', fontFamily: 'Arial', color: '#F9E79F',
-      wordWrap: { width: 820 }, align: 'center',
-    }).setOrigin(0.5).setDepth(502)
-
-    const timeInfo = this.add.text(640, 450, `⏱  ${nextConfig.timeLimit} segundos`, {
-      fontSize: '17px', fontFamily: 'Arial', color: '#607D8B',
-    }).setOrigin(0.5).setDepth(502)
-
-    const advBg = this.add.rectangle(640, 550, 280, 66, 0x4FC3F7, 1)
-      .setStrokeStyle(3, 0xFFFFFF)
-      .setInteractive({ useHandCursor: true })
-      .setDepth(502)
-    const advTxt = this.add.text(640, 550, '▶  Avançar', {
-      fontSize: '28px', fontFamily: 'Arial Black, Arial', color: '#0D1B2A',
-    }).setOrigin(0.5).setDepth(503)
-
-    const contentItems = [stars, lvlTitle, card, obj, tip, timeInfo, advBg, advTxt]
-    this.tweens.add({
-      targets: contentItems,
-      alpha: { from: 0, to: 1 }, y: '+=6',
-      duration: 400, ease: 'Back.Out',
-    })
-    this.tweens.add({
-      targets: [advBg, advTxt],
-      scaleX: 1.04, scaleY: 1.04,
-      duration: 750, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
-    })
-
-    const advance = () => {
-      this.playTick()
-      this.scene.restart({ level: nextLevel, points: this.currentPoints, lives: this.currentLives })
-    }
-    advBg.on('pointerdown', advance)
-    advTxt.setInteractive({ useHandCursor: true })
-    advTxt.on('pointerdown', advance)
-    advBg.on('pointerover', () => advBg.setFillStyle(0x29B6F6))
-    advBg.on('pointerout',  () => advBg.setFillStyle(0x4FC3F7))
-    void bg
-  }
-
-  private getLevelInstructionsFor(lvl: number): { objective: string; tip: string } {
-    if (lvl === 2) return {
-      objective: 'Compare dois veículos e descubra suas diferenças.',
-      tip:       'Marque IGUAL ou DIFERENTE para cada característica.',
-    }
-    return {
-      objective: 'Descubra o que os veículos destacados têm em comum.',
-      tip:       'Observe os veículos com borda dourada e escolha a resposta.',
-    }
   }
 
   private showGameOverScreen(reason: 'timeout' | 'wrong-answer' = 'timeout') {
@@ -667,17 +589,17 @@ export class GameScene extends Phaser.Scene {
       color: '#BDC3C7', wordWrap: { width: 800 }, align: 'center',
     }).setOrigin(0.5).setDepth(501)
 
-    const retryBg = this.add.rectangle(450, 510, 300, 66, 0x2ECC71, 1)
+    const retryBg = this.add.rectangle(440, 510, 310, 88, 0x2ECC71, 1)
       .setStrokeStyle(3, 0xFFFFFF)
       .setInteractive({ useHandCursor: true }).setDepth(502)
-    const retryTxt = this.add.text(450, 510, '🔄  Tentar Novamente', {
+    const retryTxt = this.add.text(440, 510, '🔄  Tentar Novamente', {
       fontSize: '20px', fontFamily: 'Arial Black, Arial', color: '#FFFFFF',
     }).setOrigin(0.5).setDepth(503)
 
-    const exitBg = this.add.rectangle(830, 510, 220, 66, 0xE74C3C, 1)
+    const exitBg = this.add.rectangle(840, 510, 240, 88, 0xE74C3C, 1)
       .setStrokeStyle(3, 0xFFFFFF)
       .setInteractive({ useHandCursor: true }).setDepth(502)
-    const exitTxt = this.add.text(830, 510, 'Sair', {
+    const exitTxt = this.add.text(840, 510, 'Sair', {
       fontSize: '26px', fontFamily: 'Arial Black, Arial', color: '#FFFFFF',
     }).setOrigin(0.5).setDepth(503)
 
@@ -834,7 +756,7 @@ export class GameScene extends Phaser.Scene {
 
     // Sub-título do atributo
     const sub = this.add.text(PANEL_W / 2, 64, 'Esse veículo VOA?', {
-      fontSize: '20px',
+      fontSize: '22px',
       fontFamily: 'Arial, sans-serif',
       color: '#90CAF9',
     }).setOrigin(0.5, 0)
@@ -849,12 +771,12 @@ export class GameScene extends Phaser.Scene {
     // Botões de filtro
     const btnData = [
       { label: '✈️  SIM — Voa!',      value: true as FilterValue,  color: 0x2E7D32, y: 130 },
-      { label: '🚗  NÃO — Não voa',  value: false as FilterValue, color: 0xB71C1C, y: 230 },
-      { label: '🔄  Mostrar todos',   value: null,                  color: 0x1565C0, y: 340 },
+      { label: '🚗  NÃO — Não voa',  value: false as FilterValue, color: 0xB71C1C, y: 232 },
+      { label: '🔄  Mostrar todos',   value: null,                  color: 0x1565C0, y: 342 },
     ]
 
     btnData.forEach(({ label, value, color, y }) => {
-      const btn = this.makeRoundedButton(label, color, 340, 64, () => {
+      const btn = this.makeRoundedButton(label, color, 340, 82, () => {
         if (this.phase !== 'waiting-filter') return
         this.applyFilter('voa', value)
       })
@@ -1223,7 +1145,7 @@ export class GameScene extends Phaser.Scene {
     // Instrução
     const instr = this.add.text(640, TOP_Y + 50,
       `🔍  Compare ${vA.name} e ${vB.name} — são iguais ou diferentes em cada item?`, {
-      fontSize: '19px',
+      fontSize: '22px',
       fontFamily: 'Arial, sans-serif',
       color: '#E3F2FD',
       stroke: '#000000',
@@ -1257,7 +1179,7 @@ export class GameScene extends Phaser.Scene {
     })
 
     // Botão confirmar — guarda contra cliques durante animação ou game over
-    const confirm = this.makeRoundedButton('✔  Confirmar', 0x1565C0, 240, 56, () => {
+    const confirm = this.makeRoundedButton('✔  Confirmar', 0x1565C0, 260, 72, () => {
       if (this.gameEnded || this.phase === 'feedback-ok' || this.phase === 'animating') return
       this.confirmComparison(vA, vB, pair.attributes)
     })
@@ -1309,12 +1231,12 @@ export class GameScene extends Phaser.Scene {
 
     const rowBg = this.add.graphics()
     rowBg.fillStyle(0x0D2137, 0.7)
-    rowBg.fillRoundedRect(cx - 265, cy - 28, 530, 56, 10)
+    rowBg.fillRoundedRect(cx - 280, cy - 36, 560, 72, 10)
     rowBg.lineStyle(1, 0x37474F, 0.6)
-    rowBg.strokeRoundedRect(cx - 265, cy - 28, 530, 56, 10)
+    rowBg.strokeRoundedRect(cx - 280, cy - 36, 560, 72, 10)
 
     const labelTxt = this.add.text(cx, cy, labels[attr], {
-      fontSize: '17px',
+      fontSize: '18px',
       fontFamily: 'Arial Black, Arial',
       color: '#B0BEC5',
     }).setOrigin(0.5)
@@ -1333,7 +1255,7 @@ export class GameScene extends Phaser.Scene {
 
   private makeOptionButton(label: string, color: number, onClick: () => void) {
     const container = this.add.container(0, 0)
-    const W = 130, H = 42
+    const W = 150, H = 60
 
     const bg = this.add.graphics()
     bg.fillStyle(color, 0.5)
@@ -1342,7 +1264,7 @@ export class GameScene extends Phaser.Scene {
     bg.strokeRoundedRect(-W / 2, -H / 2, W, H, 10)
 
     const txt = this.add.text(0, 0, label, {
-      fontSize: '14px',
+      fontSize: '17px',
       fontFamily: 'Arial Black, Arial',
       color: '#FFFFFF',
     }).setOrigin(0.5)
@@ -1363,7 +1285,7 @@ export class GameScene extends Phaser.Scene {
     const redraw = (btn: Phaser.GameObjects.Container, active: boolean, color: number) => {
       const bg = btn.getAt(0) as Phaser.GameObjects.Graphics
       bg.clear()
-      const W = 130, H = 42
+      const W = 150, H = 60
       bg.fillStyle(color, active ? 1 : 0.3)
       bg.fillRoundedRect(-W / 2, -H / 2, W, H, 10)
       bg.lineStyle(active ? 3 : 1, 0xFFFFFF, active ? 0.9 : 0.15)
@@ -1454,7 +1376,7 @@ export class GameScene extends Phaser.Scene {
     // Instrução
     this.add.text(START_X + (COLS * (SCARD_W + SCARD_GAP)) / 2, TOP_Y + 40,
       `💬  ${mission.instruction}`, {
-        fontSize: '18px',
+        fontSize: '22px',
         fontFamily: 'Arial, sans-serif',
         color: '#FFFDE7',
         stroke: '#000000',
@@ -1561,7 +1483,7 @@ export class GameScene extends Phaser.Scene {
       const oy  = optStartY + row * (optH + optGap)
       const isCorrect = i === mission.correctOptionIndex
 
-      const btn = this.makeGroupOptionButton(opt.label, isCorrect, optW / 2 - 6, optH, () => {
+      const btn = this.makeGroupOptionButton(opt.label, isCorrect, optW / 2 - 6, 72, () => {
         if (this.phase !== 'question') return
         overlay.getAll<Phaser.GameObjects.Container>().forEach((c) => {
           if (c instanceof Phaser.GameObjects.Container) c.disableInteractive()
@@ -1669,7 +1591,7 @@ export class GameScene extends Phaser.Scene {
 
   private makeMCQButton(label: string, onClick: () => void): Phaser.GameObjects.Container {
     const container = this.add.container(0, 0)
-    const W = 120, H = 58
+    const W = 120, H = 76
 
     const bg = this.add.graphics()
     bg.fillStyle(0x0D47A1, 1)
