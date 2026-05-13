@@ -19,16 +19,6 @@ const TIMER_BAR_Y = 100
 const TIMER_BAR_W = 900
 const GAME_ID = 'base-dos-classificadores'
 
-const RULE_MAP: Record<string, string> = {
-  cor: 'Separe por COR!',
-  forma: 'Separe por FORMA!',
-  tamanho: 'Separe por TAMANHO!',
-}
-const ICON_MAP: Record<string, string> = {
-  cor: '🎨',
-  forma: '🔷',
-  tamanho: '📏',
-}
 
 export class GameScene extends Phaser.Scene {
   private levelConfig!: LevelConfig
@@ -129,22 +119,52 @@ export class GameScene extends Phaser.Scene {
 
   // ── Telas de fluxo ──────────────────────────────────────────────────────────
 
+  private getLevelInstructions(): { objective: string; detail: string; tip: string } {
+    const nItems = this.levelConfig.items.length
+    const nBases = this.levelConfig.bases.length
+
+    if (this.levelConfig.level === 1) {
+      return {
+        objective: `Separe ${nItems} círculos em ${nBases} grupos.`,
+        detail: 'Todos têm a mesma forma. Use a COR para classificar!',
+        tip: 'Arraste cada item até a base correta.',
+      }
+    }
+
+    if (this.levelConfig.level === 2) {
+      return {
+        objective: `Classifique ${nItems} itens em ${nBases} grupos.`,
+        detail: 'Cuidado! Tem formas e cores diferentes. Siga a REGRA da barra!',
+        tip: 'Use o ícone na barra de tarefas como guia.',
+      }
+    }
+
+    return {
+      objective: `Complete o desafio com ${nItems} itens.`,
+      detail: 'Nível difícil! Agora a FORMA é o critério. Cor não ajuda!',
+      tip: 'Observe bem cada grupo de itens destacados.',
+    }
+  }
+
   private showStartScreen() {
+    const info = this.getLevelInstructions()
+    const lvl = this.levelConfig.level
+
     const bg = this.add
       .rectangle(640, 360, 1280, 720, 0x000000, 0.78)
       .setDepth(60)
       .setInteractive()
 
     const starsStr =
-      '★'.repeat(this.levelConfig.level) + '☆'.repeat(3 - this.levelConfig.level)
+      '★'.repeat(lvl) + '☆'.repeat(3 - lvl)
     const starsLbl = this.add
       .text(640, 155, starsStr, { fontSize: '48px', color: '#FFD700' })
       .setOrigin(0.5)
       .setDepth(61)
 
-    const lvlLbl = this.add
-      .text(640, 235, `NÍVEL ${this.levelConfig.level}`, {
-        fontSize: '72px',
+    const lvlTitle = this.add
+      .text(640, 235, `NÍVEL ${lvl} — Primeiros Passos`, {
+        fontSize: '56px',
         fontFamily: 'Arial Black, Arial',
         color: '#FFFFFF',
         stroke: '#000000',
@@ -153,41 +173,64 @@ export class GameScene extends Phaser.Scene {
       .setOrigin(0.5)
       .setDepth(61)
 
-    const ruleLbl = this.add
-      .text(
-        640,
-        325,
-        `${ICON_MAP[this.levelConfig.criterion] ?? ''}  ${RULE_MAP[this.levelConfig.criterion] ?? ''}`,
-        {
-          fontSize: '34px',
-          fontFamily: 'Arial, sans-serif',
-          color: '#FFF9C4',
-          stroke: '#000000',
-          strokeThickness: 5,
-        },
-      )
-      .setOrigin(0.5)
+    const card = this.add
+      .rectangle(640, 380, 900, 220, 0x1a1a2e, 0.95)
+      .setStrokeStyle(2, 0x2ecc71)
       .setDepth(61)
 
-    const nItems = this.levelConfig.items.length
-    const timerInfo = this.levelConfig.timeLimit
-      ? `⏱ ${this.levelConfig.timeLimit}s`
-      : 'Sem limite de tempo'
-    const detailsLbl = this.add
-      .text(640, 400, `${nItems} itens  •  ${timerInfo}`, {
-        fontSize: '24px',
-        color: '#B0BEC5',
+    const objective = this.add
+      .text(640, 320, `🎯  ${info.objective}`, {
+        fontSize: '22px',
+        fontFamily: 'Arial Black, Arial',
+        color: '#AED6F1',
+        wordWrap: { width: 820 },
+        align: 'center',
       })
       .setOrigin(0.5)
-      .setDepth(61)
+      .setDepth(62)
+
+    const detail = this.add
+      .text(640, 370, `✨  ${info.detail}`, {
+        fontSize: '20px',
+        fontFamily: 'Arial',
+        color: '#F9E79F',
+        wordWrap: { width: 820 },
+        align: 'center',
+      })
+      .setOrigin(0.5)
+      .setDepth(62)
+
+    const tip = this.add
+      .text(640, 420, `💡  ${info.tip}`, {
+        fontSize: '18px',
+        fontFamily: 'Arial',
+        color: '#BDC3C7',
+        wordWrap: { width: 820 },
+        align: 'center',
+      })
+      .setOrigin(0.5)
+      .setDepth(62)
+
+    const timerInfo = this.levelConfig.timeLimit
+      ? `⏱  ${this.levelConfig.timeLimit} segundos`
+      : ''
+    const timerLbl = timerInfo ? this.add
+      .text(640, 470, timerInfo, {
+        fontSize: '16px',
+        fontFamily: 'Arial',
+        color: '#607D8B',
+        align: 'center',
+      })
+      .setOrigin(0.5)
+      .setDepth(62) : null
 
     const btnBg = this.add
-      .rectangle(640, 498, 270, 72, 0x2ecc71)
+      .rectangle(640, 540, 280, 72, 0x2ecc71)
       .setStrokeStyle(3, 0x27ae60)
       .setDepth(61)
       .setInteractive({ useHandCursor: true })
     const btnText = this.add
-      .text(640, 498, '▶  Iniciar', {
+      .text(640, 540, '▶  Iniciar', {
         fontSize: '30px',
         fontFamily: 'Arial Black, Arial',
         color: '#FFFFFF',
@@ -195,17 +238,183 @@ export class GameScene extends Phaser.Scene {
       .setOrigin(0.5)
       .setDepth(62)
 
+    const contentItems = [starsLbl, lvlTitle, card, objective, detail, tip, timerLbl, btnBg, btnText].filter(Boolean)
+
+    this.tweens.add({
+      targets: contentItems,
+      alpha: { from: 0, to: 1 },
+      y: '+=6',
+      duration: 400,
+      ease: 'Back.Out',
+    })
+
+    this.tweens.add({
+      targets: [btnBg, btnText],
+      scaleX: 1.04,
+      scaleY: 1.04,
+      duration: 750,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+    })
+
+    const start = () => {
+      this.playTone(523, 0.10, 'sine', 0.20)
+      const all = [bg, ...contentItems]
+      this.tweens.add({
+        targets: all,
+        alpha: 0,
+        duration: 300,
+        onComplete: () => {
+          all.forEach((o) => o?.destroy())
+          runtimeGameBridge.emit({ type: 'GAME_READY', gameId: GAME_ID })
+          EventBus.emit('scene-ready', { levelConfig: this.levelConfig })
+          this.emitCheckpoint()
+
+          if (lvl === 1) {
+            this.showTutorialStep(0)
+          } else {
+            this.revealItems()
+            this.playGo()
+            if (this.levelConfig.timeLimit) this.startTimer()
+          }
+        },
+      })
+    }
+
     btnBg.on('pointerover', () => btnBg.setFillStyle(0x27ae60))
     btnBg.on('pointerout', () => btnBg.setFillStyle(0x2ecc71))
-    btnBg.on('pointerdown', () => {
-      ;[bg, starsLbl, lvlLbl, ruleLbl, detailsLbl, btnBg, btnText].forEach((o) => o.destroy())
-      this.emitCheckpoint()
-      runtimeGameBridge.emit({ type: 'GAME_READY', gameId: GAME_ID })
-      EventBus.emit('scene-ready', { levelConfig: this.levelConfig })
+    btnBg.on('pointerdown', start)
+    btnText.setInteractive({ useHandCursor: true })
+    btnText.on('pointerdown', start)
+  }
+
+  private showTutorialStep(stepIndex: number) {
+    const steps = [
+      {
+        title: 'Observe os círculos',
+        description: 'Veja todos os itens na tela. Cada um tem uma COR e um TAMANHO.',
+        emoji: '👀',
+      },
+      {
+        title: 'Arraste para a base',
+        description: 'Clique em um círculo e arraste-o até uma das bases na direita.',
+        emoji: '👆',
+      },
+      {
+        title: 'Acerte a classificação',
+        description: 'Se a COR estiver correta, você ganha um ponto! ✅',
+        emoji: '🎯',
+      },
+      {
+        title: 'Complete o nível',
+        description: 'Classifique todos os círculos corretamente antes do tempo acabar!',
+        emoji: '⏰',
+      },
+    ]
+
+    if (stepIndex >= steps.length) {
       this.revealItems()
       this.playGo()
       if (this.levelConfig.timeLimit) this.startTimer()
+      return
+    }
+
+    const step = steps[stepIndex]
+
+    const bg = this.add
+      .rectangle(640, 360, 1280, 720, 0x000000, 0.82)
+      .setDepth(60)
+      .setInteractive()
+
+    const emoji = this.add
+      .text(640, 220, step.emoji, { fontSize: '80px' })
+      .setOrigin(0.5)
+      .setDepth(61)
+      .setAlpha(0)
+
+    const title = this.add
+      .text(640, 310, step.title, {
+        fontSize: '42px',
+        fontFamily: 'Arial Black, Arial',
+        color: '#FFD700',
+        stroke: '#000000',
+        strokeThickness: 6,
+      })
+      .setOrigin(0.5)
+      .setDepth(61)
+      .setAlpha(0)
+
+    const description = this.add
+      .text(640, 410, step.description, {
+        fontSize: '26px',
+        fontFamily: 'Arial',
+        color: '#FFFFFF',
+        stroke: '#000',
+        strokeThickness: 3,
+        wordWrap: { width: 900 },
+        align: 'center',
+      })
+      .setOrigin(0.5)
+      .setDepth(61)
+      .setAlpha(0)
+
+    const btnBg = this.add
+      .rectangle(640, 530, 300, 64, 0x3498db)
+      .setStrokeStyle(3, 0x2980b9)
+      .setDepth(61)
+      .setInteractive({ useHandCursor: true })
+      .setAlpha(0)
+
+    const btnText = this.add
+      .text(
+        640,
+        530,
+        stepIndex === steps.length - 1 ? '▶  Começar!' : '▶  Próximo passo',
+        {
+          fontSize: '24px',
+          fontFamily: 'Arial Black, Arial',
+          color: '#FFFFFF',
+        },
+      )
+      .setOrigin(0.5)
+      .setDepth(62)
+      .setAlpha(0)
+
+    const contentItems = [emoji, title, description, btnBg, btnText]
+
+    this.tweens.add({
+      targets: contentItems,
+      alpha: { from: 0, to: 1 },
+      duration: 300,
+      ease: 'Back.Out',
     })
+
+    let done = false
+    const advance = () => {
+      if (done) return
+      done = true
+      autoTimer.destroy()
+      this.playTone(523, 0.08, 'sine', 0.18)
+      const all = [bg, ...contentItems]
+      this.tweens.add({
+        targets: all,
+        alpha: 0,
+        duration: 250,
+        onComplete: () => {
+          all.forEach((o) => o.destroy())
+          this.showTutorialStep(stepIndex + 1)
+        },
+      })
+    }
+
+    const autoTimer = this.time.delayedCall(3000, advance)
+
+    btnBg.on('pointerover', () => btnBg.setFillStyle(0x2980b9))
+    btnBg.on('pointerout', () => btnBg.setFillStyle(0x3498db))
+    btnBg.on('pointerdown', advance)
+    btnText.setInteractive({ useHandCursor: true })
+    btnText.on('pointerdown', advance)
   }
 
   private showLevelCompleteScreen(nextLevel: 1 | 2 | 3) {
@@ -287,108 +496,6 @@ export class GameScene extends Phaser.Scene {
         lives: this.currentLives,
       })
     })
-  }
-
-  private showGameOverScreen() {
-    this.input.enabled = true
-
-    const bg = this.add
-      .rectangle(640, 360, 1280, 720, 0x000000, 0.82)
-      .setDepth(60)
-      .setInteractive()
-
-    const mainLbl = this.add
-      .text(640, 210, 'GAME OVER', {
-        fontSize: '84px',
-        fontFamily: 'Arial Black, Arial',
-        color: '#E74C3C',
-        stroke: '#000000',
-        strokeThickness: 10,
-      })
-      .setOrigin(0.5)
-      .setDepth(61)
-      .setAlpha(0)
-
-    const causeLbl = this.add
-      .text(640, 300, '⏰  Tempo esgotado!', {
-        fontSize: '36px',
-        color: '#FF6B35',
-        stroke: '#000',
-        strokeThickness: 5,
-      })
-      .setOrigin(0.5)
-      .setDepth(61)
-      .setAlpha(0)
-
-    const statsLbl = this.add
-      .text(
-        640,
-        368,
-        `✅ ${this.hits} acerto${this.hits !== 1 ? 's' : ''}   ✖ ${this.errors} erro${this.errors !== 1 ? 's' : ''}`,
-        { fontSize: '28px', color: '#FFFFFF', stroke: '#000', strokeThickness: 4 },
-      )
-      .setOrigin(0.5)
-      .setDepth(61)
-      .setAlpha(0)
-
-    this.tweens.add({
-      targets: mainLbl,
-      alpha: 1,
-      scaleX: { from: 0.4, to: 1 },
-      scaleY: { from: 0.4, to: 1 },
-      duration: 380,
-      ease: 'Back.Out',
-    })
-    this.tweens.add({ targets: causeLbl, alpha: 1, duration: 300, delay: 200 })
-    this.tweens.add({ targets: statsLbl, alpha: 1, duration: 300, delay: 350 })
-
-    const retryBg = this.add
-      .rectangle(510, 465, 260, 64, 0x2ecc71)
-      .setStrokeStyle(3, 0x27ae60)
-      .setDepth(61)
-      .setInteractive({ useHandCursor: true })
-    const retryLbl = this.add
-      .text(510, 465, '↺  Tentar novamente', {
-        fontSize: '19px',
-        fontFamily: 'Arial Black, Arial',
-        color: '#FFFFFF',
-      })
-      .setOrigin(0.5)
-      .setDepth(62)
-
-    const exitBg = this.add
-      .rectangle(770, 465, 200, 64, 0x7f8c8d)
-      .setStrokeStyle(3, 0x636e72)
-      .setDepth(61)
-      .setInteractive({ useHandCursor: true })
-    const exitLbl = this.add
-      .text(770, 465, '✕  Sair', {
-        fontSize: '22px',
-        fontFamily: 'Arial Black, Arial',
-        color: '#FFFFFF',
-      })
-      .setOrigin(0.5)
-      .setDepth(62)
-
-    retryBg.on('pointerover', () => retryBg.setFillStyle(0x27ae60))
-    retryBg.on('pointerout', () => retryBg.setFillStyle(0x2ecc71))
-    retryBg.on('pointerdown', () => {
-      this.scene.restart({
-        level: this.levelConfig.level,
-        points: this.currentPoints,
-        lives: this.currentLives,
-      })
-    })
-
-    exitBg.on('pointerover', () => exitBg.setFillStyle(0x636e72))
-    exitBg.on('pointerout', () => exitBg.setFillStyle(0x7f8c8d))
-    exitBg.on('pointerdown', () => {
-      EventBus.emit('exit-game')
-    })
-
-    const btns = [retryBg, retryLbl, exitBg, exitLbl]
-    btns.forEach((o) => (o as { setAlpha: (n: number) => void }).setAlpha(0))
-    this.tweens.add({ targets: btns, alpha: 1, duration: 300, delay: 500 })
   }
 
   private showFinalCompleteScreen() {
@@ -983,18 +1090,13 @@ export class GameScene extends Phaser.Scene {
     this.input.enabled = false
     this.timerEvent?.destroy()
     this.playTimeUp()
-
     this.errors += 1
     this.currentPoints = Math.max(0, this.currentPoints - 5)
-
     runtimeGameBridge.emit({
-      type: 'WRONG_ANSWER',
+      type: 'GAME_OVER',
       gameId: GAME_ID,
-      pointsEarned: -5,
       stage: this.levelConfig.level,
     })
-
-    this.showGameOverScreen()
   }
 
   private revealItems() {

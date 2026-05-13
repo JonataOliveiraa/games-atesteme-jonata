@@ -10,6 +10,7 @@ import type { PlatformEvent } from "../shared/contracts/platformEvents";
 import type { GameEventPayload } from "../types/platform";
 import type Phaser from "phaser";
 import { EventBus } from "../shared/EventBus";
+import { gameBridge } from "../shared/bridge/gameBridge";
 
 const SLUG_TO_CODE: Record<string, GameCode> = {
   "base-dos-classificadores": "EF01CO01",
@@ -56,7 +57,6 @@ export default function GameDetailsPage() {
   const [currentLevel, setCurrentLevel] = useState<1 | 2 | 3>(1);
 
   const [showGameOverModal, setShowGameOverModal] = useState(false);
-  const [showUnlockModal, setShowUnlockModal] = useState(false);
   const [showNoLivesModal, setShowNoLivesModal] = useState(false);
   const [showPostUnlockLifeModal, setShowPostUnlockLifeModal] = useState(false);
   const [showCongratsModal, setShowCongratsModal] = useState(false);
@@ -114,10 +114,6 @@ export default function GameDetailsPage() {
       setShowNoLivesModal(true);
     };
 
-    const openUnlockModal = () => {
-      setShowUnlockModal(true);
-    };
-
     const exitGame = () => {
       setHasStartedGame(false);
       navigate("/", { replace: true });
@@ -127,18 +123,23 @@ export default function GameDetailsPage() {
       setHasStartedGame(false);
     };
 
+    const closeGameModals = () => {
+      setShowNoLivesModal(false);
+      setShowGameOverModal(false);
+    };
+
     window.addEventListener("pixel-secret-show-extra-life-modal", openExtraLifeModal);
-    window.addEventListener("pixel-secret-open-unlock-modal", openUnlockModal);
     window.addEventListener("pixel-secret-exit-game", exitGame);
     EventBus.on("exit-game", exitGame);
     EventBus.on("game-back-to-start", backToStart);
+    EventBus.on("close-game-modals", closeGameModals);
 
     return () => {
       window.removeEventListener("pixel-secret-show-extra-life-modal", openExtraLifeModal);
-      window.removeEventListener("pixel-secret-open-unlock-modal", openUnlockModal);
       window.removeEventListener("pixel-secret-exit-game", exitGame);
       EventBus.off("exit-game", exitGame);
       EventBus.off("game-back-to-start", backToStart);
+      EventBus.off("close-game-modals", closeGameModals);
     };
   }, [navigate]);
 
@@ -293,6 +294,9 @@ export default function GameDetailsPage() {
         }
 
         if (livesAfterError === 0) {
+          if (!isPixelSecreto) {
+            gameBridge.send({ type: 'PAUSE_GAME' });
+          }
           setShowNoLivesModal(true);
         }
 
@@ -381,7 +385,6 @@ export default function GameDetailsPage() {
       return;
     }
 
-    setShowUnlockModal(false);
     setShowGameOverModal(false);
     setCurrentLevel(1);
     setHasStartedGame(false);
@@ -408,8 +411,7 @@ export default function GameDetailsPage() {
 useEffect(() => {
   const hasBlockingOverlay =
     showNoLivesModal ||
-    showGameOverModal ||
-    showUnlockModal;
+    showGameOverModal;
 
   const elements = document.querySelectorAll(
     ".phaser-container, .phaser-container canvas, .game-iframe, iframe"
@@ -428,9 +430,9 @@ useEffect(() => {
       element.classList.remove("game-input-blocked");
     });
   };
-}, [showNoLivesModal, showGameOverModal, showUnlockModal]);
+}, [showNoLivesModal, showGameOverModal]);
 
-  if (blocked && !hasStartedGame && !showGameOverModal && !showUnlockModal) {
+  if (blocked && !hasStartedGame && !showGameOverModal) {
     return (
       <>
         <section>
@@ -480,7 +482,7 @@ useEffect(() => {
                   <span>Seus pontos: {points}</span>
                   <button
                     type="button"
-                    onClick={() => setShowUnlockModal(true)}
+                    onClick={handleUnlock}
                     disabled={points < unlockCost}
                   >
                     Desbloquear jogo
@@ -521,16 +523,6 @@ useEffect(() => {
             </div>
           </div>
         </section>
-
-        <ConfirmModal
-          isOpen={showUnlockModal}
-          title="Desbloquear jogo"
-          message={`Deseja desbloquear o jogo "${game.title}" por ${unlockCost} pontos?`}
-          confirmText="Confirmar"
-          cancelText="Cancelar"
-          onConfirm={handleUnlock}
-          onCancel={() => setShowUnlockModal(false)}
-        />
 
         <ConfirmModal
           isOpen={showPostUnlockLifeModal}
@@ -906,7 +898,12 @@ onTouchStart={(e) => {
               <button
                 type="button"
                 className="game-over-primary-btn"
-                onClick={handleBuyLife}
+                onClick={() => {
+                  handleBuyLife();
+                  if (!isPixelSecreto) {
+                    gameBridge.send({ type: 'RESUME_GAME' });
+                  }
+                }}
               >
                 Comprar vida
               </button>
@@ -917,6 +914,9 @@ onTouchStart={(e) => {
                 onClick={() => {
                   setShowNoLivesModal(false);
                   resumePixelSecreto();
+                  if (!isPixelSecreto) {
+                    gameBridge.send({ type: 'RESUME_GAME' });
+                  }
                 }}
               >
                 Continuar assim
@@ -948,8 +948,6 @@ onTouchStart={(e) => {
       <h1 className="game-over-title">GAME OVER</h1>
 
       <p className="game-over-text">
-        Você errou novamente sem vidas disponíveis.
-        <br />
         O jogo foi bloqueado.
         {blockedUntil && (
           <>
@@ -962,16 +960,14 @@ onTouchStart={(e) => {
       </p>
 
       <p className="game-over-warning">
-        Você pode desbloquear agora usando {unlockCost} pontos.
+        Você pode desbloquear agora usando {unlockCost} pontos. Você tem {points} ponto{points !== 1 ? 's' : ''}.
       </p>
 
       <div className="game-over-actions">
         <button
           type="button"
           className="game-over-primary-btn"
-          onClick={() => {
-            setShowUnlockModal(true);
-          }}
+          onClick={handleUnlock}
         >
           Desbloquear jogo
         </button>
@@ -993,16 +989,6 @@ onTouchStart={(e) => {
 )}
 
       <ConfirmModal
-        isOpen={showUnlockModal}
-        title="Desbloquear jogo"
-        message={`Deseja desbloquear o jogo "${game.title}" por ${unlockCost} pontos?`}
-        confirmText="Confirmar"
-        cancelText="Cancelar"
-        onConfirm={handleUnlock}
-        onCancel={() => setShowUnlockModal(false)}
-      />
-
-      <ConfirmModal
         isOpen={showCongratsModal}
         title="🏆 Parabéns! Você concluiu o jogo!"
         message={`Você completou todos os 3 níveis de "${game.title}". Excelente trabalho! Deseja jogar novamente ou voltar aos jogos?`}
@@ -1010,6 +996,16 @@ onTouchStart={(e) => {
         cancelText="Voltar aos jogos"
         onConfirm={handleCongratsPlayAgain}
         onCancel={handleCongratsExit}
+      />
+
+      <ConfirmModal
+        isOpen={showPostUnlockLifeModal}
+        title="Jogo desbloqueado"
+        message={`O jogo "${game.title}" foi desbloqueado e está com 0 vidas. Deseja comprar +1 vida por ${extraLifeCost} pontos agora?`}
+        confirmText="Comprar vida"
+        cancelText="Depois"
+        onConfirm={handleBuyLife}
+        onCancel={() => setShowPostUnlockLifeModal(false)}
       />
 
       {toast && (
