@@ -12,7 +12,6 @@ export default function PhaserCanvas({ config }: PhaserCanvasProps) {
   useEffect(() => {
     if (!containerRef.current) return;
 
-    // Se já existir um jogo, destruímos ele antes de criar o novo com a nova config
     if (gameRef.current) {
       gameRef.current.destroy(true);
       gameRef.current = null;
@@ -29,7 +28,19 @@ export default function PhaserCanvas({ config }: PhaserCanvasProps) {
         gameRef.current = null;
       }
     };
-  }, [config]); // O React vai rodar isso toda vez que a 'config' (fase/jogo) mudar
+  }, [config]);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    const onWheel = (e: WheelEvent) => {
+      window.scrollBy({ top: e.deltaY, left: e.deltaX, behavior: "auto" });
+    };
+
+    el.addEventListener("wheel", onWheel, { passive: true });
+    return () => el.removeEventListener("wheel", onWheel);
+  }, []);
 
   return (
   <div
