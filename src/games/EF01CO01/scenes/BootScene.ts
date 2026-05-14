@@ -104,6 +104,7 @@ export class BootScene extends Phaser.Scene {
       azul:     0x1E88E5,
       verde:    0x43A047,
       amarelo:  0xFDD835,
+      roxo:     0x8E24AA,
     }
 
     const sizeMap: Record<string, number> = {
@@ -112,10 +113,11 @@ export class BootScene extends Phaser.Scene {
       grande:  100,
     }
 
-    const cores    = ['vermelho', 'azul', 'verde', 'amarelo']
+    const cores    = ['vermelho', 'azul', 'verde', 'amarelo', 'roxo']
     const formas   = ['circulo', 'quadrado', 'triangulo', 'retangulo']
     const tamanhos = ['pequeno', 'medio', 'grande']
 
+    // Formas geométricas (todos os níveis)
     for (const cor of cores) {
       for (const forma of formas) {
         for (const tamanho of tamanhos) {
@@ -134,6 +136,43 @@ export class BootScene extends Phaser.Scene {
         }
       }
     }
+
+    // Manchas de cor puras para o nível 1 (sem ênfase em forma)
+    for (const cor of cores) {
+      for (const tamanho of tamanhos) {
+        const key = `item-${cor}-swatch-${tamanho}`
+        if (this.textures.exists(key)) continue
+
+        const size    = sizeMap[tamanho]
+        const fill    = colorMap[cor]
+        const canvasW = size + 20
+        const canvasH = size + 20
+
+        const gfx = this.add.graphics()
+        this.drawColorSwatch(gfx, size, fill)
+        gfx.generateTexture(key, canvasW, canvasH)
+        gfx.destroy()
+      }
+    }
+  }
+
+  private drawColorSwatch(gfx: Phaser.GameObjects.Graphics, size: number, fill: number) {
+    const half   = size / 2
+    const cx     = half + 7
+    const cy     = half + 7
+    const radius = Math.round(size * 0.22)
+
+    // Sombra suave
+    gfx.fillStyle(0x000000, 0.18)
+    gfx.fillRoundedRect(cx - half + 5, cy - half + 5, size, size, radius)
+
+    // Mancha de cor — sem contorno espesso para não sugerir forma
+    gfx.fillStyle(fill, 1)
+    gfx.fillRoundedRect(cx - half, cy - half, size, size, radius)
+
+    // Brilho discreto no canto superior
+    gfx.fillStyle(0xFFFFFF, 0.30)
+    gfx.fillRoundedRect(cx - half + 5, cy - half + 5, size * 0.45, size * 0.28, radius * 0.5)
   }
 
   // ── Desenho de formas ────────────────────────────────────────────────────

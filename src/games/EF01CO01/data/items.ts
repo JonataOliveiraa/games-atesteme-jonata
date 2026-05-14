@@ -48,6 +48,15 @@ export const ALL_ITEMS: GameItem[] = [
   { id: 'am-tri-p', color: 'amarelo', shape: 'triangulo',  size: 'pequeno', frame: '' },
   { id: 'am-tri-m', color: 'amarelo', shape: 'triangulo',  size: 'medio',   frame: '' },
   { id: 'am-ret-g', color: 'amarelo', shape: 'retangulo',  size: 'grande',  frame: '' },
+
+  // --- roxos ---
+  { id: 'rx-cir-m', color: 'roxo', shape: 'circulo',    size: 'medio',   frame: '' },
+  { id: 'rx-cir-g', color: 'roxo', shape: 'circulo',    size: 'grande',  frame: '' },
+  { id: 'rx-qua-p', color: 'roxo', shape: 'quadrado',   size: 'pequeno', frame: '' },
+  { id: 'rx-qua-m', color: 'roxo', shape: 'quadrado',   size: 'medio',   frame: '' },
+  { id: 'rx-tri-p', color: 'roxo', shape: 'triangulo',  size: 'pequeno', frame: '' },
+  { id: 'rx-tri-g', color: 'roxo', shape: 'triangulo',  size: 'grande',  frame: '' },
+  { id: 'rx-ret-m', color: 'roxo', shape: 'retangulo',  size: 'medio',   frame: '' },
 ]
 
 /** Filtra itens pelo valor de um atributo */

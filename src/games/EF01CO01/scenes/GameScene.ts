@@ -125,24 +125,24 @@ export class GameScene extends Phaser.Scene {
 
     if (this.levelConfig.level === 1) {
       return {
-        objective: `Separe ${nItems} círculos em ${nBases} grupos.`,
-        detail: 'Todos têm a mesma forma. Use a COR para classificar!',
-        tip: 'Arraste cada item até a base correta.',
+        objective: `Separe ${nItems} itens em ${nBases} grupos de CORES.`,
+        detail: 'As formas são diferentes — ignore-as! Use só a COR para classificar.',
+        tip: 'Arraste cada item para a base com a mesma cor.',
       }
     }
 
     if (this.levelConfig.level === 2) {
       return {
-        objective: `Classifique ${nItems} itens em ${nBases} grupos.`,
-        detail: 'Cuidado! Tem formas e cores diferentes. Siga a REGRA da barra!',
-        tip: 'Use o ícone na barra de tarefas como guia.',
+        objective: `Classifique ${nItems} itens em ${nBases} grupos de CORES.`,
+        detail: 'Agora são 4 cores e 3 formas. Foque na COR, não na forma!',
+        tip: 'Arraste cada item para a base com a mesma cor.',
       }
     }
 
     return {
-      objective: `Complete o desafio com ${nItems} itens.`,
-      detail: 'Nível difícil! Agora a FORMA é o critério. Cor não ajuda!',
-      tip: 'Observe bem cada grupo de itens destacados.',
+      objective: `Classifique ${nItems} itens em ${nBases} grupos de FORMAS.`,
+      detail: 'Agora a FORMA é o critério — círculo, quadrado, triângulo ou retângulo!',
+      tip: 'A cor não importa aqui. Observe a forma de cada item.',
     }
   }
 
@@ -292,13 +292,13 @@ export class GameScene extends Phaser.Scene {
   private showTutorialStep(stepIndex: number) {
     const steps = [
       {
-        title: 'Observe os círculos',
-        description: 'Veja todos os itens na tela. Cada um tem uma COR e um TAMANHO.',
+        title: 'Observe os itens',
+        description: 'Veja todos os itens na tela. Eles têm formas diferentes, mas o que importa é a COR!',
         emoji: '👀',
       },
       {
         title: 'Arraste para a base',
-        description: 'Clique em um círculo e arraste-o até uma das bases na direita.',
+        description: 'Clique em um item e arraste-o até a base com a mesma COR.',
         emoji: '👆',
       },
       {
@@ -308,7 +308,7 @@ export class GameScene extends Phaser.Scene {
       },
       {
         title: 'Complete o nível',
-        description: 'Classifique todos os círculos corretamente antes do tempo acabar!',
+        description: 'Classifique todos os itens pela COR antes do tempo acabar!',
         emoji: '⏰',
       },
     ]
@@ -698,21 +698,30 @@ export class GameScene extends Phaser.Scene {
     const w = 210
     const h = 145
     const borderColor = this.getBaseColor(baseData)
+    const isLevel1 = this.levelConfig.level === 1
 
     const shadow = this.add.rectangle(5, 5, w, h, 0x000000, 0.18)
     const panel = this.add.rectangle(0, 0, w, h, 0xffffff, 0.92)
     panel.setStrokeStyle(6, borderColor)
 
-    const header = this.add.rectangle(0, -h / 2 + 22, w, 44, borderColor, 0.85)
+    // No nível 1 o cabeçalho ocupa mais espaço (sem emoji, só cor pura)
+    const headerH = isLevel1 ? 60 : 44
+    const header = this.add.rectangle(0, -h / 2 + headerH / 2, w, headerH, borderColor, 0.92)
 
-    const icon = this.add
-      .text(0, -h / 2 + 22, this.getAttributeIcon(baseData.rule.attribute, baseData.rule.value), {
-        fontSize: '32px',
-      })
-      .setOrigin(0.5)
+    const children: Phaser.GameObjects.GameObject[] = [shadow, panel, header]
 
+    if (!isLevel1) {
+      const icon = this.add
+        .text(0, -h / 2 + 22, this.getAttributeIcon(baseData.rule.attribute, baseData.rule.value), {
+          fontSize: '32px',
+        })
+        .setOrigin(0.5)
+      children.push(icon)
+    }
+
+    const labelY = isLevel1 ? 16 : 22
     const label = this.add
-      .text(0, 22, baseData.labelKey, {
+      .text(0, labelY, baseData.labelKey, {
         fontSize: '22px',
         fontFamily: 'Arial Black, Arial',
         color: '#1A1A2E',
@@ -731,15 +740,9 @@ export class GameScene extends Phaser.Scene {
     const zone = this.add.zone(0, 0, w, h)
     zone.setRectangleDropZone(w, h)
 
-    const container = this.add.container(baseData.x, baseData.y, [
-      shadow,
-      panel,
-      header,
-      icon,
-      label,
-      arrow,
-      zone,
-    ])
+    children.push(label, arrow, zone)
+
+    const container = this.add.container(baseData.x, baseData.y, children)
 
     container.setData('baseData', baseData)
     return container
@@ -1207,17 +1210,18 @@ export class GameScene extends Phaser.Scene {
     if (attribute === 'cor') {
       const map: Record<string, number> = {
         vermelho: 0xe53935,
-        azul: 0x1e88e5,
-        verde: 0x43a047,
-        amarelo: 0xfdd835,
+        azul:     0x1e88e5,
+        verde:    0x43a047,
+        amarelo:  0xfdd835,
+        roxo:     0x8e24aa,
       }
       return map[value] ?? 0x9e9e9e
     }
 
     if (attribute === 'forma') {
       const map: Record<string, number> = {
-        circulo: 0xab47bc,
-        quadrado: 0xff7043,
+        circulo:   0xab47bc,
+        quadrado:  0xff7043,
         triangulo: 0x26c6da,
         retangulo: 0x8bc34a,
       }
@@ -1302,6 +1306,7 @@ export class GameScene extends Phaser.Scene {
         azul: '🔵',
         verde: '🟢',
         amarelo: '🟡',
+        roxo: '🟣',
       }
       return map[value] ?? '⬜'
     }

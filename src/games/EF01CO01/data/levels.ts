@@ -4,19 +4,24 @@ import { ALL_ITEMS } from './items'
 /**
  * Configuração dos 3 níveis do jogo Base dos Classificadores.
  *
- * Nível 1 — Critério cor, 6 itens (círculos em 3 tamanhos × 2 cores), 2 bases, timer 20 s.
- *   Forma idêntica em todos os itens — única variável é a cor (scaffolding máximo).
+ * Nível 1 — Critério: COR (3 cores: vermelho, azul, amarelo)
+ *   9 itens com 3 formas diferentes (círculo, quadrado, triângulo) misturadas.
+ *   Forma varia propositalmente para a criança aprender a ignorá-la e focar na cor.
+ *   3 bases por cor. Timer 25 s.
  *
- * Nível 2 — Critério cor, 12 itens (3 formas × 4 cores), 4 bases, timer 25 s.
- *   3 formas por cor (círculo, quadrado, triângulo) dificultam classificação visual por forma.
+ * Nível 2 — Critério: COR (4 cores: azul, vermelho, amarelo, verde)
+ *   12 itens = 4 cores × 3 formas (círculo, quadrado, triângulo).
+ *   Mais itens e mais cores tornam a tarefa mais exigente.
+ *   4 bases por cor. Timer 30 s.
  *
- * Nível 3 — Critério forma, 18 itens em 2 linhas (6 × 3 formas, todas as 4 cores por forma), 3 bases, timer 30 s.
- *   Segunda linha com itens extras. Cor distribuída igualmente — não serve como pista secundária.
+ * Nível 3 — Critério: FORMA (4 formas: círculo, quadrado, triângulo, retângulo)
+ *   20 itens em 2 linhas = 4 formas × 5 cores (+ roxo).
+ *   Cor varia em todas as formas — não serve como pista.
+ *   4 bases por forma. Timer 40 s.
  *
- * Posições das bases (canvas 1280×720, y=570 fixo):
- *   2 bases → x: 380, 900
- *   4 bases → x: 190, 450, 830, 1090
+ * Posições das bases (canvas 1280×720, y=570):
  *   3 bases → x: 280, 640, 1000
+ *   4 bases → x: 190, 450, 830, 1090
  */
 
 const itemById = (id: string) => {
@@ -26,18 +31,24 @@ const itemById = (id: string) => {
 }
 
 export const LEVELS: LevelConfig[] = [
-  // ── NÍVEL 1 ──────────────────────────────────────────────────────────
+  // ── NÍVEL 1 — Classificar por COR (3 cores, 3 formas misturadas) ─────────
   {
     level: 1,
     criterion: 'cor',
-    timeLimit: 20,
+    timeLimit: 25,
     items: [
-      itemById('r-cir-p'),
+      // vermelho — uma forma de cada
       itemById('r-cir-m'),
-      itemById('r-cir-g'),
-      itemById('a-cir-p'),
-      itemById('a-cir-m'),
+      itemById('r-qua-p'),
+      itemById('r-tri-m'),
+      // azul — uma forma de cada
       itemById('a-cir-g'),
+      itemById('a-qua-m'),
+      itemById('a-tri-p'),
+      // amarelo — uma forma de cada
+      itemById('am-cir-g'),
+      itemById('am-qua-m'),
+      itemById('am-tri-p'),
     ],
     bases: [
       {
@@ -45,7 +56,7 @@ export const LEVELS: LevelConfig[] = [
         rule: { attribute: 'cor', value: 'vermelho' },
         labelKey: 'Vermelho',
         audioKey: 'narr-cor-vermelho',
-        x: 380,
+        x: 280,
         y: 570,
       },
       {
@@ -53,30 +64,42 @@ export const LEVELS: LevelConfig[] = [
         rule: { attribute: 'cor', value: 'azul' },
         labelKey: 'Azul',
         audioKey: 'narr-cor-azul',
-        x: 900,
+        x: 640,
+        y: 570,
+      },
+      {
+        id: 'base-amarelo',
+        rule: { attribute: 'cor', value: 'amarelo' },
+        labelKey: 'Amarelo',
+        audioKey: 'narr-cor-amarelo',
+        x: 1000,
         y: 570,
       },
     ],
   },
 
-  // ── NÍVEL 2 ──────────────────────────────────────────────────────────
+  // ── NÍVEL 2 — Classificar por COR (4 cores, 3 formas) ────────────────────
   {
     level: 2,
     criterion: 'cor',
-    timeLimit: 25,
+    timeLimit: 30,
     items: [
+      // vermelho
       itemById('r-cir-p'),
       itemById('r-qua-m'),
-      itemById('r-tri-p'),
+      itemById('r-tri-m'),
+      // azul
       itemById('a-cir-g'),
       itemById('a-qua-p'),
       itemById('a-tri-g'),
+      // verde
       itemById('v-cir-m'),
       itemById('v-qua-g'),
       itemById('v-tri-m'),
+      // amarelo
       itemById('am-cir-g'),
-      itemById('am-qua-m'),
-      itemById('am-tri-p'),
+      itemById('am-qua-g'),
+      itemById('am-tri-m'),
     ],
     bases: [
       {
@@ -114,33 +137,36 @@ export const LEVELS: LevelConfig[] = [
     ],
   },
 
-  // ── NÍVEL 3 ──────────────────────────────────────────────────────────
+  // ── NÍVEL 3 — Classificar por FORMA (4 formas, 5 cores, 2 linhas) ────────
   {
     level: 3,
     criterion: 'forma',
-    timeLimit: 30,
+    timeLimit: 40,
     items: [
-      // círculos — 6 (4 cores + 2 tamanhos extras)
+      // círculos — 5 cores diferentes
       itemById('r-cir-m'),
       itemById('a-cir-g'),
       itemById('v-cir-g'),
       itemById('am-cir-g'),
-      itemById('r-cir-g'),
-      itemById('a-cir-m'),
-      // quadrados — 6
+      itemById('rx-cir-m'),
+      // quadrados — 5 cores diferentes
       itemById('r-qua-p'),
       itemById('a-qua-g'),
-      itemById('v-qua-g'),
-      itemById('am-qua-m'),
-      itemById('r-qua-m'),
       itemById('v-qua-p'),
-      // triângulos — 6
-      itemById('r-tri-p'),
-      itemById('a-tri-g'),
-      itemById('v-tri-m'),
-      itemById('am-tri-p'),
+      itemById('am-qua-g'),
+      itemById('rx-qua-p'),
+      // triângulos — 5 cores diferentes
       itemById('r-tri-m'),
+      itemById('a-tri-p'),
+      itemById('v-tri-g'),
       itemById('am-tri-m'),
+      itemById('rx-tri-g'),
+      // retângulos — 5 cores diferentes
+      itemById('r-ret-m'),
+      itemById('a-ret-p'),
+      itemById('v-ret-m'),
+      itemById('am-ret-g'),
+      itemById('rx-ret-m'),
     ],
     bases: [
       {
@@ -148,7 +174,7 @@ export const LEVELS: LevelConfig[] = [
         rule: { attribute: 'forma', value: 'circulo' },
         labelKey: 'Círculo',
         audioKey: 'narr-forma-circulo',
-        x: 280,
+        x: 190,
         y: 570,
       },
       {
@@ -156,7 +182,7 @@ export const LEVELS: LevelConfig[] = [
         rule: { attribute: 'forma', value: 'quadrado' },
         labelKey: 'Quadrado',
         audioKey: 'narr-forma-quadrado',
-        x: 640,
+        x: 450,
         y: 570,
       },
       {
@@ -164,7 +190,15 @@ export const LEVELS: LevelConfig[] = [
         rule: { attribute: 'forma', value: 'triangulo' },
         labelKey: 'Triângulo',
         audioKey: 'narr-forma-triangulo',
-        x: 1000,
+        x: 830,
+        y: 570,
+      },
+      {
+        id: 'base-retangulo',
+        rule: { attribute: 'forma', value: 'retangulo' },
+        labelKey: 'Retângulo',
+        audioKey: 'narr-forma-retangulo',
+        x: 1090,
         y: 570,
       },
     ],
