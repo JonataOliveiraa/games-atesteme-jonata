@@ -116,7 +116,7 @@ export default function GameDetailsPage() {
 
     const exitGame = () => {
       setHasStartedGame(false);
-      navigate("/", { replace: true });
+      navigate(-1);
     };
 
     const backToStart = () => {
@@ -149,7 +149,7 @@ export default function GameDetailsPage() {
         <button
           type="button"
           className="back-link"
-          onClick={() => navigate("/")}
+          onClick={() => navigate(-1)}
         >
           {"<"} Voltar
         </button>
@@ -401,7 +401,7 @@ export default function GameDetailsPage() {
   const handleCongratsExit = () => {
     setShowCongratsModal(false);
     setCurrentLevel(1);
-    navigate("/");
+    navigate(-1);
   };
 
   const handleExit = () => {
@@ -439,7 +439,7 @@ useEffect(() => {
           <button
             type="button"
             className="back-link"
-            onClick={() => navigate("/")}
+            onClick={() => navigate(-1)}
           >
             {"<"} Voltar
           </button>
@@ -978,7 +978,7 @@ onTouchStart={(e) => {
           onClick={() => {
             setShowGameOverModal(false);
             setHasStartedGame(false);
-            navigate("/", { replace: true });
+            navigate(-1);
           }}
         >
           Voltar aos jogos
