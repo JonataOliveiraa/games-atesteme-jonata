@@ -15,6 +15,6 @@ export class UIScene extends Phaser.Scene {
   }
 
   private handleMuteAudio = () => {
-    // sem HUD
+    // Sem HUD extra para não sobrepor a interface mobile first do GameScene.
   };
 }

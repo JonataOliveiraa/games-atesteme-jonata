@@ -17,8 +17,10 @@ export interface AlgorithmLevel {
   level: 1 | 2 | 3;
   title: string;
   objective: string;
+  themeEmoji: string;
+  timeLimit: number;
   cards: AlgorithmCard[];
   correctOrder: string[];
   distractors?: AlgorithmCard[];
-  timeLimit?: number;
+  successMessage: string;
 }
