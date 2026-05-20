@@ -587,36 +587,178 @@ export class GameScene extends Phaser.Scene {
   // ── Background & Visuals ────────────────────────────────────────────────────
 
   private createBackground() {
-    // Sky — two-tone gradient feel
-    this.add.rectangle(640, 200, 1280, 400, 0x64B5F6)
-    this.add.rectangle(640, 400, 1280, 200, 0x90CAF9)
+    // ── Sky ──────────────────────────────────────────────────────────────────
+    this.add.rectangle(640, 200, 1280, 400, 0x5BB8F5)
+    this.add.rectangle(640, 410, 1280, 160, 0xA8D8F0)   // softer horizon band
 
-    // Ground
-    this.add.rectangle(640, 600, 1280, 240, 0x388E3C)
+    // ── Rolling hills (behind fence) ─────────────────────────────────────────
+    const hillGfx = this.add.graphics()
+    hillGfx.fillStyle(0x6DB46C, 1)
+    hillGfx.fillEllipse(180, 506, 680, 200)
+    hillGfx.fillEllipse(680, 492, 920, 195)
+    hillGfx.fillEllipse(1160, 510, 660, 196)
+    // Lighter highlight tops
+    hillGfx.fillStyle(0x8BC34A, 0.52)
+    hillGfx.fillEllipse(180, 493, 560, 118)
+    hillGfx.fillEllipse(680, 479, 800, 118)
+    hillGfx.fillEllipse(1160, 496, 542, 110)
 
-    // Grass edge bumps
+    // ── Ground base ───────────────────────────────────────────────────────────
+    this.add.rectangle(640, 626, 1280, 228, 0x43A047)
+    this.add.rectangle(640, 576, 1280, 82, 0x4CAF50)    // brighter front strip
+
+    // ── White picket fence ────────────────────────────────────────────────────
+    const fenceGfx = this.add.graphics()
+    // Rail ambient shadow
+    fenceGfx.fillStyle(0x9E9E9E, 0.20)
+    fenceGfx.fillRect(0, 488, 1280, 50)
+    // Horizontal rails
+    fenceGfx.fillStyle(0xF3F3F3, 1)
+    fenceGfx.fillRoundedRect(0, 494, 1280, 10, 3)
+    fenceGfx.fillRoundedRect(0, 522, 1280, 10, 3)
+    // Rail underside shadow
+    fenceGfx.fillStyle(0xBDBDBD, 0.48)
+    fenceGfx.fillRect(0, 504, 1280, 3)
+    fenceGfx.fillRect(0, 532, 1280, 3)
+    // Pickets
+    for (let x = 6; x < 1280; x += 28) {
+      fenceGfx.fillStyle(0xC8C8C8, 0.42)
+      fenceGfx.fillRoundedRect(x + 2, 476, 14, 58, 3)
+      fenceGfx.fillStyle(0xF8F8F8, 1)
+      fenceGfx.fillRoundedRect(x, 474, 14, 58, 3)
+      fenceGfx.fillStyle(0xFFFFFF, 0.72)
+      fenceGfx.fillRoundedRect(x + 2, 474, 5, 12, 2)
+    }
+
+    // ── Grass edge (fence base) ───────────────────────────────────────────────
     const grassGfx = this.add.graphics()
-    grassGfx.fillStyle(0x66BB6A, 1)
-    for (let x = 0; x < 1280; x += 72) {
-      grassGfx.fillEllipse(x + 36, 486, 88, 22)
+    grassGfx.fillStyle(0x4CAF50, 1)
+    for (let x = -20; x < 1310; x += 48) {
+      grassGfx.fillEllipse(x + 24, 534, 58, 18)
     }
-    grassGfx.fillStyle(0x81C784, 0.55)
-    for (let x = 36; x < 1280; x += 72) {
-      grassGfx.fillEllipse(x + 18, 490, 52, 14)
+    grassGfx.fillStyle(0x66BB6A, 0.62)
+    for (let x = 6; x < 1280; x += 48) {
+      grassGfx.fillEllipse(x + 14, 539, 34, 11)
     }
 
-    // Cartoon sun with smiley face
+    // ── Stone path (bottom centre) ────────────────────────────────────────────
+    const pathGfx = this.add.graphics()
+    const stones = [
+      { x: 640, y: 705, rw: 130, rh: 46 },
+      { x: 492, y: 682, rw: 98,  rh: 38 },
+      { x: 800, y: 680, rw: 98,  rh: 38 },
+      { x: 366, y: 707, rw: 80,  rh: 32 },
+      { x: 930, y: 705, rw: 80,  rh: 32 },
+      { x: 258, y: 686, rw: 66,  rh: 28 },
+      { x: 1042, y: 683, rw: 66, rh: 28 },
+    ]
+    stones.forEach(s => {
+      pathGfx.fillStyle(0x6B5A3A, 0.32)
+      pathGfx.fillEllipse(s.x + 5, s.y + 5, s.rw, s.rh)
+      pathGfx.fillStyle(0xC8A96E, 1)
+      pathGfx.fillEllipse(s.x, s.y, s.rw, s.rh)
+      pathGfx.fillStyle(0xE2C898, 0.68)
+      pathGfx.fillEllipse(s.x - s.rw * 0.14, s.y - s.rh * 0.22, s.rw * 0.50, s.rh * 0.40)
+      pathGfx.lineStyle(1.5, 0x8A7048, 0.42)
+      pathGfx.strokeEllipse(s.x, s.y, s.rw, s.rh)
+    })
+
+    // ── Left tree ─────────────────────────────────────────────────────────────
+    const treeGfx = this.add.graphics()
+    // Trunk
+    treeGfx.fillStyle(0x5D4037, 1)
+    treeGfx.fillRoundedRect(28, 386, 32, 158, 8)
+    treeGfx.fillStyle(0x795548, 0.42)
+    treeGfx.fillRoundedRect(28, 386, 13, 158, 5)
+    // Root bumps
+    treeGfx.fillStyle(0x5D4037, 1)
+    treeGfx.fillEllipse(20, 536, 28, 14)
+    treeGfx.fillEllipse(72, 538, 22, 12)
+    // Canopy — layered circles for fluffy look
+    treeGfx.fillStyle(0x2E7D32, 1)
+    treeGfx.fillCircle(66, 386, 84)
+    treeGfx.fillCircle(20, 416, 70)
+    treeGfx.fillCircle(112, 412, 66)
+    treeGfx.fillStyle(0x388E3C, 1)
+    treeGfx.fillCircle(66, 368, 73)
+    treeGfx.fillCircle(24, 399, 58)
+    treeGfx.fillCircle(106, 396, 56)
+    treeGfx.fillStyle(0x4CAF50, 0.58)
+    treeGfx.fillCircle(52, 354, 48)
+    treeGfx.fillCircle(20, 385, 36)
+    treeGfx.fillStyle(0x66BB6A, 0.26)
+    treeGfx.fillCircle(44, 346, 28)
+
+    // ── Sparkle decorations ───────────────────────────────────────────────────
+    const sparkleGfx = this.add.graphics()
+    const sparkles = [
+      { x: 1054, y: 66, s: 7 }, { x: 1114, y: 48, s: 5 },
+      { x: 1092, y: 120, s: 5 }, { x: 294, y: 82, s: 7 },
+      { x: 342, y: 114, s: 5 }, { x: 872, y: 56, s: 5 },
+    ]
+    sparkles.forEach(({ x, y, s }) => {
+      sparkleGfx.fillStyle(0xFFFFFF, 0.92)
+      sparkleGfx.fillRect(x - 1.5, y - s, 3, s * 2)
+      sparkleGfx.fillRect(x - s, y - 1.5, s * 2, 3)
+      sparkleGfx.fillStyle(0xFFFFFF, 0.36)
+      sparkleGfx.fillRect(x - s * 0.52, y - s * 0.52, 2, s)
+      sparkleGfx.fillRect(x + s * 0.52 - 2, y - s * 0.52, 2, s)
+    })
+
+    // ── Daisy flowers on grass ────────────────────────────────────────────────
+    const daisyData = [
+      { x: 196, y: 558, r: 9 }, { x: 254, y: 574, r: 7 },
+      { x: 1044, y: 560, r: 9 }, { x: 1114, y: 572, r: 7 },
+      { x: 566, y: 563, r: 8 }, { x: 712, y: 568, r: 7 },
+      { x: 1192, y: 547, r: 6 }, { x: 84, y: 549, r: 6 },
+    ]
+    daisyData.forEach(d => {
+      const fg = this.add.graphics()
+      fg.lineStyle(2, 0x2E7D32, 1)
+      fg.lineBetween(d.x, d.y + 6, d.x, d.y + 26)
+      fg.fillStyle(0xFFFFFF, 1)
+      for (let p = 0; p < 8; p++) {
+        const a = (p / 8) * Math.PI * 2
+        fg.fillEllipse(d.x + Math.cos(a) * d.r, d.y + Math.sin(a) * d.r, 6, 10)
+      }
+      fg.fillStyle(0xFDD835, 1)
+      fg.fillCircle(d.x, d.y, Math.round(d.r * 0.52))
+      fg.fillStyle(0xF57F17, 0.48)
+      fg.fillCircle(d.x + 1, d.y - 1, Math.round(d.r * 0.22))
+    })
+
+    // ── Coloured accent flowers near bases ────────────────────────────────────
+    const flowerColors = [0xFF8F00, 0xE91E63, 0x9C27B0, 0xF44336, 0xFF5722, 0xFDD835]
+    for (let i = 0; i < 6; i++) {
+      const fx = 140 + i * 190 + Phaser.Math.Between(-14, 14)
+      const fy = 572 + Phaser.Math.Between(-6, 8)
+      const color = flowerColors[i % flowerColors.length]
+      const fg = this.add.graphics()
+      fg.fillStyle(color, 1)
+      for (let p = 0; p < 5; p++) {
+        const pa = (p / 5) * Math.PI * 2
+        fg.fillEllipse(fx + Math.cos(pa) * 9, fy + Math.sin(pa) * 9, 11, 15)
+      }
+      fg.fillStyle(0xFFF176, 1)
+      fg.fillCircle(fx, fy, 6)
+      fg.lineStyle(2, 0x2E7D32, 1)
+      fg.lineBetween(fx, fy + 7, fx, fy + 22)
+    }
+
+    // ── Cartoon sun with smiley face (top-right) ──────────────────────────────
     const sunX = 1160
     const sunY = 78
     const sunGfx = this.add.graphics()
-
+    // Outer glow ring
+    sunGfx.fillStyle(0xFFE082, 0.28)
+    sunGfx.fillCircle(sunX, sunY, 70)
     // Rays
     sunGfx.lineStyle(7, 0xFFE57F, 1)
     for (let i = 0; i < 8; i++) {
       const a = (i / 8) * Math.PI * 2
       sunGfx.lineBetween(
         sunX + Math.cos(a) * 62, sunY + Math.sin(a) * 62,
-        sunX + Math.cos(a) * 86, sunY + Math.sin(a) * 86,
+        sunX + Math.cos(a) * 90, sunY + Math.sin(a) * 90,
       )
     }
     // Sun body
@@ -632,7 +774,7 @@ export class GameScene extends Phaser.Scene {
     sunGfx.fillStyle(0xFFFFFF, 0.8)
     sunGfx.fillCircle(sunX - 14, sunY - 10, 2)
     sunGfx.fillCircle(sunX + 18, sunY - 10, 2)
-    // Smile arc (dots)
+    // Smile dots
     for (let i = 0; i <= 5; i++) {
       const a = Math.PI * 0.15 + (i / 5) * Math.PI * 0.7
       sunGfx.fillStyle(0x5D4037, 1)
@@ -642,29 +784,6 @@ export class GameScene extends Phaser.Scene {
     sunGfx.fillStyle(0xFF8A65, 0.45)
     sunGfx.fillCircle(sunX - 30, sunY + 8, 10)
     sunGfx.fillCircle(sunX + 30, sunY + 8, 10)
-
-    // Decorative flowers on grass
-    const flowerColors = [0xFF8F00, 0xE91E63, 0x9C27B0, 0xF44336, 0xFF5722, 0xFDD835]
-    for (let i = 0; i < 9; i++) {
-      const fx = 72 + i * 132 + Phaser.Math.Between(-12, 12)
-      const fy = 511 + Phaser.Math.Between(-4, 8)
-      const color = flowerColors[i % flowerColors.length]
-      const flGfx = this.add.graphics()
-      // Petals
-      flGfx.fillStyle(color, 1)
-      for (let p = 0; p < 5; p++) {
-        const pa = (p / 5) * Math.PI * 2
-        flGfx.fillEllipse(fx + Math.cos(pa) * 10, fy + Math.sin(pa) * 10, 13, 17)
-      }
-      // Center
-      flGfx.fillStyle(0xFFF176, 1)
-      flGfx.fillCircle(fx, fy, 7)
-      flGfx.fillStyle(0xFFFFFF, 0.5)
-      flGfx.fillCircle(fx - 2, fy - 2, 2)
-      // Stem
-      flGfx.lineStyle(3, 0x388E3C, 1)
-      flGfx.lineBetween(fx, fy + 8, fx, fy + 26)
-    }
   }
 
   private createClouds() {
@@ -747,6 +866,56 @@ export class GameScene extends Phaser.Scene {
       gfx.fillStyle(0x66BB6A, 0.75)
       gfx.fillEllipse(trayX + 22, trayY + trayH + 10, 30, 13)
       gfx.fillEllipse(trayX + trayW - 22, trayY + trayH + 10, 30, 13)
+
+      // ── Vine leaf clusters hanging below shelf ──────────────────────────
+      const edgeY = trayY + trayH
+      const vineGfx = this.add.graphics()
+      for (let lx = trayX + 65; lx < trayX + trayW - 30; lx += 110) {
+        const jitter = ((lx * 7) % 9) - 4   // deterministic per-cluster offset
+        vineGfx.lineStyle(2, 0x33691E, 0.7)
+        vineGfx.lineBetween(lx + jitter, edgeY, lx + jitter, edgeY + 9)
+        // Centre leaf
+        vineGfx.fillStyle(0x558B2F, 1)
+        vineGfx.fillEllipse(lx + jitter, edgeY + 13, 30, 14)
+        vineGfx.fillStyle(0x7CB342, 0.52)
+        vineGfx.fillEllipse(lx + jitter - 2, edgeY + 11, 20, 8)
+        vineGfx.lineStyle(1.5, 0x33691E, 0.52)
+        vineGfx.strokeEllipse(lx + jitter, edgeY + 13, 30, 14)
+        // Left leaf
+        vineGfx.fillStyle(0x558B2F, 1)
+        vineGfx.fillEllipse(lx + jitter - 20, edgeY + 9, 22, 11)
+        vineGfx.lineStyle(1, 0x33691E, 0.44)
+        vineGfx.strokeEllipse(lx + jitter - 20, edgeY + 9, 22, 11)
+        // Right leaf
+        vineGfx.fillStyle(0x558B2F, 1)
+        vineGfx.fillEllipse(lx + jitter + 20, edgeY + 10, 20, 11)
+        vineGfx.lineStyle(1, 0x33691E, 0.44)
+        vineGfx.strokeEllipse(lx + jitter + 20, edgeY + 10, 20, 11)
+      }
+
+      // ── Pink flowers interspersed between clusters ──────────────────────
+      const pinkColors = [0xF48FB1, 0xFF80AB, 0xEC407A, 0xF06292]
+      let flIdx = 0
+      for (let fx = trayX + 130; fx < trayX + trayW - 60; fx += 165) {
+        const fy = edgeY + 36
+        const pColor = pinkColors[flIdx % pinkColors.length]
+        flIdx++
+        const flGfx = this.add.graphics()
+        flGfx.lineStyle(2.5, 0x33691E, 1)
+        flGfx.lineBetween(fx, edgeY + 2, fx, fy)
+        flGfx.fillStyle(0x558B2F, 1)
+        flGfx.fillEllipse(fx - 9, edgeY + 16, 14, 8)
+        flGfx.fillEllipse(fx + 8, edgeY + 22, 12, 7)
+        flGfx.fillStyle(pColor, 1)
+        for (let p = 0; p < 5; p++) {
+          const pa = (p / 5) * Math.PI * 2
+          flGfx.fillEllipse(fx + Math.cos(pa) * 7, fy + Math.sin(pa) * 7, 10, 14)
+        }
+        flGfx.fillStyle(0xFDD835, 1)
+        flGfx.fillCircle(fx, fy, 5)
+        flGfx.fillStyle(0xFFA000, 0.48)
+        flGfx.fillCircle(fx - 1, fy - 1, 2)
+      }
     }
   }
 

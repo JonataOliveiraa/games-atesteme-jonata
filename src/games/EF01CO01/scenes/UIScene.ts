@@ -20,6 +20,7 @@ import type { LevelConfig } from '../types'
 export class UIScene extends Phaser.Scene {
   private progressBar!:  Phaser.GameObjects.Rectangle
   private timerBar!:     Phaser.GameObjects.Rectangle
+  private timerPctText!: Phaser.GameObjects.Text
   private timerBarTotal  = 1
   private ruleText!:     Phaser.GameObjects.Text
   private hitsText!:     Phaser.GameObjects.Text
@@ -74,17 +75,40 @@ export class UIScene extends Phaser.Scene {
     signGfx.lineStyle(4, 0x7A4A10, 1)
     signGfx.strokeRoundedRect(signX, signY, signW, signH, 12)
 
-    // Decorações foliares nos cantos
-    signGfx.fillStyle(0x4CAF50, 1)
-    const leafPoints = [
-      { x: signX - 12, y: signY + signH / 2 - 8 },
-      { x: signX - 20, y: signY + signH / 2 },
-      { x: signX - 12, y: signY + signH / 2 + 8 },
-      { x: signX + signW + 12, y: signY + signH / 2 - 8 },
-      { x: signX + signW + 20, y: signY + signH / 2 },
-      { x: signX + signW + 12, y: signY + signH / 2 + 8 },
-    ]
-    leafPoints.forEach(p => signGfx.fillCircle(p.x, p.y, 7))
+    // Decorações foliares — clusters de folhas nos dois lados do letreiro
+    const vineL = this.add.graphics()
+    const midY  = signY + signH / 2
+    // Lado esquerdo
+    vineL.fillStyle(0x2E7D32, 1)
+    vineL.fillEllipse(signX - 28, midY, 26, 13)
+    vineL.fillEllipse(signX - 18, midY - 14, 22, 11)
+    vineL.fillEllipse(signX - 18, midY + 14, 22, 11)
+    vineL.fillStyle(0x4CAF50, 1)
+    vineL.fillEllipse(signX - 36, midY - 6, 18, 9)
+    vineL.fillEllipse(signX - 36, midY + 6, 16, 8)
+    vineL.fillEllipse(signX - 26, midY - 18, 16, 8)
+    vineL.fillStyle(0x66BB6A, 0.55)
+    vineL.fillEllipse(signX - 28, midY, 14, 7)
+    vineL.lineStyle(1.2, 0x1B5E20, 0.5)
+    vineL.strokeEllipse(signX - 28, midY, 26, 13)
+    vineL.strokeEllipse(signX - 18, midY - 14, 22, 11)
+    vineL.strokeEllipse(signX - 18, midY + 14, 22, 11)
+    // Lado direito (espelhado)
+    const rx = signX + signW
+    vineL.fillStyle(0x2E7D32, 1)
+    vineL.fillEllipse(rx + 28, midY, 26, 13)
+    vineL.fillEllipse(rx + 18, midY - 14, 22, 11)
+    vineL.fillEllipse(rx + 18, midY + 14, 22, 11)
+    vineL.fillStyle(0x4CAF50, 1)
+    vineL.fillEllipse(rx + 36, midY - 6, 18, 9)
+    vineL.fillEllipse(rx + 36, midY + 6, 16, 8)
+    vineL.fillEllipse(rx + 26, midY - 18, 16, 8)
+    vineL.fillStyle(0x66BB6A, 0.55)
+    vineL.fillEllipse(rx + 28, midY, 14, 7)
+    vineL.lineStyle(1.2, 0x1B5E20, 0.5)
+    vineL.strokeEllipse(rx + 28, midY, 26, 13)
+    vineL.strokeEllipse(rx + 18, midY - 14, 22, 11)
+    vineL.strokeEllipse(rx + 18, midY + 14, 22, 11)
 
     // ícones de flor nos cantos internos da placa
     this.add.text(signX + 14, signY + signH / 2, '🌸', { fontSize: '18px' }).setOrigin(0, 0.5)
@@ -123,6 +147,15 @@ export class UIScene extends Phaser.Scene {
     this.timerBar = this.add
       .rectangle(barLeft, barY + 14, barW, 28, 0x4CAF50)
       .setOrigin(0, 0.5)
+
+    // Texto de porcentagem (direita da barra, sobre a parte escura)
+    this.timerPctText = this.add.text(barLeft + barW - 10, barY + 14, '100%', {
+      fontSize: '15px',
+      fontFamily: 'Arial Black, Arial',
+      color: '#FFFDE7',
+      stroke: '#1A0A00',
+      strokeThickness: 3,
+    }).setOrigin(1, 0.5).setDepth(2)
 
     // Brilho superior da barra
     const shineGfx = this.add.graphics()
@@ -284,6 +317,7 @@ export class UIScene extends Phaser.Scene {
     EventBus.on('update-timer', (data: { pct: number; color: number }) => {
       this.timerBar.setSize(860 * data.pct, 28)
       this.timerBar.setFillStyle(data.color)
+      this.timerPctText.setText(`${Math.round(data.pct * 100)}%`)
     }, this)
 
     EventBus.on('update-progress', (data: { pct: number; hits: number; errors: number }) => {
