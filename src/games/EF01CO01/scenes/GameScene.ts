@@ -12,11 +12,11 @@ interface DraggableItem extends Phaser.GameObjects.Image {
   originY_: number
 }
 
-const ITEM_Y = 270       // linha única (n ≤ 9)
-const ITEM_Y_ROW1 = 205  // primeira linha (n > 9)
-const ITEM_Y_ROW2 = 320  // segunda linha  (n > 9)
-const TIMER_BAR_Y = 100
-const TIMER_BAR_W = 900
+const ITEM_Y = 295       // linha única (n ≤ 9)
+const ITEM_Y_ROW1 = 225  // primeira linha (n > 9)
+const ITEM_Y_ROW2 = 350  // segunda linha  (n > 9)
+const TIMER_BAR_Y = 78
+const TIMER_BAR_W = 860
 const GAME_ID = 'base-dos-classificadores'
 
 
@@ -33,8 +33,6 @@ export class GameScene extends Phaser.Scene {
   private unsubscribePlatformCommands?: () => void
 
   private timerEvent?: Phaser.Time.TimerEvent
-  private timerBar?: Phaser.GameObjects.Rectangle
-  private timerBarBg?: Phaser.GameObjects.Rectangle
 
   private isMuted = false
   private lastWarningBeat = -1
@@ -55,6 +53,11 @@ export class GameScene extends Phaser.Scene {
   }
 
   create() {
+    // Launch the HUD scene in parallel (safe to call even if already active)
+    if (!this.scene.isActive('UIScene')) {
+      this.scene.launch('UIScene')
+    }
+
     this.createBackground()
     this.createClouds()
     this.createItemTray()
@@ -64,7 +67,7 @@ export class GameScene extends Phaser.Scene {
     this.registerPlatformCommands()
 
     if (this.levelConfig.timeLimit) {
-      this.createTimerBar()
+      EventBus.emit('init-timer', { total: this.levelConfig.timeLimit * 1000 })
     }
 
     EventBus.on('set-level', this.handleSetLevel, this)
@@ -73,16 +76,13 @@ export class GameScene extends Phaser.Scene {
   }
 
   update() {
-    if (this.timerEvent && this.timerBar && this.timerBarBg) {
+    if (this.timerEvent) {
       const remaining = this.timerEvent.getRemaining()
       const total = (this.levelConfig.timeLimit ?? 90) * 1000
       const pct = Math.max(0, remaining / total)
 
-      this.timerBar.setSize(TIMER_BAR_W * pct, 22)
-
-      if (pct > 0.5) this.timerBar.setFillStyle(0x2ecc71)
-      else if (pct > 0.25) this.timerBar.setFillStyle(0xf39c12)
-      else this.timerBar.setFillStyle(0xe74c3c)
+      const color = pct > 0.5 ? 0x4CAF50 : pct > 0.25 ? 0xFF9800 : 0xF44336
+      EventBus.emit('update-timer', { pct, color })
 
       if (pct < 0.25 && pct > 0) {
         const beat = Math.ceil(remaining / 1000)
@@ -587,69 +587,120 @@ export class GameScene extends Phaser.Scene {
   // ── Background & Visuals ────────────────────────────────────────────────────
 
   private createBackground() {
-    this.add.rectangle(640, 240, 1280, 480, 0x87ceeb)
-    this.add.rectangle(640, 80, 1280, 160, 0xb3e5fc, 0.5)
+    // Sky — two-tone gradient feel
+    this.add.rectangle(640, 200, 1280, 400, 0x64B5F6)
+    this.add.rectangle(640, 400, 1280, 200, 0x90CAF9)
 
-    this.add.rectangle(640, 600, 1280, 240, 0x66bb6a)
-    this.add.rectangle(640, 482, 1280, 8, 0x388e3c)
+    // Ground
+    this.add.rectangle(640, 600, 1280, 240, 0x388E3C)
 
-    this.add.circle(1180, 72, 48, 0xffd700)
-
-    const sunGfx = this.add.graphics()
-    sunGfx.lineStyle(5, 0xffd700, 0.8)
-
-    for (let i = 0; i < 8; i++) {
-      const a = (i / 8) * Math.PI * 2
-      const r1 = 58
-      const r2 = 78
-      sunGfx.lineBetween(
-        1180 + Math.cos(a) * r1,
-        72 + Math.sin(a) * r1,
-        1180 + Math.cos(a) * r2,
-        72 + Math.sin(a) * r2,
-      )
+    // Grass edge bumps
+    const grassGfx = this.add.graphics()
+    grassGfx.fillStyle(0x66BB6A, 1)
+    for (let x = 0; x < 1280; x += 72) {
+      grassGfx.fillEllipse(x + 36, 486, 88, 22)
+    }
+    grassGfx.fillStyle(0x81C784, 0.55)
+    for (let x = 36; x < 1280; x += 72) {
+      grassGfx.fillEllipse(x + 18, 490, 52, 14)
     }
 
-    const flowerColors = [0xff8f00, 0xe91e63, 0x9c27b0, 0xf44336]
+    // Cartoon sun with smiley face
+    const sunX = 1160
+    const sunY = 78
+    const sunGfx = this.add.graphics()
 
+    // Rays
+    sunGfx.lineStyle(7, 0xFFE57F, 1)
     for (let i = 0; i < 8; i++) {
-      const x = 80 + i * 155 + Phaser.Math.Between(-20, 20)
-      const y = 510 + Phaser.Math.Between(0, 20)
-      const color = flowerColors[i % flowerColors.length]
+      const a = (i / 8) * Math.PI * 2
+      sunGfx.lineBetween(
+        sunX + Math.cos(a) * 62, sunY + Math.sin(a) * 62,
+        sunX + Math.cos(a) * 86, sunY + Math.sin(a) * 86,
+      )
+    }
+    // Sun body
+    sunGfx.fillStyle(0xFFD700, 1)
+    sunGfx.fillCircle(sunX, sunY, 52)
+    sunGfx.fillStyle(0xFFEC6E, 0.55)
+    sunGfx.fillCircle(sunX - 14, sunY - 14, 22)
+    // Eyes
+    sunGfx.fillStyle(0x5D4037, 1)
+    sunGfx.fillCircle(sunX - 16, sunY - 8, 6)
+    sunGfx.fillCircle(sunX + 16, sunY - 8, 6)
+    // Eye shine
+    sunGfx.fillStyle(0xFFFFFF, 0.8)
+    sunGfx.fillCircle(sunX - 14, sunY - 10, 2)
+    sunGfx.fillCircle(sunX + 18, sunY - 10, 2)
+    // Smile arc (dots)
+    for (let i = 0; i <= 5; i++) {
+      const a = Math.PI * 0.15 + (i / 5) * Math.PI * 0.7
+      sunGfx.fillStyle(0x5D4037, 1)
+      sunGfx.fillCircle(sunX + Math.cos(a) * 22, sunY + 12 + Math.sin(a) * 8, 3)
+    }
+    // Cheeks
+    sunGfx.fillStyle(0xFF8A65, 0.45)
+    sunGfx.fillCircle(sunX - 30, sunY + 8, 10)
+    sunGfx.fillCircle(sunX + 30, sunY + 8, 10)
 
-      this.add.circle(x, y, 10, color)
-      this.add.circle(x - 8, y, 7, color)
-      this.add.circle(x + 8, y, 7, color)
-      this.add.circle(x, y - 8, 7, color)
-      this.add.circle(x, y + 8, 7, color)
-      this.add.circle(x, y, 6, 0xffff88)
-      this.add.rectangle(x, y + 20, 3, 18, 0x388e3c)
+    // Decorative flowers on grass
+    const flowerColors = [0xFF8F00, 0xE91E63, 0x9C27B0, 0xF44336, 0xFF5722, 0xFDD835]
+    for (let i = 0; i < 9; i++) {
+      const fx = 72 + i * 132 + Phaser.Math.Between(-12, 12)
+      const fy = 511 + Phaser.Math.Between(-4, 8)
+      const color = flowerColors[i % flowerColors.length]
+      const flGfx = this.add.graphics()
+      // Petals
+      flGfx.fillStyle(color, 1)
+      for (let p = 0; p < 5; p++) {
+        const pa = (p / 5) * Math.PI * 2
+        flGfx.fillEllipse(fx + Math.cos(pa) * 10, fy + Math.sin(pa) * 10, 13, 17)
+      }
+      // Center
+      flGfx.fillStyle(0xFFF176, 1)
+      flGfx.fillCircle(fx, fy, 7)
+      flGfx.fillStyle(0xFFFFFF, 0.5)
+      flGfx.fillCircle(fx - 2, fy - 2, 2)
+      // Stem
+      flGfx.lineStyle(3, 0x388E3C, 1)
+      flGfx.lineBetween(fx, fy + 8, fx, fy + 26)
     }
   }
 
   private createClouds() {
     const positions = [
-      { x: 130, y: 120 },
-      { x: 380, y: 90 },
-      { x: 660, y: 140 },
-      { x: 950, y: 100 },
+      { x: 130, y: 118 },
+      { x: 390, y: 88 },
+      { x: 660, y: 132 },
+      { x: 940, y: 96 },
     ]
 
     positions.forEach((pos, i) => {
-      const scale = 0.7 + (i % 2) * 0.3
+      const sc = 0.78 + (i % 2) * 0.26
       const gfx = this.add.graphics()
-      gfx.fillStyle(0xffffff, 0.88)
 
-      gfx.fillEllipse(0, 0, 120 * scale, 50 * scale)
-      gfx.fillEllipse(-32 * scale, 6 * scale, 72 * scale, 44 * scale)
-      gfx.fillEllipse(32 * scale, 6 * scale, 72 * scale, 44 * scale)
+      // Shadow
+      gfx.fillStyle(0xBBDEFB, 0.4)
+      gfx.fillEllipse(4, 6, 128 * sc, 44 * sc)
+
+      // Main cloud body — layered ellipses for fluffy look
+      gfx.fillStyle(0xFFFFFF, 0.96)
+      gfx.fillEllipse(0, 2, 134 * sc, 52 * sc)
+      gfx.fillEllipse(-34 * sc, 10 * sc, 82 * sc, 56 * sc)
+      gfx.fillEllipse(34 * sc, 10 * sc, 82 * sc, 56 * sc)
+      gfx.fillEllipse(-10 * sc, -12 * sc, 72 * sc, 50 * sc)
+      gfx.fillEllipse(18 * sc, -14 * sc, 62 * sc, 44 * sc)
+
+      // Inner highlight
+      gfx.fillStyle(0xFFFFFF, 0.55)
+      gfx.fillEllipse(-8 * sc, -6 * sc, 50 * sc, 28 * sc)
 
       gfx.setPosition(pos.x, pos.y)
 
       this.tweens.add({
         targets: gfx,
-        x: pos.x + 22,
-        duration: 5000 + i * 900,
+        x: pos.x + 26,
+        duration: 5400 + i * 760,
         yoyo: true,
         repeat: -1,
         ease: 'Sine.easeInOut',
@@ -660,30 +711,42 @@ export class GameScene extends Phaser.Scene {
   private createItemTray() {
     const n = this.levelConfig.items.length
     const rows = n > 9 ? [ITEM_Y_ROW1, ITEM_Y_ROW2] : [ITEM_Y]
-    const gfx = this.add.graphics()
 
     for (const rowY of rows) {
-      const trayY = rowY + 40
+      const trayY = rowY + 42
+      const trayX = 28
+      const trayW = 1224
+      const trayH = 30
+      const gfx = this.add.graphics()
 
-      gfx.fillStyle(0x000000, 0.15)
-      gfx.fillRect(30, trayY + 6, 1220, 30)
+      // Drop shadow
+      gfx.fillStyle(0x000000, 0.2)
+      gfx.fillRoundedRect(trayX + 4, trayY + 8, trayW, trayH, 8)
 
-      gfx.fillStyle(0xa0522d, 1)
-      gfx.fillRect(30, trayY, 1220, 28)
+      // Main plank — dark warm wood
+      gfx.fillStyle(0x795548, 1)
+      gfx.fillRoundedRect(trayX, trayY, trayW, trayH, 7)
 
-      gfx.fillStyle(0xc4813a, 1)
-      gfx.fillRect(30, trayY, 1220, 8)
+      // Highlight stripe across top (3D effect)
+      gfx.fillStyle(0xA1887F, 1)
+      gfx.fillRoundedRect(trayX, trayY, trayW, trayH * 0.40, { tl: 7, tr: 7, bl: 0, br: 0 })
 
-      gfx.fillStyle(0x7b3f1a, 1)
-      gfx.fillRect(30, trayY + 22, 1220, 6)
+      // Dark bottom edge
+      gfx.fillStyle(0x4E342E, 1)
+      gfx.fillRoundedRect(trayX, trayY + trayH * 0.72, trayW, trayH * 0.28, { tl: 0, tr: 0, bl: 7, br: 7 })
 
-      gfx.fillStyle(0x8b6914, 1)
-      for (let x = 80; x < 1220; x += 160) {
-        gfx.fillCircle(x, trayY + 14, 6)
-        gfx.fillStyle(0xd4af37, 0.6)
-        gfx.fillCircle(x, trayY + 14, 4)
-        gfx.fillStyle(0x8b6914, 1)
+      // Nail rivets
+      for (let x = 90; x < trayX + trayW - 30; x += 190) {
+        gfx.fillStyle(0x6D4C41, 1)
+        gfx.fillCircle(x, trayY + trayH / 2, 7)
+        gfx.fillStyle(0xBCAAA4, 0.65)
+        gfx.fillCircle(x - 2, trayY + trayH / 2 - 2, 3)
       }
+
+      // Small leaf accents at each end
+      gfx.fillStyle(0x66BB6A, 0.75)
+      gfx.fillEllipse(trayX + 22, trayY + trayH + 10, 30, 13)
+      gfx.fillEllipse(trayX + trayW - 22, trayY + trayH + 10, 30, 13)
     }
   }
 
@@ -695,57 +758,224 @@ export class GameScene extends Phaser.Scene {
   }
 
   private createBase(baseData: ClassifierBase): Phaser.GameObjects.Container {
-    const w = 210
-    const h = 145
-    const borderColor = this.getBaseColor(baseData)
-    const isLevel1 = this.levelConfig.level === 1
+    const w        = 240
+    const h        = 120
+    const bColor   = this.getBaseColor(baseData)
+    const bLight   = this.lightenColor(bColor, 0.32)
+    const bDark    = this.darkenColor(bColor, 0.58)
+    const rimH     = 16   // top rim "3D depth" strip
+    const soilH    = 22   // dark soil strip
+    const panelW   = w - 14
+    const panelH   = 58
+    const panelY   = 27   // center of cream panel (relative to container center y=0)
 
-    const shadow = this.add.rectangle(5, 5, w, h, 0x000000, 0.18)
-    const panel = this.add.rectangle(0, 0, w, h, 0xffffff, 0.92)
-    panel.setStrokeStyle(6, borderColor)
+    // ── Layer A: box body ───────────────────────────────────────────────────
+    const boxGfx = this.add.graphics()
 
-    // No nível 1 o cabeçalho ocupa mais espaço (sem emoji, só cor pura)
-    const headerH = isLevel1 ? 60 : 44
-    const header = this.add.rectangle(0, -h / 2 + headerH / 2, w, headerH, borderColor, 0.92)
+    // 1. Drop shadow
+    boxGfx.fillStyle(0x000000, 0.30)
+    boxGfx.fillRoundedRect(-w / 2 + 7, -h / 2 + 9, w, h - 6, 12)
 
-    const children: Phaser.GameObjects.GameObject[] = [shadow, panel, header]
+    // 2. Bottom depth face (darker variant, offset down for 3D)
+    boxGfx.fillStyle(bDark, 1)
+    boxGfx.fillRoundedRect(-w / 2, -h / 2 + rimH, w, h - rimH - 4, 10)
 
-    if (!isLevel1) {
-      const icon = this.add
-        .text(0, -h / 2 + 22, this.getAttributeIcon(baseData.rule.attribute, baseData.rule.value), {
-          fontSize: '32px',
-        })
-        .setOrigin(0.5)
-      children.push(icon)
+    // 3. Main front face (base color)
+    boxGfx.fillStyle(bColor, 1)
+    boxGfx.fillRoundedRect(-w / 2, -h / 2, w, h - 8, 12)
+
+    // 4. Top rim highlight (lighter — the "top surface" of the rim)
+    boxGfx.fillStyle(bLight, 1)
+    boxGfx.fillRoundedRect(-w / 2 + 3, -h / 2 + 3, w - 6, rimH - 5, { tl: 10, tr: 10, bl: 0, br: 0 })
+
+    // 5. Dark soil in the inner opening
+    const innerW = w - 22
+    boxGfx.fillStyle(0x1E0E00, 1)
+    boxGfx.fillRoundedRect(-innerW / 2, -h / 2 + rimH, innerW, soilH + 2, 4)
+
+    // 6. Soil texture dots (moist earth look)
+    boxGfx.fillStyle(0x5C3A1E, 0.65)
+    for (let dx = -innerW / 2 + 12; dx < innerW / 2 - 6; dx += 17) {
+      boxGfx.fillCircle(dx, -h / 2 + rimH + soilH / 2 + 1, 2)
     }
 
-    const labelY = isLevel1 ? 16 : 22
+    // 7. Inner side walls (subtle shadows on left/right of opening)
+    boxGfx.fillStyle(0x000000, 0.14)
+    boxGfx.fillRect(-innerW / 2, -h / 2 + rimH, 5, soilH + 2)
+    boxGfx.fillRect(innerW / 2 - 5, -h / 2 + rimH, 5, soilH + 2)
+
+    // 8. Outer border
+    boxGfx.lineStyle(3, bDark, 1)
+    boxGfx.strokeRoundedRect(-w / 2, -h / 2, w, h - 8, 12)
+
+    // ── Layer B: cream label panel ──────────────────────────────────────────
+    // Panel drop shadow
+    boxGfx.fillStyle(0x000000, 0.16)
+    boxGfx.fillRoundedRect(-panelW / 2 + 2, panelY - panelH / 2 + 3, panelW, panelH, 10)
+    // Panel cream body
+    boxGfx.fillStyle(0xFFF8DC, 1)
+    boxGfx.fillRoundedRect(-panelW / 2, panelY - panelH / 2, panelW, panelH, 9)
+    // Panel inner gloss
+    boxGfx.fillStyle(0xFFFFFF, 0.52)
+    boxGfx.fillRoundedRect(-panelW / 2 + 4, panelY - panelH / 2 + 4, panelW - 8, panelH * 0.38, { tl: 7, tr: 7, bl: 0, br: 0 })
+    // Panel border (slightly colored)
+    boxGfx.lineStyle(2, bDark, 0.45)
+    boxGfx.strokeRoundedRect(-panelW / 2, panelY - panelH / 2, panelW, panelH, 9)
+
+    // ── children[1]: flashRect — gold overlay on correct drop ───────────────
+    const flashRect = this.add.rectangle(0, 0, w, h, 0xFFD700)
+    flashRect.setAlpha(0)
+
+    // ── children[2]: flower (color levels) or shape icon (shape levels) ─────
+    const flX = -panelW / 2 + 30
+    const flY = panelY - 1
+    const isColorRule = baseData.rule.attribute === 'cor'
+
+    let iconChild: Phaser.GameObjects.GameObject
+    if (isColorRule) {
+      const flowerGfx = this.add.graphics()
+      this.drawFlower(flowerGfx, flX, flY, bColor, bDark)
+      iconChild = flowerGfx
+    } else {
+      iconChild = this.add
+        .text(flX, flY, this.getAttributeIcon(baseData.rule.attribute, baseData.rule.value), {
+          fontSize: '28px',
+        })
+        .setOrigin(0.5)
+    }
+
+    // ── children[3]: color/shape name label ─────────────────────────────────
     const label = this.add
-      .text(0, labelY, baseData.labelKey, {
+      .text(flX + 28, panelY + 1, baseData.labelKey, {
         fontSize: '22px',
         fontFamily: 'Arial Black, Arial',
-        color: '#1A1A2E',
-        stroke: '#FFFFFF',
-        strokeThickness: 3,
+        color: '#3E2723',
       })
-      .setOrigin(0.5)
+      .setOrigin(0, 0.5)
 
+    // ── children[4]: animated drop arrow ────────────────────────────────────
     const arrow = this.add
-      .text(0, h / 2 - 16, '▼', {
-        fontSize: '18px',
-        color: '#888888',
-      })
+      .text(0, h / 2 + 12, '▼', { fontSize: '15px', color: '#8D6E63' })
       .setOrigin(0.5)
 
+    this.tweens.add({
+      targets: arrow,
+      y: h / 2 + 18,
+      duration: 700,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+    })
+
+    // ── children[5]: drop zone ──────────────────────────────────────────────
     const zone = this.add.zone(0, 0, w, h)
     zone.setRectangleDropZone(w, h)
 
-    children.push(label, arrow, zone)
+    // ── children[6]: leaf clusters on both sides ─────────────────────────
+    const leafGfx = this.add.graphics()
+    this.drawLeafCluster(leafGfx, -w / 2 - 2, h / 2 - 10, false)
+    this.drawLeafCluster(leafGfx, w / 2 + 2, h / 2 - 10, true)
 
-    const container = this.add.container(baseData.x, baseData.y, children)
-
+    const container = this.add.container(baseData.x, baseData.y, [
+      boxGfx, flashRect, iconChild, label, arrow, zone, leafGfx,
+    ])
     container.setData('baseData', baseData)
     return container
+  }
+
+  // ── Asset drawing helpers ────────────────────────────────────────────────
+
+  private drawFlower(
+    gfx: Phaser.GameObjects.Graphics,
+    x: number,
+    y: number,
+    petalColor: number,
+    darkColor: number,
+  ) {
+    // Stem
+    gfx.lineStyle(3, 0x2E7D32, 1)
+    gfx.lineBetween(x, y + 8, x, y + 20)
+
+    // Small stem leaves
+    gfx.fillStyle(0x4CAF50, 1)
+    gfx.fillEllipse(x - 7, y + 14, 12, 7)
+    gfx.fillEllipse(x + 7, y + 15, 11, 6)
+
+    // 5 petals arranged around center
+    gfx.fillStyle(petalColor, 1)
+    for (let i = 0; i < 5; i++) {
+      const a = (i / 5) * Math.PI * 2 - Math.PI / 2
+      gfx.fillEllipse(x + Math.cos(a) * 9, y + Math.sin(a) * 9, 12, 15)
+    }
+
+    // Petal outline for definition
+    gfx.lineStyle(1.2, darkColor, 0.55)
+    for (let i = 0; i < 5; i++) {
+      const a = (i / 5) * Math.PI * 2 - Math.PI / 2
+      gfx.strokeEllipse(x + Math.cos(a) * 9, y + Math.sin(a) * 9, 12, 15)
+    }
+
+    // Yellow center disc
+    gfx.fillStyle(0xFFD700, 1)
+    gfx.fillCircle(x, y, 7)
+
+    // Center shading
+    gfx.fillStyle(0xFFA000, 0.65)
+    gfx.fillCircle(x + 1, y - 1, 3.5)
+
+    // Center seed dots
+    gfx.fillStyle(0xE65100, 0.5)
+    for (let i = 0; i < 5; i++) {
+      const a = (i / 5) * Math.PI * 2
+      gfx.fillCircle(x + Math.cos(a) * 4, y + Math.sin(a) * 4, 1.5)
+    }
+  }
+
+  private drawLeafCluster(
+    gfx: Phaser.GameObjects.Graphics,
+    x: number,
+    y: number,
+    rightSide: boolean,
+  ) {
+    const d = rightSide ? -1 : 1
+
+    // Main leaf bodies
+    gfx.fillStyle(0x4CAF50, 1)
+    gfx.fillEllipse(x + d * 11, y - 7, 28, 14)
+    gfx.fillEllipse(x + d * 17, y + 4, 22, 12)
+    gfx.fillEllipse(x + d * 4, y + 6, 18, 10)
+
+    // Darker leaf shading/outline
+    gfx.lineStyle(1.5, 0x2E7D32, 0.7)
+    gfx.strokeEllipse(x + d * 11, y - 7, 28, 14)
+    gfx.strokeEllipse(x + d * 17, y + 4, 22, 12)
+    gfx.strokeEllipse(x + d * 4, y + 6, 18, 10)
+
+    // Vein lines
+    gfx.lineStyle(1, 0x1B5E20, 0.55)
+    gfx.lineBetween(x + d * 2, y - 7, x + d * 20, y - 7)
+    gfx.lineBetween(x + d * 7, y + 4, x + d * 26, y + 4)
+  }
+
+  // ── Color helpers ────────────────────────────────────────────────────────
+
+  private lightenColor(hex: number, amount: number): number {
+    const r = (hex >> 16) & 0xFF
+    const g = (hex >> 8) & 0xFF
+    const b = hex & 0xFF
+    return (
+      (Math.min(255, Math.round(r + (255 - r) * amount)) << 16) |
+      (Math.min(255, Math.round(g + (255 - g) * amount)) << 8) |
+      Math.min(255, Math.round(b + (255 - b) * amount))
+    )
+  }
+
+  private darkenColor(hex: number, factor: number): number {
+    return (
+      (Math.round(((hex >> 16) & 0xFF) * factor) << 16) |
+      (Math.round(((hex >> 8) & 0xFF) * factor) << 8) |
+      Math.round((hex & 0xFF) * factor)
+    )
   }
 
   private createItems() {
@@ -770,7 +1000,9 @@ export class GameScene extends Phaser.Scene {
 
     items.forEach((item, i) => {
       const x = startX + i * gap
-      const key = `item-${item.color}-${item.shape}-${item.size}`
+      const key = this.levelConfig.level === 1
+        ? `item-${item.color}-swatch-${item.size}`
+        : `item-${item.color}-${item.shape}-${item.size}`
 
       const sprite = this.add.image(x, rowY, key) as DraggableItem
       sprite.setScale(displayScale)
@@ -784,26 +1016,8 @@ export class GameScene extends Phaser.Scene {
     })
   }
 
-  private createTimerBar() {
-    this.timerBarBg = this.add
-      .rectangle(640, TIMER_BAR_Y, TIMER_BAR_W + 8, 30, 0x263238, 0.5)
-      .setStrokeStyle(2, 0x546e7a)
-      .setDepth(5)
-      .setAlpha(0)
-
-    this.timerBar = this.add
-      .rectangle(640 - TIMER_BAR_W / 2, TIMER_BAR_Y, 0, 22, 0x2ecc71)
-      .setOrigin(0, 0.5)
-      .setDepth(5)
-      .setAlpha(0)
-  }
-
   private startTimer() {
-    if (!this.timerBar || !this.timerBarBg) return
-
-    this.timerBarBg.setAlpha(1)
-    this.timerBar.setAlpha(1).setSize(TIMER_BAR_W, 22)
-
+    EventBus.emit('start-timer', {})
     const timeLimit = this.levelConfig.timeLimit ?? 90
     this.timerEvent = this.time.addEvent({
       delay: timeLimit * 1000,
@@ -816,6 +1030,8 @@ export class GameScene extends Phaser.Scene {
 
   private setupDrag() {
     this.input.on('dragstart', (_: Phaser.Input.Pointer, obj: Phaser.GameObjects.Image) => {
+      // Kill the idle floating tween so it doesn't fight the drag position
+      this.tweens.killTweensOf(obj)
       obj.setDepth(10)
       this.tweens.add({ targets: obj, scaleX: 1.15, scaleY: 1.15, duration: 120 })
     })
@@ -859,8 +1075,8 @@ export class GameScene extends Phaser.Scene {
   }
 
   private findBaseAtPosition(x: number, y: number): Phaser.GameObjects.Container | null {
-    const HW = 118
-    const HH = 82
+    const HW = 120   // half of w=240
+    const HH = 59    // half of h=118
 
     for (const container of this.bases) {
       if (
@@ -931,15 +1147,14 @@ export class GameScene extends Phaser.Scene {
     item.setVisible(false)
     item.disableInteractive()
 
-    const panel = baseContainer.list[1] as Phaser.GameObjects.Rectangle
-    const originalStroke = this.getBaseColor(
-      baseContainer.getData('baseData') as ClassifierBase,
-    )
-
-    panel.setStrokeStyle(8, 0xffd700)
-
-    this.time.delayedCall(500, () => {
-      panel.setStrokeStyle(6, originalStroke)
+    // list[1] is the flashRect — gold overlay flash
+    const flashRect = baseContainer.list[1] as Phaser.GameObjects.Rectangle
+    flashRect.setFillStyle(0xFFD700).setAlpha(0.5)
+    this.tweens.add({
+      targets: flashRect,
+      alpha: 0,
+      duration: 500,
+      ease: 'Power2.Out',
     })
 
     this.tweens.add({
@@ -1002,19 +1217,31 @@ export class GameScene extends Phaser.Scene {
       angle: 0,
       ease: 'Back.Out',
       duration: 380,
+      onComplete: () => {
+        if (!item.active || !item.visible) return
+        this.tweens.add({
+          targets: item,
+          y: item.originY_ - 6,
+          duration: 1100 + Math.random() * 500,
+          yoyo: true,
+          repeat: -1,
+          ease: 'Sine.easeInOut',
+          delay: Math.random() * 400,
+        })
+      },
     })
   }
 
   private showCorrectEffect(x: number, y: number) {
-    const emojis = ['⭐', '✨', '🌟']
+    const emojis = ['⭐', '✨', '🌟', '🌸', '💛', '🍀']
 
-    for (let i = 0; i < 10; i++) {
-      const angle = (i / 10) * Math.PI * 2
-      const dist = 55 + Math.random() * 45
-
+    // Radial emoji burst
+    for (let i = 0; i < 12; i++) {
+      const angle = (i / 12) * Math.PI * 2
+      const dist = 60 + Math.random() * 55
       const star = this.add
         .text(x, y, emojis[i % emojis.length], {
-          fontSize: `${18 + Math.floor(Math.random() * 14)}px`,
+          fontSize: `${20 + Math.floor(Math.random() * 16)}px`,
         })
         .setOrigin(0.5)
         .setDepth(20)
@@ -1024,24 +1251,41 @@ export class GameScene extends Phaser.Scene {
         x: x + Math.cos(angle) * dist,
         y: y + Math.sin(angle) * dist,
         alpha: { from: 1, to: 0 },
-        scaleX: { from: 1, to: 0.2 },
-        scaleY: { from: 1, to: 0.2 },
-        duration: 550 + Math.random() * 250,
+        scaleX: { from: 1.2, to: 0.1 },
+        scaleY: { from: 1.2, to: 0.1 },
+        duration: 580 + Math.random() * 280,
         ease: 'Power2',
         onComplete: () => star.destroy(),
       })
     }
 
+    // Expanding ring burst
+    const ringGfx = this.add.graphics().setDepth(19)
+    ringGfx.lineStyle(4, 0xFFD700, 1)
+    ringGfx.strokeCircle(x, y, 8)
+    this.tweens.add({
+      targets: ringGfx,
+      scaleX: 4,
+      scaleY: 4,
+      alpha: { from: 1, to: 0 },
+      duration: 380,
+      ease: 'Power2.Out',
+      onComplete: () => ringGfx.destroy(),
+    })
+
+    // Checkmark that floats up
     const check = this.add
-      .text(x, y - 10, '✅', { fontSize: '42px' })
+      .text(x, y - 10, '✅', { fontSize: '46px' })
       .setOrigin(0.5)
       .setDepth(20)
 
     this.tweens.add({
       targets: check,
-      y: y - 70,
+      y: y - 80,
+      scaleX: { from: 0.5, to: 1 },
+      scaleY: { from: 0.5, to: 1 },
       alpha: { from: 1, to: 0 },
-      duration: 700,
+      duration: 720,
       ease: 'Power2.easeOut',
       onComplete: () => check.destroy(),
     })
@@ -1113,6 +1357,19 @@ export class GameScene extends Phaser.Scene {
         delay: i * 85,
         duration: 320,
         ease: 'Back.Out',
+        onComplete: () => {
+          if (!sprite.active) return
+          // Gentle floating idle — offset per item to avoid lockstep
+          this.tweens.add({
+            targets: sprite,
+            y: sprite.originY_ - 6,
+            duration: 1100 + Math.random() * 500,
+            yoyo: true,
+            repeat: -1,
+            ease: 'Sine.easeInOut',
+            delay: Math.random() * 700,
+          })
+        },
       })
     })
   }

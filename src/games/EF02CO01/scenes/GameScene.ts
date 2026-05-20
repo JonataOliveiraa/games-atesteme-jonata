@@ -860,27 +860,30 @@ export class GameScene extends Phaser.Scene {
   // ── Painel de filtros ────────────────────────────────────────────────────
 
   private buildFilterPanel() {
+    const mission = this.levelConfig.filterMissions![this.currentMissionIndex]
+    const isVoa   = mission.filterValue === true
+
     const panel = this.add.container(PANEL_LEFT_X, TOP_Y + 35)
     this.filterPanelContainer = panel
 
-    // Fundo do painel
+    // Fundo do painel — menor, conteúdo focado
     const bg = this.add.graphics()
     bg.fillStyle(0x081524, 0.95)
-    bg.fillRoundedRect(0, 0, PANEL_W, 495, 20)
-    bg.lineStyle(2, 0x4FC3F7, 0.45)
-    bg.strokeRoundedRect(0, 0, PANEL_W, 495, 20)
+    bg.fillRoundedRect(0, 0, PANEL_W, 310, 20)
+    bg.lineStyle(2, isVoa ? 0x4FC3F7 : 0xEF9A9A, 0.55)
+    bg.strokeRoundedRect(0, 0, PANEL_W, 310, 20)
     panel.add(bg)
 
     // Cabeçalho
-    const hdr = this.add.text(PANEL_W / 2, 26, '🔍  CLASSIFIQUE!', {
+    const hdr = this.add.text(PANEL_W / 2, 28, '🔍  CLASSIFIQUE!', {
       fontSize: '24px',
       fontFamily: 'Arial Black, Arial',
       color: '#E3F2FD',
     }).setOrigin(0.5, 0)
     panel.add(hdr)
 
-    // Sub-título do atributo
-    const sub = this.add.text(PANEL_W / 2, 64, 'Esse veículo VOA?', {
+    // Sub-título dinâmico por missão
+    const sub = this.add.text(PANEL_W / 2, 70, isVoa ? 'Esse veículo VOA?' : 'Esse veículo NÃO voa?', {
       fontSize: '22px',
       fontFamily: 'Arial, sans-serif',
       color: '#90CAF9',
@@ -890,27 +893,22 @@ export class GameScene extends Phaser.Scene {
     // Divisor
     const div = this.add.graphics()
     div.lineStyle(1, 0x4FC3F7, 0.25)
-    div.lineBetween(20, 98, PANEL_W - 20, 98)
+    div.lineBetween(20, 104, PANEL_W - 20, 104)
     panel.add(div)
 
-    // Botões de filtro
-    const btnData = [
-      { label: '✈️  SIM — Voa!',      value: true as FilterValue,  color: 0x2E7D32, y: 130 },
-      { label: '🚗  NÃO — Não voa',  value: false as FilterValue, color: 0xB71C1C, y: 232 },
-      { label: '🔄  Mostrar todos',   value: null,                  color: 0x1565C0, y: 342 },
-    ]
+    // Único botão de ação para esta missão
+    const btnLabel = isVoa ? '✈️  SIM — Voa!'  : '🚗  NÃO — Não voa'
+    const btnColor = isVoa ? 0x2E7D32           : 0xB71C1C
 
-    btnData.forEach(({ label, value, color, y }) => {
-      const btn = this.makeRoundedButton(label, color, 340, 82, () => {
-        if (this.phase !== 'waiting-filter') return
-        this.applyFilter('voa', value)
-      })
-      btn.setPosition(PANEL_W / 2, y)
-      panel.add(btn)
+    const btn = this.makeRoundedButton(btnLabel, btnColor, 340, 88, () => {
+      if (this.phase !== 'waiting-filter') return
+      this.applyFilter(mission.filterAttribute, mission.filterValue)
     })
+    btn.setPosition(PANEL_W / 2, 180)
+    panel.add(btn)
 
-    // Dica visual
-    const hint = this.add.text(PANEL_W / 2, 420, '👆 Clique em SIM ou NÃO\npara agrupar os veículos', {
+    // Dica discreta
+    const hint = this.add.text(PANEL_W / 2, 250, '👆 Clique no botão para agrupar', {
       fontSize: '15px',
       fontFamily: 'Arial, sans-serif',
       color: '#607D8B',
@@ -925,8 +923,12 @@ export class GameScene extends Phaser.Scene {
     this.instructionBanner?.destroy()
     this.instructionBanner = undefined
 
+    // Reconstrói o painel para a missão atual (botão e texto corretos)
+    this.filterPanelContainer?.destroy()
+    this.filterPanelContainer = undefined
+    this.buildFilterPanel()
+
     // UIScene já exibe instrução e dica via mission-update.
-    // Só aguardamos as animações dos cards terminarem para liberar interação.
     const delay = this.vehicleCards.length * 70 + 200
     this.time.delayedCall(delay, () => { this.phase = 'waiting-filter' })
   }

@@ -262,6 +262,21 @@ export default function GameDetailsPage() {
         const livesBeforeError = gameLives;
         const livesAfterError = Math.max(livesBeforeError - 1, 0);
 
+        if (livesBeforeError <= 0) {
+          // Jogador já está sem vidas — não deduzir pontos, ir direto ao game over
+          dispatchPlatformGameEvent({
+            type: "GAME_OVER",
+            gameId: event.gameId,
+            stage: event.stage,
+            pointsEarned: 0,
+          });
+
+          setShowNoLivesModal(false);
+          setShowGameOverModal(true);
+
+          return;
+        }
+
         dispatchPlatformGameEvent({
           type: "WRONG_ANSWER",
           gameId: event.gameId,
@@ -278,20 +293,6 @@ export default function GameDetailsPage() {
           })`,
           "error"
         );
-
-        if (livesBeforeError <= 0) {
-          dispatchPlatformGameEvent({
-            type: "GAME_OVER",
-            gameId: event.gameId,
-            stage: event.stage,
-            pointsEarned: 0,
-          });
-
-          setShowNoLivesModal(false);
-          setShowGameOverModal(true);
-
-          return;
-        }
 
         if (livesAfterError === 0) {
           if (!isPixelSecreto) {
@@ -373,6 +374,14 @@ export default function GameDetailsPage() {
   };
 
   const handleUnlock = () => {
+    if (!blocked) {
+      setShowGameOverModal(false);
+      setCurrentLevel(1);
+      setHasStartedGame(false);
+      showToast("Este jogo já está liberado.", "success");
+      return;
+    }
+
     if (points < unlockCost) {
       showToast("Pontos insuficientes para desbloquear este jogo.", "error");
       return;
@@ -960,17 +969,24 @@ onTouchStart={(e) => {
       </p>
 
       <p className="game-over-warning">
-        Você pode desbloquear agora usando {unlockCost} pontos. Você tem {points} ponto{points !== 1 ? 's' : ''}.
+        {blocked ? (
+          <>Você pode desbloquear agora usando {unlockCost} pontos. Você tem {points} ponto{points !== 1 ? 's' : ''}.</>
+        ) : (
+          <>Este jogo já está liberado. Você pode voltar aos jogos ou iniciar novamente.</>
+        )}
       </p>
 
       <div className="game-over-actions">
-        <button
-          type="button"
-          className="game-over-primary-btn"
-          onClick={handleUnlock}
-        >
-          Desbloquear jogo
-        </button>
+        {blocked && (
+          <button
+            type="button"
+            className="game-over-primary-btn"
+            onClick={handleUnlock}
+            disabled={points < unlockCost}
+          >
+            Desbloquear jogo
+          </button>
+        )}
 
         <button
           type="button"

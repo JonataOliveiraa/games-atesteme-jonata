@@ -160,19 +160,27 @@ export class BootScene extends Phaser.Scene {
     const half   = size / 2
     const cx     = half + 7
     const cy     = half + 7
-    const radius = Math.round(size * 0.22)
+    const radius = Math.round(size * 0.30)  // gel: very rounded
 
-    // Sombra suave
-    gfx.fillStyle(0x000000, 0.18)
-    gfx.fillRoundedRect(cx - half + 5, cy - half + 5, size, size, radius)
+    // Drop shadow
+    gfx.fillStyle(0x000000, 0.22)
+    gfx.fillRoundedRect(cx - half + 6, cy - half + 7, size, size, radius)
 
-    // Mancha de cor — sem contorno espesso para não sugerir forma
+    // Main gel body
     gfx.fillStyle(fill, 1)
     gfx.fillRoundedRect(cx - half, cy - half, size, size, radius)
 
-    // Brilho discreto no canto superior
-    gfx.fillStyle(0xFFFFFF, 0.30)
-    gfx.fillRoundedRect(cx - half + 5, cy - half + 5, size * 0.45, size * 0.28, radius * 0.5)
+    // Subtle border
+    gfx.lineStyle(2, 0x000000, 0.14)
+    gfx.strokeRoundedRect(cx - half, cy - half, size, size, radius)
+
+    // Large soft highlight (gel look)
+    gfx.fillStyle(0xFFFFFF, 0.36)
+    gfx.fillRoundedRect(cx - half + 6, cy - half + 5, size * 0.52, size * 0.34, radius * 0.65)
+
+    // Specular dot (top-left)
+    gfx.fillStyle(0xFFFFFF, 0.65)
+    gfx.fillCircle(cx - half * 0.44, cy - half * 0.44, size * 0.10)
   }
 
   // ── Desenho de formas ────────────────────────────────────────────────────
@@ -200,32 +208,36 @@ export class BootScene extends Phaser.Scene {
 
     switch (forma) {
       case 'circulo': {
-        // Sombra
         gfx.fillStyle(shadow, 0.28)
-        gfx.fillCircle(cx + 5, cy + 5, half)
-        // Corpo
+        gfx.fillCircle(cx + 5, cy + 6, half)
         gfx.fillStyle(fill, 1)
         gfx.fillCircle(cx, cy, half)
-        // Contorno
-        gfx.lineStyle(4, 0x000000, 0.55)
+        gfx.lineStyle(4, 0x000000, 0.50)
         gfx.strokeCircle(cx, cy, half)
-        // Brilho
-        gfx.fillStyle(0xFFFFFF, 0.45)
-        gfx.fillCircle(cx - half * 0.28, cy - half * 0.28, half * 0.22)
+        // Gel highlight — large soft area
+        gfx.fillStyle(0xFFFFFF, 0.35)
+        gfx.fillCircle(cx - half * 0.18, cy - half * 0.22, half * 0.40)
+        // Specular dot
+        gfx.fillStyle(0xFFFFFF, 0.65)
+        gfx.fillCircle(cx - half * 0.30, cy - half * 0.30, half * 0.14)
         break
       }
 
       case 'quadrado': {
         const x0 = cx - half
         const y0 = cy - half
+        const r  = Math.round(size * 0.18)
         gfx.fillStyle(shadow, 0.28)
-        gfx.fillRect(x0 + 5, y0 + 5, size, size)
+        gfx.fillRoundedRect(x0 + 5, y0 + 5, size, size, r)
         gfx.fillStyle(fill, 1)
-        gfx.fillRect(x0, y0, size, size)
-        gfx.lineStyle(4, 0x000000, 0.55)
-        gfx.strokeRect(x0, y0, size, size)
-        gfx.fillStyle(0xFFFFFF, 0.45)
-        gfx.fillRect(x0 + 5, y0 + 5, size * 0.32, size * 0.32)
+        gfx.fillRoundedRect(x0, y0, size, size, r)
+        gfx.lineStyle(4, 0x000000, 0.50)
+        gfx.strokeRoundedRect(x0, y0, size, size, r)
+        // Gel highlight
+        gfx.fillStyle(0xFFFFFF, 0.40)
+        gfx.fillRoundedRect(x0 + 6, y0 + 5, size * 0.40, size * 0.28, r * 0.5)
+        gfx.fillStyle(0xFFFFFF, 0.55)
+        gfx.fillCircle(x0 + size * 0.22, y0 + size * 0.22, size * 0.09)
         break
       }
 
@@ -250,14 +262,18 @@ export class BootScene extends Phaser.Scene {
         const rh = size * 0.55
         const rx = cx - half
         const ry = cy - rh / 2
+        const rr = Math.round(rh * 0.22)
         gfx.fillStyle(shadow, 0.28)
-        gfx.fillRect(rx + 5, ry + 5, size, rh)
+        gfx.fillRoundedRect(rx + 5, ry + 5, size, rh, rr)
         gfx.fillStyle(fill, 1)
-        gfx.fillRect(rx, ry, size, rh)
-        gfx.lineStyle(4, 0x000000, 0.55)
-        gfx.strokeRect(rx, ry, size, rh)
-        gfx.fillStyle(0xFFFFFF, 0.45)
-        gfx.fillRect(rx + 5, ry + 5, size * 0.32, rh * 0.38)
+        gfx.fillRoundedRect(rx, ry, size, rh, rr)
+        gfx.lineStyle(4, 0x000000, 0.50)
+        gfx.strokeRoundedRect(rx, ry, size, rh, rr)
+        // Gel highlight
+        gfx.fillStyle(0xFFFFFF, 0.40)
+        gfx.fillRoundedRect(rx + 6, ry + 5, size * 0.38, rh * 0.36, rr * 0.5)
+        gfx.fillStyle(0xFFFFFF, 0.55)
+        gfx.fillCircle(rx + size * 0.20, ry + rh * 0.25, rh * 0.14)
         break
       }
     }

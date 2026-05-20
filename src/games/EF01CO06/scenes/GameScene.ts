@@ -126,8 +126,9 @@ export class GameScene extends Phaser.Scene {
 
     this.input.on('pointerup', () => { this.dragging = null })
 
-    EventBus.on('mute-audio',  this.handleMuteAudio, this)
-    EventBus.on('app-action',  this.onAppAction,     this)
+    EventBus.on('mute-audio',       this.handleMuteAudio,    this)
+    EventBus.on('app-action',       this.onAppAction,        this)
+    EventBus.on('show-instructions', this.onShowInstructions, this)
 
     this.showStartScreen()
   }
@@ -169,8 +170,9 @@ export class GameScene extends Phaser.Scene {
     this.warningBeepTimer = null
     this.gravadorRecTimerEvent?.destroy()
     this.gravadorRecTimerEvent = null
-    EventBus.off('mute-audio', this.handleMuteAudio, this)
-    EventBus.off('app-action', this.onAppAction,     this)
+    EventBus.off('mute-audio',        this.handleMuteAudio,    this)
+    EventBus.off('app-action',        this.onAppAction,        this)
+    EventBus.off('show-instructions', this.onShowInstructions, this)
     this.unsubscribePlatformCommands?.()
     this.unsubscribePlatformCommands = undefined
   }
@@ -503,40 +505,86 @@ export class GameScene extends Phaser.Scene {
 
   private createCameraContent(): Phaser.GameObjects.GameObject[] {
     const objects: Phaser.GameObjects.GameObject[] = []
+    const vx = 0, vy = CONTENT_CY - 40, vw = 340, vh = 180
 
-    // Visor
-    const visor = this.add.rectangle(0, CONTENT_CY - 40, 340, 180, 0x1A252F)
-      .setStrokeStyle(3, 0x2E86C1)
-    objects.push(visor)
+    // Fundo do visor com gradiente (simulado com dois retângulos)
+    const visorBg = this.add.rectangle(vx, vy, vw, vh, 0x0D2137).setStrokeStyle(3, 0x2E86C1)
+    objects.push(visorBg)
 
-    // Cantos do visor
+    // "Céu" interno — degradê superior
+    const sky = this.add.rectangle(vx, vy - vh / 4, vw, vh / 2, 0x1A3A5C, 0.7)
+    objects.push(sky)
+    // "Chão" interno
+    const ground = this.add.rectangle(vx, vy + vh / 4, vw, vh / 2, 0x1A2B1A, 0.5)
+    objects.push(ground)
+
+    // Sujeitos a fotografar — elementos animados dentro do visor
+    const subjectDefs: { x: number; y: number; em: string; fs: string; dy: number }[] = [
+      { x: -80, y: vy - 20, em: '🌳', fs: '32px', dy:  5 },
+      { x:   0, y: vy - 10, em: '⭐', fs: '28px', dy: -6 },
+      { x:  85, y: vy - 25, em: '🏠', fs: '30px', dy:  4 },
+      { x: -45, y: vy + 35, em: '🌸', fs: '22px', dy: -4 },
+      { x:  55, y: vy + 32, em: '🦋', fs: '20px', dy:  6 },
+    ]
+    subjectDefs.forEach(({ x, y, em, fs, dy }, i) => {
+      const s = this.add.text(x, y, em, { fontSize: fs }).setOrigin(0.5)
+      this.tweens.add({
+        targets: s, y: y + dy,
+        duration: 1400 + i * 300, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+      })
+      objects.push(s)
+    })
+
+    // Linha de grade (regra dos terços — horizontal)
+    const grid = this.add.graphics()
+    grid.lineStyle(1, 0x5DADE2, 0.25)
+    grid.lineBetween(-vw / 2, vy - vh / 6, vw / 2, vy - vh / 6)
+    grid.lineBetween(-vw / 2, vy + vh / 6, vw / 2, vy + vh / 6)
+    grid.lineBetween(-vw / 3, vy - vh / 2, -vw / 3, vy + vh / 2)
+    grid.lineBetween( vw / 3, vy - vh / 2,  vw / 3, vy + vh / 2)
+    objects.push(grid)
+
+    // Linha de varredura (scan line animada)
+    const scanLine = this.add.rectangle(vx, vy - vh / 2 + 4, vw - 4, 3, 0x5DADE2, 0.35)
+    this.tweens.add({
+      targets: scanLine, y: vy + vh / 2 - 4,
+      duration: 2200, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+    })
+    objects.push(scanLine)
+
+    // Caixa de foco (AF box) — pisca levemente ao redor do sujeito central
+    const afBox = this.add.graphics()
+    const afSize = 42
+    afBox.lineStyle(2, 0x2ECC71, 1)
+    afBox.strokeRect(-afSize / 2, vy - 10 - afSize / 2, afSize, afSize)
+    this.tweens.add({ targets: afBox, alpha: { from: 1, to: 0.25 }, duration: 700, yoyo: true, repeat: -1 })
+    objects.push(afBox)
+
+    // Cantos do visor (decorativos)
     const corners = this.add.graphics()
     corners.lineStyle(4, 0x5DADE2)
-    const cx2 = 0, cy2 = CONTENT_CY - 40, hw = 170, hh = 90
-    // TL
-    corners.lineBetween(cx2 - hw, cy2 - hh, cx2 - hw + 20, cy2 - hh)
-    corners.lineBetween(cx2 - hw, cy2 - hh, cx2 - hw, cy2 - hh + 20)
-    // TR
-    corners.lineBetween(cx2 + hw, cy2 - hh, cx2 + hw - 20, cy2 - hh)
-    corners.lineBetween(cx2 + hw, cy2 - hh, cx2 + hw, cy2 - hh + 20)
-    // BL
-    corners.lineBetween(cx2 - hw, cy2 + hh, cx2 - hw + 20, cy2 + hh)
-    corners.lineBetween(cx2 - hw, cy2 + hh, cx2 - hw, cy2 + hh - 20)
-    // BR
-    corners.lineBetween(cx2 + hw, cy2 + hh, cx2 + hw - 20, cy2 + hh)
-    corners.lineBetween(cx2 + hw, cy2 + hh, cx2 + hw, cy2 + hh - 20)
+    const hw = vw / 2, hh = vh / 2
+    corners.lineBetween(-hw, vy - hh, -hw + 22, vy - hh)
+    corners.lineBetween(-hw, vy - hh, -hw, vy - hh + 22)
+    corners.lineBetween( hw, vy - hh,  hw - 22, vy - hh)
+    corners.lineBetween( hw, vy - hh,  hw, vy - hh + 22)
+    corners.lineBetween(-hw, vy + hh, -hw + 22, vy + hh)
+    corners.lineBetween(-hw, vy + hh, -hw, vy + hh - 22)
+    corners.lineBetween( hw, vy + hh,  hw - 22, vy + hh)
+    corners.lineBetween( hw, vy + hh,  hw, vy + hh - 22)
     objects.push(corners)
 
-    // Mira central
-    const mira = this.add.graphics()
-    mira.lineStyle(2, 0x5DADE2, 0.6)
-    mira.lineBetween(-10, CONTENT_CY - 40, 10, CONTENT_CY - 40)
-    mira.lineBetween(0, CONTENT_CY - 50, 0, CONTENT_CY - 30)
-    objects.push(mira)
+    // Indicador REC (canto superior esquerdo do visor)
+    const recDot = this.add.circle(-hw + 16, vy - hh + 14, 6, 0xE74C3C)
+    const recLbl = this.add.text(-hw + 28, vy - hh + 14, 'AO VIVO', {
+      fontSize: '11px', color: '#E74C3C', fontFamily: 'Arial Black',
+    }).setOrigin(0, 0.5)
+    this.tweens.add({ targets: [recDot, recLbl], alpha: { from: 1, to: 0.1 }, duration: 900, yoyo: true, repeat: -1 })
+    objects.push(recDot, recLbl)
 
     // Botão Tirar Foto
     const btn = this.createButton(0, CONTENT_CY + 80, 220, 64, '📷  Tirar Foto', 0x1A6B9A, () => {
-      this.flashCamera()
+      this.flashCamera(objects)
       this.time.delayedCall(400, () => {
         EventBus.emit('app-action', { appId: 'camera', actionKey: 'take-photo' })
         this.playSuccess()
@@ -547,9 +595,18 @@ export class GameScene extends Phaser.Scene {
     return objects
   }
 
-  private flashCamera() {
-    const flash = this.add.rectangle(0, CONTENT_CY - 40, 340, 180, 0xFFFFFF, 0.9).setDepth(100)
-    this.tweens.add({ targets: flash, alpha: 0, duration: 300, onComplete: () => flash.destroy() })
+  private flashCamera(cameraObjects?: Phaser.GameObjects.GameObject[]) {
+    const vx = 0, vy = CONTENT_CY - 40, vw = 340, vh = 180
+    const flash = this.add.rectangle(vx, vy, vw, vh, 0xFFFFFF, 0.95).setDepth(100)
+    this.tweens.add({ targets: flash, alpha: 0, duration: 350, onComplete: () => flash.destroy() })
+    // Congela brevemente a varredura (pausa tweens dos sujeitos por 500ms)
+    if (cameraObjects) {
+      cameraObjects.forEach(o => {
+        if (o instanceof Phaser.GameObjects.Text) {
+          this.tweens.getTweensOf(o).forEach(t => { t.pause(); this.time.delayedCall(500, () => t.resume()) })
+        }
+      })
+    }
     this.playTone(1200, 0.06, 'sine', 0.15)
   }
 
@@ -1520,6 +1577,52 @@ export class GameScene extends Phaser.Scene {
   // ── Handlers de EventBus ──────────────────────────────────────────────────
 
   private handleMuteAudio = (muted: boolean) => { this.isMuted = muted }
+
+  private onShowInstructions = () => {
+    if (this.gameEnded) return
+
+    const info = this.getLevelInstructions()
+    const depth = 220
+
+    const bg = this.add.rectangle(640, 360, 780, 340, 0x0A1628, 0.97)
+      .setStrokeStyle(2, 0x2E86C1).setDepth(depth).setInteractive()
+
+    const title = this.add.text(640, 245, `📋  Nível ${this.levelConfig.level} — Objetivo`, {
+      fontSize: '26px', fontFamily: 'Arial Black, Arial',
+      color: '#AED6F1', stroke: '#000', strokeThickness: 4,
+    }).setOrigin(0.5).setDepth(depth + 1)
+
+    const obj = this.add.text(640, 305, info.objective, {
+      fontSize: '22px', fontFamily: 'Arial', color: '#FFFFFF',
+      wordWrap: { width: 680 }, align: 'center',
+    }).setOrigin(0.5).setDepth(depth + 1)
+
+    const tip = this.add.text(640, 365, `💡  ${info.tip}`, {
+      fontSize: '20px', fontFamily: 'Arial', color: '#F9E79F',
+      wordWrap: { width: 680 }, align: 'center',
+    }).setOrigin(0.5).setDepth(depth + 1)
+
+    const sep = this.add.rectangle(640, 405, 680, 1, 0x2E86C1, 0.4).setDepth(depth + 1)
+
+    const closeBg = this.add.rectangle(640, 440, 180, 52, 0x2ECC71, 1)
+      .setStrokeStyle(2, 0xFFFFFF).setInteractive({ useHandCursor: true }).setDepth(depth + 1)
+    const closeTxt = this.add.text(640, 440, '✓  Entendido', {
+      fontSize: '20px', fontFamily: 'Arial Black, Arial', color: '#FFFFFF',
+    }).setOrigin(0.5).setDepth(depth + 2)
+
+    const items = [bg, title, obj, tip, sep, closeBg, closeTxt]
+    this.tweens.add({ targets: items, alpha: { from: 0, to: 1 }, duration: 200, ease: 'Quad.Out' })
+
+    const dismiss = () => {
+      this.tweens.add({
+        targets: items, alpha: 0, duration: 180,
+        onComplete: () => items.forEach(o => o.destroy()),
+      })
+    }
+    closeBg.on('pointerdown', dismiss)
+    closeTxt.setInteractive({ useHandCursor: true })
+    closeTxt.on('pointerdown', dismiss)
+  }
 
   // ── Áudio sintético ────────────────────────────────────────────────────────
 
