@@ -1,4 +1,6 @@
 import type { Game } from "../types/game";
+import heroThumbnail from "../assets/hero.png";
+import algorithmsThumbnail from "../assets/games/EF01CO03/algorithm-game-cover.png";
 
 export const games: Game[] = [
   {
@@ -9,6 +11,7 @@ export const games: Game[] = [
     points: 60,
     icon: "🗂️",
     slug: "base-dos-classificadores",
+    thumbnail: heroThumbnail,
   },
   {
     id: 1,
@@ -18,6 +21,7 @@ export const games: Game[] = [
     points: 50,
     icon: "👣",
     slug: "trilha-do-passo-a-passo",
+    thumbnail: heroThumbnail,
   },
   {
     id: 2,
@@ -27,6 +31,7 @@ export const games: Game[] = [
     points: 50,
     icon: "🛠️",
     slug: "oficina-dos-algoritmos",
+    thumbnail: algorithmsThumbnail,
 
   },
   {
@@ -37,6 +42,7 @@ export const games: Game[] = [
     points: 40,
     icon: "🎯",
     slug: "acerte-o-alvo",
+    thumbnail: heroThumbnail,
   },
   {
     id: 4,
@@ -46,6 +52,7 @@ export const games: Game[] = [
     points: 50,
     icon: "🎨",
     slug: "pixel-secreto",
+    thumbnail: heroThumbnail,
   }
   ,
   {
@@ -56,6 +63,7 @@ export const games: Game[] = [
     points: 60,
     icon: "🖥️",
     slug: "desktop-digital-infantil",
+    thumbnail: heroThumbnail,
   },
 
   {
@@ -66,6 +74,7 @@ export const games: Game[] = [
   points: 50,
   icon: "🛡️",
   slug: "guardioes-dos-dados",
+  thumbnail: heroThumbnail,
 }
 ,
  {
@@ -76,6 +85,7 @@ export const games: Game[] = [
     points: 55,
     icon: "✈️",
     slug: "hangar-dos-modelos",
+    thumbnail: heroThumbnail,
   },
   {
     id: 8,
@@ -85,6 +95,7 @@ export const games: Game[] = [
     points: 45,
     icon: "🏁",
     slug: "corrida-do-saber",
+    thumbnail: heroThumbnail,
   },
   {
     id: 9,
@@ -94,6 +105,7 @@ export const games: Game[] = [
     points: 60,
     icon: "➗",
     slug: "desafio-matematico",
+    thumbnail: heroThumbnail,
   },
   {
     id: 10,
@@ -103,6 +115,7 @@ export const games: Game[] = [
     points: 25,
     icon: "🔢",
     slug: "caca-ao-numero",
+    thumbnail: heroThumbnail,
   },
   {
     id: 11,
@@ -112,6 +125,7 @@ export const games: Game[] = [
     points: 55,
     icon: "🧩",
     slug: "sequencia-logica",
+    thumbnail: heroThumbnail,
   },
   {
     id: 12,
@@ -121,6 +135,7 @@ export const games: Game[] = [
     points: 20,
     icon: "🎨",
     slug: "desafio-das-cores",
+    thumbnail: heroThumbnail,
   },
   {
     id: 13,
@@ -130,6 +145,7 @@ export const games: Game[] = [
     points: 40,
     icon: "✍️",
     slug: "montando-palavras",
+    thumbnail: heroThumbnail,
   },
   {
     id: 14,
@@ -139,6 +155,7 @@ export const games: Game[] = [
     points: 35,
     icon: "🧮",
     slug: "conta-rapida",
+    thumbnail: heroThumbnail,
   },
   {
     id: 15,
@@ -148,6 +165,7 @@ export const games: Game[] = [
     points: 50,
     icon: "🌀",
     slug: "labirinto-inteligente",
+    thumbnail: heroThumbnail,
   },
   
 ];

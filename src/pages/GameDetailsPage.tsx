@@ -11,6 +11,7 @@ import type { GameEventPayload } from "../types/platform";
 import type Phaser from "phaser";
 import { EventBus } from "../shared/EventBus";
 import { gameBridge } from "../shared/bridge/gameBridge";
+import { useBeepSound } from "../hooks/useBeepSound";
 
 const SLUG_TO_CODE: Record<string, GameCode> = {
   "base-dos-classificadores": "EF01CO01",
@@ -37,6 +38,12 @@ const GAME_CONFIG_LOADERS: Partial<
 export default function GameDetailsPage() {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
+  const { playBeep } = useBeepSound({
+    frequency: 720,
+    duration: 70,
+    volume: 0.12,
+    type: "sine",
+  });
 
   const {
     points,
@@ -54,6 +61,7 @@ export default function GameDetailsPage() {
     useState<Phaser.Types.Core.GameConfig | null>(null);
 
   const [hasStartedGame, setHasStartedGame] = useState(false);
+  const [showInstructions, setShowInstructions] = useState(false);
   const [currentLevel, setCurrentLevel] = useState<1 | 2 | 3>(1);
 
   const [showGameOverModal, setShowGameOverModal] = useState(false);
@@ -417,6 +425,53 @@ export default function GameDetailsPage() {
   navigate(-1);
 };
 
+  const startGame = () => {
+    playBeep();
+    alreadyOfferedExtraLifeRef.current = false;
+    setShowInstructions(false);
+    setHasStartedGame(true);
+  };
+
+  const instructionsBySlug: Record<string, string[]> = {
+    "oficina-dos-algoritmos": [
+      "Arraste os cartões para os espaços numerados.",
+      "Monte todos os passos antes de testar.",
+      "A ordem certa completa a fase; erros custam pontos e vidas.",
+    ],
+    "pixel-secreto": [
+      "Observe a legenda de cores.",
+      "Pinte os espaços corretos da grade.",
+      "Complete a imagem escondida para avançar.",
+    ],
+    "base-dos-classificadores": [
+      "Observe as características de cada item.",
+      "Arraste para a base correspondente.",
+      "Classifique tudo para concluir a fase.",
+    ],
+    "guardioes-dos-dados": [
+      "Leia cada situação com atenção.",
+      "Escolha a atitude mais segura.",
+      "Proteja os dados para avançar.",
+    ],
+    "desktop-digital-infantil": [
+      "Explore os aplicativos disponíveis.",
+      "Use a ferramenta certa para cada missão.",
+      "Complete as missões para avançar.",
+    ],
+    "hangar-dos-modelos": [
+      "Compare os veículos apresentados.",
+      "Use atributos como rodas, motor e meio.",
+      "Classifique corretamente para vencer.",
+    ],
+  };
+
+  const gameInstructions =
+    instructionsBySlug[game.slug] ?? [
+      "Observe o desafio na tela.",
+      "Interaja com os elementos do jogo.",
+      "Complete o objetivo para ganhar pontos.",
+    ];
+
 useEffect(() => {
   const hasBlockingOverlay =
     showNoLivesModal ||
@@ -618,241 +673,63 @@ useEffect(() => {
                 config={gameConfig}
                 onPlatformEvent={handlePlatformEvent}
               />
-            ) : isPixelSecreto ? (
-              <div className="game-screen pixel-secret-cover">
-                <div className="pixel-secret-pixels" aria-hidden="true">
-                  <span />
-                  <span />
-                  <span />
-                  <span />
-                  <span />
-                  <span />
-                  <span />
-                  <span />
-                  <span />
-                </div>
+            ) : (
+              <div
+                className={`game-screen game-entry-cover game-entry-${game.slug} ${
+                  showInstructions ? "game-entry-instructions" : ""
+                }`}
+                style={
+                  game.thumbnail
+                    ? { backgroundImage: `url(${game.thumbnail})` }
+                    : undefined
+                }
+              >
+                <div className="game-entry-overlay">
+                  {showInstructions ? (
+                    <div className="game-instructions-panel">
+                      <div className="game-instructions-tab">Como jogar</div>
+                      <h1>{game.title}</h1>
 
-                <div className="pixel-secret-overlay">
-                  <div className="pixel-secret-badge">🎨 Jogo de pixels</div>
-                  <h1>Pixel Secreto</h1>
-                  <p>
-                    Escolha as cores da legenda, pinte os quadradinhos corretos e revele
-                    uma imagem escondida.
-                  </p>
+                      <ul className="game-instructions-list">
+                        {gameInstructions.map((instruction, index) => (
+                          <li key={instruction}>
+                            <span className="game-instruction-number">{index + 1}</span>
+                            <span>{instruction}</span>
+                          </li>
+                        ))}
+                      </ul>
 
-                  <button
-                    type="button"
-                    onClick={() => {
-                      alreadyOfferedExtraLifeRef.current = false;
-                      setHasStartedGame(true);
-                    }}
-                  >
-                    Iniciar jogo
-                  </button>
-                </div>
-              </div>
-            ) : game.slug === "guardioes-dos-dados" ? (
-              <div className="game-screen data-guardians-cover">
-                <div className="data-guardians-particles" aria-hidden="true">
-                  <span>🛡️</span>
-                  <span>🔒</span>
-                  <span>💻</span>
-                  <span>📱</span>
-                  <span>🌐</span>
-                  <span>🔐</span>
-                  <span>✅</span>
-                  <span>⭐</span>
-                  <span>👤</span>
-                </div>
+                      <div className="game-entry-actions">
+                        <button type="button" onClick={startGame}>
+                          <span aria-hidden="true">▶</span>
+                          Iniciar Game
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <h1>{game.title}</h1>
 
-                <div className="data-guardians-overlay">
-                  <div className="data-guardians-badge">🛡️ Segurança Digital</div>
-                  <h1>Guardiões dos Dados</h1>
-                  <p>
-                    Proteja informações pessoais, identifique situações perigosas e
-                    aprenda boas práticas de segurança na internet.
-                  </p>
+                    <div className="game-entry-actions">
+                      <button type="button" onClick={startGame}>
+                        <span aria-hidden="true">▶</span>
+                        Iniciar
+                      </button>
 
-                  <button
-                    type="button"
-                    onClick={() => {
-                      alreadyOfferedExtraLifeRef.current = false;
-                      setHasStartedGame(true);
-                    }}
-                  >
-                    Iniciar jogo
-                  </button>
-                </div>
-              </div>
-            ) : game.slug === "base-dos-classificadores" ? (
-              <div className="game-screen classifiers-cover">
-                <div className="classifiers-shapes" aria-hidden="true">
-                  <span>🔺</span>
-                  <span>🟦</span>
-                  <span>🟢</span>
-                  <span>⭐</span>
-                  <span>🟨</span>
-                  <span>🔵</span>
-                  <span>🟥</span>
-                  <span>🟣</span>
-                  <span>🧩</span>
-                </div>
-
-                <div className="classifiers-overlay">
-                  <div className="classifiers-badge">🧠 Lógica e classificação</div>
-                  <h1>Base dos Classificadores</h1>
-                  <p>
-                    Observe formas, cores e padrões para classificar corretamente cada
-                    item e completar os desafios.
-                  </p>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      alreadyOfferedExtraLifeRef.current = false;
-                      setHasStartedGame(true);
-                    }}
-                  >
-                    Iniciar jogo
-                  </button>
-                </div>
-              </div>
-            ) : game.slug === "oficina-dos-algoritmos" ? (
-              <div className="game-screen algorithms-cover">
-                <div className="algorithms-icons" aria-hidden="true">
-                  <span>⚙️</span>
-                  <span>➡️</span>
-                  <span>🧩</span>
-                  <span>💡</span>
-                  <span>🔁</span>
-                  <span>🖥️</span>
-                  <span>📦</span>
-                  <span>🚀</span>
-                  <span>🧠</span>
-                </div>
-
-                <div className="algorithms-overlay">
-                  <div className="algorithms-badge">
-                    ⚙️ Pensamento computacional
-                  </div>
-                  <h1>Oficina dos Algoritmos</h1>
-                  <p>
-                    Resolva desafios usando sequência lógica, organização de passos e
-                    raciocínio computacional.
-                  </p>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      alreadyOfferedExtraLifeRef.current = false;
-                      setHasStartedGame(true);
-                    }}
-                  >
-                    Iniciar jogo
-                  </button>
-                </div>
-              </div>
-            ) : game.slug === "desktop-digital-infantil" ? (
-  <div className="game-screen desktop-digital-cover">
-    <div className="desktop-digital-icons" aria-hidden="true">
-      <span>🖥️</span>
-      <span>📷</span>
-      <span>🧮</span>
-      <span>🎙️</span>
-      <span>🎨</span>
-      <span>🌐</span>
-      <span>🎵</span>
-      <span>🌙</span>
-      <span>⭐</span>
-    </div>
-
-    <div className="desktop-digital-overlay">
-      <div className="desktop-digital-badge">
-        🖥️ Uso de aplicativos
-      </div>
-
-      <h1>Desktop Digital Infantil</h1>
-
-      <p>
-        Explore apps, complete missões e ajude a Lua usando câmera,
-        calculadora, desenho, gravador e outros recursos digitais.
-      </p>
-
-      <button
-        type="button"
-        onClick={() => {
-          alreadyOfferedExtraLifeRef.current = false;
-          setHasStartedGame(true);
-        }}
-      >
-        Iniciar jogo
-      </button>
-    </div>
-  </div> ) : game.slug === "hangar-dos-modelos" ? (
-  <div className="game-screen hangar-modelos-cover">
-    <div className="hangar-floating-vehicles" aria-hidden="true">
-      <span>✈️</span>
-      <span>🚁</span>
-      <span>🚀</span>
-      <span>🚗</span>
-      <span>🚌</span>
-      <span>🚲</span>
-    </div>
-
-    <div className="hangar-modelos-overlay">
-      <div className="hangar-modelos-badge">
-        ✈️ Classificação de veículos
-      </div>
-
-      <h1>Hangar dos Modelos</h1>
-
-      <p>
-        Compare veículos, descubra características em comum e aprenda a
-        classificar modelos por atributos como voo, rodas, motor e meio de
-        transporte.
-      </p>
-
-      <button
-        type="button"
-        onClick={() => {
-          alreadyOfferedExtraLifeRef.current = false;
-          setHasStartedGame(true);
-        }}
-      >
-        Iniciar jogo
-      </button>
-    </div>
-  </div>
-) : (
-              <div className="game-screen">
-                <h2>{game.title}</h2>
-
-                <p>
-                  Prepare-se para começar. Você está com{" "}
-                  <strong>{gameLives}</strong> vida
-                  {gameLives !== 1 ? "s" : ""}.
-                </p>
-
-                <div className="game-actions">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      alreadyOfferedExtraLifeRef.current = false;
-                      setHasStartedGame(true);
-                    }}
-                  >
-                    {currentLevel === 1
-                      ? "Iniciar jogo"
-                      : `Continuar no nível ${currentLevel}`}
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={handleBuyLife}
-                    disabled={points < extraLifeCost}
-                  >
-                    Comprar +1 vida
-                  </button>
+                      <button
+                        type="button"
+                        className="game-entry-secondary"
+                        onClick={() => {
+                          playBeep();
+                          setShowInstructions(true);
+                        }}
+                      >
+                        <span aria-hidden="true">⚙</span>
+                        Instruções
+                      </button>
+                    </div>
+                    </>
+                  )}
                 </div>
               </div>
             )

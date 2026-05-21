@@ -161,20 +161,19 @@ button {
 .game-card-top {
   height: 220px;
   background: var(--top-card);
+  background-position: center;
+  background-size: cover;
   display: flex;
   align-items: center;
   justify-content: center;
+  position: relative;
 }
 
-.game-icon-box {
-  width: 96px;
-  height: 96px;
-  border-radius: 24px;
-  background: rgba(255, 255, 255, 0.45);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 46px;
+.game-card-top::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(20, 24, 56, 0.08), rgba(20, 24, 56, 0.38));
 }
 
 .game-card-content {
@@ -514,6 +513,7 @@ button {
   margin-top: 28px;
   display: flex;
   justify-content: center;
+  width: 100%;
 }
 
 /* Container do canvas Phaser — ocupa toda a largura disponível */
@@ -526,12 +526,16 @@ button {
   box-shadow: var(--shadow);
   background: #1a1a2e;
   margin: 0 auto;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .phaser-container canvas {
   width: 100% !important;
   height: 100% !important;
   display: block;
+  touch-action: none;
 }
 
 .game-screen {
@@ -583,6 +587,205 @@ button {
 .game-actions button:hover {
   transform: translateY(-1px);
   box-shadow: var(--shadow);
+}
+
+.game-entry-cover {
+  position: relative;
+  min-height: 620px;
+  overflow: hidden;
+  border-radius: 24px;
+  padding: clamp(24px, 5vw, 56px);
+  justify-content: center;
+  background:
+    linear-gradient(120deg, rgba(21, 27, 64, 0.76), rgba(21, 27, 64, 0.24)),
+    var(--top-card);
+  background-position: center;
+  background-size: cover;
+  color: #ffffff;
+}
+
+.game-entry-cover::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, rgba(15, 23, 42, 0.72), rgba(15, 23, 42, 0.14));
+  pointer-events: none;
+}
+
+.game-entry-overlay {
+  position: relative;
+  z-index: 1;
+  width: min(640px, 100%);
+  margin: 0 auto;
+  text-align: center;
+  display: grid;
+  gap: 20px;
+}
+
+.game-entry-instructions {
+  display: grid;
+  place-items: center;
+}
+
+.game-entry-instructions::before {
+  background: rgba(5, 20, 45, 0.68);
+}
+
+.game-entry-instructions .game-entry-overlay {
+  width: min(360px, 100%);
+  margin: 0;
+}
+
+.game-instructions-panel {
+  position: relative;
+  display: grid;
+  gap: 16px;
+  padding: 62px 22px 22px;
+  border-radius: 22px;
+  background: var(--instruction-bg, #fff1d2);
+  border: 6px solid var(--instruction-primary, #2f8cff);
+  box-shadow: 0 12px 0 var(--instruction-shadow, #1166c9), 0 22px 48px rgba(0, 0, 0, 0.28);
+  color: var(--instruction-text, #4b3a38);
+  text-align: center;
+}
+
+.game-instructions-tab {
+  position: absolute;
+  left: 50%;
+  top: -22px;
+  transform: translateX(-50%);
+  min-width: 212px;
+  padding: 14px 20px;
+  border-radius: 10px;
+  background: #258cff;
+  background: var(--instruction-primary, #258cff);
+  color: #ffffff;
+  font-size: 1.25rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  box-shadow: 0 5px 0 var(--instruction-shadow, #0f5fbd);
+}
+
+.game-entry-oficina-dos-algoritmos {
+  --instruction-bg: #fff6e8;
+  --instruction-primary: #f57c00;
+  --instruction-shadow: #b94f00;
+  --instruction-text: #25327a;
+  --instruction-step: #45c6f0;
+  --instruction-start: #42d640;
+  --instruction-start-shadow: #209b21;
+}
+
+.game-entry-badge {
+  width: fit-content;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.34);
+  color: #ffffff;
+  font-weight: 800;
+}
+
+.game-entry-overlay h1 {
+  margin: 0;
+  font-size: clamp(2rem, 5vw, 4.4rem);
+  line-height: 1;
+  color: #ffffff;
+  text-shadow: 0 3px 16px rgba(0, 0, 0, 0.34);
+}
+
+.game-instructions-panel h1 {
+  margin: 0;
+  color: #5a413c;
+  font-size: 1.05rem;
+  line-height: 1.2;
+  text-shadow: none;
+}
+
+.game-entry-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.game-entry-actions button {
+  min-height: 54px;
+  border: 0;
+  border-radius: 14px;
+  padding: 14px 22px;
+  background: #28bf00;
+  color: #ffffff;
+  font-weight: 900;
+  cursor: pointer;
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.22);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: transform 0.14s ease, box-shadow 0.14s ease;
+}
+
+.game-entry-actions button:hover {
+  transform: scale(1.05);
+  box-shadow: 0 18px 36px rgba(0, 0, 0, 0.26);
+}
+
+.game-entry-actions .game-entry-secondary {
+  background: rgba(255, 255, 255, 0.92);
+  color: #1f2a44;
+}
+
+.game-instructions-list {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--instruction-text, #4b3a38);
+  font-size: 0.9rem;
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+.game-instructions-list li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 62px;
+  padding: 10px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.84);
+  box-shadow: 0 4px 0 rgba(108, 82, 61, 0.12);
+  text-align: left;
+}
+
+.game-instruction-number {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: var(--instruction-step, #ff6b1a);
+  color: #ffffff;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  font-size: 1.05rem;
+  font-weight: 900;
+  box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.28);
+}
+
+.game-instructions-panel .game-entry-actions {
+  display: grid;
+}
+
+.game-instructions-panel .game-entry-actions button {
+  width: 100%;
+  border-radius: 18px;
+  background: var(--instruction-start, #28bf00);
+  box-shadow: 0 7px 0 var(--instruction-start-shadow, #159100);
 }
 
 .history-list {
@@ -674,19 +877,51 @@ button {
 
   .game-topbar {
     align-items: flex-start;
+    gap: 12px;
+    margin-top: 16px;
+    padding: 14px;
   }
 
   .game-resources {
     width: 100%;
+    gap: 8px;
   }
 
   .resource-card {
-    flex: 1 1 140px;
+    flex: 1 1 calc(50% - 8px);
+    min-width: 0;
+    padding: 10px 12px;
+  }
+
+  .game-area {
+    margin-top: 16px;
+    margin-left: -0.75rem;
+    width: calc(100% + 1.5rem);
+  }
+
+  .phaser-container {
+    border-radius: 12px;
+    max-width: none;
   }
 
   .game-screen {
     min-height: 420px;
     padding: 24px;
+  }
+
+  .game-entry-cover {
+    min-height: 480px;
+    border-radius: 14px;
+    padding: 24px;
+  }
+
+  .game-entry-overlay {
+    gap: 16px;
+  }
+
+  .game-entry-actions {
+    flex-direction: column;
+    align-items: stretch;
   }
 
   .history-main {
@@ -715,6 +950,45 @@ button {
 
   .reward-card {
     padding: 1.25rem;
+  }
+
+  .game-entry-cover {
+    min-height: 430px;
+  }
+
+  .player-avatar {
+    width: 46px;
+    height: 46px;
+  }
+
+  .player-info strong {
+    font-size: 0.92rem;
+  }
+
+  .resource-icon {
+    font-size: 1.1rem;
+  }
+
+  .resource-text span {
+    font-size: 0.75rem;
+  }
+
+  .resource-text strong {
+    font-size: 0.9rem;
+  }
+}
+
+@media (max-width: 768px) and (orientation: landscape) {
+  .page-content {
+    padding-top: 0;
+  }
+
+  .game-area {
+    margin-top: 10px;
+  }
+
+  .phaser-container {
+    width: min(100%, calc((100svh - 18px) * 16 / 9));
   }
 }
 
@@ -1446,10 +1720,8 @@ button {
 
 .game-screen.algorithms-cover {
   background:
-    radial-gradient(circle at 18% 18%, rgba(99,102,241,.35), transparent 30%),
-    radial-gradient(circle at 82% 20%, rgba(236,72,153,.25), transparent 32%),
-    radial-gradient(circle at 50% 88%, rgba(14,165,233,.28), transparent 34%),
-    linear-gradient(135deg, #eef2ff 0%, #f5f3ff 48%, #ecfeff 100%);
+    linear-gradient(90deg, rgba(24, 31, 75, .7), rgba(24, 31, 75, .18)),
+    url("../assets/games/EF01CO03/algorithm-game-cover.png") center / cover no-repeat;
 }
 
 .game-screen.pixel-secret-cover::before,

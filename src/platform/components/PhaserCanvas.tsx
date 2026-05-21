@@ -3,9 +3,10 @@ import Phaser from "phaser";
 
 interface PhaserCanvasProps {
   config: Phaser.Types.Core.GameConfig;
+  gameId: string;
 }
 
-export default function PhaserCanvas({ config }: PhaserCanvasProps) {
+export default function PhaserCanvas({ config, gameId }: PhaserCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const gameRef = useRef<Phaser.Game | null>(null);
 
@@ -46,7 +47,7 @@ export default function PhaserCanvas({ config }: PhaserCanvasProps) {
   <div
     id="game-root"
     ref={containerRef}
-    className="phaser-container"
+    className={`phaser-container phaser-container-${gameId}`}
   />
 );
 }
