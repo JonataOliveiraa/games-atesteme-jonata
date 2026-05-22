@@ -1,4 +1,7 @@
 import Phaser from 'phaser'
+import bgGardenUrl from '../../../assets/games/EF01CO01/bg-garden.png'
+import shelfWoodUrl from '../../../assets/games/EF01CO01/shelf-wood.png'
+import sunUrl from '../../../assets/games/EF01CO01/sun.png'
 
 /**
  * BootScene — carrega todos os assets e gera texturas programáticas.
@@ -25,6 +28,10 @@ export class BootScene extends Phaser.Scene {
   preload() {
     this.createLoadingBar()
 
+    this.load.image('bg-garden', bgGardenUrl)
+    this.load.image('shelf-wood', shelfWoodUrl)
+    this.load.image('sun', sunUrl)
+
     // TODO: atlas de itens
     // this.load.atlas('items', 'assets/images/items.png', 'assets/images/items.json')
 
@@ -43,6 +50,7 @@ export class BootScene extends Phaser.Scene {
 
   create() {
     this.generateItemTextures()
+    this.removeWhiteBackground('shelf-wood')
     this.scene.start('GameScene')
   }
 
@@ -277,5 +285,30 @@ export class BootScene extends Phaser.Scene {
         break
       }
     }
+  }
+
+  // Remove pixels brancos/quase-brancos de uma textura carregada,
+  // substituindo-a por uma versão com canal alpha transparente nessas áreas.
+  private removeWhiteBackground(key: string, threshold = 230) {
+    if (!this.textures.exists(key)) return
+
+    const source = this.textures.get(key).getSourceImage() as HTMLImageElement
+    const canvas = document.createElement('canvas')
+    canvas.width  = source.naturalWidth
+    canvas.height = source.naturalHeight
+    const ctx = canvas.getContext('2d')!
+    ctx.drawImage(source, 0, 0)
+
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
+    const d = imageData.data
+    for (let i = 0; i < d.length; i += 4) {
+      if (d[i] > threshold && d[i + 1] > threshold && d[i + 2] > threshold) {
+        d[i + 3] = 0   // torna transparente
+      }
+    }
+    ctx.putImageData(imageData, 0, 0)
+
+    this.textures.remove(key)
+    this.textures.addCanvas(key, canvas)
   }
 }
