@@ -14,7 +14,7 @@ const config: Phaser.Types.Core.GameConfig = {
     pixelArt: false,
     roundPixels: false,
   },
-  backgroundColor: '#6fd6df',
+  backgroundColor: '#fff6e8',
 
   scale: {
     mode: Phaser.Scale.FIT,

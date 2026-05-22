@@ -538,6 +538,10 @@ button {
   touch-action: none;
 }
 
+.phaser-container-oficina-dos-algoritmos {
+  background: #fff6e8;
+}
+
 .game-screen {
   width: 100%;
   max-width: 1280px;

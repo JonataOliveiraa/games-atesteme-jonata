@@ -35,6 +35,10 @@ const GAME_CONFIG_LOADERS: Partial<
   EF02CO01: () => import("../games/EF02CO01/index"),
 };
 
+const GAMES_WITH_IN_GAME_COMPLETION_SCREEN = new Set([
+  "oficina-dos-algoritmos",
+]);
+
 export default function GameDetailsPage() {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
@@ -331,10 +335,12 @@ export default function GameDetailsPage() {
         } else {
           setCurrentLevel(1);
 
-          window.setTimeout(() => {
-            setHasStartedGame(false);
-            setShowCongratsModal(true);
-          }, 2400);
+          if (!GAMES_WITH_IN_GAME_COMPLETION_SCREEN.has(game.slug)) {
+            window.setTimeout(() => {
+              setHasStartedGame(false);
+              setShowCongratsModal(true);
+            }, 2400);
+          }
         }
 
         streakRef.current = 0;

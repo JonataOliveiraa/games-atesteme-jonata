@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 
+import { EventBus } from '../../../shared/EventBus';
 import { gameBridge } from '../../../shared/bridge/gameBridge';
 import type { PlatformCommand } from '../../../shared/contracts/platformCommands';
 import { LEVELS } from '../data/levels';
@@ -12,6 +13,13 @@ type AlgorithmStep = AlgorithmCard & {
 const GAME_WIDTH = 960;
 const GAME_HEIGHT = 540;
 const GAME_ID = 'oficina-dos-algoritmos';
+const CARD_WIDTH = 112;
+const CARD_HEIGHT = 116;
+const CARD_IMAGE_WIDTH = 88;
+const CARD_IMAGE_HEIGHT = 72;
+const CARD_RADIUS = 20;
+const CARD_HITBOX_WIDTH = CARD_WIDTH;
+const CARD_HITBOX_HEIGHT = CARD_HEIGHT;
 
 const COLORS = {
   orange: 0xf57c00,
@@ -44,12 +52,13 @@ export class GameScene extends Phaser.Scene {
   private timerState = { progress: 1 };
   private hasStartedTimer = false;
   private timerDuration = 30000;
+  private shouldShowLevelStart = false;
 
   constructor() {
     super('GameScene');
   }
 
-  init(data?: { level?: number; points?: number; lives?: number }) {
+  init(data?: { level?: number; points?: number; lives?: number; showLevelStart?: boolean }) {
     const requestedLevel = data?.level ?? 1;
     this.currentLevel = LEVELS.find((level) => level.level === requestedLevel) ?? LEVELS[0];
     this.currentPoints = data?.points ?? this.currentPoints;
@@ -58,6 +67,7 @@ export class GameScene extends Phaser.Scene {
     this.errors = 0;
     this.hasCompletedLevel = false;
     this.hasStartedTimer = false;
+    this.shouldShowLevelStart = data?.showLevelStart ?? false;
     this.timerDuration = this.currentLevel.timeLimit * 1000;
 
     const expectedOrder = new Map(
@@ -87,10 +97,20 @@ export class GameScene extends Phaser.Scene {
     this.registerPlatformCommands();
     this.emitReady();
     this.emitCheckpoint();
+
+    if (this.shouldShowLevelStart && this.currentLevel.level > 1) {
+      this.showNextLevelStartScreen();
+    }
   }
 
   private createBackground() {
-    const bg = this.add.image(GAME_WIDTH / 2, GAME_HEIGHT / 2, 'bg-03');
+    const backgroundKey =
+      this.currentLevel.level === 2
+        ? 'bg-03-level-2'
+        : this.currentLevel.level === 3
+          ? 'bg-03-level-3'
+          : 'bg-03';
+    const bg = this.add.image(GAME_WIDTH / 2, GAME_HEIGHT / 2, backgroundKey);
     this.coverImage(bg, GAME_WIDTH, GAME_HEIGHT);
     bg.setDepth(0);
 
@@ -102,7 +122,7 @@ export class GameScene extends Phaser.Scene {
 
   private createTimeBar() {
     const x = 210;
-    const y = this.currentLevel.level === 1 ? 22 : 4;
+    const y = this.currentLevel.level === 1 ? 22 : 16;
     const width = 540;
     const height = 24;
 
@@ -163,7 +183,7 @@ export class GameScene extends Phaser.Scene {
     const isLevelOne = this.currentLevel.level === 1;
 
     this.add
-      .text(480, isLevelOne ? 80 : 42, this.currentLevel.title, {
+      .text(480, isLevelOne ? 80 : 58, this.currentLevel.title, {
         fontFamily: 'Arial',
         fontSize: '30px',
         fontStyle: 'bold',
@@ -183,7 +203,7 @@ export class GameScene extends Phaser.Scene {
       .setDepth(10);
 
     this.add
-      .text(480, isLevelOne ? 112 : 68, this.currentLevel.objective, {
+      .text(480, isLevelOne ? 112 : 84, this.currentLevel.objective, {
         fontFamily: 'Arial',
         fontSize: '15px',
         fontStyle: 'bold',
@@ -211,10 +231,10 @@ export class GameScene extends Phaser.Scene {
   const isLevelOne = this.currentLevel.level === 1;
   const panelWidth = isLevelOne ? 508 : slotCount === 5 ? 760 : 820;
   const panelX = isLevelOne ? 220 : 480 - panelWidth / 2;
-  const panelY = isLevelOne ? 130 : 78;
-  const shadowY = isLevelOne ? 138 : 86;
-  const panelHeight = isLevelOne ? 150 : 132;
-  const labelY = isLevelOne ? 145 : 94;
+  const panelY = isLevelOne ? 130 : 118;
+  const shadowY = isLevelOne ? 138 : 126;
+  const panelHeight = 150;
+  const labelY = isLevelOne ? 145 : 134;
 
   shadow.fillRoundedRect(panelX + 6, shadowY, panelWidth, panelHeight, 22);
 
@@ -258,7 +278,7 @@ export class GameScene extends Phaser.Scene {
     const spacing = count <= 3 ? 130 : count === 5 ? 140 : 124;
     const startX = 480 - ((count - 1) * spacing) / 2;
     const colors = [COLORS.blue, COLORS.green, COLORS.softOrange, COLORS.cyan, COLORS.orange, 0xa78bfa];
-    const y = isLevelOne ? 214 : 156;
+    const y = isLevelOne ? 214 : 202;
 
     for (let index = 0; index < count; index += 1) {
       this.sequenceSlots.push(
@@ -272,8 +292,8 @@ export class GameScene extends Phaser.Scene {
     container.setDepth(9);
 
     const bg = this.add.image(0, 0, 'slot');
-    bg.setCrop(175, 175, 674, 674);
-    bg.setDisplaySize(148, 152);
+    bg.texture.setFilter(Phaser.Textures.FilterMode.LINEAR);
+    bg.setDisplaySize(CARD_WIDTH, CARD_HEIGHT);
     bg.setAlpha(0.98);
 
     const number = this.add
@@ -305,11 +325,11 @@ export class GameScene extends Phaser.Scene {
 
     const totalCards = this.steps.length;
     const isLevelOne = this.currentLevel.level === 1;
-    const areaWidth = totalCards <= 3 ? 408 : totalCards <= 6 ? 650 : 740;
+    const areaWidth = isLevelOne ? 408 : totalCards <= 6 ? 850 : 936;
     const areaX = 480 - areaWidth / 2;
 
-    const areaY = isLevelOne ? 312 : 218;
-    const areaHeight = totalCards > 3 ? 262 : 132;
+    const areaY = isLevelOne ? 312 : 300;
+    const areaHeight = 132;
 
     shadow.fillRoundedRect(areaX + 6, areaY + 8, areaWidth, areaHeight, 24);
 
@@ -328,12 +348,11 @@ export class GameScene extends Phaser.Scene {
 
   private createCards() {
     const shuffled = Phaser.Utils.Array.Shuffle([...this.steps]);
-    const hasTwoRows = shuffled.length > 3;
     const isLevelOne = this.currentLevel.level === 1;
-    const cardsPerRow = hasTwoRows ? (shuffled.length <= 6 ? 3 : 4) : shuffled.length;
-    const spacing = hasTwoRows ? (shuffled.length <= 6 ? 180 : 160) : 130;
+    const cardsPerRow = isLevelOne ? shuffled.length : shuffled.length;
+    const spacing = isLevelOne ? 130 : shuffled.length <= 6 ? 136 : 116;
     const visualScale = 1;
-    const rowY = hasTwoRows ? [286, 416] : [isLevelOne ? 378 : 352];
+    const rowY = [isLevelOne ? 378 : 366];
     const startX = 480 - ((cardsPerRow - 1) * spacing) / 2;
 
     shuffled.forEach((step, index) => {
@@ -345,21 +364,33 @@ export class GameScene extends Phaser.Scene {
 
   private createCard(x: number, y: number, step: AlgorithmStep, visualScale = 1) {
     const container = this.add.container(x, y);
-    container.setSize(112, 116);
+    container.setSize(CARD_WIDTH, CARD_HEIGHT);
     container.setScale(visualScale);
     container.setDepth(12);
 
     const shadow = this.add.graphics();
     shadow.fillStyle(0x000000, 0.13);
-    shadow.fillRoundedRect(-54, -48, 108, 112, 20);
+    shadow.fillRoundedRect(
+      -CARD_WIDTH / 2 + 2,
+      -CARD_HEIGHT / 2 + 10,
+      CARD_WIDTH - 4,
+      CARD_HEIGHT - 4,
+      CARD_RADIUS
+    );
 
     const bg = this.add.graphics();
     bg.fillStyle(COLORS.cream, 0.96);
-    bg.fillRoundedRect(-56, -58, 112, 116, 20);
+    bg.fillRoundedRect(-CARD_WIDTH / 2, -CARD_HEIGHT / 2, CARD_WIDTH, CARD_HEIGHT, CARD_RADIUS);
 
-    const image = this.add.image(0, -20, step.assetKey);
+    const image = this.add.image(0, -22, step.assetKey);
     image.texture.setFilter(Phaser.Textures.FilterMode.LINEAR);
-    this.fitImage(image, 82, 68);
+    this.fitImage(image, CARD_IMAGE_WIDTH, CARD_IMAGE_HEIGHT);
+    if (
+      this.currentLevel.level === 1 &&
+      (step.assetKey === 'cheese' || step.assetKey === 'sandwich')
+    ) {
+      image.setScale(image.scaleX * 0.88, image.scaleY * 0.88);
+    }
 
     const text = this.add
       .text(0, 35, step.label, {
@@ -375,7 +406,7 @@ export class GameScene extends Phaser.Scene {
 
     container.add([shadow, bg, image, text]);
 
-    const hitbox = this.add.zone(x, y, 148 * visualScale, 148 * visualScale);
+    const hitbox = this.add.zone(x, y, CARD_HITBOX_WIDTH * visualScale, CARD_HITBOX_HEIGHT * visualScale);
     hitbox.setDepth(200);
     hitbox.setInteractive({ draggable: true, useHandCursor: true });
 
@@ -393,7 +424,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private createButton() {
-    const buttonY = this.currentLevel.level === 1 ? 478 : 508;
+    const buttonY = this.currentLevel.level === 1 ? 478 : 486;
     const button = this.add.container(480, buttonY);
     button.setDepth(40);
 
@@ -593,23 +624,18 @@ export class GameScene extends Phaser.Scene {
       this.currentPoints += 5;
       this.emitCorrectAnswer();
       this.emitCheckpoint();
-      this.showFeedback(this.currentLevel.successMessage, true);
-
-      this.time.delayedCall(1400, () => {
-        gameBridge.emit({
-          type: 'GAME_COMPLETED',
-          gameId: GAME_ID,
-          stage: this.currentLevel.level,
-        });
-
-        if (this.currentLevel.level < 3) {
-          this.scene.restart({
-            level: this.currentLevel.level + 1,
-            points: this.currentPoints,
-            lives: this.currentLives,
-          });
-        }
+      gameBridge.emit({
+        type: 'GAME_COMPLETED',
+        gameId: GAME_ID,
+        stage: this.currentLevel.level,
       });
+
+      if (this.currentLevel.level < 3) {
+        this.showLevelCompleteScreen((this.currentLevel.level + 1) as 2 | 3);
+        return;
+      }
+
+      this.showFinalLevelCompleteScreen();
       return;
     }
 
@@ -636,6 +662,516 @@ export class GameScene extends Phaser.Scene {
     this.testButtonText.setAlpha(enabled ? 1 : 0.72);
     this.testButton.setAlpha(enabled ? 1 : 0.78);
     this.testButton.input.cursor = enabled ? 'pointer' : 'default';
+  }
+
+  private showLevelCompleteScreen(nextLevel: 2 | 3) {
+    const overlay = this.add.rectangle(
+      GAME_WIDTH / 2,
+      GAME_HEIGHT / 2,
+      GAME_WIDTH,
+      GAME_HEIGHT,
+      0x12324a,
+      0.56
+    );
+    overlay.setDepth(450);
+    overlay.setInteractive();
+
+    const modal = this.add.container(GAME_WIDTH / 2, GAME_HEIGHT / 2);
+    modal.setDepth(451);
+
+    const shadow = this.add.graphics();
+    shadow.fillStyle(0x000000, 0.18);
+    shadow.fillRoundedRect(-270, -166, 540, 330, 28);
+
+    const bg = this.add.graphics();
+    bg.fillStyle(0xfff6e8, 0.98);
+    bg.fillRoundedRect(-278, -178, 556, 330, 28);
+    bg.lineStyle(5, 0xffffff, 0.95);
+    bg.strokeRoundedRect(-278, -178, 556, 330, 28);
+
+    const topBar = this.add.graphics();
+    topBar.fillStyle(COLORS.softOrange, 1);
+    topBar.fillRoundedRect(-196, -194, 392, 28, 14);
+    topBar.lineStyle(3, 0xffffff, 0.82);
+    topBar.strokeRoundedRect(-196, -194, 392, 28, 14);
+
+    const title = this.add
+      .text(0, -110, 'Parabéns!', {
+        fontFamily: 'Arial',
+        fontSize: '40px',
+        fontStyle: 'bold',
+        color: '#25327a',
+        stroke: '#ffffff',
+        strokeThickness: 5,
+      })
+      .setOrigin(0.5)
+      .setResolution(2);
+
+    const completed = this.add
+      .text(0, -50, 'Nível concluído', {
+        fontFamily: 'Arial',
+        fontSize: '26px',
+        fontStyle: 'bold',
+        color: '#f57c00',
+        align: 'center',
+        wordWrap: { width: 420 },
+      })
+      .setOrigin(0.5)
+      .setResolution(2);
+
+    const next = this.add
+      .text(0, 8, this.currentLevel.successMessage, {
+        fontFamily: 'Arial',
+        fontSize: '17px',
+        fontStyle: 'bold',
+        color: '#3b3b3b',
+        align: 'center',
+        wordWrap: { width: 430 },
+      })
+      .setOrigin(0.5)
+      .setResolution(2);
+
+    const dots = [1, 2, 3].map((level, index) => {
+      const dot = this.add.graphics();
+      dot.fillStyle(level <= this.currentLevel.level ? COLORS.green : level === nextLevel ? COLORS.orange : 0xd8dde8, 1);
+      dot.fillCircle(-28 + index * 28, 72, 8);
+      dot.lineStyle(2, 0xffffff, 0.9);
+      dot.strokeCircle(-28 + index * 28, 72, 8);
+      return dot;
+    });
+
+    modal.add([shadow, bg, topBar, title, completed, next, ...dots]);
+    modal.setScale(0.9);
+    modal.setAlpha(0);
+
+    this.tweens.add({
+      targets: modal,
+      alpha: 1,
+      scale: 1,
+      duration: 260,
+      ease: 'Back.easeOut',
+    });
+
+    const waitText = this.add
+      .text(0, 116, 'Preparando o próximo nível...', {
+        fontFamily: 'Arial',
+        fontSize: '15px',
+        fontStyle: 'bold',
+        color: '#25327a',
+      })
+      .setOrigin(0.5)
+      .setResolution(2);
+    modal.add(waitText);
+
+    this.time.delayedCall(2300, () => {
+      this.scene.restart({
+        level: nextLevel,
+        points: this.currentPoints,
+        lives: this.currentLives,
+        showLevelStart: true,
+      });
+    });
+  }
+
+  private showNextLevelStartScreen() {
+    const overlay = this.add.rectangle(
+      GAME_WIDTH / 2,
+      GAME_HEIGHT / 2,
+      GAME_WIDTH,
+      GAME_HEIGHT,
+      0x12324a,
+      0.58
+    );
+    overlay.setDepth(450);
+    overlay.setInteractive();
+
+    const modal = this.add.container(GAME_WIDTH / 2, GAME_HEIGHT / 2);
+    modal.setDepth(451);
+
+    const shadow = this.add.graphics();
+    shadow.fillStyle(0x000000, 0.18);
+    shadow.fillRoundedRect(-270, -154, 540, 312, 28);
+
+    const bg = this.add.graphics();
+    bg.fillStyle(0xfff6e8, 0.98);
+    bg.fillRoundedRect(-278, -166, 556, 312, 28);
+    bg.lineStyle(5, 0xffffff, 0.95);
+    bg.strokeRoundedRect(-278, -166, 556, 312, 28);
+
+    const topBar = this.add.graphics();
+    topBar.fillStyle(COLORS.green, 1);
+    topBar.fillRoundedRect(-196, -182, 392, 28, 14);
+    topBar.lineStyle(3, 0xffffff, 0.82);
+    topBar.strokeRoundedRect(-196, -182, 392, 28, 14);
+
+    const title = this.add
+      .text(0, -102, `Nível ${this.currentLevel.level}`, {
+        fontFamily: 'Arial',
+        fontSize: '38px',
+        fontStyle: 'bold',
+        color: '#25327a',
+        stroke: '#ffffff',
+        strokeThickness: 5,
+      })
+      .setOrigin(0.5)
+      .setResolution(2);
+
+    const objective = this.add
+      .text(0, -42, this.currentLevel.title, {
+        fontFamily: 'Arial',
+        fontSize: '24px',
+        fontStyle: 'bold',
+        color: '#f57c00',
+        align: 'center',
+        wordWrap: { width: 430 },
+      })
+      .setOrigin(0.5)
+      .setResolution(2);
+
+    const detail = this.add
+      .text(0, 12, this.currentLevel.objective, {
+        fontFamily: 'Arial',
+        fontSize: '16px',
+        fontStyle: 'bold',
+        color: '#3b3b3b',
+        align: 'center',
+        wordWrap: { width: 420 },
+      })
+      .setOrigin(0.5)
+      .setResolution(2);
+
+    const button = this.add.container(0, 104);
+    const buttonShadow = this.add.graphics();
+    buttonShadow.fillStyle(0x000000, 0.16);
+    buttonShadow.fillRoundedRect(-136, -20, 272, 48, 24);
+    const buttonBg = this.add.graphics();
+    buttonBg.fillStyle(COLORS.orange, 1);
+    buttonBg.fillRoundedRect(-140, -26, 280, 52, 26);
+    buttonBg.lineStyle(4, 0xffffff, 1);
+    buttonBg.strokeRoundedRect(-140, -26, 280, 52, 26);
+    const buttonText = this.add
+      .text(0, 0, 'Iniciar nível', {
+        fontFamily: 'Arial',
+        fontSize: '22px',
+        fontStyle: 'bold',
+        color: '#ffffff',
+        stroke: '#9a3f00',
+        strokeThickness: 3,
+      })
+      .setOrigin(0.5)
+      .setResolution(2);
+    button.add([buttonShadow, buttonBg, buttonText]);
+
+    const buttonHitbox = this.add.zone(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 104, 280, 58);
+    buttonHitbox.setDepth(452);
+    buttonHitbox.setInteractive({ useHandCursor: true });
+    buttonHitbox.on('pointerover', () => {
+      this.tweens.add({ targets: button, scale: 1.04, duration: 90, ease: 'Sine.easeOut' });
+    });
+    buttonHitbox.on('pointerout', () => {
+      this.tweens.add({ targets: button, scale: 1, duration: 90, ease: 'Sine.easeOut' });
+    });
+    buttonHitbox.on('pointerdown', () => {
+      this.playButtonSound();
+      overlay.destroy();
+      buttonHitbox.destroy();
+      modal.destroy();
+    });
+
+    modal.add([shadow, bg, topBar, title, objective, detail, button]);
+    modal.setScale(0.9);
+    modal.setAlpha(0);
+
+    this.tweens.add({
+      targets: modal,
+      alpha: 1,
+      scale: 1,
+      duration: 260,
+      ease: 'Back.easeOut',
+    });
+  }
+
+  private showFinalLevelCompleteScreen() {
+    const overlay = this.add.rectangle(
+      GAME_WIDTH / 2,
+      GAME_HEIGHT / 2,
+      GAME_WIDTH,
+      GAME_HEIGHT,
+      0x12324a,
+      0.56
+    );
+    overlay.setDepth(450);
+    overlay.setInteractive();
+
+    const modal = this.add.container(GAME_WIDTH / 2, GAME_HEIGHT / 2);
+    modal.setDepth(451);
+
+    const shadow = this.add.graphics();
+    shadow.fillStyle(0x000000, 0.18);
+    shadow.fillRoundedRect(-270, -166, 540, 330, 28);
+
+    const bg = this.add.graphics();
+    bg.fillStyle(0xfff6e8, 0.98);
+    bg.fillRoundedRect(-278, -178, 556, 330, 28);
+    bg.lineStyle(5, 0xffffff, 0.95);
+    bg.strokeRoundedRect(-278, -178, 556, 330, 28);
+
+    const topBar = this.add.graphics();
+    topBar.fillStyle(COLORS.softOrange, 1);
+    topBar.fillRoundedRect(-196, -194, 392, 28, 14);
+    topBar.lineStyle(3, 0xffffff, 0.82);
+    topBar.strokeRoundedRect(-196, -194, 392, 28, 14);
+
+    const title = this.add
+      .text(0, -110, 'Parabéns!', {
+        fontFamily: 'Arial',
+        fontSize: '40px',
+        fontStyle: 'bold',
+        color: '#25327a',
+        stroke: '#ffffff',
+        strokeThickness: 5,
+      })
+      .setOrigin(0.5)
+      .setResolution(2);
+
+    const completed = this.add
+      .text(0, -50, 'Nível concluído', {
+        fontFamily: 'Arial',
+        fontSize: '26px',
+        fontStyle: 'bold',
+        color: '#f57c00',
+      })
+      .setOrigin(0.5)
+      .setResolution(2);
+
+    const message = this.add
+      .text(0, 8, this.currentLevel.successMessage, {
+        fontFamily: 'Arial',
+        fontSize: '17px',
+        fontStyle: 'bold',
+        color: '#3b3b3b',
+        align: 'center',
+        wordWrap: { width: 430 },
+      })
+      .setOrigin(0.5)
+      .setResolution(2);
+
+    const waitText = this.add
+      .text(0, 116, 'Preparando a finalização...', {
+        fontFamily: 'Arial',
+        fontSize: '15px',
+        fontStyle: 'bold',
+        color: '#25327a',
+      })
+      .setOrigin(0.5)
+      .setResolution(2);
+
+    modal.add([shadow, bg, topBar, title, completed, message, waitText]);
+    modal.setScale(0.9);
+    modal.setAlpha(0);
+
+    this.tweens.add({
+      targets: modal,
+      alpha: 1,
+      scale: 1,
+      duration: 260,
+      ease: 'Back.easeOut',
+    });
+
+    this.time.delayedCall(2300, () => {
+      overlay.destroy();
+      modal.destroy();
+      this.showGameCompleteScreen();
+    });
+  }
+
+  private showGameCompleteScreen() {
+    const overlay = this.add.rectangle(
+      GAME_WIDTH / 2,
+      GAME_HEIGHT / 2,
+      GAME_WIDTH,
+      GAME_HEIGHT,
+      0x12324a,
+      0.62
+    );
+    overlay.setDepth(450);
+    overlay.setInteractive();
+
+    const panel = this.add.container(GAME_WIDTH / 2, GAME_HEIGHT / 2);
+    panel.setDepth(451);
+
+    const shadow = this.add.graphics();
+    shadow.fillStyle(0x000000, 0.18);
+    shadow.fillRoundedRect(-292, -178, 584, 366, 34);
+
+    const bg = this.add.graphics();
+    bg.fillStyle(0xfff6e8, 0.98);
+    bg.fillRoundedRect(-304, -190, 608, 370, 34);
+    bg.lineStyle(6, 0xffffff, 0.96);
+    bg.strokeRoundedRect(-304, -190, 608, 370, 34);
+
+    const ribbon = this.add.graphics();
+    ribbon.fillStyle(COLORS.green, 1);
+    ribbon.fillRoundedRect(-214, -208, 428, 34, 17);
+    ribbon.lineStyle(4, 0xffffff, 0.9);
+    ribbon.strokeRoundedRect(-214, -208, 428, 34, 17);
+
+    const title = this.add
+      .text(0, -128, 'Jogo concluído!', {
+        fontFamily: 'Arial',
+        fontSize: '38px',
+        fontStyle: 'bold',
+        color: '#25327a',
+        stroke: '#ffffff',
+        strokeThickness: 6,
+      })
+      .setOrigin(0.5)
+      .setResolution(2);
+
+    const subtitle = this.add
+      .text(0, -74, 'Você organizou todos os algoritmos.', {
+        fontFamily: 'Arial',
+        fontSize: '20px',
+        fontStyle: 'bold',
+        color: '#3b3b3b',
+        align: 'center',
+        wordWrap: { width: 500 },
+      })
+      .setOrigin(0.5)
+      .setResolution(2);
+
+    const levelLabels = LEVELS.map((level, index) => {
+      const item = this.add.container(-190 + index * 190, 54);
+
+      const badge = this.add.graphics();
+      badge.fillStyle(index === 0 ? COLORS.softOrange : index === 1 ? COLORS.blue : COLORS.green, 1);
+      badge.fillRoundedRect(-54, -42, 108, 84, 18);
+      badge.lineStyle(4, 0xffffff, 0.95);
+      badge.strokeRoundedRect(-54, -42, 108, 84, 18);
+
+      const number = this.add
+        .text(0, -13, String(level.level), {
+          fontFamily: 'Arial',
+          fontSize: '30px',
+          fontStyle: 'bold',
+          color: '#ffffff',
+          stroke: '#25327a',
+          strokeThickness: 4,
+        })
+        .setOrigin(0.5)
+        .setResolution(2);
+
+      const label = this.add
+        .text(0, 23, 'concluído', {
+          fontFamily: 'Arial',
+          fontSize: '12px',
+          fontStyle: 'bold',
+          color: '#ffffff',
+        })
+        .setOrigin(0.5)
+        .setResolution(2);
+
+      item.add([badge, number, label]);
+      return item;
+    });
+
+    const createFinalButton = (
+      x: number,
+      label: string,
+      color: number,
+      stroke: string,
+      onClick: () => void
+    ) => {
+      const button = this.add.container(x, 138);
+      const buttonShadow = this.add.graphics();
+      buttonShadow.fillStyle(0x000000, 0.16);
+      buttonShadow.fillRoundedRect(-128, -20, 256, 48, 24);
+      const buttonBg = this.add.graphics();
+      buttonBg.fillStyle(color, 1);
+      buttonBg.fillRoundedRect(-132, -26, 264, 52, 26);
+      buttonBg.lineStyle(4, 0xffffff, 1);
+      buttonBg.strokeRoundedRect(-132, -26, 264, 52, 26);
+      const buttonText = this.add
+        .text(0, 0, label, {
+          fontFamily: 'Arial',
+          fontSize: '20px',
+          fontStyle: 'bold',
+          color: '#ffffff',
+          stroke,
+          strokeThickness: 3,
+        })
+        .setOrigin(0.5)
+        .setResolution(2);
+      button.add([buttonShadow, buttonBg, buttonText]);
+
+      const buttonHitbox = this.add.zone(GAME_WIDTH / 2 + x, GAME_HEIGHT / 2 + 138, 264, 58);
+      buttonHitbox.setDepth(452);
+      buttonHitbox.setInteractive({ useHandCursor: true });
+      buttonHitbox.on('pointerover', () => {
+        this.tweens.add({ targets: button, scale: 1.04, duration: 90, ease: 'Sine.easeOut' });
+      });
+      buttonHitbox.on('pointerout', () => {
+        this.tweens.add({ targets: button, scale: 1, duration: 90, ease: 'Sine.easeOut' });
+      });
+      buttonHitbox.on('pointerdown', () => {
+        this.playButtonSound();
+        onClick();
+      });
+
+      return { button, buttonHitbox };
+    };
+
+    const playAgain = createFinalButton(-142, 'Jogar novamente', COLORS.green, '#1b7d1c', () => {
+      this.scene.restart({
+        level: 1,
+        points: this.currentPoints,
+        lives: this.currentLives,
+      });
+    });
+
+    const exit = createFinalButton(142, 'Voltar aos jogos', COLORS.orange, '#9a3f00', () => {
+      EventBus.emit('exit-game');
+    });
+
+    const sparkles = Array.from({ length: 14 }, (_, index) => {
+      const sparkle = this.add.graphics();
+      const x = Phaser.Math.Between(-278, 278);
+      const y = Phaser.Math.Between(-168, 158);
+      sparkle.fillStyle(index % 3 === 0 ? COLORS.blue : index % 3 === 1 ? COLORS.softOrange : COLORS.green, 0.9);
+      sparkle.fillCircle(x, y, Phaser.Math.Between(4, 8));
+      this.tweens.add({
+        targets: sparkle,
+        alpha: { from: 0.35, to: 1 },
+        scale: { from: 0.8, to: 1.35 },
+        duration: 520 + index * 30,
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.easeInOut',
+      });
+      return sparkle;
+    });
+
+    panel.add([
+      shadow,
+      bg,
+      ribbon,
+      ...sparkles,
+      title,
+      subtitle,
+      ...levelLabels,
+      playAgain.button,
+      exit.button,
+    ]);
+    panel.setScale(0.88);
+    panel.setAlpha(0);
+
+    this.tweens.add({
+      targets: panel,
+      alpha: 1,
+      scale: 1,
+      duration: 300,
+      ease: 'Back.easeOut',
+    });
   }
 
   private coverImage(image: Phaser.GameObjects.Image, width: number, height: number) {
