@@ -12,12 +12,14 @@ interface DraggableItem extends Phaser.GameObjects.Image {
   originY_: number
 }
 
-const ITEM_Y = 295       // linha única (n ≤ 9)
-const ITEM_Y_ROW1 = 225  // primeira linha (n > 9)
-const ITEM_Y_ROW2 = 350  // segunda linha  (n > 9)
-const TIMER_BAR_Y = 78
-const TIMER_BAR_W = 860
+const ITEM_Y = 295          // linha única (n ≤ 9)
+const ITEM_Y_ROW1 = 180     // primeira linha (n > 9)
+const ITEM_Y_ROW2 = 320     // segunda linha  (n > 9)
+const ITEM_SCALE_MAX = 0.70 // escala máxima dos itens — diminua para figuras menores
 const GAME_ID = 'base-dos-classificadores'
+
+const DEV_START_LEVEL: 1 | 2 | 3 = 1  // ← mude para 2 ou 3 para testar; volte para 1 antes de publicar
+const DEV_NO_TIMER    = false           // ← true = pula tela inicial e não inicia timer (ajuste visual)
 
 
 export class GameScene extends Phaser.Scene {
@@ -42,7 +44,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   init(data: { level?: number; points?: number; lives?: number }) {
-    const lvl = (data?.level ?? 1) as 1 | 2 | 3
+    const lvl = (data?.level ?? DEV_START_LEVEL) as 1 | 2 | 3
     this.levelConfig = LEVELS.find((l) => l.level === lvl) ?? LEVELS[0]
     this.hits = 0
     this.errors = 0
@@ -72,7 +74,12 @@ export class GameScene extends Phaser.Scene {
 
     EventBus.on('set-level', this.handleSetLevel, this)
     EventBus.on('mute-audio', this.handleMuteAudio, this)
-    this.showStartScreen()
+
+    if (DEV_NO_TIMER) {
+      this.revealItems()
+    } else {
+      this.showStartScreen()
+    }
   }
 
   update() {
@@ -600,12 +607,12 @@ export class GameScene extends Phaser.Scene {
     }
 
     // ── Sol (top-right) ───────────────────────────────────────────────────────
-    const sunX = 1140
+    const sunX = 1165
     const sunY = 90
-    const sunSize = 180
+    const sunSize = 200
     if (this.textures.exists('sun')) {
       // Máscara circular para cortar cantos brancos do fundo da imagem
-      const maskGfx = this.make.graphics({ x: 0, y: 0, add: false })
+      const maskGfx = this.make.graphics({ x: 0, y: 0 }, false)
       maskGfx.fillStyle(0xffffff)
       maskGfx.fillCircle(sunX, sunY, sunSize * 0.56)
       this.add.image(sunX, sunY, 'sun')
@@ -672,16 +679,16 @@ export class GameScene extends Phaser.Scene {
     // shelf-wood.png 1536×1024 — branco removido em BootScene.removeWhiteBackground()
     // Ajuste fino: SHELF_H controla a altura total; PLANK_FRAC é a % do topo até a tábua.
     // Se a tábua aparecer alta demais → aumentar PLANK_FRAC; baixa demais → diminuir.
-    const SHELF_H     = 340    // altura total de exibição no canvas (px)
-    const PLANK_FRAC  = 0.24   // fração da imagem até o topo da tábua (~22% de 1024px)
+    const SHELF_H     = 370    // altura total de exibição no canvas (px)
+    const PLANK_FRAC  = 0.40   // fração da imagem até o topo da tábua (~22% de 1024px)
 
     // Y do topo da imagem para que a tábua fique logo abaixo dos itens
     const plankOffset = Math.round(SHELF_H * PLANK_FRAC)  // px do topo da img até a tábua
 
     for (const rowY of rows) {
-      // items centrados em rowY → bottom dos itens ≈ rowY + 44
-      // queremos tábua em rowY + 44, então: imgTopY = rowY + 44 - plankOffset
-      const imgTopY = rowY + 44 - plankOffset
+      // items centrados em rowY; com ITEM_SCALE_MAX=0.70, item grande (120px) → bottom ≈ rowY+42
+      // offset 36 → tábua em rowY+36, tocando o fundo dos itens médios/grandes
+      const imgTopY = rowY + 30 - plankOffset
 
       if (useImage) {
         // Fundo já transparente — sem setCrop, sem blend mode especial
@@ -733,178 +740,102 @@ export class GameScene extends Phaser.Scene {
   }
 
   private createBase(baseData: ClassifierBase): Phaser.GameObjects.Container {
-    const w        = 240
-    const h        = 120
-    const bColor   = this.getBaseColor(baseData)
-    const bLight   = this.lightenColor(bColor, 0.32)
-    const bDark    = this.darkenColor(bColor, 0.58)
-    const rimH     = 16   // top rim "3D depth" strip
-    const soilH    = 22   // dark soil strip
-    const panelW   = w - 14
-    const panelH   = 58
-    const panelY   = 27   // center of cream panel (relative to container center y=0)
+    const w = 240
+    const h = 120
 
-    // ── Layer A: box body ───────────────────────────────────────────────────
-    const boxGfx = this.add.graphics()
+    // ── children[0]: imagem do vaso ──────────────────────────────────────────
+    const specificKey = this.getPlanterKey(baseData)
+    let boxBody: Phaser.GameObjects.Image | Phaser.GameObjects.Graphics
 
-    // 1. Drop shadow
-    boxGfx.fillStyle(0x000000, 0.30)
-    boxGfx.fillRoundedRect(-w / 2 + 7, -h / 2 + 9, w, h - 6, 12)
-
-    // 2. Bottom depth face (darker variant, offset down for 3D)
-    boxGfx.fillStyle(bDark, 1)
-    boxGfx.fillRoundedRect(-w / 2, -h / 2 + rimH, w, h - rimH - 4, 10)
-
-    // 3. Main front face (base color)
-    boxGfx.fillStyle(bColor, 1)
-    boxGfx.fillRoundedRect(-w / 2, -h / 2, w, h - 8, 12)
-
-    // 4. Top rim highlight (lighter — the "top surface" of the rim)
-    boxGfx.fillStyle(bLight, 1)
-    boxGfx.fillRoundedRect(-w / 2 + 3, -h / 2 + 3, w - 6, rimH - 5, { tl: 10, tr: 10, bl: 0, br: 0 })
-
-    // 5. Dark soil in the inner opening
-    const innerW = w - 22
-    boxGfx.fillStyle(0x1E0E00, 1)
-    boxGfx.fillRoundedRect(-innerW / 2, -h / 2 + rimH, innerW, soilH + 2, 4)
-
-    // 6. Soil texture dots (moist earth look)
-    boxGfx.fillStyle(0x5C3A1E, 0.65)
-    for (let dx = -innerW / 2 + 12; dx < innerW / 2 - 6; dx += 17) {
-      boxGfx.fillCircle(dx, -h / 2 + rimH + soilH / 2 + 1, 2)
-    }
-
-    // 7. Inner side walls (subtle shadows on left/right of opening)
-    boxGfx.fillStyle(0x000000, 0.14)
-    boxGfx.fillRect(-innerW / 2, -h / 2 + rimH, 5, soilH + 2)
-    boxGfx.fillRect(innerW / 2 - 5, -h / 2 + rimH, 5, soilH + 2)
-
-    // 8. Outer border
-    boxGfx.lineStyle(3, bDark, 1)
-    boxGfx.strokeRoundedRect(-w / 2, -h / 2, w, h - 8, 12)
-
-    // ── Layer B: cream label panel ──────────────────────────────────────────
-    // Panel drop shadow
-    boxGfx.fillStyle(0x000000, 0.16)
-    boxGfx.fillRoundedRect(-panelW / 2 + 2, panelY - panelH / 2 + 3, panelW, panelH, 10)
-    // Panel cream body
-    boxGfx.fillStyle(0xFFF8DC, 1)
-    boxGfx.fillRoundedRect(-panelW / 2, panelY - panelH / 2, panelW, panelH, 9)
-    // Panel inner gloss
-    boxGfx.fillStyle(0xFFFFFF, 0.52)
-    boxGfx.fillRoundedRect(-panelW / 2 + 4, panelY - panelH / 2 + 4, panelW - 8, panelH * 0.38, { tl: 7, tr: 7, bl: 0, br: 0 })
-    // Panel border (slightly colored)
-    boxGfx.lineStyle(2, bDark, 0.45)
-    boxGfx.strokeRoundedRect(-panelW / 2, panelY - panelH / 2, panelW, panelH, 9)
-
-    // ── children[1]: flashRect — gold overlay on correct drop ───────────────
-    const flashRect = this.add.rectangle(0, 0, w, h, 0xFFD700)
-    flashRect.setAlpha(0)
-
-    // ── children[2]: flower (color levels) or shape icon (shape levels) ─────
-    const flX = -panelW / 2 + 30
-    const flY = panelY - 1
-    const isColorRule = baseData.rule.attribute === 'cor'
-
-    let iconChild: Phaser.GameObjects.GameObject
-    if (isColorRule) {
-      const flowerGfx = this.add.graphics()
-      this.drawFlower(flowerGfx, flX, flY, bColor, bDark)
-      iconChild = flowerGfx
+    if (specificKey) {
+      boxBody = this.add.image(0, 0, specificKey).setDisplaySize(w + 60, h + 50)
     } else {
-      iconChild = this.add
-        .text(flX, flY, this.getAttributeIcon(baseData.rule.attribute, baseData.rule.value), {
-          fontSize: '28px',
-        })
-        .setOrigin(0.5)
+      // Fallback programático (sem imagem disponível)
+      const bColor = this.getBaseColor(baseData)
+      const bDark  = this.darkenColor(bColor, 0.58)
+      const bLight = this.lightenColor(bColor, 0.32)
+      const rimH   = 16
+      const soilH  = 22
+      const innerW = w - 22
+      const panelW = w - 14
+      const panelH = 58
+      const panelY = 27
+      const gfx    = this.add.graphics()
+
+      gfx.fillStyle(0x000000, 0.30)
+      gfx.fillRoundedRect(-w / 2 + 7, -h / 2 + 9, w, h - 6, 12)
+      gfx.fillStyle(bDark, 1)
+      gfx.fillRoundedRect(-w / 2, -h / 2 + rimH, w, h - rimH - 4, 10)
+      gfx.fillStyle(bColor, 1)
+      gfx.fillRoundedRect(-w / 2, -h / 2, w, h - 8, 12)
+      gfx.fillStyle(bLight, 1)
+      gfx.fillRoundedRect(-w / 2 + 3, -h / 2 + 3, w - 6, rimH - 5, { tl: 10, tr: 10, bl: 0, br: 0 })
+      gfx.fillStyle(0x1E0E00, 1)
+      gfx.fillRoundedRect(-innerW / 2, -h / 2 + rimH, innerW, soilH + 2, 4)
+      gfx.fillStyle(0x5C3A1E, 0.65)
+      for (let dx = -innerW / 2 + 12; dx < innerW / 2 - 6; dx += 17) {
+        gfx.fillCircle(dx, -h / 2 + rimH + soilH / 2 + 1, 2)
+      }
+      gfx.fillStyle(0x000000, 0.14)
+      gfx.fillRect(-innerW / 2, -h / 2 + rimH, 5, soilH + 2)
+      gfx.fillRect(innerW / 2 - 5, -h / 2 + rimH, 5, soilH + 2)
+      gfx.lineStyle(3, bDark, 1)
+      gfx.strokeRoundedRect(-w / 2, -h / 2, w, h - 8, 12)
+      gfx.fillStyle(0x000000, 0.16)
+      gfx.fillRoundedRect(-panelW / 2 + 2, panelY - panelH / 2 + 3, panelW, panelH, 10)
+      gfx.fillStyle(0xFFF8DC, 1)
+      gfx.fillRoundedRect(-panelW / 2, panelY - panelH / 2, panelW, panelH, 9)
+      gfx.fillStyle(0xFFFFFF, 0.52)
+      gfx.fillRoundedRect(-panelW / 2 + 4, panelY - panelH / 2 + 4, panelW - 8, panelH * 0.38, { tl: 7, tr: 7, bl: 0, br: 0 })
+      gfx.lineStyle(2, bDark, 0.45)
+      gfx.strokeRoundedRect(-panelW / 2, panelY - panelH / 2, panelW, panelH, 9)
+
+      const flX     = -panelW / 2 + 30
+      const flY     = panelY - 1
+      const swatch  = this.add.graphics()
+      swatch.fillStyle(0x000000, 0.22)
+      swatch.fillRoundedRect(flX - 14 + 2, flY - 10 + 2, 28, 20, 5)
+      swatch.fillStyle(bColor, 1)
+      swatch.fillRoundedRect(flX - 14, flY - 10, 28, 20, 5)
+      swatch.lineStyle(2, bDark, 0.65)
+      swatch.strokeRoundedRect(flX - 14, flY - 10, 28, 20, 5)
+
+      const label = this.add.text(flX + 28, panelY + 1, baseData.labelKey, {
+        fontSize: '22px', fontFamily: 'Arial Black, Arial', color: '#3E2723',
+      }).setOrigin(0, 0.5)
+
+      const leafGfx = this.add.graphics()
+      this.drawLeafCluster(leafGfx, -w / 2 - 2, h / 2 - 10, false)
+      this.drawLeafCluster(leafGfx, w / 2 + 2, h / 2 - 10, true)
+
+      // No fallback, o flashRect fica no índice 1 — os extras vêm depois
+      const flashRectFb = this.add.rectangle(0, 0, w, h, 0xFFD700).setAlpha(0)
+      const arrowFb = this.add.text(0, h / 2 + 12, '▼', { fontSize: '15px', color: '#8D6E63' }).setOrigin(0.5)
+      this.tweens.add({ targets: arrowFb, y: h / 2 + 18, duration: 700, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
+      const zoneFb = this.add.zone(0, 0, w, h).setRectangleDropZone(w, h)
+
+      const container = this.add.container(baseData.x, baseData.y,
+        [gfx, flashRectFb, swatch, label, arrowFb, zoneFb, leafGfx])
+      container.setData('baseData', baseData)
+      return container
     }
 
-    // ── children[3]: color/shape name label ─────────────────────────────────
-    const label = this.add
-      .text(flX + 28, panelY + 1, baseData.labelKey, {
-        fontSize: '22px',
-        fontFamily: 'Arial Black, Arial',
-        color: '#3E2723',
-      })
-      .setOrigin(0, 0.5)
+    // ── children[1]: flashRect — obrigatoriamente no índice 1 ────────────────
+    const flashRect = this.add.rectangle(0, 0, w, h, 0xFFD700).setAlpha(0)
 
-    // ── children[4]: animated drop arrow ────────────────────────────────────
-    const arrow = this.add
-      .text(0, h / 2 + 12, '▼', { fontSize: '15px', color: '#8D6E63' })
-      .setOrigin(0.5)
+    // ── children[2]: seta animada ─────────────────────────────────────────────
+    const arrow = this.add.text(0, h / 2 + 12, '▼', { fontSize: '15px', color: '#8D6E63' }).setOrigin(0.5)
+    this.tweens.add({ targets: arrow, y: h / 2 + 18, duration: 700, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
 
-    this.tweens.add({
-      targets: arrow,
-      y: h / 2 + 18,
-      duration: 700,
-      yoyo: true,
-      repeat: -1,
-      ease: 'Sine.easeInOut',
-    })
+    // ── children[3]: drop zone ────────────────────────────────────────────────
+    const zone = this.add.zone(0, 0, w, h).setRectangleDropZone(w, h)
 
-    // ── children[5]: drop zone ──────────────────────────────────────────────
-    const zone = this.add.zone(0, 0, w, h)
-    zone.setRectangleDropZone(w, h)
-
-    // ── children[6]: leaf clusters on both sides ─────────────────────────
-    const leafGfx = this.add.graphics()
-    this.drawLeafCluster(leafGfx, -w / 2 - 2, h / 2 - 10, false)
-    this.drawLeafCluster(leafGfx, w / 2 + 2, h / 2 - 10, true)
-
-    const container = this.add.container(baseData.x, baseData.y, [
-      boxGfx, flashRect, iconChild, label, arrow, zone, leafGfx,
-    ])
+    const container = this.add.container(baseData.x, baseData.y, [boxBody, flashRect, arrow, zone])
     container.setData('baseData', baseData)
     return container
   }
 
   // ── Asset drawing helpers ────────────────────────────────────────────────
-
-  private drawFlower(
-    gfx: Phaser.GameObjects.Graphics,
-    x: number,
-    y: number,
-    petalColor: number,
-    darkColor: number,
-  ) {
-    // Stem
-    gfx.lineStyle(3, 0x2E7D32, 1)
-    gfx.lineBetween(x, y + 8, x, y + 20)
-
-    // Small stem leaves
-    gfx.fillStyle(0x4CAF50, 1)
-    gfx.fillEllipse(x - 7, y + 14, 12, 7)
-    gfx.fillEllipse(x + 7, y + 15, 11, 6)
-
-    // 5 petals arranged around center
-    gfx.fillStyle(petalColor, 1)
-    for (let i = 0; i < 5; i++) {
-      const a = (i / 5) * Math.PI * 2 - Math.PI / 2
-      gfx.fillEllipse(x + Math.cos(a) * 9, y + Math.sin(a) * 9, 12, 15)
-    }
-
-    // Petal outline for definition
-    gfx.lineStyle(1.2, darkColor, 0.55)
-    for (let i = 0; i < 5; i++) {
-      const a = (i / 5) * Math.PI * 2 - Math.PI / 2
-      gfx.strokeEllipse(x + Math.cos(a) * 9, y + Math.sin(a) * 9, 12, 15)
-    }
-
-    // Yellow center disc
-    gfx.fillStyle(0xFFD700, 1)
-    gfx.fillCircle(x, y, 7)
-
-    // Center shading
-    gfx.fillStyle(0xFFA000, 0.65)
-    gfx.fillCircle(x + 1, y - 1, 3.5)
-
-    // Center seed dots
-    gfx.fillStyle(0xE65100, 0.5)
-    for (let i = 0; i < 5; i++) {
-      const a = (i / 5) * Math.PI * 2
-      gfx.fillCircle(x + Math.cos(a) * 4, y + Math.sin(a) * 4, 1.5)
-    }
-  }
 
   private drawLeafCluster(
     gfx: Phaser.GameObjects.Graphics,
@@ -971,7 +902,7 @@ export class GameScene extends Phaser.Scene {
     const n = items.length
     const gap = Math.min(130, Math.floor(1100 / Math.max(1, n - 1)))
     const startX = 640 - ((n - 1) * gap) / 2
-    const displayScale = Math.min(1.0, (gap - 10) / 120)
+    const displayScale = Math.min(ITEM_SCALE_MAX, (gap - 10) / 120)
 
     items.forEach((item, i) => {
       const x = startX + i * gap
@@ -1436,6 +1367,31 @@ export class GameScene extends Phaser.Scene {
     return ''
   }
 
+  private getPlanterKey(baseData: ClassifierBase): string | null {
+    const { attribute, value } = baseData.rule
+    if (attribute === 'cor') {
+      const map: Record<string, string> = {
+        vermelho: 'planter-box-red',
+        azul:     'planter-box-blue',
+        verde:    'planter-box-green',
+        amarelo:  'planter-box-yellow',
+      }
+      const key = map[value]
+      return key && this.textures.exists(key) ? key : null
+    }
+    if (attribute === 'forma') {
+      const map: Record<string, string> = {
+        circulo:   'planter-box-purple-circle',
+        quadrado:  'planter-box-red-square',
+        triangulo: 'planter-box-blue-triangle',
+        retangulo: 'planter-box-green-rectangle',
+      }
+      const key = map[value]
+      return key && this.textures.exists(key) ? key : null
+    }
+    return null
+  }
+
   private getBaseColor(baseData: ClassifierBase): number {
     const { attribute, value } = baseData.rule
 
@@ -1529,39 +1485,4 @@ export class GameScene extends Phaser.Scene {
     this.playTone(440, 0.07, 'sine', 0.12)  // A4 — beep sutil
   }
 
-  // ─────────────────────────────────────────────────────────────────────────────
-
-  private getAttributeIcon(attribute: string, value: string): string {
-    if (attribute === 'cor') {
-      const map: Record<string, string> = {
-        vermelho: '🔴',
-        azul: '🔵',
-        verde: '🟢',
-        amarelo: '🟡',
-        roxo: '🟣',
-      }
-      return map[value] ?? '⬜'
-    }
-
-    if (attribute === 'forma') {
-      const map: Record<string, string> = {
-        circulo: '⭕',
-        quadrado: '⬛',
-        triangulo: '🔺',
-        retangulo: '▬',
-      }
-      return map[value] ?? '?'
-    }
-
-    if (attribute === 'tamanho') {
-      const map: Record<string, string> = {
-        pequeno: '🔹',
-        medio: '🔷',
-        grande: '💠',
-      }
-      return map[value] ?? '?'
-    }
-
-    return '?'
-  }
 }

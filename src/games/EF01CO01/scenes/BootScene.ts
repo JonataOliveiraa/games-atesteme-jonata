@@ -2,6 +2,17 @@ import Phaser from 'phaser'
 import bgGardenUrl from '../../../assets/games/EF01CO01/bg-garden.png'
 import shelfWoodUrl from '../../../assets/games/EF01CO01/shelf-wood.png'
 import sunUrl from '../../../assets/games/EF01CO01/sun.png'
+import planterBoxUrl from '../../../assets/games/EF01CO01/planter-box.png'
+import planterBoxRedUrl from '../../../assets/games/EF01CO01/planter-box-red.png'
+import planterBoxBlueUrl from '../../../assets/games/EF01CO01/planter-box-blue.png'
+import planterBoxGreenUrl from '../../../assets/games/EF01CO01/planter-box-green.png'
+import planterBoxYellowUrl from '../../../assets/games/EF01CO01/planter-box-yellow.png'
+import planterBoxPurpleCircleUrl from '../../../assets/games/EF01CO01/planter-box-purple-circle.png'
+import planterBoxRedSquareUrl from '../../../assets/games/EF01CO01/planter-box-red-square.png'
+import planterBoxBlueTriangleUrl from '../../../assets/games/EF01CO01/planter-box-blue-triangle.png'
+import planterBoxGreenRectangleUrl from '../../../assets/games/EF01CO01/planter-box-green-rectangle.png'
+import woodSignUrl from '../../../assets/games/EF01CO01/wood-sign.png'
+import flowerIconUrl from '../../../assets/games/EF01CO01/flower-icon.png'
 
 /**
  * BootScene — carrega todos os assets e gera texturas programáticas.
@@ -31,6 +42,17 @@ export class BootScene extends Phaser.Scene {
     this.load.image('bg-garden', bgGardenUrl)
     this.load.image('shelf-wood', shelfWoodUrl)
     this.load.image('sun', sunUrl)
+    this.load.image('planter-box', planterBoxUrl)
+    this.load.image('planter-box-red',              planterBoxRedUrl)
+    this.load.image('planter-box-blue',             planterBoxBlueUrl)
+    this.load.image('planter-box-green',            planterBoxGreenUrl)
+    this.load.image('planter-box-yellow',           planterBoxYellowUrl)
+    this.load.image('planter-box-purple-circle',    planterBoxPurpleCircleUrl)
+    this.load.image('planter-box-red-square',       planterBoxRedSquareUrl)
+    this.load.image('planter-box-blue-triangle',    planterBoxBlueTriangleUrl)
+    this.load.image('planter-box-green-rectangle',  planterBoxGreenRectangleUrl)
+    this.load.image('wood-sign', woodSignUrl)
+    this.load.image('flower-icon', flowerIconUrl)
 
     // TODO: atlas de itens
     // this.load.atlas('items', 'assets/images/items.png', 'assets/images/items.json')
@@ -51,6 +73,17 @@ export class BootScene extends Phaser.Scene {
   create() {
     this.generateItemTextures()
     this.removeWhiteBackground('shelf-wood')
+    this.removeWhiteBackground('planter-box')
+    this.removeWhiteBackground('planter-box-red')
+    this.removeWhiteBackground('planter-box-blue')
+    this.removeWhiteBackground('planter-box-green')
+    this.removeWhiteBackground('planter-box-yellow')
+    this.removeWhiteBackground('planter-box-purple-circle')
+    this.removeWhiteBackground('planter-box-red-square')
+    this.removeWhiteBackground('planter-box-blue-triangle')
+    this.removeWhiteBackground('planter-box-green-rectangle')
+    this.removeWhiteBackground('wood-sign')
+    this.removeWhiteBackground('flower-icon')
     this.scene.start('GameScene')
   }
 
