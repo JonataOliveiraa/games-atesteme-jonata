@@ -51,105 +51,100 @@ export class UIScene extends Phaser.Scene {
   // ── Barra superior (transparente — deixa o céu do GameScene aparecer) ────────
 
   private createTopBar() {
-    // ── "Energia do Jardim" — placa decorativa de madeira ────────────────────
-    const signW = 680
-    const signH = 52
-    const signX = 640 - signW / 2
-    const signY = 8
+    // Layout vertical compacto:
+    //   letreiro centrado em SIGN_CY       (y ≈ 0–56)
+    //   barra de timer a partir de BAR_Y   (y ≈ 64–92)
+    const SIGN_CY    = 70    // centro vertical do letreiro
+    const SIGN_DW    = 920   // largura de exibição (inclui pontas com folhas)
+    const SIGN_DH    = 199    // altura de exibição
+    const BAR_Y      = SIGN_CY + SIGN_DH / 2 + 8  // 84 — imediatamente abaixo
+    const barW       = 860
+    const barLeft    = (1280 - barW) / 2            // 210
 
-    const signGfx = this.add.graphics()
+    // ── Letreiro ──────────────────────────────────────────────────────────────
+    if (this.textures.exists('wood-sign')) {
+      // Sem sombra programática — a imagem já traz profundidade própria
+      this.add.image(640, SIGN_CY, 'wood-sign')
+        .setDisplaySize(SIGN_DW, SIGN_DH)
+        .setOrigin(0.5)
+    } else {
+      // Fallback programático
+      const signW  = 680
+      const signH  = 52
+      const signX  = 640 - signW / 2
+      const signGfx = this.add.graphics()
+      signGfx.fillStyle(0x000000, 0.25)
+      signGfx.fillRoundedRect(signX + 4, SIGN_CY - signH / 2 + 5, signW, signH, 14)
+      signGfx.fillStyle(0xC8872A, 1)
+      signGfx.fillRoundedRect(signX, SIGN_CY - signH / 2, signW, signH, 12)
+      signGfx.fillStyle(0xE5A84E, 0.7)
+      signGfx.fillRoundedRect(signX + 3, SIGN_CY - signH / 2 + 3, signW - 6, signH * 0.42, { tl: 10, tr: 10, bl: 0, br: 0 })
+      signGfx.lineStyle(4, 0x7A4A10, 1)
+      signGfx.strokeRoundedRect(signX, SIGN_CY - signH / 2, signW, signH, 12)
 
-    // Sombra da placa
-    signGfx.fillStyle(0x000000, 0.25)
-    signGfx.fillRoundedRect(signX + 4, signY + 5, signW, signH, 14)
+      const vineL = this.add.graphics()
+      const rx = signX + signW
+      vineL.fillStyle(0x2E7D32, 1)
+      vineL.fillEllipse(signX - 28, SIGN_CY, 26, 13)
+      vineL.fillEllipse(signX - 18, SIGN_CY - 14, 22, 11)
+      vineL.fillEllipse(signX - 18, SIGN_CY + 14, 22, 11)
+      vineL.fillStyle(0x4CAF50, 1)
+      vineL.fillEllipse(signX - 36, SIGN_CY - 6, 18, 9)
+      vineL.fillEllipse(signX - 36, SIGN_CY + 6, 16, 8)
+      vineL.fillEllipse(signX - 26, SIGN_CY - 18, 16, 8)
+      vineL.fillStyle(0x66BB6A, 0.55)
+      vineL.fillEllipse(signX - 28, SIGN_CY, 14, 7)
+      vineL.lineStyle(1.2, 0x1B5E20, 0.5)
+      vineL.strokeEllipse(signX - 28, SIGN_CY, 26, 13)
+      vineL.strokeEllipse(signX - 18, SIGN_CY - 14, 22, 11)
+      vineL.strokeEllipse(signX - 18, SIGN_CY + 14, 22, 11)
+      vineL.fillStyle(0x2E7D32, 1)
+      vineL.fillEllipse(rx + 28, SIGN_CY, 26, 13)
+      vineL.fillEllipse(rx + 18, SIGN_CY - 14, 22, 11)
+      vineL.fillEllipse(rx + 18, SIGN_CY + 14, 22, 11)
+      vineL.fillStyle(0x4CAF50, 1)
+      vineL.fillEllipse(rx + 36, SIGN_CY - 6, 18, 9)
+      vineL.fillEllipse(rx + 36, SIGN_CY + 6, 16, 8)
+      vineL.fillEllipse(rx + 26, SIGN_CY - 18, 16, 8)
+      vineL.fillStyle(0x66BB6A, 0.55)
+      vineL.fillEllipse(rx + 28, SIGN_CY, 14, 7)
+      vineL.lineStyle(1.2, 0x1B5E20, 0.5)
+      vineL.strokeEllipse(rx + 28, SIGN_CY, 26, 13)
+      vineL.strokeEllipse(rx + 18, SIGN_CY - 14, 22, 11)
+      vineL.strokeEllipse(rx + 18, SIGN_CY + 14, 22, 11)
 
-    // Corpo da placa (madeira)
-    signGfx.fillStyle(0xC8872A, 1)
-    signGfx.fillRoundedRect(signX, signY, signW, signH, 12)
+      this.add.text(signX + 14, SIGN_CY, '🌸', { fontSize: '18px' }).setOrigin(0, 0.5)
+      this.add.text(signX + signW - 14, SIGN_CY, '🌸', { fontSize: '18px' }).setOrigin(1, 0.5)
+    }
 
-    // Gradiente de brilho superior
-    signGfx.fillStyle(0xE5A84E, 0.7)
-    signGfx.fillRoundedRect(signX + 3, signY + 3, signW - 6, signH * 0.42, { tl: 10, tr: 10, bl: 0, br: 0 })
-
-    // Borda escura
-    signGfx.lineStyle(4, 0x7A4A10, 1)
-    signGfx.strokeRoundedRect(signX, signY, signW, signH, 12)
-
-    // Decorações foliares — clusters de folhas nos dois lados do letreiro
-    const vineL = this.add.graphics()
-    const midY  = signY + signH / 2
-    // Lado esquerdo
-    vineL.fillStyle(0x2E7D32, 1)
-    vineL.fillEllipse(signX - 28, midY, 26, 13)
-    vineL.fillEllipse(signX - 18, midY - 14, 22, 11)
-    vineL.fillEllipse(signX - 18, midY + 14, 22, 11)
-    vineL.fillStyle(0x4CAF50, 1)
-    vineL.fillEllipse(signX - 36, midY - 6, 18, 9)
-    vineL.fillEllipse(signX - 36, midY + 6, 16, 8)
-    vineL.fillEllipse(signX - 26, midY - 18, 16, 8)
-    vineL.fillStyle(0x66BB6A, 0.55)
-    vineL.fillEllipse(signX - 28, midY, 14, 7)
-    vineL.lineStyle(1.2, 0x1B5E20, 0.5)
-    vineL.strokeEllipse(signX - 28, midY, 26, 13)
-    vineL.strokeEllipse(signX - 18, midY - 14, 22, 11)
-    vineL.strokeEllipse(signX - 18, midY + 14, 22, 11)
-    // Lado direito (espelhado)
-    const rx = signX + signW
-    vineL.fillStyle(0x2E7D32, 1)
-    vineL.fillEllipse(rx + 28, midY, 26, 13)
-    vineL.fillEllipse(rx + 18, midY - 14, 22, 11)
-    vineL.fillEllipse(rx + 18, midY + 14, 22, 11)
-    vineL.fillStyle(0x4CAF50, 1)
-    vineL.fillEllipse(rx + 36, midY - 6, 18, 9)
-    vineL.fillEllipse(rx + 36, midY + 6, 16, 8)
-    vineL.fillEllipse(rx + 26, midY - 18, 16, 8)
-    vineL.fillStyle(0x66BB6A, 0.55)
-    vineL.fillEllipse(rx + 28, midY, 14, 7)
-    vineL.lineStyle(1.2, 0x1B5E20, 0.5)
-    vineL.strokeEllipse(rx + 28, midY, 26, 13)
-    vineL.strokeEllipse(rx + 18, midY - 14, 22, 11)
-    vineL.strokeEllipse(rx + 18, midY + 14, 22, 11)
-
-    // ícones de flor nos cantos internos da placa
-    this.add.text(signX + 14, signY + signH / 2, '🌸', { fontSize: '18px' }).setOrigin(0, 0.5)
-    this.add.text(signX + signW - 14, signY + signH / 2, '🌸', { fontSize: '18px' }).setOrigin(1, 0.5)
-
-    // Título
-    this.add.text(640, signY + signH / 2 + 1, 'Energia do Jardim', {
-      fontSize: '26px',
+    // Texto centralizado no mesmo ponto da imagem
+    this.add.text(640, SIGN_CY, 'Energia do Jardim', {
+      fontSize: '30px',
       fontFamily: 'Arial Black, Arial',
       color: '#4A2000',
       stroke: '#F5D99B',
       strokeThickness: 2,
-    }).setOrigin(0.5)
+    }).setOrigin(0.5, 1)
 
     // ── Timer bar ────────────────────────────────────────────────────────────
-    const barY = signY + signH + 10   // = 70
-    const barW = 860
-    const barLeft = (1280 - barW) / 2 // = 210
-
-    // Estrela à esquerda da barra
-    const starL = this.add.text(barLeft - 22, barY + 14, '⭐', { fontSize: '22px' }).setOrigin(0.5)
+    const starL = this.add.text(barLeft - 22, BAR_Y + 20, '⭐', { fontSize: '22px' }).setOrigin(0.5)
     this.tweens.add({
       targets: starL,
       scaleX: 1.2, scaleY: 1.2,
       duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
     })
 
-    // Trilho da barra
     const trackGfx = this.add.graphics()
     trackGfx.fillStyle(0x33190A, 0.82)
-    trackGfx.fillRoundedRect(barLeft, barY, barW, 28, 14)
+    trackGfx.fillRoundedRect(barLeft, BAR_Y, barW, 28, 14)
     trackGfx.lineStyle(3, 0x7A4A10, 0.9)
-    trackGfx.strokeRoundedRect(barLeft, barY, barW, 28, 14)
+    trackGfx.strokeRoundedRect(barLeft, BAR_Y, barW, 28, 14)
 
-    // Barra de progresso (timer)
     this.timerBar = this.add
-      .rectangle(barLeft, barY + 14, barW, 28, 0x4CAF50)
+      .rectangle(barLeft, BAR_Y + 14, barW, 28, 0x4CAF50)
       .setOrigin(0, 0.5)
 
-    // Texto de porcentagem (direita da barra, sobre a parte escura)
-    this.timerPctText = this.add.text(barLeft + barW - 10, barY + 14, '100%', {
+    this.timerPctText = this.add.text(barLeft + barW - 10, BAR_Y + 14, '100%', {
       fontSize: '15px',
       fontFamily: 'Arial Black, Arial',
       color: '#FFFDE7',
@@ -157,12 +152,11 @@ export class UIScene extends Phaser.Scene {
       strokeThickness: 3,
     }).setOrigin(1, 0.5).setDepth(2)
 
-    // Brilho superior da barra
     const shineGfx = this.add.graphics()
     shineGfx.fillStyle(0xFFFFFF, 0.16)
-    shineGfx.fillRoundedRect(barLeft + 2, barY + 2, barW - 4, 10, { tl: 12, tr: 12, bl: 0, br: 0 })
+    shineGfx.fillRoundedRect(barLeft + 2, BAR_Y + 2, barW - 4, 10, { tl: 12, tr: 12, bl: 0, br: 0 })
 
-    // ── Estrelas de nível (flutuantes no canto superior direito) ─────────────
+    // ── Estrelas de nível (canto superior direito) ────────────────────────────
     const levBg = this.add.graphics()
     levBg.fillStyle(0x1B5E20, 0.82)
     levBg.fillRoundedRect(1078, 8, 120, 52, 10)
@@ -177,10 +171,7 @@ export class UIScene extends Phaser.Scene {
       stroke: '#1B5E20', strokeThickness: 3,
     }).setOrigin(0.5)
 
-    // Ícones de exemplo (ocultos — mantidos apenas para updateExampleIcons funcionar)
     this.exampleIcons = this.add.text(0, -999, '', { fontSize: '1px' })
-
-    // Texto de regra (movido para a barra inferior — placeholder aqui)
     this.ruleText = this.add.text(0, -999, '', { fontSize: '1px' })
 
     this.createMuteButton()
