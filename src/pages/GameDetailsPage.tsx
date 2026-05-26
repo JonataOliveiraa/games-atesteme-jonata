@@ -37,6 +37,7 @@ const GAME_CONFIG_LOADERS: Partial<
 
 const GAMES_WITH_IN_GAME_COMPLETION_SCREEN = new Set([
   "oficina-dos-algoritmos",
+  "pixel-secreto",
 ]);
 
 export default function GameDetailsPage() {
@@ -307,9 +308,7 @@ export default function GameDetailsPage() {
         );
 
         if (livesAfterError === 0) {
-          if (!isPixelSecreto) {
-            gameBridge.send({ type: 'PAUSE_GAME' });
-          }
+          gameBridge.send({ type: 'PAUSE_GAME' });
           setShowNoLivesModal(true);
         }
 

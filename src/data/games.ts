@@ -1,6 +1,7 @@
 import type { Game } from "../types/game";
 import heroThumbnail from "../assets/hero.png";
 import algorithmsThumbnail from "../assets/games/EF01CO03/algorithm-game-cover.png";
+import pixelSecretThumbnail from "../assets/games/EF01CO05/cover5.png";
 
 export const games: Game[] = [
   {
@@ -52,7 +53,7 @@ export const games: Game[] = [
     points: 50,
     icon: "🎨",
     slug: "pixel-secreto",
-    thumbnail: heroThumbnail,
+    thumbnail: pixelSecretThumbnail,
   }
   ,
   {
