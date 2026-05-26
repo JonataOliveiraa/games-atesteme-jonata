@@ -988,11 +988,23 @@ button {
   }
 
   .game-area {
-    margin-top: 10px;
+    margin-top: 8px;
+    margin-left: 0;
+    width: 100%;
   }
 
   .phaser-container {
-    width: min(100%, calc((100svh - 18px) * 16 / 9));
+    width: min(100vw, calc((100svh - 18px) * 16 / 9));
+    max-width: none;
+    height: auto;
+    aspect-ratio: 16 / 9;
+    border-radius: 10px;
+  }
+
+  .phaser-container canvas {
+    width: 100% !important;
+    height: auto !important;
+    aspect-ratio: 16 / 9;
   }
 }
 
