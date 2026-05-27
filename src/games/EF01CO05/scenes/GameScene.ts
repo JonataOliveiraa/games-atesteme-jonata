@@ -328,7 +328,7 @@ for (let i = 0; i < totalStars; i++) {
       this.add
         .rectangle(640, 585, 300, 68, 0x9333ea, 1)
         .setStrokeStyle(4, 0xffffff)
-        .setInteractive({ useHandCursor: false })
+        .setInteractive({ useHandCursor: true })
         .setDepth(302)
     );
 
@@ -356,7 +356,7 @@ for (let i = 0; i < totalStars; i++) {
     };
 
     button.on("pointerdown", start);
-    buttonText.setInteractive({ useHandCursor: false });
+    buttonText.setInteractive({ useHandCursor: true });
     buttonText.on("pointerdown", start);
 
     button.on("pointerover", () => button.setFillStyle(0xa855f7));
@@ -479,7 +479,7 @@ for (let i = 0; i < totalStars; i++) {
     const buttonBg = this.add
       .rectangle(1035, 210, 64, 64, 0xa855f7, 1)
       .setStrokeStyle(4, 0xffffff)
-      .setInteractive({ useHandCursor: false })
+      .setInteractive({ useHandCursor: true })
       .setDepth(210);
 
     const arrow = this.add
@@ -505,7 +505,7 @@ for (let i = 0; i < totalStars; i++) {
     };
 
     buttonBg.on("pointerdown", goNext);
-    arrow.setInteractive({ useHandCursor: false });
+    arrow.setInteractive({ useHandCursor: true });
     arrow.on("pointerdown", goNext);
 
     this.nextTutorialButton = this.add.container(0, 0, [buttonBg, arrow]);
@@ -675,7 +675,7 @@ for (let i = 0; i < totalStars; i++) {
       card.setInteractive({
         hitArea: new Phaser.Geom.Rectangle(-132, -31, 264, 62),
         hitAreaCallback: Phaser.Geom.Rectangle.Contains,
-        useHandCursor: false,
+        useHandCursor: true,
       });
 
       card.on("pointerdown", () => {
@@ -809,6 +809,16 @@ for (let i = 0; i < totalStars; i++) {
     }
   }
 
+  private hidePaintCursorForButton() {
+    if (this.isTouchDevice()) return;
+    this.paintCursor?.setAlpha(0);
+  }
+
+  private showPaintCursorAfterButton() {
+    if (this.isTouchDevice()) return;
+    this.paintCursor?.setAlpha(0.95);
+  }
+
   private getPaintCursorWidth() {
     return this.isTouchDevice() ? 44 : 34;
   }
@@ -840,39 +850,40 @@ for (let i = 0; i < totalStars; i++) {
   private createGrid() {
     const rows = this.levelConfig.grid.length;
     const cols = this.levelConfig.grid[0]?.length ?? 0;
-    const cellSize = rows >= 8 ? 48 : 56;
+    const cellSize = this.getGridCellSize(rows, cols);
     const gap = 4;
     const totalW = cols * cellSize + (cols - 1) * gap;
     const totalH = rows * cellSize + (rows - 1) * gap;
-    const gridCenterY = rows >= 8 ? 458 : 433;
+    const gridCenterY = this.getGridCenterY(rows, cols);
     const startX = 500 - totalW / 2 + cellSize / 2;
     const startY = gridCenterY - totalH / 2 + cellSize / 2;
+    const panelPadding = this.getGridPanelPadding(rows, cols);
 
     const panelShadow = this.add.graphics();
     panelShadow.fillStyle(0x0f172a, 0.12);
     panelShadow.fillRoundedRect(
-      500 - (totalW + 104) / 2 + 8,
-      gridCenterY - (totalH + 104) / 2 + 10,
-      totalW + 104,
-      totalH + 104,
+      500 - (totalW + panelPadding) / 2 + 8,
+      gridCenterY - (totalH + panelPadding) / 2 + 10,
+      totalW + panelPadding,
+      totalH + panelPadding,
       32
     );
 
     const panel = this.add.graphics();
     panel.fillStyle(0xffffff, 0.34);
     panel.fillRoundedRect(
-      500 - (totalW + 104) / 2,
-      gridCenterY - (totalH + 104) / 2,
-      totalW + 104,
-      totalH + 104,
+      500 - (totalW + panelPadding) / 2,
+      gridCenterY - (totalH + panelPadding) / 2,
+      totalW + panelPadding,
+      totalH + panelPadding,
       32
     );
     panel.lineStyle(5, 0xffffff, 0.88);
     panel.strokeRoundedRect(
-      500 - (totalW + 104) / 2,
-      gridCenterY - (totalH + 104) / 2,
-      totalW + 104,
-      totalH + 104,
+      500 - (totalW + panelPadding) / 2,
+      gridCenterY - (totalH + panelPadding) / 2,
+      totalW + panelPadding,
+      totalH + panelPadding,
       32
     );
 
@@ -899,7 +910,7 @@ for (let i = 0; i < totalStars; i++) {
         if (!hint && !isEmpty) {
           this.add
             .text(x, y, code, {
-              fontSize: "22px",
+              fontSize: `${Math.round(cellSize * 0.4)}px`,
               fontFamily: "Arial Black, Arial",
               color: "#7c2d12",
             })
@@ -1009,7 +1020,7 @@ for (let i = 0; i < totalStars; i++) {
       this.add
         .rectangle(500, 500, 310, 66, 0x22c55e, 1)
         .setStrokeStyle(4, 0xffffff)
-        .setInteractive({ useHandCursor: false })
+        .setInteractive({ useHandCursor: true })
         .setDepth(302)
     );
 
@@ -1028,7 +1039,7 @@ for (let i = 0; i < totalStars; i++) {
       this.add
         .rectangle(790, 500, 220, 66, 0xef4444, 1)
         .setStrokeStyle(4, 0xffffff)
-        .setInteractive({ useHandCursor: false })
+        .setInteractive({ useHandCursor: true })
         .setDepth(302)
     );
 
@@ -1055,11 +1066,11 @@ for (let i = 0; i < totalStars; i++) {
     };
 
     retryButton.on("pointerdown", retry);
-    retryText.setInteractive({ useHandCursor: false });
+    retryText.setInteractive({ useHandCursor: true });
     retryText.on("pointerdown", retry);
 
     exitButton.on("pointerdown", exit);
-    exitText.setInteractive({ useHandCursor: false });
+    exitText.setInteractive({ useHandCursor: true });
     exitText.on("pointerdown", exit);
 
     retryButton.on("pointerover", () => retryButton.setFillStyle(0x16a34a));
@@ -1141,7 +1152,7 @@ for (let i = 0; i < totalStars; i++) {
     this.add
       .rectangle(470, 560, 340, 74, 0x9333ea, 1)
       .setStrokeStyle(4, 0xffffff)
-      .setInteractive({ useHandCursor: false })
+      .setInteractive({ useHandCursor: true })
       .setDepth(302)
   );
 
@@ -1161,7 +1172,7 @@ for (let i = 0; i < totalStars; i++) {
     this.add
       .rectangle(820, 560, 320, 74, 0xef4444, 1)
       .setStrokeStyle(4, 0xffffff)
-      .setInteractive({ useHandCursor: false })
+      .setInteractive({ useHandCursor: true })
       .setDepth(302)
   );
 
@@ -1194,12 +1205,12 @@ for (let i = 0; i < totalStars; i++) {
 
   unlockButton.on("pointerdown", unlock);
 
-  unlockText.setInteractive({ useHandCursor: false });
+  unlockText.setInteractive({ useHandCursor: true });
   unlockText.on("pointerdown", unlock);
 
   exitButton.on("pointerdown", exit);
 
-  exitText.setInteractive({ useHandCursor: false });
+  exitText.setInteractive({ useHandCursor: true });
   exitText.on("pointerdown", exit);
 
   this.tweens.add({
@@ -1439,7 +1450,7 @@ for (let i = 0; i < totalStars; i++) {
     const buttonHitbox = this.addOverlayObject(
       this.add.zone(640, 360 + 104 * MODAL_SCALE, 280 * MODAL_SCALE, 58 * MODAL_SCALE).setDepth(452)
     );
-    buttonHitbox.setInteractive({ useHandCursor: false });
+    buttonHitbox.setInteractive({ useHandCursor: true });
     buttonHitbox.on("pointerover", () => {
       this.tweens.add({ targets: button, scale: 1.04, duration: 90, ease: "Sine.easeOut" });
     });
@@ -1545,6 +1556,8 @@ for (let i = 0; i < totalStars; i++) {
 
   private showGameCompleteScreen() {
     this.clearOverlay();
+    this.input.enabled = true;
+    this.levelStarted = false;
 
     const overlay = this.addOverlayObject(
       this.add.rectangle(640, 360, 1280, 720, 0x12324a, 0.62).setDepth(450)
@@ -1646,22 +1659,21 @@ for (let i = 0; i < totalStars; i++) {
         .setOrigin(0.5);
       button.add([buttonShadow, buttonBg, buttonText]);
 
-      const buttonHitbox = this.addOverlayObject(
-        this.add.zone(
-          640 + x * MODAL_SCALE,
-          360 + 138 * MODAL_SCALE,
-          264 * MODAL_SCALE,
-          58 * MODAL_SCALE
-        ).setDepth(452)
-      );
-      buttonHitbox.setInteractive({ useHandCursor: false });
-      buttonHitbox.on("pointerover", () => {
+      button.setSize(264, 58);
+      button.setInteractive({
+        hitArea: new Phaser.Geom.Rectangle(-132, -29, 264, 58),
+        hitAreaCallback: Phaser.Geom.Rectangle.Contains,
+        useHandCursor: true,
+      });
+      button.on("pointerover", () => {
+        this.hidePaintCursorForButton();
         this.tweens.add({ targets: button, scale: 1.04, duration: 90, ease: "Sine.easeOut" });
       });
-      buttonHitbox.on("pointerout", () => {
+      button.on("pointerout", () => {
+        this.showPaintCursorAfterButton();
         this.tweens.add({ targets: button, scale: 1, duration: 90, ease: "Sine.easeOut" });
       });
-      buttonHitbox.on("pointerdown", () => {
+      button.on("pointerdown", () => {
         this.playClick();
         onClick();
       });
@@ -1808,7 +1820,7 @@ for (let i = 0; i < totalStars; i++) {
       this.add
         .rectangle(640, 510, 430, 66, 0x9333ea, 1)
         .setStrokeStyle(4, 0xffffff)
-        .setInteractive({ useHandCursor: false })
+        .setInteractive({ useHandCursor: true })
         .setDepth(302)
     );
 
@@ -1830,7 +1842,7 @@ for (let i = 0; i < totalStars; i++) {
     };
 
     button.on("pointerdown", goNext);
-    buttonText.setInteractive({ useHandCursor: false });
+    buttonText.setInteractive({ useHandCursor: true });
     buttonText.on("pointerdown", goNext);
 
     button.on("pointerover", () => button.setFillStyle(0xa855f7));
@@ -1872,6 +1884,28 @@ for (let i = 0; i < totalStars; i++) {
     });
 
     this.emitProgress();
+  }
+
+  private getGridCellSize(rows: number, cols: number) {
+    const maxDimension = Math.max(rows, cols);
+
+    if (maxDimension <= 5) return 76;
+    if (maxDimension <= 7) return 66;
+    return 52;
+  }
+
+  private getGridCenterY(rows: number, cols: number) {
+    const maxDimension = Math.max(rows, cols);
+
+    if (maxDimension <= 7) return 452;
+    return 466;
+  }
+
+  private getGridPanelPadding(rows: number, cols: number) {
+    const maxDimension = Math.max(rows, cols);
+
+    if (maxDimension <= 7) return 72;
+    return 64;
   }
 
   private emitProgress() {
