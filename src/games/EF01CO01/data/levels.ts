@@ -57,7 +57,7 @@ export const LEVELS: LevelConfig[] = [
         labelKey: 'Vermelho',
         audioKey: 'narr-cor-vermelho',
         x: 280,
-        y: 570,
+        y: 608,
       },
       {
         id: 'base-azul',
@@ -65,7 +65,7 @@ export const LEVELS: LevelConfig[] = [
         labelKey: 'Azul',
         audioKey: 'narr-cor-azul',
         x: 640,
-        y: 570,
+        y: 608,
       },
       {
         id: 'base-amarelo',
@@ -73,7 +73,7 @@ export const LEVELS: LevelConfig[] = [
         labelKey: 'Amarelo',
         audioKey: 'narr-cor-amarelo',
         x: 1000,
-        y: 570,
+        y: 608,
       },
     ],
   },
@@ -108,7 +108,7 @@ export const LEVELS: LevelConfig[] = [
         labelKey: 'Vermelho',
         audioKey: 'narr-cor-vermelho',
         x: 190,
-        y: 570,
+        y: 608,
       },
       {
         id: 'base-azul',
@@ -116,7 +116,7 @@ export const LEVELS: LevelConfig[] = [
         labelKey: 'Azul',
         audioKey: 'narr-cor-azul',
         x: 450,
-        y: 570,
+        y: 608,
       },
       {
         id: 'base-verde',
@@ -124,7 +124,7 @@ export const LEVELS: LevelConfig[] = [
         labelKey: 'Verde',
         audioKey: 'narr-cor-verde',
         x: 830,
-        y: 570,
+        y: 608,
       },
       {
         id: 'base-amarelo',
@@ -132,7 +132,7 @@ export const LEVELS: LevelConfig[] = [
         labelKey: 'Amarelo',
         audioKey: 'narr-cor-amarelo',
         x: 1090,
-        y: 570,
+        y: 608,
       },
     ],
   },
@@ -175,7 +175,7 @@ export const LEVELS: LevelConfig[] = [
         labelKey: 'Círculo',
         audioKey: 'narr-forma-circulo',
         x: 190,
-        y: 570,
+        y: 608,
       },
       {
         id: 'base-quadrado',
@@ -183,7 +183,7 @@ export const LEVELS: LevelConfig[] = [
         labelKey: 'Quadrado',
         audioKey: 'narr-forma-quadrado',
         x: 450,
-        y: 570,
+        y: 608,
       },
       {
         id: 'base-triangulo',
@@ -191,7 +191,7 @@ export const LEVELS: LevelConfig[] = [
         labelKey: 'Triângulo',
         audioKey: 'narr-forma-triangulo',
         x: 830,
-        y: 570,
+        y: 608,
       },
       {
         id: 'base-retangulo',
@@ -199,7 +199,7 @@ export const LEVELS: LevelConfig[] = [
         labelKey: 'Retângulo',
         audioKey: 'narr-forma-retangulo',
         x: 1090,
-        y: 570,
+        y: 608,
       },
     ],
   },
