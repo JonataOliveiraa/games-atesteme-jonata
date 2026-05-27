@@ -1308,7 +1308,7 @@ for (let i = 0; i < totalStars; i++) {
     topBar.strokeRoundedRect(-196, -194, 392, 28, 14);
 
     const title = this.add
-      .text(0, -110, "Parabens!", {
+      .text(0, -110, "Parabéns!", {
         fontSize: "40px",
         fontFamily: "Arial Black, Arial",
         color: "#25327a",
@@ -1318,7 +1318,7 @@ for (let i = 0; i < totalStars; i++) {
       .setOrigin(0.5);
 
     const completed = this.add
-      .text(0, -50, `Nivel ${this.levelConfig.level} concluido`, {
+      .text(0, -50, `Nível ${this.levelConfig.level} concluído`, {
         fontSize: "26px",
         fontFamily: "Arial Black, Arial",
         color: "#7c3aed",
@@ -1337,7 +1337,7 @@ for (let i = 0; i < totalStars; i++) {
       .setOrigin(0.5);
 
     const waitText = this.add
-      .text(0, 116, "Preparando o proximo nivel...", {
+      .text(0, 116, "Preparando o próximo nível...", {
         fontSize: "15px",
         fontFamily: "Arial Black, Arial",
         color: "#25327a",
@@ -1398,7 +1398,7 @@ for (let i = 0; i < totalStars; i++) {
     topBar.strokeRoundedRect(-196, -182, 392, 28, 14);
 
     const title = this.add
-      .text(0, -102, `Nivel ${nextLevel}`, {
+      .text(0, -102, `Nível ${nextLevel}`, {
         fontSize: "38px",
         fontFamily: "Arial Black, Arial",
         color: "#25327a",
@@ -1437,7 +1437,7 @@ for (let i = 0; i < totalStars; i++) {
     buttonBg.lineStyle(4, 0xffffff, 1);
     buttonBg.strokeRoundedRect(-140, -26, 280, 52, 26);
     const buttonText = this.add
-      .text(0, 0, "Iniciar nivel", {
+      .text(0, 0, "Iniciar nível", {
         fontSize: "22px",
         fontFamily: "Arial Black, Arial",
         color: "#ffffff",
@@ -1502,7 +1502,7 @@ for (let i = 0; i < totalStars; i++) {
     topBar.strokeRoundedRect(-196, -194, 392, 28, 14);
 
     const title = this.add
-      .text(0, -110, "Parabens!", {
+      .text(0, -110, "Parabéns!", {
         fontSize: "40px",
         fontFamily: "Arial Black, Arial",
         color: "#25327a",
@@ -1512,7 +1512,7 @@ for (let i = 0; i < totalStars; i++) {
       .setOrigin(0.5);
 
     const completed = this.add
-      .text(0, -50, "Nivel concluido", {
+      .text(0, -50, "Nível concluído", {
         fontSize: "26px",
         fontFamily: "Arial Black, Arial",
         color: "#7c3aed",
@@ -1530,7 +1530,7 @@ for (let i = 0; i < totalStars; i++) {
       .setOrigin(0.5);
 
     const waitText = this.add
-      .text(0, 116, "Preparando a finalizacao...", {
+      .text(0, 116, "Preparando a finalização...", {
         fontSize: "15px",
         fontFamily: "Arial Black, Arial",
         color: "#25327a",
@@ -1583,7 +1583,7 @@ for (let i = 0; i < totalStars; i++) {
     ribbon.strokeRoundedRect(-214, -208, 428, 34, 17);
 
     const title = this.add
-      .text(0, -128, "Jogo concluido!", {
+      .text(0, -128, "Jogo concluído!", {
         fontSize: "38px",
         fontFamily: "Arial Black, Arial",
         color: "#25327a",
@@ -1593,7 +1593,7 @@ for (let i = 0; i < totalStars; i++) {
       .setOrigin(0.5);
 
     const subtitle = this.add
-      .text(0, -74, "Voce decodificou todas as imagens secretas.", {
+      .text(0, -74, "Você decodificou todas as imagens secretas.", {
         fontSize: "20px",
         fontFamily: "Arial Black, Arial",
         color: "#334155",
@@ -1621,7 +1621,7 @@ for (let i = 0; i < totalStars; i++) {
         .setOrigin(0.5);
 
       const label = this.add
-        .text(0, 23, "concluido", {
+        .text(0, 23, "concluído", {
           fontSize: "12px",
           fontFamily: "Arial Black, Arial",
           color: "#ffffff",
