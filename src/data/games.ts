@@ -2,6 +2,7 @@ import type { Game } from "../types/game";
 import heroThumbnail from "../assets/hero.png";
 import algorithmsThumbnail from "../assets/games/EF01CO03/algorithm-game-cover.png";
 import pixelSecretThumbnail from "../assets/games/EF01CO05/cover5.png";
+import guardiansThumbnail from "../assets/games/EF01CO07/cover.png";
 
 export const games: Game[] = [
   {
@@ -75,7 +76,7 @@ export const games: Game[] = [
   points: 50,
   icon: "🛡️",
   slug: "guardioes-dos-dados",
-  thumbnail: heroThumbnail,
+  thumbnail: guardiansThumbnail,
 }
 ,
  {

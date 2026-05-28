@@ -45,14 +45,13 @@ export class GameScene extends Phaser.Scene {
   private errors = 0;
   private hasCompletedLevel = false;
   private unsubscribePlatformCommands?: () => void;
-  private audioContext?: AudioContext;
-
   private timeBarFill?: Phaser.GameObjects.Graphics;
   private timerTween?: Phaser.Tweens.Tween;
   private timerState = { progress: 1 };
   private hasStartedTimer = false;
   private timerDuration = 30000;
   private shouldShowLevelStart = false;
+  private fallbackAudioContext?: AudioContext;
 
   constructor() {
     super('GameScene');
@@ -409,6 +408,7 @@ export class GameScene extends Phaser.Scene {
     const hitbox = this.add.zone(x, y, CARD_HITBOX_WIDTH * visualScale, CARD_HITBOX_HEIGHT * visualScale);
     hitbox.setDepth(200);
     hitbox.setInteractive({ draggable: true, useHandCursor: true });
+    hitbox.on('pointerdown', () => this.playButtonSound());
 
     hitbox.setData('card', container);
     hitbox.setData('step', step);
@@ -1185,8 +1185,8 @@ export class GameScene extends Phaser.Scene {
   }
 
   private playButtonSound() {
-    this.playTone(520, 0.045, 0.035);
-    this.time.delayedCall(42, () => this.playTone(760, 0.055, 0.032));
+    this.playTone(520, 0.06, 0.18);
+    this.time.delayedCall(55, () => this.playTone(760, 0.07, 0.16));
   }
 
   private playSlotSound() {
@@ -1194,21 +1194,32 @@ export class GameScene extends Phaser.Scene {
     this.time.delayedCall(45, () => this.playTone(920, 0.07, 0.035));
   }
 
-  private playTone(frequency: number, duration: number, volume: number) {
+  private getAudioContext(): AudioContext | null {
+    if ('context' in this.sound) {
+      return (this.sound as Phaser.Sound.WebAudioSoundManager).context;
+    }
+
     const AudioContextCtor =
       window.AudioContext ||
       (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-    if (!AudioContextCtor) return;
+    if (!AudioContextCtor) return null;
 
-    this.audioContext ??= new AudioContextCtor();
+    this.fallbackAudioContext ??= new AudioContextCtor();
+    return this.fallbackAudioContext;
+  }
 
-    if (this.audioContext.state === 'suspended') {
-      void this.audioContext.resume();
+  private playTone(frequency: number, duration: number, volume: number) {
+    const ctx = this.getAudioContext();
+    if (!ctx) return;
+
+    if (ctx.state === 'suspended') {
+      void ctx.resume().then(() => this.playTone(frequency, duration, volume));
+      return;
     }
 
-    const oscillator = this.audioContext.createOscillator();
-    const gain = this.audioContext.createGain();
-    const now = this.audioContext.currentTime;
+    const oscillator = ctx.createOscillator();
+    const gain = ctx.createGain();
+    const now = ctx.currentTime;
 
     oscillator.type = 'sine';
     oscillator.frequency.setValueAtTime(frequency, now);
@@ -1217,7 +1228,7 @@ export class GameScene extends Phaser.Scene {
     gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
 
     oscillator.connect(gain);
-    gain.connect(this.audioContext.destination);
+    gain.connect(ctx.destination);
     oscillator.start(now);
     oscillator.stop(now + duration + 0.02);
   }

@@ -38,6 +38,7 @@ const GAME_CONFIG_LOADERS: Partial<
 const GAMES_WITH_IN_GAME_COMPLETION_SCREEN = new Set([
   "oficina-dos-algoritmos",
   "pixel-secreto",
+  "guardioes-dos-dados",
 ]);
 
 export default function GameDetailsPage() {

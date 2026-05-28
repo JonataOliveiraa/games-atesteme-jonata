@@ -23,6 +23,8 @@ const config: Phaser.Types.Core.GameConfig = {
     height: 540,
   },
 
+  audio: { disableWebAudio: false },
+
   scene: [BootScene, GameScene, UIScene],
 };
 

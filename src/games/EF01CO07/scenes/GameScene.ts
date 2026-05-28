@@ -8,6 +8,7 @@ import type { SafetyChoice, SafetyLevel, SafetyScene } from "../types";
 const GAME_ID = "guardioes-dos-dados";
 const TIMER_BAR_Y = 55;
 const TIMER_BAR_W = 900;
+const MODAL_SCALE = 1.28;
 
 export class GameScene extends Phaser.Scene {
   private levelStarted = false;
@@ -22,6 +23,13 @@ export class GameScene extends Phaser.Scene {
   private timerEvent?: Phaser.Time.TimerEvent;
   private timerBar?: Phaser.GameObjects.Rectangle;
   private unsubscribePlatformCommands?: () => void;
+  private readonly paletteColors = {
+    blue: 0x2563eb,
+    navy: 0x25327a,
+    green: 0x22c55e,
+    orange: 0xf59e0b,
+    cyan: 0x38bdf8,
+  };
 
   constructor() {
     super({ key: "GameScene" });
@@ -57,10 +65,7 @@ this.overlayObjects = [];
 
     this.renderCurrentScene();
     this.emitProgress();
-
-    this.time.delayedCall(80, () => {
-  this.showStartScreen();
-});
+    this.levelStarted = true;
   }
 
   update() {
@@ -339,9 +344,12 @@ private showTutorialStep(stepIndex: number) {
 }
 
   private createBackground() {
-    this.add.rectangle(640, 360, 1280, 720, 0xf8fbff);
-    this.add.rectangle(640, 140, 1280, 280, 0xdbeafe, 0.65);
-    this.add.rectangle(640, 610, 1280, 220, 0xfef3c7, 0.35);
+    this.cameras.main.setBackgroundColor("#f8fbff");
+
+    const bgImage = this.add.image(640, 360, "guardians-bg-main").setDepth(0);
+    this.coverImage(bgImage, 1280, 720);
+
+    this.add.rectangle(640, 360, 1280, 720, 0xffffff, 0.16).setDepth(1);
 
     const circles = [
       { x: 120, y: 120, size: 70, color: 0x93c5fd },
@@ -405,16 +413,6 @@ private showTutorialStep(stepIndex: number) {
       .setOrigin(0, 0.5)
       .setDepth(6);
 
-    this.add
-      .text(640, TIMER_BAR_Y - 25, "Tempo", {
-        fontSize: "16px",
-        fontFamily: "Arial Black, Arial",
-        color: "#334155",
-        stroke: "#ffffff",
-        strokeThickness: 3,
-      })
-      .setOrigin(0.5)
-      .setDepth(7);
   }
 
   private renderCurrentScene() {
@@ -426,6 +424,7 @@ private showTutorialStep(stepIndex: number) {
 
     const scene = this.levelConfig.scenes[this.currentSceneIndex];
 
+    this.createSceneBackdrop(scene);
     this.createHeader();
     this.createStoryCard(scene);
     this.createChoiceButtons(scene);
@@ -435,6 +434,52 @@ private showTutorialStep(stepIndex: number) {
   private markDynamic<T extends Phaser.GameObjects.GameObject>(object: T): T {
     object.setData("dynamic", true);
     return object;
+  }
+
+  private createRoundedBox(
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    fillColor: number,
+    fillAlpha: number,
+    strokeColor: number,
+    strokeAlpha: number,
+    radius: number,
+    depth: number,
+    strokeWidth = 4
+  ) {
+    const box = this.add.graphics();
+    box.fillStyle(fillColor, fillAlpha);
+    box.fillRoundedRect(x - width / 2, y - height / 2, width, height, radius);
+    box.lineStyle(strokeWidth, strokeColor, strokeAlpha);
+    box.strokeRoundedRect(x - width / 2, y - height / 2, width, height, radius);
+    box.setDepth(depth);
+    return this.markDynamic(box);
+  }
+
+  private createSceneBackdrop(scene: SafetyScene) {
+    const image = this.markDynamic(
+      this.add.image(640, 360, this.getSceneImageKey(scene.id)).setDepth(2)
+    );
+    this.coverImage(image, 1280, 720);
+
+    this.markDynamic(
+      this.add.rectangle(640, 360, 1280, 720, 0x0f172a, 0.22).setDepth(3)
+    );
+
+    this.markDynamic(
+      this.add.rectangle(640, 360, 1280, 720, 0xffffff, 0.04).setDepth(4)
+    );
+  }
+
+  private getSceneImageKey(sceneId: string) {
+    return `guardians-scene-${sceneId}`;
+  }
+
+  private coverImage(image: Phaser.GameObjects.Image, width: number, height: number) {
+    const scale = Math.max(width / image.width, height / image.height);
+    image.setScale(scale);
   }
 
   private createHeader() {
@@ -453,22 +498,19 @@ private showTutorialStep(stepIndex: number) {
 
     this.markDynamic(
       this.add
-        .text(640, 160, this.levelConfig.objective, {
+        .text(640, 165, this.levelConfig.objective, {
           fontSize: "22px",
-          fontFamily: "Arial",
-          color: "#475569",
+          fontFamily: "Arial Black, Arial",
+          color: "#ffffff",
+          stroke: "#0f172a",
+          strokeThickness: 4,
           align: "center",
         })
         .setOrigin(0.5)
         .setDepth(20)
     );
 
-    this.markDynamic(
-      this.add
-        .rectangle(1040, 118, 150, 46, 0xffffff, 0.95)
-        .setStrokeStyle(3, 0x93c5fd)
-        .setDepth(20)
-    );
+    this.createRoundedBox(1040, 118, 150, 46, 0xffffff, 0.9, 0xffffff, 0.92, 8, 20, 3);
 
     this.markDynamic(
       this.add
@@ -486,12 +528,12 @@ private showTutorialStep(stepIndex: number) {
         .setDepth(21)
     );
 
-    this.markDynamic(
-      this.add
-        .rectangle(240, 118, 170, 46, 0xffffff, 0.95)
-        .setStrokeStyle(3, 0xbfdbfe)
-        .setDepth(20)
+    this.createRoundedBox(240, 118, 190, 46, 0xffffff, 0.9, 0xffffff, 0.92, 8, 20, 3);
+
+    const shieldIcon = this.markDynamic(
+      this.add.image(168, 118, "guardians-icon-shield").setDepth(21)
     );
+    shieldIcon.setDisplaySize(30, 30);
 
     this.markDynamic(
       this.add
@@ -506,22 +548,18 @@ private showTutorialStep(stepIndex: number) {
   }
 
   private createStoryCard(scene: SafetyScene) {
-    this.markDynamic(
-      this.add
-        .rectangle(640, 395, 920, 340, 0xffffff, 0.98)
-        .setStrokeStyle(4, 0x93c5fd)
-        .setDepth(10)
-    );
+    const shadow = this.add.graphics();
+    shadow.fillStyle(0x0f172a, 0.18);
+    shadow.fillRoundedRect(190, 236, 920, 340, 24);
+    shadow.setDepth(9);
+    this.markDynamic(shadow);
+
+    this.createRoundedBox(640, 395, 920, 340, 0xffffff, 0.22, 0xffffff, 0.95, 24, 10, 5);
+    this.createRoundedBox(640, 250, 920, 58, 0x2563eb, 0.96, 0xffffff, 0.86, 20, 11, 3);
 
     this.markDynamic(
       this.add
-        .rectangle(640, 250, 920, 58, 0x2563eb, 1)
-        .setDepth(11)
-    );
-
-    this.markDynamic(
-      this.add
-        .text(640, 250, `${scene.emoji} ${scene.title}`, {
+        .text(640, 250, scene.title, {
           fontSize: "26px",
           fontFamily: "Arial Black, Arial",
           color: "#ffffff",
@@ -531,37 +569,17 @@ private showTutorialStep(stepIndex: number) {
     );
 
     this.markDynamic(
-      this.add
-        .circle(350, 390, 85, 0xdbeafe, 1)
-        .setStrokeStyle(5, 0x60a5fa)
-        .setDepth(12)
-    );
-
-    this.markDynamic(
-  this.add
-    .text(350, 390, scene.emoji, {
-      fontSize: "60px",
-      fontFamily: "Arial",
-      padding: {
-        top: 18,
-        bottom: 18,
-        left: 18,
-        right: 18,
-      },
-    })
-    .setOrigin(0.5)
-    .setDepth(13)
-);
-
-    this.markDynamic(
-      this.add.text(500, 355, scene.situation, {
+      this.add.text(640, 355, scene.situation, {
           fontSize: "28px",
           fontFamily: "Arial Black, Arial",
-          color: "#0f172a",
-          wordWrap: { width: 540 },
+          color: "#ffffff",
+          stroke: "#0f172a",
+          strokeThickness: 5,
+          align: "center",
+          wordWrap: { width: 700 },
           lineSpacing: 10,
         })
-        .setOrigin(0, 0.5)
+        .setOrigin(0.5)
         .setDepth(13)
     );
 
@@ -570,9 +588,9 @@ private showTutorialStep(stepIndex: number) {
         .text(640, 505, scene.question, {
           fontSize: "30px",
           fontFamily: "Arial Black, Arial",
-          color: "#2563eb",
-          stroke: "#ffffff",
-          strokeThickness: 4,
+          color: "#ffffff",
+          stroke: "#2563eb",
+          strokeThickness: 6,
           align: "center",
           wordWrap: { width: 760 },
         })
@@ -594,13 +612,12 @@ private showTutorialStep(stepIndex: number) {
 
     choices.forEach((choice, index) => {
       const pos = positions[index];
-      const button = this.markDynamic(
-        this.add
-          .rectangle(pos.x, pos.y, 390, 78, 0x2563eb, 1)
-          .setStrokeStyle(4, 0xffffff)
-          .setInteractive({ useHandCursor: true })
-          .setDepth(20)
+      const button = this.createRoundedBox(pos.x, pos.y, 390, 78, 0x2563eb, 0.96, 0xffffff, 0.96, 16, 20, 4);
+      button.setInteractive(
+        new Phaser.Geom.Rectangle(pos.x - 195, pos.y - 39, 390, 78),
+        Phaser.Geom.Rectangle.Contains
       );
+      button.input!.cursor = "pointer";
 
       const text = this.markDynamic(
         this.add
@@ -621,8 +638,20 @@ private showTutorialStep(stepIndex: number) {
       text.setInteractive({ useHandCursor: true });
       text.on("pointerdown", choose);
 
-      button.on("pointerover", () => button.setFillStyle(0x1d4ed8));
-      button.on("pointerout", () => button.setFillStyle(0x2563eb));
+      button.on("pointerover", () => {
+        button.clear();
+        button.fillStyle(0x1d4ed8, 1);
+        button.fillRoundedRect(pos.x - 195, pos.y - 39, 390, 78, 16);
+        button.lineStyle(4, 0xffffff, 0.96);
+        button.strokeRoundedRect(pos.x - 195, pos.y - 39, 390, 78, 16);
+      });
+      button.on("pointerout", () => {
+        button.clear();
+        button.fillStyle(0x2563eb, 0.96);
+        button.fillRoundedRect(pos.x - 195, pos.y - 39, 390, 78, 16);
+        button.lineStyle(4, 0xffffff, 0.96);
+        button.strokeRoundedRect(pos.x - 195, pos.y - 39, 390, 78, 16);
+      });
     });
   }
 
@@ -649,6 +678,7 @@ private showTutorialStep(stepIndex: number) {
     if (!this.levelStarted) return;
 if (this.answeredCurrentScene) return;
 
+this.playClick();
 this.startTimerOnce();
 
     this.answeredCurrentScene = true;
@@ -690,33 +720,69 @@ this.startTimerOnce();
     });
   }
 
-  private showFeedback(message: string, color: number, icon: string) {
-    const panel = this.markDynamic(
-      this.add
-        .rectangle(640, 470, 820, 95, color, 0.95)
-        .setStrokeStyle(4, 0xffffff)
-        .setDepth(100)
-    );
+  private showFeedback(message: string, color: number, _icon: string) {
+    const isCorrect = color === 0x22c55e;
+    const accent = isCorrect ? this.paletteColors.green : 0xef4444;
 
-    const text = this.markDynamic(
+    const container = this.markDynamic(this.add.container(640, 478).setDepth(100));
+    const shadow = this.add.graphics();
+    shadow.fillStyle(0x0f172a, 0.24);
+    shadow.fillRoundedRect(-402, -50, 804, 104, 26);
+
+    const panel = this.add.graphics();
+    panel.fillStyle(0xffffff, 0.9);
+    panel.fillRoundedRect(-410, -58, 820, 104, 26);
+    panel.lineStyle(5, 0xffffff, 0.96);
+    panel.strokeRoundedRect(-410, -58, 820, 104, 26);
+
+    const accentBar = this.add.graphics();
+    accentBar.fillStyle(accent, 1);
+    accentBar.fillRoundedRect(-410, -58, 22, 104, 12);
+
+    const glow = this.add.graphics();
+    glow.fillStyle(accent, 0.18);
+    glow.fillCircle(-332, -6, 48);
+
+    const title = this.add
+      .text(-255, -25, isCorrect ? "Boa escolha!" : "Atenção!", {
+        fontSize: "22px",
+        fontFamily: "Arial Black, Arial",
+        color: isCorrect ? "#166534" : "#991b1b",
+        stroke: "#ffffff",
+        strokeThickness: 4,
+      })
+      .setOrigin(0, 0.5);
+
+    const text =
       this.add
-        .text(640, 470, `${icon} ${message}`, {
-          fontSize: "23px",
+        .text(-255, 14, message, {
+          fontSize: "18px",
           fontFamily: "Arial Black, Arial",
-          color: "#ffffff",
-          align: "center",
-          wordWrap: { width: 740 },
+          color: "#25327a",
+          align: "left",
+          wordWrap: { width: 600 },
+          lineSpacing: 4,
         })
-        .setOrigin(0.5)
-        .setDepth(101)
-    );
+        .setOrigin(0, 0.5);
+
+    const feedbackIcon =
+      this.add
+        .image(-332, -6, isCorrect ? "guardians-icon-check" : "guardians-icon-alert")
+        .setDisplaySize(74, 74);
+
+    container.add([shadow, panel, accentBar, glow, feedbackIcon, title, text]);
+    container.setScale(0.94);
+    container.setAlpha(0);
 
     this.tweens.add({
-      targets: [panel, text],
-      y: "-=10",
-      duration: 200,
-      yoyo: true,
+      targets: container,
+      alpha: 1,
+      y: 460,
+      scale: 1,
+      duration: 220,
+      ease: "Back.easeOut",
     });
+
   }
 
   private goToNextScene() {
@@ -732,9 +798,10 @@ this.startTimerOnce();
   }
 
   private handleLevelSuccess() {
+    this.levelStarted = false;
     this.playWin();
     this.timerEvent?.remove(false);
-    this.showLevelComplete();
+    this.showLevelCompleteTransition();
     this.emitProgress();
 
     const nextLevel = this.levelConfig.level + 1;
@@ -750,22 +817,411 @@ this.startTimerOnce();
         errors: this.errors,
       });
 
-      this.time.delayedCall(1200, () => {
-        this.showNextLevelButton(nextLevel as 1 | 2 | 3);
+      this.time.delayedCall(2300, () => {
+        this.showNextLevelStartTransition(nextLevel as 1 | 2 | 3);
       });
 
       return;
     }
 
-    this.time.delayedCall(1700, () => {
+    this.time.delayedCall(2300, () => {
       runtimeGameBridge.emit({
         type: "GAME_COMPLETED",
         gameId: GAME_ID,
         stage: this.levelConfig.level,
       });
 
-      this.input.enabled = false;
+      this.showGameCompleteScreen();
     });
+  }
+
+  private showLevelCompleteTransition() {
+    this.clearOverlay();
+    this.input.enabled = true;
+
+    const overlay = this.addOverlayObject(
+      this.add.rectangle(640, 360, 1280, 720, 0x0f2542, 0.58).setDepth(450)
+    );
+    overlay.setInteractive();
+
+    const modal = this.addOverlayObject(this.add.container(640, 360).setDepth(451));
+    const score = this.getScore();
+    const shadow = this.add.graphics();
+    shadow.fillStyle(0x000000, 0.18);
+    shadow.fillRoundedRect(-270, -166, 540, 330, 28);
+
+    const bg = this.add.graphics();
+    bg.fillStyle(0xffffff, 0.98);
+    bg.fillRoundedRect(-278, -178, 556, 330, 28);
+    bg.lineStyle(5, 0xffffff, 0.95);
+    bg.strokeRoundedRect(-278, -178, 556, 330, 28);
+
+    const topBar = this.add.graphics();
+    topBar.fillStyle(this.paletteColors.green, 1);
+    topBar.fillRoundedRect(-196, -194, 392, 28, 14);
+    topBar.lineStyle(3, 0xffffff, 0.82);
+    topBar.strokeRoundedRect(-196, -194, 392, 28, 14);
+
+    const title = this.add
+      .text(0, -112, "Missão concluída!", {
+        fontSize: "36px",
+        fontFamily: "Arial Black, Arial",
+        color: "#25327a",
+        stroke: "#ffffff",
+        strokeThickness: 5,
+      })
+      .setOrigin(0.5);
+
+    const completed = this.add
+      .text(0, -54, `Nível ${this.levelConfig.level} protegido`, {
+        fontSize: "24px",
+        fontFamily: "Arial Black, Arial",
+        color: "#2563eb",
+      })
+      .setOrigin(0.5);
+
+    const scoreText = this.add
+      .text(0, 4, `Pontuação: ${score} | Acertos: ${this.hits} | Erros: ${this.errors}`, {
+        fontSize: "17px",
+        fontFamily: "Arial Black, Arial",
+        color: "#334155",
+        align: "center",
+        wordWrap: { width: 470 },
+      })
+      .setOrigin(0.5);
+
+    const message = this.add
+      .text(0, 62, this.getChecklistSummary(), {
+        fontSize: "15px",
+        fontFamily: "Arial Black, Arial",
+        color: "#334155",
+        align: "center",
+        wordWrap: { width: 430 },
+      })
+      .setOrigin(0.5);
+
+    const waitText = this.add
+      .text(0, 126, "Preparando a próxima missão...", {
+        fontSize: "15px",
+        fontFamily: "Arial Black, Arial",
+        color: "#25327a",
+      })
+      .setOrigin(0.5);
+
+    modal.add([shadow, bg, topBar, title, completed, scoreText, message, waitText]);
+    modal.setScale(MODAL_SCALE * 0.9);
+    modal.setAlpha(0);
+
+    this.tweens.add({
+      targets: modal,
+      alpha: 1,
+      scale: MODAL_SCALE,
+      duration: 260,
+      ease: "Back.easeOut",
+    });
+
+    this.createCelebrationParticles();
+  }
+
+  private showNextLevelStartTransition(nextLevel: 1 | 2 | 3) {
+    this.clearOverlay();
+    this.input.enabled = true;
+
+    const nextConfig = LEVELS.find((item) => item.level === nextLevel);
+    const overlay = this.addOverlayObject(
+      this.add.rectangle(640, 360, 1280, 720, 0x0f2542, 0.58).setDepth(450)
+    );
+    overlay.setInteractive();
+
+    const modal = this.addOverlayObject(this.add.container(640, 360).setDepth(451));
+    const shadow = this.add.graphics();
+    shadow.fillStyle(0x000000, 0.18);
+    shadow.fillRoundedRect(-270, -154, 540, 312, 28);
+
+    const bg = this.add.graphics();
+    bg.fillStyle(0xffffff, 0.98);
+    bg.fillRoundedRect(-278, -166, 556, 312, 28);
+    bg.lineStyle(5, 0xffffff, 0.95);
+    bg.strokeRoundedRect(-278, -166, 556, 312, 28);
+
+    const topBar = this.add.graphics();
+    topBar.fillStyle(this.paletteColors.orange, 1);
+    topBar.fillRoundedRect(-196, -182, 392, 28, 14);
+    topBar.lineStyle(3, 0xffffff, 0.82);
+    topBar.strokeRoundedRect(-196, -182, 392, 28, 14);
+
+    const title = this.add
+      .text(0, -102, `Nível ${nextLevel}`, {
+        fontSize: "38px",
+        fontFamily: "Arial Black, Arial",
+        color: "#25327a",
+        stroke: "#ffffff",
+        strokeThickness: 5,
+      })
+      .setOrigin(0.5);
+
+    const objective = this.add
+      .text(0, -42, nextConfig?.title ?? "Nova missão", {
+        fontSize: "24px",
+        fontFamily: "Arial Black, Arial",
+        color: "#2563eb",
+        align: "center",
+        wordWrap: { width: 430 },
+      })
+      .setOrigin(0.5);
+
+    const detail = this.add
+      .text(0, 14, nextConfig?.objective ?? "Escolha atitudes seguras para proteger seus dados.", {
+        fontSize: "16px",
+        fontFamily: "Arial Black, Arial",
+        color: "#334155",
+        align: "center",
+        wordWrap: { width: 420 },
+      })
+      .setOrigin(0.5);
+
+    const button = this.add.container(0, 104);
+    const buttonShadow = this.add.graphics();
+    buttonShadow.fillStyle(0x000000, 0.16);
+    buttonShadow.fillRoundedRect(-136, -20, 272, 48, 24);
+    const buttonBg = this.add.graphics();
+    buttonBg.fillStyle(this.paletteColors.green, 1);
+    buttonBg.fillRoundedRect(-140, -26, 280, 52, 26);
+    buttonBg.lineStyle(4, 0xffffff, 1);
+    buttonBg.strokeRoundedRect(-140, -26, 280, 52, 26);
+    const buttonText = this.add
+      .text(0, 0, "Iniciar missão", {
+        fontSize: "22px",
+        fontFamily: "Arial Black, Arial",
+        color: "#ffffff",
+        stroke: "#166534",
+        strokeThickness: 3,
+      })
+      .setOrigin(0.5);
+    button.add([buttonShadow, buttonBg, buttonText]);
+
+    const hitbox = this.addOverlayObject(
+      this.add.zone(640, 360 + 104 * MODAL_SCALE, 280 * MODAL_SCALE, 58 * MODAL_SCALE).setDepth(452)
+    );
+    hitbox.setInteractive({ useHandCursor: true });
+    hitbox.on("pointerover", () => {
+      this.tweens.add({ targets: button, scale: 1.04, duration: 90, ease: "Sine.easeOut" });
+    });
+    hitbox.on("pointerout", () => {
+      this.tweens.add({ targets: button, scale: 1, duration: 90, ease: "Sine.easeOut" });
+    });
+    hitbox.on("pointerdown", () => {
+      this.playClick();
+      this.levelStarted = false;
+      this.hasStartedTimer = false;
+      this.timerEvent?.destroy();
+      this.timerEvent = undefined;
+      this.scene.restart({ level: nextLevel });
+    });
+
+    modal.add([shadow, bg, topBar, title, objective, detail, button]);
+    modal.setScale(MODAL_SCALE * 0.9);
+    modal.setAlpha(0);
+
+    this.tweens.add({
+      targets: modal,
+      alpha: 1,
+      scale: MODAL_SCALE,
+      duration: 260,
+      ease: "Back.easeOut",
+    });
+  }
+
+  private showGameCompleteScreen() {
+    this.clearOverlay();
+    this.input.enabled = true;
+    this.levelStarted = false;
+
+    const overlay = this.addOverlayObject(
+      this.add.rectangle(640, 360, 1280, 720, 0x0f2542, 0.64).setDepth(450)
+    );
+    overlay.setInteractive();
+
+    const panel = this.addOverlayObject(this.add.container(640, 360).setDepth(451));
+    const score = this.getScore();
+    const shadow = this.add.graphics();
+    shadow.fillStyle(0x000000, 0.18);
+    shadow.fillRoundedRect(-292, -178, 584, 366, 34);
+
+    const bg = this.add.graphics();
+    bg.fillStyle(0xffffff, 0.98);
+    bg.fillRoundedRect(-304, -190, 608, 370, 34);
+    bg.lineStyle(6, 0xffffff, 0.96);
+    bg.strokeRoundedRect(-304, -190, 608, 370, 34);
+
+    const ribbon = this.add.graphics();
+    ribbon.fillStyle(this.paletteColors.green, 1);
+    ribbon.fillRoundedRect(-214, -208, 428, 34, 17);
+    ribbon.lineStyle(4, 0xffffff, 0.9);
+    ribbon.strokeRoundedRect(-214, -208, 428, 34, 17);
+
+    const title = this.add
+      .text(0, -132, "Dados protegidos!", {
+        fontSize: "38px",
+        fontFamily: "Arial Black, Arial",
+        color: "#25327a",
+        stroke: "#ffffff",
+        strokeThickness: 6,
+      })
+      .setOrigin(0.5);
+
+    const subtitle = this.add
+      .text(0, -78, "Você concluiu todas as missões de segurança.", {
+        fontSize: "20px",
+        fontFamily: "Arial Black, Arial",
+        color: "#334155",
+        align: "center",
+        wordWrap: { width: 500 },
+      })
+      .setOrigin(0.5);
+
+    const scoreText = this.add
+      .text(0, -30, `Pontuação final: ${score} | Acertos: ${this.hits} | Erros: ${this.errors}`, {
+        fontSize: "17px",
+        fontFamily: "Arial Black, Arial",
+        color: "#2563eb",
+        align: "center",
+        wordWrap: { width: 500 },
+      })
+      .setOrigin(0.5);
+
+    const levelLabels = [1, 2, 3].map((level, index) => {
+      const item = this.add.container(-190 + index * 190, 54);
+      const badge = this.add.graphics();
+      badge.fillStyle(index === 0 ? this.paletteColors.orange : index === 1 ? this.paletteColors.cyan : this.paletteColors.green, 1);
+      badge.fillRoundedRect(-54, -42, 108, 84, 18);
+      badge.lineStyle(4, 0xffffff, 0.95);
+      badge.strokeRoundedRect(-54, -42, 108, 84, 18);
+      const number = this.add
+        .text(0, -13, String(level), {
+          fontSize: "30px",
+          fontFamily: "Arial Black, Arial",
+          color: "#ffffff",
+          stroke: "#25327a",
+          strokeThickness: 4,
+        })
+        .setOrigin(0.5);
+      const label = this.add
+        .text(0, 23, "protegido", {
+          fontSize: "12px",
+          fontFamily: "Arial Black, Arial",
+          color: "#ffffff",
+        })
+        .setOrigin(0.5);
+      item.add([badge, number, label]);
+      return item;
+    });
+
+    const createFinalButton = (x: number, label: string, color: number, stroke: string, onClick: () => void) => {
+      const button = this.add.container(x, 138);
+      const buttonShadow = this.add.graphics();
+      buttonShadow.fillStyle(0x000000, 0.16);
+      buttonShadow.fillRoundedRect(-128, -20, 256, 48, 24);
+      const buttonBg = this.add.graphics();
+      buttonBg.fillStyle(color, 1);
+      buttonBg.fillRoundedRect(-132, -26, 264, 52, 26);
+      buttonBg.lineStyle(4, 0xffffff, 1);
+      buttonBg.strokeRoundedRect(-132, -26, 264, 52, 26);
+      const buttonText = this.add
+        .text(0, 0, label, {
+          fontSize: "20px",
+          fontFamily: "Arial Black, Arial",
+          color: "#ffffff",
+          stroke,
+          strokeThickness: 3,
+        })
+        .setOrigin(0.5);
+      button.add([buttonShadow, buttonBg, buttonText]);
+      button.setSize(264, 58);
+      button.setInteractive({
+        hitArea: new Phaser.Geom.Rectangle(-132, -29, 264, 58),
+        hitAreaCallback: Phaser.Geom.Rectangle.Contains,
+        useHandCursor: true,
+      });
+      button.on("pointerover", () => {
+        this.tweens.add({ targets: button, scale: 1.04, duration: 90, ease: "Sine.easeOut" });
+      });
+      button.on("pointerout", () => {
+        this.tweens.add({ targets: button, scale: 1, duration: 90, ease: "Sine.easeOut" });
+      });
+      button.on("pointerdown", () => {
+        this.playClick();
+        onClick();
+      });
+      return button;
+    };
+
+    const playAgain = createFinalButton(-142, "Jogar novamente", this.paletteColors.green, "#166534", () => {
+      this.scene.restart({ level: 1 });
+    });
+    const exit = createFinalButton(142, "Voltar aos jogos", this.paletteColors.orange, "#9a3f00", () => {
+      EventBus.emit("exit-game");
+    });
+
+    const sparkles = Array.from({ length: 14 }, (_, index) => {
+      const sparkle = this.add.graphics();
+      sparkle.fillStyle(index % 3 === 0 ? this.paletteColors.cyan : index % 3 === 1 ? this.paletteColors.orange : this.paletteColors.green, 0.9);
+      sparkle.fillCircle(Phaser.Math.Between(-278, 278), Phaser.Math.Between(-168, 158), Phaser.Math.Between(4, 8));
+      this.tweens.add({
+        targets: sparkle,
+        alpha: { from: 0.35, to: 1 },
+        scale: { from: 0.8, to: 1.35 },
+        duration: 520 + index * 30,
+        yoyo: true,
+        repeat: -1,
+        ease: "Sine.easeInOut",
+      });
+      return sparkle;
+    });
+
+    panel.add([shadow, bg, ribbon, ...sparkles, title, subtitle, scoreText, ...levelLabels, playAgain, exit]);
+    panel.setScale(MODAL_SCALE * 0.88);
+    panel.setAlpha(0);
+
+    this.tweens.add({
+      targets: panel,
+      alpha: 1,
+      scale: MODAL_SCALE,
+      duration: 300,
+      ease: "Back.easeOut",
+    });
+  }
+
+  private getScore() {
+    return this.hits * 5 - this.errors * 5;
+  }
+
+  private getChecklistSummary() {
+    const items = this.checklist.slice(0, 2);
+    if (!items.length) return "Você praticou escolhas seguras para proteger seus dados.";
+    return items.map((item) => `✓ ${item}`).join("\n");
+  }
+
+  private createCelebrationParticles() {
+    const colors = [this.paletteColors.green, this.paletteColors.orange, this.paletteColors.cyan, 0xa855f7, 0xfacc15];
+    for (let i = 0; i < 28; i++) {
+      const particle = this.add.graphics().setDepth(452);
+      const size = Phaser.Math.Between(5, 12);
+      particle.fillStyle(colors[i % colors.length], 0.95);
+      particle.fillCircle(0, 0, size);
+      particle.setPosition(640 + Phaser.Math.Between(-90, 90), 360 + Phaser.Math.Between(-60, 60));
+      this.tweens.add({
+        targets: particle,
+        x: 640 + Phaser.Math.Between(-380, 380),
+        y: 360 + Phaser.Math.Between(-220, 180),
+        alpha: 0,
+        scaleX: 1.6,
+        scaleY: 1.6,
+        duration: Phaser.Math.Between(760, 1260),
+        ease: "Cubic.easeOut",
+        onComplete: () => particle.destroy(),
+      });
+    }
   }
 
   private showLevelComplete() {
