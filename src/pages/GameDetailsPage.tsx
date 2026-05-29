@@ -82,6 +82,7 @@ export default function GameDetailsPage() {
   const game = games.find((item) => item.slug === slug);
   const gameCode = slug ? SLUG_TO_CODE[slug] : undefined;
   const isPixelSecreto = game?.slug === "pixel-secreto";
+  const startsInsidePhaser = gameCode === "EF01CO02";
 
   useEffect(() => {
     let cancelled = false;
@@ -608,7 +609,7 @@ useEffect(() => {
 
         <div className="game-area">
           {gameCode && gameConfig ? (
-            hasStartedGame ? (
+            hasStartedGame || startsInsidePhaser ? (
               <GameFrame
                 gameId={game.slug}
                 level={currentLevel}

@@ -1,17 +1,22 @@
+export interface RobotPart {
+    id: number;
+    label: string;
+    assetKey: string; 
+}
+
 export interface OrigamiStep {
     id: number;
     label: string;
-    assetKey?: string; 
+    assetKey: string;
 }
 
 export interface LevelConfig {
     id: number;
     name: string;
-    steps: OrigamiStep[];
+    steps: RobotPart[];
     timeLimit: number;
 }
 
-// --- ADICIONE ESTE BLOCO ABAIXO ---
 export interface RuntimeGameBridge {
   emit: (data: {
     type: string;

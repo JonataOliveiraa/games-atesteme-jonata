@@ -3,39 +3,35 @@ import { LevelConfig } from "../types";
 export const LEVELS: LevelConfig[] = [
     {
         id: 1,
-        name: "Barco de Papel",
-        timeLimit: 20,
+        name: "Montagem Básica",
+        timeLimit: 30,
         steps: [
-            { id: 1, label: "Base", assetKey: "origami_base" },
-            { id: 2, label: "Dobra Central", assetKey: "origami_center" },
-            { id: 3, label: "Pontas", assetKey: "origami_tips" },
-            { id: 4, label: "Finalização", assetKey: "origami_boat" }
+            { id: 1, label: "Cabeça ", assetKey: "robot_kbt_head" },
+            { id: 2, label: "Tronco ", assetKey: "robot_kbt_torso" },
+            { id: 3, label: "Pernas ", assetKey: "robot_kbt_legs" }
         ]
     },
     {
         id: 2,
-        name: "Avião de Papel",
-        timeLimit: 30,
+        name: "Modelo KWG - Rokusho",
+        timeLimit: 50, // Tempo aumentado devido à expansão de peças
         steps: [
-            { id: 1, label: "Folha Reta", assetKey: "plane_step_1" },
-            { id: 2, label: "Triângulo", assetKey: "plane_step_2" },
-            { id: 3, label: "Dobrar Meio", assetKey: "plane_step_3" },
-            { id: 4, label: "Asa Esquerda", assetKey: "plane_step_4" },
-            { id: 5, label: "Asa Direita", assetKey: "plane_step_5" },
-            { id: 6, label: "Voo Pronto", assetKey: "plane_step_6" }
+            { id: 1, label: "Cabeça (Sensor)", assetKey: "robot_kwg_head" },
+            { id: 2, label: "Ombro Esquerdo", assetKey: "robot_kwg_shoulder_l" },
+            { id: 3, label: "Ombro Direito", assetKey: "robot_kwg_shoulder_r" },
+            { id: 4, label: "Tronco (Blindagem)", assetKey: "robot_kwg_torso" },
+            { id: 5, label: "Espada (Chanfrada)", assetKey: "robot_kwg_sword" },
+            { id: 6, label: "Pernas (Agilidade)", assetKey: "robot_kwg_legs" }
         ]
     },
     {
         id: 3,
-        name: "Rosto de Cachorro",
+        name: "Modelo STG - Cyandog",
         timeLimit: 40,
         steps: [
-            { id: 1, label: "Papel Quadrado", assetKey: "dog_step_1" },
-            { id: 2, label: "Dobrar Triângulo", assetKey: "dog_step_2" },
-            { id: 3, label: "Orelha Direita", assetKey: "dog_step_3" },
-            { id: 4, label: "Orelha Esquerda", assetKey: "dog_step_4" },
-            { id: 5, label: "Dobrar Queixo", assetKey: "dog_step_5" },
-            { id: 6, label: "Rosto Pronto", assetKey: "dog_step_6" }
+            { id: 1, label: "Cabeça (Mira)", assetKey: "robot_stg_head" },
+            { id: 2, label: "Tronco (Rifle)", assetKey: "robot_stg_torso" },
+            { id: 3, label: "Pernas (Tanque)", assetKey: "robot_stg_legs" }
         ]
     }
 ];

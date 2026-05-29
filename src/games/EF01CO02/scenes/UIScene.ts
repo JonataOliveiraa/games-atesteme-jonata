@@ -20,85 +20,63 @@ export class UIScene extends Phaser.Scene {
   }
 
   private createTopBar() {
-    // Fundo superior
-    this.add.rectangle(640, 45, 1280, 90, 0xFFF8F0, 0.94).setStrokeStyle(3, 0xDEB887)
+    // Fundo superior estilizado para o laboratório cyberpunk
+    this.add.rectangle(640, 45, 1280, 90, 0x111827, 0.95).setStrokeStyle(3, 0xff9100, 0.6)
     
     // Rótulo Missão
-    this.add.text(18, 45, '🎯', { fontSize: '24px' }).setOrigin(0, 0.5)
-    this.add.text(52, 45, 'Missão:', { fontSize: '18px', fontFamily: 'Arial, sans-serif', color: '#7F8C8D' }).setOrigin(0, 0.5)
+    this.add.text(18, 45, '⚡', { fontSize: '24px' }).setOrigin(0, 0.5)
+    this.add.text(52, 45, 'PROJETO ATIVO:', { fontSize: '14px', fontFamily: 'Arial Black', color: '#ff9100' }).setOrigin(0, 0.5)
     
-    // Nome da missão
-    this.add.text(140, 45, '...', { fontSize: '20px', fontFamily: 'Arial Black, Arial', color: '#1A1A2E' })
-      .setOrigin(0, 0.5)
-      .setName('missionNameText')
-
-    // Indicador de passo
-    this.stepIndicator = this.add.text(640, 45, 'Carregando...', { fontSize: '20px', fontFamily: 'Arial, sans-serif', color: '#2980B9' }).setOrigin(0.5, 0.5)
+    // Nome do Robô Atual
+    this.add.text(190, 45, 'Aguardando Sistema...', { fontSize: '22px', fontFamily: 'Arial Black', color: '#ffffff' }).setOrigin(0, 0.5).setName('missionNameText')
     
-    // Estrelas
-    this.levelStars = this.add.text(1060, 45, '★☆☆', { fontSize: '28px', color: '#F1C40F' }).setOrigin(0.5)
-
-    this.createMuteButton()
+    // Estrelas de Estágio (Progresso Geral)
+    this.levelStars = this.add.text(1080, 45, '☆☆☆', { fontSize: '28px', color: '#ffaa00' }).setOrigin(1, 0.5)
+    
+    // Botão de Mudo
+    this.muteIcon = this.add.text(1220, 45, '🔊', { fontSize: '24px', color: '#ffffff' }).setOrigin(0.5).setInteractive({ useHandCursor: true })
+    this.muteIcon.on('pointerdown', () => this.toggleMute())
   }
 
   private createBottomBar() {
-    const BAR_Y = 680
-    this.add.rectangle(640, BAR_Y, 1280, 80, 0xFFF8F0, 0.94).setStrokeStyle(3, 0xDEB887)
-
-    // Acertos
-    this.add.text(28, BAR_Y, '✅', { fontSize: '22px' }).setOrigin(0, 0.5)
-    this.add.text(58, BAR_Y, '0', { fontSize: '26px', fontFamily: 'Arial Black, Arial', color: '#27AE60' })
-      .setOrigin(0, 0.5)
-      .setName('hitsText')
-
-    // Erros
-    this.add.text(110, BAR_Y, '✖', { fontSize: '22px', color: '#E74C3C' }).setOrigin(0, 0.5)
-    this.add.text(140, BAR_Y, '0', { fontSize: '26px', fontFamily: 'Arial Black, Arial', color: '#E74C3C' })
-      .setOrigin(0, 0.5)
-      .setName('errorsText')
-
-    // Progresso
-    this.add.text(640, BAR_Y - 16, 'Progresso', { fontSize: '13px', color: '#95A5A6', fontFamily: 'Arial' }).setOrigin(0.5)
-    const barX = 640; const barW = 400
-    this.add.rectangle(barX, BAR_Y + 10, barW, 22, 0xDFE6E9).setStrokeStyle(1, 0xBDC3C7)
-    this.add.rectangle(barX - barW / 2, BAR_Y + 10, 0, 22, 0x2ECC71).setOrigin(0, 0.5).setName('progressBar')
-
-    // Fase
-    this.add.text(1100, BAR_Y - 16, 'Fase', { fontSize: '13px', color: '#95A5A6', fontFamily: 'Arial' }).setOrigin(0.5)
-    this.add.text(1100, BAR_Y + 10, '1', { fontSize: '26px', fontFamily: 'Arial Black, Arial', color: '#8E44AD' })
-      .setOrigin(0.5)
-      .setName('levelText')
-  }
-
-  private createMuteButton() {
-    const btn = this.add.container(1220, 45).setInteractive(new Phaser.Geom.Circle(0, 0, 30), Phaser.Geom.Circle.Contains)
-    const bg = this.add.circle(0, 0, 25, 0xE0E0E0)
-    this.muteIcon = this.add.text(0, 0, '🔊', { fontSize: '24px' }).setOrigin(0.5)
+    // Container inferior de telemetria
+    this.add.rectangle(640, 685, 1280, 70, 0x0f172a, 0.9)
     
-    btn.add([bg, this.muteIcon])
-    
-    btn.on('pointerdown', () => {
-      this.isMuted = !this.isMuted
-      this.muteIcon.setText(this.isMuted ? '🔇' : '🔊')
-      EventBus.emit('mute-audio', this.isMuted)
-    })
+    // Barra de Progresso Interna da Montagem
+    this.add.text(50, 685, 'MONTAGEM:', { fontSize: '14px', fontFamily: 'Arial Black', color: '#00ffff' }).setOrigin(0, 0.5)
+    this.add.rectangle(170, 685, 400, 22, 0x1e293b).setOrigin(0, 0.5).setStrokeStyle(2, 0x334155)
+    this.add.rectangle(170, 685, 0, 22, 0x00ffcc).setOrigin(0, 0.5).setName('progressBar')
+
+    // Contador de Acertos e Erros de Conexão
+    this.add.text(620, 685, '✅ Conexões:', { fontSize: '15px', fontFamily: 'Arial Black', color: '#ffffff' }).setOrigin(0, 0.5)
+    this.add.text(730, 685, '0', { fontSize: '16px', fontFamily: 'Arial Black', color: '#10b981' }).setOrigin(0, 0.5).setName('hitsText')
+
+    this.add.text(800, 685, '❌ Falhas:', { fontSize: '15px', fontFamily: 'Arial Black', color: '#ffffff' }).setOrigin(0, 0.5)
+    this.add.text(880, 685, '0', { fontSize: '16px', fontFamily: 'Arial Black', color: '#ef4444' }).setOrigin(0, 0.5).setName('errorsText')
+
+    // Indicador textual de Peças Conectadas (Ex: Peça 1/3)
+    this.stepIndicator = this.add.text(1230, 685, 'PEÇA: 0/3', { fontSize: '16px', fontFamily: 'Arial Black', color: '#a5b4fc' }).setOrigin(1, 0.5)
   }
 
   private registerEventListeners() {
-    EventBus.on('scene-ready', (data: { levelConfig: LevelConfig }) => {
-      this.levelConfig = data.levelConfig
-      this.updateMissionName(this.levelConfig.mission.name)
-      this.updateLevelStars(this.levelConfig.level)
-      this.updateProgress(0, 0, 0, this.levelConfig.mission.steps.length)
-      
-      const levelText = this.children.getByName('levelText') as Phaser.GameObjects.Text
-      if (levelText) levelText.setText(this.levelConfig.level.toString())
+    EventBus.on('level-started', (config: LevelConfig) => {
+      this.levelConfig = config
+      this.updateMissionName(config.name)
+      this.updateLevelStars(config.id)
+      this.updateStepIndicator(0, config.steps.length)
+      this.updateProgress(0, 0, 0, config.steps.length)
     }, this)
 
-    EventBus.on('update-progress', (data: { pct: number; hits: number; errors: number; currentStep: number; totalSteps: number }) => {
+    EventBus.on('game-metrics', (data: { pct: number; hits: number; errors: number; currentStep: number; totalSteps: number }) => {
       this.updateProgress(data.pct, data.hits, data.errors, data.totalSteps)
       this.updateStepIndicator(data.currentStep, data.totalSteps)
     }, this)
+  }
+
+  private toggleMute() {
+    this.isMuted = !this.isMuted;
+    this.sound.mute = this.isMuted;
+    this.muteIcon.setText(this.isMuted ? '🔇' : '🔊');
   }
 
   private updateMissionName(name: string) {
@@ -124,13 +102,12 @@ export class UIScene extends Phaser.Scene {
 
   private updateStepIndicator(current: number, total: number) {
     if (this.stepIndicator) {
-      const displayCurrent = current > total ? total : current
-      this.stepIndicator.setText(`Passo ${displayCurrent}/${total}`)
+      this.stepIndicator.setText(`PEÇA: ${current}/${total}`)
     }
   }
 
-  shutdown() {
-    EventBus.off('scene-ready', undefined, this)
-    EventBus.off('update-progress', undefined, this)
+  destroy() {
+    EventBus.off('level-started')
+    EventBus.off('game-metrics')
   }
 }
