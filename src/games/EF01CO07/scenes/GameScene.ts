@@ -428,7 +428,6 @@ private showTutorialStep(stepIndex: number) {
     this.createHeader();
     this.createStoryCard(scene);
     this.createChoiceButtons(scene);
-    this.createProgressDots();
   }
 
   private markDynamic<T extends Phaser.GameObjects.GameObject>(object: T): T {
@@ -465,11 +464,11 @@ private showTutorialStep(stepIndex: number) {
     this.coverImage(image, 1280, 720);
 
     this.markDynamic(
-      this.add.rectangle(640, 360, 1280, 720, 0x0f172a, 0.22).setDepth(3)
+      this.add.rectangle(640, 360, 1280, 720, 0x0f172a, 0.08).setDepth(3)
     );
 
     this.markDynamic(
-      this.add.rectangle(640, 360, 1280, 720, 0xffffff, 0.04).setDepth(4)
+      this.add.rectangle(640, 630, 1280, 180, 0x0f172a, 0.16).setDepth(4)
     );
   }
 
@@ -549,35 +548,34 @@ private showTutorialStep(stepIndex: number) {
 
   private createStoryCard(scene: SafetyScene) {
     const shadow = this.add.graphics();
-    shadow.fillStyle(0x0f172a, 0.18);
-    shadow.fillRoundedRect(190, 236, 920, 340, 24);
+    shadow.fillStyle(0x0f172a, 0.24);
+    shadow.fillRoundedRect(154, 496, 972, 144, 20);
     shadow.setDepth(9);
     this.markDynamic(shadow);
 
-    this.createRoundedBox(640, 395, 920, 340, 0xffffff, 0.22, 0xffffff, 0.95, 24, 10, 5);
-    this.createRoundedBox(640, 250, 920, 58, 0x2563eb, 0.96, 0xffffff, 0.86, 20, 11, 3);
+    this.createRoundedBox(640, 564, 980, 140, 0xffffff, 0.86, 0xffffff, 0.96, 20, 10, 5);
 
     this.markDynamic(
       this.add
-        .text(640, 250, scene.title, {
-          fontSize: "26px",
+        .text(640, 516, scene.title, {
+          fontSize: "28px",
           fontFamily: "Arial Black, Arial",
-          color: "#ffffff",
+          color: "#2563eb",
+          stroke: "#ffffff",
+          strokeThickness: 4,
         })
         .setOrigin(0.5)
         .setDepth(12)
     );
 
     this.markDynamic(
-      this.add.text(640, 355, scene.situation, {
-          fontSize: "28px",
+      this.add.text(640, 558, scene.situation, {
+          fontSize: "25px",
           fontFamily: "Arial Black, Arial",
-          color: "#ffffff",
-          stroke: "#0f172a",
-          strokeThickness: 5,
+          color: "#0f172a",
           align: "center",
-          wordWrap: { width: 700 },
-          lineSpacing: 10,
+          wordWrap: { width: 910 },
+          lineSpacing: 4,
         })
         .setOrigin(0.5)
         .setDepth(13)
@@ -585,12 +583,12 @@ private showTutorialStep(stepIndex: number) {
 
     this.markDynamic(
       this.add
-        .text(640, 505, scene.question, {
-          fontSize: "30px",
+        .text(640, 606, scene.question, {
+          fontSize: "28px",
           fontFamily: "Arial Black, Arial",
-          color: "#ffffff",
-          stroke: "#2563eb",
-          strokeThickness: 6,
+          color: "#2563eb",
+          stroke: "#ffffff",
+          strokeThickness: 4,
           align: "center",
           wordWrap: { width: 760 },
         })
@@ -601,8 +599,8 @@ private showTutorialStep(stepIndex: number) {
 
   private createChoiceButtons(scene: SafetyScene) {
     const positions = [
-      { x: 410, y: 635 },
-      { x: 870, y: 635 },
+      { x: 425, y: 686 },
+      { x: 855, y: 686 },
     ];
 
     const choices =
@@ -612,9 +610,9 @@ private showTutorialStep(stepIndex: number) {
 
     choices.forEach((choice, index) => {
       const pos = positions[index];
-      const button = this.createRoundedBox(pos.x, pos.y, 390, 78, 0x2563eb, 0.96, 0xffffff, 0.96, 16, 20, 4);
+      const button = this.createRoundedBox(pos.x, pos.y, 380, 62, 0x2563eb, 0.96, 0xffffff, 0.96, 15, 20, 4);
       button.setInteractive(
-        new Phaser.Geom.Rectangle(pos.x - 195, pos.y - 39, 390, 78),
+        new Phaser.Geom.Rectangle(pos.x - 190, pos.y - 31, 380, 62),
         Phaser.Geom.Rectangle.Contains
       );
       button.input!.cursor = "pointer";
@@ -622,11 +620,11 @@ private showTutorialStep(stepIndex: number) {
       const text = this.markDynamic(
         this.add
           .text(pos.x, pos.y, choice.text, {
-            fontSize: "20px",
+            fontSize: "23px",
             fontFamily: "Arial Black, Arial",
             color: "#ffffff",
             align: "center",
-            wordWrap: { width: 330 },
+            wordWrap: { width: 340 },
           })
           .setOrigin(0.5)
           .setDepth(21)
@@ -641,16 +639,16 @@ private showTutorialStep(stepIndex: number) {
       button.on("pointerover", () => {
         button.clear();
         button.fillStyle(0x1d4ed8, 1);
-        button.fillRoundedRect(pos.x - 195, pos.y - 39, 390, 78, 16);
+        button.fillRoundedRect(pos.x - 190, pos.y - 31, 380, 62, 15);
         button.lineStyle(4, 0xffffff, 0.96);
-        button.strokeRoundedRect(pos.x - 195, pos.y - 39, 390, 78, 16);
+        button.strokeRoundedRect(pos.x - 190, pos.y - 31, 380, 62, 15);
       });
       button.on("pointerout", () => {
         button.clear();
         button.fillStyle(0x2563eb, 0.96);
-        button.fillRoundedRect(pos.x - 195, pos.y - 39, 390, 78, 16);
+        button.fillRoundedRect(pos.x - 190, pos.y - 31, 380, 62, 15);
         button.lineStyle(4, 0xffffff, 0.96);
-        button.strokeRoundedRect(pos.x - 195, pos.y - 39, 390, 78, 16);
+        button.strokeRoundedRect(pos.x - 190, pos.y - 31, 380, 62, 15);
       });
     });
   }
@@ -664,7 +662,7 @@ private showTutorialStep(stepIndex: number) {
         this.add
           .circle(
             startX + i * 34,
-            690,
+            710,
             10,
             i <= this.currentSceneIndex ? 0x2563eb : 0xcbd5e1,
             1
