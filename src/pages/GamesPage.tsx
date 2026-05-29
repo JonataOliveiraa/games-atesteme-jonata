@@ -1,13 +1,14 @@
-import { useState } from "react";
 import GameCard from "../components/GameCard";
 import { useBeepSound } from "../hooks/useBeepSound";
 import { games } from "../data/games";
 import { useGame } from "../context/useGame";
+import { useSearchParams } from "react-router-dom";
 
 const ITEMS_PER_PAGE = 6;
 
 export default function GamesPage() {
-  const [currentPage, setCurrentPage] = useState(1);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const currentPage = Math.max(1, Number(searchParams.get("page")) || 1);
   const { blockedGamesCount } = useGame();
 
   const { playBeep } = useBeepSound({
@@ -22,23 +23,21 @@ export default function GamesPage() {
   const endIndex = startIndex + ITEMS_PER_PAGE;
   const currentGames = games.slice(startIndex, endIndex);
 
+  const setPage = (page: number) => {
+    playBeep();
+    setSearchParams(page === 1 ? {} : { page: String(page) });
+  };
+
   const goToNextPage = () => {
-    if (currentPage < totalPages) {
-      playBeep();
-      setCurrentPage((prev) => prev + 1);
-    }
+    if (currentPage < totalPages) setPage(currentPage + 1);
   };
 
   const goToPrevPage = () => {
-    if (currentPage > 1) {
-      playBeep();
-      setCurrentPage((prev) => prev - 1);
-    }
+    if (currentPage > 1) setPage(currentPage - 1);
   };
 
   const handlePageClick = (pageNumber: number) => {
-    playBeep();
-    setCurrentPage(pageNumber);
+    setPage(pageNumber);
   };
 
   return (

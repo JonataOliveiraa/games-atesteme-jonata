@@ -1,4 +1,8 @@
 import type { Game } from "../types/game";
+import heroThumbnail from "../assets/hero.png";
+import algorithmsThumbnail from "../assets/games/EF01CO03/algorithm-game-cover.png";
+import pixelSecretThumbnail from "../assets/games/EF01CO05/cover5.png";
+import guardiansThumbnail from "../assets/games/EF01CO07/cover.png";
 
 export const games: Game[] = [
   {
@@ -9,6 +13,7 @@ export const games: Game[] = [
     points: 60,
     icon: "🗂️",
     slug: "base-dos-classificadores",
+    thumbnail: heroThumbnail,
   },
   {
     id: 1,
@@ -18,6 +23,7 @@ export const games: Game[] = [
     points: 50,
     icon: "👣",
     slug: "trilha-do-passo-a-passo",
+    thumbnail: heroThumbnail,
   },
   {
     id: 2,
@@ -27,6 +33,7 @@ export const games: Game[] = [
     points: 50,
     icon: "🛠️",
     slug: "oficina-dos-algoritmos",
+    thumbnail: algorithmsThumbnail,
 
   },
   {
@@ -37,6 +44,7 @@ export const games: Game[] = [
     points: 40,
     icon: "🎯",
     slug: "acerte-o-alvo",
+    thumbnail: heroThumbnail,
   },
   {
     id: 4,
@@ -46,6 +54,7 @@ export const games: Game[] = [
     points: 50,
     icon: "🎨",
     slug: "pixel-secreto",
+    thumbnail: pixelSecretThumbnail,
   }
   ,
   {
@@ -56,6 +65,7 @@ export const games: Game[] = [
     points: 60,
     icon: "🖥️",
     slug: "desktop-digital-infantil",
+    thumbnail: heroThumbnail,
   },
 
   {
@@ -66,6 +76,7 @@ export const games: Game[] = [
   points: 50,
   icon: "🛡️",
   slug: "guardioes-dos-dados",
+  thumbnail: guardiansThumbnail,
 }
 ,
  {
@@ -76,78 +87,87 @@ export const games: Game[] = [
     points: 55,
     icon: "✈️",
     slug: "hangar-dos-modelos",
+    thumbnail: heroThumbnail,
   },
   {
-    id: 7,
+    id: 8,
     title: "Corrida do Saber",
     description: "Avance casas ao acertar perguntas e complete o percurso.",
     category: "Perguntas",
     points: 45,
     icon: "🏁",
     slug: "corrida-do-saber",
+    thumbnail: heroThumbnail,
   },
   {
-    id: 8,
+    id: 9,
     title: "Desafio Matemático",
     description: "Resolva contas e problemas no menor tempo possível.",
     category: "Matemática",
     points: 60,
     icon: "➗",
     slug: "desafio-matematico",
+    thumbnail: heroThumbnail,
   },
   {
-    id: 9,
+    id: 10,
     title: "Caça ao Número",
     description: "Encontre os números corretos antes do tempo acabar.",
     category: "Atenção",
     points: 25,
     icon: "🔢",
     slug: "caca-ao-numero",
+    thumbnail: heroThumbnail,
   },
   {
-    id: 10,
+    id: 11,
     title: "Sequência Lógica",
     description: "Complete as sequências corretamente para avançar.",
     category: "Raciocínio",
     points: 55,
     icon: "🧩",
     slug: "sequencia-logica",
+    thumbnail: heroThumbnail,
   },
   {
-    id: 11,
+    id: 12,
     title: "Desafio das Cores",
     description: "Associe cores e padrões corretamente para vencer.",
     category: "Percepção",
     points: 20,
     icon: "🎨",
     slug: "desafio-das-cores",
+    thumbnail: heroThumbnail,
   },
   {
-    id: 12,
+    id: 13,
     title: "Montando Palavras",
     description: "Organize letras para formar as palavras corretas.",
     category: "Português",
     points: 40,
     icon: "✍️",
     slug: "montando-palavras",
+    thumbnail: heroThumbnail,
   },
   {
-    id: 13,
+    id: 14,
     title: "Conta Rápida",
     description: "Resolva operações matemáticas com rapidez.",
     category: "Cálculo",
     points: 35,
     icon: "🧮",
     slug: "conta-rapida",
+    thumbnail: heroThumbnail,
   },
   {
-    id: 14,
+    id: 15,
     title: "Labirinto Inteligente",
     description: "Encontre o melhor caminho até a saída.",
     category: "Estratégia",
     points: 50,
     icon: "🌀",
     slug: "labirinto-inteligente",
+    thumbnail: heroThumbnail,
   },
   
 ];
