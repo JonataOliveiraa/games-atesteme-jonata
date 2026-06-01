@@ -1,6 +1,6 @@
 export type Attribute = 'cor' | 'forma' | 'tamanho'
 
-export type Color = 'vermelho' | 'azul' | 'verde' | 'amarelo'
+export type Color = 'vermelho' | 'azul' | 'verde' | 'amarelo' | 'roxo'
 export type Shape = 'circulo' | 'quadrado' | 'triangulo' | 'retangulo'
 export type Size = 'pequeno' | 'medio' | 'grande'
 

@@ -6,4 +6,5 @@ export type Game = {
   points: number;
   icon: string;
   slug: string;
+  thumbnail?: string;
 };

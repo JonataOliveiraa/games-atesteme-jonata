@@ -1,24 +1,31 @@
-import * as Phaser from "phaser";
-import { BootScene } from "./scenes/BootScene";
-import { GameScene } from "./scenes/GameScene";
-import { UIScene } from "./scenes/UIScene";
+import Phaser from 'phaser';
 
-const EF01CO03Config: Phaser.Types.Core.GameConfig = {
+import { BootScene } from './scenes/BootScene';
+import { GameScene } from './scenes/GameScene';
+import { UIScene } from './scenes/UIScene';
+
+const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
-  width: 1280,
-  height: 720,
-  backgroundColor: "#1a1a2e",
-  scene: [BootScene, GameScene, UIScene],
-  physics: {
-    default: "arcade",
-    arcade: { debug: false },
+  width: 960,
+  height: 540,
+  render: {
+    antialias: true,
+    antialiasGL: true,
+    pixelArt: false,
+    roundPixels: false,
   },
+  backgroundColor: '#fff6e8',
+
   scale: {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
+    width: 960,
+    height: 540,
   },
+
   audio: { disableWebAudio: false },
-  dom: { createContainer: false },
+
+  scene: [BootScene, GameScene, UIScene],
 };
 
-export default EF01CO03Config;
+export default config;

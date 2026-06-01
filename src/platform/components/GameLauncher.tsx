@@ -56,5 +56,5 @@ export default function GameLauncher({
   return () => window.clearTimeout(id);
 }, [gameId]);
 
-return <PhaserCanvas key={gameId} config={config} />;
+return <PhaserCanvas key={gameId} gameId={gameId} config={config} />;
 }

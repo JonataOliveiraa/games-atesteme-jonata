@@ -10,6 +10,8 @@ import type { PlatformEvent } from "../shared/contracts/platformEvents";
 import type { GameEventPayload } from "../types/platform";
 import type Phaser from "phaser";
 import { EventBus } from "../shared/EventBus";
+import { gameBridge } from "../shared/bridge/gameBridge";
+import { useBeepSound } from "../hooks/useBeepSound";
 
 const SLUG_TO_CODE: Record<string, GameCode> = {
   "base-dos-classificadores": "EF01CO01",
@@ -33,9 +35,21 @@ const GAME_CONFIG_LOADERS: Partial<
   EF02CO01: () => import("../games/EF02CO01/index"),
 };
 
+const GAMES_WITH_IN_GAME_COMPLETION_SCREEN = new Set([
+  "oficina-dos-algoritmos",
+  "pixel-secreto",
+  "guardioes-dos-dados",
+]);
+
 export default function GameDetailsPage() {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
+  const { playBeep } = useBeepSound({
+    frequency: 720,
+    duration: 70,
+    volume: 0.12,
+    type: "sine",
+  });
 
   const {
     points,
@@ -53,10 +67,10 @@ export default function GameDetailsPage() {
     useState<Phaser.Types.Core.GameConfig | null>(null);
 
   const [hasStartedGame, setHasStartedGame] = useState(false);
+  const [showInstructions, setShowInstructions] = useState(false);
   const [currentLevel, setCurrentLevel] = useState<1 | 2 | 3>(1);
 
   const [showGameOverModal, setShowGameOverModal] = useState(false);
-  const [showUnlockModal, setShowUnlockModal] = useState(false);
   const [showNoLivesModal, setShowNoLivesModal] = useState(false);
   const [showPostUnlockLifeModal, setShowPostUnlockLifeModal] = useState(false);
   const [showCongratsModal, setShowCongratsModal] = useState(false);
@@ -115,31 +129,32 @@ export default function GameDetailsPage() {
       setShowNoLivesModal(true);
     };
 
-    const openUnlockModal = () => {
-      setShowUnlockModal(true);
-    };
-
     const exitGame = () => {
       setHasStartedGame(false);
-      navigate("/", { replace: true });
+      navigate(-1);
     };
 
     const backToStart = () => {
       setHasStartedGame(false);
     };
 
+    const closeGameModals = () => {
+      setShowNoLivesModal(false);
+      setShowGameOverModal(false);
+    };
+
     window.addEventListener("pixel-secret-show-extra-life-modal", openExtraLifeModal);
-    window.addEventListener("pixel-secret-open-unlock-modal", openUnlockModal);
     window.addEventListener("pixel-secret-exit-game", exitGame);
     EventBus.on("exit-game", exitGame);
     EventBus.on("game-back-to-start", backToStart);
+    EventBus.on("close-game-modals", closeGameModals);
 
     return () => {
       window.removeEventListener("pixel-secret-show-extra-life-modal", openExtraLifeModal);
-      window.removeEventListener("pixel-secret-open-unlock-modal", openUnlockModal);
       window.removeEventListener("pixel-secret-exit-game", exitGame);
       EventBus.off("exit-game", exitGame);
       EventBus.off("game-back-to-start", backToStart);
+      EventBus.off("close-game-modals", closeGameModals);
     };
   }, [navigate]);
 
@@ -149,7 +164,7 @@ export default function GameDetailsPage() {
         <button
           type="button"
           className="back-link"
-          onClick={() => navigate("/")}
+          onClick={() => navigate(-1)}
         >
           {"<"} Voltar
         </button>
@@ -262,6 +277,21 @@ export default function GameDetailsPage() {
         const livesBeforeError = gameLives;
         const livesAfterError = Math.max(livesBeforeError - 1, 0);
 
+        if (livesBeforeError <= 0) {
+          // Jogador já está sem vidas — não deduzir pontos, ir direto ao game over
+          dispatchPlatformGameEvent({
+            type: "GAME_OVER",
+            gameId: event.gameId,
+            stage: event.stage,
+            pointsEarned: 0,
+          });
+
+          setShowNoLivesModal(false);
+          setShowGameOverModal(true);
+
+          return;
+        }
+
         dispatchPlatformGameEvent({
           type: "WRONG_ANSWER",
           gameId: event.gameId,
@@ -279,21 +309,8 @@ export default function GameDetailsPage() {
           "error"
         );
 
-        if (livesBeforeError <= 0) {
-          dispatchPlatformGameEvent({
-            type: "GAME_OVER",
-            gameId: event.gameId,
-            stage: event.stage,
-            pointsEarned: 0,
-          });
-
-          setShowNoLivesModal(false);
-          setShowGameOverModal(true);
-
-          return;
-        }
-
         if (livesAfterError === 0) {
+          gameBridge.send({ type: 'PAUSE_GAME' });
           setShowNoLivesModal(true);
         }
 
@@ -319,10 +336,12 @@ export default function GameDetailsPage() {
         } else {
           setCurrentLevel(1);
 
-          window.setTimeout(() => {
-            setHasStartedGame(false);
-            setShowCongratsModal(true);
-          }, 2400);
+          if (!GAMES_WITH_IN_GAME_COMPLETION_SCREEN.has(game.slug)) {
+            window.setTimeout(() => {
+              setHasStartedGame(false);
+              setShowCongratsModal(true);
+            }, 2400);
+          }
         }
 
         streakRef.current = 0;
@@ -370,6 +389,14 @@ export default function GameDetailsPage() {
   };
 
   const handleUnlock = () => {
+    if (!blocked) {
+      setShowGameOverModal(false);
+      setCurrentLevel(1);
+      setHasStartedGame(false);
+      showToast("Este jogo já está liberado.", "success");
+      return;
+    }
+
     if (points < unlockCost) {
       showToast("Pontos insuficientes para desbloquear este jogo.", "error");
       return;
@@ -382,7 +409,6 @@ export default function GameDetailsPage() {
       return;
     }
 
-    setShowUnlockModal(false);
     setShowGameOverModal(false);
     setCurrentLevel(1);
     setHasStartedGame(false);
@@ -399,18 +425,64 @@ export default function GameDetailsPage() {
   const handleCongratsExit = () => {
     setShowCongratsModal(false);
     setCurrentLevel(1);
-    navigate("/");
+    navigate(-1);
   };
 
   const handleExit = () => {
   navigate(-1);
 };
 
+  const startGame = () => {
+    playBeep();
+    alreadyOfferedExtraLifeRef.current = false;
+    setShowInstructions(false);
+    setHasStartedGame(true);
+  };
+
+  const instructionsBySlug: Record<string, string[]> = {
+    "oficina-dos-algoritmos": [
+      "Arraste os cartões para os espaços numerados.",
+      "Monte todos os passos antes de testar.",
+      "A ordem certa completa a fase; erros custam pontos e vidas.",
+    ],
+    "pixel-secreto": [
+      "Observe a legenda de cores.",
+      "Pinte os espaços corretos da grade.",
+      "Complete a imagem escondida para avançar.",
+    ],
+    "base-dos-classificadores": [
+      "Observe as características de cada item.",
+      "Arraste para a base correspondente.",
+      "Classifique tudo para concluir a fase.",
+    ],
+    "guardioes-dos-dados": [
+      "Leia cada situação com atenção.",
+      "Escolha a atitude mais segura.",
+      "Proteja os dados para avançar.",
+    ],
+    "desktop-digital-infantil": [
+      "Explore os aplicativos disponíveis.",
+      "Use a ferramenta certa para cada missão.",
+      "Complete as missões para avançar.",
+    ],
+    "hangar-dos-modelos": [
+      "Compare os veículos apresentados.",
+      "Use atributos como rodas, motor e meio.",
+      "Classifique corretamente para vencer.",
+    ],
+  };
+
+  const gameInstructions =
+    instructionsBySlug[game.slug] ?? [
+      "Observe o desafio na tela.",
+      "Interaja com os elementos do jogo.",
+      "Complete o objetivo para ganhar pontos.",
+    ];
+
 useEffect(() => {
   const hasBlockingOverlay =
     showNoLivesModal ||
-    showGameOverModal ||
-    showUnlockModal;
+    showGameOverModal;
 
   const elements = document.querySelectorAll(
     ".phaser-container, .phaser-container canvas, .game-iframe, iframe"
@@ -429,16 +501,16 @@ useEffect(() => {
       element.classList.remove("game-input-blocked");
     });
   };
-}, [showNoLivesModal, showGameOverModal, showUnlockModal]);
+}, [showNoLivesModal, showGameOverModal]);
 
-  if (blocked && !hasStartedGame && !showGameOverModal && !showUnlockModal) {
+  if (blocked && !hasStartedGame && !showGameOverModal) {
     return (
       <>
         <section>
           <button
             type="button"
             className="back-link"
-            onClick={() => navigate("/")}
+            onClick={() => navigate(-1)}
           >
             {"<"} Voltar
           </button>
@@ -481,7 +553,7 @@ useEffect(() => {
                   <span>Seus pontos: {points}</span>
                   <button
                     type="button"
-                    onClick={() => setShowUnlockModal(true)}
+                    onClick={handleUnlock}
                     disabled={points < unlockCost}
                   >
                     Desbloquear jogo
@@ -522,16 +594,6 @@ useEffect(() => {
             </div>
           </div>
         </section>
-
-        <ConfirmModal
-          isOpen={showUnlockModal}
-          title="Desbloquear jogo"
-          message={`Deseja desbloquear o jogo "${game.title}" por ${unlockCost} pontos?`}
-          confirmText="Confirmar"
-          cancelText="Cancelar"
-          onConfirm={handleUnlock}
-          onCancel={() => setShowUnlockModal(false)}
-        />
 
         <ConfirmModal
           isOpen={showPostUnlockLifeModal}
@@ -618,241 +680,63 @@ useEffect(() => {
                 config={gameConfig}
                 onPlatformEvent={handlePlatformEvent}
               />
-            ) : isPixelSecreto ? (
-              <div className="game-screen pixel-secret-cover">
-                <div className="pixel-secret-pixels" aria-hidden="true">
-                  <span />
-                  <span />
-                  <span />
-                  <span />
-                  <span />
-                  <span />
-                  <span />
-                  <span />
-                  <span />
-                </div>
+            ) : (
+              <div
+                className={`game-screen game-entry-cover game-entry-${game.slug} ${
+                  showInstructions ? "game-entry-instructions" : ""
+                }`}
+                style={
+                  game.thumbnail
+                    ? { backgroundImage: `url(${game.thumbnail})` }
+                    : undefined
+                }
+              >
+                <div className="game-entry-overlay">
+                  {showInstructions ? (
+                    <div className="game-instructions-panel">
+                      <div className="game-instructions-tab">Como jogar</div>
+                      <h1>{game.title}</h1>
 
-                <div className="pixel-secret-overlay">
-                  <div className="pixel-secret-badge">🎨 Jogo de pixels</div>
-                  <h1>Pixel Secreto</h1>
-                  <p>
-                    Escolha as cores da legenda, pinte os quadradinhos corretos e revele
-                    uma imagem escondida.
-                  </p>
+                      <ul className="game-instructions-list">
+                        {gameInstructions.map((instruction, index) => (
+                          <li key={instruction}>
+                            <span className="game-instruction-number">{index + 1}</span>
+                            <span>{instruction}</span>
+                          </li>
+                        ))}
+                      </ul>
 
-                  <button
-                    type="button"
-                    onClick={() => {
-                      alreadyOfferedExtraLifeRef.current = false;
-                      setHasStartedGame(true);
-                    }}
-                  >
-                    Iniciar jogo
-                  </button>
-                </div>
-              </div>
-            ) : game.slug === "guardioes-dos-dados" ? (
-              <div className="game-screen data-guardians-cover">
-                <div className="data-guardians-particles" aria-hidden="true">
-                  <span>🛡️</span>
-                  <span>🔒</span>
-                  <span>💻</span>
-                  <span>📱</span>
-                  <span>🌐</span>
-                  <span>🔐</span>
-                  <span>✅</span>
-                  <span>⭐</span>
-                  <span>👤</span>
-                </div>
+                      <div className="game-entry-actions">
+                        <button type="button" onClick={startGame}>
+                          <span aria-hidden="true">▶</span>
+                          Iniciar Game
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <h1>{game.title}</h1>
 
-                <div className="data-guardians-overlay">
-                  <div className="data-guardians-badge">🛡️ Segurança Digital</div>
-                  <h1>Guardiões dos Dados</h1>
-                  <p>
-                    Proteja informações pessoais, identifique situações perigosas e
-                    aprenda boas práticas de segurança na internet.
-                  </p>
+                    <div className="game-entry-actions">
+                      <button type="button" onClick={startGame}>
+                        <span aria-hidden="true">▶</span>
+                        Iniciar
+                      </button>
 
-                  <button
-                    type="button"
-                    onClick={() => {
-                      alreadyOfferedExtraLifeRef.current = false;
-                      setHasStartedGame(true);
-                    }}
-                  >
-                    Iniciar jogo
-                  </button>
-                </div>
-              </div>
-            ) : game.slug === "base-dos-classificadores" ? (
-              <div className="game-screen classifiers-cover">
-                <div className="classifiers-shapes" aria-hidden="true">
-                  <span>🔺</span>
-                  <span>🟦</span>
-                  <span>🟢</span>
-                  <span>⭐</span>
-                  <span>🟨</span>
-                  <span>🔵</span>
-                  <span>🟥</span>
-                  <span>🟣</span>
-                  <span>🧩</span>
-                </div>
-
-                <div className="classifiers-overlay">
-                  <div className="classifiers-badge">🧠 Lógica e classificação</div>
-                  <h1>Base dos Classificadores</h1>
-                  <p>
-                    Observe formas, cores e padrões para classificar corretamente cada
-                    item e completar os desafios.
-                  </p>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      alreadyOfferedExtraLifeRef.current = false;
-                      setHasStartedGame(true);
-                    }}
-                  >
-                    Iniciar jogo
-                  </button>
-                </div>
-              </div>
-            ) : game.slug === "oficina-dos-algoritmos" ? (
-              <div className="game-screen algorithms-cover">
-                <div className="algorithms-icons" aria-hidden="true">
-                  <span>⚙️</span>
-                  <span>➡️</span>
-                  <span>🧩</span>
-                  <span>💡</span>
-                  <span>🔁</span>
-                  <span>🖥️</span>
-                  <span>📦</span>
-                  <span>🚀</span>
-                  <span>🧠</span>
-                </div>
-
-                <div className="algorithms-overlay">
-                  <div className="algorithms-badge">
-                    ⚙️ Pensamento computacional
-                  </div>
-                  <h1>Oficina dos Algoritmos</h1>
-                  <p>
-                    Resolva desafios usando sequência lógica, organização de passos e
-                    raciocínio computacional.
-                  </p>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      alreadyOfferedExtraLifeRef.current = false;
-                      setHasStartedGame(true);
-                    }}
-                  >
-                    Iniciar jogo
-                  </button>
-                </div>
-              </div>
-            ) : game.slug === "desktop-digital-infantil" ? (
-  <div className="game-screen desktop-digital-cover">
-    <div className="desktop-digital-icons" aria-hidden="true">
-      <span>🖥️</span>
-      <span>📷</span>
-      <span>🧮</span>
-      <span>🎙️</span>
-      <span>🎨</span>
-      <span>🌐</span>
-      <span>🎵</span>
-      <span>🌙</span>
-      <span>⭐</span>
-    </div>
-
-    <div className="desktop-digital-overlay">
-      <div className="desktop-digital-badge">
-        🖥️ Uso de aplicativos
-      </div>
-
-      <h1>Desktop Digital Infantil</h1>
-
-      <p>
-        Explore apps, complete missões e ajude a Lua usando câmera,
-        calculadora, desenho, gravador e outros recursos digitais.
-      </p>
-
-      <button
-        type="button"
-        onClick={() => {
-          alreadyOfferedExtraLifeRef.current = false;
-          setHasStartedGame(true);
-        }}
-      >
-        Iniciar jogo
-      </button>
-    </div>
-  </div> ) : game.slug === "hangar-dos-modelos" ? (
-  <div className="game-screen hangar-modelos-cover">
-    <div className="hangar-floating-vehicles" aria-hidden="true">
-      <span>✈️</span>
-      <span>🚁</span>
-      <span>🚀</span>
-      <span>🚗</span>
-      <span>🚌</span>
-      <span>🚲</span>
-    </div>
-
-    <div className="hangar-modelos-overlay">
-      <div className="hangar-modelos-badge">
-        ✈️ Classificação de veículos
-      </div>
-
-      <h1>Hangar dos Modelos</h1>
-
-      <p>
-        Compare veículos, descubra características em comum e aprenda a
-        classificar modelos por atributos como voo, rodas, motor e meio de
-        transporte.
-      </p>
-
-      <button
-        type="button"
-        onClick={() => {
-          alreadyOfferedExtraLifeRef.current = false;
-          setHasStartedGame(true);
-        }}
-      >
-        Iniciar jogo
-      </button>
-    </div>
-  </div>
-) : (
-              <div className="game-screen">
-                <h2>{game.title}</h2>
-
-                <p>
-                  Prepare-se para começar. Você está com{" "}
-                  <strong>{gameLives}</strong> vida
-                  {gameLives !== 1 ? "s" : ""}.
-                </p>
-
-                <div className="game-actions">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      alreadyOfferedExtraLifeRef.current = false;
-                      setHasStartedGame(true);
-                    }}
-                  >
-                    {currentLevel === 1
-                      ? "Iniciar jogo"
-                      : `Continuar no nível ${currentLevel}`}
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={handleBuyLife}
-                    disabled={points < extraLifeCost}
-                  >
-                    Comprar +1 vida
-                  </button>
+                      <button
+                        type="button"
+                        className="game-entry-secondary"
+                        onClick={() => {
+                          playBeep();
+                          setShowInstructions(true);
+                        }}
+                      >
+                        <span aria-hidden="true">⚙</span>
+                        Instruções
+                      </button>
+                    </div>
+                    </>
+                  )}
                 </div>
               </div>
             )
@@ -907,7 +791,12 @@ onTouchStart={(e) => {
               <button
                 type="button"
                 className="game-over-primary-btn"
-                onClick={handleBuyLife}
+                onClick={() => {
+                  handleBuyLife();
+                  if (!isPixelSecreto) {
+                    gameBridge.send({ type: 'RESUME_GAME' });
+                  }
+                }}
               >
                 Comprar vida
               </button>
@@ -918,6 +807,9 @@ onTouchStart={(e) => {
                 onClick={() => {
                   setShowNoLivesModal(false);
                   resumePixelSecreto();
+                  if (!isPixelSecreto) {
+                    gameBridge.send({ type: 'RESUME_GAME' });
+                  }
                 }}
               >
                 Continuar assim
@@ -949,8 +841,6 @@ onTouchStart={(e) => {
       <h1 className="game-over-title">GAME OVER</h1>
 
       <p className="game-over-text">
-        Você errou novamente sem vidas disponíveis.
-        <br />
         O jogo foi bloqueado.
         {blockedUntil && (
           <>
@@ -963,19 +853,24 @@ onTouchStart={(e) => {
       </p>
 
       <p className="game-over-warning">
-        Você pode desbloquear agora usando {unlockCost} pontos.
+        {blocked ? (
+          <>Você pode desbloquear agora usando {unlockCost} pontos. Você tem {points} ponto{points !== 1 ? 's' : ''}.</>
+        ) : (
+          <>Este jogo já está liberado. Você pode voltar aos jogos ou iniciar novamente.</>
+        )}
       </p>
 
       <div className="game-over-actions">
-        <button
-          type="button"
-          className="game-over-primary-btn"
-          onClick={() => {
-            setShowUnlockModal(true);
-          }}
-        >
-          Desbloquear jogo
-        </button>
+        {blocked && (
+          <button
+            type="button"
+            className="game-over-primary-btn"
+            onClick={handleUnlock}
+            disabled={points < unlockCost}
+          >
+            Desbloquear jogo
+          </button>
+        )}
 
         <button
           type="button"
@@ -983,7 +878,7 @@ onTouchStart={(e) => {
           onClick={() => {
             setShowGameOverModal(false);
             setHasStartedGame(false);
-            navigate("/", { replace: true });
+            navigate(-1);
           }}
         >
           Voltar aos jogos
@@ -994,16 +889,6 @@ onTouchStart={(e) => {
 )}
 
       <ConfirmModal
-        isOpen={showUnlockModal}
-        title="Desbloquear jogo"
-        message={`Deseja desbloquear o jogo "${game.title}" por ${unlockCost} pontos?`}
-        confirmText="Confirmar"
-        cancelText="Cancelar"
-        onConfirm={handleUnlock}
-        onCancel={() => setShowUnlockModal(false)}
-      />
-
-      <ConfirmModal
         isOpen={showCongratsModal}
         title="🏆 Parabéns! Você concluiu o jogo!"
         message={`Você completou todos os 3 níveis de "${game.title}". Excelente trabalho! Deseja jogar novamente ou voltar aos jogos?`}
@@ -1011,6 +896,16 @@ onTouchStart={(e) => {
         cancelText="Voltar aos jogos"
         onConfirm={handleCongratsPlayAgain}
         onCancel={handleCongratsExit}
+      />
+
+      <ConfirmModal
+        isOpen={showPostUnlockLifeModal}
+        title="Jogo desbloqueado"
+        message={`O jogo "${game.title}" foi desbloqueado e está com 0 vidas. Deseja comprar +1 vida por ${extraLifeCost} pontos agora?`}
+        confirmText="Comprar vida"
+        cancelText="Depois"
+        onConfirm={handleBuyLife}
+        onCancel={() => setShowPostUnlockLifeModal(false)}
       />
 
       {toast && (

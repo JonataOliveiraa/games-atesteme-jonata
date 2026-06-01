@@ -1,4 +1,18 @@
 import Phaser from 'phaser'
+import bgGardenUrl from '../../../assets/games/EF01CO01/bg-garden.png'
+import shelfWoodUrl from '../../../assets/games/EF01CO01/shelf-wood.png'
+import sunUrl from '../../../assets/games/EF01CO01/sun.png'
+import planterBoxUrl from '../../../assets/games/EF01CO01/planter-box.png'
+import planterBoxRedUrl from '../../../assets/games/EF01CO01/planter-box-red.png'
+import planterBoxBlueUrl from '../../../assets/games/EF01CO01/planter-box-blue.png'
+import planterBoxGreenUrl from '../../../assets/games/EF01CO01/planter-box-green.png'
+import planterBoxYellowUrl from '../../../assets/games/EF01CO01/planter-box-yellow.png'
+import planterBoxPurpleCircleUrl from '../../../assets/games/EF01CO01/planter-box-purple-circle.png'
+import planterBoxRedSquareUrl from '../../../assets/games/EF01CO01/planter-box-red-square.png'
+import planterBoxBlueTriangleUrl from '../../../assets/games/EF01CO01/planter-box-blue-triangle.png'
+import planterBoxGreenRectangleUrl from '../../../assets/games/EF01CO01/planter-box-green-rectangle.png'
+import woodSignUrl from '../../../assets/games/EF01CO01/wood-sign.png'
+import flowerIconUrl from '../../../assets/games/EF01CO01/flower-icon.png'
 
 /**
  * BootScene — carrega todos os assets e gera texturas programáticas.
@@ -25,6 +39,21 @@ export class BootScene extends Phaser.Scene {
   preload() {
     this.createLoadingBar()
 
+    this.load.image('bg-garden', bgGardenUrl)
+    this.load.image('shelf-wood', shelfWoodUrl)
+    this.load.image('sun', sunUrl)
+    this.load.image('planter-box', planterBoxUrl)
+    this.load.image('planter-box-red',              planterBoxRedUrl)
+    this.load.image('planter-box-blue',             planterBoxBlueUrl)
+    this.load.image('planter-box-green',            planterBoxGreenUrl)
+    this.load.image('planter-box-yellow',           planterBoxYellowUrl)
+    this.load.image('planter-box-purple-circle',    planterBoxPurpleCircleUrl)
+    this.load.image('planter-box-red-square',       planterBoxRedSquareUrl)
+    this.load.image('planter-box-blue-triangle',    planterBoxBlueTriangleUrl)
+    this.load.image('planter-box-green-rectangle',  planterBoxGreenRectangleUrl)
+    this.load.image('wood-sign', woodSignUrl)
+    this.load.image('flower-icon', flowerIconUrl)
+
     // TODO: atlas de itens
     // this.load.atlas('items', 'assets/images/items.png', 'assets/images/items.json')
 
@@ -43,6 +72,18 @@ export class BootScene extends Phaser.Scene {
 
   create() {
     this.generateItemTextures()
+    this.removeWhiteBackground('shelf-wood')
+    this.removeWhiteBackground('planter-box')
+    this.removeWhiteBackground('planter-box-red')
+    this.removeWhiteBackground('planter-box-blue')
+    this.removeWhiteBackground('planter-box-green')
+    this.removeWhiteBackground('planter-box-yellow')
+    this.removeWhiteBackground('planter-box-purple-circle')
+    this.removeWhiteBackground('planter-box-red-square')
+    this.removeWhiteBackground('planter-box-blue-triangle')
+    this.removeWhiteBackground('planter-box-green-rectangle')
+    this.removeWhiteBackground('wood-sign')
+    this.removeWhiteBackground('flower-icon')
     this.scene.start('GameScene')
   }
 
@@ -104,6 +145,7 @@ export class BootScene extends Phaser.Scene {
       azul:     0x1E88E5,
       verde:    0x43A047,
       amarelo:  0xFDD835,
+      roxo:     0x8E24AA,
     }
 
     const sizeMap: Record<string, number> = {
@@ -112,10 +154,11 @@ export class BootScene extends Phaser.Scene {
       grande:  100,
     }
 
-    const cores    = ['vermelho', 'azul', 'verde', 'amarelo']
+    const cores    = ['vermelho', 'azul', 'verde', 'amarelo', 'roxo']
     const formas   = ['circulo', 'quadrado', 'triangulo', 'retangulo']
     const tamanhos = ['pequeno', 'medio', 'grande']
 
+    // Formas geométricas (todos os níveis)
     for (const cor of cores) {
       for (const forma of formas) {
         for (const tamanho of tamanhos) {
@@ -134,6 +177,51 @@ export class BootScene extends Phaser.Scene {
         }
       }
     }
+
+    // Manchas de cor puras para o nível 1 (sem ênfase em forma)
+    for (const cor of cores) {
+      for (const tamanho of tamanhos) {
+        const key = `item-${cor}-swatch-${tamanho}`
+        if (this.textures.exists(key)) continue
+
+        const size    = sizeMap[tamanho]
+        const fill    = colorMap[cor]
+        const canvasW = size + 20
+        const canvasH = size + 20
+
+        const gfx = this.add.graphics()
+        this.drawColorSwatch(gfx, size, fill)
+        gfx.generateTexture(key, canvasW, canvasH)
+        gfx.destroy()
+      }
+    }
+  }
+
+  private drawColorSwatch(gfx: Phaser.GameObjects.Graphics, size: number, fill: number) {
+    const half   = size / 2
+    const cx     = half + 7
+    const cy     = half + 7
+    const radius = Math.round(size * 0.30)  // gel: very rounded
+
+    // Drop shadow
+    gfx.fillStyle(0x000000, 0.22)
+    gfx.fillRoundedRect(cx - half + 6, cy - half + 7, size, size, radius)
+
+    // Main gel body
+    gfx.fillStyle(fill, 1)
+    gfx.fillRoundedRect(cx - half, cy - half, size, size, radius)
+
+    // Subtle border
+    gfx.lineStyle(2, 0x000000, 0.14)
+    gfx.strokeRoundedRect(cx - half, cy - half, size, size, radius)
+
+    // Large soft highlight (gel look)
+    gfx.fillStyle(0xFFFFFF, 0.36)
+    gfx.fillRoundedRect(cx - half + 6, cy - half + 5, size * 0.52, size * 0.34, radius * 0.65)
+
+    // Specular dot (top-left)
+    gfx.fillStyle(0xFFFFFF, 0.65)
+    gfx.fillCircle(cx - half * 0.44, cy - half * 0.44, size * 0.10)
   }
 
   // ── Desenho de formas ────────────────────────────────────────────────────
@@ -161,32 +249,36 @@ export class BootScene extends Phaser.Scene {
 
     switch (forma) {
       case 'circulo': {
-        // Sombra
         gfx.fillStyle(shadow, 0.28)
-        gfx.fillCircle(cx + 5, cy + 5, half)
-        // Corpo
+        gfx.fillCircle(cx + 5, cy + 6, half)
         gfx.fillStyle(fill, 1)
         gfx.fillCircle(cx, cy, half)
-        // Contorno
-        gfx.lineStyle(4, 0x000000, 0.55)
+        gfx.lineStyle(4, 0x000000, 0.50)
         gfx.strokeCircle(cx, cy, half)
-        // Brilho
-        gfx.fillStyle(0xFFFFFF, 0.45)
-        gfx.fillCircle(cx - half * 0.28, cy - half * 0.28, half * 0.22)
+        // Gel highlight — large soft area
+        gfx.fillStyle(0xFFFFFF, 0.35)
+        gfx.fillCircle(cx - half * 0.18, cy - half * 0.22, half * 0.40)
+        // Specular dot
+        gfx.fillStyle(0xFFFFFF, 0.65)
+        gfx.fillCircle(cx - half * 0.30, cy - half * 0.30, half * 0.14)
         break
       }
 
       case 'quadrado': {
         const x0 = cx - half
         const y0 = cy - half
+        const r  = Math.round(size * 0.18)
         gfx.fillStyle(shadow, 0.28)
-        gfx.fillRect(x0 + 5, y0 + 5, size, size)
+        gfx.fillRoundedRect(x0 + 5, y0 + 5, size, size, r)
         gfx.fillStyle(fill, 1)
-        gfx.fillRect(x0, y0, size, size)
-        gfx.lineStyle(4, 0x000000, 0.55)
-        gfx.strokeRect(x0, y0, size, size)
-        gfx.fillStyle(0xFFFFFF, 0.45)
-        gfx.fillRect(x0 + 5, y0 + 5, size * 0.32, size * 0.32)
+        gfx.fillRoundedRect(x0, y0, size, size, r)
+        gfx.lineStyle(4, 0x000000, 0.50)
+        gfx.strokeRoundedRect(x0, y0, size, size, r)
+        // Gel highlight
+        gfx.fillStyle(0xFFFFFF, 0.40)
+        gfx.fillRoundedRect(x0 + 6, y0 + 5, size * 0.40, size * 0.28, r * 0.5)
+        gfx.fillStyle(0xFFFFFF, 0.55)
+        gfx.fillCircle(x0 + size * 0.22, y0 + size * 0.22, size * 0.09)
         break
       }
 
@@ -211,16 +303,45 @@ export class BootScene extends Phaser.Scene {
         const rh = size * 0.55
         const rx = cx - half
         const ry = cy - rh / 2
+        const rr = Math.round(rh * 0.22)
         gfx.fillStyle(shadow, 0.28)
-        gfx.fillRect(rx + 5, ry + 5, size, rh)
+        gfx.fillRoundedRect(rx + 5, ry + 5, size, rh, rr)
         gfx.fillStyle(fill, 1)
-        gfx.fillRect(rx, ry, size, rh)
-        gfx.lineStyle(4, 0x000000, 0.55)
-        gfx.strokeRect(rx, ry, size, rh)
-        gfx.fillStyle(0xFFFFFF, 0.45)
-        gfx.fillRect(rx + 5, ry + 5, size * 0.32, rh * 0.38)
+        gfx.fillRoundedRect(rx, ry, size, rh, rr)
+        gfx.lineStyle(4, 0x000000, 0.50)
+        gfx.strokeRoundedRect(rx, ry, size, rh, rr)
+        // Gel highlight
+        gfx.fillStyle(0xFFFFFF, 0.40)
+        gfx.fillRoundedRect(rx + 6, ry + 5, size * 0.38, rh * 0.36, rr * 0.5)
+        gfx.fillStyle(0xFFFFFF, 0.55)
+        gfx.fillCircle(rx + size * 0.20, ry + rh * 0.25, rh * 0.14)
         break
       }
     }
+  }
+
+  // Remove pixels brancos/quase-brancos de uma textura carregada,
+  // substituindo-a por uma versão com canal alpha transparente nessas áreas.
+  private removeWhiteBackground(key: string, threshold = 230) {
+    if (!this.textures.exists(key)) return
+
+    const source = this.textures.get(key).getSourceImage() as HTMLImageElement
+    const canvas = document.createElement('canvas')
+    canvas.width  = source.naturalWidth
+    canvas.height = source.naturalHeight
+    const ctx = canvas.getContext('2d')!
+    ctx.drawImage(source, 0, 0)
+
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
+    const d = imageData.data
+    for (let i = 0; i < d.length; i += 4) {
+      if (d[i] > threshold && d[i + 1] > threshold && d[i + 2] > threshold) {
+        d[i + 3] = 0   // torna transparente
+      }
+    }
+    ctx.putImageData(imageData, 0, 0)
+
+    this.textures.remove(key)
+    this.textures.addCanvas(key, canvas)
   }
 }

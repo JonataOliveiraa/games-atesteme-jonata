@@ -57,9 +57,14 @@ export default function GameCard({ game }: Props) {
         onClick={handleClick}
       >
         <div className={`game-card ${blocked ? "game-card-disabled" : ""}`}>
-          <div className="game-card-top">
-            <div className="game-icon-box">{game.icon}</div>
-          </div>
+          <div
+            className="game-card-top"
+            style={
+              game.thumbnail
+                ? { backgroundImage: `url(${game.thumbnail})` }
+                : undefined
+            }
+          />
 
           <div className="game-card-content">
             <h3>{game.title}</h3>

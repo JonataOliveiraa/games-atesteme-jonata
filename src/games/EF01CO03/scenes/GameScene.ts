@@ -1,1050 +1,1332 @@
-import * as Phaser from "phaser";
-import { EventBus } from "../../../shared/EventBus";
-import { runtimeGameBridge } from "../../../shared/bridge/runtimeGameBridge";
-import type { PlatformCommand } from "../../../shared/contracts/platformCommands";
-import { LEVELS } from "../data/levels";
-import type { AlgorithmCard, AlgorithmLevel } from "../types";
+import Phaser from 'phaser';
 
-interface CardSprite extends Phaser.GameObjects.Container {
-  cardData: AlgorithmCard;
-  originX_: number;
-  originY_: number;
-}
+import { EventBus } from '../../../shared/EventBus';
+import { gameBridge } from '../../../shared/bridge/gameBridge';
+import type { PlatformCommand } from '../../../shared/contracts/platformCommands';
+import { LEVELS } from '../data/levels';
+import type { AlgorithmCard, AlgorithmLevel } from '../types';
 
-const GAME_ID = "oficina-dos-algoritmos";
-const TIMER_BAR_Y = 55;
-const TIMER_BAR_W = 900;
-
-export class GameScene extends Phaser.Scene {
-  private levelStarted = false;
-  private overlayObjects: Phaser.GameObjects.GameObject[] = [];
-  private levelConfig!: AlgorithmLevel;
-  private cardSprites: CardSprite[] = [];
-  private slots: Phaser.GameObjects.Rectangle[] = [];
-  private placedCards: Array<CardSprite | null> = [];
-  private hasStartedTimer = false;
-
-  private hits = 0;
-  private errors = 0;
-  private scoredCorrectCards = new Set<string>();
-
-  private timerEvent?: Phaser.Time.TimerEvent;
-  private timerBar?: Phaser.GameObjects.Rectangle;
-
-  private unsubscribePlatformCommands?: () => void;
-
-  private clearOverlay() {
-  this.overlayObjects.forEach((object) => object.destroy());
-  this.overlayObjects = [];
-}
-
-private startTimerOnce() {
-  if (this.hasStartedTimer) return;
-
-  this.hasStartedTimer = true;
-  this.startTimer();
-}
-
-private addOverlayObject<T extends Phaser.GameObjects.GameObject>(object: T): T {
-  this.overlayObjects.push(object);
-  return object;
-}
-
-private getLevelInstructions() {
-  if (this.levelConfig.level === 1) {
-    return {
-      title: "Nível 1 - Primeiros passos",
-      objective: "Organize os comandos na ordem correta.",
-      tip: "Observe a sequência e pense no que deve acontecer primeiro.",
-    };
-  }
-  
-  if (this.levelConfig.level === 2) {
-    return {
-      title: "Nível 2 - Sequência lógica",
-      objective: "Monte um algoritmo com mais etapas.",
-      tip: "A ordem dos comandos muda o resultado final.",
-    };
-  }
-
-  return {
-    title: "Nível 3 - Desafio final",
-    objective: "Resolva uma sequência mais complexa.",
-    tip: "Analise tudo antes de testar o algoritmo.",
-  };
-}
-
-private showStartScreen() {
-  this.clearOverlay();
-  this.levelStarted = false;
-  this.input.enabled = true;
-
-  const info = this.getLevelInstructions();
-
-  this.addOverlayObject(
-    this.add.rectangle(640, 360, 1280, 720, 0xf5f3ff, 0.98).setDepth(300)
-  );
-
-  this.addOverlayObject(
-  this.add
-    .text(640, 115, "⚙️", {
-      fontSize: "64px",
-      fontFamily: "Arial",
-      padding: {
-        top: 18,
-        bottom: 18,
-        left: 18,
-        right: 18,
-      },
-    })
-    .setOrigin(0.5)
-    .setDepth(301)
-);
-
-  this.addOverlayObject(
-    this.add.text(640, 210, info.title, {
-      fontSize: "44px",
-      fontFamily: "Arial Black, Arial",
-      color: "#4338ca",
-      stroke: "#ffffff",
-      strokeThickness: 6,
-      align: "center",
-      wordWrap: { width: 920 },
-    })
-      .setOrigin(0.5)
-      .setDepth(301)
-  );
-
-  this.addOverlayObject(
-    this.add.rectangle(640, 380, 900, 230, 0xffffff, 0.9)
-      .setStrokeStyle(5, 0x818cf8)
-      .setDepth(301)
-  );
-
-  this.addOverlayObject(
-    this.add.text(640, 335, `🎯 ${info.objective}`, {
-      fontSize: "28px",
-      fontFamily: "Arial Black, Arial",
-      color: "#334155",
-      align: "center",
-      wordWrap: { width: 760 },
-    })
-      .setOrigin(0.5)
-      .setDepth(302)
-  );
-
-  this.addOverlayObject(
-    this.add.text(640, 430, `💡 ${info.tip}`, {
-      fontSize: "24px",
-      fontFamily: "Arial",
-      color: "#475569",
-      align: "center",
-      wordWrap: { width: 760 },
-    })
-      .setOrigin(0.5)
-      .setDepth(302)
-  );
-
-  const button = this.addOverlayObject(
-    this.add.rectangle(640, 585, 330, 70, 0x6366f1, 1)
-      .setStrokeStyle(4, 0xffffff)
-      .setInteractive({ useHandCursor: true })
-      .setDepth(302)
-  );
-
-  const buttonText = this.addOverlayObject(
-    this.add.text(640, 585, "Iniciar nível", {
-      fontSize: "28px",
-      fontFamily: "Arial Black, Arial",
-      color: "#ffffff",
-    })
-      .setOrigin(0.5)
-      .setDepth(303)
-  );
-
-  const start = () => {
-    this.playClick();
-  this.clearOverlay();
-
-  if (this.levelConfig.level === 1) {
-    this.showTutorialStep(0);
-    return;
-  }
-
-  this.levelStarted = true;
+type AlgorithmStep = AlgorithmCard & {
+  correctOrder: number | null;
 };
 
-  button.on("pointerdown", start);
-  buttonText.setInteractive({ useHandCursor: true });
-  buttonText.on("pointerdown", start);
-}
+const GAME_WIDTH = 960;
+const GAME_HEIGHT = 540;
+const GAME_ID = 'oficina-dos-algoritmos';
+const CARD_WIDTH = 112;
+const CARD_HEIGHT = 116;
+const CARD_IMAGE_WIDTH = 88;
+const CARD_IMAGE_HEIGHT = 72;
+const CARD_RADIUS = 20;
+const CARD_HITBOX_WIDTH = CARD_WIDTH;
+const CARD_HITBOX_HEIGHT = CARD_HEIGHT;
+
+const COLORS = {
+  orange: 0xf57c00,
+  blue: 0x45c6f0,
+  green: 0x42d640,
+  softOrange: 0xff8a2a,
+  cream: 0xfff6e8,
+  cyan: 0x35c5df,
+};
+
+export class GameScene extends Phaser.Scene {
+  private sequenceSlots: Phaser.GameObjects.Container[] = [];
+  private placedOrder: Array<number | null> = [];
+  private testButton?: Phaser.GameObjects.Container;
+  private testButtonBg?: Phaser.GameObjects.Graphics;
+  private testButtonText?: Phaser.GameObjects.Text;
+  private isTestButtonEnabled = false;
+  private currentLevel: AlgorithmLevel = LEVELS[0];
+  private steps: AlgorithmStep[] = [];
+  private currentPoints = 0;
+  private currentLives = 0;
+  private hits = 0;
+  private errors = 0;
+  private hasCompletedLevel = false;
+  private unsubscribePlatformCommands?: () => void;
+  private timeBarFill?: Phaser.GameObjects.Graphics;
+  private timerTween?: Phaser.Tweens.Tween;
+  private timerState = { progress: 1 };
+  private hasStartedTimer = false;
+  private timerDuration = 30000;
+  private shouldShowLevelStart = false;
+  private fallbackAudioContext?: AudioContext;
 
   constructor() {
-    super({ key: "GameScene" });
+    super('GameScene');
   }
 
-  init(data: { level?: number }) {
-    const lvl = (data?.level ?? 1) as 1 | 2 | 3;
-    this.levelConfig = LEVELS.find((item) => item.level === lvl) ?? LEVELS[0];
+  init(data?: { level?: number; points?: number; lives?: number; showLevelStart?: boolean }) {
+    const requestedLevel = data?.level ?? 1;
+    this.currentLevel = LEVELS.find((level) => level.level === requestedLevel) ?? LEVELS[0];
+    this.currentPoints = data?.points ?? this.currentPoints;
+    this.currentLives = data?.lives ?? this.currentLives;
+    this.hits = 0;
+    this.errors = 0;
+    this.hasCompletedLevel = false;
+    this.hasStartedTimer = false;
+    this.shouldShowLevelStart = data?.showLevelStart ?? false;
+    this.timerDuration = this.currentLevel.timeLimit * 1000;
 
-    this.cardSprites = [];
-this.slots = [];
-this.placedCards = [];
-this.hits = 0;
-this.errors = 0;
-this.levelStarted = false;
-this.hasStartedTimer = false;
-this.timerEvent?.destroy();
-this.timerEvent = undefined;
-this.timerBar = undefined;
-this.scoredCorrectCards = new Set<string>();}
+    const expectedOrder = new Map(
+      this.currentLevel.correctOrder.map((id, index) => [id, index + 1])
+    );
+    this.steps = [
+      ...this.currentLevel.cards,
+      ...(this.currentLevel.distractors ?? []),
+    ].map((card) => ({
+      ...card,
+      correctOrder: expectedOrder.get(card.id) ?? null,
+    }));
+    this.placedOrder = this.currentLevel.correctOrder.map(() => null);
+    this.sequenceSlots = [];
+  }
 
   create() {
-  this.createBackground();
-  this.createTitle();
-  this.createTimerBar();
-  this.createSlots();
-  this.createCards();
-  this.createTestButton();
-  this.setupDrag();
-  this.registerPlatformCommands();
+    this.createBackground();
+    this.createTimeBar();
+    this.createTitle();
+    this.createSequencePanel();
+    this.createSequenceSlots();
+    this.createCardsArea();
+    this.createCards();
+    this.createButton();
+    this.registerDragEvents();
+    this.registerPlatformCommands();
+    this.emitReady();
+    this.emitCheckpoint();
 
-  EventBus.emit("algorithm-level-ready", {
-    levelConfig: this.levelConfig,
-  });
-
-  runtimeGameBridge.emit({
-    type: "GAME_READY",
-    gameId: GAME_ID,
-  });
-
-  this.emitProgress();
-
-this.time.delayedCall(80, () => {
-  this.showStartScreen();
-});
-  }
-  
-  update() {
-    if (!this.timerEvent || !this.timerBar) return;
-
-    const remaining = this.timerEvent.getRemaining();
-    const total = (this.levelConfig.timeLimit ?? 60) * 1000;
-    const pct = Math.max(0, remaining / total);
-
-    this.timerBar.setSize(TIMER_BAR_W * pct, 20);
-
-    if (pct > 0.5) this.timerBar.setFillStyle(0x22c55e);
-    else if (pct > 0.25) this.timerBar.setFillStyle(0xf59e0b);
-    else this.timerBar.setFillStyle(0xef4444);
-  }
-
-  shutdown() {
-    this.timerEvent?.destroy();
-
-    if (this.unsubscribePlatformCommands) {
-      this.unsubscribePlatformCommands();
-      this.unsubscribePlatformCommands = undefined;
+    if (this.shouldShowLevelStart && this.currentLevel.level > 1) {
+      this.showNextLevelStartScreen();
     }
   }
-
-  private showTutorialStep(stepIndex: number) {
-  this.clearOverlay();
-
-  const steps = [
-    {
-      title: "Arraste os cartões",
-      description: "Pegue os cartões e coloque na sequência correta.",
-      emoji: "🖱️",
-    },
-    {
-      title: "Monte o algoritmo",
-      description: "A ordem dos passos é importante para completar a tarefa.",
-      emoji: "⚙️",
-    },
-    {
-      title: "Teste sua sequência",
-      description: "Clique no botão roxo para verificar se o algoritmo está correto.",
-      emoji: "✅",
-    },
-  ];
-
-  const step = steps[stepIndex];
-
-  this.addOverlayObject(
-    this.add.rectangle(640, 360, 1280, 720, 0x000000, 0.72)
-      .setDepth(400)
-  );
-
-  this.addOverlayObject(
-    this.add.rectangle(640, 300, 760, 260, 0xffffff, 1)
-      .setStrokeStyle(6, 0x8b5cf6)
-      .setDepth(401)
-  );
-
-  this.addOverlayObject(
-    this.add.text(640, 225, step.emoji, {
-      fontSize: "70px",
-      fontFamily: "Arial",
-      padding: {
-        top: 12,
-        bottom: 12,
-      },
-    })
-      .setOrigin(0.5)
-      .setDepth(402)
-  );
-
-  this.addOverlayObject(
-    this.add.text(640, 300, step.title, {
-      fontSize: "38px",
-      fontFamily: "Arial Black, Arial",
-      color: "#7c3aed",
-      align: "center",
-    })
-      .setOrigin(0.5)
-      .setDepth(402)
-  );
-
-  this.addOverlayObject(
-    this.add.text(640, 370, step.description, {
-      fontSize: "24px",
-      fontFamily: "Arial",
-      color: "#334155",
-      align: "center",
-      wordWrap: {
-        width: 620,
-      },
-    })
-      .setOrigin(0.5)
-      .setDepth(402)
-  );
-
-  const isLast = stepIndex >= steps.length - 1;
-
-  const button = this.addOverlayObject(
-    this.add.rectangle(
-      930,
-      300,
-      80,
-      80,
-      0x8b5cf6,
-      1
-    )
-      .setStrokeStyle(4, 0xffffff)
-      .setInteractive({ useHandCursor: true })
-      .setDepth(403)
-  );
-
-  const buttonText = this.addOverlayObject(
-    this.add.text(
-      930,
-      300,
-      isLast ? "▶" : "→",
-      {
-        fontSize: "40px",
-        fontFamily: "Arial Black, Arial",
-        color: "#ffffff",
-      }
-    )
-      .setOrigin(0.5)
-      .setDepth(404)
-  );
-
-  const next = () => {
-    this.playClick();
-
-    if (isLast) {
-      this.clearOverlay();
-      this.levelStarted = true;
-      return;
-    }
-
-    this.showTutorialStep(stepIndex + 1);
-  };
-
-  button.on("pointerdown", next);
-
-  buttonText.setInteractive({ useHandCursor: true });
-  buttonText.on("pointerdown", next);
-}
 
   private createBackground() {
-    this.add.rectangle(640, 360, 1280, 720, 0xf3e8ff);
-    this.add.rectangle(640, 180, 1280, 360, 0xdbeafe, 0.55);
-    this.add.rectangle(640, 520, 1280, 380, 0xfef3c7, 0.55);
+    const backgroundKey =
+      this.currentLevel.level === 2
+        ? 'bg-03-level-2'
+        : this.currentLevel.level === 3
+          ? 'bg-03-level-3'
+          : 'bg-03';
+    const bg = this.add.image(GAME_WIDTH / 2, GAME_HEIGHT / 2, backgroundKey);
+    this.coverImage(bg, GAME_WIDTH, GAME_HEIGHT);
+    bg.setDepth(0);
 
-    const colors = [0xc4b5fd, 0x93c5fd, 0xf9a8d4, 0xfcd34d, 0x86efac];
-
-    for (let i = 0; i < 14; i++) {
-      const circle = this.add.circle(
-        Phaser.Math.Between(40, 1240),
-        Phaser.Math.Between(85, 680),
-        Phaser.Math.Between(20, 56),
-        Phaser.Utils.Array.GetRandom(colors),
-        0.22
-      );
-
-      this.tweens.add({
-        targets: circle,
-        y: circle.y + Phaser.Math.Between(-16, 16),
-        x: circle.x + Phaser.Math.Between(-10, 10),
-        duration: 2200 + i * 150,
-        yoyo: true,
-        repeat: -1,
-        ease: "Sine.easeInOut",
-      });
-    }
-
-    this.add
-      .rectangle(640, 385, 1110, 465, 0xffffff, 0.42)
-      .setStrokeStyle(3, 0xffffff, 0.6);
+    const overlay = this.add.graphics();
+    overlay.fillStyle(0xffffff, 0.05);
+    overlay.fillRoundedRect(0, 0, GAME_WIDTH, GAME_HEIGHT, 28);
+    overlay.setDepth(1);
   }
 
-  private createTitle() {
-    this.add
-      .text(640, 130, this.levelConfig.title, {
-        fontSize: "42px",
-        fontFamily: "Arial Black, Arial",
-        color: "#5b21b6",
-        stroke: "#ffffff",
-        strokeThickness: 5,
-      })
-      .setOrigin(0.5);
+  private createTimeBar() {
+    const x = 210;
+    const y = this.currentLevel.level === 1 ? 22 : 16;
+    const width = 540;
+    const height = 24;
 
-    this.add
-      .text(640, 175, "Arraste os cartões na ordem correta e teste seu algoritmo.", {
-        fontSize: "22px",
-        fontFamily: "Arial",
-        color: "#334155",
-      })
-      .setOrigin(0.5);
+    const bg = this.add.graphics();
+    bg.fillStyle(0xdff2bc, 1);
+    bg.fillRoundedRect(x, y, width, height, 12);
+    bg.setDepth(6);
+
+    this.timeBarFill = this.add.graphics();
+    this.timeBarFill.setData('barX', x);
+    this.timeBarFill.setData('barY', y);
+    this.timeBarFill.setData('barWidth', width);
+    this.timeBarFill.setData('barHeight', height);
+    this.timeBarFill.setDepth(7);
+
+    this.drawTimeBar(1);
   }
 
-  private createTimerBar() {
-    this.add
-      .rectangle(640, TIMER_BAR_Y, TIMER_BAR_W + 8, 28, 0x334155, 0.4)
-      .setStrokeStyle(2, 0x64748b)
-      .setDepth(5);
+  private drawTimeBar(progress: number) {
+    if (!this.timeBarFill) return;
 
-    this.timerBar = this.add
-      .rectangle(640 - TIMER_BAR_W / 2, TIMER_BAR_Y, TIMER_BAR_W, 20, 0x22c55e)
-      .setOrigin(0, 0.5)
-      .setDepth(6);
+    const x = this.timeBarFill.getData('barX') as number;
+    const y = this.timeBarFill.getData('barY') as number;
+    const barWidth = this.timeBarFill.getData('barWidth') as number;
+    const barHeight = this.timeBarFill.getData('barHeight') as number;
+    const width = barWidth * Phaser.Math.Clamp(progress, 0, 1);
 
-    this.add
-      .text(640, TIMER_BAR_Y - 25, "Tempo", {
-        fontSize: "16px",
-        fontFamily: "Arial Black, Arial",
-        color: "#334155",
-        stroke: "#ffffff",
-        strokeThickness: 3,
-      })
-      .setOrigin(0.5)
-      .setDepth(7);
+    this.timeBarFill.clear();
+    this.timeBarFill.fillStyle(0x7ed321, 1);
+    this.timeBarFill.fillRoundedRect(x, y, width, barHeight, barHeight / 2);
   }
 
   private startTimer() {
-    this.timerEvent?.destroy();
+    if (this.hasStartedTimer) return;
 
-    this.timerEvent = this.time.addEvent({
-      delay: (this.levelConfig.timeLimit ?? 60) * 1000,
-      callback: this.onTimeUp,
-      callbackScope: this,
+    this.hasStartedTimer = true;
+    this.timerState.progress = 1;
+    this.drawTimeBar(1);
+
+    this.timerTween = this.tweens.add({
+      targets: this.timerState,
+      progress: 0,
+      duration: this.timerDuration,
+      ease: 'Linear',
+      onUpdate: () => this.drawTimeBar(this.timerState.progress),
+      onComplete: () => {
+        this.drawTimeBar(0);
+        this.errors += 1;
+        this.currentLives = Math.max(0, this.currentLives - 1);
+        this.emitWrongAnswer();
+        this.emitCheckpoint();
+        this.showFeedback('Tempo esgotado!', false);
+      },
     });
   }
 
-  private onTimeUp() {
-    this.input.enabled = false;
-    this.timerEvent?.destroy();
-
-    this.playWrong();
-    this.showFloatingMessage("Tempo esgotado!", 0xef4444);
-
-    runtimeGameBridge.emit({
-      type: "GAME_OVER",
-      gameId: GAME_ID,
-      stage: this.levelConfig.level,
-    });
-  }
-
-  private createSlots() {
-    const total = this.levelConfig.correctOrder.length;
-
-    const slotW = total > 5 ? 120 : 150;
-    const gap = total > 5 ? 10 : 18;
-    const slotH = 110;
-
-    const totalWidth = total * slotW + (total - 1) * gap;
-    const startX = 640 - totalWidth / 2 + slotW / 2;
-
-    this.placedCards = Array(total).fill(null);
+  private createTitle() {
+    const isLevelOne = this.currentLevel.level === 1;
 
     this.add
-      .rectangle(640, 345, totalWidth + 95, 185, 0xffffff, 0.7)
-      .setStrokeStyle(3, 0xc4b5fd);
-
-    this.add
-      .text(640, 260, "Sequência", {
-        fontSize: "21px",
-        fontFamily: "Arial Black, Arial",
-        color: "#7c3aed",
-        stroke: "#ffffff",
+      .text(480, isLevelOne ? 80 : 58, this.currentLevel.title, {
+        fontFamily: 'Arial',
+        fontSize: '30px',
+        fontStyle: 'bold',
+        color: '#ffffff',
+        stroke: '#1b2559',
         strokeThickness: 4,
+        shadow: {
+          offsetX: 0,
+          offsetY: 2,
+          color: '#2d2d7a',
+          blur: 0,
+          fill: true,
+        },
       })
-      .setOrigin(0.5);
+      .setOrigin(0.5)
+      .setResolution(2)
+      .setDepth(10);
 
-    for (let i = 0; i < total; i++) {
-      const x = startX + i * (slotW + gap);
-      const y = 355;
+    this.add
+      .text(480, isLevelOne ? 112 : 84, this.currentLevel.objective, {
+        fontFamily: 'Arial',
+        fontSize: '15px',
+        fontStyle: 'bold',
+        color: '#ffffff',
+        stroke: '#1b2559',
+        strokeThickness: 3,
+        shadow: {
+          offsetX: 0,
+          offsetY: 1,
+          color: '#2d2d7a',
+          blur: 0,
+          fill: true,
+        },
+      })
+      .setOrigin(0.5)
+      .setResolution(2)
+      .setDepth(10);
+  }
 
-      const slot = this.add
-        .rectangle(x, y, slotW, slotH, 0xffffff, 0.96)
-        .setStrokeStyle(5, 0x8b5cf6);
+ private createSequencePanel() {
+  const shadow = this.add.graphics();
+  shadow.fillStyle(0x000000, 0.14);
 
-      this.add
-        .text(x, y - 68, `${i + 1}`, {
-          fontSize: "18px",
-          fontFamily: "Arial Black, Arial",
-          backgroundColor: "#8b5cf6",
-          color: "#ffffff",
-          padding: { x: 8, y: 4 },
-        })
-        .setOrigin(0.5)
-        .setDepth(20);
+  const slotCount = this.currentLevel.correctOrder.length;
+  const isLevelOne = this.currentLevel.level === 1;
+  const panelWidth = isLevelOne ? 508 : slotCount === 5 ? 760 : 820;
+  const panelX = isLevelOne ? 220 : 480 - panelWidth / 2;
+  const panelY = isLevelOne ? 130 : 118;
+  const shadowY = isLevelOne ? 138 : 126;
+  const panelHeight = 150;
+  const labelY = isLevelOne ? 145 : 134;
 
-      slot.setData("slotIndex", i);
-      this.slots.push(slot);
+  shadow.fillRoundedRect(panelX + 6, shadowY, panelWidth, panelHeight, 22);
+
+  shadow.setDepth(6);
+
+  const panel = this.add.graphics();
+
+  panel.fillStyle(0xffffff, 0.48);
+
+  panel.fillRoundedRect(panelX, panelY, panelWidth + 12, panelHeight, 22);
+
+  panel.lineStyle(3, 0xffffff, 0.75);
+
+  panel.strokeRoundedRect(panelX, panelY, panelWidth + 12, panelHeight, 22);
+
+  panel.setDepth(7);
+
+  this.add
+    .text(480, labelY, 'Sequência', {
+      fontFamily: 'Arial',
+      fontSize: '17px',
+      fontStyle: 'bold',
+      color: '#25327a',
+
+      shadow: {
+        offsetX: 0,
+        offsetY: 1,
+        color: '#ffffff',
+        blur: 0,
+        fill: true,
+      },
+    })
+    .setOrigin(0.5)
+    .setResolution(2)
+    .setDepth(10);
+}
+
+  private createSequenceSlots() {
+    const count = this.currentLevel.correctOrder.length;
+    const isLevelOne = this.currentLevel.level === 1;
+    const spacing = count <= 3 ? 130 : count === 5 ? 140 : 124;
+    const startX = 480 - ((count - 1) * spacing) / 2;
+    const colors = [COLORS.blue, COLORS.green, COLORS.softOrange, COLORS.cyan, COLORS.orange, 0xa78bfa];
+    const y = isLevelOne ? 214 : 202;
+
+    for (let index = 0; index < count; index += 1) {
+      this.sequenceSlots.push(
+        this.createSlot(startX + index * spacing, y, colors[index % colors.length], String(index + 1))
+      );
     }
   }
 
+  private createSlot(x: number, y: number, color: number, label: string) {
+    const container = this.add.container(x, y);
+    container.setDepth(9);
+
+    const bg = this.add.image(0, 0, 'slot');
+    bg.texture.setFilter(Phaser.Textures.FilterMode.LINEAR);
+    bg.setDisplaySize(CARD_WIDTH, CARD_HEIGHT);
+    bg.setAlpha(0.98);
+
+    const number = this.add
+      .text(0, 0, label, {
+        fontFamily: 'Arial',
+        fontSize: '42px',
+        fontStyle: 'bold',
+        color: '#ffffff',
+        stroke: '#1b2559',
+        strokeThickness: 4,
+        shadow: {
+          offsetX: 0,
+          offsetY: 2,
+          color: '#3b3b8f',
+          blur: 0,
+          fill: true,
+        },
+      })
+      .setOrigin(0.5)
+      .setResolution(2);
+
+    container.add([bg, number]);
+    return container;
+  }
+
+  private createCardsArea() {
+    const shadow = this.add.graphics();
+    shadow.fillStyle(0x000000, 0.14);
+
+    const totalCards = this.steps.length;
+    const isLevelOne = this.currentLevel.level === 1;
+    const areaWidth = isLevelOne ? 408 : totalCards <= 6 ? 850 : 936;
+    const areaX = 480 - areaWidth / 2;
+
+    const areaY = isLevelOne ? 312 : 300;
+    const areaHeight = 132;
+
+    shadow.fillRoundedRect(areaX + 6, areaY + 8, areaWidth, areaHeight, 24);
+
+  shadow.setDepth(7);
+
+    const bg = this.add.graphics();
+
+    bg.fillStyle(0xffd54f, 0.68);
+    bg.fillRoundedRect(areaX, areaY, areaWidth + 12, areaHeight, 24);
+
+    bg.lineStyle(2, 0xffffff, 0.95);
+    bg.strokeRoundedRect(areaX, areaY, areaWidth + 12, areaHeight, 24);
+
+  bg.setDepth(8);
+}
+
   private createCards() {
-    const cards = Phaser.Utils.Array.Shuffle([
-      ...this.levelConfig.cards,
-      ...(this.levelConfig.distractors ?? []),
-    ]);
+    const shuffled = Phaser.Utils.Array.Shuffle([...this.steps]);
+    const isLevelOne = this.currentLevel.level === 1;
+    const cardsPerRow = isLevelOne ? shuffled.length : shuffled.length;
+    const spacing = isLevelOne ? 130 : shuffled.length <= 6 ? 136 : 116;
+    const visualScale = 1;
+    const rowY = [isLevelOne ? 378 : 366];
+    const startX = 480 - ((cardsPerRow - 1) * spacing) / 2;
 
-    this.add
-      .rectangle(640, 565, 1100, 150, 0xfef3c7, 0.95)
-      .setStrokeStyle(4, 0xf59e0b);
-
-    const cardW = cards.length > 6 ? 120 : 150;
-    const gap = cards.length > 6 ? 10 : 18;
-
-    const totalWidth = cards.length * cardW + (cards.length - 1) * gap;
-    const startX = 640 - totalWidth / 2 + cardW / 2;
-
-    cards.forEach((card, index) => {
-      const x = startX + index * (cardW + gap);
-      const y = 565;
-
-      const sprite = this.createCard(card, x, y);
-
-      if (cards.length > 6) {
-        sprite.setScale(0.9);
-      }
-
-      this.cardSprites.push(sprite);
+    shuffled.forEach((step, index) => {
+      const row = Math.floor(index / cardsPerRow);
+      const column = index % cardsPerRow;
+      this.createCard(startX + column * spacing, rowY[row], step, visualScale);
     });
   }
 
-  private createCard(card: AlgorithmCard, x: number, y: number): CardSprite {
-    const shadow = this.add.rectangle(4, 5, 150, 110, 0x000000, 0.12);
+  private createCard(x: number, y: number, step: AlgorithmStep, visualScale = 1) {
+    const container = this.add.container(x, y);
+    container.setSize(CARD_WIDTH, CARD_HEIGHT);
+    container.setScale(visualScale);
+    container.setDepth(12);
 
-    const bg = this.add
-      .rectangle(0, 0, 150, 110, 0xffffff, 1)
-      .setStrokeStyle(4, this.getCardColor(card.type));
+    const shadow = this.add.graphics();
+    shadow.fillStyle(0x000000, 0.13);
+    shadow.fillRoundedRect(
+      -CARD_WIDTH / 2 + 2,
+      -CARD_HEIGHT / 2 + 10,
+      CARD_WIDTH - 4,
+      CARD_HEIGHT - 4,
+      CARD_RADIUS
+    );
 
-    const emoji = this.add
-  .text(0, -18, card.emoji, {
-    fontSize: "28px",
-    fontFamily: "Arial",
-    align: "center",
-  })
-  .setOrigin(0.5);
+    const bg = this.add.graphics();
+    bg.fillStyle(COLORS.cream, 0.96);
+    bg.fillRoundedRect(-CARD_WIDTH / 2, -CARD_HEIGHT / 2, CARD_WIDTH, CARD_HEIGHT, CARD_RADIUS);
 
-const label = this.add
-  .text(0, 24, card.label, {
-    fontSize: "13px",
-    fontFamily: "Arial Black, Arial",
-    color: "#1e293b",
-    align: "center",
-    wordWrap: { width: 95 },
-    lineSpacing: -4,
-  })
-  .setOrigin(0.5);
+    const image = this.add.image(0, -22, step.assetKey);
+    image.texture.setFilter(Phaser.Textures.FilterMode.LINEAR);
+    this.fitImage(image, CARD_IMAGE_WIDTH, CARD_IMAGE_HEIGHT);
+    if (
+      this.currentLevel.level === 1 &&
+      (step.assetKey === 'cheese' || step.assetKey === 'sandwich')
+    ) {
+      image.setScale(image.scaleX * 0.88, image.scaleY * 0.88);
+    }
 
-const container = this.add.container(
-  x,
-  y,
-  [shadow, bg, emoji, label]
-) as CardSprite;
+    const text = this.add
+      .text(0, 35, step.label, {
+        fontFamily: 'Arial',
+        fontSize: '11px',
+        fontStyle: 'bold',
+        color: '#3b3b3b',
+        align: 'center',
+        wordWrap: { width: 84 },
+      })
+      .setOrigin(0.5)
+      .setResolution(2);
 
-    container.cardData = card;
-    container.originX_ = x;
-    container.originY_ = y;
-    container.setSize(150, 130);
-    container.setInteractive({ draggable: true, useHandCursor: true });
+    container.add([shadow, bg, image, text]);
 
-    this.input.setDraggable(container);
+    const hitbox = this.add.zone(x, y, CARD_HITBOX_WIDTH * visualScale, CARD_HITBOX_HEIGHT * visualScale);
+    hitbox.setDepth(200);
+    hitbox.setInteractive({ draggable: true, useHandCursor: true });
+    hitbox.on('pointerdown', () => this.playButtonSound());
+
+    hitbox.setData('card', container);
+    hitbox.setData('step', step);
+    container.setData('hitbox', hitbox);
+
+    container.setData('step', step);
+    container.setData('startX', x);
+    container.setData('startY', y);
+    container.setData('baseScale', visualScale);
+    container.setData('currentSlotIndex', null);
 
     return container;
   }
 
-  private createTestButton() {
-  const button = this.add
-    .rectangle(640, 470, 320, 58, 0x7b2ff7, 1)
-    .setStrokeStyle(4, 0xffffff)
-    .setInteractive({ useHandCursor: true });
+  private createButton() {
+    const buttonY = this.currentLevel.level === 1 ? 478 : 486;
+    const button = this.add.container(480, buttonY);
+    button.setDepth(40);
 
-  const text = this.add
-    .text(640, 470, "Testar algoritmo", {
-      fontSize: "24px",
-      fontFamily: "Arial Black, Arial",
-      color: "#ffffff",
-    })
-    .setOrigin(0.5);
+    const shadow = this.add.graphics();
+    shadow.fillStyle(0x000000, 0.16);
+    shadow.fillRoundedRect(-128, -20, 256, 46, 23);
 
-  const runTest = () => {
-    if (!this.levelStarted) return;
+    const bg = this.add.graphics();
+    bg.fillStyle(COLORS.orange, 1);
+    bg.fillRoundedRect(-132, -25, 264, 50, 25);
+    bg.lineStyle(4, 0xffffff, 1);
+    bg.strokeRoundedRect(-132, -25, 264, 50, 25);
 
-    this.playClick();
-    this.startTimerOnce();
-    this.testAlgorithm();
-  };
+    const text = this.add
+      .text(0, 0, 'Testar algoritmo', {
+        fontFamily: 'Arial',
+        fontSize: '21px',
+        fontStyle: 'bold',
+        color: '#ffffff',
+        shadow: {
+          offsetX: 0,
+          offsetY: 2,
+          color: '#9a3f00',
+          blur: 0,
+          fill: true,
+        },
+      })
+      .setOrigin(0.5)
+      .setResolution(2);
 
-  button.on("pointerdown", runTest);
-  text.setInteractive({ useHandCursor: true });
-  text.on("pointerdown", runTest);
+    button.add([shadow, bg, text]);
 
-  button.on("pointerover", () => button.setFillStyle(0x9d4edd));
-  button.on("pointerout", () => button.setFillStyle(0x7b2ff7));
-}
+    const hitArea = new Phaser.Geom.Rectangle(-152, -36, 304, 72);
 
-  private setupDrag() {
-  this.input.on("dragstart", (_: Phaser.Input.Pointer, obj: CardSprite) => {
-    if (!this.levelStarted) return;
-    this.startTimerOnce();
-
-    obj.setDepth(30);
-    this.playClick();
-
-    this.tweens.add({
-      targets: obj,
-      scaleX: 1.08,
-      scaleY: 1.08,
-      duration: 120,
+    button.setInteractive({
+      hitArea,
+      hitAreaCallback: Phaser.Geom.Rectangle.Contains,
+      useHandCursor: true,
     });
-  });
 
-  this.input.on(
-    "drag",
-    (_: Phaser.Input.Pointer, obj: CardSprite, dragX: number, dragY: number) => {
-      if (!this.levelStarted) return;
+    button.on('pointerdown', () => {
+      this.playButtonSound();
+      this.testAlgorithm();
+    });
+    button.on('pointerover', () => {
+      this.tweens.add({ targets: button, scale: 1.04, duration: 90, ease: 'Sine.easeOut' });
+    });
+    button.on('pointerout', () => {
+      this.tweens.add({ targets: button, scale: 1, duration: 90, ease: 'Sine.easeOut' });
+    });
 
-      obj.setPosition(dragX, dragY);
-    }
-  );
+    this.testButton = button;
+    this.testButtonBg = bg;
+    this.testButtonText = text;
+    this.updateTestButtonState();
+  }
 
-  this.input.on("dragend", (_: Phaser.Input.Pointer, obj: CardSprite) => {
-    if (!this.levelStarted) return;
+  private registerDragEvents() {
+    this.input.on('dragstart', (_pointer: Phaser.Input.Pointer, gameObject: Phaser.GameObjects.GameObject) => {
+      const hitbox = gameObject as Phaser.GameObjects.Zone;
+      const card = hitbox.getData('card') as Phaser.GameObjects.Container;
 
-    obj.setDepth(0);
+      if (!card) return;
 
-    const slotIndex = this.findNearestSlotIndex(obj.x, obj.y);
+      this.startTimer();
 
-    if (slotIndex === null) {
-      this.returnCard(obj);
+      const currentSlot = card.getData('currentSlotIndex') as number | null;
+      if (currentSlot !== null) {
+        this.placedOrder[currentSlot] = null;
+        card.setData('currentSlotIndex', null);
+        this.updateTestButtonState();
+      }
+
+      hitbox.setDepth(300);
+      card.setDepth(100);
+      this.tweens.killTweensOf(card);
+      this.tweens.killTweensOf(hitbox);
+      card.setScale((card.getData('baseScale') as number) * 1.04);
+    });
+
+    this.input.on('drag', (
+      _pointer: Phaser.Input.Pointer,
+      gameObject: Phaser.GameObjects.GameObject,
+      dragX: number,
+      dragY: number
+    ) => {
+      const hitbox = gameObject as Phaser.GameObjects.Zone;
+      const card = hitbox.getData('card') as Phaser.GameObjects.Container;
+
+      if (!card) return;
+
+      hitbox.x = dragX;
+      hitbox.y = dragY;
+      card.x = dragX;
+      card.y = dragY;
+    });
+
+    this.input.on('dragend', (_pointer: Phaser.Input.Pointer, gameObject: Phaser.GameObjects.GameObject) => {
+      const hitbox = gameObject as Phaser.GameObjects.Zone;
+      const card = hitbox.getData('card') as Phaser.GameObjects.Container;
+
+      if (!card) return;
+
+      this.handleCardDrop(card);
+    });
+  }
+
+  private handleCardDrop(card: Phaser.GameObjects.Container) {
+    const step = card.getData('step') as AlgorithmStep;
+    const hitbox = card.getData('hitbox') as Phaser.GameObjects.Zone;
+
+    const slotIndex = this.sequenceSlots.findIndex((slot, index) => {
+      const distance = Phaser.Math.Distance.Between(card.x, card.y, slot.x, slot.y);
+      return distance < 86 && this.placedOrder[index] === null;
+    });
+
+    if (slotIndex === -1) {
+      this.returnCard(card);
       return;
     }
 
-    this.placeCardInSlot(obj, slotIndex);
-  });
-}
+    const slot = this.sequenceSlots[slotIndex];
+    this.placedOrder[slotIndex] = step.correctOrder ?? -1;
+    card.setData('currentSlotIndex', slotIndex);
+    this.updateTestButtonState();
+    this.playSlotSound();
 
-  private findNearestSlotIndex(x: number, y: number): number | null {
-    for (const slot of this.slots) {
-      if (Phaser.Geom.Rectangle.Contains(slot.getBounds(), x, y)) {
-        return slot.getData("slotIndex") as number;
-      }
-    }
-
-    return null;
-  }
-
-  private placeCardInSlot(card: CardSprite, slotIndex: number) {
-    const oldSlotIndex = this.placedCards.findIndex((item) => item === card);
-
-    if (oldSlotIndex >= 0) {
-      this.placedCards[oldSlotIndex] = null;
-    }
-
-    const currentCard = this.placedCards[slotIndex];
-
-    if (currentCard && currentCard !== card) {
-      this.returnCard(currentCard);
-    }
-
-    const slot = this.slots[slotIndex];
-
-    this.placedCards[slotIndex] = card;
+    this.tweens.killTweensOf(card);
+    this.tweens.killTweensOf(hitbox);
 
     this.tweens.add({
       targets: card,
       x: slot.x,
       y: slot.y,
-      scaleX: 0.9,
-      scaleY: 0.9,
-      duration: 220,
-      ease: "Back.Out",
-      onComplete: () => {
-        this.emitProgress();
-      },
+      scale: card.getData('baseScale') as number,
+      duration: 160,
+      ease: 'Back.easeOut',
+      onComplete: () => card.setDepth(20),
+    });
+
+    this.tweens.add({
+      targets: hitbox,
+      x: slot.x,
+      y: slot.y,
+      duration: 160,
+      ease: 'Back.easeOut',
+      onComplete: () => hitbox.setDepth(200),
     });
   }
 
-  private returnCard(card: CardSprite) {
-    const oldSlotIndex = this.placedCards.findIndex((item) => item === card);
+  private returnCard(card: Phaser.GameObjects.Container) {
+    const hitbox = card.getData('hitbox') as Phaser.GameObjects.Zone;
 
-    if (oldSlotIndex >= 0) {
-      this.placedCards[oldSlotIndex] = null;
-    }
+    card.setData('currentSlotIndex', null);
+    this.updateTestButtonState();
+
+    this.tweens.killTweensOf(card);
+    this.tweens.killTweensOf(hitbox);
 
     this.tweens.add({
       targets: card,
-      x: card.originX_,
-      y: card.originY_,
-      scaleX: 1,
-      scaleY: 1,
-      duration: 260,
-      ease: "Back.Out",
+      x: card.getData('startX'),
+      y: card.getData('startY'),
+      scale: card.getData('baseScale') as number,
+      duration: 180,
+      ease: 'Back.easeOut',
+      onComplete: () => card.setDepth(12),
     });
 
-    this.emitProgress();
+    this.tweens.add({
+      targets: hitbox,
+      x: card.getData('startX'),
+      y: card.getData('startY'),
+      duration: 180,
+      ease: 'Back.easeOut',
+      onComplete: () => hitbox.setDepth(200),
+    });
   }
 
   private testAlgorithm() {
-    if (!this.levelStarted) return;
+    if (!this.isTestButtonEnabled || this.hasCompletedLevel) return;
 
-    const selectedOrder = this.placedCards.map(
-      (card) => card?.cardData.id ?? null
-    );
+    const correct = this.currentLevel.correctOrder.map((_, index) => index + 1);
+    const isComplete = this.placedOrder.every((value) => value !== null);
 
-    if (selectedOrder.some((id) => id === null)) {
-      this.playWrong();
-      this.showFloatingMessage("Complete todos os passos primeiro", 0xf59e0b);
+    if (!isComplete) {
+      this.showFeedback('Complete a sequência!', false);
       return;
     }
 
-    const isCorrect = selectedOrder.every(
-      (id, index) => id === this.levelConfig.correctOrder[index]
-    );
+    const isCorrect = this.placedOrder.every((value, index) => value === correct[index]);
 
     if (isCorrect) {
+      this.hasCompletedLevel = true;
+      this.timerTween?.stop();
       this.hits += 1;
-      this.playCorrect();
-
-      runtimeGameBridge.emit({
-        type: "CORRECT_ANSWER",
+      this.currentPoints += 5;
+      this.emitCorrectAnswer();
+      this.emitCheckpoint();
+      gameBridge.emit({
+        type: 'GAME_COMPLETED',
         gameId: GAME_ID,
-        stage: this.levelConfig.level,
-        pointsEarned: 5,
+        stage: this.currentLevel.level,
       });
 
-      this.handleSuccess();
+      if (this.currentLevel.level < 3) {
+        this.showLevelCompleteScreen((this.currentLevel.level + 1) as 2 | 3);
+        return;
+      }
+
+      this.showFinalLevelCompleteScreen();
       return;
     }
 
     this.errors += 1;
-    this.playWrong();
-
-    runtimeGameBridge.emit({
-      type: "WRONG_ANSWER",
-      gameId: GAME_ID,
-      stage: this.levelConfig.level,
-      pointsEarned: -5,
-    });
-
-    this.showFloatingMessage("Sequência incorreta! Você perdeu uma vida.", 0xef4444);
-    this.emitProgress();
+    this.currentPoints = Math.max(0, this.currentPoints - 5);
+    this.currentLives = Math.max(0, this.currentLives - 1);
+    this.emitWrongAnswer();
+    this.emitCheckpoint();
+    this.showFeedback('Tente novamente!', false);
   }
 
-  private handleSuccess() {
-    this.playWin();
-    this.showSuccessAnimation();
-    this.emitProgress();
-    this.timerEvent?.destroy();
-    this.timerEvent = undefined;
-    this.hasStartedTimer = false;
+  private updateTestButtonState() {
+    const enabled = this.placedOrder.every((value) => value !== null);
+    this.isTestButtonEnabled = enabled;
 
-    const nextLevel = this.levelConfig.level + 1;
+    if (!this.testButton || !this.testButtonBg || !this.testButtonText || !this.testButton.input) return;
 
-    if (nextLevel <= 3) {
-      runtimeGameBridge.emit({
-        type: "CHECKPOINT",
-        gameId: GAME_ID,
-        stage: nextLevel,
-        progress: 0,
-        score: this.hits * 5 - this.errors * 5,
-        hits: this.hits,
-        errors: this.errors,
+    this.testButtonBg.clear();
+    this.testButtonBg.fillStyle(enabled ? COLORS.orange : 0xb8c0cc, 1);
+    this.testButtonBg.fillRoundedRect(-132, -25, 264, 50, 25);
+    this.testButtonBg.lineStyle(4, 0xffffff, enabled ? 1 : 0.72);
+    this.testButtonBg.strokeRoundedRect(-132, -25, 264, 50, 25);
+
+    this.testButtonText.setAlpha(enabled ? 1 : 0.72);
+    this.testButton.setAlpha(enabled ? 1 : 0.78);
+    this.testButton.input.cursor = enabled ? 'pointer' : 'default';
+  }
+
+  private showLevelCompleteScreen(nextLevel: 2 | 3) {
+    const overlay = this.add.rectangle(
+      GAME_WIDTH / 2,
+      GAME_HEIGHT / 2,
+      GAME_WIDTH,
+      GAME_HEIGHT,
+      0x12324a,
+      0.56
+    );
+    overlay.setDepth(450);
+    overlay.setInteractive();
+
+    const modal = this.add.container(GAME_WIDTH / 2, GAME_HEIGHT / 2);
+    modal.setDepth(451);
+
+    const shadow = this.add.graphics();
+    shadow.fillStyle(0x000000, 0.18);
+    shadow.fillRoundedRect(-270, -166, 540, 330, 28);
+
+    const bg = this.add.graphics();
+    bg.fillStyle(0xfff6e8, 0.98);
+    bg.fillRoundedRect(-278, -178, 556, 330, 28);
+    bg.lineStyle(5, 0xffffff, 0.95);
+    bg.strokeRoundedRect(-278, -178, 556, 330, 28);
+
+    const topBar = this.add.graphics();
+    topBar.fillStyle(COLORS.softOrange, 1);
+    topBar.fillRoundedRect(-196, -194, 392, 28, 14);
+    topBar.lineStyle(3, 0xffffff, 0.82);
+    topBar.strokeRoundedRect(-196, -194, 392, 28, 14);
+
+    const title = this.add
+      .text(0, -110, 'Parabéns!', {
+        fontFamily: 'Arial',
+        fontSize: '40px',
+        fontStyle: 'bold',
+        color: '#25327a',
+        stroke: '#ffffff',
+        strokeThickness: 5,
+      })
+      .setOrigin(0.5)
+      .setResolution(2);
+
+    const completed = this.add
+      .text(0, -50, 'Nível concluído', {
+        fontFamily: 'Arial',
+        fontSize: '26px',
+        fontStyle: 'bold',
+        color: '#f57c00',
+        align: 'center',
+        wordWrap: { width: 420 },
+      })
+      .setOrigin(0.5)
+      .setResolution(2);
+
+    const next = this.add
+      .text(0, 8, this.currentLevel.successMessage, {
+        fontFamily: 'Arial',
+        fontSize: '17px',
+        fontStyle: 'bold',
+        color: '#3b3b3b',
+        align: 'center',
+        wordWrap: { width: 430 },
+      })
+      .setOrigin(0.5)
+      .setResolution(2);
+
+    const dots = [1, 2, 3].map((level, index) => {
+      const dot = this.add.graphics();
+      dot.fillStyle(level <= this.currentLevel.level ? COLORS.green : level === nextLevel ? COLORS.orange : 0xd8dde8, 1);
+      dot.fillCircle(-28 + index * 28, 72, 8);
+      dot.lineStyle(2, 0xffffff, 0.9);
+      dot.strokeCircle(-28 + index * 28, 72, 8);
+      return dot;
+    });
+
+    modal.add([shadow, bg, topBar, title, completed, next, ...dots]);
+    modal.setScale(0.9);
+    modal.setAlpha(0);
+
+    this.tweens.add({
+      targets: modal,
+      alpha: 1,
+      scale: 1,
+      duration: 260,
+      ease: 'Back.easeOut',
+    });
+
+    const waitText = this.add
+      .text(0, 116, 'Preparando o próximo nível...', {
+        fontFamily: 'Arial',
+        fontSize: '15px',
+        fontStyle: 'bold',
+        color: '#25327a',
+      })
+      .setOrigin(0.5)
+      .setResolution(2);
+    modal.add(waitText);
+
+    this.time.delayedCall(2300, () => {
+      this.scene.restart({
+        level: nextLevel,
+        points: this.currentPoints,
+        lives: this.currentLives,
+        showLevelStart: true,
+      });
+    });
+  }
+
+  private showNextLevelStartScreen() {
+    const overlay = this.add.rectangle(
+      GAME_WIDTH / 2,
+      GAME_HEIGHT / 2,
+      GAME_WIDTH,
+      GAME_HEIGHT,
+      0x12324a,
+      0.58
+    );
+    overlay.setDepth(450);
+    overlay.setInteractive();
+
+    const modal = this.add.container(GAME_WIDTH / 2, GAME_HEIGHT / 2);
+    modal.setDepth(451);
+
+    const shadow = this.add.graphics();
+    shadow.fillStyle(0x000000, 0.18);
+    shadow.fillRoundedRect(-270, -154, 540, 312, 28);
+
+    const bg = this.add.graphics();
+    bg.fillStyle(0xfff6e8, 0.98);
+    bg.fillRoundedRect(-278, -166, 556, 312, 28);
+    bg.lineStyle(5, 0xffffff, 0.95);
+    bg.strokeRoundedRect(-278, -166, 556, 312, 28);
+
+    const topBar = this.add.graphics();
+    topBar.fillStyle(COLORS.green, 1);
+    topBar.fillRoundedRect(-196, -182, 392, 28, 14);
+    topBar.lineStyle(3, 0xffffff, 0.82);
+    topBar.strokeRoundedRect(-196, -182, 392, 28, 14);
+
+    const title = this.add
+      .text(0, -102, `Nível ${this.currentLevel.level}`, {
+        fontFamily: 'Arial',
+        fontSize: '38px',
+        fontStyle: 'bold',
+        color: '#25327a',
+        stroke: '#ffffff',
+        strokeThickness: 5,
+      })
+      .setOrigin(0.5)
+      .setResolution(2);
+
+    const objective = this.add
+      .text(0, -42, this.currentLevel.title, {
+        fontFamily: 'Arial',
+        fontSize: '24px',
+        fontStyle: 'bold',
+        color: '#f57c00',
+        align: 'center',
+        wordWrap: { width: 430 },
+      })
+      .setOrigin(0.5)
+      .setResolution(2);
+
+    const detail = this.add
+      .text(0, 12, this.currentLevel.objective, {
+        fontFamily: 'Arial',
+        fontSize: '16px',
+        fontStyle: 'bold',
+        color: '#3b3b3b',
+        align: 'center',
+        wordWrap: { width: 420 },
+      })
+      .setOrigin(0.5)
+      .setResolution(2);
+
+    const button = this.add.container(0, 104);
+    const buttonShadow = this.add.graphics();
+    buttonShadow.fillStyle(0x000000, 0.16);
+    buttonShadow.fillRoundedRect(-136, -20, 272, 48, 24);
+    const buttonBg = this.add.graphics();
+    buttonBg.fillStyle(COLORS.orange, 1);
+    buttonBg.fillRoundedRect(-140, -26, 280, 52, 26);
+    buttonBg.lineStyle(4, 0xffffff, 1);
+    buttonBg.strokeRoundedRect(-140, -26, 280, 52, 26);
+    const buttonText = this.add
+      .text(0, 0, 'Iniciar nível', {
+        fontFamily: 'Arial',
+        fontSize: '22px',
+        fontStyle: 'bold',
+        color: '#ffffff',
+        stroke: '#9a3f00',
+        strokeThickness: 3,
+      })
+      .setOrigin(0.5)
+      .setResolution(2);
+    button.add([buttonShadow, buttonBg, buttonText]);
+
+    const buttonHitbox = this.add.zone(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 104, 280, 58);
+    buttonHitbox.setDepth(452);
+    buttonHitbox.setInteractive({ useHandCursor: true });
+    buttonHitbox.on('pointerover', () => {
+      this.tweens.add({ targets: button, scale: 1.04, duration: 90, ease: 'Sine.easeOut' });
+    });
+    buttonHitbox.on('pointerout', () => {
+      this.tweens.add({ targets: button, scale: 1, duration: 90, ease: 'Sine.easeOut' });
+    });
+    buttonHitbox.on('pointerdown', () => {
+      this.playButtonSound();
+      overlay.destroy();
+      buttonHitbox.destroy();
+      modal.destroy();
+    });
+
+    modal.add([shadow, bg, topBar, title, objective, detail, button]);
+    modal.setScale(0.9);
+    modal.setAlpha(0);
+
+    this.tweens.add({
+      targets: modal,
+      alpha: 1,
+      scale: 1,
+      duration: 260,
+      ease: 'Back.easeOut',
+    });
+  }
+
+  private showFinalLevelCompleteScreen() {
+    const overlay = this.add.rectangle(
+      GAME_WIDTH / 2,
+      GAME_HEIGHT / 2,
+      GAME_WIDTH,
+      GAME_HEIGHT,
+      0x12324a,
+      0.56
+    );
+    overlay.setDepth(450);
+    overlay.setInteractive();
+
+    const modal = this.add.container(GAME_WIDTH / 2, GAME_HEIGHT / 2);
+    modal.setDepth(451);
+
+    const shadow = this.add.graphics();
+    shadow.fillStyle(0x000000, 0.18);
+    shadow.fillRoundedRect(-270, -166, 540, 330, 28);
+
+    const bg = this.add.graphics();
+    bg.fillStyle(0xfff6e8, 0.98);
+    bg.fillRoundedRect(-278, -178, 556, 330, 28);
+    bg.lineStyle(5, 0xffffff, 0.95);
+    bg.strokeRoundedRect(-278, -178, 556, 330, 28);
+
+    const topBar = this.add.graphics();
+    topBar.fillStyle(COLORS.softOrange, 1);
+    topBar.fillRoundedRect(-196, -194, 392, 28, 14);
+    topBar.lineStyle(3, 0xffffff, 0.82);
+    topBar.strokeRoundedRect(-196, -194, 392, 28, 14);
+
+    const title = this.add
+      .text(0, -110, 'Parabéns!', {
+        fontFamily: 'Arial',
+        fontSize: '40px',
+        fontStyle: 'bold',
+        color: '#25327a',
+        stroke: '#ffffff',
+        strokeThickness: 5,
+      })
+      .setOrigin(0.5)
+      .setResolution(2);
+
+    const completed = this.add
+      .text(0, -50, 'Nível concluído', {
+        fontFamily: 'Arial',
+        fontSize: '26px',
+        fontStyle: 'bold',
+        color: '#f57c00',
+      })
+      .setOrigin(0.5)
+      .setResolution(2);
+
+    const message = this.add
+      .text(0, 8, this.currentLevel.successMessage, {
+        fontFamily: 'Arial',
+        fontSize: '17px',
+        fontStyle: 'bold',
+        color: '#3b3b3b',
+        align: 'center',
+        wordWrap: { width: 430 },
+      })
+      .setOrigin(0.5)
+      .setResolution(2);
+
+    const waitText = this.add
+      .text(0, 116, 'Preparando a finalização...', {
+        fontFamily: 'Arial',
+        fontSize: '15px',
+        fontStyle: 'bold',
+        color: '#25327a',
+      })
+      .setOrigin(0.5)
+      .setResolution(2);
+
+    modal.add([shadow, bg, topBar, title, completed, message, waitText]);
+    modal.setScale(0.9);
+    modal.setAlpha(0);
+
+    this.tweens.add({
+      targets: modal,
+      alpha: 1,
+      scale: 1,
+      duration: 260,
+      ease: 'Back.easeOut',
+    });
+
+    this.time.delayedCall(2300, () => {
+      overlay.destroy();
+      modal.destroy();
+      this.showGameCompleteScreen();
+    });
+  }
+
+  private showGameCompleteScreen() {
+    const overlay = this.add.rectangle(
+      GAME_WIDTH / 2,
+      GAME_HEIGHT / 2,
+      GAME_WIDTH,
+      GAME_HEIGHT,
+      0x12324a,
+      0.62
+    );
+    overlay.setDepth(450);
+    overlay.setInteractive();
+
+    const panel = this.add.container(GAME_WIDTH / 2, GAME_HEIGHT / 2);
+    panel.setDepth(451);
+
+    const shadow = this.add.graphics();
+    shadow.fillStyle(0x000000, 0.18);
+    shadow.fillRoundedRect(-292, -178, 584, 366, 34);
+
+    const bg = this.add.graphics();
+    bg.fillStyle(0xfff6e8, 0.98);
+    bg.fillRoundedRect(-304, -190, 608, 370, 34);
+    bg.lineStyle(6, 0xffffff, 0.96);
+    bg.strokeRoundedRect(-304, -190, 608, 370, 34);
+
+    const ribbon = this.add.graphics();
+    ribbon.fillStyle(COLORS.green, 1);
+    ribbon.fillRoundedRect(-214, -208, 428, 34, 17);
+    ribbon.lineStyle(4, 0xffffff, 0.9);
+    ribbon.strokeRoundedRect(-214, -208, 428, 34, 17);
+
+    const title = this.add
+      .text(0, -128, 'Jogo concluído!', {
+        fontFamily: 'Arial',
+        fontSize: '38px',
+        fontStyle: 'bold',
+        color: '#25327a',
+        stroke: '#ffffff',
+        strokeThickness: 6,
+      })
+      .setOrigin(0.5)
+      .setResolution(2);
+
+    const subtitle = this.add
+      .text(0, -74, 'Você organizou todos os algoritmos.', {
+        fontFamily: 'Arial',
+        fontSize: '20px',
+        fontStyle: 'bold',
+        color: '#3b3b3b',
+        align: 'center',
+        wordWrap: { width: 500 },
+      })
+      .setOrigin(0.5)
+      .setResolution(2);
+
+    const levelLabels = LEVELS.map((level, index) => {
+      const item = this.add.container(-190 + index * 190, 54);
+
+      const badge = this.add.graphics();
+      badge.fillStyle(index === 0 ? COLORS.softOrange : index === 1 ? COLORS.blue : COLORS.green, 1);
+      badge.fillRoundedRect(-54, -42, 108, 84, 18);
+      badge.lineStyle(4, 0xffffff, 0.95);
+      badge.strokeRoundedRect(-54, -42, 108, 84, 18);
+
+      const number = this.add
+        .text(0, -13, String(level.level), {
+          fontFamily: 'Arial',
+          fontSize: '30px',
+          fontStyle: 'bold',
+          color: '#ffffff',
+          stroke: '#25327a',
+          strokeThickness: 4,
+        })
+        .setOrigin(0.5)
+        .setResolution(2);
+
+      const label = this.add
+        .text(0, 23, 'concluído', {
+          fontFamily: 'Arial',
+          fontSize: '12px',
+          fontStyle: 'bold',
+          color: '#ffffff',
+        })
+        .setOrigin(0.5)
+        .setResolution(2);
+
+      item.add([badge, number, label]);
+      return item;
+    });
+
+    const createFinalButton = (
+      x: number,
+      label: string,
+      color: number,
+      stroke: string,
+      onClick: () => void
+    ) => {
+      const button = this.add.container(x, 138);
+      const buttonShadow = this.add.graphics();
+      buttonShadow.fillStyle(0x000000, 0.16);
+      buttonShadow.fillRoundedRect(-128, -20, 256, 48, 24);
+      const buttonBg = this.add.graphics();
+      buttonBg.fillStyle(color, 1);
+      buttonBg.fillRoundedRect(-132, -26, 264, 52, 26);
+      buttonBg.lineStyle(4, 0xffffff, 1);
+      buttonBg.strokeRoundedRect(-132, -26, 264, 52, 26);
+      const buttonText = this.add
+        .text(0, 0, label, {
+          fontFamily: 'Arial',
+          fontSize: '20px',
+          fontStyle: 'bold',
+          color: '#ffffff',
+          stroke,
+          strokeThickness: 3,
+        })
+        .setOrigin(0.5)
+        .setResolution(2);
+      button.add([buttonShadow, buttonBg, buttonText]);
+
+      const buttonHitbox = this.add.zone(GAME_WIDTH / 2 + x, GAME_HEIGHT / 2 + 138, 264, 58);
+      buttonHitbox.setDepth(452);
+      buttonHitbox.setInteractive({ useHandCursor: true });
+      buttonHitbox.on('pointerover', () => {
+        this.tweens.add({ targets: button, scale: 1.04, duration: 90, ease: 'Sine.easeOut' });
+      });
+      buttonHitbox.on('pointerout', () => {
+        this.tweens.add({ targets: button, scale: 1, duration: 90, ease: 'Sine.easeOut' });
+      });
+      buttonHitbox.on('pointerdown', () => {
+        this.playButtonSound();
+        onClick();
       });
 
-      this.time.delayedCall(1500, () => {
-  this.levelStarted = false;
-  this.hasStartedTimer = false;
-  this.timerEvent?.destroy();
-  this.timerEvent = undefined;
+      return { button, buttonHitbox };
+    };
 
-  this.scene.restart({ level: nextLevel });
-});
+    const playAgain = createFinalButton(-142, 'Jogar novamente', COLORS.green, '#1b7d1c', () => {
+      this.scene.restart({
+        level: 1,
+        points: this.currentPoints,
+        lives: this.currentLives,
+      });
+    });
 
+    const exit = createFinalButton(142, 'Voltar aos jogos', COLORS.orange, '#9a3f00', () => {
+      EventBus.emit('exit-game');
+    });
+
+    const sparkles = Array.from({ length: 14 }, (_, index) => {
+      const sparkle = this.add.graphics();
+      const x = Phaser.Math.Between(-278, 278);
+      const y = Phaser.Math.Between(-168, 158);
+      sparkle.fillStyle(index % 3 === 0 ? COLORS.blue : index % 3 === 1 ? COLORS.softOrange : COLORS.green, 0.9);
+      sparkle.fillCircle(x, y, Phaser.Math.Between(4, 8));
+      this.tweens.add({
+        targets: sparkle,
+        alpha: { from: 0.35, to: 1 },
+        scale: { from: 0.8, to: 1.35 },
+        duration: 520 + index * 30,
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.easeInOut',
+      });
+      return sparkle;
+    });
+
+    panel.add([
+      shadow,
+      bg,
+      ribbon,
+      ...sparkles,
+      title,
+      subtitle,
+      ...levelLabels,
+      playAgain.button,
+      exit.button,
+    ]);
+    panel.setScale(0.88);
+    panel.setAlpha(0);
+
+    this.tweens.add({
+      targets: panel,
+      alpha: 1,
+      scale: 1,
+      duration: 300,
+      ease: 'Back.easeOut',
+    });
+  }
+
+  private coverImage(image: Phaser.GameObjects.Image, width: number, height: number) {
+    const scale = Math.max(width / image.width, height / image.height);
+    image.setScale(scale);
+  }
+
+  private fitImage(image: Phaser.GameObjects.Image, maxWidth: number, maxHeight: number) {
+    const scale = Math.min(maxWidth / image.width, maxHeight / image.height);
+    image.setScale(scale);
+  }
+
+  private playButtonSound() {
+    this.playTone(520, 0.06, 0.18);
+    this.time.delayedCall(55, () => this.playTone(760, 0.07, 0.16));
+  }
+
+  private playSlotSound() {
+    this.playTone(660, 0.05, 0.035);
+    this.time.delayedCall(45, () => this.playTone(920, 0.07, 0.035));
+  }
+
+  private getAudioContext(): AudioContext | null {
+    if ('context' in this.sound) {
+      return (this.sound as Phaser.Sound.WebAudioSoundManager).context;
+    }
+
+    const AudioContextCtor =
+      window.AudioContext ||
+      (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    if (!AudioContextCtor) return null;
+
+    this.fallbackAudioContext ??= new AudioContextCtor();
+    return this.fallbackAudioContext;
+  }
+
+  private playTone(frequency: number, duration: number, volume: number) {
+    const ctx = this.getAudioContext();
+    if (!ctx) return;
+
+    if (ctx.state === 'suspended') {
+      void ctx.resume().then(() => this.playTone(frequency, duration, volume));
       return;
     }
 
-    this.time.delayedCall(1500, () => {
-      runtimeGameBridge.emit({
-        type: "GAME_COMPLETED",
-        gameId: GAME_ID,
-        stage: this.levelConfig.level,
-      });
+    const oscillator = ctx.createOscillator();
+    const gain = ctx.createGain();
+    const now = ctx.currentTime;
 
-      this.input.enabled = false;
+    oscillator.type = 'sine';
+    oscillator.frequency.setValueAtTime(frequency, now);
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(volume, now + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+
+    oscillator.connect(gain);
+    gain.connect(ctx.destination);
+    oscillator.start(now);
+    oscillator.stop(now + duration + 0.02);
+  }
+
+  private emitReady() {
+    gameBridge.emit({
+      type: 'GAME_READY',
+      gameId: GAME_ID,
     });
   }
 
-  private handleFailure(wrongIndex: number) {
-    const slot = this.slots[wrongIndex];
-
-    this.playWrong();
-    slot.setStrokeStyle(7, 0xef4444);
-
-    this.time.delayedCall(700, () => {
-      slot.setStrokeStyle(5, 0x8b5cf6);
-    });
-
-    this.showFloatingMessage(`Revise o passo ${wrongIndex + 1}`, 0xef4444);
-    this.emitProgress();
-  }
-
-  private showSlotCorrect(slot: Phaser.GameObjects.Rectangle) {
-    slot.setStrokeStyle(6, 0x22c55e);
-
-    const check = this.add
-      .text(slot.x, slot.y - 5, "✓", {
-        fontSize: "48px",
-        fontFamily: "Arial Black, Arial",
-        color: "#22c55e",
-        stroke: "#ffffff",
-        strokeThickness: 5,
-      })
-      .setOrigin(0.5)
-      .setDepth(80);
-
-    this.tweens.add({
-      targets: check,
-      y: check.y - 35,
-      alpha: 0,
-      duration: 650,
-      ease: "Power2",
-      onComplete: () => check.destroy(),
-    });
-
-    this.time.delayedCall(500, () => {
-      slot.setStrokeStyle(5, 0x8b5cf6);
+  private emitCorrectAnswer() {
+    gameBridge.emit({
+      type: 'CORRECT_ANSWER',
+      gameId: GAME_ID,
+      pointsEarned: 5,
+      stage: this.currentLevel.level,
     });
   }
 
-  private showSlotWrong(slot: Phaser.GameObjects.Rectangle) {
-    const originalX = slot.x;
-
-    slot.setStrokeStyle(6, 0xef4444);
-
-    const wrong = this.add
-      .text(slot.x, slot.y - 5, "!", {
-        fontSize: "44px",
-        fontFamily: "Arial Black, Arial",
-        color: "#ef4444",
-        stroke: "#ffffff",
-        strokeThickness: 5,
-      })
-      .setOrigin(0.5)
-      .setDepth(80);
-
-    this.tweens.add({
-      targets: slot,
-      x: { from: originalX - 8, to: originalX + 8 },
-      duration: 60,
-      yoyo: true,
-      repeat: 4,
-      onComplete: () => slot.setX(originalX),
-    });
-
-    this.tweens.add({
-      targets: wrong,
-      y: wrong.y - 30,
-      alpha: 0,
-      duration: 650,
-      ease: "Power2",
-      onComplete: () => wrong.destroy(),
-    });
-
-    this.time.delayedCall(600, () => {
-      slot.setStrokeStyle(5, 0x8b5cf6);
+  private emitWrongAnswer() {
+    gameBridge.emit({
+      type: 'WRONG_ANSWER',
+      gameId: GAME_ID,
+      pointsEarned: -5,
+      stage: this.currentLevel.level,
     });
   }
 
-  private showSuccessAnimation() {
-    this.showFloatingMessage("Algoritmo completo!", 0x22c55e);
+  private emitCheckpoint() {
+    const placedCount = this.placedOrder.filter((value) => value !== null).length;
+    const progress = Math.round((placedCount / this.currentLevel.correctOrder.length) * 100);
 
-    const emojis = ["⭐", "✨", "🌟"];
-
-    for (let i = 0; i < 18; i++) {
-      const star = this.add
-        .text(640, 330, emojis[i % emojis.length], {
-          fontSize: `${Phaser.Math.Between(24, 42)}px`,
-        })
-        .setOrigin(0.5)
-        .setDepth(90);
-
-      this.tweens.add({
-        targets: star,
-        x: 640 + Phaser.Math.Between(-360, 360),
-        y: 330 + Phaser.Math.Between(-180, 180),
-        alpha: 0,
-        duration: Phaser.Math.Between(700, 1200),
-        onComplete: () => star.destroy(),
-      });
-    }
-  }
-
-  private showFloatingMessage(message: string, color: number) {
-    const bgColor = Phaser.Display.Color.IntegerToColor(color).rgba;
-
-    const text = this.add
-      .text(640, 225, message, {
-        fontSize: "32px",
-        fontFamily: "Arial Black, Arial",
-        color: "#ffffff",
-        backgroundColor: bgColor,
-        padding: { x: 18, y: 10 },
-      })
-      .setOrigin(0.5)
-      .setDepth(100);
-
-    this.tweens.add({
-      targets: text,
-      y: 200,
-      alpha: 0,
-      delay: 900,
-      duration: 450,
-      onComplete: () => text.destroy(),
-    });
-  }
-
-  private emitProgress() {
-    const total = this.levelConfig.correctOrder.length;
-    const filled = this.placedCards.filter(Boolean).length;
-    const progress = Math.round((filled / total) * 100);
-
-    EventBus.emit("algorithm-progress", {
-      progress,
-      hits: this.hits,
-      errors: this.errors,
-    });
-
-    runtimeGameBridge.emit({
-      type: "CHECKPOINT",
+    gameBridge.emit({
+      type: 'CHECKPOINT',
       gameId: GAME_ID,
       progress,
-      score: this.hits * 5 - this.errors * 5,
-      stage: this.levelConfig.level,
+      score: this.currentPoints,
+      stage: this.currentLevel.level,
       hits: this.hits,
       errors: this.errors,
     });
   }
 
   private registerPlatformCommands() {
-    this.unsubscribePlatformCommands = runtimeGameBridge.onCommand(
-      (command: PlatformCommand) => {
-        if (command.type !== "START_GAME") return;
-        if (command.gameId !== GAME_ID) return;
-        if (command.stage === this.levelConfig.level) return;
-
-        this.time.delayedCall(100, () => {
+    this.unsubscribePlatformCommands?.();
+    this.unsubscribePlatformCommands = gameBridge.onPlatformCommand((command: PlatformCommand) => {
+      switch (command.type) {
+        case 'START_GAME':
+          if (command.gameId !== GAME_ID) return;
           this.scene.restart({
-            level: command.stage as 1 | 2 | 3,
+            level: command.stage,
+            points: command.points,
+            lives: command.lives,
           });
-        });
+          return;
+
+        case 'PAUSE_GAME':
+          this.scene.pause();
+          return;
+
+        case 'RESUME_GAME':
+          this.scene.resume();
+          return;
+
+        case 'UNLOCK_GAME':
+          return;
       }
-    );
-  }
+    });
 
-  private getAudioContext(): AudioContext | null {
-    if (!("context" in this.sound)) return null;
-    return (this.sound as Phaser.Sound.WebAudioSoundManager).context;
-  }
-
-  private playTone(
-    frequency: number,
-    duration: number,
-    type: OscillatorType = "sine",
-    volume = 0.25,
-    delaySeconds = 0
-  ) {
-    const ctx = this.getAudioContext();
-    if (!ctx) return;
-
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-
-    osc.type = type;
-    osc.frequency.setValueAtTime(frequency, ctx.currentTime + delaySeconds);
-    gain.gain.setValueAtTime(volume, ctx.currentTime + delaySeconds);
-
-    gain.gain.exponentialRampToValueAtTime(
-      0.001,
-      ctx.currentTime + delaySeconds + duration
-    );
-
-    osc.start(ctx.currentTime + delaySeconds);
-    osc.stop(ctx.currentTime + delaySeconds + duration + 0.01);
-  }
-
-  private playClick() {
-    this.playTone(440, 0.05, "sine", 0.12);
-  }
-
-  private playCorrect() {
-    this.playTone(523, 0.12, "sine", 0.28, 0);
-    this.playTone(659, 0.12, "sine", 0.28, 0.1);
-    this.playTone(784, 0.2, "sine", 0.32, 0.2);
-  }
-
-  private playWrong() {
-    this.playTone(220, 0.1, "square", 0.18, 0);
-    this.playTone(196, 0.1, "square", 0.14, 0.1);
-    this.playTone(165, 0.18, "square", 0.1, 0.2);
-  }
-
-  private playWin() {
-    [262, 330, 392, 523].forEach((freq, index) => {
-      this.playTone(freq, 0.2, "sine", 0.3, index * 0.13);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.unsubscribePlatformCommands?.();
+      this.unsubscribePlatformCommands = undefined;
+      this.timerTween?.stop();
     });
   }
 
-  private getCardColor(type: string): number {
-    const map: Record<string, number> = {
-      start: 0x22c55e,
-      prepare: 0x38bdf8,
-      build: 0xfacc15,
-      test: 0xfb923c,
-      finish: 0xa855f7,
-    };
+  private showFeedback(message: string, success: boolean) {
+    const text = this.add
+      .text(480, 310, message, {
+        fontFamily: 'Arial',
+        fontSize: '23px',
+        fontStyle: 'bold',
+        color: success ? '#22c55e' : '#ef4444',
+        backgroundColor: '#ffffff',
+        padding: { left: 16, right: 16, top: 10, bottom: 10 },
+      })
+      .setOrigin(0.5)
+      .setResolution(2)
+      .setDepth(400);
 
-    return map[type] ?? 0x8b5cf6;
+    this.tweens.add({
+      targets: text,
+      alpha: 0,
+      y: 290,
+      delay: 1200,
+      duration: 500,
+      onComplete: () => text.destroy(),
+    });
   }
 }

@@ -90,8 +90,25 @@ export class UIScene extends Phaser.Scene {
       fontSize: '20px', color: '#F1C40F',
     }).setOrigin(0.5)
 
+    // Botão instruções (canto direito, à esquerda do mute)
+    this.createInstructionsButton()
+
     // Botão mute (canto direito)
     this.createMuteButton()
+  }
+
+  // ── Botão instruções ──────────────────────────────────────────────────────
+
+  private createInstructionsButton() {
+    const btn = this.add.rectangle(1185, 56, 52, 60, 0x1A2A3A, 0.9)
+      .setStrokeStyle(1.5, 0x2E86C1)
+      .setInteractive({ useHandCursor: true })
+
+    this.add.text(1185, 56, '❓', { fontSize: '22px' }).setOrigin(0.5)
+
+    btn.on('pointerdown', () => EventBus.emit('show-instructions'))
+    btn.on('pointerover',  () => btn.setFillStyle(0x243447))
+    btn.on('pointerout',   () => btn.setFillStyle(0x1A2A3A, 0.9))
   }
 
   // ── Botão mute ────────────────────────────────────────────────────────────
