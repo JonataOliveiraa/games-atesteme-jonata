@@ -1,6 +1,7 @@
 import type { Game } from "../types/game";
 import heroThumbnail from "../assets/hero.png";
 import algorithmsThumbnail from "../assets/games/EF01CO03/algorithm-game-cover.png";
+import trilhaThumbnail from "../assets/games/EF01CO02/Trilha.png"
 import pixelSecretThumbnail from "../assets/games/EF01CO05/cover5.png";
 import guardiansThumbnail from "../assets/games/EF01CO07/cover.png";
 
@@ -13,7 +14,6 @@ export const games: Game[] = [
     points: 60,
     icon: "🗂️",
     slug: "base-dos-classificadores",
-    thumbnail: heroThumbnail,
   },
   {
     id: 1,
@@ -23,7 +23,7 @@ export const games: Game[] = [
     points: 50,
     icon: "👣",
     slug: "trilha-do-passo-a-passo",
-    thumbnail: heroThumbnail,
+    thumbnail: trilhaThumbnail,
   },
   {
     id: 2,
@@ -44,7 +44,6 @@ export const games: Game[] = [
     points: 40,
     icon: "🎯",
     slug: "acerte-o-alvo",
-    thumbnail: heroThumbnail,
   },
   {
     id: 4,
@@ -65,7 +64,6 @@ export const games: Game[] = [
     points: 60,
     icon: "🖥️",
     slug: "desktop-digital-infantil",
-    thumbnail: heroThumbnail,
   },
 
   {
