@@ -180,7 +180,7 @@ export class GameScene extends Phaser.Scene {
   // ── Desktop ───────────────────────────────────────────────────────────────
 
   private createDesktop() {
-    this.add.image(640, 330, 'desktop-bg').setOrigin(0.5).setY(330)
+    this.add.image(640, 330, 'desktop-bg').setOrigin(0.5).setDisplaySize(1280, 660)
   }
 
   private createTaskbar() {
