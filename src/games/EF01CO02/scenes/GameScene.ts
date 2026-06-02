@@ -137,7 +137,7 @@ export class GameScene extends Phaser.Scene {
             fontSize: '16px', fontFamily: 'Arial Black, Arial', color: '#4338ca'
         }).setOrigin(0.5);
 
-        const title = this.add.text(width / 2, height * 0.44, "Trilha do Passo a Passo", {
+        const title = this.add.text(width / 2, height * 0.44, "Trilha do Passo a Pas", {
             fontSize: '58px', fontFamily: 'Arial Black, Arial', color: '#4f46e5'
         }).setOrigin(0.5);
 

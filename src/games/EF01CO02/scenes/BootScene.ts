@@ -1,8 +1,8 @@
 import Phaser from 'phaser';
-import robotHead from '../Imagens Games EF01CO02/Cabeça Metabee.png';
-import robotTorso from '../Imagens Games EF01CO02/Tronco Metabee.png';
-import robotLegs from '../Imagens Games EF01CO02/Pernas Metabee.png';
-import robotFull from '../Imagens Games EF01CO02/Metabee completo.png';
+import robotHead from '../../../assets/games/EF01CO02/CabecaMetabee.png';
+import robotTorso from '../../../assets/games/EF01CO02/TroncoMetabee.png';
+import robotLegs from '../../../assets/games/EF01CO02/PernasMetabee.png';
+import robotFull from '../../../assets/games/EF01CO02/MetabeeCompleto.png';
 
 export class BootScene extends Phaser.Scene {
     constructor() { super('BootScene'); }
