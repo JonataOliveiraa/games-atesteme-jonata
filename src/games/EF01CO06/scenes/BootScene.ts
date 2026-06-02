@@ -1,15 +1,18 @@
 import Phaser from 'phaser'
 import { APP_DEFS } from '../types'
+import desktopBgUrl from '../../../assets/games/EF01CO06/desktop-bg.png'
 
 /**
- * BootScene — gera texturas programáticas para EF01CO06.
+ * BootScene — carrega assets e gera texturas programáticas para EF01CO06.
  *
- * Texturas geradas:
+ * Texturas carregadas via arquivo:
+ *   `desktop-bg`     → wallpaper do desktop (PNG)
+ *
+ * Texturas geradas programaticamente (fallback / pendentes de asset):
  *   `icon-{appId}`   → ícone do app (88×88 px, rounded rect + forma específica)
- *   `desktop-bg`     → wallpaper do desktop (1280×720)
  *   `taskbar-bg`     → fundo da barra de tarefas (1280×60)
  *
- * TODO: substituir por atlas real quando assets estiverem disponíveis.
+ * TODO: substituir ícones por atlas real quando assets estiverem disponíveis.
  */
 export class BootScene extends Phaser.Scene {
   constructor() {
@@ -18,7 +21,8 @@ export class BootScene extends Phaser.Scene {
 
   preload() {
     this.createLoadingBar()
-    // TODO: this.load.atlas('ef01co06-icons', 'assets/images/ef01co06/icons.png', 'assets/images/ef01co06/icons.json')
+    this.load.image('desktop-bg', desktopBgUrl)
+    // TODO: this.load.atlas('ef01co06-icons', ..., ...)
     // TODO: this.load.audio('sfx-open',    ['assets/audio/window-open.ogg', 'assets/audio/window-open.mp3'])
     // TODO: this.load.audio('sfx-close',   ['assets/audio/window-close.ogg','assets/audio/window-close.mp3'])
     // TODO: this.load.audio('sfx-success', ['assets/audio/success.ogg',     'assets/audio/success.mp3'])

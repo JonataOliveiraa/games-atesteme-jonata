@@ -1,5 +1,6 @@
 import type { Game } from "../types/game";
 import heroThumbnail from "../assets/hero.png";
+import classificadoresThumbnail from "../assets/games/EF01CO01/cover-01.png";
 import algorithmsThumbnail from "../assets/games/EF01CO03/algorithm-game-cover.png";
 import trilhaThumbnail from "../assets/games/EF01CO02/Trilha.png"
 import pixelSecretThumbnail from "../assets/games/EF01CO05/cover5.png";
@@ -14,6 +15,7 @@ export const games: Game[] = [
     points: 60,
     icon: "🗂️",
     slug: "base-dos-classificadores",
+    thumbnail: classificadoresThumbnail,
   },
   {
     id: 1,
