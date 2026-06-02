@@ -5,6 +5,7 @@ import { EventBus } from '../../../shared/EventBus';
 const GAME_ID = "EF01CO02";
 const TIMER_BAR_Y = 115;
 const TIMER_BAR_W = 500;
+const WORKSPACE_TOP = 232;
 
 const PALETTE = {
     skyTop: 0x7bdff2,
@@ -12,13 +13,18 @@ const PALETTE = {
     grass: 0x64d98b,
     labFloor: 0xb8f2e6,
     labWall: 0xdff7ff,
+    mint: 0xa7f3d0,
+    cyanSoft: 0xcffafe,
+    lemon: 0xfef08a,
     boltBlue: 0x38bdf8,
     boltYellow: 0xffd166,
     boltRed: 0xff6b6b,
     panel: 0xffffff,
     panelBlue: 0xe6f7ff,
     panelYellow: 0xfff0a8,
+    paper: 0xfffffb,
     ink: "#2c3563",
+    slate: 0x2c3563,
     purple: 0x8b5cf6,
     orange: 0xff9f1c,
     green: 0x2dd4bf,
@@ -190,26 +196,24 @@ export class GameScene extends Phaser.Scene {
         this.drawMedabotLab(width, height);
 
         this.drawRoundedPanel(width * 0.28, height * 0.61, width * 0.43, height * 0.6, PALETTE.panelYellow, PALETTE.orange);
-        this.add.text(width * 0.28, 215, "Pecas Medabot", { 
-            fontSize: "21px", fontFamily: "Arial Black", color: "#8a3ffc", stroke: "#ffffff", strokeThickness: 5
-        }).setOrigin(0.5).setDepth(3);
+        this.drawWorkspaceHeader(width * 0.28, WORKSPACE_TOP, width * 0.39, "Pecas Medabot", PALETTE.orange, PALETTE.purple, "1");
 
         this.drawRoundedPanel(width * 0.72, height * 0.61, width * 0.43, height * 0.6, PALETTE.panelBlue, PALETTE.green);
-        this.add.text(width * 0.72, 215, "Base de montagem", { 
-            fontSize: "21px", fontFamily: "Arial Black", color: "#0f766e", stroke: "#ffffff", strokeThickness: 5
-        }).setOrigin(0.5).setDepth(3);
+        this.drawWorkspaceHeader(width * 0.72, WORKSPACE_TOP, width * 0.39, "Base de montagem", PALETTE.green, 0x0f766e, "2");
     }
 
     private createTitle(width: number) {
-        this.drawPill(width / 2, 160, 720, 44, 0xffffff, 0x7dd3fc, 4).setDepth(7);
-        this.add.text(width / 2, 160, "Arraste cada parte do Medabot seguindo a ordem da trilha.", { 
-            fontSize: "17px", fontFamily: "Arial Black", color: PALETTE.ink, align: "center", wordWrap: { width: 660 }
+        this.drawPill(width / 2, 160, 760, 46, 0xffffff, 0x7dd3fc, 4).setDepth(7);
+        this.add.circle(width / 2 - 350, 160, 14, PALETTE.lemon, 1).setDepth(8).setStrokeStyle(3, 0xffffff, 0.9);
+        this.add.circle(width / 2 + 350, 160, 14, PALETTE.pink, 1).setDepth(8).setStrokeStyle(3, 0xffffff, 0.9);
+        this.add.text(width / 2, 160, "Arraste as pecas na ordem da trilha para montar o Medabot.", { 
+            fontSize: "17px", fontFamily: "Arial Black", color: PALETTE.ink, align: "center", wordWrap: { width: 650 }
         }).setOrigin(0.5).setDepth(8);
     }
 
     private createTimerBar(width: number) {
-        this.drawPill(width / 2, TIMER_BAR_Y, TIMER_BAR_W + 22, 30, 0xffffff, 0x6c63ff, 5).setDepth(5);
-        this.timerBar = this.add.rectangle(width / 2 - TIMER_BAR_W / 2, TIMER_BAR_Y, TIMER_BAR_W, 15, PALETTE.green).setOrigin(0, 0.5).setDepth(6);
+        this.drawPill(width / 2, TIMER_BAR_Y, TIMER_BAR_W + 36, 34, 0xffffff, 0x6c63ff, 5).setDepth(5);
+        this.timerBar = this.add.rectangle(width / 2 - TIMER_BAR_W / 2, TIMER_BAR_Y, TIMER_BAR_W, 16, PALETTE.green).setOrigin(0, 0.5).setDepth(6);
         this.add.text(width / 2, TIMER_BAR_Y - 28, "Tempo da aventura", { fontSize: "14px", fontFamily: "Arial Black", color: "#4f46e5" }).setOrigin(0.5).setDepth(6);
     }
 
@@ -227,14 +231,8 @@ export class GameScene extends Phaser.Scene {
 
         level.steps.forEach((step, index) => {
             const y = startY + (index * spacingY);
-            this.drawCard(posX_Chassi, y, cardW, cardH, 0xf8fbff, PALETTE.purple);
+            this.drawSlotCard(posX_Chassi, y, cardW, cardH, index + 1, step.label, isLevel2);
             const slotBox = this.add.rectangle(posX_Chassi, y, cardW, cardH, 0xffffff, 0.02).setStrokeStyle(3, PALETTE.purple);
-            
-            this.add.circle(posX_Chassi - 112, y, isLevel2 ? 20 : 26, 0xffd166, 1).setStrokeStyle(3, 0xffffff);
-            this.add.text(posX_Chassi - 112, y, `${index + 1}`, { fontSize: isLevel2 ? '20px' : '25px', color: '#ffffff', fontFamily: 'Arial Black', stroke: '#b45309', strokeThickness: 3 }).setOrigin(0.5);
-            this.add.text(posX_Chassi + 32, y, `Lugar da\n${step.label.toUpperCase()}`, { 
-                fontSize: isLevel2 ? '11px' : '13px', color: '#415174', fontFamily: 'Arial Black', align: 'left' 
-            }).setOrigin(0.5);
 
             slotBox.setData('stepId', step.id).setInteractive().input.dropZone = true;
         });
@@ -244,24 +242,19 @@ export class GameScene extends Phaser.Scene {
         shuffledParts.forEach((part, index) => {
             const y = startY + (index * spacingY);
             const container = this.add.container(posX_Pecas, y);
-            const itemShadow = this.add.graphics();
-            itemShadow.fillStyle(0x9a7b3f, 0.2);
-            itemShadow.fillRoundedRect(-cardW / 2 + 7, -cardH / 2 + 8, cardW, cardH, 22);
-            const itemCard = this.add.graphics();
-            itemCard.fillStyle(0xffffff, 1);
-            itemCard.lineStyle(4, PALETTE.orange, 1);
-            itemCard.fillRoundedRect(-cardW / 2, -cardH / 2, cardW, cardH, 22);
-            itemCard.strokeRoundedRect(-cardW / 2, -cardH / 2, cardW, cardH, 22);
-            const itemBg = this.add.rectangle(0, 0, cardW, cardH, 0xffffff, 0.02).setStrokeStyle(4, PALETTE.orange);
+            const itemCard = this.drawPartCard(-cardW / 2, -cardH / 2, cardW, cardH, index);
+            const itemBg = this.add.rectangle(0, 0, cardW, cardH, 0xffffff, 0.02).setStrokeStyle(3, PALETTE.orange, 0.4);
             
-            const sprite = this.add.sprite(-90, 0, part.assetKey).setDisplaySize(isLevel2 ? 55 : 80, isLevel2 ? 55 : 80);
+            const spritePad = this.add.circle(-96, 0, isLevel2 ? 31 : 42, 0xecfeff, 1).setStrokeStyle(3, 0xffffff, 0.95);
+            const sprite = this.add.sprite(-96, 0, part.assetKey).setDisplaySize(isLevel2 ? 55 : 82, isLevel2 ? 55 : 82);
             this.tweens.add({ targets: sprite, angle: 3, duration: 950 + index * 120, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
 
-            const txt = this.add.text(35, 0, part.label, { 
-                fontSize: isLevel2 ? '13px' : '15px', color: PALETTE.ink, fontFamily: 'Arial Black', align: 'center', wordWrap: { width: cardW - 130 } 
-            }).setOrigin(0.5); 
+            const txt = this.add.text(40, 0, part.label.trim(), { 
+                fontSize: isLevel2 ? '13px' : '16px', color: PALETTE.ink, fontFamily: 'Arial Black', align: 'left', wordWrap: { width: cardW - 148 } 
+            }).setOrigin(0.5);
+            const grip = this.add.text(cardW / 2 - 28, 0, "::", { fontSize: '24px', color: '#f59e0b', fontFamily: 'Arial Black' }).setOrigin(0.5);
 
-            container.add([itemShadow, itemCard, itemBg, sprite, txt]);
+            container.add([itemCard, spritePad, itemBg, sprite, txt, grip]);
             container.setData('stepId', part.id);
             
             itemBg.setInteractive({ draggable: true, useHandCursor: true });
@@ -342,6 +335,7 @@ export class GameScene extends Phaser.Scene {
 
         const overlay = this.add.rectangle(width / 2, height / 2, width, height, 0x7dd3fc, 0.92);
         const title = this.add.text(width / 2, height * 0.16, "Trilha completa!", { fontSize: '48px', fontFamily: 'Arial Black', color: '#4f46e5', stroke: '#ffffff', strokeThickness: 8 }).setOrigin(0.5);
+        this.addCelebrationRobots(container, width, height);
         
         const finalImage = this.add.image(width / 2, height * 0.45, 'robot_kbt_full_v2').setDisplaySize(350, 500);
         this.tweens.add({ targets: finalImage, y: "-=12", duration: 1300, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
@@ -383,6 +377,7 @@ export class GameScene extends Phaser.Scene {
         
         const bg = this.add.rectangle(width / 2, height / 2, width, height, 0x312e81, 0.86);
         const title = this.add.text(width / 2, height * 0.4, "O tempo acabou!", { fontSize: '42px', fontFamily: 'Arial Black', color: '#ffffff', stroke: '#ff6fb1', strokeThickness: 7 }).setOrigin(0.5);
+        this.addCelebrationRobots(container, width, height);
         
         const btnBg = this.add.rectangle(width / 2, height * 0.6, 460, 85, PALETTE.orange).setStrokeStyle(5, 0xffffff).setInteractive({ useHandCursor: true });
         const btnText = this.add.text(width / 2, height * 0.6, "TENTAR DE NOVO", { fontSize: '26px', fontFamily: 'Arial Black', color: '#ffffff' }).setOrigin(0.5);
@@ -400,11 +395,54 @@ export class GameScene extends Phaser.Scene {
         shadow.fillStyle(PALETTE.shadow, 0.16);
         shadow.fillRoundedRect(x - w / 2 + 10, y - h / 2 + 12, w, h, 30);
         const panel = this.add.graphics();
-        panel.fillStyle(fill, 0.96);
-        panel.lineStyle(5, stroke, 0.8);
+        panel.fillGradientStyle(fill, 0xffffff, fill, 0xffffff, 0.96);
+        panel.lineStyle(5, stroke, 0.76);
         panel.fillRoundedRect(x - w / 2, y - h / 2, w, h, 30);
         panel.strokeRoundedRect(x - w / 2, y - h / 2, w, h, 30);
+        panel.lineStyle(2, 0xffffff, 0.82);
+        panel.strokeRoundedRect(x - w / 2 + 10, y - h / 2 + 10, w - 20, h - 20, 24);
         return panel;
+    }
+
+    private drawWorkspaceHeader(x: number, y: number, w: number, label: string, fill: number, textColor: number, badge: string) {
+        const tab = this.add.graphics();
+        tab.fillStyle(0xffffff, 0.96);
+        tab.lineStyle(4, fill, 0.95);
+        tab.fillRoundedRect(x - w / 2, y - 20, w, 42, 21);
+        tab.strokeRoundedRect(x - w / 2, y - 20, w, 42, 21);
+        this.add.circle(x - w / 2 + 28, y + 1, 17, fill, 1).setStrokeStyle(3, 0xffffff, 0.95).setDepth(4);
+        this.add.text(x - w / 2 + 28, y + 1, badge, { fontSize: "15px", fontFamily: "Arial Black", color: "#ffffff" }).setOrigin(0.5).setDepth(5);
+        this.add.text(x, y, label, { 
+            fontSize: "21px", fontFamily: "Arial Black", color: `#${textColor.toString(16).padStart(6, '0')}`, stroke: "#ffffff", strokeThickness: 5
+        }).setOrigin(0.5).setDepth(5);
+    }
+
+    private drawPartCard(x: number, y: number, w: number, h: number, index: number) {
+        const card = this.add.graphics();
+        card.fillStyle(0x9a7b3f, 0.18);
+        card.fillRoundedRect(x + 7, y + 9, w, h, 22);
+        card.fillGradientStyle(0xffffff, 0xfffbeb, 0xffffff, 0xfffbeb, 1);
+        card.lineStyle(4, PALETTE.orange, 1);
+        card.fillRoundedRect(x, y, w, h, 22);
+        card.strokeRoundedRect(x, y, w, h, 22);
+        card.fillStyle(index % 2 === 0 ? PALETTE.lemon : PALETTE.cyanSoft, 0.52);
+        card.fillRoundedRect(x + 10, y + 10, 96, h - 20, 16);
+        return card;
+    }
+
+    private drawSlotCard(x: number, y: number, w: number, h: number, step: number, label: string, compact: boolean) {
+        this.drawCard(x, y, w, h, 0xf8fbff, PALETTE.purple);
+        const line = this.add.graphics();
+        line.lineStyle(4, PALETTE.purple, 0.18);
+        line.lineBetween(x - 66, y, x + 108, y);
+        this.add.circle(x - 112, y, compact ? 20 : 27, 0xffd166, 1).setStrokeStyle(4, 0xffffff, 0.98);
+        this.add.text(x - 112, y, `${step}`, { fontSize: compact ? '20px' : '25px', color: '#ffffff', fontFamily: 'Arial Black', stroke: '#b45309', strokeThickness: 3 }).setOrigin(0.5);
+        this.add.text(x + 30, y - (compact ? 1 : 4), `Lugar da`, { 
+            fontSize: compact ? '11px' : '13px', color: '#64748b', fontFamily: 'Arial Black', align: 'left' 
+        }).setOrigin(0.5);
+        this.add.text(x + 35, y + (compact ? 14 : 15), label.trim().toUpperCase(), { 
+            fontSize: compact ? '11px' : '14px', color: '#334155', fontFamily: 'Arial Black', align: 'left', wordWrap: { width: w - 150 }
+        }).setOrigin(0.5);
     }
 
     private drawCard(x: number, y: number, w: number, h: number, fill: number, stroke: number) {
@@ -457,13 +495,16 @@ export class GameScene extends Phaser.Scene {
     }
 
     private addStartRobotCrew(width: number, height: number) {
+        const shift = this.currentLevelIdx * 0.035;
         return [
-            this.drawFloatingMedabotTile(width * 0.1, height * 0.2, 0.36, PALETTE.purple, -5),
-            this.drawFloatingMedabotTile(width * 0.87, height * 0.23, 0.34, PALETTE.boltBlue, 5),
-            this.drawFloatingMedabotTile(width * 0.14, height * 0.78, 0.38, PALETTE.pink, 4),
-            this.drawFloatingMedabotTile(width * 0.35, height * 0.84, 0.34, PALETTE.orange, -2),
-            this.drawFloatingMedabotTile(width * 0.61, height * 0.85, 0.34, PALETTE.green, 2),
-            this.drawFloatingMedabotTile(width * 0.82, height * 0.77, 0.38, PALETTE.boltYellow, -4)
+            this.drawFloatingMedabotTile(width * (0.1 + shift), height * 0.2, 0.44, PALETTE.purple, -5),
+            this.drawFloatingMedabotTile(width * (0.87 - shift), height * 0.23, 0.42, PALETTE.boltBlue, 5),
+            this.drawFloatingMedabotTile(width * 0.14, height * 0.78, 0.46, PALETTE.pink, 4),
+            this.drawFloatingMedabotTile(width * 0.35, height * (0.84 - shift), 0.4, PALETTE.orange, -2),
+            this.drawFloatingMedabotTile(width * 0.61, height * (0.85 - shift), 0.4, PALETTE.green, 2),
+            this.drawFloatingMedabotTile(width * 0.82, height * 0.77, 0.46, PALETTE.boltYellow, -4),
+            this.drawFloatingMedabotTile(width * 0.23, height * 0.36, 0.34, PALETTE.cyanSoft, 6),
+            this.drawFloatingMedabotTile(width * 0.76, height * 0.38, 0.34, PALETTE.lemon, -6)
         ];
     }
 
@@ -477,22 +518,26 @@ export class GameScene extends Phaser.Scene {
         card.lineStyle(3 * scale, 0xffffff, 0.96);
         card.fillRoundedRect(-54 * scale, -54 * scale, 108 * scale, 108 * scale, 22 * scale);
         card.strokeRoundedRect(-54 * scale, -54 * scale, 108 * scale, 108 * scale, 22 * scale);
-        const bot = this.drawMedabotBuddy(0, 10 * scale, scale * 0.7, accent);
-        bot.removeFromDisplayList();
-        tile.add([shadow, card, bot]);
+        const glow = this.add.circle(0, 2 * scale, 46 * scale, accent, 0.18);
+        const bot = this.add.image(0, 4 * scale, 'robot_kbt_full_v2').setDisplaySize(86 * scale, 124 * scale);
+        tile.add([shadow, card, glow, bot]);
         tile.setAngle(angle);
         this.tweens.add({ targets: tile, y: y - 12, angle: angle * -1, duration: 1800 + Math.abs(angle) * 90, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
         return tile;
     }
 
     private addLabRobotCrew(width: number, height: number) {
+        const levelShift = this.currentLevelIdx * 0.025;
         const specs = [
-            { x: 0.08, y: 0.49, s: 0.6, c: PALETTE.boltYellow, capsule: true },
-            { x: 0.92, y: 0.49, s: 0.6, c: PALETTE.boltRed, capsule: true },
-            { x: 0.16, y: 0.71, s: 0.38, c: PALETTE.orange },
-            { x: 0.84, y: 0.71, s: 0.38, c: PALETTE.green },
-            { x: 0.06, y: 0.28, s: 0.34, c: PALETTE.boltBlue },
-            { x: 0.94, y: 0.28, s: 0.34, c: PALETTE.pink }
+            { x: 0.08 + levelShift, y: 0.49, s: 0.68, c: PALETTE.boltYellow, capsule: true, a: -4 },
+            { x: 0.92 - levelShift, y: 0.49, s: 0.68, c: PALETTE.boltRed, capsule: true, a: 4 },
+            { x: 0.16, y: 0.71, s: 0.44, c: PALETTE.orange, a: 5 },
+            { x: 0.84, y: 0.71, s: 0.44, c: PALETTE.green, a: -5 },
+            { x: 0.06, y: 0.28, s: 0.42, c: PALETTE.boltBlue, a: -7 },
+            { x: 0.94, y: 0.28, s: 0.42, c: PALETTE.pink, a: 7 },
+            { x: 0.31 + levelShift, y: 0.26, s: 0.32, c: PALETTE.purple, a: 4 },
+            { x: 0.69 - levelShift, y: 0.26, s: 0.32, c: PALETTE.boltYellow, a: -4 },
+            { x: 0.48, y: 0.82, s: 0.34, c: PALETTE.boltBlue, a: 2 }
         ];
 
         specs.forEach((spec) => {
@@ -500,7 +545,44 @@ export class GameScene extends Phaser.Scene {
                 this.drawMedabotCapsule(width * spec.x, height * 0.48, 0.72);
             }
 
-            this.drawMedabotBuddy(width * spec.x, height * spec.y, spec.s, spec.c);
+            this.drawRealMedabot(width * spec.x, height * spec.y, spec.s, spec.c, spec.a);
+        });
+    }
+
+    private drawRealMedabot(x: number, y: number, scale: number, accent: number, angle = 0, alpha = 1) {
+        const bot = this.add.container(x, y);
+        const shadow = this.add.ellipse(0, 60 * scale, 90 * scale, 24 * scale, PALETTE.shadow, 0.16 * alpha);
+        const glow = this.add.circle(0, -6 * scale, 62 * scale, accent, 0.16 * alpha);
+        const sprite = this.add.image(0, -8 * scale, 'robot_kbt_full_v2')
+            .setDisplaySize(98 * scale, 142 * scale)
+            .setAlpha(alpha);
+
+        bot.add([shadow, glow, sprite]);
+        bot.setAngle(angle);
+        this.tweens.add({
+            targets: bot,
+            y: y - 10 * scale,
+            angle: angle * -0.65,
+            duration: 1500 + Math.abs(angle) * 95,
+            yoyo: true,
+            repeat: -1,
+            ease: 'Sine.easeInOut'
+        });
+        return bot;
+    }
+
+    private addCelebrationRobots(container: Phaser.GameObjects.Container, width: number, height: number) {
+        const specs = [
+            { x: 0.12, y: 0.2, s: 0.56, c: PALETTE.lemon, a: -8 },
+            { x: 0.88, y: 0.22, s: 0.54, c: PALETTE.pink, a: 8 },
+            { x: 0.18, y: 0.78, s: 0.48, c: PALETTE.green, a: 5 },
+            { x: 0.82, y: 0.77, s: 0.48, c: PALETTE.boltBlue, a: -5 }
+        ];
+
+        specs.forEach((spec) => {
+            const bot = this.drawRealMedabot(width * spec.x, height * spec.y, spec.s, spec.c, spec.a, 0.78);
+            bot.removeFromDisplayList();
+            container.add(bot);
         });
     }
 
