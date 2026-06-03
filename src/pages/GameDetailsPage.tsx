@@ -21,6 +21,7 @@ const SLUG_TO_CODE: Record<string, GameCode> = {
   "desktop-digital-infantil": "EF01CO06",
   "guardioes-dos-dados": "EF01CO07",
   "hangar-dos-modelos": "EF02CO01",
+  "desfile-do-robo-repetidor": "EF02CO02",
 };
 
 const GAME_CONFIG_LOADERS: Partial<
@@ -33,12 +34,14 @@ const GAME_CONFIG_LOADERS: Partial<
   EF01CO06: () => import("../games/EF01CO06/index"),
   EF01CO07: () => import("../games/EF01CO07/index"),
   EF02CO01: () => import("../games/EF02CO01/index"),
+  EF02CO02: () => import("../games/EF02CO02/index"),
 };
 
 const GAMES_WITH_IN_GAME_COMPLETION_SCREEN = new Set([
   "oficina-dos-algoritmos",
   "pixel-secreto",
   "guardioes-dos-dados",
+  "desfile-do-robo-repetidor",
 ]);
 
 export default function GameDetailsPage() {
@@ -469,6 +472,11 @@ export default function GameDetailsPage() {
       "Compare os veículos apresentados.",
       "Use atributos como rodas, motor e meio.",
       "Classifique corretamente para vencer.",
+    ],
+    "desfile-do-robo-repetidor": [
+      "Escolha uma seta para cada casa do caminho.",
+      "Desvie dos cones antes de chegar ao palco.",
+      "Execute o programa para levar o robô até a estrela.",
     ],
   };
 
