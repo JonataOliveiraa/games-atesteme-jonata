@@ -1,6 +1,17 @@
 import Phaser from 'phaser'
 import { APP_DEFS } from '../types'
-import desktopBgUrl from '../../../assets/games/EF01CO06/desktop-bg.png'
+import desktopBgUrl      from '../../../assets/games/EF01CO06/desktop-bg.png'
+import loadingBgUrl      from '../../../assets/games/EF01CO06/loading-bg.png'
+import iconCameraUrl     from '../../../assets/games/EF01CO06/icon-camera.png'
+import iconGravadorUrl   from '../../../assets/games/EF01CO06/icon-gravador.png'
+import iconDesenhoUrl    from '../../../assets/games/EF01CO06/icon-desenho.png'
+import iconCalculadoraUrl from '../../../assets/games/EF01CO06/icon-calculadora.png'
+import iconNavegadorUrl  from '../../../assets/games/EF01CO06/icon-navegador.png'
+import iconPlayerUrl     from '../../../assets/games/EF01CO06/icon-player.png'
+import albumArtUrl       from '../../../assets/games/EF01CO06/album-art.png'
+import cameraSceneUrl    from '../../../assets/games/EF01CO06/camera-scene.png'
+import browserPageUrl    from '../../../assets/games/EF01CO06/browser-page.png'
+import luaUrl            from '../../../assets/games/EF01CO06/lua.png'
 
 /**
  * BootScene — carrega assets e gera texturas programáticas para EF01CO06.
@@ -21,8 +32,26 @@ export class BootScene extends Phaser.Scene {
 
   preload() {
     this.createLoadingBar()
-    this.load.image('desktop-bg', desktopBgUrl)
-    // TODO: this.load.atlas('ef01co06-icons', ..., ...)
+
+    // loading-bg carrega primeiro para poder ser exibido durante o preload
+    this.load.image('loading-bg', loadingBgUrl)
+    this.load.on('filecomplete-image-loading-bg', () => {
+      const img = this.add.image(640, 360, 'loading-bg').setDisplaySize(1280, 720)
+      this.children.sendToBack(img)
+    })
+
+    this.load.image('desktop-bg',    desktopBgUrl)
+    this.load.image('icon-camera',   iconCameraUrl)
+    this.load.image('icon-gravador', iconGravadorUrl)
+    this.load.image('icon-desenho',  iconDesenhoUrl)
+    this.load.image('icon-calculadora', iconCalculadoraUrl)
+    this.load.image('icon-navegador', iconNavegadorUrl)
+    this.load.image('icon-player',   iconPlayerUrl)
+    this.load.image('album-art',     albumArtUrl)
+    this.load.image('camera-scene',  cameraSceneUrl)
+    this.load.image('browser-page',  browserPageUrl)
+    this.load.image('mascot-lua',    luaUrl)
+
     // TODO: this.load.audio('sfx-open',    ['assets/audio/window-open.ogg', 'assets/audio/window-open.mp3'])
     // TODO: this.load.audio('sfx-close',   ['assets/audio/window-close.ogg','assets/audio/window-close.mp3'])
     // TODO: this.load.audio('sfx-success', ['assets/audio/success.ogg',     'assets/audio/success.mp3'])
@@ -40,6 +69,7 @@ export class BootScene extends Phaser.Scene {
   private createLoadingBar() {
     const cx = 640, cy = 360, w = 500, h = 28
 
+    // Fundo escuro programático — substituído por loading-bg.png assim que carrega
     this.add.rectangle(640, 360, 1280, 720, 0x1A2035)
     this.add.rectangle(640, 280, 200, 200, 0x2C3E6A, 0.4)
 

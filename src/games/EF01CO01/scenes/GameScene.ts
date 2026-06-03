@@ -28,13 +28,14 @@ const COLORS = {
 }
 
 const DEV_START_LEVEL: 1 | 2 | 3 = 1  // ← mude para 2 ou 3 para testar; volte para 1 antes de publicar
-const DEV_NO_TIMER    = false      // ← true = pula tela inicial e não inicia timer (ajuste visual)
+const DEV_NO_TIMER    = true      // ← true = pula tela inicial e não inicia timer (ajuste visual)
 
 
 export class GameScene extends Phaser.Scene {
   private levelConfig!: LevelConfig
   private bases: Phaser.GameObjects.Container[] = []
   private itemSprites: DraggableItem[] = []
+  private itemBackings: Phaser.GameObjects.Graphics[] = []
   private hits = 0
   private errors = 0
   private startTime = 0
@@ -67,6 +68,7 @@ export class GameScene extends Phaser.Scene {
     this.hasStartedTimer = false
     this.timerState = { progress: 1 }
     this.timerDuration = (this.levelConfig.timeLimit ?? 90) * 1000
+    this.itemBackings = []
   }
 
   create() {
@@ -571,30 +573,21 @@ export class GameScene extends Phaser.Scene {
     const rows = n > 9 ? [ITEM_Y_ROW1, ITEM_Y_ROW2] : [ITEM_Y]
     const useImage = this.textures.exists('shelf-wood')
 
-    // shelf-wood.png 1536×1024 — branco removido em BootScene.removeWhiteBackground()
-    // Ajuste fino: SHELF_H controla a altura total; PLANK_FRAC é a % do topo até a tábua.
-    // Se a tábua aparecer alta demais → aumentar PLANK_FRAC; baixa demais → diminuir.
-    const SHELF_W     = 1500   // largura de exibição (px) — aumente para esticar horizontalmente
-    const SHELF_H     = 380    // altura total de exibição no canvas (px)
-    const PLANK_FRAC  = 0.35   // fração da imagem até o topo da tábua (~22% de 1024px)
-
-    // Y do topo da imagem para que a tábua fique logo abaixo dos itens
-    const plankOffset = Math.round(SHELF_H * PLANK_FRAC)  // px do topo da img até a tábua
+    const SHELF_W    = 1500
+    const SHELF_H    = 380
+    const PLANK_FRAC = 0.35
+    const plankOffset = Math.round(SHELF_H * PLANK_FRAC)
 
     for (const rowY of rows) {
-      // items centrados em rowY; com ITEM_SCALE_MAX=0.70, item grande (120px) → bottom ≈ rowY+42
-      // offset 36 → tábua em rowY+36, tocando o fundo dos itens médios/grandes
       const imgTopY = rowY + 30 - plankOffset
 
       if (useImage) {
-        // Fundo já transparente — sem setCrop, sem blend mode especial
         this.add.image(640, imgTopY, 'shelf-wood')
           .setOrigin(0.5, 0)
           .setDisplaySize(SHELF_W, SHELF_H)
           .setDepth(2)
       } else {
         const trayY = rowY + 42
-        // Fallback programático
         const trayX = 28
         const trayW = 1224
         const trayH = 30
@@ -682,7 +675,7 @@ export class GameScene extends Phaser.Scene {
       gfx.fillStyle(0xFFF8DC, 1)
       gfx.fillRoundedRect(-panelW / 2, panelY - panelH / 2, panelW, panelH, 9)
       gfx.fillStyle(0xFFFFFF, 0.52)
-      gfx.fillRoundedRect(-panelW / 2 + 4, panelY - panelH / 2 + 4, panelW - 8, panelH * 0.38, { tl: 7, tr: 7, bl: 0, br: 0 })
+      gfx.fillRoundedRect(-panelW / 2 + 4, panelY - panelH / 2 + 4, panelW - 8, panelH * 0.65, { tl: 7, tr: 7, bl: 0, br: 0 })
       gfx.lineStyle(2, bDark, 0.45)
       gfx.strokeRoundedRect(-panelW / 2, panelY - panelH / 2, panelW, panelH, 9)
 
@@ -799,15 +792,28 @@ export class GameScene extends Phaser.Scene {
     const gap = Math.min(130, Math.floor(1100 / Math.max(1, n - 1)))
     const startX = 640 - ((n - 1) * gap) / 2
     const displayScale = Math.min(ITEM_SCALE_MAX, (gap - 10) / 120)
+    const bSize = Math.round(displayScale * 110) + 28
 
     items.forEach((item, i) => {
       const x = startX + i * gap
+
+      const backing = this.add.graphics()
+      backing.fillStyle(0xFFFFFF, 1.0)
+      backing.fillRoundedRect(-bSize / 2, -bSize / 2, bSize, bSize, bSize * 0.22)
+      backing.lineStyle(1.5, 0xFFFFFF, 0.55)
+      backing.strokeRoundedRect(-bSize / 2, -bSize / 2, bSize, bSize, bSize * 0.22)
+      backing.setPosition(x, rowY)
+      backing.setDepth(3)
+      backing.setAlpha(0)
+      this.itemBackings.push(backing)
+
       const key = this.levelConfig.level === 1
         ? `item-${item.color}-swatch-${item.size}`
         : `item-${item.color}-${item.shape}-${item.size}`
 
       const sprite = this.add.image(x, rowY, key) as DraggableItem
       sprite.setScale(displayScale)
+      sprite.setDepth(4)
       sprite.itemData = item
       sprite.originX_ = x
       sprite.originY_ = rowY
@@ -835,10 +841,10 @@ export class GameScene extends Phaser.Scene {
   }
 
   private createTimeBar() {
-    const x = 210
-    const y = 117
-    const w = 860
-    const h = 24
+    const x = 240
+    const y = 28
+    const w = 800
+    const h = 30
 
     const bg = this.add.graphics()
     bg.fillStyle(0x33190A, 0.82)
@@ -1200,6 +1206,16 @@ export class GameScene extends Phaser.Scene {
   }
 
   private revealItems() {
+    this.itemBackings.forEach((backing, i) => {
+      this.tweens.add({
+        targets: backing,
+        alpha: 0.65,
+        delay: i * 85,
+        duration: 320,
+        ease: 'Back.Out',
+      })
+    })
+
     this.itemSprites.forEach((sprite, i) => {
       this.tweens.add({
         targets: sprite,
@@ -1212,7 +1228,6 @@ export class GameScene extends Phaser.Scene {
         ease: 'Back.Out',
         onComplete: () => {
           if (!sprite.active) return
-          // Gentle floating idle — offset per item to avoid lockstep
           this.tweens.add({
             targets: sprite,
             y: sprite.originY_ - 6,
