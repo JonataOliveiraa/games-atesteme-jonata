@@ -2,10 +2,11 @@ import type { Game } from "../types/game";
 import heroThumbnail from "../assets/hero.png";
 import classificadoresThumbnail from "../assets/games/EF01CO01/cover-01.png";
 import algorithmsThumbnail from "../assets/games/EF01CO03/algorithm-game-cover.png";
-import trilhaThumbnail from "../assets/games/EF01CO02/Trilha.png"
+import trilhaThumbnail from "../assets/games/EF01CO02/Trilha.png";
 import pixelSecretThumbnail from "../assets/games/EF01CO05/cover5.png";
 import guardiansThumbnail from "../assets/games/EF01CO07/cover.png";
 import desktopThumbnail from "../assets/games/EF01CO06/cover.png";
+import robotParadeThumbnail from "../assets/games/EF02CO02/cover.png";
 
 export const games: Game[] = [
   {
@@ -37,7 +38,6 @@ export const games: Game[] = [
     icon: "🛠️",
     slug: "oficina-dos-algoritmos",
     thumbnail: algorithmsThumbnail,
-
   },
   {
     id: 3,
@@ -57,8 +57,7 @@ export const games: Game[] = [
     icon: "🎨",
     slug: "pixel-secreto",
     thumbnail: pixelSecretThumbnail,
-  }
-  ,
+  },
   {
     id: 5,
     title: "Desktop Digital Infantil",
@@ -69,19 +68,17 @@ export const games: Game[] = [
     slug: "desktop-digital-infantil",
     thumbnail: desktopThumbnail,
   },
-
   {
     id: 6,
-  title: "Guardiões dos Dados",
-  description: "Escolha atitudes seguras em situações com celular, tablet, computador, jogos e aplicativos.",
-  category: "Pensamento Computacional",
-  points: 50,
-  icon: "🛡️",
-  slug: "guardioes-dos-dados",
-  thumbnail: guardiansThumbnail,
-}
-,
- {
+    title: "Guardiões dos Dados",
+    description: "Escolha atitudes seguras em situações com celular, tablet, computador, jogos e aplicativos.",
+    category: "Pensamento Computacional",
+    points: 50,
+    icon: "🛡️",
+    slug: "guardioes-dos-dados",
+    thumbnail: guardiansThumbnail,
+  },
+  {
     id: 7,
     title: "Hangar dos Modelos",
     description: "Filtre, compare e agrupe meios de transporte por atributos como meio, motor e rodas.",
@@ -93,6 +90,16 @@ export const games: Game[] = [
   },
   {
     id: 8,
+    title: "Desfile do Robô Repetidor",
+    description: "Monte um caminho com setas para guiar o robô até o palco.",
+    category: "Pensamento Computacional",
+    points: 55,
+    icon: "🤖",
+    slug: "desfile-do-robo-repetidor",
+    thumbnail: robotParadeThumbnail,
+  },
+  {
+    id: 9,
     title: "Corrida do Saber",
     description: "Avance casas ao acertar perguntas e complete o percurso.",
     category: "Perguntas",
@@ -102,7 +109,7 @@ export const games: Game[] = [
     thumbnail: heroThumbnail,
   },
   {
-    id: 9,
+    id: 10,
     title: "Desafio Matemático",
     description: "Resolva contas e problemas no menor tempo possível.",
     category: "Matemática",
@@ -112,7 +119,7 @@ export const games: Game[] = [
     thumbnail: heroThumbnail,
   },
   {
-    id: 10,
+    id: 11,
     title: "Caça ao Número",
     description: "Encontre os números corretos antes do tempo acabar.",
     category: "Atenção",
@@ -122,7 +129,7 @@ export const games: Game[] = [
     thumbnail: heroThumbnail,
   },
   {
-    id: 11,
+    id: 12,
     title: "Sequência Lógica",
     description: "Complete as sequências corretamente para avançar.",
     category: "Raciocínio",
@@ -132,7 +139,7 @@ export const games: Game[] = [
     thumbnail: heroThumbnail,
   },
   {
-    id: 12,
+    id: 13,
     title: "Desafio das Cores",
     description: "Associe cores e padrões corretamente para vencer.",
     category: "Percepção",
@@ -142,7 +149,7 @@ export const games: Game[] = [
     thumbnail: heroThumbnail,
   },
   {
-    id: 13,
+    id: 14,
     title: "Montando Palavras",
     description: "Organize letras para formar as palavras corretas.",
     category: "Português",
@@ -152,7 +159,7 @@ export const games: Game[] = [
     thumbnail: heroThumbnail,
   },
   {
-    id: 14,
+    id: 15,
     title: "Conta Rápida",
     description: "Resolva operações matemáticas com rapidez.",
     category: "Cálculo",
@@ -162,7 +169,7 @@ export const games: Game[] = [
     thumbnail: heroThumbnail,
   },
   {
-    id: 15,
+    id: 16,
     title: "Labirinto Inteligente",
     description: "Encontre o melhor caminho até a saída.",
     category: "Estratégia",
@@ -171,5 +178,4 @@ export const games: Game[] = [
     slug: "labirinto-inteligente",
     thumbnail: heroThumbnail,
   },
-  
 ];
