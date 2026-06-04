@@ -29,6 +29,8 @@ export class GameScene extends Phaser.Scene {
   private pathMarks: Phaser.GameObjects.GameObject[] = [];
   private programObjects: Phaser.GameObjects.GameObject[] = [];
   private overlayObjects: Phaser.GameObjects.GameObject[] = [];
+  private directionHitAreas: Array<{ bounds: Phaser.Geom.Rectangle; onClick: () => void }> = [];
+  private actionHitAreas: Array<{ bounds: Phaser.Geom.Rectangle; onClick: () => void }> = [];
   private commandLocked = false;
   private hits = 0;
   private errors = 0;
@@ -53,6 +55,8 @@ export class GameScene extends Phaser.Scene {
     this.pathMarks = [];
     this.programObjects = [];
     this.overlayObjects = [];
+    this.directionHitAreas = [];
+    this.actionHitAreas = [];
     this.commandLocked = false;
     this.hits = 0;
     this.errors = 0;
@@ -94,6 +98,9 @@ export class GameScene extends Phaser.Scene {
 
   shutdown() {
     this.timerEvent?.destroy();
+    this.input.off("pointerdown", this.handleDirectionPointerDown, this);
+    this.input.off("pointermove", this.handleDirectionPointerMove, this);
+    this.input.setDefaultCursor("default");
     this.unsubscribePlatformCommands?.();
   }
 
@@ -252,7 +259,10 @@ if (isObstacle) {
   }
 
   private createCommandPanel() {
-    this.drawGamePanel(910, 302, 604, 270, COLORS.purple, 1);
+    this.directionHitAreas = [];
+    this.input.off("pointerdown", this.handleDirectionPointerDown, this);
+    this.input.off("pointermove", this.handleDirectionPointerMove, this);
+    this.drawGamePanel(910, 350, 604, 320, COLORS.purple, 1);
     this.drawPanelHeader(910, 178, 410, "Escolha a direção", COLORS.purple);
 
     this.add.text(910, 224, "Cada toque na seta move o robô 1 casa.", {
@@ -266,9 +276,9 @@ if (isObstacle) {
 
     const directions: Array<{ x: number; y: number; label: string; arrow: string; direction: Direction; color: number }> = [
       { x: 910, y: 270, label: "Cima", arrow: "↑", direction: "up", color: COLORS.blue },
-      { x: 910, y: 318, label: "Direita", arrow: "→", direction: "right", color: COLORS.purple },
-      { x: 910, y: 366, label: "Baixo", arrow: "↓", direction: "down", color: COLORS.blue },
-      { x: 910, y: 414, label: "Esquerda", arrow: "←", direction: "left", color: COLORS.purple },
+      { x: 910, y: 332, label: "Direita", arrow: "→", direction: "right", color: COLORS.purple },
+      { x: 910, y: 394, label: "Baixo", arrow: "↓", direction: "down", color: COLORS.blue },
+      { x: 910, y: 456, label: "Esquerda", arrow: "←", direction: "left", color: COLORS.purple },
     ];
 
     directions.forEach((button) => {
@@ -281,17 +291,43 @@ if (isObstacle) {
         () => this.addCommand({ type: "move", direction: button.direction })
       );
     });
+
+    this.input.on("pointerdown", this.handleDirectionPointerDown, this);
+    this.input.on("pointermove", this.handleDirectionPointerMove, this);
+  }
+
+  private handleDirectionPointerDown(pointer: Phaser.Input.Pointer) {
+    if (this.commandLocked || this.overlayObjects.length) return;
+
+    const hit =
+      this.directionHitAreas.find((area) => area.bounds.contains(pointer.x, pointer.y)) ??
+      this.actionHitAreas.find((area) => area.bounds.contains(pointer.x, pointer.y));
+    if (!hit) return;
+
+    hit.onClick();
+  }
+
+  private handleDirectionPointerMove(pointer: Phaser.Input.Pointer) {
+    if (this.commandLocked || this.overlayObjects.length) {
+      this.input.setDefaultCursor("default");
+      return;
+    }
+
+    const isOverDirection = this.directionHitAreas.some((area) => area.bounds.contains(pointer.x, pointer.y));
+    const isOverAction = this.actionHitAreas.some((area) => area.bounds.contains(pointer.x, pointer.y));
+    this.input.setDefaultCursor(isOverDirection || isOverAction ? "pointer" : "default");
   }
 
   private createProgramPanel() {
-    this.drawGamePanel(910, 530, 604, 140, COLORS.blue, 1);
-    this.drawPanelHeader(910, 466, 320, "Programa do robô", COLORS.blue);
+    this.drawGamePanel(910, 566, 604, 108, COLORS.blue, 1);
+    this.drawPanelHeader(910, 512, 320, "Programa do robô", COLORS.blue);
   }
 
   private createActionButtons() {
-    this.createUiButton(730, 635, 168, 64, "Executar", COLORS.green, () => this.executeProgram());
-    this.createUiButton(910, 635, 158, 64, "Desfazer", COLORS.orange, () => this.undoCommand());
-    this.createUiButton(1080, 635, 146, 64, "Limpar", 0xef4444, () => this.clearProgram());
+    this.actionHitAreas = [];
+    this.createUiButton(690, 668, 205, 76, "Executar", COLORS.green, () => this.executeProgram());
+    this.createUiButton(910, 668, 195, 76, "Desfazer", COLORS.orange, () => this.undoCommand());
+    this.createUiButton(1130, 668, 185, 76, "Limpar", 0xef4444, () => this.clearProgram());
   }
   private createRobot() {
   const pos = this.gridToWorld(
@@ -359,8 +395,8 @@ if (isObstacle) {
     this.programObjects = [];
 
     if (!this.program.length) {
-      this.programObjects.push(this.add.text(910, 530, "Toque nas setas para montar o caminho do robô, uma casa por vez.", {
-        fontSize: "18px",
+      this.programObjects.push(this.add.text(910, 568, "Toque nas setas para montar o caminho do robô, uma casa por vez.", {
+        fontSize: "17px",
         fontFamily: "Arial Black, Arial",
         color: "#ffffff",
         stroke: "#0f172a",
@@ -374,19 +410,19 @@ if (isObstacle) {
     this.program.forEach((command, index) => {
       const col = index % 7;
       const row = Math.floor(index / 7);
-      const x = 642 + col * 86;
-      const y = 506 + row * 46;
+      const x = 648 + col * 84;
+      const y = 548 + row * 46;
       const label = this.getCommandLabel(command);
       const block = this.add.graphics().setDepth(12);
       block.fillStyle(this.getCommandColor(command), 0.98);
-      block.fillRoundedRect(x - 28, y - 24, 56, 48, 14);
+      block.fillRoundedRect(x - 25, y - 18, 50, 36, 12);
       block.fillStyle(0xffffff, 0.14);
-      block.fillRoundedRect(x - 20, y - 17, 40, 16, 8);
+      block.fillRoundedRect(x - 18, y - 13, 36, 12, 6);
       block.lineStyle(3, 0xffffff, 0.9);
-      block.strokeRoundedRect(x - 28, y - 24, 56, 48, 14);
+      block.strokeRoundedRect(x - 25, y - 18, 50, 36, 12);
       this.programObjects.push(block);
       this.programObjects.push(this.add.text(x, y, label, {
-        fontSize: "28px",
+        fontSize: "24px",
         fontFamily: "Arial Black, Arial",
         color: "#ffffff",
         stroke: "#0f172a",
@@ -904,21 +940,9 @@ if (isObstacle) {
     }).setOrigin(0.5);
 
     button.add([shadow, bg, text]);
-    const hitWidth = width + 28;
-    const hitHeight = height + 24;
-    button.setSize(hitWidth, hitHeight);
-    button.setInteractive({
-      hitArea: new Phaser.Geom.Rectangle(-hitWidth / 2, -hitHeight / 2, hitWidth, hitHeight),
-      hitAreaCallback: Phaser.Geom.Rectangle.Contains,
-      useHandCursor: true,
-    });
-    button.on("pointerdown", onClick);
-    button.on("pointerover", () => {
-      this.tweens.add({ targets: button, scale: 1.04, duration: 90, ease: "Sine.easeOut" });
-    });
-
-    button.on("pointerout", () => {
-      this.tweens.add({ targets: button, scale: 1, duration: 90, ease: "Sine.easeOut" });
+    this.actionHitAreas.push({
+      bounds: new Phaser.Geom.Rectangle(x - width / 2, y - height / 2, width, height),
+      onClick,
     });
   }
 
@@ -930,32 +954,32 @@ if (isObstacle) {
     color: number,
     onClick: () => void
   ) {
-    const width = 270;
-    const height = 42;
+    const width = 410;
+    const height = 54;
     const button = this.add.container(x, y).setDepth(12);
 
     const shadow = this.add.graphics();
     shadow.fillStyle(0x0f172a, 0.26);
-    shadow.fillRoundedRect(-width / 2 + 4, -height / 2 + 5, width, height, 14);
+    shadow.fillRoundedRect(-width / 2 + 5, -height / 2 + 6, width, height, 18);
 
     const bg = this.add.graphics();
     bg.fillStyle(color, 0.98);
-    bg.fillRoundedRect(-width / 2, -height / 2, width, height, 14);
+    bg.fillRoundedRect(-width / 2, -height / 2, width, height, 18);
     bg.fillStyle(0xffffff, 0.16);
-    bg.fillRoundedRect(-width / 2 + 8, -height / 2 + 6, 48, height - 12, 12);
+    bg.fillRoundedRect(-width / 2 + 10, -height / 2 + 8, 64, height - 16, 14);
     bg.lineStyle(3, 0xffffff, 0.92);
-    bg.strokeRoundedRect(-width / 2, -height / 2, width, height, 14);
+    bg.strokeRoundedRect(-width / 2, -height / 2, width, height, 18);
 
-    const icon = this.add.text(-95, 0, arrow, {
-      fontSize: "30px",
+    const icon = this.add.text(-160, 0, arrow, {
+      fontSize: "36px",
       fontFamily: "Arial Black, Arial",
       color: "#ffffff",
       stroke: "#0f172a",
       strokeThickness: 4,
     }).setOrigin(0.5);
 
-    const text = this.add.text(26, 0, label, {
-      fontSize: "18px",
+    const text = this.add.text(34, 0, label, {
+      fontSize: "22px",
       fontFamily: "Arial Black, Arial",
       color: "#ffffff",
       stroke: "#0f172a",
@@ -964,30 +988,9 @@ if (isObstacle) {
     }).setOrigin(0.5);
 
     button.add([shadow, bg, icon, text]);
-    button.setSize(width, height);
-    button.setInteractive({
-      hitArea: new Phaser.Geom.Rectangle(-width / 2, -height / 2, width, height),
-      hitAreaCallback: Phaser.Geom.Rectangle.Contains,
-      useHandCursor: true,
-    });
-    button.on("pointerdown", onClick);
-    button.on("pointerover", () => {
-      bg.clear();
-      bg.fillStyle(color, 1);
-      bg.fillRoundedRect(-width / 2, -height / 2, width, height, 14);
-      bg.fillStyle(0xffffff, 0.2);
-      bg.fillRoundedRect(-width / 2 + 8, -height / 2 + 6, 48, height - 12, 12);
-      bg.lineStyle(3, 0xffffff, 0.98);
-      bg.strokeRoundedRect(-width / 2, -height / 2, width, height, 14);
-    });
-    button.on("pointerout", () => {
-      bg.clear();
-      bg.fillStyle(color, 0.98);
-      bg.fillRoundedRect(-width / 2, -height / 2, width, height, 14);
-      bg.fillStyle(0xffffff, 0.16);
-      bg.fillRoundedRect(-width / 2 + 8, -height / 2 + 6, 48, height - 12, 12);
-      bg.lineStyle(3, 0xffffff, 0.92);
-      bg.strokeRoundedRect(-width / 2, -height / 2, width, height, 14);
+    this.directionHitAreas.push({
+      bounds: new Phaser.Geom.Rectangle(x - width / 2, y - height / 2, width, height),
+      onClick,
     });
   }
 
