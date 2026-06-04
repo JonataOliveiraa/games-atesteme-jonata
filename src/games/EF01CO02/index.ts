@@ -2,6 +2,7 @@ import Phaser from 'phaser'
 import { BootScene } from './scenes//BootScene'
 import { GameScene } from './scenes/GameScene'
 import { UIScene } from './scenes/UIScene'
+import './styles/medabot-ui.css'
 
 const EF01CO02Config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
@@ -21,7 +22,7 @@ const EF01CO02Config: Phaser.Types.Core.GameConfig = {
     disableWebAudio: false 
   },
   dom: { 
-    createContainer: false 
+    createContainer: true 
   },
 }
 
