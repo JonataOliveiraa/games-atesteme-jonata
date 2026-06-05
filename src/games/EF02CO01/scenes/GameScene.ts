@@ -158,7 +158,7 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
-  update(_time: number, _delta: number) {
+  update() {
     // timer is tween-driven — no per-frame update needed
   }
 
@@ -831,7 +831,6 @@ export class GameScene extends Phaser.Scene {
     const subText  = isYes ? cfg.subYes  : cfg.subNo
     const btnLabel = isYes ? cfg.btnYes  : cfg.btnNo
     const btnColor = isYes ? 0x2E7D32   : 0xB71C1C
-    const rimColor = isYes ? 0x4FC3F7   : 0xEF9A9A
 
     const panel = this.add.container(PANEL_LEFT_X, TOP_Y + 35)
     this.filterPanelContainer = panel
