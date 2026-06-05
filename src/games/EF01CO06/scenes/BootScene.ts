@@ -12,6 +12,9 @@ import albumArtUrl       from '../../../assets/games/EF01CO06/album-art.png'
 import cameraSceneUrl    from '../../../assets/games/EF01CO06/camera-scene.png'
 import browserPageUrl    from '../../../assets/games/EF01CO06/browser-page.png'
 import luaUrl            from '../../../assets/games/EF01CO06/lua.png'
+import gravadorBgUrl     from '../../../assets/games/EF01CO06/gravador-bg.png'
+import desenhoCanvasUrl  from '../../../assets/games/EF01CO06/desenho-canvas.png'
+import calcBgUrl         from '../../../assets/games/EF01CO06/calculadora-bg.png'
 
 /**
  * BootScene — carrega assets e gera texturas programáticas para EF01CO06.
@@ -47,10 +50,13 @@ export class BootScene extends Phaser.Scene {
     this.load.image('icon-calculadora', iconCalculadoraUrl)
     this.load.image('icon-navegador', iconNavegadorUrl)
     this.load.image('icon-player',   iconPlayerUrl)
-    this.load.image('album-art',     albumArtUrl)
-    this.load.image('camera-scene',  cameraSceneUrl)
-    this.load.image('browser-page',  browserPageUrl)
-    this.load.image('mascot-lua',    luaUrl)
+    this.load.image('album-art',      albumArtUrl)
+    this.load.image('camera-scene',   cameraSceneUrl)
+    this.load.image('browser-page',   browserPageUrl)
+    this.load.image('mascot-lua',     luaUrl)
+    this.load.image('gravador-bg',    gravadorBgUrl)
+    this.load.image('desenho-canvas', desenhoCanvasUrl)
+    this.load.image('calc-bg',        calcBgUrl)
 
     // TODO: this.load.audio('sfx-open',    ['assets/audio/window-open.ogg', 'assets/audio/window-open.mp3'])
     // TODO: this.load.audio('sfx-close',   ['assets/audio/window-close.ogg','assets/audio/window-close.mp3'])

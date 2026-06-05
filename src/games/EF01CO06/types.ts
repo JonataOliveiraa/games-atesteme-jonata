@@ -28,10 +28,10 @@ export interface LevelConfig {
 }
 
 export const APP_DEFS: AppDef[] = [
-  { id: 'camera',      label: 'Câmera',      icon: '📷', headerColor: 0x1A6B9A, bodyColor: 0xD6EAF8 },
-  { id: 'gravador',    label: 'Gravador',    icon: '🎙️', headerColor: 0x922B21, bodyColor: 0xFADBC8 },
-  { id: 'desenho',     label: 'Desenho',     icon: '🎨', headerColor: 0x76448A, bodyColor: 0xE8DAEF },
-  { id: 'calculadora', label: 'Calculadora', icon: '🧮', headerColor: 0x1E8449, bodyColor: 0xD5F5E3 },
-  { id: 'navegador',   label: 'Navegador',   icon: '🌐', headerColor: 0xCA6F1E, bodyColor: 0xFEF9E7 },
-  { id: 'player',      label: 'Músicas',     icon: '🎵', headerColor: 0x1A252F, bodyColor: 0xD6EEF8 },
+  { id: 'camera',      label: 'Câmera',      icon: '📷', headerColor: 0x1A6B9A, bodyColor: 0x0D1B2A },
+  { id: 'gravador',    label: 'Gravador',    icon: '🎙️', headerColor: 0x922B21, bodyColor: 0x1A0D0A },
+  { id: 'desenho',     label: 'Desenho',     icon: '🎨', headerColor: 0x76448A, bodyColor: 0x140E1A },
+  { id: 'calculadora', label: 'Calculadora', icon: '🧮', headerColor: 0x1E8449, bodyColor: 0x0A1A10 },
+  { id: 'navegador',   label: 'Navegador',   icon: '🌐', headerColor: 0xCA6F1E, bodyColor: 0x1A140A },
+  { id: 'player',      label: 'Músicas',     icon: '🎵', headerColor: 0x1A252F, bodyColor: 0x0A1628 },
 ]
