@@ -8,6 +8,7 @@ import guardiansThumbnail from "../assets/games/EF01CO07/cover.png";
 import desktopThumbnail from "../assets/games/EF01CO06/cover.png";
 import robotParadeThumbnail from "../assets/games/EF02CO02/cover.png";
 import hangarThumbnail from "../assets/games/EF02CO01/cover-hangar.png";
+import machineFactoryThumbnail from "../assets/games/EF02CO03/cover.png";
 
 export const games: Game[] = [
   {
@@ -101,13 +102,13 @@ export const games: Game[] = [
   },
   {
     id: 9,
-    title: "Corrida do Saber",
-    description: "Avance casas ao acertar perguntas e complete o percurso.",
-    category: "Perguntas",
-    points: 45,
-    icon: "🏁",
-    slug: "corrida-do-saber",
-    thumbnail: heroThumbnail,
+    title: "Fábrica de Máquinas",
+    description: "Escolha máquinas, descubra os comandos que cada uma aceita e monte uma linha de produção.",
+    category: "Mundo Digital",
+    points: 60,
+    icon: "🏭",
+    slug: "fabrica-de-maquinas",
+    thumbnail: machineFactoryThumbnail,
   },
   {
     id: 10,

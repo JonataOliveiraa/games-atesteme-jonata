@@ -447,8 +447,7 @@ if (isObstacle) {
         this.errors += 1;
         this.playWrong();
         runtimeGameBridge.emit({ type: "WRONG_ANSWER", gameId: GAME_ID, stage: this.levelConfig.level, pointsEarned: -5 });
-        this.showToast(result.message, 0xef4444);
-        this.commandLocked = false;
+        this.restartCurrentLevelAfterError(result.message);
         this.emitProgress();
         return;
       }
@@ -467,9 +466,17 @@ if (isObstacle) {
     this.errors += 1;
     this.playWrong();
     runtimeGameBridge.emit({ type: "WRONG_ANSWER", gameId: GAME_ID, stage: this.levelConfig.level, pointsEarned: -5 });
-    this.showToast("O robô parou fora da estrela. Tente mudar o caminho das setas.", 0xef4444);
-    this.commandLocked = false;
+    this.restartCurrentLevelAfterError("O robô parou fora da estrela. O nível vai recomeçar.");
     this.emitProgress();
+  }
+
+  private restartCurrentLevelAfterError(message: string) {
+    this.commandLocked = true;
+    this.timerEvent?.remove(false);
+    this.showToast(message, 0xef4444);
+    this.time.delayedCall(1000, () => {
+      this.scene.restart({ level: this.levelConfig.level });
+    });
   }
 
   private runCommand(command: RobotCommand) {
