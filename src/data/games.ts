@@ -7,6 +7,7 @@ import pixelSecretThumbnail from "../assets/games/EF01CO05/cover5.png";
 import guardiansThumbnail from "../assets/games/EF01CO07/cover.png";
 import desktopThumbnail from "../assets/games/EF01CO06/cover.png";
 import robotParadeThumbnail from "../assets/games/EF02CO02/cover.png";
+import hangarThumbnail from "../assets/games/EF02CO01/cover-hangar.png";
 
 export const games: Game[] = [
   {
@@ -86,7 +87,7 @@ export const games: Game[] = [
     points: 55,
     icon: "✈️",
     slug: "hangar-dos-modelos",
-    thumbnail: heroThumbnail,
+    thumbnail: hangarThumbnail,
   },
   {
     id: 8,

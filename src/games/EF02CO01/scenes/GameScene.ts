@@ -71,10 +71,14 @@ export class GameScene extends Phaser.Scene {
   private isMuted = false
   private phase: MissionPhase = 'intro'
   private gameEnded = false
+  private shouldShowLevelStart = false
   private missionEffectActive = false
 
   // Objetos de jogo
   private vehicleCards: VehicleCard[] = []
+
+  // Overlay (modais de fluxo)
+  private overlayObjects: Phaser.GameObjects.GameObject[] = []
 
   // Container destruível entre pares (nível 2)
   private missionLayer?: Phaser.GameObjects.Container
@@ -92,15 +96,13 @@ export class GameScene extends Phaser.Scene {
     diferenteBtn: Phaser.GameObjects.Container
   }>()
 
-  // Timer (padrão EF01CO06)
-  private timerBar!: Phaser.GameObjects.Rectangle
-  private timeLeft = 0
+  // Timer (padrão EF01CO03)
+  private timeBarFill?: Phaser.GameObjects.Graphics
+  private timerTween?: Phaser.Tweens.Tween
+  private timerState = { progress: 1 }
   private timerActive = false
   private timerWarned = false
   private warningBeepTimer: Phaser.Time.TimerEvent | null = null
-
-  // Timer no padrão da plataforma: só começa na primeira ação real
-  private hasStartedTimer = false
 
   private unsubPlatform?: () => void
 
@@ -110,7 +112,7 @@ export class GameScene extends Phaser.Scene {
 
   // ── Lifecycle ─────────────────────────────────────────────────────────────
 
-  init(data: { level?: number; points?: number; lives?: number }) {
+  init(data: { level?: number; points?: number; lives?: number; showLevelStart?: boolean }) {
     const lvl = (data?.level ?? 1) as 1 | 2 | 3
     this.levelConfig         = LEVELS.find((l) => l.level === lvl) ?? LEVELS[0]
     this.currentMissionIndex = 0
@@ -121,15 +123,16 @@ export class GameScene extends Phaser.Scene {
     this.isMuted             = false
     this.phase               = 'intro'
     this.gameEnded           = false
+    this.shouldShowLevelStart = data?.showLevelStart ?? false
     this.missionEffectActive = false
     this.vehicleCards        = []
+    this.overlayObjects      = []
     this.comparisonAnswers.clear()
     this.comparisonBtns.clear()
-    this.timerActive  = false
-    this.timerWarned  = false
-    this.timeLeft     = 0
+    this.timerActive      = false
+    this.timerWarned      = false
+    this.timerState.progress = 1
     this.warningBeepTimer = null
-    this.hasStartedTimer = false
   }
 
   create() {
@@ -137,332 +140,103 @@ export class GameScene extends Phaser.Scene {
     this.createTimerBar()
     this.registerPlatformCommands()
     EventBus.on('mute-audio', (m: boolean) => { this.isMuted = m }, this)
-    this.showStartScreen()
+
+    runtimeGameBridge.emit({ type: 'GAME_READY', gameId: GAME_ID })
+    this.broadcastMissionState()
+    this.emitCheckpoint()
+
+    switch (this.levelConfig.level) {
+      case 1: this.startLevel1(); break
+      case 2: this.startLevel2(); break
+      case 3: this.startLevel3(); break
+    }
+
+    if (this.shouldShowLevelStart && this.levelConfig.level > 1) {
+      this.showNextLevelStartScreen()
+    } else {
+      this.startTimer()
+    }
   }
 
-  update(_time: number, delta: number) {
-    if (this.timerActive) this.updateTimer(delta)
+  update(_time: number, _delta: number) {
+    // timer is tween-driven — no per-frame update needed
   }
 
   shutdown() {
     this.timerActive = false
+    this.timerTween?.stop()
     this.warningBeepTimer?.destroy()
     this.warningBeepTimer = null
+    this.clearOverlay()
     EventBus.off('mute-audio', undefined, this)
     this.unsubPlatform?.()
     this.unsubPlatform = undefined
   }
 
   // ══════════════════════════════════════════════════════════════════════════
-  //  TELA INICIAL (padrão EF01CO06)
+  //  OVERLAY MANAGEMENT
   // ══════════════════════════════════════════════════════════════════════════
 
-  private getLevelInstructions(): { objective: string; detail: string; tip: string } {
-    const lvl = this.levelConfig.level
-    if (lvl === 1) return {
-      objective: 'Filtre os veículos e responda quantos têm cada característica.',
-      detail:    '6 veículos do ar e da terra para classificar.',
-      tip:       'Clique em SIM ou NÃO no painel, depois responda a pergunta.',
-    }
-    if (lvl === 2) return {
-      objective: 'Compare dois veículos e descubra semelhanças e diferenças.',
-      detail:    '2 pares de veículos com 4 atributos cada.',
-      tip:       'Marque IGUAL ou DIFERENTE para cada característica.',
-    }
-    return {
-      objective: 'Descubra o que os veículos destacados têm em comum.',
-      detail:    '12 veículos — identifique o atributo que une cada grupo.',
-      tip:       'Observe os veículos com borda dourada e escolha a resposta.',
-    }
+  private addOverlayObject<T extends Phaser.GameObjects.GameObject>(obj: T): T {
+    this.overlayObjects.push(obj)
+    return obj
   }
 
-  private showStartScreen() {
-    const info = this.getLevelInstructions()
-    const lvl  = this.levelConfig.level
-
-    const bg = this.add.rectangle(640, 360, 1280, 720, 0x0D1B2A, 0.97)
-      .setDepth(60).setInteractive()
-
-    const stars = this.add.text(640, 160, '★'.repeat(lvl) + '☆'.repeat(3 - lvl), {
-      fontSize: '44px', color: '#F1C40F',
-    }).setOrigin(0.5).setDepth(61)
-
-    const lvlTitle = this.add.text(640, 237, `Nível ${lvl} — Hangar dos Modelos`, {
-      fontSize: '36px', fontFamily: 'Arial Black, Arial',
-      color: '#FFFFFF', stroke: '#0D1B2A', strokeThickness: 6,
-      align: 'center', wordWrap: { width: 900 },
-    }).setOrigin(0.5).setDepth(61)
-
-    const card = this.add.rectangle(640, 395, 900, 240, 0x1A2A3A, 1)
-      .setStrokeStyle(2, 0x4FC3F7).setDepth(61)
-
-    const objective = this.add.text(640, 315, `🎯  ${info.objective}`, {
-      fontSize: '22px', fontFamily: 'Arial Black, Arial',
-      color: '#AED6F1', wordWrap: { width: 820 }, align: 'center',
-    }).setOrigin(0.5).setDepth(62)
-
-    const detail = this.add.text(640, 388, `✈️  ${info.detail}`, {
-      fontSize: '20px', fontFamily: 'Arial',
-      color: '#F9E79F', wordWrap: { width: 820 }, align: 'center',
-    }).setOrigin(0.5).setDepth(62)
-
-    const tip = this.add.text(640, 450, `💡  ${info.tip}`, {
-      fontSize: '18px', fontFamily: 'Arial',
-      color: '#BDC3C7', wordWrap: { width: 820 }, align: 'center',
-    }).setOrigin(0.5).setDepth(62)
-
-    const timerInfo = this.add.text(640, 502, `⏱  ${this.levelConfig.timeLimit} segundos`, {
-      fontSize: '16px', fontFamily: 'Arial',
-      color: '#607D8B', align: 'center',
-    }).setOrigin(0.5).setDepth(62)
-
-    const btnBg = this.add.rectangle(640, 574, 300, 88, 0x2ECC71, 1)
-      .setStrokeStyle(3, 0xFFFFFF)
-      .setInteractive({ useHandCursor: true })
-      .setDepth(62)
-    const btnTxt = this.add.text(640, 574, '▶  Iniciar', {
-      fontSize: '28px', fontFamily: 'Arial Black, Arial', color: '#FFFFFF',
-    }).setOrigin(0.5).setDepth(63)
-
-    const contentItems = [stars, lvlTitle, card, objective, detail, tip, timerInfo, btnBg, btnTxt]
-
-    this.tweens.add({
-      targets: contentItems,
-      alpha: { from: 0, to: 1 }, y: '+=6',
-      duration: 400, ease: 'Back.Out',
-    })
-    this.tweens.add({
-      targets: [btnBg, btnTxt],
-      scaleX: 1.04, scaleY: 1.04,
-      duration: 750, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
-    })
-
-    const start = () => {
-      this.playTick()
-      const all = [bg, ...contentItems]
-      this.tweens.add({
-        targets: all, alpha: 0, duration: 300,
-        onComplete: () => {
-          all.forEach(o => o.destroy())
-          runtimeGameBridge.emit({ type: 'GAME_READY', gameId: GAME_ID })
-          this.broadcastMissionState()
-          this.emitCheckpoint()
-
-          if (this.levelConfig.level === 1) {
-            this.showTutorialStep(0)
-            return
-          }
-
-          this.showFirstMissionBanner()
-        },
-      })
-    }
-
-    btnBg.on('pointerdown', start)
-    btnTxt.setInteractive({ useHandCursor: true })
-    btnTxt.on('pointerdown', start)
-    btnBg.on('pointerover', () => btnBg.setFillStyle(0x27AE60))
-    btnBg.on('pointerout',  () => btnBg.setFillStyle(0x2ECC71))
-    void bg
+  private clearOverlay() {
+    this.overlayObjects.forEach(o => o.destroy())
+    this.overlayObjects = []
   }
 
-  private showTutorialStep(stepIndex: number) {
-    const steps = [
-      {
-        title: 'Observe os veículos',
-        description: 'Veja os veículos na tela e preste atenção nas características de cada um.',
-        emoji: '👀',
-      },
-      {
-        title: 'Use os filtros',
-        description: 'Clique em SIM ou NÃO para separar os veículos que combinam com a regra.',
-        emoji: '🔍',
-      },
-      {
-        title: 'Responda a pergunta',
-        description: 'Depois de classificar, escolha a quantidade correta para concluir o desafio.',
-        emoji: '✅',
-      },
-    ]
-
-    const step = steps[stepIndex]
-    const isLast = stepIndex >= steps.length - 1
-
-    const overlay = this.add
-      .rectangle(640, 360, 1280, 720, 0x000000, 0.72)
-      .setDepth(400)
-      .setInteractive()
-
-    const card = this.add
-      .rectangle(640, 300, 880, 270, 0xffffff, 1)
-      .setStrokeStyle(6, 0x4fc3f7)
-      .setDepth(401)
-
-    const emoji = this.add
-      .text(640, 220, step.emoji, {
-        fontSize: '64px',
-        fontFamily: 'Arial',
-        padding: {
-          top: 14,
-          bottom: 14,
-          left: 14,
-          right: 14,
-        },
-      })
-      .setOrigin(0.5)
-      .setDepth(402)
-
-    const title = this.add
-      .text(640, 305, step.title, {
-        fontSize: '38px',
-        fontFamily: 'Arial Black, Arial',
-        color: '#1565c0',
-        align: 'center',
-      })
-      .setOrigin(0.5)
-      .setDepth(402)
-
-    const description = this.add
-      .text(640, 375, step.description, {
-        fontSize: '24px',
-        fontFamily: 'Arial',
-        color: '#334155',
-        align: 'center',
-        wordWrap: { width: 680 },
-      })
-      .setOrigin(0.5)
-      .setDepth(402)
-
-    const button = this.add
-      .rectangle(1020, 300, 80, 80, 0x1565c0, 1)
-      .setStrokeStyle(4, 0xffffff)
-      .setInteractive({ useHandCursor: true })
-      .setDepth(403)
-
-    const buttonText = this.add
-      .text(1020, 300, isLast ? '▶' : '→', {
-        fontSize: '40px',
-        fontFamily: 'Arial Black, Arial',
-        color: '#ffffff',
-      })
-      .setOrigin(0.5)
-      .setDepth(404)
-
-    const cleanup = () => {
-      overlay.destroy()
-      card.destroy()
-      emoji.destroy()
-      title.destroy()
-      description.destroy()
-      button.destroy()
-      buttonText.destroy()
-    }
-
-    const next = () => {
-      this.playTick()
-      cleanup()
-
-      if (isLast) {
-        this.showFirstMissionBanner()
-        return
-      }
-
-      this.showTutorialStep(stepIndex + 1)
-    }
-
-    button.on('pointerdown', next)
-    buttonText.setInteractive({ useHandCursor: true })
-    buttonText.on('pointerdown', next)
-  }
-
-  private showFirstMissionBanner() {
-    this.input.enabled = false
-
-    const overlay = this.add.rectangle(640, 360, 1280, 720, 0x000000, 0.55)
-      .setDepth(200).setInteractive()
-
-    const label = this.add.text(640, 285, 'PRIMEIRO DESAFIO:', {
-      fontSize: '28px', fontFamily: 'Arial Black', color: '#AED6F1',
-      stroke: '#000', strokeThickness: 6,
-    }).setOrigin(0.5).setDepth(201).setAlpha(0)
-
-    const missions = this.levelConfig.filterMissions
-      ?? this.levelConfig.groupingMissions
-      ?? []
-    const firstInstruction = (missions[0] as { instruction?: string })?.instruction
-      ?? 'Compare os veículos!'
-
-    const missionTxt = this.add.text(640, 370, firstInstruction, {
-      fontSize: '30px', fontFamily: 'Arial Black', color: '#FFFFFF',
-      stroke: '#000', strokeThickness: 7,
-      wordWrap: { width: 900 }, align: 'center',
-    }).setOrigin(0.5).setDepth(201).setAlpha(0)
-
-    const hint = this.add.text(640, 468, '⬆️  Veja a instrução na barra acima!', {
-      fontSize: '18px', fontFamily: 'Arial', color: '#F9E79F',
-      stroke: '#000', strokeThickness: 3,
-    }).setOrigin(0.5).setDepth(201).setAlpha(0)
-
-    this.tweens.add({ targets: [label, missionTxt, hint], alpha: 1, duration: 350, ease: 'Power2' })
-    this.playTone(784, 0.10, 'sine', 0.20)
-
-    this.time.delayedCall(2200, () => {
-      this.tweens.add({
-        targets: [overlay, label, missionTxt, hint], alpha: 0, duration: 350,
-        onComplete: () => {
-          overlay.destroy(); label.destroy(); missionTxt.destroy(); hint.destroy()
-          this.input.enabled = true
-          switch (this.levelConfig.level) {
-            case 1: this.startLevel1(); break
-            case 2: this.startLevel2(); break
-            case 3: this.startLevel3(); break
-          }
-        },
-      })
-    })
-  }
 
   // ══════════════════════════════════════════════════════════════════════════
   //  TIMER (padrão EF01CO06)
   // ══════════════════════════════════════════════════════════════════════════
 
   private createTimerBar() {
-    this.add.rectangle(640, 118, 1280, 10, 0x0A1628).setDepth(8)
-    this.timerBar = this.add.rectangle(0, 118, 1280, 10, 0x2ECC71).setOrigin(0, 0.5).setDepth(9)
+    const barX = 200, barY = 106, barW = 880, barH = 24
+
+    const bg = this.add.graphics()
+    bg.fillStyle(0xdff2bc, 1)
+    bg.fillRoundedRect(barX, barY, barW, barH, 12)
+    bg.setDepth(6)
+
+    this.timeBarFill = this.add.graphics()
+    this.timeBarFill.setDepth(7)
+    this.drawTimeBar(1)
+  }
+
+  private drawTimeBar(progress: number) {
+    if (!this.timeBarFill) return
+    const barX = 200, barY = 106, barW = 880, barH = 24
+    this.timeBarFill.clear()
+    this.timeBarFill.fillStyle(0x7ed321, 1)
+    const w = barW * Phaser.Math.Clamp(progress, 0, 1)
+    if (w > 0) this.timeBarFill.fillRoundedRect(barX, barY, w, barH, 12)
   }
 
   private startTimer() {
-    this.timeLeft    = this.levelConfig.timeLimit * 1000
+    this.timerState.progress = 1
     this.timerActive = true
     this.timerWarned = false
-    this.timerBar.setSize(1280, 10)
-    this.timerBar.setFillStyle(0x2ECC71)
-  }
+    this.drawTimeBar(1)
 
-  private startTimerOnFirstInteraction() {
-    if (this.hasStartedTimer) return
-
-    this.hasStartedTimer = true
-    this.startTimer()
-  }
-
-  private updateTimer(delta: number) {
-    this.timeLeft -= delta
-    if (this.timeLeft <= 0) {
-      this.timeLeft    = 0
-      this.timerActive = false
-      this.onTimeUp()
-      return
-    }
-
-    const ratio = this.timeLeft / (this.levelConfig.timeLimit * 1000)
-    this.timerBar.setSize(Math.max(0, 1280 * ratio), 10)
-    this.timerBar.setFillStyle(ratio > 0.5 ? 0x2ECC71 : ratio > 0.25 ? 0xF39C12 : 0xE74C3C)
-
-    if (!this.timerWarned && ratio <= 0.25) {
-      this.timerWarned = true
-      this.startWarningBeeps()
-    }
+    this.timerTween = this.tweens.add({
+      targets:  this.timerState,
+      progress: 0,
+      duration: this.levelConfig.timeLimit * 1000,
+      ease:     'Linear',
+      onUpdate: () => {
+        this.drawTimeBar(this.timerState.progress)
+        if (!this.timerWarned && this.timerState.progress <= 0.25) {
+          this.timerWarned = true
+          this.startWarningBeeps()
+        }
+      },
+      onComplete: () => {
+        this.drawTimeBar(0)
+        this.onTimeUp()
+      },
+    })
   }
 
   private startWarningBeeps() {
@@ -477,7 +251,8 @@ export class GameScene extends Phaser.Scene {
   private onTimeUp() {
     if (this.gameEnded) return
     this.gameEnded   = true
-    this.timerBar.setSize(0, 10)
+    this.timerActive = false
+    this.drawTimeBar(0)
     this.warningBeepTimer?.destroy()
     this.warningBeepTimer = null
     this.input.enabled    = false
@@ -555,206 +330,422 @@ export class GameScene extends Phaser.Scene {
 
     const wasTimerActive = this.timerActive
     this.timerActive = false
+    this.timerTween?.pause()
 
     const resume = () => {
       this.missionEffectActive = false
-      if (wasTimerActive) this.timerActive = true
+      if (wasTimerActive) {
+        this.timerActive = true
+        this.timerTween?.resume()
+      }
       onDone()
     }
 
-    const overlay = this.add.rectangle(640, 360, 1280, 720, 0x000000, 0.5)
+    const overlay = this.add.rectangle(640, 360, 1280, 720, 0x12324a, 0.56)
       .setDepth(200).setInteractive()
 
-    const txt = this.add.text(640, 330, '🌟 Missão Concluída!', {
-      fontSize: '62px', fontFamily: 'Arial Black', color: '#F1C40F',
-      stroke: '#000', strokeThickness: 9,
-    }).setOrigin(0.5).setDepth(201).setAlpha(0)
+    const modal = this.add.container(640, 360).setDepth(201)
 
-    this.tweens.add({
-      targets: txt, alpha: 1,
-      scaleX: { from: 0.5, to: 1 }, scaleY: { from: 0.5, to: 1 },
-      duration: 380, ease: 'Back.Out',
-    })
+    const shadow = this.add.graphics()
+    shadow.fillStyle(0x000000, 0.18)
+    shadow.fillRoundedRect(-270, -126, 540, nextInstruction ? 270 : 210, 28)
 
-    for (let i = 0; i < 20; i++) {
-      const sx = Phaser.Math.Between(60, 1220)
-      const sy = Phaser.Math.Between(-60, -10)
-      const em = ['⭐', '🌟', '✨', '💫'][i % 4]
-      const star = this.add.text(sx, sy, em, { fontSize: `${Phaser.Math.Between(20, 44)}px` }).setDepth(201)
-      this.tweens.add({
-        targets: star, y: Phaser.Math.Between(350, 650), alpha: { from: 1, to: 0 },
-        angle: Phaser.Math.Between(-45, 45),
-        duration: Phaser.Math.Between(900, 1800), delay: Phaser.Math.Between(0, 500),
-        onComplete: () => star.destroy(),
-      })
-    }
+    const cardH = nextInstruction ? 258 : 198
+    const bg = this.add.graphics()
+    bg.fillStyle(0xfff6e8, 0.98)
+    bg.fillRoundedRect(-278, -138, 556, cardH, 28)
+    bg.lineStyle(5, 0xffffff, 0.95)
+    bg.strokeRoundedRect(-278, -138, 556, cardH, 28)
+
+    const topBar = this.add.graphics()
+    topBar.fillStyle(0xff8a2a, 1)
+    topBar.fillRoundedRect(-196, -154, 392, 28, 14)
+    topBar.lineStyle(3, 0xffffff, 0.82)
+    topBar.strokeRoundedRect(-196, -154, 392, 28, 14)
+
+    const title = this.add.text(0, -76, 'Missão concluída!', {
+      fontFamily: 'Arial', fontStyle: 'bold',
+      fontSize: '36px', color: '#25327a',
+      stroke: '#ffffff', strokeThickness: 5,
+    }).setOrigin(0.5).setResolution(2)
+
+    const objs: Phaser.GameObjects.GameObject[] = [shadow, bg, topBar, title]
 
     if (nextInstruction) {
-      this.time.delayedCall(1900, () => {
-        this.tweens.add({ targets: txt, alpha: 0, duration: 250 })
+      const nextLabel = this.add.text(0, -14, 'Próximo desafio:', {
+        fontFamily: 'Arial', fontStyle: 'bold',
+        fontSize: '17px', color: '#f57c00',
+      }).setOrigin(0.5).setResolution(2)
 
-        const nextLabel = this.add.text(640, 290, 'PRÓXIMO DESAFIO:', {
-          fontSize: '26px', fontFamily: 'Arial Black', color: '#AED6F1',
-          stroke: '#000', strokeThickness: 5,
-        }).setOrigin(0.5).setDepth(201).setAlpha(0)
+      const nextTxt = this.add.text(0, 42, nextInstruction, {
+        fontFamily: 'Arial', fontStyle: 'bold',
+        fontSize: '20px', color: '#3b3b3b',
+        align: 'center', wordWrap: { width: 460 },
+      }).setOrigin(0.5).setResolution(2)
 
-        const nextTxt = this.add.text(640, 368, nextInstruction, {
-          fontSize: '30px', fontFamily: 'Arial Black', color: '#FFFFFF',
-          stroke: '#000', strokeThickness: 6,
-          wordWrap: { width: 900 }, align: 'center',
-        }).setOrigin(0.5).setDepth(201).setAlpha(0)
-
-        this.tweens.add({ targets: [nextLabel, nextTxt], alpha: 1, duration: 300, ease: 'Power2' })
-
-        this.time.delayedCall(1800, () => {
-          this.tweens.add({
-            targets: [overlay, nextLabel, nextTxt, txt], alpha: 0, duration: 300,
-            onComplete: () => { overlay.destroy(); nextLabel.destroy(); nextTxt.destroy(); txt.destroy(); resume() },
-          })
-        })
-      })
-    } else {
-      this.time.delayedCall(1900, () => {
-        this.tweens.add({
-          targets: [overlay, txt], alpha: 0, duration: 300,
-          onComplete: () => { overlay.destroy(); txt.destroy(); resume() },
-        })
-      })
+      objs.push(nextLabel, nextTxt)
     }
+
+    modal.add(objs)
+    modal.setScale(0.9).setAlpha(0)
+    this.tweens.add({ targets: modal, alpha: 1, scale: 1, duration: 260, ease: 'Back.easeOut' })
+
+    this.time.delayedCall(nextInstruction ? 2400 : 1800, () => {
+      this.tweens.add({
+        targets: [overlay, modal], alpha: 0, duration: 280,
+        onComplete: () => { overlay.destroy(); modal.destroy(); resume() },
+      })
+    })
   }
 
-  private showLevelCompleteScreen(nextLevel: 1 | 2 | 3 | null) {
+  private showLevelCompleteTransition(nextLevel: 1 | 2 | 3 | null) {
     this.timerActive = false
+    this.timerTween?.stop()
     this.warningBeepTimer?.destroy()
     this.warningBeepTimer = null
+    this.clearOverlay()
+
+    const overlay = this.addOverlayObject(
+      this.add.rectangle(640, 360, 1280, 720, 0x12324a, 0.56).setDepth(450)
+    )
+    overlay.setInteractive()
+
+    const modal = this.addOverlayObject(this.add.container(640, 360).setDepth(451))
+    const lvl = this.levelConfig.level
+
+    const shadow = this.add.graphics()
+    shadow.fillStyle(0x000000, 0.18)
+    shadow.fillRoundedRect(-270, -166, 540, 330, 28)
+
+    const bg = this.add.graphics()
+    bg.fillStyle(0xfff6e8, 0.98)
+    bg.fillRoundedRect(-278, -178, 556, 330, 28)
+    bg.lineStyle(5, 0xffffff, 0.95)
+    bg.strokeRoundedRect(-278, -178, 556, 330, 28)
+
+    const topBar = this.add.graphics()
+    topBar.fillStyle(0xff8a2a, 1)
+    topBar.fillRoundedRect(-196, -194, 392, 28, 14)
+    topBar.lineStyle(3, 0xffffff, 0.82)
+    topBar.strokeRoundedRect(-196, -194, 392, 28, 14)
+
+    const title = this.add.text(0, -110, 'Parabéns!', {
+      fontFamily: 'Arial', fontStyle: 'bold',
+      fontSize: '40px', color: '#25327a',
+      stroke: '#ffffff', strokeThickness: 5,
+    }).setOrigin(0.5).setResolution(2)
+
+    const completed = this.add.text(0, -50, 'Nível concluído', {
+      fontFamily: 'Arial', fontStyle: 'bold',
+      fontSize: '26px', color: '#f57c00',
+      align: 'center', wordWrap: { width: 420 },
+    }).setOrigin(0.5).setResolution(2)
+
+    const successTexts: Record<number, string> = {
+      1: 'Você aprendeu a separar veículos que voam e que têm rodas!',
+      2: 'Você comparou veículos e identificou semelhanças e diferenças!',
+      3: 'Você descobriu o que une cada grupo de veículos!',
+    }
+    const next = this.add.text(0, 8, successTexts[lvl] ?? '', {
+      fontFamily: 'Arial', fontStyle: 'bold',
+      fontSize: '17px', color: '#3b3b3b',
+      align: 'center', wordWrap: { width: 430 },
+    }).setOrigin(0.5).setResolution(2)
+
+    // Dots de progresso de nível (igual EF01CO03)
+    const nextLvl = nextLevel ?? (lvl + 1)
+    const dots = [1, 2, 3].map((level, index) => {
+      const dot = this.add.graphics()
+      dot.fillStyle(
+        level <= lvl ? 0x42d640
+          : level === nextLvl ? 0xff8a2a
+          : 0xd8dde8,
+        1
+      )
+      dot.fillCircle(-28 + index * 28, 72, 8)
+      dot.lineStyle(2, 0xffffff, 0.9)
+      dot.strokeCircle(-28 + index * 28, 72, 8)
+      return dot
+    })
+
+    const waitText = this.add.text(0, 116, nextLevel ? 'Preparando o próximo nível...' : '', {
+      fontFamily: 'Arial', fontStyle: 'bold',
+      fontSize: '15px', color: '#25327a',
+    }).setOrigin(0.5).setResolution(2)
+
+    modal.add([shadow, bg, topBar, title, completed, next, ...dots, waitText])
+    modal.setScale(0.9).setAlpha(0)
+    this.tweens.add({ targets: modal, alpha: 1, scale: 1, duration: 260, ease: 'Back.easeOut' })
+
+    this.time.delayedCall(2300, () => {
+      if (nextLevel) {
+        this.scene.restart({ level: nextLevel, points: this.currentPoints, lives: this.currentLives, showLevelStart: true })
+      } else {
+        this.showGameCompleteScreen()
+      }
+    })
+  }
+
+  private showNextLevelStartScreen() {
+    const overlay = this.add.rectangle(640, 360, 1280, 720, 0x12324a, 0.58)
+      .setDepth(450).setInteractive()
+
+    const modal = this.add.container(640, 360).setDepth(451)
+
+    const shadow = this.add.graphics()
+    shadow.fillStyle(0x000000, 0.18)
+    shadow.fillRoundedRect(-270, -154, 540, 312, 28)
+
+    const bg = this.add.graphics()
+    bg.fillStyle(0xfff6e8, 0.98)
+    bg.fillRoundedRect(-278, -166, 556, 312, 28)
+    bg.lineStyle(5, 0xffffff, 0.95)
+    bg.strokeRoundedRect(-278, -166, 556, 312, 28)
+
+    const topBar = this.add.graphics()
+    topBar.fillStyle(0x42d640, 1)
+    topBar.fillRoundedRect(-196, -182, 392, 28, 14)
+    topBar.lineStyle(3, 0xffffff, 0.82)
+    topBar.strokeRoundedRect(-196, -182, 392, 28, 14)
 
     const lvl = this.levelConfig.level
-    const bg  = this.add.rectangle(640, 360, 1280, 720, 0x0D1B2A, 0.97).setDepth(500)
+    const title = this.add.text(0, -102, `Nível ${lvl}`, {
+      fontFamily: 'Arial', fontStyle: 'bold',
+      fontSize: '38px', color: '#25327a',
+      stroke: '#ffffff', strokeThickness: 5,
+    }).setOrigin(0.5).setResolution(2)
 
-    const starsEm = this.add.text(640, 180, '⭐'.repeat(lvl), {
-      fontSize: '56px',
-    }).setOrigin(0.5).setDepth(501)
+    const info = this.getLevelInfo(lvl)
+    const objective = this.add.text(0, -42, info.objective, {
+      fontFamily: 'Arial', fontStyle: 'bold',
+      fontSize: '24px', color: '#f57c00',
+      align: 'center', wordWrap: { width: 430 },
+    }).setOrigin(0.5).setResolution(2)
 
-    const title = this.add.text(640, 280, 'Parabéns!', {
-      fontSize: '70px', fontFamily: 'Arial Black, Arial',
-      color: '#F1C40F', stroke: '#000000', strokeThickness: 8,
-    }).setOrigin(0.5).setDepth(501)
+    const detail = this.add.text(0, 12, info.tip, {
+      fontFamily: 'Arial', fontStyle: 'bold',
+      fontSize: '16px', color: '#3b3b3b',
+      align: 'center', wordWrap: { width: 420 },
+    }).setOrigin(0.5).setResolution(2)
 
-    const subtitle = this.add.text(640, 372, `Você concluiu o Nível ${lvl}!`, {
-      fontSize: '32px', fontFamily: 'Arial Black, Arial',
-      color: '#FFFFFF', stroke: '#000000', strokeThickness: 5,
-      wordWrap: { width: 900 }, align: 'center',
-    }).setOrigin(0.5).setDepth(501)
+    const button = this.add.container(0, 104)
+    const buttonShadow = this.add.graphics()
+    buttonShadow.fillStyle(0x000000, 0.16)
+    buttonShadow.fillRoundedRect(-136, -20, 272, 48, 24)
+    const buttonBg = this.add.graphics()
+    buttonBg.fillStyle(0xf57c00, 1)
+    buttonBg.fillRoundedRect(-140, -26, 280, 52, 26)
+    buttonBg.lineStyle(4, 0xffffff, 1)
+    buttonBg.strokeRoundedRect(-140, -26, 280, 52, 26)
+    const buttonText = this.add.text(0, 0, 'Iniciar nível', {
+      fontFamily: 'Arial', fontStyle: 'bold',
+      fontSize: '22px', color: '#ffffff',
+      stroke: '#9a3f00', strokeThickness: 3,
+    }).setOrigin(0.5).setResolution(2)
+    button.add([buttonShadow, buttonBg, buttonText])
 
-    const stats = this.add.text(640, 440, `✅ ${this.hits} acertos   ✖ ${this.errors} erros`, {
-      fontSize: '22px', fontFamily: 'Arial', color: '#AED6F1',
-    }).setOrigin(0.5).setDepth(501)
+    const buttonHitbox = this.add.zone(640, 360 + 104, 280, 58)
+    buttonHitbox.setDepth(452).setInteractive({ useHandCursor: true })
+    buttonHitbox.on('pointerover', () => {
+      this.tweens.add({ targets: button, scale: 1.04, duration: 90, ease: 'Sine.easeOut' })
+    })
+    buttonHitbox.on('pointerout', () => {
+      this.tweens.add({ targets: button, scale: 1, duration: 90, ease: 'Sine.easeOut' })
+    })
+    buttonHitbox.on('pointerdown', () => {
+      this.playTick()
+      overlay.destroy()
+      buttonHitbox.destroy()
+      modal.destroy()
+      this.startTimer()
+    })
 
-    const contentItems = [starsEm, title, subtitle, stats]
+    modal.add([shadow, bg, topBar, title, objective, detail, button])
+    modal.setScale(0.9).setAlpha(0)
+    this.tweens.add({ targets: modal, alpha: 1, scale: 1, duration: 260, ease: 'Back.easeOut' })
+  }
 
-    // Confetti
-    for (let i = 0; i < 20; i++) {
-      const em   = ['⭐', '🌟', '✨', '💫'][i % 4]
-      const star = this.add.text(
-        Phaser.Math.Between(60, 1220), Phaser.Math.Between(130, 200),
-        em, { fontSize: `${Phaser.Math.Between(20, 44)}px` },
-      ).setDepth(502)
-      this.tweens.add({
-        targets: star, y: Phaser.Math.Between(400, 680), alpha: 0,
-        angle: Phaser.Math.Between(-45, 45),
-        duration: Phaser.Math.Between(900, 1800), delay: Phaser.Math.Between(0, 500),
-        onComplete: () => star.destroy(),
+  private showGameCompleteScreen() {
+    this.clearOverlay()
+    const overlay = this.addOverlayObject(
+      this.add.rectangle(640, 360, 1280, 720, 0x12324a, 0.62).setDepth(450)
+    )
+    overlay.setInteractive()
+
+    const panel = this.addOverlayObject(this.add.container(640, 360).setDepth(451))
+
+    const shadow = this.add.graphics()
+    shadow.fillStyle(0x000000, 0.18)
+    shadow.fillRoundedRect(-292, -178, 584, 366, 34)
+
+    const bg = this.add.graphics()
+    bg.fillStyle(0xfff6e8, 0.98)
+    bg.fillRoundedRect(-304, -190, 608, 370, 34)
+    bg.lineStyle(6, 0xffffff, 0.96)
+    bg.strokeRoundedRect(-304, -190, 608, 370, 34)
+
+    const ribbon = this.add.graphics()
+    ribbon.fillStyle(0x42d640, 1)
+    ribbon.fillRoundedRect(-214, -208, 428, 34, 17)
+    ribbon.lineStyle(4, 0xffffff, 0.9)
+    ribbon.strokeRoundedRect(-214, -208, 428, 34, 17)
+
+    const title = this.add.text(0, -128, 'Jogo concluído!', {
+      fontFamily: 'Arial', fontStyle: 'bold',
+      fontSize: '38px', color: '#25327a',
+      stroke: '#ffffff', strokeThickness: 6,
+    }).setOrigin(0.5).setResolution(2)
+
+    const subtitle = this.add.text(0, -74, 'Você explorou todos os veículos do hangar!', {
+      fontFamily: 'Arial', fontStyle: 'bold',
+      fontSize: '20px', color: '#3b3b3b',
+      align: 'center', wordWrap: { width: 500 },
+    }).setOrigin(0.5).setResolution(2)
+
+    const levelLabels = [1, 2, 3].map((level, index) => {
+      const item = this.add.container(-190 + index * 190, 54)
+      const badge = this.add.graphics()
+      badge.fillStyle(index === 0 ? 0xff8a2a : index === 1 ? 0x45c6f0 : 0x42d640, 1)
+      badge.fillRoundedRect(-54, -42, 108, 84, 18)
+      badge.lineStyle(4, 0xffffff, 0.95)
+      badge.strokeRoundedRect(-54, -42, 108, 84, 18)
+      const number = this.add.text(0, -13, String(level), {
+        fontFamily: 'Arial', fontStyle: 'bold',
+        fontSize: '30px', color: '#ffffff',
+        stroke: '#25327a', strokeThickness: 4,
+      }).setOrigin(0.5).setResolution(2)
+      const label = this.add.text(0, 23, 'concluído', {
+        fontFamily: 'Arial', fontStyle: 'bold',
+        fontSize: '12px', color: '#ffffff',
+      }).setOrigin(0.5).setResolution(2)
+      item.add([badge, number, label])
+      return item
+    })
+
+    const createFinalButton = (x: number, label: string, color: number, stroke: string, onClick: () => void) => {
+      const button = this.add.container(x, 138)
+      const buttonShadow = this.add.graphics()
+      buttonShadow.fillStyle(0x000000, 0.16)
+      buttonShadow.fillRoundedRect(-128, -20, 256, 48, 24)
+      const buttonBg = this.add.graphics()
+      buttonBg.fillStyle(color, 1)
+      buttonBg.fillRoundedRect(-132, -26, 264, 52, 26)
+      buttonBg.lineStyle(4, 0xffffff, 1)
+      buttonBg.strokeRoundedRect(-132, -26, 264, 52, 26)
+      const buttonText = this.add.text(0, 0, label, {
+        fontFamily: 'Arial', fontStyle: 'bold',
+        fontSize: '20px', color: '#ffffff',
+        stroke, strokeThickness: 3,
+      }).setOrigin(0.5).setResolution(2)
+      button.add([buttonShadow, buttonBg, buttonText])
+
+      const buttonHitbox = this.add.zone(640 + x, 360 + 138, 264, 58)
+      buttonHitbox.setDepth(452).setInteractive({ useHandCursor: true })
+      buttonHitbox.on('pointerover', () => {
+        this.tweens.add({ targets: button, scale: 1.04, duration: 90, ease: 'Sine.easeOut' })
       })
+      buttonHitbox.on('pointerout', () => {
+        this.tweens.add({ targets: button, scale: 1, duration: 90, ease: 'Sine.easeOut' })
+      })
+      buttonHitbox.on('pointerdown', () => {
+        this.playTick()
+        onClick()
+      })
+      return { button, buttonHitbox }
     }
 
-    this.tweens.add({
-      targets: contentItems,
-      alpha: { from: 0, to: 1 }, y: '+=6',
-      duration: 400, ease: 'Back.Out',
+    const playAgain = createFinalButton(-142, 'Jogar novamente', 0x42d640, '#1b7d1c', () => {
+      this.scene.restart({ level: 1, points: 0, lives: 1 })
+    })
+    const exitBtn = createFinalButton(142, 'Voltar aos jogos', 0xf57c00, '#9a3f00', () => {
+      EventBus.emit('exit-game')
     })
 
-    this.time.delayedCall(1800, () => {
+    const sparkles = Array.from({ length: 14 }, (_, i) => {
+      const sp = this.add.graphics()
+      const x = Phaser.Math.Between(-278, 278)
+      const y = Phaser.Math.Between(-168, 158)
+      sp.fillStyle([0x38bdf8, 0xff8a2a, 0x42d640][i % 3], 0.9)
+      sp.fillCircle(x, y, Phaser.Math.Between(4, 8))
       this.tweens.add({
-        targets: [bg, ...contentItems], alpha: 0, duration: 350,
-        onComplete: () => {
-          bg.destroy(); contentItems.forEach(o => o.destroy())
-          if (nextLevel) this.scene.restart({ level: nextLevel, points: this.currentPoints, lives: this.currentLives })
-        },
+        targets: sp, alpha: { from: 0.35, to: 1 }, scale: { from: 0.8, to: 1.35 },
+        duration: 520 + i * 30, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
       })
+      return sp
     })
+
+    panel.add([shadow, bg, ribbon, ...sparkles, title, subtitle, ...levelLabels, playAgain.button, exitBtn.button])
+    panel.setScale(0.88).setAlpha(0)
+    this.tweens.add({ targets: panel, alpha: 1, scale: 1, duration: 300, ease: 'Back.easeOut' })
   }
 
   private showGameOverScreen(reason: 'timeout' | 'wrong-answer' = 'timeout') {
     this.input.enabled = true
+    this.clearOverlay()
 
-    this.playTone(330, 0.30, 'square', 0.18)
-    this.time.delayedCall(100, () => this.playTone(220, 0.40, 'square', 0.16))
+    const overlay = this.addOverlayObject(
+      this.add.rectangle(640, 360, 1280, 720, 0x12324a, 0.60).setDepth(450)
+    )
+    overlay.setInteractive()
 
-    const bg = this.add.rectangle(640, 360, 1280, 720, 0x0D1B2A, 0.97)
-      .setDepth(500).setInteractive()
+    const panel = this.addOverlayObject(this.add.container(640, 360).setDepth(451))
 
-    const title = this.add.text(640, 215, 'GAME OVER', {
-      fontSize: '80px', fontFamily: 'Arial Black, Arial',
-      color: '#E74C3C', stroke: '#000000', strokeThickness: 10,
-    }).setOrigin(0.5).setDepth(501)
+    const shadow = this.add.graphics()
+    shadow.fillStyle(0x000000, 0.18)
+    shadow.fillRoundedRect(-270, -166, 540, 330, 28)
 
-    const reasonMsg = reason === 'timeout' ? '⏱  O tempo acabou!' : '❌  Resposta incorreta!'
-    const timeupTxt = this.add.text(640, 315, reasonMsg, {
-      fontSize: '32px', fontFamily: 'Arial Black, Arial',
-      color: '#FFFFFF', stroke: '#000000', strokeThickness: 5,
-    }).setOrigin(0.5).setDepth(501)
+    const bg = this.add.graphics()
+    bg.fillStyle(0xfff6e8, 0.98)
+    bg.fillRoundedRect(-278, -178, 556, 332, 28)
+    bg.lineStyle(5, 0xffffff, 0.95)
+    bg.strokeRoundedRect(-278, -178, 556, 332, 28)
+
+    const topBar = this.add.graphics()
+    topBar.fillStyle(0xef4444, 1)
+    topBar.fillRoundedRect(-196, -194, 392, 28, 14)
+    topBar.lineStyle(3, 0xffffff, 0.82)
+    topBar.strokeRoundedRect(-196, -194, 392, 28, 14)
+
+    const icon = this.add.text(0, -112, reason === 'timeout' ? '⏱' : '❌', {
+      fontSize: '54px',
+    }).setOrigin(0.5)
+
+    const title = this.add.text(0, -50, 'Que pena!', {
+      fontFamily: 'Arial', fontStyle: 'bold',
+      fontSize: '38px', color: '#25327a',
+      stroke: '#ffffff', strokeThickness: 5,
+    }).setOrigin(0.5).setResolution(2)
+
+    const reasonMsg = reason === 'timeout' ? 'O tempo acabou!' : 'Resposta incorreta!'
+    const reasonTxt = this.add.text(0, 6, reasonMsg, {
+      fontFamily: 'Arial', fontStyle: 'bold',
+      fontSize: '22px', color: '#ef4444',
+    }).setOrigin(0.5).setResolution(2)
 
     const total = (this.levelConfig.filterMissions?.length)
       ?? (this.levelConfig.comparisonPairs?.length)
       ?? (this.levelConfig.groupingMissions?.length)
       ?? 1
 
-    const statsTxt = this.add.text(640, 390, `Você completou ${this.currentMissionIndex} de ${total} missões.`, {
-      fontSize: '22px', fontFamily: 'Arial',
-      color: '#BDC3C7', wordWrap: { width: 800 }, align: 'center',
-    }).setOrigin(0.5).setDepth(501)
+    const statsTxt = this.add.text(0, 52, `${this.currentMissionIndex} de ${total} missões concluídas`, {
+      fontFamily: 'Arial', fontStyle: 'bold',
+      fontSize: '17px', color: '#3b3b3b',
+      align: 'center', wordWrap: { width: 440 },
+    }).setOrigin(0.5).setResolution(2)
 
-    const retryBg = this.add.rectangle(440, 510, 310, 88, 0x2ECC71, 1)
-      .setStrokeStyle(3, 0xFFFFFF)
-      .setInteractive({ useHandCursor: true }).setDepth(502)
-    const retryTxt = this.add.text(440, 510, '🔄  Tentar Novamente', {
-      fontSize: '20px', fontFamily: 'Arial Black, Arial', color: '#FFFFFF',
-    }).setOrigin(0.5).setDepth(503)
-
-    const exitBg = this.add.rectangle(840, 510, 240, 88, 0xE74C3C, 1)
-      .setStrokeStyle(3, 0xFFFFFF)
-      .setInteractive({ useHandCursor: true }).setDepth(502)
-    const exitTxt = this.add.text(840, 510, 'Sair', {
-      fontSize: '26px', fontFamily: 'Arial Black, Arial', color: '#FFFFFF',
-    }).setOrigin(0.5).setDepth(503)
-
-    const contentItems = [title, timeupTxt, statsTxt, retryBg, retryTxt, exitBg, exitTxt]
-    this.tweens.add({
-      targets: contentItems,
-      alpha: { from: 0, to: 1 }, y: '+=8',
-      duration: 450, ease: 'Back.Out',
+    const retryBtn = this.createModalButton(-140, 118, '🔄 Tentar novamente', 0x42d640, () => {
+      this.scene.restart({ level: this.levelConfig.level, points: this.currentPoints, lives: this.currentLives })
+    })
+    const exitBtn = this.createModalButton(140, 118, 'Sair', 0xf57c00, () => {
+      EventBus.emit('exit-game')
     })
 
-    const retry = () => {
-      this.playTick()
-      this.scene.restart({ level: this.levelConfig.level, points: this.currentPoints, lives: this.currentLives })
-    }
-    const exit = () => {
-      this.playTick()
-      EventBus.emit('game-back-to-start')
-    }
+    panel.add([shadow, bg, topBar, icon, title, reasonTxt, statsTxt, retryBtn, exitBtn])
+    panel.setScale(0.9).setAlpha(0)
+    this.tweens.add({ targets: panel, alpha: 1, scale: 1, duration: 260, ease: 'Back.easeOut' })
 
-    retryBg.on('pointerdown', retry)
-    retryTxt.setInteractive({ useHandCursor: true })
-    retryTxt.on('pointerdown', retry)
-    exitBg.on('pointerdown', exit)
-    exitTxt.setInteractive({ useHandCursor: true })
-    exitTxt.on('pointerdown', exit)
-    retryBg.on('pointerover', () => retryBg.setFillStyle(0x27AE60))
-    retryBg.on('pointerout',  () => retryBg.setFillStyle(0x2ECC71))
-    exitBg.on('pointerover',  () => exitBg.setFillStyle(0xC0392B))
-    exitBg.on('pointerout',   () => exitBg.setFillStyle(0xE74C3C))
-    void bg
+    this.playTone(330, 0.30, 'square', 0.18)
+    this.time.delayedCall(100, () => this.playTone(220, 0.40, 'square', 0.16))
   }
 
   // ══════════════════════════════════════════════════════════════════════════
@@ -762,34 +753,9 @@ export class GameScene extends Phaser.Scene {
   // ══════════════════════════════════════════════════════════════════════════
 
   private drawBackground() {
-    const g = this.add.graphics()
-
-    // Gradiente de céu
-    g.fillGradientStyle(0x0A1628, 0x0A1628, 0x162744, 0x162744, 1)
-    g.fillRect(0, 0, 1280, 720)
-
-    // Chão do hangar
-    g.fillStyle(0x08111E, 1)
-    g.fillRect(0, BOTTOM_Y, 1280, 720 - BOTTOM_Y)
-
-    // Linhas de perspectiva do chão
-    g.lineStyle(1, 0x4FC3F7, 0.12)
-    for (let i = 1; i <= 8; i++) {
-      g.lineBetween(i * 142, BOTTOM_Y, 640, BOTTOM_Y - 20)
-    }
-
-    // Focos de luz no teto
-    const lampX = [100, 320, 540, 760, 980, 1200]
-    lampX.forEach((lx) => {
-      g.fillStyle(0xFFEB3B, 0.65)
-      g.fillCircle(lx, 28, 12)
-      // Cone de luz
-      g.fillStyle(0xFFEB3B, 0.04)
-      g.fillTriangle(lx - 80, BOTTOM_Y, lx + 80, BOTTOM_Y, lx, 40)
-    })
-
-    // Separador vertical (nível 1 e 3 têm painel à direita)
+    this.add.image(640, 360, 'hangar-bg').setDisplaySize(1280, 720).setDepth(-1)
     if (this.levelConfig.level !== 2) {
+      const g = this.add.graphics()
       g.lineStyle(1, 0x4FC3F7, 0.2)
       g.lineBetween(PANEL_LEFT_X - 10, TOP_Y, PANEL_LEFT_X - 10, BOTTOM_Y)
     }
@@ -824,36 +790,28 @@ export class GameScene extends Phaser.Scene {
   }
 
   private makeVehicleCard(vehicle: Vehicle, cx: number, cy: number): VehicleCard {
-    const key = `vehicle-${vehicle.id}`
+    const bg = this.add.image(0, 0, `card-${vehicle.attributes.meio}`)
+      .setDisplaySize(CARD_W, CARD_H).setOrigin(0.5)
 
-    // Fundo do cartão (textura do BootScene)
-    const img = this.add.image(0, 0, key).setOrigin(0.5)
+    const img = this.add.image(0, -10, `veh-${vehicle.id}`).setDisplaySize(76, 76).setOrigin(0.5)
 
-    // Emoji grande — posicionado no spotlight da textura
-    const emoji = this.add.text(0, -16, vehicle.emoji, { fontSize: '52px' })
-      .setOrigin(0.5)
+    const nameBg = this.add.graphics()
+    nameBg.fillStyle(0x000000, 0.45)
+    nameBg.fillRoundedRect(-CARD_W / 2 + 4, CARD_H / 2 - 26, CARD_W - 8, 22, { tl: 0, tr: 0, bl: 12, br: 12 })
 
-    // Nome — sobre a banda escura da textura
-    const name = this.add.text(0, 44, vehicle.name, {
-      fontSize: '13px',
-      fontFamily: 'Arial Black, Arial',
-      color: '#FFFFFF',
-      stroke: '#000000',
-      strokeThickness: 2,
+    const name = this.add.text(0, CARD_H / 2 - 15, vehicle.name, {
+      fontSize: '13px', fontFamily: 'Arial Black, Arial',
+      color: '#FFFFFF', stroke: '#000000', strokeThickness: 2,
     }).setOrigin(0.5)
 
-    const container = this.add.container(cx, cy, [img, emoji, name])
+    const container = this.add.container(cx, cy, [bg, nameBg, img, name])
     container.setSize(CARD_W, CARD_H)
-
-    // Animação de entrada
     container.setAlpha(0).setScale(0.72)
     this.tweens.add({
-      targets: container,
-      alpha: 1, scaleX: 1, scaleY: 1,
+      targets: container, alpha: 1, scaleX: 1, scaleY: 1,
       duration: 380, ease: 'Back.Out',
       delay: this.vehicleCards.length * 70,
     })
-
     return { container, vehicle, homeX: cx, homeY: cy }
   }
 
@@ -861,17 +819,26 @@ export class GameScene extends Phaser.Scene {
 
   private buildFilterPanel() {
     const mission = this.levelConfig.filterMissions![this.currentMissionIndex]
-    const isVoa   = mission.filterValue === true
+    const isYes   = mission.filterValue === true
+
+    // Textos e cores por atributo + valor
+    const attrCfg: Record<string, { subYes: string; subNo: string; btnYes: string; btnNo: string }> = {
+      voa:      { subYes: 'Esse veículo VOA?',       subNo: 'Esse veículo NÃO voa?',       btnYes: '✈️  SIM — Voa!',        btnNo: '🚗  NÃO — Não voa'   },
+      temRodas: { subYes: 'Esse veículo tem RODAS?',  subNo: 'Esse veículo NÃO tem rodas?', btnYes: '🔵  SIM — Tem rodas!',   btnNo: '⭕  NÃO — Sem rodas'  },
+      temMotor: { subYes: 'Esse veículo tem MOTOR?',  subNo: 'Esse veículo NÃO tem motor?', btnYes: '⚙️  SIM — Tem motor!',   btnNo: '🔇  NÃO — Sem motor'  },
+    }
+    const cfg      = attrCfg[mission.filterAttribute] ?? attrCfg['voa']
+    const subText  = isYes ? cfg.subYes  : cfg.subNo
+    const btnLabel = isYes ? cfg.btnYes  : cfg.btnNo
+    const btnColor = isYes ? 0x2E7D32   : 0xB71C1C
+    const rimColor = isYes ? 0x4FC3F7   : 0xEF9A9A
 
     const panel = this.add.container(PANEL_LEFT_X, TOP_Y + 35)
     this.filterPanelContainer = panel
 
-    // Fundo do painel — menor, conteúdo focado
-    const bg = this.add.graphics()
-    bg.fillStyle(0x081524, 0.95)
-    bg.fillRoundedRect(0, 0, PANEL_W, 310, 20)
-    bg.lineStyle(2, isVoa ? 0x4FC3F7 : 0xEF9A9A, 0.55)
-    bg.strokeRoundedRect(0, 0, PANEL_W, 310, 20)
+    // Fundo do painel
+    const bg = this.add.image(PANEL_W / 2, 155, 'panel-filter')
+      .setDisplaySize(PANEL_W, 310).setOrigin(0.5)
     panel.add(bg)
 
     // Cabeçalho
@@ -882,8 +849,8 @@ export class GameScene extends Phaser.Scene {
     }).setOrigin(0.5, 0)
     panel.add(hdr)
 
-    // Sub-título dinâmico por missão
-    const sub = this.add.text(PANEL_W / 2, 70, isVoa ? 'Esse veículo VOA?' : 'Esse veículo NÃO voa?', {
+    // Sub-título dinâmico (atributo + valor)
+    const sub = this.add.text(PANEL_W / 2, 70, subText, {
       fontSize: '22px',
       fontFamily: 'Arial, sans-serif',
       color: '#90CAF9',
@@ -897,9 +864,6 @@ export class GameScene extends Phaser.Scene {
     panel.add(div)
 
     // Único botão de ação para esta missão
-    const btnLabel = isVoa ? '✈️  SIM — Voa!'  : '🚗  NÃO — Não voa'
-    const btnColor = isVoa ? 0x2E7D32           : 0xB71C1C
-
     const btn = this.makeRoundedButton(btnLabel, btnColor, 340, 88, () => {
       if (this.phase !== 'waiting-filter') return
       this.applyFilter(mission.filterAttribute, mission.filterValue)
@@ -936,7 +900,6 @@ export class GameScene extends Phaser.Scene {
   // ── Aplicar filtro ───────────────────────────────────────────────────────
 
   private applyFilter(attribute: FilterAttribute, value: FilterValue | null) {
-    this.startTimerOnFirstInteraction()
     this.phase = 'animating'
 
     if (value === null) {
@@ -1075,7 +1038,6 @@ export class GameScene extends Phaser.Scene {
   }
 
   private answerCount(correct: boolean) {
-    this.startTimerOnFirstInteraction()
     if (this.phase !== 'question') return
     this.questionOverlay?.disableInteractive()
     this.questionOverlay?.getAll<Phaser.GameObjects.Container>().forEach((c) => {
@@ -1118,6 +1080,7 @@ export class GameScene extends Phaser.Scene {
     if (this.gameEnded) return
     this.gameEnded   = true
     this.timerActive = false
+    this.timerTween?.stop()
     this.warningBeepTimer?.destroy()
     this.warningBeepTimer = null
 
@@ -1236,7 +1199,7 @@ export class GameScene extends Phaser.Scene {
       ? (this.levelConfig.level + 1) as 1 | 2 | 3
       : null
 
-    this.showLevelCompleteScreen(nextLevel)
+    this.showLevelCompleteTransition(nextLevel)
   }
 
   // ══════════════════════════════════════════════════════════════════════════
@@ -1323,24 +1286,16 @@ export class GameScene extends Phaser.Scene {
   private buildLargeCard(vehicle: Vehicle, cx: number, cy: number, layer: Phaser.GameObjects.Container) {
     const W = 190, H = 185
 
-    const g = this.add.graphics()
-    g.fillStyle(vehicle.bodyColor, 1)
-    g.fillRoundedRect(cx - W / 2, cy - H / 2, W, H, 22)
-    g.fillStyle(0xFFFFFF, 0.17)
-    g.fillRoundedRect(cx - W / 2 + 8, cy - H / 2 + 8, W - 16, 55, { tl: 14, tr: 14, bl: 0, br: 0 })
-    g.lineStyle(3, 0xFFFFFF, 0.5)
-    g.strokeRoundedRect(cx - W / 2, cy - H / 2, W, H, 22)
+    const bg = this.add.image(cx, cy, `card-${vehicle.attributes.meio}`)
+      .setDisplaySize(W, H).setOrigin(0.5)
 
-    const emoji = this.add.text(cx, cy - 24, vehicle.emoji, { fontSize: '60px' }).setOrigin(0.5)
-    const name  = this.add.text(cx, cy + 66, vehicle.name, {
-      fontSize: '18px',
-      fontFamily: 'Arial Black, Arial',
-      color: '#1A2340',
-      stroke: '#FFFFFF',
-      strokeThickness: 3,
+    const img = this.add.image(cx, cy - 20, `veh-${vehicle.id}`).setDisplaySize(110, 110).setOrigin(0.5)
+    const name = this.add.text(cx, cy + 66, vehicle.name, {
+      fontSize: '18px', fontFamily: 'Arial Black, Arial',
+      color: '#FFFFFF', stroke: '#000000', strokeThickness: 3,
     }).setOrigin(0.5)
 
-    layer.add([g, emoji, name])
+    layer.add([bg, img, name])
   }
 
   private buildComparisonRow(
@@ -1406,7 +1361,6 @@ export class GameScene extends Phaser.Scene {
   }
 
   private selectAnswer(attr: FilterAttribute, isIgual: boolean) {
-    this.startTimerOnFirstInteraction()
     this.comparisonAnswers.set(attr, isIgual)
 
     const btns = this.comparisonBtns.get(attr)
@@ -1518,33 +1472,31 @@ export class GameScene extends Phaser.Scene {
   }
 
   private makeSmallCard(vehicle: Vehicle, cx: number, cy: number, highlight: boolean): VehicleCard {
-    // Usa a mesma textura do BootScene (igual N1 e N2), escalada para SCARD_W/CARD_W
-    const scale = SCARD_W / CARD_W  // 120/155 ≈ 0.774
-    const key   = `vehicle-${vehicle.id}`
+    const scale = SCARD_W / CARD_W
 
-    const img = this.add.image(0, 0, key).setOrigin(0.5)
+    const bg = this.add.image(0, 0, `card-${vehicle.attributes.meio}`)
+      .setDisplaySize(CARD_W, CARD_H).setOrigin(0.5)
 
-    const emoji = this.add.text(0, -16, vehicle.emoji, { fontSize: '52px' }).setOrigin(0.5)
+    const img = this.add.image(0, -10, `veh-${vehicle.id}`).setDisplaySize(76, 76).setOrigin(0.5)
 
-    const name = this.add.text(0, 44, vehicle.name, {
-      fontSize: '13px',
-      fontFamily: 'Arial Black, Arial',
-      color: '#FFFFFF',
-      stroke: '#000000',
-      strokeThickness: 2,
+    const nameBg = this.add.graphics()
+    nameBg.fillStyle(0x000000, 0.45)
+    nameBg.fillRoundedRect(-CARD_W / 2 + 4, CARD_H / 2 - 26, CARD_W - 8, 22, { tl: 0, tr: 0, bl: 12, br: 12 })
+
+    const name = this.add.text(0, CARD_H / 2 - 15, vehicle.name, {
+      fontSize: '13px', fontFamily: 'Arial Black, Arial',
+      color: '#FFFFFF', stroke: '#000000', strokeThickness: 2,
     }).setOrigin(0.5)
 
-    const container = this.add.container(cx, cy, [img, emoji, name])
-    container.setSize(CARD_W, CARD_H)  // tamanho local antes do scale
+    const container = this.add.container(cx, cy, [bg, nameBg, img, name])
+    container.setSize(CARD_W, CARD_H)
     container.setScale(scale)
 
     if (highlight) {
-      // Borda dourada: lineStyle divide por scale para compensar o zoom do container
       const glow = this.add.graphics()
       glow.lineStyle(4 / scale, 0xFFD700, 1)
       glow.strokeRoundedRect(-CARD_W / 2 - 8, -CARD_H / 2 - 8, CARD_W + 16, CARD_H + 16, 22)
-      container.addAt(glow, 0)  // atrás dos outros elementos
-
+      container.addAt(glow, 0)
       this.tweens.add({
         targets: container,
         scaleX: scale * 1.06, scaleY: scale * 1.06,
@@ -1552,13 +1504,11 @@ export class GameScene extends Phaser.Scene {
       })
     }
 
-    const targetAlpha = highlight ? 1 : 0.45
     container.setAlpha(0)
     this.tweens.add({
-      targets: container, alpha: targetAlpha,
+      targets: container, alpha: highlight ? 1 : 0.45,
       duration: 280, delay: this.vehicleCards.length * 40,
     })
-
     return { container, vehicle, homeX: cx, homeY: cy }
   }
 
@@ -1614,7 +1564,6 @@ export class GameScene extends Phaser.Scene {
       const isCorrect = i === mission.correctOptionIndex
 
       const btn = this.makeGroupOptionButton(opt.label, isCorrect, optW / 2 - 6, 72, () => {
-        this.startTimerOnFirstInteraction()
         if (this.phase !== 'question') return
         overlay.getAll<Phaser.GameObjects.Container>().forEach((c) => {
           if (c instanceof Phaser.GameObjects.Container) c.disableInteractive()
@@ -1769,6 +1718,41 @@ export class GameScene extends Phaser.Scene {
       duration: 200, yoyo: true, hold: 1800,
       onComplete: () => toast.destroy(),
     })
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  //  HELPERS DE MODAL
+  // ══════════════════════════════════════════════════════════════════════════
+
+  private createModalButton(x: number, y: number, label: string, color: number, onClick: () => void) {
+    const button = this.add.container(x, y)
+    const bg = this.add.graphics()
+    bg.fillStyle(color, 1)
+    bg.fillRoundedRect(-124, -24, 248, 48, 24)
+    bg.lineStyle(4, 0xffffff, 1)
+    bg.strokeRoundedRect(-124, -24, 248, 48, 24)
+    const text = this.add.text(0, 0, label, {
+      fontSize: '17px', fontFamily: 'Arial Black, Arial',
+      color: '#ffffff', stroke: '#0f172a', strokeThickness: 3,
+    }).setOrigin(0.5)
+    button.add([bg, text])
+    button.setSize(256, 68)
+    button.setInteractive({ useHandCursor: true })
+    button.on('pointerover', () => this.tweens.add({ targets: button, scale: 1.05, duration: 90 }))
+    button.on('pointerout', () => this.tweens.add({ targets: button, scale: 1, duration: 90 }))
+    button.on('pointerdown', () => { this.playTick(); onClick() })
+    return button
+  }
+
+  private getLevelInfo(lvl: number): { objective: string; tip: string } {
+    if (lvl === 2) return {
+      objective: 'Compare dois veículos e descubra semelhanças e diferenças.',
+      tip: 'Marque IGUAL ou DIFERENTE para cada característica.',
+    }
+    return {
+      objective: 'Descubra o que os veículos destacados têm em comum.',
+      tip: 'Observe os veículos com borda dourada e escolha a resposta.',
+    }
   }
 
   // ══════════════════════════════════════════════════════════════════════════
