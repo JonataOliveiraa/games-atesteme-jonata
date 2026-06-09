@@ -1,104 +1,101 @@
 import type { Mission } from '../types'
 
+// ── Nível 1: Introdução ──────────────────────────────────────────────────────
+// Apps disponíveis: Relógio + Calculadora
+// Tarefas básicas: ajustar horário, fazer uma conta simples
+
 export const MISSIONS_L1: Mission[] = [
   {
     id: 'm1-1',
-    text: 'A Lua quer guardar uma foto especial da aula!',
+    text: 'Atualize o horário do computador para 9h00',
     steps: [
-      { appId: 'camera', actionKey: 'take-photo', hint: 'Abra a Câmera e tire uma foto' },
+      { appId: 'relogio', actionKey: 'set-time', hint: 'Abra o Relógio e clique em Sincronizar' },
     ],
   },
   {
     id: 'm1-2',
-    text: 'Quantas estrelas são 2 + 3? Use a calculadora!',
+    text: 'Calcule quantos alunos há na turma: 12 + 8 = ?',
     steps: [
-      { appId: 'calculadora', actionKey: 'calculate', hint: 'Use a Calculadora e pressione =' },
+      { appId: 'calculadora', actionKey: 'calculate', hint: 'Abra a Calculadora e pressione =' },
     ],
   },
 ]
+
+// ── Nível 2: Desenvolvimento ─────────────────────────────────────────────────
+// Apps disponíveis: Relógio + Calculadora + Pasta + Gravador
+// Progressão: um app novo por missão, sem repetição
 
 export const MISSIONS_L2: Mission[] = [
   {
     id: 'm2-1',
-    text: 'A Lua quer mandar uma mensagem de voz para a amiga!',
+    text: 'Atualize o horário do computador para 9h00',
     steps: [
-      { appId: 'gravador', actionKey: 'save-recording', hint: 'Grave e salve sua mensagem' },
+      { appId: 'relogio', actionKey: 'set-time', hint: 'Abra o Relógio e clique em Sincronizar' },
     ],
   },
   {
     id: 'm2-2',
-    text: 'Desenhe algo colorido para a Lua ver!',
+    text: 'Calcule o número de alunos presentes: 15 + 7 = ?',
     steps: [
-      { appId: 'desenho', actionKey: 'confirm-drawing', hint: 'Desenhe e pressione Pronto!' },
+      { appId: 'calculadora', actionKey: 'calculate', hint: 'Abra a Calculadora e pressione =' },
     ],
   },
   {
     id: 'm2-3',
-    text: 'Tire uma foto da sala e descubra: 4 + 2 = ?',
+    text: 'Organize os arquivos de aula na Pasta da Turma',
     steps: [
-      { appId: 'camera',      actionKey: 'take-photo', hint: 'Tire uma foto com a Câmera' },
-      { appId: 'calculadora', actionKey: 'calculate',  hint: 'Agora calcule 4 + 2 na Calculadora' },
+      { appId: 'pasta', actionKey: 'organize-files', hint: 'Mova todos os arquivos para a pasta e confirme' },
     ],
   },
   {
     id: 'm2-4',
-    text: 'Fotografe um amigo especial e grave uma mensagem para ele!',
+    text: 'Grave uma mensagem de boas-vindas para a turma',
     steps: [
-      { appId: 'camera',   actionKey: 'take-photo',     hint: 'Tire uma foto com a Câmera' },
-      { appId: 'gravador', actionKey: 'save-recording', hint: 'Agora grave uma mensagem no Gravador' },
+      { appId: 'gravador', actionKey: 'save-recording', hint: 'Grave e salve sua mensagem no Gravador' },
     ],
   },
 ]
 
+// ── Nível 3: Domínio ─────────────────────────────────────────────────────────
+// Apps disponíveis: todos (+ botão Desligar no desktop)
+// Tarefas: sequências com 3 passos, uso do botão desligar
+
 export const MISSIONS_L3: Mission[] = [
   {
     id: 'm3-1',
-    text: 'Grave sua voz, tire uma foto e acesse a biblioteca!',
+    text: 'Organize os arquivos e atualize o relógio da sala',
     steps: [
-      { appId: 'gravador',  actionKey: 'save-recording', hint: 'Grave uma mensagem' },
-      { appId: 'camera',    actionKey: 'take-photo',     hint: 'Agora tire uma foto' },
-      { appId: 'navegador', actionKey: 'navigate',       hint: 'Acesse a Biblioteca Digital' },
+      { appId: 'pasta',   actionKey: 'organize-files', hint: 'Mova os arquivos para a Pasta da Turma' },
+      { appId: 'relogio', actionKey: 'set-time',       hint: 'Agora sincronize o horário no Relógio' },
     ],
   },
   {
     id: 'm3-2',
-    text: 'Ouça a música favorita da Lua e depois desenhe o que imaginou!',
+    text: 'Grave a lição do dia e faça um desenho para a capa',
     steps: [
-      { appId: 'player',  actionKey: 'play-music',      hint: 'Toque a música no Player' },
-      { appId: 'desenho', actionKey: 'confirm-drawing', hint: 'Desenhe o que imaginou' },
+      { appId: 'gravador', actionKey: 'save-recording',  hint: 'Grave a lição de hoje no Gravador' },
+      { appId: 'desenho',  actionKey: 'confirm-drawing', hint: 'Desenhe a capa e pressione Pronto!' },
     ],
   },
   {
     id: 'm3-3',
-    text: 'Grave seu nome, calcule 5 + 3 e tire uma foto do resultado!',
+    text: 'Calcule o total de materiais: 5 + 7 + 3 = ?',
     steps: [
-      { appId: 'gravador',    actionKey: 'save-recording', hint: 'Grave seu nome' },
-      { appId: 'calculadora', actionKey: 'calculate',      hint: 'Calcule 5 + 3 na Calculadora' },
-      { appId: 'camera',      actionKey: 'take-photo',     hint: 'Tire uma foto do resultado' },
+      { appId: 'calculadora', actionKey: 'calculate', hint: 'Calcule na Calculadora e pressione =' },
     ],
   },
   {
     id: 'm3-4',
-    text: 'Ouça uma música e pesquise sobre ela na biblioteca!',
+    text: 'Ouça a música do encerramento da aula',
     steps: [
-      { appId: 'player',    actionKey: 'play-music', hint: 'Toque a música no Player' },
-      { appId: 'navegador', actionKey: 'navigate',   hint: 'Pesquise na Biblioteca Digital' },
+      { appId: 'player', actionKey: 'play-music', hint: 'Abra Músicas e clique em Tocar' },
     ],
   },
   {
     id: 'm3-5',
-    text: 'Desenhe um problema de matemática e resolva-o na calculadora!',
+    text: 'Encerre a sessão: desligue o computador corretamente',
     steps: [
-      { appId: 'desenho',     actionKey: 'confirm-drawing', hint: 'Desenhe um problema e pressione Pronto!' },
-      { appId: 'calculadora', actionKey: 'calculate',       hint: 'Calcule a resposta na Calculadora' },
-    ],
-  },
-  {
-    id: 'm3-6',
-    text: 'Tire uma foto especial e grave uma mensagem sobre ela!',
-    steps: [
-      { appId: 'camera',   actionKey: 'take-photo',     hint: 'Tire uma foto com a Câmera' },
-      { appId: 'gravador', actionKey: 'save-recording', hint: 'Grave uma mensagem sobre a foto' },
+      { appId: 'power', actionKey: 'shutdown', hint: 'Clique no botão Desligar no canto inferior direito' },
     ],
   },
 ]

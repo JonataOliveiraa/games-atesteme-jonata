@@ -478,13 +478,15 @@ export default function GameDetailsPage() {
     ],
     "desfile-do-robo-repetidor": [
       "Escolha uma seta para cada casa do caminho.",
-      "Desvie dos cones antes de chegar ao palco.",
+      "Passe pelo portal obrigatório antes de chegar à estrela.",
+      "Desvie dos cones e respeite o limite de comandos do nível.",
       "Execute o programa para levar o robô até a estrela.",
     ],
     "fabrica-de-maquinas": [
-      "Escolha a máquina que combina com a tarefa.",
-      "Toque apenas nos comandos que essa máquina entende.",
-      "Monte a linha de produção e execute para ver o produto final.",
+      "Observe qual produto a fábrica precisa produzir.",
+      "Arraste as máquinas embaralhadas para a esteira na ordem correta.",
+      "Clique em Iniciar Produção para testar a sequência.",
+      "Se a esteira parar, leia a dica e reorganize as etapas.",
     ],
   };
 

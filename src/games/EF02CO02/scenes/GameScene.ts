@@ -9,7 +9,8 @@ const GAME_ID = "desfile-do-robo-repetidor";
 const TIMER_BAR_W = 820;
 const TIMER_BAR_Y = 48;
 const MODAL_SCALE = 1.18;
-const MAX_PROGRAM_BLOCKS = 14;
+const BOARD_START_X = 86;
+const BOARD_START_Y = 210;
 
 const COLORS = {
   blue: 0x2563eb,
@@ -28,10 +29,12 @@ export class GameScene extends Phaser.Scene {
   private robotState!: { x: number; y: number; direction: Direction };
   private pathMarks: Phaser.GameObjects.GameObject[] = [];
   private programObjects: Phaser.GameObjects.GameObject[] = [];
+  private executedPath: GridPoint[] = [];
   private overlayObjects: Phaser.GameObjects.GameObject[] = [];
   private directionHitAreas: Array<{ bounds: Phaser.Geom.Rectangle; onClick: () => void }> = [];
   private actionHitAreas: Array<{ bounds: Phaser.Geom.Rectangle; onClick: () => void }> = [];
   private commandLocked = false;
+  private hasPassedCheckpoint = false;
   private hits = 0;
   private errors = 0;
   private hasStartedTimer = false;
@@ -54,10 +57,12 @@ export class GameScene extends Phaser.Scene {
     };
     this.pathMarks = [];
     this.programObjects = [];
+    this.executedPath = [];
     this.overlayObjects = [];
     this.directionHitAreas = [];
     this.actionHitAreas = [];
     this.commandLocked = false;
+    this.hasPassedCheckpoint = this.isCheckpoint(this.robotState.x, this.robotState.y);
     this.hits = 0;
     this.errors = 0;
     this.hasStartedTimer = false;
@@ -209,8 +214,8 @@ export class GameScene extends Phaser.Scene {
   private createBoard() {
     const { cols, rows } = this.levelConfig.gridSize;
     const cell = this.getCellSize();
-    const startX = 86;
-    const startY = 190;
+    const startX = BOARD_START_X;
+    const startY = BOARD_START_Y;
     const boardW = cols * cell;
     const boardH = rows * cell;
 
@@ -222,6 +227,7 @@ export class GameScene extends Phaser.Scene {
         const py = startY + y * cell + cell / 2;
         const isObstacle = this.isObstacle(x, y);
         const isGoal = this.levelConfig.goal.x === x && this.levelConfig.goal.y === y;
+        const isCheckpoint = this.isCheckpoint(x, y);
         
 
         this.add.image(px, py, "grid-tile")
@@ -254,6 +260,23 @@ if (isObstacle) {
   )
   .setDepth(4);
 }
+
+if (isCheckpoint) {
+  const portal = this.add.graphics().setDepth(5);
+  portal.fillStyle(0xfde68a, 0.36);
+  portal.fillCircle(px, py, (cell - 16) / 2);
+  portal.lineStyle(5, 0xf59e0b, 0.96);
+  portal.strokeCircle(px, py, (cell - 18) / 2);
+  portal.lineStyle(3, 0xffffff, 0.96);
+  portal.strokeCircle(px, py, (cell - 30) / 2);
+  this.add.text(px, py + cell * 0.27, "portal", {
+    fontSize: `${Math.max(11, Math.floor(cell * 0.16))}px`,
+    fontFamily: "Arial Black, Arial",
+    color: "#ffffff",
+    stroke: "#7c2d12",
+    strokeThickness: 3,
+  }).setOrigin(0.5).setDepth(6);
+}
       }
     }
   }
@@ -262,30 +285,31 @@ if (isObstacle) {
     this.directionHitAreas = [];
     this.input.off("pointerdown", this.handleDirectionPointerDown, this);
     this.input.off("pointermove", this.handleDirectionPointerMove, this);
-    this.drawGamePanel(910, 350, 604, 320, COLORS.purple, 1);
-    this.drawPanelHeader(910, 178, 410, "Escolha a direção", COLORS.purple);
+    this.drawGamePanel(910, 326, 604, 292, COLORS.purple, 1);
+    this.drawPanelHeader(910, 172, 410, "Escolha a direção", COLORS.purple);
 
-    this.add.text(910, 224, "Cada toque na seta move o robô 1 casa.", {
-      fontSize: "17px",
+    this.add.text(910, 220, "Cada toque move o robô 1 casa. Passe pelo portal antes da estrela.", {
+      fontSize: "16px",
       fontFamily: "Arial Black, Arial",
       color: "#ffffff",
       stroke: "#0f172a",
       strokeThickness: 4,
       align: "center",
+      wordWrap: { width: 500 },
     }).setOrigin(0.5).setDepth(12);
 
-    const directions: Array<{ x: number; y: number; label: string; arrow: string; direction: Direction; color: number }> = [
-      { x: 910, y: 270, label: "Cima", arrow: "↑", direction: "up", color: COLORS.blue },
-      { x: 910, y: 332, label: "Direita", arrow: "→", direction: "right", color: COLORS.purple },
-      { x: 910, y: 394, label: "Baixo", arrow: "↓", direction: "down", color: COLORS.blue },
-      { x: 910, y: 456, label: "Esquerda", arrow: "←", direction: "left", color: COLORS.purple },
+    const directions: Array<{ x: number; y: number; label: string; angle: number; direction: Direction; color: number }> = [
+      { x: 786, y: 288, label: "Cima", angle: -90, direction: "up", color: COLORS.blue },
+      { x: 1034, y: 288, label: "Direita", angle: 0, direction: "right", color: COLORS.purple },
+      { x: 786, y: 406, label: "Baixo", angle: 90, direction: "down", color: COLORS.blue },
+      { x: 1034, y: 406, label: "Esquerda", angle: 180, direction: "left", color: COLORS.purple },
     ];
 
     directions.forEach((button) => {
       this.createDirectionButton(
         button.x,
         button.y,
-        button.arrow,
+        button.angle,
         button.label,
         button.color,
         () => this.addCommand({ type: "move", direction: button.direction })
@@ -308,7 +332,9 @@ if (isObstacle) {
   }
 
   private handleDirectionPointerMove(pointer: Phaser.Input.Pointer) {
-    if (this.commandLocked || this.overlayObjects.length) {
+    if (this.overlayObjects.length) return;
+
+    if (this.commandLocked) {
       this.input.setDefaultCursor("default");
       return;
     }
@@ -319,15 +345,15 @@ if (isObstacle) {
   }
 
   private createProgramPanel() {
-    this.drawGamePanel(910, 566, 604, 108, COLORS.blue, 1);
-    this.drawPanelHeader(910, 512, 320, "Programa do robô", COLORS.blue);
+    this.drawGamePanel(910, 558, 604, 136, COLORS.blue, 1);
+    this.drawPanelHeader(910, 492, 320, "Programa do robô", COLORS.blue);
   }
 
   private createActionButtons() {
     this.actionHitAreas = [];
-    this.createUiButton(690, 668, 205, 76, "Executar", COLORS.green, () => this.executeProgram());
-    this.createUiButton(910, 668, 195, 76, "Desfazer", COLORS.orange, () => this.undoCommand());
-    this.createUiButton(1130, 668, 185, 76, "Limpar", 0xef4444, () => this.clearProgram());
+    this.createUiButton(690, 676, 205, 72, "Executar", COLORS.green, () => this.executeProgram());
+    this.createUiButton(910, 676, 195, 72, "Desfazer", COLORS.orange, () => this.undoCommand());
+    this.createUiButton(1130, 676, 185, 72, "Limpar", 0xef4444, () => this.clearProgram());
   }
   private createRobot() {
   const pos = this.gridToWorld(
@@ -365,8 +391,8 @@ if (isObstacle) {
 
   private addCommand(command: RobotCommand) {
     if (this.commandLocked) return;
-    if (this.program.length >= MAX_PROGRAM_BLOCKS) {
-      this.showToast("Seu programa está cheio. Apague uma seta para tentar outro caminho.", 0xf59e0b);
+    if (this.program.length >= this.levelConfig.maxBlocks) {
+      this.showToast(`Limite de ${this.levelConfig.maxBlocks} comandos. Apague uma seta para tentar outro caminho.`, 0xf59e0b);
       return;
     }
     this.playClick();
@@ -393,6 +419,7 @@ if (isObstacle) {
   private renderProgram() {
     this.programObjects.forEach((object) => object.destroy());
     this.programObjects = [];
+    this.drawCommandLimitCounter();
 
     if (!this.program.length) {
       this.programObjects.push(this.add.text(910, 568, "Toque nas setas para montar o caminho do robô, uma casa por vez.", {
@@ -408,29 +435,44 @@ if (isObstacle) {
     }
 
     this.program.forEach((command, index) => {
-      const col = index % 7;
-      const row = Math.floor(index / 7);
-      const x = 648 + col * 84;
-      const y = 548 + row * 46;
-      const label = this.getCommandLabel(command);
+      const col = index % 9;
+      const row = Math.floor(index / 9);
+      const x = 642 + col * 58;
+      const y = 545 + row * 42;
       const block = this.add.graphics().setDepth(12);
       block.fillStyle(this.getCommandColor(command), 0.98);
-      block.fillRoundedRect(x - 25, y - 18, 50, 36, 12);
+      block.fillRoundedRect(x - 21, y - 15, 42, 30, 10);
       block.fillStyle(0xffffff, 0.14);
-      block.fillRoundedRect(x - 18, y - 13, 36, 12, 6);
+      block.fillRoundedRect(x - 15, y - 11, 30, 10, 5);
       block.lineStyle(3, 0xffffff, 0.9);
-      block.strokeRoundedRect(x - 25, y - 18, 50, 36, 12);
+      block.strokeRoundedRect(x - 21, y - 15, 42, 30, 10);
       this.programObjects.push(block);
-      this.programObjects.push(this.add.text(x, y, label, {
-        fontSize: "24px",
-        fontFamily: "Arial Black, Arial",
-        color: "#ffffff",
-        stroke: "#0f172a",
-        strokeThickness: 4,
-        align: "center",
-        wordWrap: { width: 70 },
-      }).setOrigin(0.5).setDepth(13));
+      const icon = this.add.image(x, y, "block-move")
+        .setAngle(this.getCommandAngle(command))
+        .setDepth(13);
+      this.fitImage(icon, 32, 24);
+      this.programObjects.push(icon);
     });
+  }
+
+  private drawCommandLimitCounter() {
+    const isFull = this.program.length >= this.levelConfig.maxBlocks;
+    const color = isFull ? 0xf59e0b : COLORS.green;
+    const bg = this.add.graphics().setDepth(13);
+    bg.fillStyle(color, 0.96);
+    bg.fillRoundedRect(150, 146, 260, 38, 19);
+    bg.lineStyle(3, 0xffffff, 0.92);
+    bg.strokeRoundedRect(150, 146, 260, 38, 19);
+    this.programObjects.push(bg);
+
+    this.programObjects.push(this.add.text(280, 165, `Comandos: ${this.program.length}/${this.levelConfig.maxBlocks}`, {
+      fontSize: "18px",
+      fontFamily: "Arial Black, Arial",
+      color: "#ffffff",
+      stroke: "#0f172a",
+      strokeThickness: 4,
+      align: "center",
+    }).setOrigin(0.5).setDepth(14));
   }
 
   private async executeProgram() {
@@ -440,6 +482,8 @@ if (isObstacle) {
     this.commandLocked = true;
     this.clearPathMarks();
     this.resetRobot();
+    this.executedPath = [{ x: this.robotState.x, y: this.robotState.y }];
+    this.hasPassedCheckpoint = this.isCheckpoint(this.robotState.x, this.robotState.y);
 
     for (const command of this.program) {
       const result = await this.runCommand(command);
@@ -453,20 +497,28 @@ if (isObstacle) {
       }
     }
 
-    if (this.robotState.x === this.levelConfig.goal.x && this.robotState.y === this.levelConfig.goal.y) {
+    if (
+      this.robotState.x === this.levelConfig.goal.x &&
+      this.robotState.y === this.levelConfig.goal.y &&
+      this.hasVisitedCheckpoint()
+    ) {
       this.hits += 1;
       this.playCorrect();
       const bonus = this.program.length <= this.levelConfig.minBlocks ? 5 : 0;
       runtimeGameBridge.emit({ type: "CORRECT_ANSWER", gameId: GAME_ID, stage: this.levelConfig.level, pointsEarned: 5 + bonus });
       this.emitProgress();
-      this.time.delayedCall(650, () => this.handleLevelSuccess());
+      this.handleLevelSuccess();
       return;
     }
 
     this.errors += 1;
     this.playWrong();
     runtimeGameBridge.emit({ type: "WRONG_ANSWER", gameId: GAME_ID, stage: this.levelConfig.level, pointsEarned: -5 });
-    this.restartCurrentLevelAfterError("O robô parou fora da estrela. O nível vai recomeçar.");
+    this.restartCurrentLevelAfterError(
+      this.robotState.x === this.levelConfig.goal.x && this.robotState.y === this.levelConfig.goal.y
+        ? "Passe pelo portal antes de chegar à estrela."
+        : "O robô parou fora da estrela. O nível vai recomeçar."
+    );
     this.emitProgress();
   }
 
@@ -504,6 +556,10 @@ if (isObstacle) {
 
       this.robotState.x = next.x;
       this.robotState.y = next.y;
+      this.executedPath.push({ x: next.x, y: next.y });
+      if (this.isCheckpoint(next.x, next.y)) {
+        this.hasPassedCheckpoint = true;
+      }
 
       const pos = this.gridToWorld(next.x, next.y);
       this.markPath(pos.x, pos.y);
@@ -602,8 +658,8 @@ if (isObstacle) {
       return dot;
     });
 
-    const waitText = this.add.text(0, 132, "Preparando o próximo nível...", {
-      fontSize: "15px",
+    const waitText = this.add.text(0, 132, "Abrindo a próxima fase...", {
+      fontSize: "17px",
       fontFamily: "Arial Black, Arial",
       color: "#25327a",
     }).setOrigin(0.5);
@@ -620,7 +676,7 @@ if (isObstacle) {
       ease: "Back.easeOut",
     });
 
-    this.time.delayedCall(1800, () => {
+    this.time.delayedCall(3000, () => {
       this.showNextLevelStartTransition(nextLevel);
     });
   }
@@ -629,7 +685,6 @@ if (isObstacle) {
     this.clearOverlay();
     const nextConfig = LEVELS.find((item) => item.level === nextLevel);
     const overlay = this.addOverlayObject(this.add.rectangle(640, 360, 1280, 720, 0x12324a, 0.58).setDepth(450));
-    overlay.setInteractive();
 
     const modal = this.addOverlayObject(this.add.container(640, 360).setDepth(451));
     const shadow = this.add.graphics();
@@ -648,7 +703,7 @@ if (isObstacle) {
     topBar.lineStyle(3, 0xffffff, 0.82);
     topBar.strokeRoundedRect(-196, -182, 392, 28, 14);
 
-    const title = this.add.text(0, -102, `Nível ${nextLevel}`, {
+    const title = this.add.text(0, -102, `Nível ${nextLevel} liberado!`, {
       fontSize: "38px",
       fontFamily: "Arial Black, Arial",
       color: "#25327a",
@@ -690,17 +745,29 @@ if (isObstacle) {
     }).setOrigin(0.5);
     button.add([buttonShadow, buttonBg, buttonText]);
 
-    const buttonHitbox = this.addOverlayObject(this.add.zone(640, 360 + 104 * MODAL_SCALE, 300 * MODAL_SCALE, 76 * MODAL_SCALE).setDepth(452));
+    let hasStartedNextLevel = false;
+    const startNextLevel = () => {
+      if (hasStartedNextLevel) return;
+      hasStartedNextLevel = true;
+      this.input.setDefaultCursor("default");
+      this.scene.restart({ level: nextLevel });
+    };
+
+    overlay.setInteractive();
+
+    const buttonHitbox = this.addOverlayObject(this.add.zone(640, 360 + 104 * MODAL_SCALE, 280 * MODAL_SCALE, 62 * MODAL_SCALE).setDepth(452));
     buttonHitbox.setInteractive({ useHandCursor: true });
     buttonHitbox.on("pointerover", () => {
+      this.input.setDefaultCursor("pointer");
       this.tweens.add({ targets: button, scale: 1.04, duration: 90, ease: "Sine.easeOut" });
     });
     buttonHitbox.on("pointerout", () => {
+      this.input.setDefaultCursor("default");
       this.tweens.add({ targets: button, scale: 1, duration: 90, ease: "Sine.easeOut" });
     });
     buttonHitbox.on("pointerdown", () => {
       this.playClick();
-      this.scene.restart({ level: nextLevel });
+      startNextLevel();
     });
 
     modal.add([shadow, bg, topBar, title, objective, detail, button]);
@@ -714,6 +781,7 @@ if (isObstacle) {
       duration: 260,
       ease: "Back.easeOut",
     });
+
   }
 
   private showGameCompleteScreen() {
@@ -784,8 +852,8 @@ if (isObstacle) {
       wordWrap: { width: 480 },
     }).setOrigin(0.5);
 
-    const playAgain = this.createFinalButton(-142, 138, "Jogar novamente", COLORS.green, () => this.scene.restart({ level: 1 }));
-    const exit = this.createFinalButton(142, 138, "Voltar aos jogos", COLORS.orange, () => EventBus.emit("exit-game"));
+    const playAgain = this.createFinalButton(-158, 138, "Jogar novamente", COLORS.green, () => this.scene.restart({ level: 1 }));
+    const exit = this.createFinalButton(158, 138, "Voltar aos jogos", COLORS.orange, () => EventBus.emit("exit-game"));
 
     const sparkles = Array.from({ length: 14 }, (_, index) => {
       const sparkle = this.add.graphics();
@@ -806,6 +874,14 @@ if (isObstacle) {
     });
 
     panel.add([shadow, bg, ribbon, ...sparkles, title, subtitle, badge, ...levelLabels, playAgain, exit]);
+    this.createModalButtonHitbox(640 - 158 * MODAL_SCALE, 360 + 138 * MODAL_SCALE, 268 * MODAL_SCALE, 62 * MODAL_SCALE, playAgain, () => {
+      this.playClick();
+      this.scene.restart({ level: 1 });
+    });
+    this.createModalButtonHitbox(640 + 158 * MODAL_SCALE, 360 + 138 * MODAL_SCALE, 268 * MODAL_SCALE, 62 * MODAL_SCALE, exit, () => {
+      this.playClick();
+      EventBus.emit("exit-game");
+    });
     panel.setScale(MODAL_SCALE * 0.9);
     panel.setAlpha(0);
     this.tweens.add({
@@ -851,6 +927,28 @@ if (isObstacle) {
     return button;
   }
 
+  private createModalButtonHitbox(
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    visualTarget: Phaser.GameObjects.Container,
+    onClick: () => void
+  ) {
+    const hitbox = this.addOverlayObject(this.add.zone(x, y, width, height).setDepth(452));
+    hitbox.setInteractive({ useHandCursor: true });
+    hitbox.on("pointerover", () => {
+      this.input.setDefaultCursor("pointer");
+      this.tweens.add({ targets: visualTarget, scale: 1.04, duration: 90, ease: "Sine.easeOut" });
+    });
+    hitbox.on("pointerout", () => {
+      this.input.setDefaultCursor("default");
+      this.tweens.add({ targets: visualTarget, scale: 1, duration: 90, ease: "Sine.easeOut" });
+    });
+    hitbox.on("pointerdown", onClick);
+    return hitbox;
+  }
+
   private addOverlayObject<T extends Phaser.GameObjects.GameObject>(object: T): T {
     this.overlayObjects.push(object);
     return object;
@@ -873,6 +971,7 @@ if (isObstacle) {
 
   private resetRobot() {
     this.robotState = { x: this.levelConfig.start.x, y: this.levelConfig.start.y, direction: this.levelConfig.direction };
+    this.hasPassedCheckpoint = this.isCheckpoint(this.robotState.x, this.robotState.y);
     const pos = this.gridToWorld(this.robotState.x, this.robotState.y);
     this.robot.setPosition(pos.x, pos.y);
     this.updateRobotRotation();
@@ -897,7 +996,7 @@ if (isObstacle) {
 
   private gridToWorld(x: number, y: number) {
     const cell = this.getCellSize();
-    return { x: 86 + x * cell + cell / 2, y: 190 + y * cell + cell / 2 };
+    return { x: BOARD_START_X + x * cell + cell / 2, y: BOARD_START_Y + y * cell + cell / 2 };
   }
 
   private getCellSize() {
@@ -913,14 +1012,22 @@ if (isObstacle) {
     return this.levelConfig.obstacles.some((point) => point.x === x && point.y === y);
   }
 
-  private getCommandLabel(command: RobotCommand) {
-    const arrow = {
-      up: "↑",
-      right: "→",
-      down: "↓",
-      left: "←",
+  private isCheckpoint(x: number, y: number) {
+    return this.levelConfig.checkpoint?.x === x && this.levelConfig.checkpoint.y === y;
+  }
+
+  private hasVisitedCheckpoint() {
+    if (!this.levelConfig.checkpoint) return true;
+    return this.executedPath.some((point) => this.isCheckpoint(point.x, point.y));
+  }
+
+  private getCommandAngle(command: RobotCommand) {
+    return {
+      up: -90,
+      right: 0,
+      down: 90,
+      left: 180,
     }[command.direction];
-    return arrow;
   }
 
   private getCommandColor(command: RobotCommand) {
@@ -956,13 +1063,13 @@ if (isObstacle) {
   private createDirectionButton(
     x: number,
     y: number,
-    arrow: string,
+    angle: number,
     label: string,
     color: number,
     onClick: () => void
   ) {
-    const width = 410;
-    const height = 54;
+    const width = 220;
+    const height = 92;
     const button = this.add.container(x, y).setDepth(12);
 
     const shadow = this.add.graphics();
@@ -973,25 +1080,22 @@ if (isObstacle) {
     bg.fillStyle(color, 0.98);
     bg.fillRoundedRect(-width / 2, -height / 2, width, height, 18);
     bg.fillStyle(0xffffff, 0.16);
-    bg.fillRoundedRect(-width / 2 + 10, -height / 2 + 8, 64, height - 16, 14);
+    bg.fillRoundedRect(-width / 2 + 10, -height / 2 + 10, 72, height - 20, 14);
     bg.lineStyle(3, 0xffffff, 0.92);
     bg.strokeRoundedRect(-width / 2, -height / 2, width, height, 18);
 
-    const icon = this.add.text(-160, 0, arrow, {
-      fontSize: "36px",
-      fontFamily: "Arial Black, Arial",
-      color: "#ffffff",
-      stroke: "#0f172a",
-      strokeThickness: 4,
-    }).setOrigin(0.5);
+    const icon = this.add.image(-74, -2, "block-move")
+      .setAngle(angle);
+    this.fitImage(icon, 64, 56);
 
     const text = this.add.text(34, 0, label, {
-      fontSize: "22px",
+      fontSize: "20px",
       fontFamily: "Arial Black, Arial",
       color: "#ffffff",
       stroke: "#0f172a",
       strokeThickness: 3,
       align: "center",
+      wordWrap: { width: 116 },
     }).setOrigin(0.5);
 
     button.add([shadow, bg, icon, text]);
@@ -1122,7 +1226,7 @@ if (isObstacle) {
   }
 
   private emitProgress() {
-    const progress = this.program.length ? Math.min(95, Math.round((this.program.length / MAX_PROGRAM_BLOCKS) * 100)) : 0;
+    const progress = this.program.length ? Math.min(95, Math.round((this.program.length / this.levelConfig.maxBlocks) * 100)) : 0;
     runtimeGameBridge.emit({
       type: "CHECKPOINT",
       gameId: GAME_ID,

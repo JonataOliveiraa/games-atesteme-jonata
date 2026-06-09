@@ -19,6 +19,8 @@ export interface RepeatLevel {
   start: GridPoint;
   direction: Direction;
   goal: GridPoint;
+  checkpoint?: GridPoint;
   obstacles: GridPoint[];
   minBlocks: number;
+  maxBlocks: number;
 }
