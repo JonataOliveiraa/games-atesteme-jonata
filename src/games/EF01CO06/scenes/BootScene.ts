@@ -1,33 +1,21 @@
 import Phaser from 'phaser'
 import { APP_DEFS } from '../types'
-import desktopBgUrl      from '../../../assets/games/EF01CO06/desktop-bg.png'
-import loadingBgUrl      from '../../../assets/games/EF01CO06/loading-bg.png'
-import iconCameraUrl     from '../../../assets/games/EF01CO06/icon-camera.png'
-import iconGravadorUrl   from '../../../assets/games/EF01CO06/icon-gravador.png'
-import iconDesenhoUrl    from '../../../assets/games/EF01CO06/icon-desenho.png'
+import desktopBgUrl       from '../../../assets/games/EF01CO06/desktop-bg.png'
+import loadingBgUrl       from '../../../assets/games/EF01CO06/loading-bg.png'
+import iconGravadorUrl    from '../../../assets/games/EF01CO06/icon-gravador.png'
+import iconDesenhoUrl     from '../../../assets/games/EF01CO06/icon-desenho.png'
 import iconCalculadoraUrl from '../../../assets/games/EF01CO06/icon-calculadora.png'
-import iconNavegadorUrl  from '../../../assets/games/EF01CO06/icon-navegador.png'
-import iconPlayerUrl     from '../../../assets/games/EF01CO06/icon-player.png'
-import albumArtUrl       from '../../../assets/games/EF01CO06/album-art.png'
-import cameraSceneUrl    from '../../../assets/games/EF01CO06/camera-scene.png'
-import browserPageUrl    from '../../../assets/games/EF01CO06/browser-page.png'
-import luaUrl            from '../../../assets/games/EF01CO06/lua.png'
-import gravadorBgUrl     from '../../../assets/games/EF01CO06/gravador-bg.png'
-import desenhoCanvasUrl  from '../../../assets/games/EF01CO06/desenho-canvas.png'
-import calcBgUrl         from '../../../assets/games/EF01CO06/calculadora-bg.png'
+import iconPlayerUrl      from '../../../assets/games/EF01CO06/icon-player.png'
+import iconRelogioUrl     from '../../../assets/games/EF01CO06/icon-relogio.png'
+import albumArtUrl        from '../../../assets/games/EF01CO06/album-art.png'
+import gravadorBgUrl      from '../../../assets/games/EF01CO06/gravador-bg.png'
+import desenhoCanvasUrl   from '../../../assets/games/EF01CO06/desenho-canvas.png'
+import calcBgUrl          from '../../../assets/games/EF01CO06/calculadora-bg.png'
+import pastaDocMatUrl     from '../../../assets/games/EF01CO06/pasta-doc-matematica.png'
+import pastaDocLeitUrl    from '../../../assets/games/EF01CO06/pasta-doc-leitura.png'
+import pastaDocArteUrl    from '../../../assets/games/EF01CO06/pasta-doc-arte.png'
+import iconPowerUrl       from '../../../assets/games/EF01CO06/icon-power.png'
 
-/**
- * BootScene — carrega assets e gera texturas programáticas para EF01CO06.
- *
- * Texturas carregadas via arquivo:
- *   `desktop-bg`     → wallpaper do desktop (PNG)
- *
- * Texturas geradas programaticamente (fallback / pendentes de asset):
- *   `icon-{appId}`   → ícone do app (88×88 px, rounded rect + forma específica)
- *   `taskbar-bg`     → fundo da barra de tarefas (1280×60)
- *
- * TODO: substituir ícones por atlas real quando assets estiverem disponíveis.
- */
 export class BootScene extends Phaser.Scene {
   constructor() {
     super({ key: 'BootScene' })
@@ -36,30 +24,28 @@ export class BootScene extends Phaser.Scene {
   preload() {
     this.createLoadingBar()
 
-    // loading-bg carrega primeiro para poder ser exibido durante o preload
     this.load.image('loading-bg', loadingBgUrl)
     this.load.on('filecomplete-image-loading-bg', () => {
       const img = this.add.image(640, 360, 'loading-bg').setDisplaySize(1280, 720)
       this.children.sendToBack(img)
     })
 
-    this.load.image('desktop-bg',    desktopBgUrl)
-    this.load.image('icon-camera',   iconCameraUrl)
-    this.load.image('icon-gravador', iconGravadorUrl)
-    this.load.image('icon-desenho',  iconDesenhoUrl)
+    this.load.image('desktop-bg',     desktopBgUrl)
+    this.load.image('icon-gravador',  iconGravadorUrl)
+    this.load.image('icon-desenho',   iconDesenhoUrl)
     this.load.image('icon-calculadora', iconCalculadoraUrl)
-    this.load.image('icon-navegador', iconNavegadorUrl)
-    this.load.image('icon-player',   iconPlayerUrl)
+    this.load.image('icon-player',    iconPlayerUrl)
+    this.load.image('icon-relogio',   iconRelogioUrl)
     this.load.image('album-art',      albumArtUrl)
-    this.load.image('camera-scene',   cameraSceneUrl)
-    this.load.image('browser-page',   browserPageUrl)
-    this.load.image('mascot-lua',     luaUrl)
     this.load.image('gravador-bg',    gravadorBgUrl)
     this.load.image('desenho-canvas', desenhoCanvasUrl)
     this.load.image('calc-bg',        calcBgUrl)
+    this.load.image('pasta-doc-matematica', pastaDocMatUrl)
+    this.load.image('pasta-doc-leitura',    pastaDocLeitUrl)
+    this.load.image('pasta-doc-arte',       pastaDocArteUrl)
+    this.load.image('icon-power',           iconPowerUrl)
 
     // TODO: this.load.audio('sfx-open',    ['assets/audio/window-open.ogg', 'assets/audio/window-open.mp3'])
-    // TODO: this.load.audio('sfx-close',   ['assets/audio/window-close.ogg','assets/audio/window-close.mp3'])
     // TODO: this.load.audio('sfx-success', ['assets/audio/success.ogg',     'assets/audio/success.mp3'])
   }
 
@@ -70,38 +56,129 @@ export class BootScene extends Phaser.Scene {
     this.scene.start('GameScene')
   }
 
-  // ── Loading bar ─────────────────────────────────────────────────────────────
+  // ── Tela de carregamento ──────────────────────────────────────────────────
 
   private createLoadingBar() {
-    const cx = 640, cy = 360, w = 500, h = 28
+    const cx = 640, cy = 360
 
-    // Fundo escuro programático — substituído por loading-bg.png assim que carrega
-    this.add.rectangle(640, 360, 1280, 720, 0x1A2035)
-    this.add.rectangle(640, 280, 200, 200, 0x2C3E6A, 0.4)
+    // Fundo escuro inicial
+    this.add.rectangle(640, 360, 1280, 720, 0x0D1628)
 
-    // Monitor icon
-    const mon = this.add.graphics()
-    mon.lineStyle(6, 0x5DADE2)
-    mon.strokeRect(490, 200, 300, 180)
-    mon.fillStyle(0x1B4F72)
-    mon.fillRect(496, 206, 288, 168)
-    mon.fillStyle(0x5DADE2)
-    mon.fillRect(615, 380, 50, 16)
-    mon.fillRect(580, 394, 120, 8)
+    // Painel central com borda
+    const panel = this.add.graphics()
+    panel.fillStyle(0x0A1F38, 0.92)
+    panel.fillRoundedRect(cx - 300, cy - 210, 600, 420, 20)
+    panel.lineStyle(2, 0x2E86C1, 0.7)
+    panel.strokeRoundedRect(cx - 300, cy - 210, 600, 420, 20)
 
-    this.add.text(640, 295, '🖥️', { fontSize: '48px' }).setOrigin(0.5)
+    // Faixa de título superior
+    const header = this.add.graphics()
+    header.fillStyle(0x1A3A6B, 1)
+    header.fillRoundedRect(cx - 300, cy - 210, 600, 54, { tl: 20, tr: 20, bl: 0, br: 0 })
 
-    this.add.text(640, 440, 'Preparando o Desktop...', {
-      fontSize: '22px', color: '#AED6F1', fontFamily: 'Arial, sans-serif',
+    this.add.text(cx, cy - 183, '🖥️  Desktop Digital Infantil', {
+      fontSize: '22px', color: '#AED6F1', fontFamily: 'Arial Black',
     }).setOrigin(0.5)
 
-    this.add.rectangle(cx, cy + 100, w + 8, h + 8, 0x1B2A4A).setStrokeStyle(2, 0x5DADE2)
-    const bar = this.add.rectangle(cx - w / 2, cy + 100, 4, h, 0x5DADE2).setOrigin(0, 0.5)
+    // Monitor ilustrado
+    this.drawMonitorIllustration(cx, cy - 80)
 
-    this.load.on('progress', (v: number) => bar.setSize(Math.max(4, w * v), h))
+    // Título
+    this.add.text(cx, cy + 52, 'Preparando o Desktop...', {
+      fontSize: '20px', color: '#85C1E9', fontFamily: 'Arial',
+    }).setOrigin(0.5)
+
+    // App icons preview (pequenos, como se fosse carregar)
+    const previewIcons = ['🕐', '🧮', '📁', '🎙️', '🎨', '🎵']
+    previewIcons.forEach((icon, i) => {
+      const ix = cx - 138 + i * 56
+      const dot = this.add.circle(ix, cy + 100, 18, 0x1A3A6B)
+      dot.setStrokeStyle(1.5, 0x2E86C1, 0.7)
+      this.add.text(ix, cy + 100, icon, { fontSize: '16px' }).setOrigin(0.5)
+
+      dot.setAlpha(0.3)
+      this.time.addEvent({
+        delay: 200 + i * 120, callback: () => {
+          this.tweens.add({ targets: dot, alpha: 1, duration: 280, ease: 'Sine.easeOut' })
+        },
+      })
+    })
+
+    // Barra de progresso
+    const BAR_X = cx - 240, BAR_Y = cy + 142, BAR_W = 480, BAR_H = 22
+
+    const trackBg = this.add.graphics()
+    trackBg.fillStyle(0x071428, 1)
+    trackBg.fillRoundedRect(BAR_X - 3, BAR_Y - 3, BAR_W + 6, BAR_H + 6, (BAR_H + 6) / 2)
+    trackBg.lineStyle(1.5, 0x2E86C1, 0.6)
+    trackBg.strokeRoundedRect(BAR_X - 3, BAR_Y - 3, BAR_W + 6, BAR_H + 6, (BAR_H + 6) / 2)
+
+    const barFill = this.add.graphics()
+    const barShine = this.add.graphics()
+
+    const pctText = this.add.text(cx, BAR_Y + BAR_H + 14, '0%', {
+      fontSize: '13px', color: '#7FB3D3', fontFamily: 'Arial',
+    }).setOrigin(0.5)
+
+    this.load.on('progress', (v: number) => {
+      const filled = Math.max(BAR_H, BAR_W * v)
+      barFill.clear()
+      barFill.fillStyle(0x2980B9, 1)
+      barFill.fillRoundedRect(BAR_X, BAR_Y, filled, BAR_H, BAR_H / 2)
+      // Gradiente claro por cima
+      barFill.fillStyle(0x5DADE2, 0.5)
+      barFill.fillRoundedRect(BAR_X, BAR_Y, filled, BAR_H * 0.45, { tl: BAR_H / 2, tr: BAR_H / 2, bl: 0, br: 0 })
+
+      barShine.clear()
+      barShine.fillStyle(0xFFFFFF, 0.15)
+      barShine.fillRoundedRect(BAR_X + 2, BAR_Y + 2, filled - 4, 6, { tl: 4, tr: 4, bl: 0, br: 0 })
+
+      pctText.setText(Math.round(v * 100) + '%')
+    })
   }
 
-  // ── Textura de ícone (forma específica por app) ──────────────────────────────
+  private drawMonitorIllustration(cx: number, cy: number) {
+    const g = this.add.graphics()
+
+    // Sombra do monitor
+    g.fillStyle(0x000000, 0.25)
+    g.fillRoundedRect(cx - 106, cy - 76, 216, 156, 10)
+
+    // Corpo do monitor
+    g.fillStyle(0x1B4F72, 1)
+    g.fillRoundedRect(cx - 110, cy - 80, 220, 150, 10)
+    g.lineStyle(4, 0x2E86C1, 0.9)
+    g.strokeRoundedRect(cx - 110, cy - 80, 220, 150, 10)
+
+    // Tela
+    g.fillStyle(0x0D2137, 1)
+    g.fillRoundedRect(cx - 96, cy - 68, 192, 120, 6)
+
+    // "Desktop" na tela (mini icons)
+    const miniIcons = [
+      { x: cx - 72, y: cy - 44, c: 0x1A3A6B },
+      { x: cx - 40, y: cy - 44, c: 0x1E8449 },
+      { x: cx - 8,  y: cy - 44, c: 0xB7770D },
+    ]
+    miniIcons.forEach(({ x, y, c }) => {
+      g.fillStyle(c, 0.9)
+      g.fillRoundedRect(x - 14, y - 12, 28, 28, 4)
+    })
+
+    // Barra de tarefas mini
+    g.fillStyle(0x071428, 0.85)
+    g.fillRect(cx - 96, cy + 34, 192, 16)
+
+    // Pescoço
+    g.fillStyle(0x1B4F72, 1)
+    g.fillRect(cx - 14, cy + 70, 28, 18)
+
+    // Base
+    g.fillStyle(0x2E86C1, 0.7)
+    g.fillRoundedRect(cx - 44, cy + 88, 88, 10, 5)
+  }
+
+  // ── Texturas de ícone (programáticas para apps sem PNG) ──────────────────
 
   private generateIconTextures() {
     const SIZE = 88
@@ -116,27 +193,27 @@ export class BootScene extends Phaser.Scene {
       gfx.fillStyle(0x000000, 0.28)
       gfx.fillRoundedRect(4, 6, SIZE, SIZE, 20)
 
-      // Fundo base do ícone (gradiente simulado)
+      // Fundo base
       gfx.fillStyle(app.headerColor, 1)
       gfx.fillRoundedRect(0, 0, SIZE, SIZE, 20)
 
-      // Realce superior (brilho iOS-style)
+      // Realce iOS-style
       gfx.fillStyle(0xFFFFFF, 0.20)
       gfx.fillRoundedRect(0, 0, SIZE, SIZE / 2.2, 20)
       gfx.fillRect(0, SIZE / 2.2 - 2, SIZE, 2)
 
-      // Borda interna sutil
+      // Borda interna
       gfx.lineStyle(1.5, 0xFFFFFF, 0.18)
       gfx.strokeRoundedRect(1, 1, SIZE - 2, SIZE - 2, 19)
 
-      // Desenho específico de cada app
       switch (app.id) {
-        case 'camera':      this.drawCameraIcon(gfx);      break
+        case 'relogio':     this.drawRelogioIcon(gfx);     break
         case 'gravador':    this.drawGravadorIcon(gfx);    break
         case 'desenho':     this.drawDesenhoIcon(gfx);     break
         case 'calculadora': this.drawCalculadoraIcon(gfx); break
-        case 'navegador':   this.drawNavegadorIcon(gfx);   break
+        case 'pasta':       this.drawPastaIcon(gfx);       break
         case 'player':      this.drawPlayerIcon(gfx);      break
+        case 'power':       this.drawPowerIcon(gfx);       break
       }
 
       gfx.generateTexture(key, SIZE + 8, SIZE + 8)
@@ -144,105 +221,134 @@ export class BootScene extends Phaser.Scene {
     }
   }
 
-  // Câmera — lente com anel externo, anel interno e reflexo
-  private drawCameraIcon(g: Phaser.GameObjects.Graphics) {
-    const cx = 44, cy = 48
-    // Corpo branco semitransparente
+  // ── Ícone Relógio ─────────────────────────────────────────────────────────
+
+  private drawRelogioIcon(g: Phaser.GameObjects.Graphics) {
+    const cx = 44, cy = 46, r = 28
+    // Mostrador do relógio
     g.fillStyle(0xFFFFFF, 0.15)
-    g.fillRoundedRect(10, 28, 68, 46, 8)
-    // Saliência superior (visor)
-    g.fillStyle(0xFFFFFF, 0.15)
-    g.fillRoundedRect(30, 20, 28, 14, 6)
-    // Anel externo da lente
-    g.lineStyle(4, 0xFFFFFF, 0.85)
-    g.strokeCircle(cx, cy, 17)
-    // Anel interno
-    g.lineStyle(2, 0xFFFFFF, 0.55)
-    g.strokeCircle(cx, cy, 12)
-    // Centro da lente
-    g.fillStyle(0x000000, 0.40)
-    g.fillCircle(cx, cy, 9)
-    // Reflexo
-    g.fillStyle(0xFFFFFF, 0.70)
-    g.fillCircle(cx - 5, cy - 5, 3)
-    // Flash LED
-    g.fillStyle(0xFFFF99, 0.90)
-    g.fillCircle(66, 30, 4)
-    g.lineStyle(1.5, 0xFFFFFF, 0.5)
-    g.strokeCircle(66, 30, 4)
+    g.fillCircle(cx, cy, r)
+    g.lineStyle(3.5, 0xFFFFFF, 0.90)
+    g.strokeCircle(cx, cy, r)
+    // Marcas das horas (4 principais)
+    g.lineStyle(2.5, 0xFFFFFF, 0.8)
+    g.lineBetween(cx,      cy - r + 5, cx,      cy - r + 12)  // 12h
+    g.lineBetween(cx + r - 5, cy,      cx + r - 12, cy)        // 3h
+    g.lineBetween(cx,      cy + r - 5, cx,      cy + r - 12)  // 6h
+    g.lineBetween(cx - r + 5, cy,      cx - r + 12, cy)        // 9h
+    // Ponteiros: 9:00
+    const hAngle = (9 / 12 * 360 - 90) * Math.PI / 180
+    const mAngle = -90 * Math.PI / 180  // minutos em 12 (0 min)
+    g.lineStyle(4, 0xFFFFFF, 0.95)
+    g.lineBetween(cx, cy, cx + Math.cos(hAngle) * 16, cy + Math.sin(hAngle) * 16)
+    g.lineStyle(3, 0xAED6F1, 0.9)
+    g.lineBetween(cx, cy, cx + Math.cos(mAngle) * 22, cy + Math.sin(mAngle) * 22)
+    // Centro
+    g.fillStyle(0xFFFFFF, 1)
+    g.fillCircle(cx, cy, 3.5)
+    // Coroa do relógio (topo)
+    g.fillStyle(0xFFFFFF, 0.7)
+    g.fillRect(cx - 4, cy - r - 8, 8, 8)
+    g.fillRoundedRect(cx - 5, cy - r - 4, 10, 6, 3)
   }
 
-  // Gravador — microfone com corpo + base
+  // ── Ícone Pasta ───────────────────────────────────────────────────────────
+
+  private drawPastaIcon(g: Phaser.GameObjects.Graphics) {
+    // Aba superior da pasta
+    g.fillStyle(0xFFFFFF, 0.88)
+    g.fillRoundedRect(10, 20, 28, 12, 4)
+    // Corpo da pasta
+    g.fillStyle(0xFFFFFF, 0.82)
+    g.fillRoundedRect(8, 28, 72, 46, 6)
+    g.lineStyle(1.5, 0xFFFFFF, 0.40)
+    g.strokeRoundedRect(8, 28, 72, 46, 6)
+    // Divisória interna (linhas de documentos)
+    g.lineStyle(2, 0xB7770D, 0.40)
+    g.lineBetween(20, 40, 68, 40)
+    g.lineBetween(20, 50, 68, 50)
+    g.lineBetween(20, 60, 55, 60)
+    // Ícone de documento dentro da pasta
+    g.fillStyle(0xF9E79F, 0.70)
+    g.fillRoundedRect(30, 35, 28, 34, 3)
+    g.fillStyle(0xB7770D, 0.50)
+    g.fillRect(34, 42, 20, 3)
+    g.fillRect(34, 49, 20, 3)
+    g.fillRect(34, 56, 14, 3)
+    // Símbolo "+" (novo arquivo)
+    g.lineStyle(3, 0xFFFFFF, 0.90)
+    g.lineBetween(62, 46, 72, 46)
+    g.lineBetween(67, 41, 67, 51)
+  }
+
+  // ── Ícone Power ───────────────────────────────────────────────────────────
+
+  private drawPowerIcon(g: Phaser.GameObjects.Graphics) {
+    const cx = 44, cy = 46
+    // Círculo aberto (power symbol)
+    g.lineStyle(7, 0xFFFFFF, 0.90)
+    g.beginPath()
+    g.arc(cx, cy + 4, 22, Math.PI * 0.25 + 0.1, Math.PI * 1.75 - 0.1, false)
+    g.strokePath()
+    // Linha vertical do topo
+    g.lineStyle(7, 0xFFFFFF, 0.95)
+    g.lineBetween(cx, cy - 22, cx, cy - 8)
+    // Brilho central
+    g.fillStyle(0xFFFFFF, 0.25)
+    g.fillCircle(cx, cy + 4, 12)
+  }
+
+  // ── Ícones reutilizados ───────────────────────────────────────────────────
+
   private drawGravadorIcon(g: Phaser.GameObjects.Graphics) {
     const cx = 44, cy = 44
-    // Corpo do microfone (cápsula arredondada)
     g.fillStyle(0xFFFFFF, 0.88)
     g.fillRoundedRect(cx - 11, cy - 26, 22, 36, 11)
     g.lineStyle(2, 0xFFFFFF, 0.55)
     g.strokeRoundedRect(cx - 11, cy - 26, 22, 36, 11)
-    // Grade do microfone (linhas horizontais)
     g.lineStyle(1.5, 0xFFFFFF, 0.30)
     for (let i = 0; i < 4; i++) {
       const y = cy - 18 + i * 8
       g.lineBetween(cx - 9, y, cx + 9, y)
     }
-    // Arco de som (arcadas)
     g.lineStyle(2.5, 0xFFFFFF, 0.75)
     g.beginPath(); g.arc(cx, cy + 3, 20, Math.PI + 0.3, Math.PI * 2 - 0.3, false); g.strokePath()
     g.lineStyle(2, 0xFFFFFF, 0.50)
     g.beginPath(); g.arc(cx, cy + 3, 27, Math.PI + 0.5, Math.PI * 2 - 0.5, false); g.strokePath()
-    // Haste e base
     g.fillStyle(0xFFFFFF, 0.85)
     g.fillRect(cx - 1.5, cy + 23, 3, 10)
-    g.fillRect(cx - 12, cy + 33, 24, 4)
     g.fillRoundedRect(cx - 14, cy + 33, 28, 5, 2)
   }
 
-  // Desenho — paleta de artista com furos e pincéis
   private drawDesenhoIcon(g: Phaser.GameObjects.Graphics) {
     const cx = 44, cy = 46
-    // Paleta (elipse branca)
     g.fillStyle(0xFFFFFF, 0.88)
     g.fillEllipse(cx, cy, 54, 48)
     g.lineStyle(2, 0xFFFFFF, 0.45)
     g.strokeEllipse(cx, cy, 54, 48)
-    // Furo do polegar
     g.fillStyle(0x000000, 0.25)
     g.fillCircle(cx - 12, cy + 8, 6)
-    // Blobs de tinta colorida
     const cores = [0xE74C3C, 0x3498DB, 0x2ECC71, 0xF39C12, 0x9B59B6]
     const posicoes = [
-      { x: cx - 16, y: cy - 12 },
-      { x: cx + 4,  y: cy - 16 },
-      { x: cx + 18, y: cy - 4  },
-      { x: cx + 14, y: cy + 12 },
-      { x: cx - 4,  y: cy + 14 },
+      { x: cx - 16, y: cy - 12 }, { x: cx + 4, y: cy - 16 },
+      { x: cx + 18, y: cy - 4 }, { x: cx + 14, y: cy + 12 }, { x: cx - 4, y: cy + 14 },
     ]
-    cores.forEach((c, i) => {
-      g.fillStyle(c, 0.92)
-      g.fillCircle(posicoes[i].x, posicoes[i].y, 7)
-    })
-    // Pincel
+    cores.forEach((c, i) => { g.fillStyle(c, 0.92); g.fillCircle(posicoes[i].x, posicoes[i].y, 7) })
     g.lineStyle(3, 0xFFFFFF, 0.80)
     g.lineBetween(cx + 18, cy - 20, cx + 28, cy - 36)
     g.fillStyle(0xF39C12, 0.90)
     g.fillTriangle(cx + 18, cy - 20, cx + 14, cy - 24, cx + 24, cy - 28)
   }
 
-  // Calculadora — tela + grade de botões
   private drawCalculadoraIcon(g: Phaser.GameObjects.Graphics) {
     const left = 16, top = 14, w = 56, h = 60
-    // Corpo
     g.fillStyle(0xFFFFFF, 0.15)
     g.fillRoundedRect(left, top, w, h, 8)
-    // Tela
     g.fillStyle(0x000000, 0.45)
     g.fillRoundedRect(left + 4, top + 4, w - 8, 18, 4)
     g.fillStyle(0x2ECC71, 0.90)
-    // Número na tela
     g.fillRect(left + 32, top + 8, 12, 4)
     g.fillRect(left + 32, top + 14, 16, 4)
-    // Grid de botões 4×3
     const bw = 10, bh = 8, gap = 3
     const gLeft = left + 5, gTop = top + 28
     const colors = [0xFFFFFF, 0xFFFFFF, 0xFFFFFF, 0xE74C3C,
@@ -257,95 +363,44 @@ export class BootScene extends Phaser.Scene {
     }
   }
 
-  // Navegador — globo com meridianos e paralelos
-  private drawNavegadorIcon(g: Phaser.GameObjects.Graphics) {
-    const cx = 44, cy = 46, r = 28
-    // Fundo do globo
-    g.fillStyle(0xFFFFFF, 0.15)
-    g.fillCircle(cx, cy, r)
-    // Contorno
-    g.lineStyle(2.5, 0xFFFFFF, 0.80)
-    g.strokeCircle(cx, cy, r)
-    // Meridiano central (linha vertical)
-    g.lineStyle(1.5, 0xFFFFFF, 0.55)
-    g.lineBetween(cx, cy - r, cx, cy + r)
-    // Elipses de meridianos
-    g.lineStyle(1.5, 0xFFFFFF, 0.40)
-    g.strokeEllipse(cx, cy, r * 0.9, r * 2)
-    g.strokeEllipse(cx, cy, r * 1.7, r * 2)
-    // Paralelos (linhas horizontais)
-    g.lineStyle(1.5, 0xFFFFFF, 0.40)
-    g.lineBetween(cx - r, cy, cx + r, cy)
-    g.lineBetween(cx - r * 0.84, cy - r * 0.5, cx + r * 0.84, cy - r * 0.5)
-    g.lineBetween(cx - r * 0.84, cy + r * 0.5, cx + r * 0.84, cy + r * 0.5)
-    // Pino de localização
-    g.fillStyle(0xFFFFFF, 0.95)
-    g.fillCircle(cx + 10, cy - 10, 5)
-    g.fillTriangle(cx + 10, cy - 1, cx + 6, cy - 12, cx + 14, cy - 12)
-  }
-
-  // Player — triângulo play + ondas de som
   private drawPlayerIcon(g: Phaser.GameObjects.Graphics) {
     const cx = 44, cy = 44
-    // Círculo de fundo
     g.fillStyle(0xFFFFFF, 0.15)
     g.fillCircle(cx, cy, 28)
     g.lineStyle(2, 0xFFFFFF, 0.50)
     g.strokeCircle(cx, cy, 28)
-    // Triângulo Play (preenchido, branco)
     g.fillStyle(0xFFFFFF, 0.92)
     g.fillTriangle(cx - 9, cy - 17, cx - 9, cy + 17, cx + 18, cy)
-    // Nota musical flutuando
     g.fillStyle(0xFFFFFF, 0.70)
     g.fillCircle(cx + 18, cy - 16, 4)
     g.fillRect(cx + 21, cy - 28, 2.5, 13)
     g.fillRect(cx + 21, cy - 28, 10, 2.5)
   }
 
-  // ── Wallpaper ────────────────────────────────────────────────────────────────
+  // ── Wallpaper fallback ────────────────────────────────────────────────────
 
   private generateDesktopBg() {
     if (this.textures.exists('desktop-bg')) return
-
     const gfx = this.add.graphics()
-
-    // Gradiente azul escuro → azul médio
     for (let y = 0; y < 660; y += 4) {
       const t = y / 660
       const r = Math.round(Phaser.Math.Linear(0x0A, 0x1A, t))
       const g2 = Math.round(Phaser.Math.Linear(0x14, 0x3A, t))
       const b = Math.round(Phaser.Math.Linear(0x2E, 0x6A, t))
-      const color = (r << 16) | (g2 << 8) | b
-      gfx.fillStyle(color, 1)
+      gfx.fillStyle((r << 16) | (g2 << 8) | b, 1)
       gfx.fillRect(0, y, 1280, 5)
     }
-
-    // Estrelas decorativas
     const rng = new Phaser.Math.RandomDataGenerator(['ef01co06'])
     for (let i = 0; i < 40; i++) {
-      const x = rng.between(0, 1280)
-      const y = rng.between(0, 400)
-      const r = rng.between(1, 3)
       gfx.fillStyle(0xFFFFFF, rng.realInRange(0.2, 0.7))
-      gfx.fillCircle(x, y, r)
+      gfx.fillCircle(rng.between(0, 1280), rng.between(0, 400), rng.between(1, 3))
     }
-
-    // Montanhas suaves
-    gfx.fillStyle(0x0D2137, 0.7)
-    gfx.fillTriangle(0, 660, 200, 460, 400, 660)
-    gfx.fillTriangle(300, 660, 550, 400, 800, 660)
-    gfx.fillTriangle(700, 660, 950, 430, 1200, 660)
-    gfx.fillTriangle(1050, 660, 1280, 480, 1280, 660)
-
     gfx.generateTexture('desktop-bg', 1280, 660)
     gfx.destroy()
   }
 
-  // ── Taskbar ──────────────────────────────────────────────────────────────────
-
   private generateTaskbarBg() {
     if (this.textures.exists('taskbar-bg')) return
-
     const gfx = this.add.graphics()
     gfx.fillStyle(0x0D1B2A, 0.95)
     gfx.fillRect(0, 0, 1280, 60)
