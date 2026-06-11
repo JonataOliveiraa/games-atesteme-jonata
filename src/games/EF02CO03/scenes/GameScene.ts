@@ -1,15 +1,18 @@
-﻿import Phaser from "phaser";
+import Phaser from "phaser";
 import { EventBus } from "../../../shared/EventBus";
 import { runtimeGameBridge } from "../../../shared/bridge/runtimeGameBridge";
 import type { PlatformCommand } from "../../../shared/contracts/platformCommands";
-import { COMMANDS, LEVELS, MACHINES, getCommand, getMachine } from "../data/levels";
-import type { CommandDefinition, CommandId, FactoryLevel, MachineDefinition, MachineId, ProgramStep } from "../types";
+import { LEVELS, shuffleStages } from "../data/levels";
+import type { FactoryLevel, FactoryStage, FactoryStageId, ProductStage } from "../types";
 
 const GAME_ID = "fabrica-de-maquinas";
-const TIMER_BAR_W = 820;
-const TIMER_BAR_Y = 48;
+const TIMER_BAR_W = 980;
+const TIMER_BAR_Y = 42;
 const MODAL_SCALE = 1.14;
-const MAX_PROGRAM_STEPS = 8;
+const CARD_W = 180;
+const CARD_H = 136;
+const SLOT_W = CARD_W;
+const SLOT_H = CARD_H;
 
 const COLORS = {
   blue: 0x2563eb,
@@ -18,24 +21,34 @@ const COLORS = {
   orange: 0xf59e0b,
   purple: 0x8b5cf6,
   red: 0xef4444,
-  panel: 0x102a43,
+  ink: 0x102a43,
+};
+
+type CardRecord = {
+  id: FactoryStageId;
+  card: Phaser.GameObjects.Container;
+  hitbox: Phaser.GameObjects.Zone;
+  homeX: number;
+  homeY: number;
+  slotIndex: number | null;
 };
 
 export class GameScene extends Phaser.Scene {
   private levelConfig!: FactoryLevel;
-  private selectedMachine?: MachineId;
-  private program: ProgramStep[] = [];
-  private machineObjects: Phaser.GameObjects.GameObject[] = [];
-  private commandObjects: Phaser.GameObjects.GameObject[] = [];
-  private programObjects: Phaser.GameObjects.GameObject[] = [];
-  private overlayObjects: Phaser.GameObjects.GameObject[] = [];
+  private shuffledStages: FactoryStage[] = [];
+  private cards = new Map<FactoryStageId, CardRecord>();
+  private slots: Array<FactoryStageId | null> = [];
+  private slotRects: Phaser.Geom.Rectangle[] = [];
+  private slotCenters: Array<{ x: number; y: number }> = [];
   private productObjects: Phaser.GameObjects.GameObject[] = [];
+  private overlayObjects: Phaser.GameObjects.GameObject[] = [];
+  private selectedCard?: FactoryStageId;
   private commandLocked = false;
   private hits = 0;
   private errors = 0;
   private hasStartedTimer = false;
   private timerEvent?: Phaser.Time.TimerEvent;
-  private timerBar?: Phaser.GameObjects.Rectangle;
+  private timerBar?: Phaser.GameObjects.Graphics;
   private unsubscribePlatformCommands?: () => void;
 
   constructor() {
@@ -45,13 +58,14 @@ export class GameScene extends Phaser.Scene {
   init(data: { level?: number }) {
     const lvl = (data?.level ?? 1) as 1 | 2 | 3;
     this.levelConfig = LEVELS.find((level) => level.level === lvl) ?? LEVELS[0];
-    this.selectedMachine = this.levelConfig.availableMachines.length === 1 ? this.levelConfig.availableMachines[0] : undefined;
-    this.program = [];
-    this.machineObjects = [];
-    this.commandObjects = [];
-    this.programObjects = [];
-    this.overlayObjects = [];
+    this.shuffledStages = shuffleStages(this.levelConfig.stages);
+    this.cards = new Map();
+    this.slots = Array.from({ length: this.levelConfig.solution.length }, () => null);
+    this.slotRects = [];
+    this.slotCenters = [];
     this.productObjects = [];
+    this.overlayObjects = [];
+    this.selectedCard = undefined;
     this.commandLocked = false;
     this.hits = 0;
     this.errors = 0;
@@ -65,12 +79,11 @@ export class GameScene extends Phaser.Scene {
     this.createBackground();
     this.createTimerBar();
     this.createHeader();
-    this.createFactoryFloor();
-    this.createMachinePanel();
-    this.createCommandPanel();
-    this.createProgramPanel();
-    this.createActionButtons();
+    this.createInstructionBand();
+    this.createStageCards();
+    this.createConveyor();
     this.createProductPreview();
+    this.createActionButtons();
     this.registerPlatformCommands();
 
     runtimeGameBridge.emit({ type: "GAME_READY", gameId: GAME_ID });
@@ -79,534 +92,437 @@ export class GameScene extends Phaser.Scene {
 
   update() {
     if (!this.timerEvent || !this.timerBar) return;
-
-    const remaining = this.timerEvent.getRemaining();
-    const total = this.levelConfig.timeLimit * 1000;
-    const pct = Math.max(0, remaining / total);
-    this.timerBar.setSize(TIMER_BAR_W * pct, 18);
-
-    if (pct > 0.5) this.timerBar.setFillStyle(COLORS.green);
-    else if (pct > 0.25) this.timerBar.setFillStyle(COLORS.orange);
-    else this.timerBar.setFillStyle(COLORS.red);
+    const pct = Math.max(0, this.timerEvent.getRemaining() / (this.levelConfig.timeLimit * 1000));
+    const color = pct > 0.5 ? COLORS.green : pct > 0.25 ? COLORS.orange : COLORS.red;
+    this.drawTimerFill(TIMER_BAR_W * pct, color);
   }
 
   shutdown() {
     this.timerEvent?.destroy();
     this.unsubscribePlatformCommands?.();
+    this.input.setDefaultCursor("default");
   }
 
   private createBackground() {
     const bgKey = this.getBackgroundKey();
     if (this.textures.exists(bgKey)) {
-      this.add.image(640, 360, bgKey)
-        .setDisplaySize(1280, 720)
-        .setDepth(-100);
-      this.add.rectangle(640, 360, 1280, 720, 0x0f172a, 0.14).setDepth(-99);
+      this.add.image(640, 360, bgKey).setDisplaySize(1280, 720).setDepth(-100);
+      this.add.rectangle(640, 360, 1280, 720, 0xffffff, 0.22).setDepth(-99);
       return;
     }
-
-    this.add.rectangle(640, 360, 1280, 720, 0x9ee8ff).setDepth(-100);
-
-    const bg = this.add.graphics().setDepth(-99);
-    bg.fillStyle(0xc7f6ff, 1);
-    bg.fillRoundedRect(0, 0, 1280, 720, 0);
-    bg.fillStyle(0x7dd3fc, 0.7);
-    bg.fillRoundedRect(0, 226, 1280, 494, 0);
-    bg.fillStyle(0x22c55e, 0.88);
-    bg.fillRoundedRect(0, 616, 1280, 104, 0);
-
-    for (let i = 0; i < 9; i++) {
-      const x = 60 + i * 154;
-      bg.fillStyle(i % 2 ? 0x8b5cf6 : 0xf59e0b, 0.28);
-      bg.fillRoundedRect(x, 126 + (i % 3) * 20, 98, 72, 18);
-    }
-
-    bg.lineStyle(4, 0xffffff, 0.25);
-    for (let y = 268; y < 620; y += 52) {
-      bg.lineBetween(0, y, 1280, y - 42);
-    }
+    this.add.rectangle(640, 360, 1280, 720, 0xb8f1ff).setDepth(-100);
   }
 
   private getBackgroundKey() {
     return {
-      1: "level-1-math-bg",
-      2: "level-2-paper-bg",
-      3: "level-3-fruit-bg",
+      1: "level-1-shirt-factory-bg",
+      2: "level-2-plush-factory-bg",
+      3: "level-3-shipping-center-bg",
     }[this.levelConfig.level];
   }
 
   private createTimerBar() {
-    this.add.rectangle(640, TIMER_BAR_Y, TIMER_BAR_W + 8, 28, 0x0f172a, 0.32)
-      .setStrokeStyle(3, 0xffffff, 0.85);
-    this.timerBar = this.add.rectangle(640 - TIMER_BAR_W / 2, TIMER_BAR_Y, TIMER_BAR_W, 18, COLORS.green)
-      .setOrigin(0, 0.5);
+    const track = this.add.graphics().setDepth(45);
+    track.fillStyle(0x334155, 0.18);
+    track.fillRoundedRect(640 - TIMER_BAR_W / 2, TIMER_BAR_Y - 16, TIMER_BAR_W, 32, 16);
+
+    this.timerBar = this.add.graphics().setDepth(46);
+    this.drawTimerFill(TIMER_BAR_W, COLORS.green);
+
+  }
+
+  private drawTimerFill(width: number, color: number) {
+    if (!this.timerBar) return;
+    const fillWidth = Math.max(0, width);
+    this.timerBar.clear();
+    if (fillWidth <= 0) return;
+    this.timerBar.fillStyle(color, 1);
+    this.timerBar.fillRoundedRect(640 - TIMER_BAR_W / 2, TIMER_BAR_Y - 16, fillWidth, 32, 16);
   }
 
   private createHeader() {
-    this.addSharpText(640, 94, this.levelConfig.title, {
-      fontSize: "36px",
+    this.addSharpText(640, 104, this.levelConfig.title, {
+      fontSize: "42px",
       fontFamily: "Arial Black, Arial",
-      color: "#25327a",
-      stroke: "#ffffff",
-      strokeThickness: 7,
+      color: "#ffffff",
+      stroke: "#1e3a8a",
+      strokeThickness: 6,
     }).setOrigin(0.5);
 
-    this.addSharpText(640, 132, this.levelConfig.objective, {
-      fontSize: "19px",
+    this.addSharpText(640, 150, this.getHeaderInstruction(), {
+      fontSize: "21px",
       fontFamily: "Arial Black, Arial",
-      color: "#0f172a",
-      stroke: "#ffffff",
+      color: "#ffffff",
+      stroke: "#1e3a8a",
       strokeThickness: 4,
       align: "center",
-      wordWrap: { width: 860 },
+      wordWrap: { width: 900 },
     }).setOrigin(0.5);
 
-    this.addSharpText(1082, 105, `Nível ${this.levelConfig.level}/3`, {
+    this.addSharpText(1086, 104, `Nível ${this.levelConfig.level}/3`, {
       fontSize: "18px",
       fontFamily: "Arial Black, Arial",
       color: "#1e3a8a",
-      backgroundColor: "rgba(255,255,255,0.75)",
+      backgroundColor: "rgba(255,255,255,0.76)",
       padding: { x: 14, y: 8 },
     }).setOrigin(0.5);
   }
 
-  private createFactoryFloor() {
-    this.drawPanel(70, 158, 1140, 96, COLORS.cyan, 1);
-    this.addSharpText(640, 210, this.levelConfig.prompt, {
-      fontSize: "24px",
-      fontFamily: "Arial Black, Arial",
-      color: "#ffffff",
-      stroke: "#0f172a",
-      strokeThickness: 5,
-      align: "center",
-      wordWrap: { width: 1040 },
-    }).setOrigin(0.5).setDepth(4);
+  private createInstructionBand() {
   }
 
-  private createMachinePanel() {
-    this.machineObjects.forEach((object) => object.destroy());
-    this.machineObjects = [];
-
-    this.drawPanel(56, 282, 520, 252, COLORS.purple, 1);
-    this.drawPanelHeader(316, 282, 340, "1. Escolha a máquina", COLORS.purple);
-
-    const machines = this.levelConfig.availableMachines
-      .map((id) => getMachine(id))
-      .filter(Boolean) as MachineDefinition[];
-
-    machines.forEach((machine, index) => {
-      const x = machines.length === 1 ? 316 : 186 + (index % 2) * 260;
-      const y = 388 + Math.floor(index / 2) * 104;
-      this.machineObjects.push(...this.createMachineCard(x, y, machine));
-    });
-  }
-
-  private createMachineCard(x: number, y: number, machine: MachineDefinition) {
-    const selected = this.selectedMachine === machine.id;
-    const objects: Phaser.GameObjects.GameObject[] = [];
-    const width = 232;
-    const height = 82;
-    const card = this.add.container(x, y).setDepth(12);
-
-    const shadow = this.add.graphics();
-    shadow.fillStyle(0x0f172a, 0.24);
-    shadow.fillRoundedRect(-width / 2 + 5, -height / 2 + 7, width, height, 20);
-
-    const bg = this.add.graphics();
-    bg.fillStyle(machine.color, selected ? 1 : 0.82);
-    bg.fillRoundedRect(-width / 2, -height / 2, width, height, 20);
-    bg.fillStyle(0xffffff, 0.17);
-    bg.fillRoundedRect(-width / 2 + 10, -height / 2 + 9, 66, height - 18, 16);
-    bg.lineStyle(selected ? 5 : 3, selected ? 0xfde68a : 0xffffff, selected ? 1 : 0.86);
-    bg.strokeRoundedRect(-width / 2, -height / 2, width, height, 20);
-
-    const assetKey = this.getMachineAssetKey(machine.id);
-    const icon = this.textures.exists(assetKey)
-      ? this.fitImage(this.add.image(-76, -2, assetKey), 62, 62)
-      : this.addSharpText(-76, -2, machine.icon, {
-          fontSize: "32px",
-          fontFamily: "Arial Black, Arial",
-          color: "#ffffff",
-          stroke: "#0f172a",
-          strokeThickness: 4,
-        }).setOrigin(0.5);
-
-    const text = this.addSharpText(32, 0, machine.shortName, {
-      fontSize: "17px",
-      fontFamily: "Arial Black, Arial",
-      color: "#ffffff",
-      stroke: "#0f172a",
-      strokeThickness: 4,
-      align: "center",
-      wordWrap: { width: 126 },
-    }).setOrigin(0.5);
-
-    card.add([shadow, bg, icon, text]);
-    card.setSize(width, height);
-    const hitZone = this.createTapZone(x, y, width, height, 40, () => {
-      if (this.commandLocked) return;
-      this.playClick();
-      this.startTimerOnce();
-      this.selectedMachine = machine.id;
-      this.createMachinePanel();
-      this.createCommandPanel();
-    });
-
-    objects.push(card, hitZone);
-    return objects;
-  }
-
-  private getMachineAssetKey(machineId: MachineId) {
-    return `machine-${machineId === "calculator" ? "calculator" : machineId === "folder" ? "folder" : machineId}`;
-  }
-
-  private createCommandPanel() {
-    this.commandObjects.forEach((object) => object.destroy());
-    this.commandObjects = [];
-
-    this.drawPanel(612, 282, 610, 252, COLORS.blue, 1);
-    this.drawPanelHeader(917, 282, 330, "2. Escolha comandos", COLORS.blue);
-
-    const selected = getMachine(this.selectedMachine ?? "");
-    if (!selected) {
-      this.commandObjects.push(this.addSharpText(917, 406, "Toque em uma máquina para ver os comandos que ela entende.", {
-        fontSize: "20px",
-        fontFamily: "Arial Black, Arial",
-        color: "#ffffff",
-        stroke: "#0f172a",
-        strokeThickness: 4,
-        align: "center",
-        wordWrap: { width: 450 },
-      }).setOrigin(0.5).setDepth(12));
-      return;
-    }
-
-    this.commandObjects.push(this.addSharpText(917, 328, `${selected.shortName} entende:`, {
-      fontSize: "18px",
-      fontFamily: "Arial Black, Arial",
-      color: "#ffffff",
-      stroke: "#0f172a",
-      strokeThickness: 4,
-      align: "center",
-    }).setOrigin(0.5).setDepth(12));
-
-    const commands = this.levelConfig.availableCommands
-      .map((id) => getCommand(id))
-      .filter((command): command is CommandDefinition => Boolean(command) && command.machine === selected.id)
-      .sort(() => Phaser.Math.FloatBetween(-1, 1));
-
-    commands.forEach((command, index) => {
-      const x = 780 + (index % 2) * 274;
-      const y = 414 + Math.floor(index / 2) * 88;
-      this.commandObjects.push(...this.createCommandButton(x, y, command));
-    });
-  }
-
-  private createCommandButton(x: number, y: number, command: CommandDefinition) {
-    const width = 236;
-    const height = 72;
-    const machine = getMachine(command.machine);
-    const color = machine?.color ?? COLORS.blue;
-    const button = this.add.container(x, y).setDepth(12);
-    const bg = this.add.graphics();
-    bg.fillStyle(color, 0.98);
-    bg.fillRoundedRect(-width / 2, -height / 2, width, height, 18);
-    bg.lineStyle(3, 0xffffff, 0.92);
-    bg.strokeRoundedRect(-width / 2, -height / 2, width, height, 18);
-
-    const commandAssetKey = this.getCommandAssetKey(command.id);
-    const icon = this.textures.exists(commandAssetKey)
-      ? this.fitImage(this.add.image(-82, -1, commandAssetKey), 58, 58)
-      : this.addSharpText(-82, -1, command.icon, {
-          fontSize: command.icon.length > 1 ? "24px" : "30px",
-          fontFamily: "Arial Black, Arial",
-          color: "#ffffff",
-          stroke: "#0f172a",
-          strokeThickness: 4,
-        }).setOrigin(0.5);
-
-    const label = this.addSharpText(34, 0, command.label, {
-      fontSize: command.label.length > 13 ? "15px" : "17px",
-      fontFamily: "Arial Black, Arial",
-      color: "#ffffff",
-      stroke: "#0f172a",
-      strokeThickness: 3,
-      align: "center",
-      wordWrap: { width: 136 },
-    }).setOrigin(0.5);
-
-    button.add([bg, icon, label]);
-    button.setSize(width, height);
-    const hitZone = this.createTapZone(x, y, width, height, 40, () => this.addProgramStep(command));
-    return [button, hitZone];
-  }
-
-  private createProgramPanel() {
-    this.drawPanel(56, 574, 690, 104, COLORS.cyan, 1);
-    this.drawPanelHeader(401, 574, 310, "3. Linha de produção", COLORS.cyan);
-    this.renderProgram();
-  }
-
-  private createActionButtons() {
-    this.createUiButton(846, 688, 150, 58, "Executar", COLORS.green, () => this.executeProgram());
-    this.createUiButton(1008, 688, 150, 58, "Desfazer", COLORS.orange, () => this.undoCommand());
-    this.createUiButton(1162, 688, 126, 58, "Limpar", COLORS.red, () => this.clearProgram());
-  }
-
-  private createProductPreview() {
-    this.drawPanel(780, 548, 440, 126, COLORS.green, 1);
-    this.drawPanelHeader(1000, 548, 260, "Produto final", COLORS.green);
-    this.drawProductPlaceholder(false);
-  }
-
-  private drawProductPlaceholder(success: boolean) {
-    this.productObjects.forEach((object) => object.destroy());
-    this.productObjects = [];
-
-    const icon = success ? "*" : "?";
-    const title = success ? this.levelConfig.successProduct : "Aguardando execução";
-    const color = success ? COLORS.green : 0x64748b;
-
-    const badge = this.add.graphics().setDepth(12);
-    badge.fillStyle(color, 0.95);
-    badge.fillRoundedRect(804, 594, 86, 58, 16);
-    badge.lineStyle(3, 0xffffff, 0.92);
-    badge.strokeRoundedRect(804, 594, 86, 58, 16);
-    this.productObjects.push(badge);
-
-    const productKey = success ? this.getProductAssetKey() : "";
-    if (success && this.textures.exists(productKey)) {
-      this.productObjects.push(this.fitImage(this.add.image(847, 623, productKey), 78, 78).setDepth(13));
-    } else {
-      this.productObjects.push(this.addSharpText(847, 623, icon, {
-        fontSize: "33px",
-        fontFamily: "Arial Black, Arial",
-        color: "#ffffff",
-        stroke: "#0f172a",
-        strokeThickness: 4,
-      }).setOrigin(0.5).setDepth(13));
-    }
-
-    this.productObjects.push(this.addSharpText(1048, 623, title, {
-      fontSize: success ? "20px" : "19px",
-      fontFamily: "Arial Black, Arial",
-      color: "#ffffff",
-      stroke: "#0f172a",
-      strokeThickness: 4,
-      align: "center",
-      wordWrap: { width: 300 },
-    }).setOrigin(0.5).setDepth(13));
-  }
-
-  private getProductAssetKey() {
+  private getHeaderInstruction() {
     return {
-      1: "product-number-10",
-      2: "product-folded-paper",
-      3: "product-fruit-drink-star",
+      1: "Organize as máquinas na ordem certa para fabricar uma camisa.",
+      2: "Organize as máquinas na ordem certa para montar uma pelúcia.",
+      3: "Organize as máquinas na ordem certa para preparar e enviar os pedidos.",
     }[this.levelConfig.level];
   }
 
-  private getCommandAssetKey(commandId: CommandId) {
-    return {
-      add2: "command-add2",
-      double: "command-double",
-      fold: "command-fold",
-      crease: "command-crease",
-      stampStar: "command-stamp-star",
-      stampOk: "command-stamp-ok",
-      addFruit: "command-add-fruit",
-      blend: "command-blend",
-    }[commandId];
+  private createStageCards() {
+    this.drawPanel(52, 410, 1176, 204, COLORS.purple, 1);
+    this.drawPanelHeader(640, 420, 420, "Máquinas embaralhadas", COLORS.purple);
+
+    this.shuffledStages.forEach((stage, index) => {
+      const x = 170 + index * 235;
+      const y = 528;
+      const { card, hitbox } = this.createMachineCard(stage, x, y);
+      this.cards.set(stage.id, { id: stage.id, card, hitbox, homeX: x, homeY: y, slotIndex: null });
+    });
   }
 
-  private addProgramStep(command: CommandDefinition) {
+  private createConveyor() {
+    this.drawPanel(52, 184, 1176, 204, COLORS.blue, 1);
+    this.drawPanelHeader(640, 194, 420, "Sequência da produção", COLORS.blue);
+
+    this.slotRects = [];
+    this.slotCenters = [];
+
+    const slotStartX = 166;
+    const slotGap = 224;
+    this.levelConfig.solution.forEach((stageId, index) => {
+      const x = slotStartX + index * slotGap;
+      const y = 306;
+      const stageColor = this.levelConfig.stages.find((stage) => stage.id === stageId)?.color ?? COLORS.blue;
+      this.slotCenters.push({ x, y });
+      this.slotRects.push(new Phaser.Geom.Rectangle(x - SLOT_W / 2, y - SLOT_H / 2, SLOT_W, SLOT_H));
+
+      const slot = this.add.graphics().setDepth(4);
+      slot.fillStyle(0xfffbf1, 0.46);
+      slot.fillRoundedRect(x - SLOT_W / 2, y - SLOT_H / 2, SLOT_W, SLOT_H, 22);
+      slot.lineStyle(5, stageColor, 0.92);
+      slot.strokeRoundedRect(x - SLOT_W / 2, y - SLOT_H / 2, SLOT_W, SLOT_H, 22);
+      slot.lineStyle(2, 0xffffff, 0.88);
+      slot.strokeRoundedRect(x - SLOT_W / 2 + 6, y - SLOT_H / 2 + 6, SLOT_W - 12, SLOT_H - 12, 18);
+
+      this.addSharpText(x, y - 44, `${index + 1}`, {
+        fontSize: "24px",
+        fontFamily: "Arial Black, Arial",
+        color: "#ffffff",
+        stroke: "#0f172a",
+        strokeThickness: 4,
+      }).setOrigin(0.5).setDepth(5);
+    });
+
+    for (let i = 0; i < 4; i++) {
+      this.addSharpText(slotStartX + slotGap / 2 + i * slotGap, 306, "→", {
+        fontSize: "30px",
+        fontFamily: "Arial Black, Arial",
+        color: "#ffffff",
+        stroke: "#0f172a",
+        strokeThickness: 4,
+      }).setOrigin(0.5).setDepth(5);
+    }
+  }
+
+  private createProductPreview() {
+    this.drawPanel(52, 628, 748, 76, COLORS.green, 1);
+    this.drawPanelHeader(426, 630, 260, "Produto", COLORS.green);
+    this.drawProductStage(null);
+  }
+
+  private createActionButtons() {
+    this.createUiButton(1032, 666, 360, 70, "Iniciar Produção", COLORS.green, () => this.executeProduction());
+  }
+
+  private createMachineCard(stage: FactoryStage, x: number, y: number) {
+    const card = this.add.container(x, y).setDepth(20);
+    const shadow = this.add.graphics();
+    shadow.fillStyle(0x000000, 0.16);
+    shadow.fillRoundedRect(-CARD_W / 2 + 6, -CARD_H / 2 + 8, CARD_W, CARD_H, 22);
+
+    const bg = this.add.graphics();
+    bg.fillStyle(0xfff6e8, 1);
+    bg.fillRoundedRect(-CARD_W / 2, -CARD_H / 2, CARD_W, CARD_H, 22);
+    bg.lineStyle(3, 0xffffff, 0.88);
+    bg.strokeRoundedRect(-CARD_W / 2, -CARD_H / 2, CARD_W, CARD_H, 22);
+
+    const stageAssetKey = this.getStageAssetKey(stage.id);
+    const icon = this.textures.exists(stageAssetKey)
+      ? this.fitImage(this.add.image(0, -22, stageAssetKey), 132, 76)
+      : this.addSharpText(0, -22, stage.icon, {
+          fontSize: "24px",
+          fontFamily: "Arial Black, Arial",
+          color: "#ffffff",
+          stroke: "#0f172a",
+          strokeThickness: 4,
+        }).setOrigin(0.5);
+
+    const label = this.addSharpText(0, 52, stage.shortLabel, {
+      fontSize: stage.shortLabel.length > 13 ? "14px" : "16px",
+      fontFamily: "Arial Black, Arial",
+      color: "#4b5563",
+      stroke: "#ffffff",
+      strokeThickness: 2,
+      align: "center",
+      wordWrap: { width: 154 },
+    }).setOrigin(0.5);
+
+    card.add([shadow, bg, icon, label]);
+    card.setSize(CARD_W, CARD_H);
+
+    const hitbox = this.add.zone(x, y, CARD_W + 28, CARD_H + 24).setDepth(80);
+    hitbox.setInteractive({ draggable: true, useHandCursor: true });
+
+    hitbox.on("pointerdown", () => {
+      if (this.commandLocked) return;
+      this.selectedCard = stage.id;
+      this.startTimerOnce();
+      this.highlightSelectedCard(stage.id);
+    });
+
+    this.input.setDraggable(hitbox);
+    hitbox.on("dragstart", () => {
+      if (this.commandLocked) return;
+      this.selectedCard = stage.id;
+      this.startTimerOnce();
+      this.removeFromSlot(stage.id);
+      card.setDepth(60);
+      hitbox.setDepth(90);
+      this.highlightSelectedCard(stage.id);
+    });
+    hitbox.on("drag", (_pointer: Phaser.Input.Pointer, dragX: number, dragY: number) => {
+      if (this.commandLocked) return;
+      card.setPosition(dragX, dragY);
+      hitbox.setPosition(dragX, dragY);
+    });
+    hitbox.on("dragend", (pointer: Phaser.Input.Pointer) => {
+      if (this.commandLocked) return;
+      this.dropCard(stage.id, pointer.x, pointer.y);
+      card.setDepth(20);
+      hitbox.setDepth(80);
+    });
+
+    return { card, hitbox };
+  }
+
+  private dropCard(id: FactoryStageId, pointerX: number, pointerY: number) {
+    const targetIndex = this.slotRects.findIndex((rect) => rect.contains(pointerX, pointerY));
+    if (targetIndex < 0) {
+      this.returnCardHome(id);
+      return;
+    }
+    this.placeCardInSlot(id, targetIndex);
+  }
+
+  private placeCardInSlot(id: FactoryStageId, slotIndex: number) {
+    const cardRecord = this.cards.get(id);
+    if (!cardRecord) return;
+
+    const previousInSlot = this.slots[slotIndex];
+    if (previousInSlot && previousInSlot !== id) {
+      this.returnCardHome(previousInSlot);
+    }
+
+    this.removeFromSlot(id);
+    this.slots[slotIndex] = id;
+    cardRecord.slotIndex = slotIndex;
+    const center = this.slotCenters[slotIndex];
+    cardRecord.card.setScale(1);
+    this.tweens.add({ targets: cardRecord.card, x: center.x, y: center.y, duration: 140, ease: "Sine.easeOut" });
+    this.tweens.add({ targets: cardRecord.hitbox, x: center.x, y: center.y, duration: 140, ease: "Sine.easeOut" });
+    this.playClick();
+    this.emitProgress();
+  }
+
+  private removeFromSlot(id: FactoryStageId) {
+    const record = this.cards.get(id);
+    if (record?.slotIndex !== null && record?.slotIndex !== undefined) {
+      this.slots[record.slotIndex] = null;
+      record.slotIndex = null;
+    }
+  }
+
+  private returnCardHome(id: FactoryStageId) {
+    const record = this.cards.get(id);
+    if (!record) return;
+    this.removeFromSlot(id);
+    record.card.setScale(1);
+    this.tweens.add({ targets: record.card, x: record.homeX, y: record.homeY, duration: 160, ease: "Sine.easeOut" });
+    this.tweens.add({ targets: record.hitbox, x: record.homeX, y: record.homeY, duration: 160, ease: "Sine.easeOut" });
+    this.emitProgress();
+  }
+
+  private highlightSelectedCard(id: FactoryStageId) {
+    this.cards.forEach((record) => record.card.setAlpha(record.id === id ? 1 : 0.88));
+  }
+
+  private undoLast() {
     if (this.commandLocked) return;
+    const lastIndex = [...this.slots].map(Boolean).lastIndexOf(true);
+    if (lastIndex < 0) return;
+    const id = this.slots[lastIndex];
+    if (!id) return;
+    this.playClick();
+    this.returnCardHome(id);
+  }
+
+  private clearLine() {
+    if (this.commandLocked) return;
+    this.playClick();
+    this.slots.forEach((id) => {
+      if (id) this.returnCardHome(id);
+    });
+    this.drawProductStage(null);
+  }
+
+  private async executeProduction() {
+    if (this.commandLocked) return;
+    this.playClick();
     this.startTimerOnce();
 
-    if (!this.selectedMachine) return;
-    const selected = getMachine(this.selectedMachine);
-    if (!selected?.acceptedCommands.includes(command.id)) {
+    if (this.slots.some((slot) => !slot)) {
+      this.playWrong();
+      this.showToast("Preencha todos os espaços da esteira antes de iniciar.", COLORS.orange);
+      return;
+    }
+
+    this.commandLocked = true;
+    const wrongIndex = this.levelConfig.solution.findIndex((expected, index) => this.slots[index] !== expected);
+
+    if (wrongIndex >= 0) {
       this.errors += 1;
       this.playWrong();
-      this.showToast(`${selected?.shortName ?? "Esta máquina"} não entende "${command.label}".`, COLORS.red);
+      await this.flashSlot(wrongIndex, COLORS.red);
+      this.showToast(`A esteira parou na etapa ${wrongIndex + 1}. ${this.levelConfig.hint}`, COLORS.red);
       runtimeGameBridge.emit({ type: "WRONG_ANSWER", gameId: GAME_ID, stage: this.levelConfig.level, pointsEarned: -5 });
+      this.commandLocked = false;
       this.emitProgress();
       return;
     }
 
-    if (this.program.length >= MAX_PROGRAM_STEPS) {
-      this.showToast("A linha está cheia. Apague um comando para tentar outro caminho.", COLORS.orange);
-      return;
+    for (let i = 0; i < this.levelConfig.solution.length; i++) {
+      await this.animateProductThroughStep(i);
     }
 
-    this.playClick();
-    this.program.push({ machine: this.selectedMachine, command: command.id });
-    this.renderProgram();
+    this.hits += 1;
+    this.playCorrect();
+    runtimeGameBridge.emit({ type: "CORRECT_ANSWER", gameId: GAME_ID, stage: this.levelConfig.level, pointsEarned: 10 });
     this.emitProgress();
+    await this.showFinalProductReveal();
+    this.handleLevelSuccess();
   }
 
-  private undoCommand() {
-    if (this.commandLocked || !this.program.length) return;
-    this.playClick();
-    this.program.pop();
-    this.renderProgram();
-    this.emitProgress();
-  }
-
-  private clearProgram() {
-    if (this.commandLocked) return;
-    this.playClick();
-    this.program = [];
-    this.drawProductPlaceholder(false);
-    this.renderProgram();
-    this.emitProgress();
-  }
-
-  private renderProgram() {
-    this.programObjects.forEach((object) => object.destroy());
-    this.programObjects = [];
-    const hasStart = Boolean(this.levelConfig.startLabel);
-    const startX = hasStart ? 102 : 104;
-    const firstCommandX = hasStart ? 194 : 112;
-    const stepGap = 78;
-    const y = 632;
-
-    if (hasStart) {
-      this.drawProgramStartBlock(startX, y, this.levelConfig.startLabel ?? "");
-    }
-
-    if (!this.program.length) {
-      this.programObjects.push(this.addSharpText(hasStart ? 420 : 398, 632, "Os comandos escolhidos aparecem aqui, na ordem em que serão executados.", {
-        fontSize: "20px",
-        fontFamily: "Arial Black, Arial",
-        color: "#ffffff",
-        stroke: "#0f172a",
-        strokeThickness: 4,
-        align: "center",
-        wordWrap: { width: hasStart ? 450 : 560 },
-      }).setOrigin(0.5).setDepth(13));
-      return;
-    }
-
-    if (hasStart) {
-      this.drawProgramArrow(150, y);
-    }
-
-    this.program.forEach((step, index) => {
-      const machine = getMachine(step.machine);
-      const command = getCommand(step.command);
-      const x = firstCommandX + index * stepGap;
-
-      const block = this.add.graphics().setDepth(12);
-      block.fillStyle(machine?.color ?? COLORS.blue, 0.96);
-      block.fillRoundedRect(x - 32, y - 25, 64, 50, 14);
-      block.lineStyle(3, 0xffffff, 0.9);
-      block.strokeRoundedRect(x - 32, y - 25, 64, 50, 14);
-      this.programObjects.push(block);
-
-      if (index > 0) {
-        this.drawProgramArrow(x - 40, y);
-      }
-
-      this.programObjects.push(this.addSharpText(x, y - 10, machine?.icon ?? "?", {
-        fontSize: "18px",
-        fontFamily: "Arial Black, Arial",
-        color: "#ffffff",
-        stroke: "#0f172a",
-        strokeThickness: 4,
-      }).setOrigin(0.5).setDepth(13));
-
-      const commandAssetKey = command ? this.getCommandAssetKey(command.id) : "";
-      if (command && this.textures.exists(commandAssetKey)) {
-        this.programObjects.push(this.fitImage(this.add.image(x, y + 13, commandAssetKey), 32, 24).setDepth(13));
-      } else {
-        this.programObjects.push(this.addSharpText(x, y + 12, command?.icon ?? "?", {
-          fontSize: "14px",
-          fontFamily: "Arial Black, Arial",
-          color: "#ffffff",
-          stroke: "#0f172a",
-          strokeThickness: 3,
-        }).setOrigin(0.5).setDepth(13));
-      }
+  private animateProductThroughStep(index: number) {
+    return new Promise<void>((resolve) => {
+      const center = this.slotCenters[index];
+      const stage = this.levelConfig.productStages[index];
+      const product = this.createProductToken(stage, center.x, center.y - 80, 0.9).setDepth(70);
+      this.drawProductStage(stage);
+      this.flashSlot(index, COLORS.green);
+      this.tweens.add({
+        targets: product,
+        y: center.y + 4,
+        scale: 1,
+        duration: 260,
+        ease: "Back.easeOut",
+        yoyo: true,
+        hold: 160,
+        onComplete: () => {
+          product.destroy();
+          resolve();
+        },
+      });
     });
   }
 
-  private drawProgramStartBlock(x: number, y: number, label: string) {
-    const block = this.add.graphics().setDepth(12);
-    block.fillStyle(0x0f172a, 0.78);
-    block.fillRoundedRect(x - 34, y - 25, 68, 50, 15);
-    block.lineStyle(3, 0xfde68a, 0.95);
-    block.strokeRoundedRect(x - 34, y - 25, 68, 50, 15);
-    this.programObjects.push(block);
+  private createProductToken(stage: ProductStage, x: number, y: number, scale = 1) {
+    const container = this.add.container(x, y).setScale(scale);
+    if (stage.assetKey && this.textures.exists(stage.assetKey)) {
+      const glow = this.add.graphics();
+      glow.fillStyle(0xffffff, 0.82);
+      glow.fillRoundedRect(-42, -34, 84, 68, 18);
+      glow.lineStyle(4, stage.color, 0.72);
+      glow.strokeRoundedRect(-42, -34, 84, 68, 18);
+      const image = this.fitImage(this.add.image(0, 0, stage.assetKey), 82, 66);
+      container.add([glow, image]);
+      return container;
+    }
 
-    this.programObjects.push(this.addSharpText(x, y - 12, "início", {
-      fontSize: "10px",
+    const bg = this.add.graphics();
+    bg.fillStyle(stage.color, 1);
+    bg.fillRoundedRect(-34, -28, 68, 56, 16);
+    bg.lineStyle(4, 0xffffff, 0.94);
+    bg.strokeRoundedRect(-34, -28, 68, 56, 16);
+    const tokenText = stage.icon === "?" ? "?" : "✅";
+    const text = this.addSharpText(0, 0, tokenText, {
+      fontSize: tokenText === "?" ? "24px" : "28px",
       fontFamily: "Arial Black, Arial",
-      color: "#fde68a",
+      color: "#ffffff",
       stroke: "#0f172a",
       strokeThickness: 3,
-    }).setOrigin(0.5).setDepth(13));
+    }).setOrigin(0.5);
+    container.add([bg, text]);
+    return container;
+  }
 
-    this.programObjects.push(this.addSharpText(x, y + 9, label, {
-      fontSize: label.length > 2 ? "14px" : "22px",
+  private getStageAssetKey(stageId: FactoryStageId) {
+    return {
+      "shirt-separate": "machine-shirt-fabric",
+      "shirt-cut": "machine-shirt-cut",
+      "shirt-sew": "machine-shirt-sew",
+      "shirt-buttons": "machine-shirt-buttons",
+      "shirt-iron": "machine-shirt-iron",
+      "plush-separate": "machine-plush-fabric",
+      "plush-cut": "machine-plush-cut",
+      "plush-sew": "machine-plush-sew",
+      "plush-fill": "machine-plush-fill",
+      "plush-details": "machine-plush-details",
+      "shipping-check": "machine-shipping-check",
+      "shipping-pack": "machine-shipping-pack",
+      "shipping-label": "machine-shipping-label",
+      "shipping-sort": "machine-shipping-sort",
+      "shipping-load": "machine-shipping-load",
+    }[stageId];
+  }
+
+  private drawProductStage(stage: ProductStage | null) {
+    this.productObjects.forEach((object) => object.destroy());
+    this.productObjects = [];
+    const current = stage ?? { label: "Aguardando produção", icon: "?", color: 0x64748b };
+    const token = this.createProductToken(current, 166, 666, 0.9).setDepth(12);
+    const label = this.addSharpText(462, 672, stage ? current.label : `${this.levelConfig.productName}: aguardando produção`, {
+      fontSize: "19px",
       fontFamily: "Arial Black, Arial",
       color: "#ffffff",
       stroke: "#0f172a",
       strokeThickness: 4,
       align: "center",
-    }).setOrigin(0.5).setDepth(13));
+      wordWrap: { width: 560 },
+    }).setOrigin(0.5).setDepth(12);
+    this.productObjects.push(token, label);
   }
 
-  private drawProgramArrow(x: number, y: number) {
-    this.programObjects.push(this.addSharpText(x, y, "→", {
-      fontSize: "20px",
-      fontFamily: "Arial Black, Arial",
-      color: "#ffffff",
-      stroke: "#0f172a",
-      strokeThickness: 3,
-    }).setOrigin(0.5).setDepth(13));
-  }
-
-  private async executeProgram() {
-    if (this.commandLocked || !this.program.length) return;
-    this.playClick();
-    this.startTimerOnce();
-    this.commandLocked = true;
-    this.drawProductPlaceholder(false);
-
-    for (let i = 0; i < this.program.length; i++) {
-      await this.flashProgramStep(i);
-    }
-
-    if (this.isProgramCorrect()) {
-      this.hits += 1;
-      this.playCorrect();
-      runtimeGameBridge.emit({ type: "CORRECT_ANSWER", gameId: GAME_ID, stage: this.levelConfig.level, pointsEarned: 10 });
-      this.drawProductPlaceholder(true);
-      this.emitProgress();
-      this.time.delayedCall(800, () => this.handleLevelSuccess());
-      return;
-    }
-
-    this.errors += 1;
-    this.commandLocked = false;
-    this.playWrong();
-    runtimeGameBridge.emit({ type: "WRONG_ANSWER", gameId: GAME_ID, stage: this.levelConfig.level, pointsEarned: -5 });
-    this.showToast(this.levelConfig.hint, COLORS.red);
-    this.emitProgress();
-  }
-
-  private flashProgramStep(index: number) {
+  private flashSlot(index: number, color: number) {
     return new Promise<void>((resolve) => {
-      const x = (this.levelConfig.startLabel ? 194 : 112) + index * 78;
-      const glow = this.add.graphics().setDepth(14);
-      glow.lineStyle(5, 0xfde68a, 1);
-      glow.strokeRoundedRect(x - 36, 632 - 29, 72, 58, 16);
+      const center = this.slotCenters[index];
+      const glow = this.add.graphics().setDepth(80);
+      glow.lineStyle(7, color, 1);
+      glow.strokeRoundedRect(center.x - SLOT_W / 2, center.y - SLOT_H / 2, SLOT_W, SLOT_H, 20);
       this.tweens.add({
         targets: glow,
         alpha: 0,
-        duration: 260,
-        delay: 120,
+        duration: 420,
         onComplete: () => {
           glow.destroy();
           resolve();
@@ -615,19 +531,9 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
-  private isProgramCorrect() {
-    if (this.program.length !== this.levelConfig.solution.length) return false;
-    return this.levelConfig.solution.every((expected, index) => {
-      const actual = this.program[index];
-      return actual?.machine === expected.machine && actual?.command === expected.command;
-    });
-  }
-
   private handleLevelSuccess() {
     this.timerEvent?.remove(false);
-    this.commandLocked = true;
     const nextLevel = this.levelConfig.level + 1;
-
     if (nextLevel <= 3) {
       runtimeGameBridge.emit({
         type: "CHECKPOINT",
@@ -641,78 +547,85 @@ export class GameScene extends Phaser.Scene {
       this.showLevelCompleteTransition(nextLevel as 1 | 2 | 3);
       return;
     }
-
     runtimeGameBridge.emit({ type: "GAME_COMPLETED", gameId: GAME_ID, stage: this.levelConfig.level });
     this.showGameCompleteScreen();
+  }
+
+  private showFinalProductReveal() {
+    return new Promise<void>((resolve) => {
+      const finalStage = this.levelConfig.productStages[this.levelConfig.productStages.length - 1];
+      const overlay = this.add.rectangle(640, 360, 1280, 720, 0x12324a, 0.34).setDepth(300);
+      const glow = this.add.graphics().setDepth(301);
+      glow.fillStyle(0xffffff, 0.84);
+      glow.fillRoundedRect(440, 196, 400, 328, 34);
+      glow.lineStyle(6, 0xffffff, 0.95);
+      glow.strokeRoundedRect(440, 196, 400, 328, 34);
+
+      const product = this.createProductToken(finalStage, 640, 326, 2.25).setDepth(302);
+      const label = this.addSharpText(640, 470, finalStage.label, {
+        fontSize: "26px",
+        fontFamily: "Arial Black, Arial",
+        color: "#1e3a8a",
+        stroke: "#ffffff",
+        strokeThickness: 4,
+        align: "center",
+        wordWrap: { width: 340 },
+      }).setOrigin(0.5).setDepth(302);
+
+      const targets = [overlay, glow, product, label];
+      targets.forEach((target) => target.setAlpha(0));
+      this.tweens.add({
+        targets,
+        alpha: 1,
+        duration: 220,
+        ease: "Sine.easeOut",
+        onComplete: () => {
+          this.time.delayedCall(900, () => {
+            this.tweens.add({
+              targets,
+              alpha: 0,
+              duration: 220,
+              ease: "Sine.easeIn",
+              onComplete: () => {
+                targets.forEach((target) => target.destroy());
+                resolve();
+              },
+            });
+          });
+        },
+      });
+    });
   }
 
   private showLevelCompleteTransition(nextLevel: 1 | 2 | 3) {
     this.clearOverlay();
     const overlay = this.addOverlayObject(this.add.rectangle(640, 360, 1280, 720, 0x12324a, 0.56).setDepth(450));
     overlay.setInteractive();
-
-    const modal = this.addOverlayObject(this.add.container(640, 360).setDepth(451));
-    const shadow = this.add.graphics();
-    shadow.fillStyle(0x000000, 0.18);
-    shadow.fillRoundedRect(-270, -166, 540, 330, 28);
-
-    const bg = this.add.graphics();
-    bg.fillStyle(0xffffff, 0.98);
-    bg.fillRoundedRect(-278, -178, 556, 330, 28);
-    bg.lineStyle(5, 0xffffff, 0.95);
-    bg.strokeRoundedRect(-278, -178, 556, 330, 28);
-
-    const topBar = this.add.graphics();
-    topBar.fillStyle(COLORS.orange, 1);
-    topBar.fillRoundedRect(-196, -194, 392, 28, 14);
-    topBar.lineStyle(3, 0xffffff, 0.82);
-    topBar.strokeRoundedRect(-196, -194, 392, 28, 14);
+    const modal = this.createModalBase(640, 360, COLORS.orange);
 
     const badgeIcon = this.add.image(0, -114, "success-badge");
     this.fitImage(badgeIcon, 82, 82);
-
-    const title = this.addSharpText(0, -58, "Parabéns!", {
-      fontSize: "40px",
-      fontFamily: "Arial Black, Arial",
-      color: "#25327a",
-      stroke: "#ffffff",
-      strokeThickness: 5,
-    }).setOrigin(0.5);
-
+    const title = this.addSharpText(0, -58, "Parabéns!", this.modalTitleStyle()).setOrigin(0.5);
     const score = this.addSharpText(0, -5, `Nível ${this.levelConfig.level} concluído`, {
       fontSize: "26px",
       fontFamily: "Arial Black, Arial",
       color: "#7c3aed",
     }).setOrigin(0.5);
-
-    const detail = this.addSharpText(0, 48, this.levelConfig.successProduct, {
-      fontSize: "17px",
+    const detail = this.addSharpText(0, 48, this.levelConfig.successMessage, {
+      fontSize: "20px",
       fontFamily: "Arial Black, Arial",
       color: "#334155",
       align: "center",
       wordWrap: { width: 430 },
     }).setOrigin(0.5);
-
-    const dots = [1, 2, 3].map((level, index) => {
-      const dot = this.add.graphics();
-      dot.fillStyle(level <= this.levelConfig.level ? COLORS.green : level === nextLevel ? COLORS.orange : 0xd8dde8, 1);
-      dot.fillCircle(-28 + index * 28, 94, 8);
-      dot.lineStyle(2, 0xffffff, 0.9);
-      dot.strokeCircle(-28 + index * 28, 94, 8);
-      return dot;
-    });
-
-    const waitText = this.addSharpText(0, 132, "Preparando a próxima estação...", {
+    const waitText = this.addSharpText(0, 122, "Preparando a próxima produção...", {
       fontSize: "15px",
       fontFamily: "Arial Black, Arial",
       color: "#25327a",
     }).setOrigin(0.5);
 
-    modal.add([shadow, bg, topBar, badgeIcon, title, score, detail, ...dots, waitText]);
-    modal.setScale(MODAL_SCALE * 0.9);
-    modal.setAlpha(0);
-    this.tweens.add({ targets: modal, alpha: 1, scale: MODAL_SCALE, duration: 260, ease: "Back.easeOut" });
-
+    modal.add([badgeIcon, title, score, detail, waitText]);
+    this.animateModal(modal);
     this.time.delayedCall(1800, () => this.showNextLevelStartTransition(nextLevel));
   }
 
@@ -721,83 +634,35 @@ export class GameScene extends Phaser.Scene {
     const nextConfig = LEVELS.find((item) => item.level === nextLevel);
     const overlay = this.addOverlayObject(this.add.rectangle(640, 360, 1280, 720, 0x12324a, 0.58).setDepth(450));
     overlay.setInteractive();
+    const modal = this.createModalBase(640, 360, COLORS.green);
 
-    const modal = this.addOverlayObject(this.add.container(640, 360).setDepth(451));
-    const shadow = this.add.graphics();
-    shadow.fillStyle(0x000000, 0.18);
-    shadow.fillRoundedRect(-270, -154, 540, 312, 28);
-
-    const bg = this.add.graphics();
-    bg.fillStyle(0xffffff, 0.98);
-    bg.fillRoundedRect(-278, -166, 556, 312, 28);
-    bg.lineStyle(5, 0xffffff, 0.95);
-    bg.strokeRoundedRect(-278, -166, 556, 312, 28);
-
-    const topBar = this.add.graphics();
-    topBar.fillStyle(COLORS.green, 1);
-    topBar.fillRoundedRect(-196, -182, 392, 28, 14);
-    topBar.lineStyle(3, 0xffffff, 0.82);
-    topBar.strokeRoundedRect(-196, -182, 392, 28, 14);
-
-    const title = this.addSharpText(0, -102, `Nível ${nextLevel}`, {
-      fontSize: "38px",
-      fontFamily: "Arial Black, Arial",
-      color: "#25327a",
-      stroke: "#ffffff",
-      strokeThickness: 5,
-    }).setOrigin(0.5);
-
-    const objective = this.addSharpText(0, -42, nextConfig?.title ?? "Nova estação", {
+    const title = this.addSharpText(0, -102, `Nível ${nextLevel}`, this.modalTitleStyle()).setOrigin(0.5);
+    const objective = this.addSharpText(0, -42, nextConfig?.title ?? "Nova produção", {
       fontSize: "24px",
       fontFamily: "Arial Black, Arial",
       color: "#7c3aed",
       align: "center",
       wordWrap: { width: 430 },
     }).setOrigin(0.5);
-
-    const detail = this.addSharpText(0, 12, nextConfig?.objective ?? "Use a máquina certa.", {
+    const detail = this.addSharpText(0, 14, nextConfig?.objective ?? "Organize as máquinas.", {
       fontSize: "16px",
       fontFamily: "Arial Black, Arial",
       color: "#334155",
       align: "center",
       wordWrap: { width: 420 },
     }).setOrigin(0.5);
-
-    const button = this.add.container(0, 104);
-    const buttonShadow = this.add.graphics();
-    buttonShadow.fillStyle(0x000000, 0.16);
-    buttonShadow.fillRoundedRect(-136, -20, 272, 48, 24);
-    const buttonBg = this.add.graphics();
-    buttonBg.fillStyle(COLORS.orange, 1);
-    buttonBg.fillRoundedRect(-140, -26, 280, 52, 26);
-    buttonBg.lineStyle(4, 0xffffff, 1);
-    buttonBg.strokeRoundedRect(-140, -26, 280, 52, 26);
-    const buttonText = this.addSharpText(0, 0, "Iniciar nível", {
-      fontSize: "22px",
-      fontFamily: "Arial Black, Arial",
-      color: "#ffffff",
-      stroke: "#9a3f00",
-      strokeThickness: 3,
-    }).setOrigin(0.5);
-    button.add([buttonShadow, buttonBg, buttonText]);
-
+    const button = this.createModalButton(0, 104, "Iniciar nível", COLORS.orange);
     const buttonHitbox = this.addOverlayObject(this.add.zone(640, 360 + 104 * MODAL_SCALE, 300 * MODAL_SCALE, 76 * MODAL_SCALE).setDepth(452));
     buttonHitbox.setInteractive({ useHandCursor: true });
-    buttonHitbox.on("pointerover", () => {
-      this.tweens.add({ targets: button, scale: 1.04, duration: 90, ease: "Sine.easeOut" });
-    });
-    buttonHitbox.on("pointerout", () => {
-      this.tweens.add({ targets: button, scale: 1, duration: 90, ease: "Sine.easeOut" });
-    });
+    buttonHitbox.on("pointerover", () => this.tweens.add({ targets: button, scale: 1.04, duration: 90, ease: "Sine.easeOut" }));
+    buttonHitbox.on("pointerout", () => this.tweens.add({ targets: button, scale: 1, duration: 90, ease: "Sine.easeOut" }));
     buttonHitbox.on("pointerdown", () => {
       this.playClick();
       this.scene.restart({ level: nextLevel });
     });
 
-    modal.add([shadow, bg, topBar, title, objective, detail, button]);
-    modal.setScale(MODAL_SCALE * 0.9);
-    modal.setAlpha(0);
-    this.tweens.add({ targets: modal, alpha: 1, scale: MODAL_SCALE, duration: 260, ease: "Back.easeOut" });
+    modal.add([title, objective, detail, button]);
+    this.animateModal(modal);
   }
 
   private showGameCompleteScreen() {
@@ -822,7 +687,7 @@ export class GameScene extends Phaser.Scene {
     ribbon.lineStyle(4, 0xffffff, 0.9);
     ribbon.strokeRoundedRect(-214, -208, 428, 34, 17);
 
-    const title = this.addSharpText(0, -128, "Fábrica concluída!", {
+    const title = this.addSharpText(0, -128, "Fábrica organizada!", {
       fontSize: "38px",
       fontFamily: "Arial Black, Arial",
       color: "#25327a",
@@ -830,12 +695,20 @@ export class GameScene extends Phaser.Scene {
       strokeThickness: 6,
     }).setOrigin(0.5);
 
-    const subtitle = this.addSharpText(0, -76, `Pontuação final: ${this.getScore()} • Acertos: ${this.hits} • Erros: ${this.errors}`, {
-      fontSize: "20px",
+    const subtitle = this.addSharpText(0, -78, `Pontuação final: ${this.getScore()} • Acertos: ${this.hits} • Erros: ${this.errors}`, {
+      fontSize: "18px",
       fontFamily: "Arial Black, Arial",
       color: "#334155",
       align: "center",
       wordWrap: { width: 500 },
+    }).setOrigin(0.5);
+
+    const message = this.addSharpText(0, -28, "Você organizou todas as máquinas da fábrica.", {
+      fontSize: "20px",
+      fontFamily: "Arial Black, Arial",
+      color: "#7c3aed",
+      align: "center",
+      wordWrap: { width: 460 },
     }).setOrigin(0.5);
 
     const levelLabels = [1, 2, 3].map((level, index) => {
@@ -861,17 +734,6 @@ export class GameScene extends Phaser.Scene {
       return item;
     });
 
-    const badge = this.addSharpText(0, -26, "Cada máquina entende seu próprio conjunto de instruções.", {
-      fontSize: "19px",
-      fontFamily: "Arial Black, Arial",
-      color: "#7c3aed",
-      align: "center",
-      wordWrap: { width: 430 },
-    }).setOrigin(0.5);
-
-    const playAgain = this.createFinalButton(-142, 138, "Jogar novamente", COLORS.green, () => this.scene.restart({ level: 1 }));
-    const exit = this.createFinalButton(142, 138, "Voltar aos jogos", COLORS.orange, () => EventBus.emit("exit-game"));
-
     const sparkles = Array.from({ length: 14 }, (_, index) => {
       const sparkle = this.add.graphics();
       const x = Phaser.Math.Between(-278, 278);
@@ -890,21 +752,76 @@ export class GameScene extends Phaser.Scene {
       return sparkle;
     });
 
-    panel.add([shadow, bg, ribbon, ...sparkles, title, subtitle, badge, ...levelLabels, playAgain, exit]);
-    panel.setScale(MODAL_SCALE * 0.9);
-    panel.setAlpha(0);
-    this.tweens.add({ targets: panel, alpha: 1, scale: MODAL_SCALE, duration: 280, ease: "Back.easeOut" });
+    const playAgain = this.createFinalButton(-158, 138, "Jogar novamente", COLORS.green, () => this.scene.restart({ level: 1 }));
+    const exit = this.createFinalButton(158, 138, "Voltar aos jogos", COLORS.orange, () => EventBus.emit("exit-game"));
+
+    panel.add([shadow, bg, ribbon, ...sparkles, title, subtitle, message, ...levelLabels, playAgain, exit]);
+    this.animateModal(panel);
+  }
+
+  private createModalBase(x: number, y: number, color: number) {
+    const modal = this.addOverlayObject(this.add.container(x, y).setDepth(451));
+    const shadow = this.add.graphics();
+    shadow.fillStyle(0x000000, 0.18);
+    shadow.fillRoundedRect(-270, -166, 540, 330, 28);
+    const bg = this.add.graphics();
+    bg.fillStyle(0xffffff, 0.98);
+    bg.fillRoundedRect(-278, -178, 556, 330, 28);
+    bg.lineStyle(5, 0xffffff, 0.95);
+    bg.strokeRoundedRect(-278, -178, 556, 330, 28);
+    const topBar = this.add.graphics();
+    topBar.fillStyle(color, 1);
+    topBar.fillRoundedRect(-196, -194, 392, 28, 14);
+    topBar.lineStyle(3, 0xffffff, 0.82);
+    topBar.strokeRoundedRect(-196, -194, 392, 28, 14);
+    modal.add([shadow, bg, topBar]);
+    return modal;
+  }
+
+  private createModalButton(x: number, y: number, label: string, color: number) {
+    const button = this.add.container(x, y);
+    const shadow = this.add.graphics();
+    shadow.fillStyle(0x000000, 0.16);
+    shadow.fillRoundedRect(-136, -20, 272, 48, 24);
+    const bg = this.add.graphics();
+    bg.fillStyle(color, 1);
+    bg.fillRoundedRect(-140, -26, 280, 52, 26);
+    bg.lineStyle(4, 0xffffff, 1);
+    bg.strokeRoundedRect(-140, -26, 280, 52, 26);
+    const text = this.addSharpText(0, 0, label, {
+      fontSize: "22px",
+      fontFamily: "Arial Black, Arial",
+      color: "#ffffff",
+      stroke: "#9a3f00",
+      strokeThickness: 3,
+    }).setOrigin(0.5);
+    button.add([shadow, bg, text]);
+    return button;
+  }
+
+  private animateModal(modal: Phaser.GameObjects.Container) {
+    modal.setScale(MODAL_SCALE * 0.9);
+    modal.setAlpha(0);
+    this.tweens.add({ targets: modal, alpha: 1, scale: MODAL_SCALE, duration: 260, ease: "Back.easeOut" });
+  }
+
+  private modalTitleStyle(): Phaser.Types.GameObjects.Text.TextStyle {
+    return {
+      fontSize: "38px",
+      fontFamily: "Arial Black, Arial",
+      color: "#25327a",
+      stroke: "#ffffff",
+      strokeThickness: 5,
+    };
   }
 
   private createFinalButton(x: number, y: number, label: string, color: number, onClick: () => void) {
-    const width = 264;
-    const height = 52;
     const button = this.add.container(x, y);
     const bg = this.add.graphics();
     bg.fillStyle(color, 1);
-    bg.fillRoundedRect(-width / 2, -height / 2, width, height, 26);
+    bg.fillRoundedRect(-132, -26, 264, 52, 26);
     bg.lineStyle(4, 0xffffff, 1);
-    bg.strokeRoundedRect(-width / 2, -height / 2, width, height, 26);
+    bg.strokeRoundedRect(-132, -26, 264, 52, 26);
     const text = this.addSharpText(0, 0, label, {
       fontSize: "19px",
       fontFamily: "Arial Black, Arial",
@@ -913,19 +830,12 @@ export class GameScene extends Phaser.Scene {
       strokeThickness: 3,
     }).setOrigin(0.5);
     button.add([bg, text]);
-    button.setSize(292, 76);
-    button.setInteractive({
-      hitArea: new Phaser.Geom.Rectangle(-146, -38, 292, 76),
-      hitAreaCallback: Phaser.Geom.Rectangle.Contains,
-      useHandCursor: true,
-    });
-    button.on("pointerover", () => {
-      this.tweens.add({ targets: button, scale: 1.04, duration: 90, ease: "Sine.easeOut" });
-    });
-    button.on("pointerout", () => {
-      this.tweens.add({ targets: button, scale: 1, duration: 90, ease: "Sine.easeOut" });
-    });
-    button.on("pointerdown", () => {
+
+    const hitbox = this.addOverlayObject(this.add.zone(640 + x * MODAL_SCALE, 360 + y * MODAL_SCALE, 310 * MODAL_SCALE, 86 * MODAL_SCALE).setDepth(452));
+    hitbox.setInteractive({ useHandCursor: true });
+    hitbox.on("pointerover", () => this.tweens.add({ targets: button, scale: 1.04, duration: 90, ease: "Sine.easeOut" }));
+    hitbox.on("pointerout", () => this.tweens.add({ targets: button, scale: 1, duration: 90, ease: "Sine.easeOut" }));
+    hitbox.on("pointerdown", () => {
       this.playClick();
       onClick();
     });
@@ -936,11 +846,11 @@ export class GameScene extends Phaser.Scene {
     const button = this.add.container(x, y).setDepth(12);
     const bg = this.add.graphics();
     bg.fillStyle(color, 0.98);
-    bg.fillRoundedRect(-width / 2, -height / 2, width, height, 18);
+    bg.fillRoundedRect(-width / 2, -height / 2, width, height, height / 2);
     bg.lineStyle(3, 0xffffff, 0.92);
-    bg.strokeRoundedRect(-width / 2, -height / 2, width, height, 18);
+    bg.strokeRoundedRect(-width / 2, -height / 2, width, height, height / 2);
     const text = this.addSharpText(0, 0, label, {
-      fontSize: width < 120 ? "13px" : width < 140 ? "14px" : "16px",
+      fontSize: width > 260 ? "22px" : "16px",
       fontFamily: "Arial Black, Arial",
       color: "#ffffff",
       stroke: "#0f172a",
@@ -948,74 +858,41 @@ export class GameScene extends Phaser.Scene {
       align: "center",
     }).setOrigin(0.5);
     button.add([bg, text]);
-    button.setSize(width, height);
-    this.createTapZone(x, y, width, height, 40, onClick);
-    return button;
-  }
-
-  private createTapZone(x: number, y: number, width: number, height: number, depth: number, onClick: () => void) {
-    const zone = this.add.zone(x, y, width, height).setDepth(depth);
+    const zone = this.add.zone(x, y, width + 12, height + 12).setDepth(40);
     zone.setInteractive({ useHandCursor: true });
     zone.on("pointerdown", onClick);
-    return zone;
-  }
-
-  private fitImage(image: Phaser.GameObjects.Image, maxWidth: number, maxHeight: number) {
-    const texture = image.texture.getSourceImage() as HTMLImageElement | HTMLCanvasElement;
-    const sourceWidth = texture.width || maxWidth;
-    const sourceHeight = texture.height || maxHeight;
-    const scale = Math.min(maxWidth / sourceWidth, maxHeight / sourceHeight);
-    image.setDisplaySize(sourceWidth * scale, sourceHeight * scale);
-    return image;
-  }
-
-  private addSharpText(
-    x: number,
-    y: number,
-    text: string | string[],
-    style?: Phaser.Types.GameObjects.Text.TextStyle,
-  ) {
-    const textObject = this.add.text(x, y, text, style);
-    textObject.setResolution(2);
-    return textObject;
+    return button;
   }
 
   private drawPanel(x: number, y: number, width: number, height: number, accentColor: number, depth: number) {
     const shadow = this.add.graphics();
-    shadow.fillStyle(0x0f172a, 0.22);
-    shadow.fillRoundedRect(x + 10, y + 12, width, height, 26);
+    shadow.fillStyle(0x000000, 0.16);
+    shadow.fillRoundedRect(x + 10, y + 12, width, height, 32);
     shadow.setDepth(depth);
 
     const panel = this.add.graphics();
-    panel.fillStyle(0xffffff, 0.34);
-    panel.fillRoundedRect(x, y, width, height, 26);
-    panel.fillStyle(0xffffff, 0.12);
-    panel.fillRoundedRect(x + 10, y + 10, width - 20, 32, 16);
-    panel.lineStyle(4, 0xffffff, 0.92);
-    panel.strokeRoundedRect(x, y, width, height, 26);
-    panel.lineStyle(2, accentColor, 0.48);
-    panel.strokeRoundedRect(x + 5, y + 5, width - 10, height - 10, 22);
+    panel.fillStyle(0xffffff, 0.36);
+    panel.fillRoundedRect(x, y, width, height, 32);
+    panel.fillStyle(0xfffbf1, 0.2);
+    panel.fillRoundedRect(x + 10, y + 10, width - 20, height - 20, 24);
+    panel.lineStyle(5, 0xffffff, 0.9);
+    panel.strokeRoundedRect(x, y, width, height, 32);
+    panel.lineStyle(2, 0xffffff, 0.54);
+    panel.strokeRoundedRect(x + 7, y + 7, width - 14, height - 14, 26);
     panel.setDepth(depth + 0.1);
     return panel;
   }
 
   private drawPanelHeader(x: number, y: number, width: number, label: string, color: number) {
     const container = this.add.container(x, y).setDepth(11);
-    const shadow = this.add.graphics();
-    shadow.fillStyle(0x0f172a, 0.28);
-    shadow.fillRoundedRect(-width / 2 + 4, -21 + 5, width, 42, 21);
-    const bg = this.add.graphics();
-    bg.fillStyle(color, 1);
-    bg.fillRoundedRect(-width / 2, -21, width, 42, 21);
-    bg.lineStyle(3, 0xffffff, 0.88);
-    bg.strokeRoundedRect(-width / 2, -21, width, 42, 21);
-    const text = this.addSharpText(0, 0, label, {
-      fontSize: "19px",
+    const text = this.addSharpText(0, 20, label, {
+      fontSize: "20px",
       fontFamily: "Arial Black, Arial",
-      color: "#ffffff",
-      align: "center",
+      color: "#1e3a8a",
+      stroke: "#ffffff",
+      strokeThickness: 3,
     }).setOrigin(0.5);
-    container.add([shadow, bg, text]);
+    container.add([text]);
     return container;
   }
 
@@ -1023,22 +900,22 @@ export class GameScene extends Phaser.Scene {
     const container = this.add.container(640, 640).setDepth(200);
     const bg = this.add.graphics();
     bg.fillStyle(color, 0.96);
-    bg.fillRoundedRect(-410, -34, 820, 68, 22);
+    bg.fillRoundedRect(-420, -36, 840, 72, 22);
     bg.lineStyle(4, 0xffffff, 0.94);
-    bg.strokeRoundedRect(-410, -34, 820, 68, 22);
+    bg.strokeRoundedRect(-420, -36, 840, 72, 22);
     const text = this.addSharpText(0, 0, message, {
-      fontSize: "19px",
+      fontSize: "18px",
       fontFamily: "Arial Black, Arial",
       color: "#ffffff",
       align: "center",
-      wordWrap: { width: 750 },
+      wordWrap: { width: 760 },
     }).setOrigin(0.5);
     container.add([bg, text]);
     this.tweens.add({
       targets: container,
       y: 620,
       alpha: 0,
-      delay: 1550,
+      delay: 1850,
       duration: 420,
       onComplete: () => container.destroy(),
     });
@@ -1063,13 +940,14 @@ export class GameScene extends Phaser.Scene {
         this.errors += 1;
         this.playWrong();
         runtimeGameBridge.emit({ type: "GAME_OVER", gameId: GAME_ID, stage: this.levelConfig.level });
-        this.showToast("Tempo esgotado. Tente montar uma linha mais direta.", COLORS.red);
+        this.showToast("Tempo esgotado. Tente organizar a esteira de novo.", COLORS.red);
       },
     });
   }
 
   private emitProgress() {
-    const progress = this.program.length ? Math.min(95, Math.round((this.program.length / MAX_PROGRAM_STEPS) * 100)) : 0;
+    const filled = this.slots.filter(Boolean).length;
+    const progress = filled ? Math.min(95, Math.round((filled / this.levelConfig.solution.length) * 100)) : 0;
     runtimeGameBridge.emit({
       type: "CHECKPOINT",
       gameId: GAME_ID,
@@ -1092,6 +970,25 @@ export class GameScene extends Phaser.Scene {
       if (command.stage === this.levelConfig.level) return;
       this.scene.restart({ level: command.stage as 1 | 2 | 3 });
     });
+  }
+
+  private fitImage(image: Phaser.GameObjects.Image, maxWidth: number, maxHeight: number) {
+    const texture = image.texture.getSourceImage() as HTMLImageElement | HTMLCanvasElement;
+    const sourceWidth = texture.width || maxWidth;
+    const sourceHeight = texture.height || maxHeight;
+    const scale = Math.min(maxWidth / sourceWidth, maxHeight / sourceHeight);
+    image.setDisplaySize(sourceWidth * scale, sourceHeight * scale);
+    return image;
+  }
+
+  private addSharpText(x: number, y: number, text: string | string[], style?: Phaser.Types.GameObjects.Text.TextStyle) {
+    const normalizedStyle: Phaser.Types.GameObjects.Text.TextStyle = {
+      fontStyle: "bold",
+      ...style,
+    };
+    const textObject = this.add.text(x, y, text, normalizedStyle);
+    textObject.setResolution(2);
+    return textObject;
   }
 
   private getAudioContext(): AudioContext | null {
@@ -1129,4 +1026,3 @@ export class GameScene extends Phaser.Scene {
     this.playTone(165, 0.16, "square", 0.1, 0.12);
   }
 }
-

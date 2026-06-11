@@ -1,34 +1,33 @@
-export type MachineId = "calculator" | "folder" | "stamper" | "mixer";
+export type FactoryStageId =
+  | "shirt-separate"
+  | "shirt-cut"
+  | "shirt-sew"
+  | "shirt-buttons"
+  | "shirt-iron"
+  | "plush-separate"
+  | "plush-cut"
+  | "plush-sew"
+  | "plush-fill"
+  | "plush-details"
+  | "shipping-check"
+  | "shipping-pack"
+  | "shipping-label"
+  | "shipping-sort"
+  | "shipping-load";
 
-export type CommandId =
-  | "add2"
-  | "double"
-  | "fold"
-  | "crease"
-  | "stampStar"
-  | "stampOk"
-  | "addFruit"
-  | "blend";
-
-export interface MachineDefinition {
-  id: MachineId;
-  name: string;
-  shortName: string;
+export interface FactoryStage {
+  id: FactoryStageId;
+  label: string;
+  shortLabel: string;
   icon: string;
   color: number;
-  acceptedCommands: CommandId[];
 }
 
-export interface CommandDefinition {
-  id: CommandId;
+export interface ProductStage {
   label: string;
   icon: string;
-  machine: MachineId;
-}
-
-export interface ProgramStep {
-  machine: MachineId;
-  command: CommandId;
+  color: number;
+  assetKey?: string;
 }
 
 export interface FactoryLevel {
@@ -37,10 +36,10 @@ export interface FactoryLevel {
   objective: string;
   prompt: string;
   timeLimit: number;
-  availableMachines: MachineId[];
-  availableCommands: CommandId[];
-  solution: ProgramStep[];
-  startLabel?: string;
-  successProduct: string;
+  stages: FactoryStage[];
+  solution: FactoryStageId[];
+  productName: string;
+  productStages: ProductStage[];
+  successMessage: string;
   hint: string;
 }

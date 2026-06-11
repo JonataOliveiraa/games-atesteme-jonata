@@ -1,44 +1,50 @@
 import Phaser from "phaser";
 
-import level1MathBgUrl from "../../../assets/games/EF02CO03/level-1-math-bg.png";
-import level2PaperBgUrl from "../../../assets/games/EF02CO03/level-2-paper-bg.png";
-import level3FruitBgUrl from "../../../assets/games/EF02CO03/level-3-fruit-bg.png";
-import machineCalculatorUrl from "../../../assets/games/EF02CO03/machine-calculator.png";
-import machineFolderUrl from "../../../assets/games/EF02CO03/machine-folder.png";
-import machineMixerUrl from "../../../assets/games/EF02CO03/machine-mixer.png";
-import machineStamperUrl from "../../../assets/games/EF02CO03/machine-stamper.png";
-import commandAdd2Url from "../../../assets/games/EF02CO03/command-add2.png";
-import commandAddFruitUrl from "../../../assets/games/EF02CO03/command-add-fruit.png";
-import commandBlendUrl from "../../../assets/games/EF02CO03/command-blend.png";
-import commandCreaseUrl from "../../../assets/games/EF02CO03/command-crease.png";
-import commandDoubleUrl from "../../../assets/games/EF02CO03/command-double.png";
-import commandFoldUrl from "../../../assets/games/EF02CO03/command-fold.png";
-import commandStampOkUrl from "../../../assets/games/EF02CO03/command-stamp-ok.png";
-import commandStampStarUrl from "../../../assets/games/EF02CO03/command-stamp-star.png";
-import productFoldedPaperUrl from "../../../assets/games/EF02CO03/product-folded-paper.png";
-import productFruitDrinkStarUrl from "../../../assets/games/EF02CO03/product-fruit-drink-star.png";
-import productNumber10Url from "../../../assets/games/EF02CO03/product-number-10.png";
+import level1ShirtFactoryBgUrl from "../../../assets/games/EF02CO03/level-1-shirt-factory-bg.png";
+import level2PlushFactoryBgUrl from "../../../assets/games/EF02CO03/level-2-plush-factory-bg.png";
+import level3ShippingCenterBgUrl from "../../../assets/games/EF02CO03/level-3-shipping-center-bg.png";
+import machinePlushCutUrl from "../../../assets/games/EF02CO03/machine-plush-cut.png";
+import machinePlushDetailsUrl from "../../../assets/games/EF02CO03/machine-plush-details.png";
+import machinePlushFabricUrl from "../../../assets/games/EF02CO03/machine-plush-fabric.png";
+import machinePlushFillUrl from "../../../assets/games/EF02CO03/machine-plush-fill.png";
+import machinePlushSewUrl from "../../../assets/games/EF02CO03/machine-plush-sew.png";
+import machineShippingCheckUrl from "../../../assets/games/EF02CO03/machine-shipping-check.png";
+import machineShippingLabelUrl from "../../../assets/games/EF02CO03/machine-shipping-label.png";
+import machineShippingLoadUrl from "../../../assets/games/EF02CO03/machine-shipping-load.png";
+import machineShippingPackUrl from "../../../assets/games/EF02CO03/machine-shipping-pack.png";
+import machineShippingSortUrl from "../../../assets/games/EF02CO03/machine-shipping-sort.png";
+import machineShirtButtonsUrl from "../../../assets/games/EF02CO03/machine-shirt-buttons.png";
+import machineShirtCutUrl from "../../../assets/games/EF02CO03/machine-shirt-cut.png";
+import machineShirtFabricUrl from "../../../assets/games/EF02CO03/machine-shirt-fabric.png";
+import machineShirtIronUrl from "../../../assets/games/EF02CO03/machine-shirt-iron.png";
+import machineShirtSewUrl from "../../../assets/games/EF02CO03/machine-shirt-sew.png";
+import productPlushFinalUrl from "../../../assets/games/EF02CO03/product-plush-final.png";
+import productShippingFinalUrl from "../../../assets/games/EF02CO03/product-shipping-final.png";
+import productShirtFinalUrl from "../../../assets/games/EF02CO03/product-shirt-final.png";
 import successBadgeUrl from "../../../assets/games/EF02CO02/success-badge.png";
 
 const ASSETS: Array<[string, string]> = [
-  ["level-1-math-bg", level1MathBgUrl],
-  ["level-2-paper-bg", level2PaperBgUrl],
-  ["level-3-fruit-bg", level3FruitBgUrl],
-  ["machine-calculator", machineCalculatorUrl],
-  ["machine-folder", machineFolderUrl],
-  ["machine-mixer", machineMixerUrl],
-  ["machine-stamper", machineStamperUrl],
-  ["command-add2", commandAdd2Url],
-  ["command-add-fruit", commandAddFruitUrl],
-  ["command-blend", commandBlendUrl],
-  ["command-crease", commandCreaseUrl],
-  ["command-double", commandDoubleUrl],
-  ["command-fold", commandFoldUrl],
-  ["command-stamp-ok", commandStampOkUrl],
-  ["command-stamp-star", commandStampStarUrl],
-  ["product-folded-paper", productFoldedPaperUrl],
-  ["product-fruit-drink-star", productFruitDrinkStarUrl],
-  ["product-number-10", productNumber10Url],
+  ["level-1-shirt-factory-bg", level1ShirtFactoryBgUrl],
+  ["level-2-plush-factory-bg", level2PlushFactoryBgUrl],
+  ["level-3-shipping-center-bg", level3ShippingCenterBgUrl],
+  ["machine-plush-cut", machinePlushCutUrl],
+  ["machine-plush-details", machinePlushDetailsUrl],
+  ["machine-plush-fabric", machinePlushFabricUrl],
+  ["machine-plush-fill", machinePlushFillUrl],
+  ["machine-plush-sew", machinePlushSewUrl],
+  ["machine-shipping-check", machineShippingCheckUrl],
+  ["machine-shipping-label", machineShippingLabelUrl],
+  ["machine-shipping-load", machineShippingLoadUrl],
+  ["machine-shipping-pack", machineShippingPackUrl],
+  ["machine-shipping-sort", machineShippingSortUrl],
+  ["machine-shirt-buttons", machineShirtButtonsUrl],
+  ["machine-shirt-cut", machineShirtCutUrl],
+  ["machine-shirt-fabric", machineShirtFabricUrl],
+  ["machine-shirt-iron", machineShirtIronUrl],
+  ["machine-shirt-sew", machineShirtSewUrl],
+  ["product-plush-final", productPlushFinalUrl],
+  ["product-shipping-final", productShippingFinalUrl],
+  ["product-shirt-final", productShirtFinalUrl],
   ["success-badge", successBadgeUrl],
 ];
 
