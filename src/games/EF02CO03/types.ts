@@ -9,11 +9,11 @@ export type FactoryStageId =
   | "plush-sew"
   | "plush-fill"
   | "plush-details"
-  | "shipping-check"
-  | "shipping-pack"
-  | "shipping-label"
-  | "shipping-sort"
-  | "shipping-load";
+  | "backpack-separate"
+  | "backpack-cut"
+  | "backpack-sew"
+  | "backpack-straps"
+  | "backpack-zipper";
 
 export interface FactoryStage {
   id: FactoryStageId;

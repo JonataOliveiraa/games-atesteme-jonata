@@ -180,4 +180,14 @@ export const games: Game[] = [
     slug: "labirinto-inteligente",
     thumbnail: heroThumbnail,
   },
+  {
+    id: 17,
+    title: "Montador de Informações",
+    description: "Combine dados soltos em campos corretos para formar datas, endereços e imagens.",
+    category: "Mundo Digital",
+    points: 60,
+    icon: "🧩",
+    slug: "montador-de-informacoes",
+    thumbnail: heroThumbnail,
+  },
 ];

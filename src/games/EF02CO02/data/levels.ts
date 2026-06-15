@@ -4,7 +4,7 @@ export const LEVELS: RepeatLevel[] = [
   {
     level: 1,
     title: "Primeiro Desfile",
-    objective: "Passe pelo portal e leve o robô até a estrela.",
+    objective: "Leve o robô até a estrela.",
     timeLimit: 45,
     gridSize: { cols: 6, rows: 5 },
     start: { x: 0, y: 2 },
@@ -23,7 +23,7 @@ export const LEVELS: RepeatLevel[] = [
   {
     level: 2,
     title: "Curva do Robô",
-    objective: "Passe pelo portal, desvie dos cones e chegue à estrela.",
+    objective: "Desvie dos cones e chegue à estrela.",
     timeLimit: 60,
     gridSize: { cols: 7, rows: 6 },
     start: { x: 1, y: 4 },
@@ -45,7 +45,7 @@ export const LEVELS: RepeatLevel[] = [
   {
     level: 3,
     title: "Desfile Otimizado",
-    objective: "Passe pelo portal obrigatório antes de chegar ao palco.",
+    objective: "Chegue ao palco do desfile.",
     timeLimit: 75,
     gridSize: { cols: 8, rows: 6 },
     start: { x: 0, y: 5 },

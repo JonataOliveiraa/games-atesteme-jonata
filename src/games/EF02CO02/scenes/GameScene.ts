@@ -31,8 +31,11 @@ export class GameScene extends Phaser.Scene {
   private programObjects: Phaser.GameObjects.GameObject[] = [];
   private executedPath: GridPoint[] = [];
   private overlayObjects: Phaser.GameObjects.GameObject[] = [];
+  private infoObjects: Phaser.GameObjects.GameObject[] = [];
   private directionHitAreas: Array<{ bounds: Phaser.Geom.Rectangle; onClick: () => void }> = [];
   private actionHitAreas: Array<{ bounds: Phaser.Geom.Rectangle; onClick: () => void }> = [];
+  private infoHitArea?: { bounds: Phaser.Geom.Rectangle; onClick: () => void };
+  private infoCloseHitArea?: { bounds: Phaser.Geom.Rectangle; onClick: () => void };
   private commandLocked = false;
   private hasPassedCheckpoint = false;
   private hits = 0;
@@ -59,8 +62,11 @@ export class GameScene extends Phaser.Scene {
     this.programObjects = [];
     this.executedPath = [];
     this.overlayObjects = [];
+    this.infoObjects = [];
     this.directionHitAreas = [];
     this.actionHitAreas = [];
+    this.infoHitArea = undefined;
+    this.infoCloseHitArea = undefined;
     this.commandLocked = false;
     this.hasPassedCheckpoint = this.isCheckpoint(this.robotState.x, this.robotState.y);
     this.hits = 0;
@@ -192,16 +198,6 @@ export class GameScene extends Phaser.Scene {
       strokeThickness: 7,
     }).setOrigin(0.5);
 
-    this.add.text(640, 132, this.levelConfig.objective, {
-      fontSize: "20px",
-      fontFamily: "Arial Black, Arial",
-      color: "#0f172a",
-      stroke: "#ffffff",
-      strokeThickness: 4,
-      align: "center",
-      wordWrap: { width: 820 },
-    }).setOrigin(0.5);
-
     this.add.text(1080, 105, `Nível ${this.levelConfig.level}/3`, {
       fontSize: "18px",
       fontFamily: "Arial Black, Arial",
@@ -209,6 +205,110 @@ export class GameScene extends Phaser.Scene {
       backgroundColor: "rgba(255,255,255,0.75)",
       padding: { x: 14, y: 8 },
     }).setOrigin(0.5);
+  }
+
+  private createInfoButton(x: number, y: number) {
+    const button = this.add.graphics().setDepth(20);
+    button.fillStyle(0x2563eb, 0.98);
+    button.fillRoundedRect(x - 48, y - 20, 96, 40, 20);
+    button.lineStyle(4, 0xffffff, 0.95);
+    button.strokeRoundedRect(x - 48, y - 20, 96, 40, 20);
+
+    const label = this.add.text(x, y - 1, "Dica", {
+      fontSize: "19px",
+      fontFamily: "Arial Black, Arial",
+      color: "#ffffff",
+      stroke: "#1e3a8a",
+      strokeThickness: 4,
+    }).setOrigin(0.5).setDepth(21);
+
+    const hitArea = this.add.zone(x, y, 118, 62)
+      .setOrigin(0.5)
+      .setDepth(22)
+      .setInteractive({ useHandCursor: true });
+
+    hitArea.on("pointerdown", () => this.showInfoOverlay());
+
+    this.infoHitArea = {
+      bounds: new Phaser.Geom.Rectangle(x - 59, y - 31, 118, 62),
+      onClick: () => this.showInfoOverlay(),
+    };
+
+    return { button, label, hitArea };
+  }
+
+  private showInfoOverlay() {
+    this.clearInfoOverlay();
+
+    const shade = this.add.rectangle(640, 360, 1280, 720, 0x0f172a, 0.46)
+      .setDepth(330)
+      .setInteractive();
+
+    const panel = this.add.graphics().setDepth(331);
+    panel.fillStyle(0xffffff, 0.96);
+    panel.fillRoundedRect(310, 158, 660, 404, 34);
+    panel.lineStyle(6, 0xffffff, 0.98);
+    panel.strokeRoundedRect(310, 158, 660, 404, 34);
+    panel.lineStyle(3, COLORS.cyan, 0.55);
+    panel.strokeRoundedRect(326, 174, 628, 372, 26);
+
+    const title = this.add.text(640, 206, "Como jogar", {
+      fontSize: "34px",
+      fontFamily: "Arial Black, Arial",
+      color: "#25327a",
+      stroke: "#ffffff",
+      strokeThickness: 6,
+    }).setOrigin(0.5).setDepth(332);
+
+    const lines = [
+      "Monte o caminho com as setas.",
+      "Passe pela marca da pata no tabuleiro.",
+      `Limite: ${this.levelConfig.maxBlocks} comandos.`,
+    ];
+
+    const body = this.add.text(640, 324, lines.join("\n"), {
+      fontSize: "25px",
+      fontFamily: "Arial Black, Arial",
+      color: "#334155",
+      stroke: "#ffffff",
+      strokeThickness: 4,
+      align: "center",
+      lineSpacing: 18,
+      wordWrap: { width: 560 },
+    }).setOrigin(0.5).setDepth(332);
+
+    const closeBg = this.add.graphics().setDepth(332);
+    closeBg.fillStyle(COLORS.orange, 1);
+    closeBg.fillRoundedRect(470, 468, 340, 68, 34);
+    closeBg.lineStyle(5, 0xffffff, 0.98);
+    closeBg.strokeRoundedRect(470, 468, 340, 68, 34);
+
+    const closeText = this.add.text(640, 502, "Entendi", {
+      fontSize: "28px",
+      fontFamily: "Arial Black, Arial",
+      color: "#ffffff",
+      stroke: "#7c2d12",
+      strokeThickness: 5,
+    }).setOrigin(0.5).setDepth(333);
+
+    const closeHit = this.add.zone(640, 502, 380, 88)
+      .setOrigin(0.5)
+      .setDepth(334)
+      .setInteractive({ useHandCursor: true });
+    closeHit.on("pointerdown", () => this.clearInfoOverlay());
+
+    this.infoCloseHitArea = {
+      bounds: new Phaser.Geom.Rectangle(450, 458, 380, 88),
+      onClick: () => this.clearInfoOverlay(),
+    };
+
+    this.infoObjects.push(shade, panel, title, body, closeBg, closeText, closeHit);
+  }
+
+  private clearInfoOverlay() {
+    this.infoObjects.forEach((object) => object.destroy());
+    this.infoObjects = [];
+    this.infoCloseHitArea = undefined;
   }
 
   private createBoard() {
@@ -220,6 +320,7 @@ export class GameScene extends Phaser.Scene {
     const boardH = rows * cell;
 
     this.drawGamePanel(startX + boardW / 2, startY + boardH / 2, boardW + 38, boardH + 38, COLORS.cyan, -2);
+    this.createInfoButton(startX + 76, startY - 42);
 
     for (let y = 0; y < rows; y++) {
       for (let x = 0; x < cols; x++) {
@@ -262,20 +363,9 @@ if (isObstacle) {
 }
 
 if (isCheckpoint) {
-  const portal = this.add.graphics().setDepth(5);
-  portal.fillStyle(0xfde68a, 0.36);
-  portal.fillCircle(px, py, (cell - 16) / 2);
-  portal.lineStyle(5, 0xf59e0b, 0.96);
-  portal.strokeCircle(px, py, (cell - 18) / 2);
-  portal.lineStyle(3, 0xffffff, 0.96);
-  portal.strokeCircle(px, py, (cell - 30) / 2);
-  this.add.text(px, py + cell * 0.27, "portal", {
-    fontSize: `${Math.max(11, Math.floor(cell * 0.16))}px`,
-    fontFamily: "Arial Black, Arial",
-    color: "#ffffff",
-    stroke: "#7c2d12",
-    strokeThickness: 3,
-  }).setOrigin(0.5).setDepth(6);
+  this.add.image(px, py - cell * 0.04, "path-mark")
+    .setDisplaySize(cell - 8, cell - 8)
+    .setDepth(5);
 }
       }
     }
@@ -287,16 +377,6 @@ if (isCheckpoint) {
     this.input.off("pointermove", this.handleDirectionPointerMove, this);
     this.drawGamePanel(910, 326, 604, 292, COLORS.purple, 1);
     this.drawPanelHeader(910, 172, 410, "Escolha a direção", COLORS.purple);
-
-    this.add.text(910, 220, "Cada toque move o robô 1 casa. Passe pelo portal antes da estrela.", {
-      fontSize: "16px",
-      fontFamily: "Arial Black, Arial",
-      color: "#ffffff",
-      stroke: "#0f172a",
-      strokeThickness: 4,
-      align: "center",
-      wordWrap: { width: 500 },
-    }).setOrigin(0.5).setDepth(12);
 
     const directions: Array<{ x: number; y: number; label: string; angle: number; direction: Direction; color: number }> = [
       { x: 786, y: 288, label: "Cima", angle: -90, direction: "up", color: COLORS.blue },
@@ -321,6 +401,18 @@ if (isCheckpoint) {
   }
 
   private handleDirectionPointerDown(pointer: Phaser.Input.Pointer) {
+    if (this.infoObjects.length) {
+      if (this.infoCloseHitArea?.bounds.contains(pointer.x, pointer.y)) {
+        this.infoCloseHitArea.onClick();
+      }
+      return;
+    }
+
+    if (this.infoHitArea?.bounds.contains(pointer.x, pointer.y)) {
+      this.infoHitArea.onClick();
+      return;
+    }
+
     if (this.commandLocked || this.overlayObjects.length) return;
 
     const hit =
@@ -332,16 +424,18 @@ if (isCheckpoint) {
   }
 
   private handleDirectionPointerMove(pointer: Phaser.Input.Pointer) {
-    if (this.overlayObjects.length) return;
+    if (this.overlayObjects.length || this.infoObjects.length) return;
+
+    const isOverInfo = this.infoHitArea?.bounds.contains(pointer.x, pointer.y) ?? false;
 
     if (this.commandLocked) {
-      this.input.setDefaultCursor("default");
+      this.input.setDefaultCursor(isOverInfo ? "pointer" : "default");
       return;
     }
 
     const isOverDirection = this.directionHitAreas.some((area) => area.bounds.contains(pointer.x, pointer.y));
     const isOverAction = this.actionHitAreas.some((area) => area.bounds.contains(pointer.x, pointer.y));
-    this.input.setDefaultCursor(isOverDirection || isOverAction ? "pointer" : "default");
+    this.input.setDefaultCursor(isOverInfo || isOverDirection || isOverAction ? "pointer" : "default");
   }
 
   private createProgramPanel() {
@@ -392,7 +486,7 @@ if (isCheckpoint) {
   private addCommand(command: RobotCommand) {
     if (this.commandLocked) return;
     if (this.program.length >= this.levelConfig.maxBlocks) {
-      this.showToast(`Limite de ${this.levelConfig.maxBlocks} comandos. Apague uma seta para tentar outro caminho.`, 0xf59e0b);
+      this.showToast("Limite atingido.", 0xf59e0b);
       return;
     }
     this.playClick();
@@ -421,18 +515,7 @@ if (isCheckpoint) {
     this.programObjects = [];
     this.drawCommandLimitCounter();
 
-    if (!this.program.length) {
-      this.programObjects.push(this.add.text(910, 568, "Toque nas setas para montar o caminho do robô, uma casa por vez.", {
-        fontSize: "17px",
-        fontFamily: "Arial Black, Arial",
-        color: "#ffffff",
-        stroke: "#0f172a",
-        strokeThickness: 4,
-        align: "center",
-        wordWrap: { width: 430 },
-      }).setOrigin(0.5).setDepth(13));
-      return;
-    }
+    if (!this.program.length) return;
 
     this.program.forEach((command, index) => {
       const col = index % 9;
@@ -458,14 +541,19 @@ if (isCheckpoint) {
   private drawCommandLimitCounter() {
     const isFull = this.program.length >= this.levelConfig.maxBlocks;
     const color = isFull ? 0xf59e0b : COLORS.green;
+    const cell = this.getCellSize();
+    const boardW = this.levelConfig.gridSize.cols * cell;
+    const boardH = this.levelConfig.gridSize.rows * cell;
+    const x = BOARD_START_X + boardW / 2;
+    const y = BOARD_START_Y + boardH + 58;
     const bg = this.add.graphics().setDepth(13);
     bg.fillStyle(color, 0.96);
-    bg.fillRoundedRect(150, 146, 260, 38, 19);
+    bg.fillRoundedRect(x - 56, y - 19, 112, 38, 19);
     bg.lineStyle(3, 0xffffff, 0.92);
-    bg.strokeRoundedRect(150, 146, 260, 38, 19);
+    bg.strokeRoundedRect(x - 56, y - 19, 112, 38, 19);
     this.programObjects.push(bg);
 
-    this.programObjects.push(this.add.text(280, 165, `Comandos: ${this.program.length}/${this.levelConfig.maxBlocks}`, {
+    this.programObjects.push(this.add.text(x, y, `${this.program.length}/${this.levelConfig.maxBlocks}`, {
       fontSize: "18px",
       fontFamily: "Arial Black, Arial",
       color: "#ffffff",
@@ -516,7 +604,7 @@ if (isCheckpoint) {
     runtimeGameBridge.emit({ type: "WRONG_ANSWER", gameId: GAME_ID, stage: this.levelConfig.level, pointsEarned: -5 });
     this.restartCurrentLevelAfterError(
       this.robotState.x === this.levelConfig.goal.x && this.robotState.y === this.levelConfig.goal.y
-        ? "Passe pelo portal antes de chegar à estrela."
+        ? "Você pulou a marca da pata no tabuleiro. O nível vai recomeçar."
         : "O robô parou fora da estrela. O nível vai recomeçar."
     );
     this.emitProgress();
@@ -641,30 +729,16 @@ if (isCheckpoint) {
       color: "#7c3aed",
     }).setOrigin(0.5);
 
-    const detail = this.add.text(0, 48, `Você usou ${this.program.length} seta(s). Meta: ${this.levelConfig.minBlocks}.`, {
-      fontSize: "17px",
-      fontFamily: "Arial Black, Arial",
-      color: "#334155",
-      align: "center",
-      wordWrap: { width: 430 },
-    }).setOrigin(0.5);
-
     const dots = [1, 2, 3].map((level, index) => {
       const dot = this.add.graphics();
       dot.fillStyle(level <= this.levelConfig.level ? COLORS.green : level === nextLevel ? COLORS.orange : 0xd8dde8, 1);
-      dot.fillCircle(-28 + index * 28, 94, 8);
+      dot.fillCircle(-28 + index * 28, 58, 8);
       dot.lineStyle(2, 0xffffff, 0.9);
-      dot.strokeCircle(-28 + index * 28, 94, 8);
+      dot.strokeCircle(-28 + index * 28, 58, 8);
       return dot;
     });
 
-    const waitText = this.add.text(0, 132, "Abrindo a próxima fase...", {
-      fontSize: "17px",
-      fontFamily: "Arial Black, Arial",
-      color: "#25327a",
-    }).setOrigin(0.5);
-
-    modal.add([shadow, bg, topBar, badgeIcon, title, score, detail, ...dots, waitText]);
+    modal.add([shadow, bg, topBar, badgeIcon, title, score, ...dots]);
     modal.setScale(MODAL_SCALE * 0.9);
     modal.setAlpha(0);
 
@@ -711,20 +785,12 @@ if (isCheckpoint) {
       strokeThickness: 5,
     }).setOrigin(0.5);
 
-    const objective = this.add.text(0, -42, nextConfig?.title ?? "Novo desafio", {
+    const objective = this.add.text(0, -24, nextConfig?.title ?? "Novo desafio", {
       fontSize: "24px",
       fontFamily: "Arial Black, Arial",
       color: "#7c3aed",
       align: "center",
       wordWrap: { width: 430 },
-    }).setOrigin(0.5);
-
-    const detail = this.add.text(0, 12, nextConfig?.objective ?? "Leve o robô até a estrela.", {
-      fontSize: "16px",
-      fontFamily: "Arial Black, Arial",
-      color: "#334155",
-      align: "center",
-      wordWrap: { width: 420 },
     }).setOrigin(0.5);
 
     const button = this.add.container(0, 104);
@@ -770,7 +836,7 @@ if (isCheckpoint) {
       startNextLevel();
     });
 
-    modal.add([shadow, bg, topBar, title, objective, detail, button]);
+    modal.add([shadow, bg, topBar, title, objective, button]);
     modal.setScale(MODAL_SCALE * 0.9);
     modal.setAlpha(0);
 
@@ -844,14 +910,6 @@ if (isCheckpoint) {
       return item;
     });
 
-    const badge = this.add.text(0, -24, "Você criou um caminho usando uma seta para cada casa.", {
-      fontSize: "22px",
-      fontFamily: "Arial Black, Arial",
-      color: "#7c3aed",
-      align: "center",
-      wordWrap: { width: 480 },
-    }).setOrigin(0.5);
-
     const playAgain = this.createFinalButton(-158, 138, "Jogar novamente", COLORS.green, () => this.scene.restart({ level: 1 }));
     const exit = this.createFinalButton(158, 138, "Voltar aos jogos", COLORS.orange, () => EventBus.emit("exit-game"));
 
@@ -873,7 +931,7 @@ if (isCheckpoint) {
       return sparkle;
     });
 
-    panel.add([shadow, bg, ribbon, ...sparkles, title, subtitle, badge, ...levelLabels, playAgain, exit]);
+    panel.add([shadow, bg, ribbon, ...sparkles, title, subtitle, ...levelLabels, playAgain, exit]);
     this.createModalButtonHitbox(640 - 158 * MODAL_SCALE, 360 + 138 * MODAL_SCALE, 268 * MODAL_SCALE, 62 * MODAL_SCALE, playAgain, () => {
       this.playClick();
       this.scene.restart({ level: 1 });

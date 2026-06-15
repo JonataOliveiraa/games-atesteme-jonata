@@ -23,6 +23,7 @@ const SLUG_TO_CODE: Record<string, GameCode> = {
   "hangar-dos-modelos": "EF02CO01",
   "desfile-do-robo-repetidor": "EF02CO02",
   "fabrica-de-maquinas": "EF02CO03",
+  "montador-de-informacoes": "EF03CO04",
 };
 
 const GAME_CONFIG_LOADERS: Partial<
@@ -37,6 +38,7 @@ const GAME_CONFIG_LOADERS: Partial<
   EF02CO01: () => import("../games/EF02CO01/index"),
   EF02CO02: () => import("../games/EF02CO02/index"),
   EF02CO03: () => import("../games/EF02CO03/index"),
+  EF03CO04: () => import("../games/EF03CO04/index"),
 };
 
 const GAMES_WITH_IN_GAME_COMPLETION_SCREEN = new Set([
@@ -45,6 +47,7 @@ const GAMES_WITH_IN_GAME_COMPLETION_SCREEN = new Set([
   "guardioes-dos-dados",
   "desfile-do-robo-repetidor",
   "fabrica-de-maquinas",
+  "montador-de-informacoes",
 ]);
 
 export default function GameDetailsPage() {
@@ -478,7 +481,7 @@ export default function GameDetailsPage() {
     ],
     "desfile-do-robo-repetidor": [
       "Escolha uma seta para cada casa do caminho.",
-      "Passe pelo portal obrigatório antes de chegar à estrela.",
+      "Use o botão Dica para ver a regra especial do caminho.",
       "Desvie dos cones e respeite o limite de comandos do nível.",
       "Execute o programa para levar o robô até a estrela.",
     ],
@@ -487,6 +490,12 @@ export default function GameDetailsPage() {
       "Arraste as máquinas embaralhadas para a esteira na ordem correta.",
       "Clique em Iniciar Produção para testar a sequência.",
       "Se a esteira parar, leia a dica e reorganize as etapas.",
+    ],
+    "montador-de-informacoes": [
+      "Observe qual informação precisa ser formada.",
+      "Arraste cada dado solto para o campo correto.",
+      "Clique em Validar informação para testar a combinação.",
+      "Dados isolados podem não informar muito, mas juntos formam uma informação útil.",
     ],
   };
 
