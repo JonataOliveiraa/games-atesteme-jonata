@@ -3,58 +3,35 @@ import { EventBus } from '../../../shared/EventBus'
 import { runtimeGameBridge } from '../../../shared/bridge/runtimeGameBridge'
 import type { PlatformCommand } from '../../../shared/contracts/platformCommands'
 import type {
-  FilterAttribute,
-  FilterValue,
   LevelConfig,
   Vehicle,
-  VehicleAttributes,
-  GroupingMission,
-  ComparisonPair,
+  VehicleCard,
 } from '../types'
 import { LEVELS } from '../data/levels'
-import { vehicleById } from '../data/vehicles'
+import { ALL_VEHICLES } from '../data/vehicles'
 
 // ── Constantes de layout ─────────────────────────────────────────────────────
 
 const GAME_ID      = 'hangar-dos-modelos'
 const TOP_Y        = 95       // base da UIScene superior
 const BOTTOM_Y     = 638      // topo da UIScene inferior
-const MID_Y        = (TOP_Y + BOTTOM_Y) / 2
 
-// Zona de veículos (esquerda)
-const VEH_AREA_W   = 840
 // Painel de filtros (direita)
 const PANEL_LEFT_X = 860
 const PANEL_W      = 400
-//const PANEL_CX     = PANEL_LEFT_X + PANEL_W / 2   // 1060
 
-// Cartão grande (nível 1 e 2)
+// Cartão
 const CARD_W       = 155
 const CARD_H       = 125
-const CARD_GAP     = 18
-
-// Cartão pequeno (nível 3, grid 4×3)
-const SCARD_W      = 120
-const SCARD_H      = 98
-const SCARD_GAP    = 12
 
 // ── Tipos internos ────────────────────────────────────────────────────────────
 
-interface VehicleCard {
-  container: Phaser.GameObjects.Container
-  vehicle: Vehicle
-  homeX: number
-  homeY: number
-}
-
 type MissionPhase =
   | 'intro'
-  | 'waiting-filter'
+  | 'waiting-answer'
   | 'animating'
-  | 'question'
   | 'feedback-ok'
   | 'feedback-err'
-  | 'next-mission'
   | 'level-complete'
 
 // ── GameScene ─────────────────────────────────────────────────────────────────
@@ -77,24 +54,14 @@ export class GameScene extends Phaser.Scene {
   // Objetos de jogo
   private vehicleCards: VehicleCard[] = []
 
+  // Nova mecânica de seleção
+  private selectedVehicleIds = new Set<string>()
+  private questionPanel?: Phaser.GameObjects.Container
+  private confirmBtn?: Phaser.GameObjects.Container
+  private selectionCountText?: Phaser.GameObjects.Text
+
   // Overlay (modais de fluxo)
   private overlayObjects: Phaser.GameObjects.GameObject[] = []
-
-  // Container destruível entre pares (nível 2)
-  private missionLayer?: Phaser.GameObjects.Container
-
-  // UI temporária por missão (destruída ao avançar)
-  private filterPanelContainer?: Phaser.GameObjects.Container
-  private instructionBanner?: Phaser.GameObjects.Container
-  private questionOverlay?: Phaser.GameObjects.Container
-  private feedbackBanner?: Phaser.GameObjects.Text
-
-  // Nível 2 — comparação
-  private comparisonAnswers = new Map<string, boolean | null>()
-  private comparisonBtns    = new Map<string, {
-    igualBtn:     Phaser.GameObjects.Container
-    diferenteBtn: Phaser.GameObjects.Container
-  }>()
 
   // Timer (padrão EF01CO03)
   private timeBarFill?: Phaser.GameObjects.Graphics
@@ -127,8 +94,7 @@ export class GameScene extends Phaser.Scene {
     this.missionEffectActive = false
     this.vehicleCards        = []
     this.overlayObjects      = []
-    this.comparisonAnswers.clear()
-    this.comparisonBtns.clear()
+    this.selectedVehicleIds  = new Set()
     this.timerActive      = false
     this.timerWarned      = false
     this.timerState.progress = 1
@@ -145,11 +111,7 @@ export class GameScene extends Phaser.Scene {
     this.broadcastMissionState()
     this.emitCheckpoint()
 
-    switch (this.levelConfig.level) {
-      case 1: this.startLevel1(); break
-      case 2: this.startLevel2(); break
-      case 3: this.startLevel3(); break
-    }
+    this.startLevel()
 
     if (this.shouldShowLevelStart && this.levelConfig.level > 1) {
       this.showNextLevelStartScreen()
@@ -271,49 +233,24 @@ export class GameScene extends Phaser.Scene {
   // ══════════════════════════════════════════════════════════════════════════
 
   private broadcastMissionState() {
-    const lvl = this.levelConfig.level
-    const idx = this.currentMissionIndex
-    const total = (this.levelConfig.filterMissions?.length)
-      ?? (this.levelConfig.comparisonPairs?.length)
-      ?? (this.levelConfig.groupingMissions?.length)
-      ?? 1
-
-    let instruction = ''
-    let hint = ''
-
-    if (lvl === 1 && this.levelConfig.filterMissions) {
-      const m = this.levelConfig.filterMissions[idx]
-      instruction = m?.instruction ?? ''
-      hint        = m?.question    ?? ''
-    } else if (lvl === 2) {
-      instruction = '🔍  Compare os dois veículos!'
-      hint        = 'Marque IGUAL ou DIFERENTE para cada atributo.'
-    } else if (lvl === 3 && this.levelConfig.groupingMissions) {
-      const m = this.levelConfig.groupingMissions[idx]
-      instruction = m?.instruction ?? ''
-      hint        = m?.question    ?? ''
-    }
-
+    const missions = this.levelConfig.missions
+    const mission = missions[this.currentMissionIndex] ?? missions[0]
     EventBus.emit('mission-update', {
-      instruction,
-      hint,
-      missionIndex:  idx,
-      totalMissions: total,
-      level:         lvl,
+      instruction: mission.question,
+      hint: mission.hint,
+      missionIndex:  this.currentMissionIndex,
+      totalMissions: missions.length,
+      level:         this.levelConfig.level,
     })
   }
 
   private emitCheckpoint() {
-    const total = (this.levelConfig.filterMissions?.length)
-      ?? (this.levelConfig.comparisonPairs?.length)
-      ?? (this.levelConfig.groupingMissions?.length)
-      ?? 1
-
+    const progress = Math.round((this.currentMissionIndex / this.levelConfig.missions.length) * 100)
     runtimeGameBridge.emit({
       type:     'CHECKPOINT',
       gameId:   GAME_ID,
-      progress: this.currentMissionIndex / total,
-      score:    this.hits * 20,
+      progress,
+      score:    this.currentPoints,
       stage:    this.levelConfig.level,
       hits:     this.hits,
       errors:   this.errors,
@@ -443,8 +380,8 @@ export class GameScene extends Phaser.Scene {
 
     const successTexts: Record<number, string> = {
       1: 'Você aprendeu a separar veículos que voam e que têm rodas!',
-      2: 'Você comparou veículos e identificou semelhanças e diferenças!',
-      3: 'Você descobriu o que une cada grupo de veículos!',
+      2: 'Você identificou os veículos pelo meio e pelo funcionamento!',
+      3: 'Você classificou todos os veículos pelo meio de transporte!',
     }
     const next = this.add.text(0, 8, successTexts[lvl] ?? '', {
       fontFamily: 'Arial', fontStyle: 'bold',
@@ -722,10 +659,7 @@ export class GameScene extends Phaser.Scene {
       fontSize: '22px', color: '#ef4444',
     }).setOrigin(0.5).setResolution(2)
 
-    const total = (this.levelConfig.filterMissions?.length)
-      ?? (this.levelConfig.comparisonPairs?.length)
-      ?? (this.levelConfig.groupingMissions?.length)
-      ?? 1
+    const total = this.levelConfig.missions.length
 
     const statsTxt = this.add.text(0, 52, `${this.currentMissionIndex} de ${total} missões concluídas`, {
       fontFamily: 'Arial', fontStyle: 'bold',
@@ -754,38 +688,47 @@ export class GameScene extends Phaser.Scene {
 
   private drawBackground() {
     this.add.image(640, 360, 'hangar-bg').setDisplaySize(1280, 720).setDepth(-1)
-    if (this.levelConfig.level !== 2) {
-      const g = this.add.graphics()
-      g.lineStyle(1, 0x4FC3F7, 0.2)
-      g.lineBetween(PANEL_LEFT_X - 10, TOP_Y, PANEL_LEFT_X - 10, BOTTOM_Y)
-    }
+    const g = this.add.graphics()
+    g.lineStyle(1, 0x4FC3F7, 0.2)
+    g.lineBetween(PANEL_LEFT_X - 10, TOP_Y, PANEL_LEFT_X - 10, BOTTOM_Y)
   }
 
   // ══════════════════════════════════════════════════════════════════════════
-  //  NÍVEL 1 — FILTRO BINÁRIO
+  //  GRID UNIFICADA DE VEÍCULOS
   // ══════════════════════════════════════════════════════════════════════════
 
-  private startLevel1() {
-    this.buildVehicleGrid6()
-    this.buildFilterPanel()
-    this.showMissionIntro()
+  private startLevel() {
+    this.buildVehicleGrid()
+    this.buildQuestionPanel()
+    this.showCurrentMission()
   }
 
-  // ── Grid de 6 veículos (3×2) na área esquerda ────────────────────────────
+  private buildVehicleGrid() {
+    const vehicles = this.levelConfig.vehicleIds
+      .map(id => ALL_VEHICLES.find(v => v.id === id)!)
+      .filter(Boolean)
 
-  private buildVehicleGrid6() {
-    const ids   = this.levelConfig.vehicleIds   // 6 veículos
-    const cols  = 3
-    const totalW = cols * (CARD_W + CARD_GAP) - CARD_GAP
-    const startX = (VEH_AREA_W - totalW) / 2 + CARD_W / 2  // centra na área
-    const startY = 195
+    // Embaralhar para não dar pistas visuais sobre a missão atual
+    Phaser.Utils.Array.Shuffle(vehicles)
 
-    ids.forEach((id, idx) => {
-      const col = idx % cols
-      const row = Math.floor(idx / cols)
-      const cx  = startX + col * (CARD_W + CARD_GAP)
-      const cy  = startY + row * (CARD_H + CARD_GAP + 20)
-      this.vehicleCards.push(this.makeVehicleCard(vehicleById(id), cx, cy))
+    const count = vehicles.length
+    const cols = count <= 6 ? 3 : 4
+    const rows = Math.ceil(count / cols)
+
+    // Área de cards: x 20–840, y 140–630
+    const areaX = 20, areaW = 820
+    const areaY = 140, areaH = 490
+
+    const colSpacing = areaW / cols
+    const rowSpacing = areaH / rows
+
+    vehicles.forEach((vehicle, i) => {
+      const col = i % cols
+      const row = Math.floor(i / cols)
+      const cx = areaX + colSpacing * col + colSpacing / 2
+      const cy = areaY + rowSpacing * row + rowSpacing / 2
+      const card = this.makeVehicleCard(vehicle, cx, cy)
+      this.vehicleCards.push(card)
     })
   }
 
@@ -793,7 +736,8 @@ export class GameScene extends Phaser.Scene {
     const bg = this.add.image(0, 0, `card-${vehicle.attributes.meio}`)
       .setDisplaySize(CARD_W, CARD_H).setOrigin(0.5)
 
-    const img = this.add.image(0, -10, `veh-${vehicle.id}`).setDisplaySize(76, 76).setOrigin(0.5)
+    const img = this.add.image(0, -10, `veh-${vehicle.id}`)
+      .setDisplaySize(76, 76).setOrigin(0.5)
 
     const nameBg = this.add.graphics()
     nameBg.fillStyle(0x000000, 0.45)
@@ -804,353 +748,260 @@ export class GameScene extends Phaser.Scene {
       color: '#FFFFFF', stroke: '#000000', strokeThickness: 2,
     }).setOrigin(0.5)
 
-    const container = this.add.container(cx, cy, [bg, nameBg, img, name])
+    // Seleção visual: glow border + checkmark (inicialmente ocultos)
+    const selGlow = this.add.graphics()
+    selGlow.lineStyle(5, 0x42d640, 1)
+    selGlow.strokeRoundedRect(-CARD_W / 2 - 4, -CARD_H / 2 - 4, CARD_W + 8, CARD_H + 8, 18)
+    selGlow.setAlpha(0)
+
+    const checkmark = this.add.text(CARD_W / 2 - 10, -CARD_H / 2 + 8, '✔', {
+      fontSize: '22px', color: '#42d640',
+      stroke: '#000000', strokeThickness: 3,
+    }).setOrigin(1, 0).setAlpha(0)
+
+    const container = this.add.container(cx, cy, [bg, nameBg, img, name, selGlow, checkmark])
     container.setSize(CARD_W, CARD_H)
     container.setAlpha(0).setScale(0.72)
+    container.setInteractive({ useHandCursor: true })
+
+    // Guardar referências de seleção no container via data
+    container.setData('vehicleId', vehicle.id)
+    container.setData('selGlow', selGlow)
+    container.setData('checkmark', checkmark)
+    container.setData('selected', false)
+
+    container.on('pointerdown', () => this.toggleVehicleSelection(vehicle.id, container))
+
     this.tweens.add({
       targets: container, alpha: 1, scaleX: 1, scaleY: 1,
       duration: 380, ease: 'Back.Out',
       delay: this.vehicleCards.length * 70,
     })
+
     return { container, vehicle, homeX: cx, homeY: cy }
   }
 
-  // ── Painel de filtros ────────────────────────────────────────────────────
+  private buildQuestionPanel() {
+    const panelY = TOP_Y + 35
 
-  private buildFilterPanel() {
-    const mission = this.levelConfig.filterMissions![this.currentMissionIndex]
-    const isYes   = mission.filterValue === true
+    this.questionPanel = this.add.container(PANEL_LEFT_X, panelY).setDepth(10)
 
-    // Textos e cores por atributo + valor
-    const attrCfg: Record<string, { subYes: string; subNo: string; btnYes: string; btnNo: string }> = {
-      voa:      { subYes: 'Esse veículo VOA?',       subNo: 'Esse veículo NÃO voa?',       btnYes: '✈️  SIM — Voa!',        btnNo: '🚗  NÃO — Não voa'   },
-      temRodas: { subYes: 'Esse veículo tem RODAS?',  subNo: 'Esse veículo NÃO tem rodas?', btnYes: '🔵  SIM — Tem rodas!',   btnNo: '⭕  NÃO — Sem rodas'  },
-      temMotor: { subYes: 'Esse veículo tem MOTOR?',  subNo: 'Esse veículo NÃO tem motor?', btnYes: '⚙️  SIM — Tem motor!',   btnNo: '🔇  NÃO — Sem motor'  },
-    }
-    const cfg      = attrCfg[mission.filterAttribute] ?? attrCfg['voa']
-    const subText  = isYes ? cfg.subYes  : cfg.subNo
-    const btnLabel = isYes ? cfg.btnYes  : cfg.btnNo
-    const btnColor = isYes ? 0x2E7D32   : 0xB71C1C
-
-    const panel = this.add.container(PANEL_LEFT_X, TOP_Y + 35)
-    this.filterPanelContainer = panel
-
-    // Fundo do painel
     const bg = this.add.image(PANEL_W / 2, 155, 'panel-filter')
       .setDisplaySize(PANEL_W, 310).setOrigin(0.5)
-    panel.add(bg)
 
-    // Cabeçalho
-    const hdr = this.add.text(PANEL_W / 2, 28, '🔍  CLASSIFIQUE!', {
-      fontSize: '24px',
-      fontFamily: 'Arial Black, Arial',
-      color: '#E3F2FD',
-    }).setOrigin(0.5, 0)
-    panel.add(hdr)
+    const qText = this.add.text(PANEL_W / 2, 28, '', {
+      fontFamily: 'Arial', fontStyle: 'bold',
+      fontSize: '22px', color: '#25327a',
+      align: 'center', wordWrap: { width: 360 },
+    }).setOrigin(0.5, 0).setResolution(2)
 
-    // Sub-título dinâmico (atributo + valor)
-    const sub = this.add.text(PANEL_W / 2, 70, subText, {
-      fontSize: '22px',
-      fontFamily: 'Arial, sans-serif',
-      color: '#90CAF9',
-    }).setOrigin(0.5, 0)
-    panel.add(sub)
+    this.selectionCountText = this.add.text(PANEL_W / 2, 100, '0 selecionados', {
+      fontFamily: 'Arial', fontStyle: 'bold',
+      fontSize: '17px', color: '#607d8b',
+    }).setOrigin(0.5, 0).setResolution(2)
 
-    // Divisor
-    const div = this.add.graphics()
-    div.lineStyle(1, 0x4FC3F7, 0.25)
-    div.lineBetween(20, 104, PANEL_W - 20, 104)
-    panel.add(div)
+    // Botão Confirmar
+    this.confirmBtn = this.add.container(PANEL_W / 2, 185)
+    const btnBg = this.add.graphics()
+    btnBg.fillStyle(0xb8c0cc, 1)
+    btnBg.fillRoundedRect(-120, -24, 240, 48, 24)
+    btnBg.lineStyle(3, 0xffffff, 0.8)
+    btnBg.strokeRoundedRect(-120, -24, 240, 48, 24)
+    const btnTxt = this.add.text(0, 0, '✔  Confirmar', {
+      fontFamily: 'Arial', fontStyle: 'bold',
+      fontSize: '20px', color: '#ffffff',
+      stroke: '#00000040', strokeThickness: 2,
+    }).setOrigin(0.5).setResolution(2)
+    this.confirmBtn.add([btnBg, btnTxt])
+    this.confirmBtn.setSize(240, 72)
+    this.confirmBtn.setInteractive({ useHandCursor: false })
+    this.confirmBtn.setData('btnBg', btnBg)
+    this.confirmBtn.setData('enabled', false)
+    this.confirmBtn.on('pointerdown', () => this.confirmAnswer())
 
-    // Único botão de ação para esta missão
-    const btn = this.makeRoundedButton(btnLabel, btnColor, 340, 88, () => {
-      if (this.phase !== 'waiting-filter') return
-      this.applyFilter(mission.filterAttribute, mission.filterValue)
-    })
-    btn.setPosition(PANEL_W / 2, 180)
-    panel.add(btn)
+    const hintText = this.add.text(PANEL_W / 2, 242, '', {
+      fontFamily: 'Arial', fontStyle: 'bold',
+      fontSize: '14px', color: '#607d8b',
+      align: 'center', wordWrap: { width: 340 },
+    }).setOrigin(0.5, 0).setResolution(2)
 
-    // Dica discreta
-    const hint = this.add.text(PANEL_W / 2, 250, '👆 Clique no botão para agrupar', {
-      fontSize: '15px',
-      fontFamily: 'Arial, sans-serif',
-      color: '#607D8B',
-      align: 'center',
-    }).setOrigin(0.5, 0)
-    panel.add(hint)
+    this.questionPanel.setData('qText', qText)
+    this.questionPanel.setData('hintText', hintText)
+    this.questionPanel.add([bg, qText, this.selectionCountText!, this.confirmBtn, hintText])
   }
 
-  // ── Banner de instrução da missão ────────────────────────────────────────
+  private showCurrentMission() {
+    if (!this.questionPanel) return
+    const mission = this.levelConfig.missions[this.currentMissionIndex]
 
-  private showMissionIntro() {
-    this.instructionBanner?.destroy()
-    this.instructionBanner = undefined
+    const qText = this.questionPanel.getData('qText') as Phaser.GameObjects.Text
+    const hintText = this.questionPanel.getData('hintText') as Phaser.GameObjects.Text
+    qText.setText(mission.question)
+    hintText.setText(mission.hint)
 
-    // Reconstrói o painel para a missão atual (botão e texto corretos)
-    this.filterPanelContainer?.destroy()
-    this.filterPanelContainer = undefined
-    this.buildFilterPanel()
+    this.selectedVehicleIds.clear()
+    this.vehicleCards.forEach(vc => this.setCardSelected(vc.container, false))
+    this.updateConfirmButton()
+    this.phase = 'waiting-answer'
 
-    // UIScene já exibe instrução e dica via mission-update.
-    const delay = this.vehicleCards.length * 70 + 200
-    this.time.delayedCall(delay, () => { this.phase = 'waiting-filter' })
+    this.broadcastMissionState()
   }
 
-  // ── Aplicar filtro ───────────────────────────────────────────────────────
+  private toggleVehicleSelection(vehicleId: string, container: Phaser.GameObjects.Container) {
+    if (this.gameEnded || this.phase !== 'waiting-answer') return
 
-  private applyFilter(attribute: FilterAttribute, value: FilterValue | null) {
-    this.phase = 'animating'
+    const isSelected = container.getData('selected') as boolean
+    this.setCardSelected(container, !isSelected)
 
-    if (value === null) {
-      // "Mostrar todos" → volta para posições originais
-      this.vehicleCards.forEach((card) => {
-        this.tweens.add({
-          targets: card.container,
-          x: card.homeX, y: card.homeY,
-          alpha: 1, scaleX: 1, scaleY: 1,
-          duration: 400, ease: 'Quad.Out',
-        })
+    if (!isSelected) {
+      this.selectedVehicleIds.add(vehicleId)
+    } else {
+      this.selectedVehicleIds.delete(vehicleId)
+    }
+
+    this.updateConfirmButton()
+    this.playTick()
+  }
+
+  private setCardSelected(container: Phaser.GameObjects.Container, selected: boolean) {
+    const selGlow = container.getData('selGlow') as Phaser.GameObjects.Graphics
+    const checkmark = container.getData('checkmark') as Phaser.GameObjects.Text
+    container.setData('selected', selected)
+
+    this.tweens.killTweensOf(selGlow)
+    this.tweens.killTweensOf(checkmark)
+
+    selGlow.setAlpha(selected ? 1 : 0)
+    checkmark.setAlpha(selected ? 1 : 0)
+
+    if (selected) {
+      this.tweens.add({
+        targets: container, scaleX: 1.05, scaleY: 1.05,
+        duration: 80, ease: 'Power2', yoyo: true,
       })
-      this.time.delayedCall(450, () => { this.phase = 'waiting-filter' })
+    }
+  }
+
+  private updateConfirmButton() {
+    if (!this.confirmBtn) return
+    const enabled = this.selectedVehicleIds.size > 0
+    const btnBg = this.confirmBtn.getData('btnBg') as Phaser.GameObjects.Graphics
+    const wasEnabled = this.confirmBtn.getData('enabled') as boolean
+
+    if (enabled === wasEnabled) {
+      // só atualiza o contador
+      if (this.selectionCountText) {
+        const n = this.selectedVehicleIds.size
+        this.selectionCountText.setText(`${n} selecionado${n !== 1 ? 's' : ''}`)
+      }
       return
     }
 
-    // Separa matching e non-matching
-    const matching:    VehicleCard[] = []
-    const nonMatching: VehicleCard[] = []
+    this.confirmBtn.setData('enabled', enabled)
+    btnBg.clear()
+    btnBg.fillStyle(enabled ? 0x42d640 : 0xb8c0cc, 1)
+    btnBg.fillRoundedRect(-120, -24, 240, 48, 24)
+    btnBg.lineStyle(3, 0xffffff, enabled ? 1 : 0.8)
+    btnBg.strokeRoundedRect(-120, -24, 240, 48, 24)
 
-    this.vehicleCards.forEach((card) => {
-      const attrVal = card.vehicle.attributes[attribute as keyof VehicleAttributes]
-      ;(attrVal === value ? matching : nonMatching).push(card)
-    })
-
-    // Zona superior → matching (destaque)
-    const MATCH_START_X = 95
-    const MATCH_Y       = 205
-    const MATCH_COLS    = 3
-
-    matching.forEach((card, i) => {
-      const col = i % MATCH_COLS
-      const row = Math.floor(i / MATCH_COLS)
-      const tx  = MATCH_START_X + col * (CARD_W + 10)
-      const ty  = MATCH_Y + row * (CARD_H + 10)
-
-      this.tweens.add({
-        targets: card.container,
-        x: tx, y: ty, alpha: 1, scaleX: 1.05, scaleY: 1.05,
-        duration: 550, ease: 'Quad.Out',
-      })
-    })
-
-    // Non-matching → desloca para baixo e esmaece
-    const NM_START_X = 95
-    const NM_Y       = 490
-    nonMatching.forEach((card, i) => {
-      const col = i % MATCH_COLS
-      const tx  = NM_START_X + col * (CARD_W + 10)
-
-      this.tweens.add({
-        targets: card.container,
-        x: tx, y: NM_Y, alpha: 0.25, scaleX: 0.78, scaleY: 0.78,
-        duration: 480, ease: 'Quad.Out',
-      })
-    })
-
-    // Zona de destaque (quadrado verde ao redor dos matching)
-    this.drawGroupZone(matching.length, MATCH_Y)
-
-    // Aguarda animação → exibe pergunta MCQ
-    this.time.delayedCall(680, () => {
-      const mission = this.levelConfig.filterMissions![this.currentMissionIndex]
-      this.showCountQuestion(mission.question, mission.expectedCount)
-    })
-  }
-
-  private drawGroupZone(count: number, topY: number) {
-    if (count === 0) return
-    const cols  = Math.min(count, 3)
-    const rows  = Math.ceil(count / 3)
-    const zoneW = cols * (CARD_W + 10) + 20
-    const zoneH = rows * (CARD_H + 10) + 20
-    const zx    = 85
-    const zy    = topY - 16
-
-    const zone = this.add.graphics()
-    zone.fillStyle(0x1B5E20, 0.12)
-    zone.fillRoundedRect(zx, zy, zoneW, zoneH, 16)
-    zone.lineStyle(2, 0x66BB6A, 0.55)
-    zone.strokeRoundedRect(zx, zy, zoneW, zoneH, 16)
-
-    // Destrói após a questão ser respondida
-    this.time.delayedCall(5000, () => zone.destroy())
-  }
-
-  // ── Pergunta MCQ de contagem ─────────────────────────────────────────────
-
-  private showCountQuestion(question: string, correct: number) {
-    this.questionOverlay?.destroy()
-    this.phase = 'question'
-
-    const CX     = VEH_AREA_W / 2
-    const CY     = BOTTOM_Y - 72
-    const overlay = this.add.container(CX, CY)
-    this.questionOverlay = overlay
-
-    // Fundo da pergunta
-    const bg = this.add.graphics()
-    bg.fillStyle(0x071320, 0.97)
-    bg.fillRoundedRect(-380, -60, 760, 120, 18)
-    bg.lineStyle(2, 0x4FC3F7, 0.65)
-    bg.strokeRoundedRect(-380, -60, 760, 120, 18)
-    overlay.add(bg)
-
-    // Texto da pergunta
-    const qTxt = this.add.text(0, -28, `❓  ${question}`, {
-      fontSize: '22px',
-      fontFamily: 'Arial Black, Arial',
-      color: '#E3F2FD',
-    }).setOrigin(0.5)
-    overlay.add(qTxt)
-
-    // Opções MCQ
-    const options = this.buildCountOptions(correct, this.levelConfig.vehicleIds.length)
-    const spacing = 150
-    options.forEach((opt, i) => {
-      const isCorrect = opt === correct
-      const bx = (i - 1) * spacing
-      const btn = this.makeMCQButton(String(opt), () => this.answerCount(isCorrect))
-      btn.setPosition(bx, 28)
-      overlay.add(btn)
-    })
-
-    overlay.setAlpha(0)
-    this.tweens.add({ targets: overlay, alpha: 1, duration: 280 })
-  }
-
-  private buildCountOptions(correct: number, total: number): number[] {
-    const candidates = new Set([correct])
-    const tries = [correct + 1, correct - 1, correct + 2, correct - 2]
-    for (const c of tries) {
-      if (c >= 1 && c <= total && candidates.size < 3) candidates.add(c)
-    }
-    return Phaser.Utils.Array.Shuffle([...candidates]).slice(0, 3) as number[]
-  }
-
-  private answerCount(correct: boolean) {
-    if (this.phase !== 'question') return
-    this.questionOverlay?.disableInteractive()
-    this.questionOverlay?.getAll<Phaser.GameObjects.Container>().forEach((c) => {
-      if (c.setInteractive) c.disableInteractive()
-    })
-
-    if (correct) {
-      this.onCorrect()
+    if (enabled) {
+      this.confirmBtn.setInteractive({ useHandCursor: true })
     } else {
-      this.onWrong()
+      this.confirmBtn.disableInteractive()
+    }
+
+    if (this.selectionCountText) {
+      const n = this.selectedVehicleIds.size
+      this.selectionCountText.setText(`${n} selecionado${n !== 1 ? 's' : ''}`)
     }
   }
 
-  // ── Acerto / Erro ─────────────────────────────────────────────────────────
+  private confirmAnswer() {
+    if (this.phase !== 'waiting-answer' || !this.confirmBtn?.getData('enabled')) return
 
-  private onCorrect() {
-    if (this.gameEnded) return
-    this.hits++
     this.phase = 'feedback-ok'
-    this.playHit()
-    this.showFeedback('✅  Muito bem!', 0x1B5E20)
+    this.confirmBtn?.disableInteractive()
 
-    runtimeGameBridge.emit({
-      type:         'CORRECT_ANSWER',
-      gameId:       GAME_ID,
-      pointsEarned: 20,
-      stage:        this.levelConfig.level,
-    })
+    const mission = this.levelConfig.missions[this.currentMissionIndex]
+    const vehicles = this.levelConfig.vehicleIds
+      .map(id => ALL_VEHICLES.find(v => v.id === id)!)
+      .filter(Boolean)
 
-    this.time.delayedCall(900, () => {
-      this.questionOverlay?.destroy()
-      this.questionOverlay = undefined
-      this.feedbackBanner?.destroy()
-      this.feedbackBanner = undefined
-      this.advanceMissionWithEffect()
-    })
-  }
-
-  private onWrong() {
-    if (this.gameEnded) return
-    this.gameEnded   = true
-    this.timerActive = false
-    this.timerTween?.stop()
-    this.warningBeepTimer?.destroy()
-    this.warningBeepTimer = null
-
-    this.errors++
-    this.phase = 'feedback-err'
-    this.playMiss()
-    this.showFeedback('❌  Resposta incorreta!', 0x7F0000)
-
-    runtimeGameBridge.emit({
-      type:         'WRONG_ANSWER',
-      gameId:       GAME_ID,
-      pointsEarned: 0,
-      stage:        this.levelConfig.level,
-    })
-
-    // Shake no overlay MCQ (nível 1 e 3)
-    if (this.questionOverlay) {
-      this.tweens.add({
-        targets:  this.questionOverlay,
-        x:        this.questionOverlay.x - 8,
-        duration: 55, yoyo: true, repeat: 4,
-      })
+    const matchesAttr = (v: Vehicle): boolean => {
+      switch (mission.attribute) {
+        case 'voa':       return v.attributes.voa       === mission.value
+        case 'temRodas':  return v.attributes.temRodas  === mission.value
+        case 'temMotor':  return v.attributes.temMotor  === mission.value
+        case 'meio':      return v.attributes.meio       === mission.value
+        default:          return false
+      }
     }
+    const correctIds = new Set(vehicles.filter(matchesAttr).map(v => v.id))
 
-    this.time.delayedCall(1200, () => {
-      this.feedbackBanner?.destroy()
-      this.feedbackBanner = undefined
-      this.showGameOverScreen('wrong-answer')
-    })
-  }
+    const selected = this.selectedVehicleIds
+    const isCorrect =
+      correctIds.size === selected.size &&
+      [...correctIds].every(id => selected.has(id))
 
-  private enableOverlayButtons() {
-    this.questionOverlay?.getAll<Phaser.GameObjects.Container>().forEach((child) => {
-      if (child instanceof Phaser.GameObjects.Container && child.input) {
-        child.setInteractive({ useHandCursor: true })
+    // Feedback visual em cada card
+    this.vehicleCards.forEach(vc => {
+      const id = vc.vehicle.id
+      const wasSelected = selected.has(id)
+      const shouldBeSelected = correctIds.has(id)
+
+      if (wasSelected && shouldBeSelected) {
+        // correto — pulso verde
+        this.tweens.add({
+          targets: vc.container, scaleX: 1.1, scaleY: 1.1,
+          duration: 180, ease: 'Sine.Out', yoyo: true,
+        })
+      } else if (wasSelected && !shouldBeSelected) {
+        // errado — destaca em vermelho
+        const wrongGlow = this.add.graphics()
+        wrongGlow.lineStyle(5, 0xef4444, 1)
+        wrongGlow.strokeRoundedRect(-CARD_W / 2 - 4, -CARD_H / 2 - 4, CARD_W + 8, CARD_H + 8, 18)
+        vc.container.add(wrongGlow)
+        this.tweens.add({
+          targets: vc.container, x: vc.homeX - 6, duration: 60, yoyo: true, repeat: 3, ease: 'Power2',
+          onComplete: () => wrongGlow.destroy(),
+        })
+      } else if (!wasSelected && shouldBeSelected) {
+        // esquecido — borda amarela pulsante
+        const missedGlow = this.add.graphics()
+        missedGlow.lineStyle(5, 0xf59e0b, 1)
+        missedGlow.strokeRoundedRect(-CARD_W / 2 - 4, -CARD_H / 2 - 4, CARD_W + 8, CARD_H + 8, 18)
+        vc.container.add(missedGlow)
+        // mostra o checkmark amarelo para indicar que deveria ter sido selecionado
+        const checkmark = vc.container.getData('checkmark') as Phaser.GameObjects.Text
+        checkmark.setStyle({ color: '#f59e0b' }).setAlpha(1)
+        this.time.delayedCall(1500, () => { missedGlow.destroy(); checkmark.setAlpha(0).setStyle({ color: '#42d640' }) })
       }
     })
-  }
 
-  private showFeedback(msg: string, bgColor: number) {
-    this.feedbackBanner?.destroy()
-    const txt = this.add.text(VEH_AREA_W / 2, TOP_Y + 80, msg, {
-      fontSize: '28px',
-      fontFamily: 'Arial Black, Arial',
-      color:    '#FFFFFF',
-      backgroundColor: `#${bgColor.toString(16).padStart(6, '0')}cc`,
-      padding:  { x: 24, y: 12 },
-    }).setOrigin(0.5).setDepth(200).setAlpha(0)
-
-    this.feedbackBanner = txt
-    this.tweens.add({ targets: txt, y: TOP_Y + 60, alpha: 1, duration: 250 })
-  }
-
-  // ── Progressão de missões ────────────────────────────────────────────────
-
-  private advanceMissionWithEffect() {
-    const missions =
-      this.levelConfig.filterMissions
-      ?? this.levelConfig.comparisonPairs
-      ?? this.levelConfig.groupingMissions
-      ?? []
-
-    const nextIndex = this.currentMissionIndex + 1
-    const isLast    = nextIndex >= missions.length
-
-    // Instrução da próxima missão (se houver)
-    let nextInstruction: string | null = null
-    if (!isLast) {
-      const next = missions[nextIndex]
-      nextInstruction = (next as { instruction?: string })?.instruction ?? null
+    if (isCorrect) {
+      this.hits++
+      this.playCorrect()
+      this.time.delayedCall(1200, () => this.advanceMission())
+    } else {
+      this.errors++
+      this.playError()
+      runtimeGameBridge.emit({
+        type: 'WRONG_ANSWER',
+        gameId: GAME_ID,
+        pointsEarned: -2,
+        stage: this.levelConfig.level,
+      })
+      this.emitCheckpoint()
+      this.time.delayedCall(1800, () => this.advanceMission())
     }
+  }
+
+  private advanceMission() {
+    const missions = this.levelConfig.missions
+    const isLast = this.currentMissionIndex >= missions.length - 1
+    const nextInstruction = !isLast
+      ? missions[this.currentMissionIndex + 1].question
+      : null
 
     this.showMissionCompleteEffect(isLast ? null : nextInstruction, () => {
       this.currentMissionIndex++
@@ -1158,566 +1009,37 @@ export class GameScene extends Phaser.Scene {
         this.endLevel()
         return
       }
-
-      this.emitCheckpoint()
-      this.broadcastMissionState()
-      this.phase = 'next-mission'
-
-      // Reset cards para posição home
-      this.vehicleCards.forEach((card, i) => {
-        this.tweens.add({
-          targets: card.container,
-          x: card.homeX, y: card.homeY,
-          alpha: 1, scaleX: 1, scaleY: 1,
-          duration: 380, ease: 'Quad.Out',
-          delay: i * 40,
-        })
-      })
-
-      this.time.delayedCall(500, () => {
-        switch (this.levelConfig.level) {
-          case 1: this.showMissionIntro();    break
-          case 2: this.nextComparisonPair();  break
-          case 3: this.nextGroupingMission(); break
-        }
-      })
+      this.time.delayedCall(300, () => this.showCurrentMission())
     })
   }
 
   private endLevel() {
     this.phase = 'level-complete'
+    this.gameEnded = true
+    this.timerActive = false
+    this.timerTween?.stop()
+    this.warningBeepTimer?.destroy()
+    this.warningBeepTimer = null
+
     this.playFanfare()
 
     runtimeGameBridge.emit({
-      type:  'GAME_COMPLETED',
+      type: 'GAME_COMPLETED',
       gameId: GAME_ID,
-      stage:  this.levelConfig.level,
+      stage: this.levelConfig.level,
     })
+    this.emitCheckpoint()
 
     const nextLevel = this.levelConfig.level < 3
-      ? (this.levelConfig.level + 1) as 1 | 2 | 3
+      ? (this.levelConfig.level + 1) as 2 | 3
       : null
 
-    this.showLevelCompleteTransition(nextLevel)
-  }
-
-  // ══════════════════════════════════════════════════════════════════════════
-  //  NÍVEL 2 — COMPARAÇÃO LADO A LADO
-  // ══════════════════════════════════════════════════════════════════════════
-
-  private startLevel2() {
-    this.renderComparisonPair(this.levelConfig.comparisonPairs![0])
-  }
-
-  private nextComparisonPair() {
-    this.vehicleCards.forEach((c) => c.container.destroy())
-    this.vehicleCards = []
-    this.comparisonAnswers.clear()
-    this.comparisonBtns.clear()
-    this.missionLayer?.destroy()
-    this.missionLayer = undefined
-
-    this.time.delayedCall(80, () => {
-      this.renderComparisonPair(
-        this.levelConfig.comparisonPairs![this.currentMissionIndex],
-      )
-    })
-  }
-
-  private renderComparisonPair(pair: ComparisonPair) {
-    // TODOS os objetos do par vão para missionLayer para que nextComparisonPair()
-    // destrua tudo com um único missionLayer.destroy()
-    const layer = this.add.container(0, 0)
-    this.missionLayer = layer
-
-    const vA = vehicleById(pair.vehicleAId)
-    const vB = vehicleById(pair.vehicleBId)
-
-    // Instrução
-    const instr = this.add.text(640, TOP_Y + 50,
-      `🔍  Compare ${vA.name} e ${vB.name} — são iguais ou diferentes em cada item?`, {
-      fontSize: '22px',
-      fontFamily: 'Arial, sans-serif',
-      color: '#E3F2FD',
-      stroke: '#000000',
-      strokeThickness: 3,
-      wordWrap: { width: 1100 },
-      align: 'center',
-    }).setOrigin(0.5, 0)
-    layer.add(instr)
-
-    // "VS" pulsante no centro
-    const vs = this.add.text(640, MID_Y - 110, 'VS', {
-      fontSize: '56px',
-      fontFamily: 'Arial Black, Arial',
-      color: '#FFD700',
-      stroke: '#000000',
-      strokeThickness: 6,
-    }).setOrigin(0.5)
-    this.tweens.add({ targets: vs, scaleX: 1.1, scaleY: 1.1, yoyo: true, repeat: -1, duration: 750 })
-    layer.add(vs)
-
-    // Cartões grandes dos veículos — retornam objetos para o layer
-    this.buildLargeCard(vA, 200, MID_Y, layer)
-    this.buildLargeCard(vB, 1080, MID_Y, layer)
-
-    // Tabela de atributos
-    const attrStartY = MID_Y - 90
-    const rowH       = 82
-
-    pair.attributes.forEach((attr, i) => {
-      this.buildComparisonRow(attr, vA, vB, 640, attrStartY + i * rowH, layer)
-    })
-
-    // Botão confirmar — guarda contra cliques durante animação ou game over
-    const confirm = this.makeRoundedButton('✔  Confirmar', 0x1565C0, 260, 72, () => {
-      if (this.gameEnded || this.phase === 'feedback-ok' || this.phase === 'animating') return
-      this.confirmComparison(vA, vB, pair.attributes)
-    })
-    confirm.setPosition(640, attrStartY + pair.attributes.length * rowH + 40)
-    layer.add(confirm)
-
-    // Entrada com fade
-    layer.setAlpha(0)
-    this.tweens.add({ targets: layer, alpha: 1, duration: 350 })
-  }
-
-  private buildLargeCard(vehicle: Vehicle, cx: number, cy: number, layer: Phaser.GameObjects.Container) {
-    const W = 190, H = 185
-
-    const bg = this.add.image(cx, cy, `card-${vehicle.attributes.meio}`)
-      .setDisplaySize(W, H).setOrigin(0.5)
-
-    const img = this.add.image(cx, cy - 20, `veh-${vehicle.id}`).setDisplaySize(110, 110).setOrigin(0.5)
-    const name = this.add.text(cx, cy + 66, vehicle.name, {
-      fontSize: '18px', fontFamily: 'Arial Black, Arial',
-      color: '#FFFFFF', stroke: '#000000', strokeThickness: 3,
-    }).setOrigin(0.5)
-
-    layer.add([bg, img, name])
-  }
-
-  private buildComparisonRow(
-    attr: FilterAttribute,
-    vA:   Vehicle,
-    vB:   Vehicle,
-    cx:   number,
-    cy:   number,
-    layer: Phaser.GameObjects.Container,
-  ) {
-    const labels: Record<FilterAttribute, string> = {
-      voa:      '✈️  Voa?',
-      temRodas: '🔵  Tem rodas?',
-      temMotor: '⚙️  Tem motor?',
-      meio:     '🗺️  Meio de transporte',
-    }
-
-    const rowBg = this.add.graphics()
-    rowBg.fillStyle(0x0D2137, 0.7)
-    rowBg.fillRoundedRect(cx - 280, cy - 36, 560, 72, 10)
-    rowBg.lineStyle(1, 0x37474F, 0.6)
-    rowBg.strokeRoundedRect(cx - 280, cy - 36, 560, 72, 10)
-
-    const labelTxt = this.add.text(cx, cy, labels[attr], {
-      fontSize: '18px',
-      fontFamily: 'Arial Black, Arial',
-      color: '#B0BEC5',
-    }).setOrigin(0.5)
-
-    const igualBtn     = this.makeOptionButton('IGUAL',     0x1B5E20, () => this.selectAnswer(attr, true))
-    const diferenteBtn = this.makeOptionButton('DIFERENTE', 0x7F0000, () => this.selectAnswer(attr, false))
-
-    igualBtn.setPosition(cx - 210, cy)
-    diferenteBtn.setPosition(cx + 210, cy)
-
-    this.comparisonAnswers.set(attr, null)
-    this.comparisonBtns.set(attr, { igualBtn, diferenteBtn })
-
-    layer.add([rowBg, labelTxt, igualBtn, diferenteBtn])
-  }
-
-  private makeOptionButton(label: string, color: number, onClick: () => void): Phaser.GameObjects.Container {
-    const container = this.add.container(0, 0)
-    const W = 150, H = 60
-
-    const bg = this.add.graphics()
-    bg.fillStyle(color, 0.5)
-    bg.fillRoundedRect(-W / 2, -H / 2, W, H, 10)
-    bg.lineStyle(2, 0xFFFFFF, 0.2)
-    bg.strokeRoundedRect(-W / 2, -H / 2, W, H, 10)
-
-    const txt = this.add.text(0, 0, label, {
-      fontSize: '17px',
-      fontFamily: 'Arial Black, Arial',
-      color: '#FFFFFF',
-    }).setOrigin(0.5)
-
-    container.add([bg, txt])
-    container.setSize(W, H)
-    container.setInteractive({ useHandCursor: true })
-    container.on('pointerdown', () => { this.playTick(); onClick() })
-    return container
-  }
-
-  private selectAnswer(attr: FilterAttribute, isIgual: boolean) {
-    this.comparisonAnswers.set(attr, isIgual)
-
-    const btns = this.comparisonBtns.get(attr)
-    if (!btns) return
-
-    const redraw = (btn: Phaser.GameObjects.Container, active: boolean, color: number) => {
-      const bg = btn.getAt(0) as Phaser.GameObjects.Graphics
-      bg.clear()
-      const W = 150, H = 60
-      bg.fillStyle(color, active ? 1 : 0.3)
-      bg.fillRoundedRect(-W / 2, -H / 2, W, H, 10)
-      bg.lineStyle(active ? 3 : 1, 0xFFFFFF, active ? 0.9 : 0.15)
-      bg.strokeRoundedRect(-W / 2, -H / 2, W, H, 10)
-      if (active) {
-        this.tweens.add({ targets: btn, scaleX: 1.08, scaleY: 1.08, yoyo: true, duration: 120 })
-      }
-    }
-
-    redraw(btns.igualBtn,     isIgual,  0x1B5E20)
-    redraw(btns.diferenteBtn, !isIgual, 0x7F0000)
-    this.playTick()
-  }
-
-  private confirmComparison(vA: Vehicle, vB: Vehicle, attrs: FilterAttribute[]) {
-    // Verifica se respondeu tudo
-    const unanswered = attrs.filter((a) => this.comparisonAnswers.get(a) === null)
-    if (unanswered.length > 0) {
-      this.showToast('Responda todas as características! 😊', 0xF57F17)
-      return
-    }
-
-    let allCorrect = true
-    attrs.forEach((attr) => {
-      const valA     = vA.attributes[attr as keyof VehicleAttributes]
-      const valB     = vB.attributes[attr as keyof VehicleAttributes]
-      const realIgual = valA === valB
-      if (this.comparisonAnswers.get(attr) !== realIgual) allCorrect = false
-    })
-
-    if (allCorrect) {
-      this.onCorrect()
-    } else {
-      // Shake dos botões errados antes de chamar onWrong()
-      attrs.forEach((attr) => {
-        const valA      = vA.attributes[attr as keyof VehicleAttributes]
-        const valB      = vB.attributes[attr as keyof VehicleAttributes]
-        const realIgual = valA === valB
-        if (this.comparisonAnswers.get(attr) !== realIgual) {
-          const btns = this.comparisonBtns.get(attr)
-          if (btns) {
-            const wrongBtn = realIgual ? btns.diferenteBtn : btns.igualBtn
-            this.tweens.add({ targets: wrongBtn, x: wrongBtn.x - 6, duration: 50, yoyo: true, repeat: 5 })
-          }
-        }
-      })
-      this.onWrong()
-    }
-  }
-
-  // ══════════════════════════════════════════════════════════════════════════
-  //  NÍVEL 3 — DESCOBERTA DO ATRIBUTO
-  // ══════════════════════════════════════════════════════════════════════════
-
-  private startLevel3() {
-    this.renderGroupingMission(this.levelConfig.groupingMissions![0])
-  }
-
-  private nextGroupingMission() {
-    this.vehicleCards.forEach((c) => c.container.destroy())
-    this.vehicleCards = []
-    this.renderGroupingMission(
-      this.levelConfig.groupingMissions![this.currentMissionIndex],
-    )
-  }
-
-  private renderGroupingMission(mission: GroupingMission) {
-    const ids = this.levelConfig.vehicleIds  // 12 veículos
-
-    // Grid 4×3 de cartões pequenos (zona esquerda)
-    const COLS  = 4
-    const START_X = 40
-    const START_Y = TOP_Y + 60
-
-    ids.forEach((id, idx) => {
-      const col = idx % COLS
-      const row = Math.floor(idx / COLS)
-      const cx  = START_X + col * (SCARD_W + SCARD_GAP) + SCARD_W / 2
-      const cy  = START_Y + row * (SCARD_H + SCARD_GAP) + SCARD_H / 2
-
-      const vehicle  = vehicleById(id)
-      const attrVal  = vehicle.attributes[mission.highlightAttribute as keyof VehicleAttributes]
-      const isMatch  = attrVal === mission.highlightValue
-
-      this.vehicleCards.push(this.makeSmallCard(vehicle, cx, cy, isMatch))
-    })
-
-    // Instrução
-    this.add.text(START_X + (COLS * (SCARD_W + SCARD_GAP)) / 2, TOP_Y + 40,
-      `💬  ${mission.instruction}`, {
-        fontSize: '22px',
-        fontFamily: 'Arial, sans-serif',
-        color: '#FFFDE7',
-        stroke: '#000000',
-        strokeThickness: 3,
-      }).setOrigin(0.5, 0)
-
-    // Painel da pergunta (direita)
-    this.time.delayedCall(1300, () => this.showGroupingQuestion(mission))
-  }
-
-  private makeSmallCard(vehicle: Vehicle, cx: number, cy: number, highlight: boolean): VehicleCard {
-    const scale = SCARD_W / CARD_W
-
-    const bg = this.add.image(0, 0, `card-${vehicle.attributes.meio}`)
-      .setDisplaySize(CARD_W, CARD_H).setOrigin(0.5)
-
-    const img = this.add.image(0, -10, `veh-${vehicle.id}`).setDisplaySize(76, 76).setOrigin(0.5)
-
-    const nameBg = this.add.graphics()
-    nameBg.fillStyle(0x000000, 0.45)
-    nameBg.fillRoundedRect(-CARD_W / 2 + 4, CARD_H / 2 - 26, CARD_W - 8, 22, { tl: 0, tr: 0, bl: 12, br: 12 })
-
-    const name = this.add.text(0, CARD_H / 2 - 15, vehicle.name, {
-      fontSize: '13px', fontFamily: 'Arial Black, Arial',
-      color: '#FFFFFF', stroke: '#000000', strokeThickness: 2,
-    }).setOrigin(0.5)
-
-    const container = this.add.container(cx, cy, [bg, nameBg, img, name])
-    container.setSize(CARD_W, CARD_H)
-    container.setScale(scale)
-
-    if (highlight) {
-      const glow = this.add.graphics()
-      glow.lineStyle(4 / scale, 0xFFD700, 1)
-      glow.strokeRoundedRect(-CARD_W / 2 - 8, -CARD_H / 2 - 8, CARD_W + 16, CARD_H + 16, 22)
-      container.addAt(glow, 0)
-      this.tweens.add({
-        targets: container,
-        scaleX: scale * 1.06, scaleY: scale * 1.06,
-        yoyo: true, repeat: -1, duration: 850, ease: 'Sine.InOut',
-      })
-    }
-
-    container.setAlpha(0)
-    this.tweens.add({
-      targets: container, alpha: highlight ? 1 : 0.45,
-      duration: 280, delay: this.vehicleCards.length * 40,
-    })
-    return { container, vehicle, homeX: cx, homeY: cy }
-  }
-
-  private showGroupingQuestion(mission: GroupingMission) {
-    this.questionOverlay?.destroy()
-    this.phase = 'question'
-
-    const PX    = PANEL_LEFT_X
-    const PY    = TOP_Y + 35
-    const PH    = BOTTOM_Y - TOP_Y - 35
-
-    const overlay = this.add.container(0, 0)
-    this.questionOverlay = overlay
-
-    // Fundo do painel
-    const bg = this.add.graphics()
-    bg.fillStyle(0x081524, 0.96)
-    bg.fillRoundedRect(PX, PY, PANEL_W, PH, 20)
-    bg.lineStyle(2, 0xFFD700, 0.6)
-    bg.strokeRoundedRect(PX, PY, PANEL_W, PH, 20)
-    overlay.add(bg)
-
-    // Pergunta
-    const qTxt = this.add.text(PX + PANEL_W / 2, PY + 40, `🔍  ${mission.question}`, {
-      fontSize: '22px',
-      fontFamily: 'Arial Black, Arial',
-      color: '#FFD700',
-      wordWrap: { width: PANEL_W - 40 },
-      align: 'center',
-    }).setOrigin(0.5, 0)
-    overlay.add(qTxt)
-
-    // Dica visual — destaque amarelo
-    const hint = this.add.text(PX + PANEL_W / 2, PY + 110, 'Os veículos com borda\ndourada foram agrupados.\nO que eles têm em comum?', {
-      fontSize: '15px',
-      fontFamily: 'Arial, sans-serif',
-      color: '#90CAF9',
-      align: 'center',
-    }).setOrigin(0.5, 0)
-    overlay.add(hint)
-
-    // Opções 2×2
-    const optW = PANEL_W - 40
-    const optH = 58
-    const optGap = 12
-    const optStartY = PY + 185
-
-    mission.options.forEach((opt, i) => {
-      const row = Math.floor(i / 2)
-      const col = i % 2
-      const ox  = PX + 20 + col * ((optW / 2) + optGap / 2)
-      const oy  = optStartY + row * (optH + optGap)
-      const isCorrect = i === mission.correctOptionIndex
-
-      const btn = this.makeGroupOptionButton(opt.label, isCorrect, optW / 2 - 6, 72, () => {
-        if (this.phase !== 'question') return
-        overlay.getAll<Phaser.GameObjects.Container>().forEach((c) => {
-          if (c instanceof Phaser.GameObjects.Container) c.disableInteractive()
-        })
-        if (isCorrect) this.onCorrect()
-        else           this.onWrong()
-      })
-      btn.setPosition(ox + (optW / 2 - 6) / 2, oy + optH / 2)
-      overlay.add(btn)
-    })
-
-    overlay.setAlpha(0)
-    this.tweens.add({ targets: overlay, alpha: 1, duration: 380 })
-  }
-
-  private makeGroupOptionButton(
-    label: string,
-    _isCorrect: boolean,
-    W: number, H: number,
-    onClick: () => void,
-  ): Phaser.GameObjects.Container {
-    const container = this.add.container(0, 0)
-
-    const bg = this.add.graphics()
-    bg.fillStyle(0x1565C0, 0.9)
-    bg.fillRoundedRect(-W / 2, -H / 2, W, H, 12)
-    bg.lineStyle(2, 0x90CAF9, 0.4)
-    bg.strokeRoundedRect(-W / 2, -H / 2, W, H, 12)
-
-    const txt = this.add.text(0, 0, label, {
-      fontSize: '15px',
-      fontFamily: 'Arial Black, Arial',
-      color: '#FFFFFF',
-      wordWrap: { width: W - 16 },
-      align: 'center',
-    }).setOrigin(0.5)
-
-    container.add([bg, txt])
-    container.setSize(W, H)
-    container.setInteractive({ useHandCursor: true })
-
-    container.on('pointerover', () => {
-      bg.clear()
-      bg.fillStyle(0x1E88E5, 1)
-      bg.fillRoundedRect(-W / 2, -H / 2, W, H, 12)
-      bg.lineStyle(2, 0xE3F2FD, 0.8)
-      bg.strokeRoundedRect(-W / 2, -H / 2, W, H, 12)
-    })
-    container.on('pointerout', () => {
-      bg.clear()
-      bg.fillStyle(0x1565C0, 0.9)
-      bg.fillRoundedRect(-W / 2, -H / 2, W, H, 12)
-      bg.lineStyle(2, 0x90CAF9, 0.4)
-      bg.strokeRoundedRect(-W / 2, -H / 2, W, H, 12)
-    })
-    container.on('pointerdown', () => { this.playTick(); onClick() })
-
-    return container
+    this.time.delayedCall(400, () => this.showLevelCompleteTransition(nextLevel))
   }
 
   // ══════════════════════════════════════════════════════════════════════════
   //  UTILITÁRIOS DE UI
   // ══════════════════════════════════════════════════════════════════════════
-
-  private makeRoundedButton(
-    label: string,
-    color: number,
-    W: number, H: number,
-    onClick: () => void,
-  ): Phaser.GameObjects.Container {
-    const container = this.add.container(0, 0)
-
-    const bg = this.add.graphics()
-    bg.fillStyle(color, 0.9)
-    bg.fillRoundedRect(-W / 2, -H / 2, W, H, 14)
-    bg.lineStyle(2, 0xFFFFFF, 0.25)
-    bg.strokeRoundedRect(-W / 2, -H / 2, W, H, 14)
-
-    const txt = this.add.text(0, 0, label, {
-      fontSize: '18px',
-      fontFamily: 'Arial Black, Arial',
-      color: '#FFFFFF',
-    }).setOrigin(0.5)
-
-    container.add([bg, txt])
-    container.setSize(W, H)
-    container.setInteractive({ useHandCursor: true })
-
-    container.on('pointerover', () => {
-      this.tweens.add({ targets: container, scaleX: 1.05, scaleY: 1.05, duration: 110 })
-      bg.clear()
-      bg.fillStyle(Phaser.Display.Color.IntegerToColor(color).brighten(20).color, 1)
-      bg.fillRoundedRect(-W / 2, -H / 2, W, H, 14)
-    })
-    container.on('pointerout', () => {
-      this.tweens.add({ targets: container, scaleX: 1, scaleY: 1, duration: 110 })
-      bg.clear()
-      bg.fillStyle(color, 0.9)
-      bg.fillRoundedRect(-W / 2, -H / 2, W, H, 14)
-    })
-    container.on('pointerdown', () => { this.playTick(); onClick() })
-
-    return container
-  }
-
-  private makeMCQButton(label: string, onClick: () => void): Phaser.GameObjects.Container {
-    const container = this.add.container(0, 0)
-    const W = 120, H = 76
-
-    const bg = this.add.graphics()
-    bg.fillStyle(0x0D47A1, 1)
-    bg.fillRoundedRect(-W / 2, -H / 2, W, H, 12)
-    bg.lineStyle(2, 0x90CAF9, 0.5)
-    bg.strokeRoundedRect(-W / 2, -H / 2, W, H, 12)
-
-    const txt = this.add.text(0, 0, label, {
-      fontSize: '34px',
-      fontFamily: 'Arial Black, Arial',
-      color: '#FFFFFF',
-    }).setOrigin(0.5)
-
-    container.add([bg, txt])
-    container.setSize(W, H)
-    container.setInteractive({ useHandCursor: true })
-
-    container.on('pointerover', () => {
-      bg.clear()
-      bg.fillStyle(0x1565C0, 1)
-      bg.fillRoundedRect(-W / 2, -H / 2, W, H, 12)
-    })
-    container.on('pointerout', () => {
-      bg.clear()
-      bg.fillStyle(0x0D47A1, 1)
-      bg.fillRoundedRect(-W / 2, -H / 2, W, H, 12)
-    })
-    container.on('pointerdown', () => { this.playTick(); onClick() })
-
-    return container
-  }
-
-  private showToast(message: string, color: number) {
-    const toast = this.add.text(640, BOTTOM_Y - 30, message, {
-      fontSize: '18px',
-      fontFamily: 'Arial, sans-serif',
-      color: '#FFFFFF',
-      backgroundColor: `#${color.toString(16).padStart(6, '0')}cc`,
-      padding: { x: 16, y: 10 },
-    }).setOrigin(0.5).setDepth(250).setAlpha(0)
-
-    this.tweens.add({
-      targets: toast, alpha: 1,
-      duration: 200, yoyo: true, hold: 1800,
-      onComplete: () => toast.destroy(),
-    })
-  }
 
   // ══════════════════════════════════════════════════════════════════════════
   //  HELPERS DE MODAL
@@ -1744,13 +1066,10 @@ export class GameScene extends Phaser.Scene {
   }
 
   private getLevelInfo(lvl: number): { objective: string; tip: string } {
-    if (lvl === 2) return {
-      objective: 'Compare dois veículos e descubra semelhanças e diferenças.',
-      tip: 'Marque IGUAL ou DIFERENTE para cada característica.',
-    }
+    const config = LEVELS.find(l => l.level === lvl)
     return {
-      objective: 'Descubra o que os veículos destacados têm em comum.',
-      tip: 'Observe os veículos com borda dourada e escolha a resposta.',
+      objective: config?.objective ?? '',
+      tip: config?.tip ?? '',
     }
   }
 
@@ -1780,13 +1099,12 @@ export class GameScene extends Phaser.Scene {
     osc.start(); osc.stop(ctx.currentTime + dur)
   }
 
-  private playTick()   { this.playTone(880, 0.07, 'sine', 0.12) }
-  private playHit()    {
-    this.playTone(523, 0.11, 'sine', 0.28)
-    this.time.delayedCall(120, () => this.playTone(659, 0.11, 'sine', 0.28))
-    this.time.delayedCall(240, () => this.playTone(784, 0.18, 'sine', 0.28))
+  private playTick()   { this.playTone(520, 0.04, 'sine', 0.08) }
+  private playCorrect() {
+    this.playTone(660, 0.08, 'sine', 0.15)
+    this.time.delayedCall(100, () => this.playTone(880, 0.08, 'sine', 0.12))
   }
-  private playMiss()   { this.playTone(200, 0.32, 'sawtooth', 0.28) }
+  private playError()  { this.playTone(330, 0.20, 'square', 0.15) }
   private playFanfare() {
     [523, 659, 784, 1047].forEach((f, i) =>
       this.time.delayedCall(i * 125, () => this.playTone(f, 0.22, 'sine', 0.32)),

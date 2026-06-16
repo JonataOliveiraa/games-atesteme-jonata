@@ -1,109 +1,100 @@
 import type { LevelConfig } from '../types'
 
-/**
- * Nível 1 — Dois atributos, três missões:
- *   M1: filtrar por VOA = true  (3 veículos)
- *   M2: filtrar por VOA = false (3 veículos)
- *   M3: filtrar por TEM RODAS = true (4 veículos: avião, carro, ônibus, bicicleta)
- *   6 veículos, timer 30s.
- *
- * Nível 2 — Comparação lado a lado:
- *   8 veículos, 2 pares comparados por 4 atributos.
- *
- * Nível 3 — Descoberta do atributo:
- *   12 veículos, aluno identifica qual atributo une um grupo destacado.
- */
 export const LEVELS: LevelConfig[] = [
-
-  // ── NÍVEL 1 ──────────────────────────────────────────────────────────────
   {
     level: 1,
     timeLimit: 30,
     vehicleIds: ['aviao', 'helicoptero', 'foguete', 'carro', 'onibus', 'bicicleta'],
-    filterMissions: [
+    title: 'Voar ou não voar?',
+    objective: 'Toque nos veículos que pertencem a cada grupo.',
+    tip: 'Observe as imagens com atenção antes de tocar.',
+    missions: [
       {
         id: 'l1-m1',
-        instruction: 'Veja quais veículos VOAM! Clique no painel.',
-        question: 'Quantos veículos VOAM?',
-        filterAttribute: 'voa',
-        filterValue: true,
-        expectedCount: 3,   // aviao, helicoptero, foguete
+        question: 'Quais veículos VOAM? ✈️',
+        hint: 'Toque nos veículos que voam',
+        attribute: 'voa',
+        value: true,
       },
       {
         id: 'l1-m2',
-        instruction: 'E quais NÃO voam? Clique no painel.',
-        question: 'Quantos veículos NÃO voam?',
-        filterAttribute: 'voa',
-        filterValue: false,
-        expectedCount: 3,   // carro, onibus, bicicleta
+        question: 'Quais NÃO voam? 🚗',
+        hint: 'Toque nos veículos que não voam',
+        attribute: 'voa',
+        value: false,
       },
       {
         id: 'l1-m3',
-        instruction: 'Agora descubra quais têm RODAS! Clique no painel.',
-        question: 'Quantos veículos têm RODAS?',
-        filterAttribute: 'temRodas',
-        filterValue: true,
-        expectedCount: 4,   // aviao, carro, onibus, bicicleta
+        question: 'Quais têm RODAS? 🔵',
+        hint: 'Toque nos veículos com rodas',
+        attribute: 'temRodas',
+        value: true,
       },
     ],
   },
-
-  // ── NÍVEL 2 ──────────────────────────────────────────────────────────────
   {
     level: 2,
-    timeLimit: 25,
+    timeLimit: 30,
     vehicleIds: ['aviao', 'carro', 'barco', 'foguete', 'bicicleta', 'lancha', 'trem', 'moto'],
-    comparisonPairs: [
+    title: 'Onde vão e como funcionam?',
+    objective: 'Identifique os veículos pelo meio e pelo funcionamento.',
+    tip: 'Alguns veículos podem ter mais de uma característica!',
+    missions: [
       {
-        vehicleAId: 'aviao',
-        vehicleBId: 'carro',
-        attributes: ['voa', 'temRodas', 'temMotor', 'meio'],
+        id: 'l2-m1',
+        question: 'Quais vão pelo AR? ✈️',
+        hint: 'Toque nos veículos que se movem pelo ar',
+        attribute: 'meio',
+        value: 'ar',
       },
       {
-        vehicleAId: 'barco',
-        vehicleBId: 'foguete',
-        attributes: ['voa', 'temRodas', 'temMotor', 'meio'],
+        id: 'l2-m2',
+        question: 'Quais vão pela ÁGUA? 🌊',
+        hint: 'Toque nos veículos que se movem pela água',
+        attribute: 'meio',
+        value: 'agua',
+      },
+      {
+        id: 'l2-m3',
+        question: 'Quais têm MOTOR? ⚙️',
+        hint: 'Toque nos veículos que usam motor',
+        attribute: 'temMotor',
+        value: true,
       },
     ],
   },
-
-  // ── NÍVEL 3 ──────────────────────────────────────────────────────────────
   {
     level: 3,
-    timeLimit: 30,
+    timeLimit: 35,
     vehicleIds: [
       'aviao', 'helicoptero', 'foguete', 'moto',
       'carro', 'onibus', 'bicicleta', 'trem',
       'barco', 'lancha', 'patinete', 'navio',
     ],
-    groupingMissions: [
+    title: 'Ar, terra ou água?',
+    objective: 'Classifique todos os veículos pelo meio de transporte.',
+    tip: 'Existem 3 grupos: ar, terra e água. Encontre todos!',
+    missions: [
       {
         id: 'l3-m1',
-        instruction: 'Observe os veículos em destaque...',
-        question: 'O que esses veículos têm em COMUM?',
-        highlightAttribute: 'meio',
-        highlightValue: 'agua',
-        options: [
-          { label: 'Voam ✈️',         attribute: 'voa',      value: true    },
-          { label: 'Têm rodas 🔵',    attribute: 'temRodas', value: true    },
-          { label: 'Vão pela água 🌊', attribute: 'meio',     value: 'agua'  },
-          { label: 'Têm motor ⚙️',    attribute: 'temMotor', value: true    },
-        ],
-        correctOptionIndex: 2,
+        question: 'Quais vão pelo AR? ✈️',
+        hint: 'Toque nos veículos que se movem pelo ar',
+        attribute: 'meio',
+        value: 'ar',
       },
       {
         id: 'l3-m2',
-        instruction: 'Olha esses outros veículos agrupados...',
-        question: 'O que esses veículos têm em COMUM?',
-        highlightAttribute: 'temMotor',
-        highlightValue: false,
-        options: [
-          { label: 'Voam ✈️',           attribute: 'voa',      value: true  },
-          { label: 'Têm rodas 🔵',      attribute: 'temRodas', value: true  },
-          { label: 'Não têm motor 🔇',  attribute: 'temMotor', value: false },
-          { label: 'Vão pelo ar 💨',    attribute: 'meio',     value: 'ar'  },
-        ],
-        correctOptionIndex: 2,
+        question: 'Quais vão pela TERRA? 🛣️',
+        hint: 'Toque nos veículos que se movem pela terra',
+        attribute: 'meio',
+        value: 'terra',
+      },
+      {
+        id: 'l3-m3',
+        question: 'Quais vão pela ÁGUA? 🌊',
+        hint: 'Toque nos veículos que se movem pela água',
+        attribute: 'meio',
+        value: 'agua',
       },
     ],
   },

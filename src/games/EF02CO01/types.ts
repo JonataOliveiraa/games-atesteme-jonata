@@ -17,39 +17,28 @@ export interface Vehicle {
   attributes: VehicleAttributes
 }
 
-/** Missão dos níveis 1 (filtro binário + MCQ de contagem) */
-export interface FilterMission {
-  id: string
-  instruction: string
-  question: string
-  filterAttribute: FilterAttribute
-  filterValue: FilterValue
-  expectedCount: number
+export interface VehicleCard {
+  container: Phaser.GameObjects.Container
+  vehicle: Vehicle
+  homeX: number
+  homeY: number
 }
 
-/** Par de veículos para o nível 2 (comparação) */
-export interface ComparisonPair {
-  vehicleAId: string
-  vehicleBId: string
-  attributes: FilterAttribute[]
-}
-
-/** Missão do nível 3: aluno descobre o atributo comum de um grupo */
-export interface GroupingMission {
+/** Missão: jogador toca nos veículos que correspondem ao atributo/valor */
+export interface SelectionMission {
   id: string
-  instruction: string
-  question: string
-  highlightAttribute: FilterAttribute
-  highlightValue: FilterValue
-  options: { label: string; attribute: FilterAttribute; value: FilterValue }[]
-  correctOptionIndex: number
+  question: string      // "Quais veículos VOAM? ✈️"
+  hint: string          // "Toque nos veículos que voam"
+  attribute: FilterAttribute
+  value: FilterValue
 }
 
 export interface LevelConfig {
   level: 1 | 2 | 3
   vehicleIds: string[]
-  timeLimit: number           // segundos
-  filterMissions?: FilterMission[]
-  comparisonPairs?: ComparisonPair[]
-  groupingMissions?: GroupingMission[]
+  timeLimit: number
+  missions: SelectionMission[]
+  title: string         // "Voar ou não voar?"
+  objective: string     // exibido no modal de instrução
+  tip: string           // exibido no modal de instrução
 }
