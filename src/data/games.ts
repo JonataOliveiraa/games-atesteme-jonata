@@ -9,6 +9,7 @@ import desktopThumbnail from "../assets/games/EF01CO06/cover.png";
 import robotParadeThumbnail from "../assets/games/EF02CO02/cover.png";
 import hangarThumbnail from "../assets/games/EF02CO01/cover-hangar.png";
 import machineFactoryThumbnail from "../assets/games/EF02CO03/cover.png";
+import informationBuilderThumbnail from "../assets/games/EF03CO04/cover-montador-informacoes.png";
 
 export const games: Game[] = [
   {
@@ -188,6 +189,6 @@ export const games: Game[] = [
     points: 60,
     icon: "🧩",
     slug: "montador-de-informacoes",
-    thumbnail: heroThumbnail,
+    thumbnail: informationBuilderThumbnail,
   },
 ];
