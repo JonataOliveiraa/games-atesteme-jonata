@@ -22,7 +22,7 @@ const PANEL_W      = 400
 
 // Cartão
 const CARD_W       = 155
-const CARD_H       = 125
+const CARD_H       = 132
 
 // ── Tipos internos ────────────────────────────────────────────────────────────
 
@@ -736,8 +736,8 @@ export class GameScene extends Phaser.Scene {
     const bg = this.add.image(0, 0, `card-${vehicle.attributes.meio}`)
       .setDisplaySize(CARD_W, CARD_H).setOrigin(0.5)
 
-    const img = this.add.image(0, -10, `veh-${vehicle.id}`)
-      .setDisplaySize(76, 76).setOrigin(0.5)
+    const img = this.add.image(0, -12, `veh-${vehicle.id}`)
+      .setDisplaySize(96, 96).setOrigin(0.5)
 
     const nameBg = this.add.graphics()
     nameBg.fillStyle(0x000000, 0.45)
@@ -844,6 +844,12 @@ export class GameScene extends Phaser.Scene {
     this.updateConfirmButton()
     this.phase = 'waiting-answer'
 
+    // Retoma o timer pausado por confirmAnswer() (só se a cena não encerrou)
+    if (!this.gameEnded && this.timerTween) {
+      this.timerActive = true
+      this.timerTween.resume()
+    }
+
     this.broadcastMissionState()
   }
 
@@ -921,6 +927,13 @@ export class GameScene extends Phaser.Scene {
 
     this.phase = 'feedback-ok'
     this.confirmBtn?.disableInteractive()
+
+    // Pausa o timer imediatamente para evitar que onTimeUp() dispare
+    // durante o delayedCall de feedback (race condition)
+    this.timerActive = false
+    this.timerTween?.pause()
+    this.warningBeepTimer?.destroy()
+    this.warningBeepTimer = null
 
     const mission = this.levelConfig.missions[this.currentMissionIndex]
     const vehicles = this.levelConfig.vehicleIds
