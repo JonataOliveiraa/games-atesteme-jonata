@@ -1,5 +1,6 @@
 ﻿import Phaser from "phaser";
 
+import blockMoveUrl from "../../../assets/games/EF02CO02/block-move.png";
 import goalStageUrl from "../../../assets/games/EF02CO02/goal-stage.png";
 import gridTileUrl from "../../../assets/games/EF02CO02/grid-tile.png";
 import obstacleConeUrl from "../../../assets/games/EF02CO02/obstacle-cone.png";
@@ -11,6 +12,7 @@ import wallpaperUrl from "../../../assets/games/EF02CO02/wallpaper.png";
 const ASSETS: Array<[string, string]> = [
   ["wallpaper", wallpaperUrl],
   ["robot", robotUrl],
+  ["block-move", blockMoveUrl],
   ["goal-stage", goalStageUrl],
   ["obstacle-cone", obstacleConeUrl],
   ["grid-tile", gridTileUrl],

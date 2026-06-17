@@ -9,7 +9,8 @@ const GAME_ID = "desfile-do-robo-repetidor";
 const TIMER_BAR_W = 820;
 const TIMER_BAR_Y = 48;
 const MODAL_SCALE = 1.18;
-const MAX_PROGRAM_BLOCKS = 14;
+const BOARD_START_X = 86;
+const BOARD_START_Y = 210;
 
 const COLORS = {
   blue: 0x2563eb,
@@ -28,10 +29,15 @@ export class GameScene extends Phaser.Scene {
   private robotState!: { x: number; y: number; direction: Direction };
   private pathMarks: Phaser.GameObjects.GameObject[] = [];
   private programObjects: Phaser.GameObjects.GameObject[] = [];
+  private executedPath: GridPoint[] = [];
   private overlayObjects: Phaser.GameObjects.GameObject[] = [];
+  private infoObjects: Phaser.GameObjects.GameObject[] = [];
   private directionHitAreas: Array<{ bounds: Phaser.Geom.Rectangle; onClick: () => void }> = [];
   private actionHitAreas: Array<{ bounds: Phaser.Geom.Rectangle; onClick: () => void }> = [];
+  private infoHitArea?: { bounds: Phaser.Geom.Rectangle; onClick: () => void };
+  private infoCloseHitArea?: { bounds: Phaser.Geom.Rectangle; onClick: () => void };
   private commandLocked = false;
+  private hasPassedCheckpoint = false;
   private hits = 0;
   private errors = 0;
   private hasStartedTimer = false;
@@ -54,10 +60,15 @@ export class GameScene extends Phaser.Scene {
     };
     this.pathMarks = [];
     this.programObjects = [];
+    this.executedPath = [];
     this.overlayObjects = [];
+    this.infoObjects = [];
     this.directionHitAreas = [];
     this.actionHitAreas = [];
+    this.infoHitArea = undefined;
+    this.infoCloseHitArea = undefined;
     this.commandLocked = false;
+    this.hasPassedCheckpoint = this.isCheckpoint(this.robotState.x, this.robotState.y);
     this.hits = 0;
     this.errors = 0;
     this.hasStartedTimer = false;
@@ -187,16 +198,6 @@ export class GameScene extends Phaser.Scene {
       strokeThickness: 7,
     }).setOrigin(0.5);
 
-    this.add.text(640, 132, this.levelConfig.objective, {
-      fontSize: "20px",
-      fontFamily: "Arial Black, Arial",
-      color: "#0f172a",
-      stroke: "#ffffff",
-      strokeThickness: 4,
-      align: "center",
-      wordWrap: { width: 820 },
-    }).setOrigin(0.5);
-
     this.add.text(1080, 105, `Nível ${this.levelConfig.level}/3`, {
       fontSize: "18px",
       fontFamily: "Arial Black, Arial",
@@ -206,15 +207,120 @@ export class GameScene extends Phaser.Scene {
     }).setOrigin(0.5);
   }
 
+  private createInfoButton(x: number, y: number) {
+    const button = this.add.graphics().setDepth(20);
+    button.fillStyle(0x2563eb, 0.98);
+    button.fillRoundedRect(x - 48, y - 20, 96, 40, 20);
+    button.lineStyle(4, 0xffffff, 0.95);
+    button.strokeRoundedRect(x - 48, y - 20, 96, 40, 20);
+
+    const label = this.add.text(x, y - 1, "Dica", {
+      fontSize: "19px",
+      fontFamily: "Arial Black, Arial",
+      color: "#ffffff",
+      stroke: "#1e3a8a",
+      strokeThickness: 4,
+    }).setOrigin(0.5).setDepth(21);
+
+    const hitArea = this.add.zone(x, y, 118, 62)
+      .setOrigin(0.5)
+      .setDepth(22)
+      .setInteractive({ useHandCursor: true });
+
+    hitArea.on("pointerdown", () => this.showInfoOverlay());
+
+    this.infoHitArea = {
+      bounds: new Phaser.Geom.Rectangle(x - 59, y - 31, 118, 62),
+      onClick: () => this.showInfoOverlay(),
+    };
+
+    return { button, label, hitArea };
+  }
+
+  private showInfoOverlay() {
+    this.clearInfoOverlay();
+
+    const shade = this.add.rectangle(640, 360, 1280, 720, 0x0f172a, 0.46)
+      .setDepth(330)
+      .setInteractive();
+
+    const panel = this.add.graphics().setDepth(331);
+    panel.fillStyle(0xffffff, 0.96);
+    panel.fillRoundedRect(310, 158, 660, 404, 34);
+    panel.lineStyle(6, 0xffffff, 0.98);
+    panel.strokeRoundedRect(310, 158, 660, 404, 34);
+    panel.lineStyle(3, COLORS.cyan, 0.55);
+    panel.strokeRoundedRect(326, 174, 628, 372, 26);
+
+    const title = this.add.text(640, 206, "Como jogar", {
+      fontSize: "34px",
+      fontFamily: "Arial Black, Arial",
+      color: "#25327a",
+      stroke: "#ffffff",
+      strokeThickness: 6,
+    }).setOrigin(0.5).setDepth(332);
+
+    const lines = [
+      "Monte o caminho com as setas.",
+      "Passe pela marca da pata no tabuleiro.",
+      `Limite: ${this.levelConfig.maxBlocks} comandos.`,
+    ];
+
+    const body = this.add.text(640, 324, lines.join("\n"), {
+      fontSize: "25px",
+      fontFamily: "Arial Black, Arial",
+      color: "#334155",
+      stroke: "#ffffff",
+      strokeThickness: 4,
+      align: "center",
+      lineSpacing: 18,
+      wordWrap: { width: 560 },
+    }).setOrigin(0.5).setDepth(332);
+
+    const closeBg = this.add.graphics().setDepth(332);
+    closeBg.fillStyle(COLORS.orange, 1);
+    closeBg.fillRoundedRect(470, 468, 340, 68, 34);
+    closeBg.lineStyle(5, 0xffffff, 0.98);
+    closeBg.strokeRoundedRect(470, 468, 340, 68, 34);
+
+    const closeText = this.add.text(640, 502, "Entendi", {
+      fontSize: "28px",
+      fontFamily: "Arial Black, Arial",
+      color: "#ffffff",
+      stroke: "#7c2d12",
+      strokeThickness: 5,
+    }).setOrigin(0.5).setDepth(333);
+
+    const closeHit = this.add.zone(640, 502, 380, 88)
+      .setOrigin(0.5)
+      .setDepth(334)
+      .setInteractive({ useHandCursor: true });
+    closeHit.on("pointerdown", () => this.clearInfoOverlay());
+
+    this.infoCloseHitArea = {
+      bounds: new Phaser.Geom.Rectangle(450, 458, 380, 88),
+      onClick: () => this.clearInfoOverlay(),
+    };
+
+    this.infoObjects.push(shade, panel, title, body, closeBg, closeText, closeHit);
+  }
+
+  private clearInfoOverlay() {
+    this.infoObjects.forEach((object) => object.destroy());
+    this.infoObjects = [];
+    this.infoCloseHitArea = undefined;
+  }
+
   private createBoard() {
     const { cols, rows } = this.levelConfig.gridSize;
     const cell = this.getCellSize();
-    const startX = 86;
-    const startY = 190;
+    const startX = BOARD_START_X;
+    const startY = BOARD_START_Y;
     const boardW = cols * cell;
     const boardH = rows * cell;
 
     this.drawGamePanel(startX + boardW / 2, startY + boardH / 2, boardW + 38, boardH + 38, COLORS.cyan, -2);
+    this.createInfoButton(startX + 76, startY - 42);
 
     for (let y = 0; y < rows; y++) {
       for (let x = 0; x < cols; x++) {
@@ -222,6 +328,7 @@ export class GameScene extends Phaser.Scene {
         const py = startY + y * cell + cell / 2;
         const isObstacle = this.isObstacle(x, y);
         const isGoal = this.levelConfig.goal.x === x && this.levelConfig.goal.y === y;
+        const isCheckpoint = this.isCheckpoint(x, y);
         
 
         this.add.image(px, py, "grid-tile")
@@ -254,6 +361,12 @@ if (isObstacle) {
   )
   .setDepth(4);
 }
+
+if (isCheckpoint) {
+  this.add.image(px, py - cell * 0.04, "path-mark")
+    .setDisplaySize(cell - 8, cell - 8)
+    .setDepth(5);
+}
       }
     }
   }
@@ -262,30 +375,21 @@ if (isObstacle) {
     this.directionHitAreas = [];
     this.input.off("pointerdown", this.handleDirectionPointerDown, this);
     this.input.off("pointermove", this.handleDirectionPointerMove, this);
-    this.drawGamePanel(910, 350, 604, 320, COLORS.purple, 1);
-    this.drawPanelHeader(910, 178, 410, "Escolha a direção", COLORS.purple);
+    this.drawGamePanel(910, 326, 604, 292, COLORS.purple, 1);
+    this.drawPanelHeader(910, 172, 410, "Escolha a direção", COLORS.purple);
 
-    this.add.text(910, 224, "Cada toque na seta move o robô 1 casa.", {
-      fontSize: "17px",
-      fontFamily: "Arial Black, Arial",
-      color: "#ffffff",
-      stroke: "#0f172a",
-      strokeThickness: 4,
-      align: "center",
-    }).setOrigin(0.5).setDepth(12);
-
-    const directions: Array<{ x: number; y: number; label: string; arrow: string; direction: Direction; color: number }> = [
-      { x: 910, y: 270, label: "Cima", arrow: "↑", direction: "up", color: COLORS.blue },
-      { x: 910, y: 332, label: "Direita", arrow: "→", direction: "right", color: COLORS.purple },
-      { x: 910, y: 394, label: "Baixo", arrow: "↓", direction: "down", color: COLORS.blue },
-      { x: 910, y: 456, label: "Esquerda", arrow: "←", direction: "left", color: COLORS.purple },
+    const directions: Array<{ x: number; y: number; label: string; angle: number; direction: Direction; color: number }> = [
+      { x: 786, y: 288, label: "Cima", angle: -90, direction: "up", color: COLORS.blue },
+      { x: 1034, y: 288, label: "Direita", angle: 0, direction: "right", color: COLORS.purple },
+      { x: 786, y: 406, label: "Baixo", angle: 90, direction: "down", color: COLORS.blue },
+      { x: 1034, y: 406, label: "Esquerda", angle: 180, direction: "left", color: COLORS.purple },
     ];
 
     directions.forEach((button) => {
       this.createDirectionButton(
         button.x,
         button.y,
-        button.arrow,
+        button.angle,
         button.label,
         button.color,
         () => this.addCommand({ type: "move", direction: button.direction })
@@ -297,6 +401,18 @@ if (isObstacle) {
   }
 
   private handleDirectionPointerDown(pointer: Phaser.Input.Pointer) {
+    if (this.infoObjects.length) {
+      if (this.infoCloseHitArea?.bounds.contains(pointer.x, pointer.y)) {
+        this.infoCloseHitArea.onClick();
+      }
+      return;
+    }
+
+    if (this.infoHitArea?.bounds.contains(pointer.x, pointer.y)) {
+      this.infoHitArea.onClick();
+      return;
+    }
+
     if (this.commandLocked || this.overlayObjects.length) return;
 
     const hit =
@@ -308,26 +424,30 @@ if (isObstacle) {
   }
 
   private handleDirectionPointerMove(pointer: Phaser.Input.Pointer) {
-    if (this.commandLocked || this.overlayObjects.length) {
-      this.input.setDefaultCursor("default");
+    if (this.overlayObjects.length || this.infoObjects.length) return;
+
+    const isOverInfo = this.infoHitArea?.bounds.contains(pointer.x, pointer.y) ?? false;
+
+    if (this.commandLocked) {
+      this.input.setDefaultCursor(isOverInfo ? "pointer" : "default");
       return;
     }
 
     const isOverDirection = this.directionHitAreas.some((area) => area.bounds.contains(pointer.x, pointer.y));
     const isOverAction = this.actionHitAreas.some((area) => area.bounds.contains(pointer.x, pointer.y));
-    this.input.setDefaultCursor(isOverDirection || isOverAction ? "pointer" : "default");
+    this.input.setDefaultCursor(isOverInfo || isOverDirection || isOverAction ? "pointer" : "default");
   }
 
   private createProgramPanel() {
-    this.drawGamePanel(910, 566, 604, 108, COLORS.blue, 1);
-    this.drawPanelHeader(910, 512, 320, "Programa do robô", COLORS.blue);
+    this.drawGamePanel(910, 558, 604, 136, COLORS.blue, 1);
+    this.drawPanelHeader(910, 492, 320, "Programa do robô", COLORS.blue);
   }
 
   private createActionButtons() {
     this.actionHitAreas = [];
-    this.createUiButton(690, 668, 205, 76, "Executar", COLORS.green, () => this.executeProgram());
-    this.createUiButton(910, 668, 195, 76, "Desfazer", COLORS.orange, () => this.undoCommand());
-    this.createUiButton(1130, 668, 185, 76, "Limpar", 0xef4444, () => this.clearProgram());
+    this.createUiButton(690, 676, 205, 72, "Executar", COLORS.green, () => this.executeProgram());
+    this.createUiButton(910, 676, 195, 72, "Desfazer", COLORS.orange, () => this.undoCommand());
+    this.createUiButton(1130, 676, 185, 72, "Limpar", 0xef4444, () => this.clearProgram());
   }
   private createRobot() {
   const pos = this.gridToWorld(
@@ -365,8 +485,8 @@ if (isObstacle) {
 
   private addCommand(command: RobotCommand) {
     if (this.commandLocked) return;
-    if (this.program.length >= MAX_PROGRAM_BLOCKS) {
-      this.showToast("Seu programa está cheio. Apague uma seta para tentar outro caminho.", 0xf59e0b);
+    if (this.program.length >= this.levelConfig.maxBlocks) {
+      this.showToast("Limite atingido.", 0xf59e0b);
       return;
     }
     this.playClick();
@@ -393,44 +513,54 @@ if (isObstacle) {
   private renderProgram() {
     this.programObjects.forEach((object) => object.destroy());
     this.programObjects = [];
+    this.drawCommandLimitCounter();
 
-    if (!this.program.length) {
-      this.programObjects.push(this.add.text(910, 568, "Toque nas setas para montar o caminho do robô, uma casa por vez.", {
-        fontSize: "17px",
-        fontFamily: "Arial Black, Arial",
-        color: "#ffffff",
-        stroke: "#0f172a",
-        strokeThickness: 4,
-        align: "center",
-        wordWrap: { width: 430 },
-      }).setOrigin(0.5).setDepth(13));
-      return;
-    }
+    if (!this.program.length) return;
 
     this.program.forEach((command, index) => {
-      const col = index % 7;
-      const row = Math.floor(index / 7);
-      const x = 648 + col * 84;
-      const y = 548 + row * 46;
-      const label = this.getCommandLabel(command);
+      const col = index % 9;
+      const row = Math.floor(index / 9);
+      const x = 642 + col * 58;
+      const y = 545 + row * 42;
       const block = this.add.graphics().setDepth(12);
       block.fillStyle(this.getCommandColor(command), 0.98);
-      block.fillRoundedRect(x - 25, y - 18, 50, 36, 12);
+      block.fillRoundedRect(x - 21, y - 15, 42, 30, 10);
       block.fillStyle(0xffffff, 0.14);
-      block.fillRoundedRect(x - 18, y - 13, 36, 12, 6);
+      block.fillRoundedRect(x - 15, y - 11, 30, 10, 5);
       block.lineStyle(3, 0xffffff, 0.9);
-      block.strokeRoundedRect(x - 25, y - 18, 50, 36, 12);
+      block.strokeRoundedRect(x - 21, y - 15, 42, 30, 10);
       this.programObjects.push(block);
-      this.programObjects.push(this.add.text(x, y, label, {
-        fontSize: "24px",
-        fontFamily: "Arial Black, Arial",
-        color: "#ffffff",
-        stroke: "#0f172a",
-        strokeThickness: 4,
-        align: "center",
-        wordWrap: { width: 70 },
-      }).setOrigin(0.5).setDepth(13));
+      const icon = this.add.image(x, y, "block-move")
+        .setAngle(this.getCommandAngle(command))
+        .setDepth(13);
+      this.fitImage(icon, 32, 24);
+      this.programObjects.push(icon);
     });
+  }
+
+  private drawCommandLimitCounter() {
+    const isFull = this.program.length >= this.levelConfig.maxBlocks;
+    const color = isFull ? 0xf59e0b : COLORS.green;
+    const cell = this.getCellSize();
+    const boardW = this.levelConfig.gridSize.cols * cell;
+    const boardH = this.levelConfig.gridSize.rows * cell;
+    const x = BOARD_START_X + boardW / 2;
+    const y = BOARD_START_Y + boardH + 58;
+    const bg = this.add.graphics().setDepth(13);
+    bg.fillStyle(color, 0.96);
+    bg.fillRoundedRect(x - 56, y - 19, 112, 38, 19);
+    bg.lineStyle(3, 0xffffff, 0.92);
+    bg.strokeRoundedRect(x - 56, y - 19, 112, 38, 19);
+    this.programObjects.push(bg);
+
+    this.programObjects.push(this.add.text(x, y, `${this.program.length}/${this.levelConfig.maxBlocks}`, {
+      fontSize: "18px",
+      fontFamily: "Arial Black, Arial",
+      color: "#ffffff",
+      stroke: "#0f172a",
+      strokeThickness: 4,
+      align: "center",
+    }).setOrigin(0.5).setDepth(14));
   }
 
   private async executeProgram() {
@@ -440,6 +570,8 @@ if (isObstacle) {
     this.commandLocked = true;
     this.clearPathMarks();
     this.resetRobot();
+    this.executedPath = [{ x: this.robotState.x, y: this.robotState.y }];
+    this.hasPassedCheckpoint = this.isCheckpoint(this.robotState.x, this.robotState.y);
 
     for (const command of this.program) {
       const result = await this.runCommand(command);
@@ -447,29 +579,44 @@ if (isObstacle) {
         this.errors += 1;
         this.playWrong();
         runtimeGameBridge.emit({ type: "WRONG_ANSWER", gameId: GAME_ID, stage: this.levelConfig.level, pointsEarned: -5 });
-        this.showToast(result.message, 0xef4444);
-        this.commandLocked = false;
+        this.restartCurrentLevelAfterError(result.message);
         this.emitProgress();
         return;
       }
     }
 
-    if (this.robotState.x === this.levelConfig.goal.x && this.robotState.y === this.levelConfig.goal.y) {
+    if (
+      this.robotState.x === this.levelConfig.goal.x &&
+      this.robotState.y === this.levelConfig.goal.y &&
+      this.hasVisitedCheckpoint()
+    ) {
       this.hits += 1;
       this.playCorrect();
       const bonus = this.program.length <= this.levelConfig.minBlocks ? 5 : 0;
       runtimeGameBridge.emit({ type: "CORRECT_ANSWER", gameId: GAME_ID, stage: this.levelConfig.level, pointsEarned: 5 + bonus });
       this.emitProgress();
-      this.time.delayedCall(650, () => this.handleLevelSuccess());
+      this.handleLevelSuccess();
       return;
     }
 
     this.errors += 1;
     this.playWrong();
     runtimeGameBridge.emit({ type: "WRONG_ANSWER", gameId: GAME_ID, stage: this.levelConfig.level, pointsEarned: -5 });
-    this.showToast("O robô parou fora da estrela. Tente mudar o caminho das setas.", 0xef4444);
-    this.commandLocked = false;
+    this.restartCurrentLevelAfterError(
+      this.robotState.x === this.levelConfig.goal.x && this.robotState.y === this.levelConfig.goal.y
+        ? "Você pulou a marca da pata no tabuleiro. O nível vai recomeçar."
+        : "O robô parou fora da estrela. O nível vai recomeçar."
+    );
     this.emitProgress();
+  }
+
+  private restartCurrentLevelAfterError(message: string) {
+    this.commandLocked = true;
+    this.timerEvent?.remove(false);
+    this.showToast(message, 0xef4444);
+    this.time.delayedCall(1000, () => {
+      this.scene.restart({ level: this.levelConfig.level });
+    });
   }
 
   private runCommand(command: RobotCommand) {
@@ -497,6 +644,10 @@ if (isObstacle) {
 
       this.robotState.x = next.x;
       this.robotState.y = next.y;
+      this.executedPath.push({ x: next.x, y: next.y });
+      if (this.isCheckpoint(next.x, next.y)) {
+        this.hasPassedCheckpoint = true;
+      }
 
       const pos = this.gridToWorld(next.x, next.y);
       this.markPath(pos.x, pos.y);
@@ -578,30 +729,16 @@ if (isObstacle) {
       color: "#7c3aed",
     }).setOrigin(0.5);
 
-    const detail = this.add.text(0, 48, `Você usou ${this.program.length} seta(s). Meta: ${this.levelConfig.minBlocks}.`, {
-      fontSize: "17px",
-      fontFamily: "Arial Black, Arial",
-      color: "#334155",
-      align: "center",
-      wordWrap: { width: 430 },
-    }).setOrigin(0.5);
-
     const dots = [1, 2, 3].map((level, index) => {
       const dot = this.add.graphics();
       dot.fillStyle(level <= this.levelConfig.level ? COLORS.green : level === nextLevel ? COLORS.orange : 0xd8dde8, 1);
-      dot.fillCircle(-28 + index * 28, 94, 8);
+      dot.fillCircle(-28 + index * 28, 58, 8);
       dot.lineStyle(2, 0xffffff, 0.9);
-      dot.strokeCircle(-28 + index * 28, 94, 8);
+      dot.strokeCircle(-28 + index * 28, 58, 8);
       return dot;
     });
 
-    const waitText = this.add.text(0, 132, "Preparando o próximo nível...", {
-      fontSize: "15px",
-      fontFamily: "Arial Black, Arial",
-      color: "#25327a",
-    }).setOrigin(0.5);
-
-    modal.add([shadow, bg, topBar, badgeIcon, title, score, detail, ...dots, waitText]);
+    modal.add([shadow, bg, topBar, badgeIcon, title, score, ...dots]);
     modal.setScale(MODAL_SCALE * 0.9);
     modal.setAlpha(0);
 
@@ -613,7 +750,7 @@ if (isObstacle) {
       ease: "Back.easeOut",
     });
 
-    this.time.delayedCall(1800, () => {
+    this.time.delayedCall(3000, () => {
       this.showNextLevelStartTransition(nextLevel);
     });
   }
@@ -622,7 +759,6 @@ if (isObstacle) {
     this.clearOverlay();
     const nextConfig = LEVELS.find((item) => item.level === nextLevel);
     const overlay = this.addOverlayObject(this.add.rectangle(640, 360, 1280, 720, 0x12324a, 0.58).setDepth(450));
-    overlay.setInteractive();
 
     const modal = this.addOverlayObject(this.add.container(640, 360).setDepth(451));
     const shadow = this.add.graphics();
@@ -641,7 +777,7 @@ if (isObstacle) {
     topBar.lineStyle(3, 0xffffff, 0.82);
     topBar.strokeRoundedRect(-196, -182, 392, 28, 14);
 
-    const title = this.add.text(0, -102, `Nível ${nextLevel}`, {
+    const title = this.add.text(0, -102, `Nível ${nextLevel} liberado!`, {
       fontSize: "38px",
       fontFamily: "Arial Black, Arial",
       color: "#25327a",
@@ -649,20 +785,12 @@ if (isObstacle) {
       strokeThickness: 5,
     }).setOrigin(0.5);
 
-    const objective = this.add.text(0, -42, nextConfig?.title ?? "Novo desafio", {
+    const objective = this.add.text(0, -24, nextConfig?.title ?? "Novo desafio", {
       fontSize: "24px",
       fontFamily: "Arial Black, Arial",
       color: "#7c3aed",
       align: "center",
       wordWrap: { width: 430 },
-    }).setOrigin(0.5);
-
-    const detail = this.add.text(0, 12, nextConfig?.objective ?? "Leve o robô até a estrela.", {
-      fontSize: "16px",
-      fontFamily: "Arial Black, Arial",
-      color: "#334155",
-      align: "center",
-      wordWrap: { width: 420 },
     }).setOrigin(0.5);
 
     const button = this.add.container(0, 104);
@@ -683,20 +811,32 @@ if (isObstacle) {
     }).setOrigin(0.5);
     button.add([buttonShadow, buttonBg, buttonText]);
 
-    const buttonHitbox = this.addOverlayObject(this.add.zone(640, 360 + 104 * MODAL_SCALE, 300 * MODAL_SCALE, 76 * MODAL_SCALE).setDepth(452));
+    let hasStartedNextLevel = false;
+    const startNextLevel = () => {
+      if (hasStartedNextLevel) return;
+      hasStartedNextLevel = true;
+      this.input.setDefaultCursor("default");
+      this.scene.restart({ level: nextLevel });
+    };
+
+    overlay.setInteractive();
+
+    const buttonHitbox = this.addOverlayObject(this.add.zone(640, 360 + 104 * MODAL_SCALE, 280 * MODAL_SCALE, 62 * MODAL_SCALE).setDepth(452));
     buttonHitbox.setInteractive({ useHandCursor: true });
     buttonHitbox.on("pointerover", () => {
+      this.input.setDefaultCursor("pointer");
       this.tweens.add({ targets: button, scale: 1.04, duration: 90, ease: "Sine.easeOut" });
     });
     buttonHitbox.on("pointerout", () => {
+      this.input.setDefaultCursor("default");
       this.tweens.add({ targets: button, scale: 1, duration: 90, ease: "Sine.easeOut" });
     });
     buttonHitbox.on("pointerdown", () => {
       this.playClick();
-      this.scene.restart({ level: nextLevel });
+      startNextLevel();
     });
 
-    modal.add([shadow, bg, topBar, title, objective, detail, button]);
+    modal.add([shadow, bg, topBar, title, objective, button]);
     modal.setScale(MODAL_SCALE * 0.9);
     modal.setAlpha(0);
 
@@ -707,6 +847,7 @@ if (isObstacle) {
       duration: 260,
       ease: "Back.easeOut",
     });
+
   }
 
   private showGameCompleteScreen() {
@@ -769,16 +910,8 @@ if (isObstacle) {
       return item;
     });
 
-    const badge = this.add.text(0, -24, "Você criou um caminho usando uma seta para cada casa.", {
-      fontSize: "22px",
-      fontFamily: "Arial Black, Arial",
-      color: "#7c3aed",
-      align: "center",
-      wordWrap: { width: 480 },
-    }).setOrigin(0.5);
-
-    const playAgain = this.createFinalButton(-142, 138, "Jogar novamente", COLORS.green, () => this.scene.restart({ level: 1 }));
-    const exit = this.createFinalButton(142, 138, "Voltar aos jogos", COLORS.orange, () => EventBus.emit("exit-game"));
+    const playAgain = this.createFinalButton(-158, 138, "Jogar novamente", COLORS.green, () => this.scene.restart({ level: 1 }));
+    const exit = this.createFinalButton(158, 138, "Voltar aos jogos", COLORS.orange, () => EventBus.emit("exit-game"));
 
     const sparkles = Array.from({ length: 14 }, (_, index) => {
       const sparkle = this.add.graphics();
@@ -798,7 +931,15 @@ if (isObstacle) {
       return sparkle;
     });
 
-    panel.add([shadow, bg, ribbon, ...sparkles, title, subtitle, badge, ...levelLabels, playAgain, exit]);
+    panel.add([shadow, bg, ribbon, ...sparkles, title, subtitle, ...levelLabels, playAgain, exit]);
+    this.createModalButtonHitbox(640 - 158 * MODAL_SCALE, 360 + 138 * MODAL_SCALE, 268 * MODAL_SCALE, 62 * MODAL_SCALE, playAgain, () => {
+      this.playClick();
+      this.scene.restart({ level: 1 });
+    });
+    this.createModalButtonHitbox(640 + 158 * MODAL_SCALE, 360 + 138 * MODAL_SCALE, 268 * MODAL_SCALE, 62 * MODAL_SCALE, exit, () => {
+      this.playClick();
+      EventBus.emit("exit-game");
+    });
     panel.setScale(MODAL_SCALE * 0.9);
     panel.setAlpha(0);
     this.tweens.add({
@@ -844,6 +985,28 @@ if (isObstacle) {
     return button;
   }
 
+  private createModalButtonHitbox(
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    visualTarget: Phaser.GameObjects.Container,
+    onClick: () => void
+  ) {
+    const hitbox = this.addOverlayObject(this.add.zone(x, y, width, height).setDepth(452));
+    hitbox.setInteractive({ useHandCursor: true });
+    hitbox.on("pointerover", () => {
+      this.input.setDefaultCursor("pointer");
+      this.tweens.add({ targets: visualTarget, scale: 1.04, duration: 90, ease: "Sine.easeOut" });
+    });
+    hitbox.on("pointerout", () => {
+      this.input.setDefaultCursor("default");
+      this.tweens.add({ targets: visualTarget, scale: 1, duration: 90, ease: "Sine.easeOut" });
+    });
+    hitbox.on("pointerdown", onClick);
+    return hitbox;
+  }
+
   private addOverlayObject<T extends Phaser.GameObjects.GameObject>(object: T): T {
     this.overlayObjects.push(object);
     return object;
@@ -866,6 +1029,7 @@ if (isObstacle) {
 
   private resetRobot() {
     this.robotState = { x: this.levelConfig.start.x, y: this.levelConfig.start.y, direction: this.levelConfig.direction };
+    this.hasPassedCheckpoint = this.isCheckpoint(this.robotState.x, this.robotState.y);
     const pos = this.gridToWorld(this.robotState.x, this.robotState.y);
     this.robot.setPosition(pos.x, pos.y);
     this.updateRobotRotation();
@@ -890,7 +1054,7 @@ if (isObstacle) {
 
   private gridToWorld(x: number, y: number) {
     const cell = this.getCellSize();
-    return { x: 86 + x * cell + cell / 2, y: 190 + y * cell + cell / 2 };
+    return { x: BOARD_START_X + x * cell + cell / 2, y: BOARD_START_Y + y * cell + cell / 2 };
   }
 
   private getCellSize() {
@@ -906,14 +1070,22 @@ if (isObstacle) {
     return this.levelConfig.obstacles.some((point) => point.x === x && point.y === y);
   }
 
-  private getCommandLabel(command: RobotCommand) {
-    const arrow = {
-      up: "↑",
-      right: "→",
-      down: "↓",
-      left: "←",
+  private isCheckpoint(x: number, y: number) {
+    return this.levelConfig.checkpoint?.x === x && this.levelConfig.checkpoint.y === y;
+  }
+
+  private hasVisitedCheckpoint() {
+    if (!this.levelConfig.checkpoint) return true;
+    return this.executedPath.some((point) => this.isCheckpoint(point.x, point.y));
+  }
+
+  private getCommandAngle(command: RobotCommand) {
+    return {
+      up: -90,
+      right: 0,
+      down: 90,
+      left: 180,
     }[command.direction];
-    return arrow;
   }
 
   private getCommandColor(command: RobotCommand) {
@@ -949,13 +1121,13 @@ if (isObstacle) {
   private createDirectionButton(
     x: number,
     y: number,
-    arrow: string,
+    angle: number,
     label: string,
     color: number,
     onClick: () => void
   ) {
-    const width = 410;
-    const height = 54;
+    const width = 220;
+    const height = 92;
     const button = this.add.container(x, y).setDepth(12);
 
     const shadow = this.add.graphics();
@@ -966,25 +1138,22 @@ if (isObstacle) {
     bg.fillStyle(color, 0.98);
     bg.fillRoundedRect(-width / 2, -height / 2, width, height, 18);
     bg.fillStyle(0xffffff, 0.16);
-    bg.fillRoundedRect(-width / 2 + 10, -height / 2 + 8, 64, height - 16, 14);
+    bg.fillRoundedRect(-width / 2 + 10, -height / 2 + 10, 72, height - 20, 14);
     bg.lineStyle(3, 0xffffff, 0.92);
     bg.strokeRoundedRect(-width / 2, -height / 2, width, height, 18);
 
-    const icon = this.add.text(-160, 0, arrow, {
-      fontSize: "36px",
-      fontFamily: "Arial Black, Arial",
-      color: "#ffffff",
-      stroke: "#0f172a",
-      strokeThickness: 4,
-    }).setOrigin(0.5);
+    const icon = this.add.image(-74, -2, "block-move")
+      .setAngle(angle);
+    this.fitImage(icon, 64, 56);
 
     const text = this.add.text(34, 0, label, {
-      fontSize: "22px",
+      fontSize: "20px",
       fontFamily: "Arial Black, Arial",
       color: "#ffffff",
       stroke: "#0f172a",
       strokeThickness: 3,
       align: "center",
+      wordWrap: { width: 116 },
     }).setOrigin(0.5);
 
     button.add([shadow, bg, icon, text]);
@@ -1115,7 +1284,7 @@ if (isObstacle) {
   }
 
   private emitProgress() {
-    const progress = this.program.length ? Math.min(95, Math.round((this.program.length / MAX_PROGRAM_BLOCKS) * 100)) : 0;
+    const progress = this.program.length ? Math.min(95, Math.round((this.program.length / this.levelConfig.maxBlocks) * 100)) : 0;
     runtimeGameBridge.emit({
       type: "CHECKPOINT",
       gameId: GAME_ID,

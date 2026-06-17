@@ -8,7 +8,7 @@ import { LEVELS } from '../data/levels'
 
 const WIN_W = 440
 const WIN_H = 340
-const HEADER_H = 44
+const HEADER_H = 52
 const CONTENT_TOP = -(WIN_H / 2) + HEADER_H       // -126
 const CONTENT_H   = WIN_H - HEADER_H               // 296
 const CONTENT_CY  = CONTENT_TOP + CONTENT_H / 2    // 22
@@ -56,12 +56,26 @@ export class GameScene extends Phaser.Scene {
   // Per-app state
   private lastTapTime: Partial<Record<AppId, number>> = {}
   private gravadorState: 'idle' | 'recording' | 'stopped' = 'idle'
+  private gravadorSaved = false
   private gravadorStatusText: Phaser.GameObjects.Text | null = null
   private desenho: DesenhoState = { container: null, gfx: null, readyBtn: null, tapCount: 0, drawColor: 0x3498DB }
   private calcDisplay = ''
   private calcText: Phaser.GameObjects.Text | null = null
 
-  // Timer (tween-based — mesmo padrão do EF01CO01)
+  // Relógio
+  private relogioHands: Phaser.GameObjects.Graphics | null = null
+  private relogioDigital: Phaser.GameObjects.Text | null = null
+
+  // Pasta
+  private pastaFilesDone = 0
+  private pastaTotal = 3
+  private pastaConfirmBtn: Phaser.GameObjects.Container | null = null
+
+  // Checklist de missões no desktop
+  private checklistDots: Array<{ dot: Phaser.GameObjects.Graphics; x: number; y: number; label: Phaser.GameObjects.Text }> = []
+  private checklistCounter: Phaser.GameObjects.Text | null = null
+
+  // Timer (padrão EF01CO01 — desenhado diretamente no GameScene)
   private timeBarFill?: Phaser.GameObjects.Graphics
   private timerTween?: Phaser.Tweens.Tween
   private timerState = { progress: 1 }
@@ -112,31 +126,38 @@ export class GameScene extends Phaser.Scene {
     this.timerState.progress = 1
     this.levelStarted = false
     this.hasStartedTimer = false
+    this.relogioHands = null
+    this.relogioDigital = null
+    this.pastaFilesDone = 0
+    this.pastaConfirmBtn = null
+    this.checklistDots = []
+    this.gravadorSaved = false
+    this.checklistCounter = null
   }
 
   create() {
     this.createDesktop()
-    this.createTaskbar()
     this.createAppIcons()
+    this.createChecklist()
+    this.createShutdownButton()
     this.createTimerBar()
+    this.createHudButtons()
     this.registerPlatformCommands()
 
     this.input.on('pointerup', () => { this.dragging = null })
 
-    EventBus.on('mute-audio',       this.handleMuteAudio,    this)
-    EventBus.on('app-action',       this.onAppAction,        this)
-    EventBus.on('show-instructions', this.onShowInstructions, this)
+    EventBus.on('app-action', this.onAppAction, this)
 
     this.showStartScreen()
   }
 
-  update(_time: number, _delta: number) {
+  update() {
     // Drag de janela
     if (this.dragging && this.input.activePointer.isDown) {
       const ptr = this.input.activePointer
       this.dragging.container.setPosition(
         Phaser.Math.Clamp(ptr.x + this.dragging.offX, WIN_W / 2, 1280 - WIN_W / 2),
-        Phaser.Math.Clamp(ptr.y + this.dragging.offY, 124 + WIN_H / 2, 660 - WIN_H / 2),
+        Phaser.Math.Clamp(ptr.y + this.dragging.offY, 148 + WIN_H / 2, 720 - WIN_H / 2),
       )
     }
 
@@ -164,9 +185,7 @@ export class GameScene extends Phaser.Scene {
     this.timerTween = undefined
     this.gravadorRecTimerEvent?.destroy()
     this.gravadorRecTimerEvent = null
-    EventBus.off('mute-audio',        this.handleMuteAudio,    this)
-    EventBus.off('app-action',        this.onAppAction,        this)
-    EventBus.off('show-instructions', this.onShowInstructions, this)
+    EventBus.off('app-action', this.onAppAction, this)
     this.unsubscribePlatformCommands?.()
     this.unsubscribePlatformCommands = undefined
   }
@@ -174,30 +193,7 @@ export class GameScene extends Phaser.Scene {
   // ── Desktop ───────────────────────────────────────────────────────────────
 
   private createDesktop() {
-    this.add.image(640, 330, 'desktop-bg').setOrigin(0.5).setDisplaySize(1280, 660)
-  }
-
-  private createTaskbar() {
-    this.add.image(640, 690, 'taskbar-bg').setOrigin(0.5)
-
-    // Relógio
-    const clock = this.add.text(1240, 690, '', {
-      fontSize: '16px', color: '#AED6F1', fontFamily: 'Arial',
-    }).setOrigin(0.5)
-
-    const updateClock = () => {
-      const d = new Date()
-      const h = String(d.getHours()).padStart(2, '0')
-      const m = String(d.getMinutes()).padStart(2, '0')
-      clock.setText(`${h}:${m}`)
-    }
-    updateClock()
-    this.time.addEvent({ delay: 30000, callback: updateClock, loop: true })
-
-    // Logo "Desktop da Lua" na taskbar
-    this.add.text(20, 690, '🌙 Desktop da Lua', {
-      fontSize: '18px', color: '#AED6F1', fontFamily: 'Arial Black, Arial',
-    }).setOrigin(0, 0.5)
+    this.add.image(640, 360, 'desktop-bg').setOrigin(0.5).setDisplaySize(1280, 720)
   }
 
   // ── Ícones de app ─────────────────────────────────────────────────────────
@@ -214,31 +210,38 @@ export class GameScene extends Phaser.Scene {
   }
 
   private computeIconPositions(count: number): { x: number; y: number }[] {
-    // Grade 2 colunas à esquerda do desktop
-    const COL1_X = 130, COL2_X = 260
-    const ROW_Y  = [200, 360, 510]
+    const COL1_X = 108, COL2_X = 252
+    const ROW_Y  = [215, 390, 560]
     const rows   = Math.ceil(count / 2)
     const pos: { x: number; y: number }[] = []
 
     for (let r = 0; r < rows; r++) {
       for (let c = 0; c < 2; c++) {
         if (pos.length >= count) break
-        pos.push({ x: c === 0 ? COL1_X : COL2_X, y: ROW_Y[r] ?? 200 + r * 150 })
+        pos.push({ x: c === 0 ? COL1_X : COL2_X, y: ROW_Y[r] ?? 215 + r * 175 })
       }
     }
     return pos
   }
 
   private createIcon(def: AppDef, x: number, y: number) {
-    const ICON_SIZE = 88
+    const ICON_SIZE = 136
+    const CORNER_R  = 22
+
+    // Máscara arredondada para remover o fundo quadrado dos PNGs
+    const maskGfx = this.make.graphics({}, false)
+    maskGfx.fillStyle(0xffffff)
+    maskGfx.fillRoundedRect(x - ICON_SIZE / 2, y - ICON_SIZE / 2, ICON_SIZE, ICON_SIZE, CORNER_R)
 
     const iconImg = this.add.image(0, 0, `icon-${def.id}`).setDisplaySize(ICON_SIZE, ICON_SIZE)
-    const label   = this.add.text(0, ICON_SIZE / 2 + 4, def.label, {
-      fontSize: '18px', color: '#FFFFFF', fontFamily: 'Arial Black, Arial',
+    iconImg.setMask(maskGfx.createGeometryMask())
+
+    const label = this.add.text(0, ICON_SIZE / 2 + 6, def.label, {
+      fontSize: '16px', color: '#FFFFFF', fontFamily: 'Arial Black, Arial',
       stroke: '#000000', strokeThickness: 3,
     }).setOrigin(0.5, 0)
 
-    const hitZone = this.add.zone(0, 0, ICON_SIZE + 10, ICON_SIZE + 30)
+    const hitZone = this.add.zone(0, 0, ICON_SIZE + 10, ICON_SIZE + 34)
       .setInteractive({ useHandCursor: true })
 
     hitZone.on('pointerdown', () => this.handleIconTap(def.id))
@@ -248,7 +251,6 @@ export class GameScene extends Phaser.Scene {
     const container = this.add.container(x, y, [iconImg, label, hitZone])
     container.setDepth(5)
 
-    // Animação de entrada
     container.setAlpha(0).setScale(0.7)
     const idx = this.levelConfig.availableApps.indexOf(def.id)
     this.tweens.add({
@@ -301,33 +303,45 @@ export class GameScene extends Phaser.Scene {
 
   private createWindow(def: AppDef, cx: number, cy: number): Phaser.GameObjects.Container {
     // Sombra
-    const shadow = this.add.rectangle(8, 8, WIN_W, WIN_H, 0x000000, 0.3)
+    const shadow = this.add.rectangle(10, 10, WIN_W + 4, WIN_H + 4, 0x000000, 0.35)
 
     // Corpo
     const body = this.add.rectangle(0, 0, WIN_W, WIN_H, def.bodyColor)
       .setStrokeStyle(2, def.headerColor)
 
-    // Header
-    const header = this.add.rectangle(0, -(WIN_H / 2) + HEADER_H / 2, WIN_W, HEADER_H, def.headerColor)
+    // Área de conteúdo interna (fundo levemente diferenciado)
+    const contentAreaY = CONTENT_TOP + CONTENT_H / 2
+    const contentBg = this.add.graphics()
+    const lightened = Phaser.Display.Color.ValueToColor(def.bodyColor).brighten(12).color
+    contentBg.fillStyle(lightened, 1)
+    contentBg.fillRoundedRect(-(WIN_W / 2) + 10, CONTENT_TOP + 8, WIN_W - 20, CONTENT_H - 16, 8)
+    void contentAreaY
 
-    // Ícone + título no header
+    // Header com gradiente simulado (retângulo principal + faixa de brilho)
+    const header = this.add.rectangle(0, -(WIN_H / 2) + HEADER_H / 2, WIN_W, HEADER_H, def.headerColor)
+    const headerShine = this.add.graphics()
+    headerShine.fillStyle(0xFFFFFF, 0.12)
+    headerShine.fillRoundedRect(-(WIN_W / 2), -(WIN_H / 2), WIN_W, HEADER_H / 2, { tl: 0, tr: 0, bl: 0, br: 0 })
+
+    // Ícone + título no header (fonte maior)
     const titleTxt = this.add.text(
-      -(WIN_W / 2) + 14, -(WIN_H / 2) + HEADER_H / 2,
+      -(WIN_W / 2) + 16, -(WIN_H / 2) + HEADER_H / 2,
       `${def.icon}  ${def.label}`,
-      { fontSize: '18px', color: '#FFFFFF', fontFamily: 'Arial Black, Arial' },
+      { fontSize: '22px', color: '#FFFFFF', fontFamily: 'Arial Black, Arial' },
     ).setOrigin(0, 0.5)
 
-    // Botão fechar
-    const closeBg = this.add.rectangle(WIN_W / 2 - 20, -(WIN_H / 2) + HEADER_H / 2, 32, 28, 0xE74C3C)
-    const closeTxt = this.add.text(WIN_W / 2 - 20, -(WIN_H / 2) + HEADER_H / 2, '✕', {
-      fontSize: '16px', color: '#FFFFFF', fontFamily: 'Arial Black',
+    // Botão fechar (maior, mais fácil de tocar)
+    const closeBg = this.add.rectangle(WIN_W / 2 - 24, -(WIN_H / 2) + HEADER_H / 2, 38, 36, 0xE74C3C)
+      .setStrokeStyle(1, 0xFFFFFF, 0.3)
+    const closeTxt = this.add.text(WIN_W / 2 - 24, -(WIN_H / 2) + HEADER_H / 2, '✕', {
+      fontSize: '18px', color: '#FFFFFF', fontFamily: 'Arial Black',
     }).setOrigin(0.5)
 
     // Conteúdo do app
     const contentItems = this.createAppContent(def.id)
 
     const container = this.add.container(cx, cy, [
-      shadow, body, header, titleTxt, closeBg, closeTxt,
+      shadow, body, contentBg, header, headerShine, titleTxt, closeBg, closeTxt,
       ...contentItems,
     ])
 
@@ -407,30 +421,30 @@ export class GameScene extends Phaser.Scene {
     win.setDepth(this.windowDepth)
   }
 
-  // ── Timer bar (padrão EF01CO01) ───────────────────────────────────────────
+  // ── Timer Bar ───────────────────────────────────────────────
 
   private createTimerBar() {
-    const x = 240, y = 122, w = 800, h = 26
+    const x = 240, y = 28, w = 800, h = 30
 
     const bg = this.add.graphics()
     bg.fillStyle(0x33190A, 0.82)
     bg.fillRoundedRect(x, y, w, h, 12)
     bg.lineStyle(3, 0x7A4A10, 0.9)
     bg.strokeRoundedRect(x, y, w, h, 12)
-    bg.setDepth(9)
+    bg.setDepth(6)
 
     this.timeBarFill = this.add.graphics()
     this.timeBarFill.setData('x', x)
     this.timeBarFill.setData('y', y)
     this.timeBarFill.setData('w', w)
     this.timeBarFill.setData('h', h)
-    this.timeBarFill.setDepth(10)
+    this.timeBarFill.setDepth(7)
     this.drawTimeBar(1)
 
     const shine = this.add.graphics()
     shine.fillStyle(0xFFFFFF, 0.16)
     shine.fillRoundedRect(x + 2, y + 2, w - 4, 10, { tl: 10, tr: 10, bl: 0, br: 0 })
-    shine.setDepth(11)
+    shine.setDepth(8)
   }
 
   private drawTimeBar(progress: number) {
@@ -446,6 +460,254 @@ export class GameScene extends Phaser.Scene {
       this.timeBarFill.fillStyle(fill, 1)
       this.timeBarFill.fillRoundedRect(x, y, width, h, h / 2)
     }
+  }
+
+  // ── Botões HUD (mute + instruções) ────────────────────────────────────────
+
+  private createHudButtons() {
+    let muted = false
+
+    // Botão mute
+    const muteBg = this.add.rectangle(1248, 18, 48, 38, 0x0A1628, 0.85)
+      .setStrokeStyle(1.5, 0x2E86C1).setInteractive({ useHandCursor: true }).setDepth(6)
+    const muteIcon = this.add.text(1248, 18, '🔊', { fontSize: '20px' })
+      .setOrigin(0.5).setDepth(7)
+
+    muteBg.on('pointerdown', () => {
+      muted = !muted
+      muteIcon.setText(muted ? '🔇' : '🔊')
+      EventBus.emit('mute-audio', muted)
+      this.handleMuteAudio(muted)
+    })
+    muteBg.on('pointerover', () => muteBg.setFillStyle(0x1A2A3A))
+    muteBg.on('pointerout',  () => muteBg.setFillStyle(0x0A1628, 0.85))
+
+    // Botão instruções
+    const insBg = this.add.rectangle(1192, 18, 48, 38, 0x0A1628, 0.85)
+      .setStrokeStyle(1.5, 0x2E86C1).setInteractive({ useHandCursor: true }).setDepth(6)
+    this.add.text(1192, 18, '❓', { fontSize: '20px' }).setOrigin(0.5).setDepth(7)
+
+    insBg.on('pointerdown', () => this.onShowInstructions())
+    insBg.on('pointerover', () => insBg.setFillStyle(0x1A2A3A))
+    insBg.on('pointerout',  () => insBg.setFillStyle(0x0A1628, 0.85))
+  }
+
+  // ── Checklist de missões ──────────────────────────────────────────────────
+
+  private createChecklist() {
+    const missions = this.levelConfig.missions
+    const ITEM_H  = 54
+    const PAD     = 16
+    const TITLE_H = 46
+    const FOOT_H  = 36
+    const W       = 388
+    const H       = TITLE_H + missions.length * ITEM_H + PAD * 2 + FOOT_H
+    const PX      = 976
+    const PY      = 72 + H / 2
+
+    // Sombra
+    const shadow = this.add.graphics().setDepth(8)
+    shadow.fillStyle(0x000000, 0.30)
+    shadow.fillRoundedRect(PX - W / 2 + 5, PY - H / 2 + 5, W, H, 12)
+
+    // Fundo
+    const bg = this.add.graphics().setDepth(9)
+    bg.fillStyle(0x071828, 0.94)
+    bg.fillRoundedRect(PX - W / 2, PY - H / 2, W, H, 12)
+    bg.lineStyle(2.5, 0x2E86C1, 0.75)
+    bg.strokeRoundedRect(PX - W / 2, PY - H / 2, W, H, 12)
+
+    // Cabeçalho
+    const hdr = this.add.graphics().setDepth(9)
+    hdr.fillStyle(0x1A3A6B, 1)
+    hdr.fillRoundedRect(PX - W / 2, PY - H / 2, W, TITLE_H, { tl: 12, tr: 12, bl: 0, br: 0 })
+
+    this.add.text(PX, PY - H / 2 + TITLE_H / 2,
+      `📋  Missões — Nível ${this.levelConfig.level}`, {
+        fontSize: '17px', color: '#AED6F1', fontFamily: 'Arial Black',
+      }).setOrigin(0.5).setDepth(10).setResolution(2)
+
+    // Itens
+    const dotX   = PX - W / 2 + 22
+    const labelX = PX - W / 2 + 46
+
+    missions.forEach((mission, i) => {
+      const itemY = PY - H / 2 + TITLE_H + PAD + i * ITEM_H + ITEM_H / 2
+
+      if (i > 0) {
+        const sep = this.add.graphics().setDepth(9)
+        sep.lineStyle(1, 0x1E3A5A, 0.55)
+        sep.lineBetween(PX - W / 2 + 12, itemY - ITEM_H / 2,
+                        PX + W / 2 - 12, itemY - ITEM_H / 2)
+      }
+
+      const dot = this.add.graphics().setDepth(10)
+      this.drawChecklistDot(dot, dotX, itemY, false)
+
+      const label = this.add.text(labelX, itemY, mission.text, {
+        fontSize: '15px', color: '#D6E8F5', fontFamily: 'Arial',
+        wordWrap: { width: W - 56, useAdvancedWrap: true },
+        lineSpacing: 2,
+      }).setOrigin(0, 0.5).setDepth(10).setResolution(2)
+
+      this.checklistDots.push({ dot, x: dotX, y: itemY, label })
+    })
+
+    // Rodapé — contador
+    const counterY = PY + H / 2 - FOOT_H / 2
+    this.checklistCounter = this.add.text(PX, counterY,
+      `0 / ${missions.length} concluídas`, {
+        fontSize: '14px', color: '#5D8AAD', fontFamily: 'Arial',
+      }).setOrigin(0.5).setDepth(10).setResolution(2)
+  }
+
+  private drawChecklistDot(
+    dot: Phaser.GameObjects.Graphics,
+    x: number, y: number,
+    completed: boolean,
+  ) {
+    dot.clear()
+    const R = 9
+    if (completed) {
+      dot.fillStyle(0x2ECC71, 1)
+      dot.fillCircle(x, y, R)
+      dot.lineStyle(2.5, 0xFFFFFF, 0.95)
+      dot.lineBetween(x - 5, y, x - 1.5, y + 4)
+      dot.lineBetween(x - 1.5, y + 4, x + 5, y - 4)
+    } else {
+      dot.fillStyle(0x1E2C3A, 1)
+      dot.fillCircle(x, y, R)
+      dot.lineStyle(2, 0x5D7A8A, 0.8)
+      dot.strokeCircle(x, y, R)
+    }
+  }
+
+  private updateChecklist() {
+    this.checklistDots.forEach((item, i) => {
+      if (i < this.completedMissions) {
+        this.drawChecklistDot(item.dot, item.x, item.y, true)
+        item.dot.setScale(0.4)
+        this.tweens.add({
+          targets: item.dot, scaleX: 1, scaleY: 1, duration: 380, ease: 'Back.Out',
+        })
+        item.label.setColor('#4A7A5A').setAlpha(0.65)
+      }
+    })
+    if (this.checklistCounter) {
+      this.checklistCounter.setText(`${this.completedMissions} / ${this.levelConfig.missions.length} concluídas`)
+    }
+  }
+
+  // ── Botão Desligar ────────────────────────────────────────────────────────
+
+  private createShutdownButton() {
+    const x = 1230, y = 688
+    const btn = this.add.container(x, y).setDepth(8)
+
+    const bg = this.add.graphics()
+    const drawBg = (hover: boolean) => {
+      bg.clear()
+      bg.fillStyle(hover ? 0x8B1A1A : 0x5C1010, hover ? 1 : 0.88)
+      bg.fillCircle(0, 0, 27)
+      bg.lineStyle(2, 0xFF6B6B, hover ? 1 : 0.65)
+      bg.strokeCircle(0, 0, 27)
+    }
+    drawBg(false)
+
+    // Ícone PNG (com fallback programático se não carregado)
+    let iconObj: Phaser.GameObjects.Image | Phaser.GameObjects.Graphics
+    if (this.textures.exists('icon-power')) {
+      iconObj = this.add.image(0, -2, 'icon-power').setDisplaySize(38, 38)
+    } else {
+      const g = this.add.graphics()
+      g.lineStyle(4, 0xFFFFFF, 0.90)
+      g.beginPath()
+      g.arc(0, 3, 14, Math.PI * 0.28, Math.PI * 1.72, false)
+      g.strokePath()
+      g.lineStyle(4, 0xFFFFFF, 0.95)
+      g.lineBetween(0, -18, 0, -8)
+      iconObj = g
+    }
+
+    const label = this.add.text(0, 34, 'Desligar', {
+      fontSize: '11px', color: '#FF8A80', fontFamily: 'Arial',
+      stroke: '#000000', strokeThickness: 2,
+    }).setOrigin(0.5)
+
+    const hit = this.add.zone(0, 0, 60, 60).setInteractive({ useHandCursor: true })
+    hit.on('pointerdown', () => this.showShutdownConfirm())
+    hit.on('pointerover', () => drawBg(true))
+    hit.on('pointerout',  () => drawBg(false))
+
+    btn.add([bg, iconObj, label, hit])
+  }
+
+  private showShutdownConfirm() {
+    if (!this.levelStarted || this.gameEnded) return
+
+    const W = 1280, H = 720
+    const overlay = this.add.rectangle(W / 2, H / 2, W, H, 0x000000, 0.52)
+      .setDepth(250).setInteractive()
+
+    const modal = this.add.container(W / 2, H / 2).setDepth(251)
+
+    const bg = this.add.graphics()
+    bg.fillStyle(0x0D1628, 0.97)
+    bg.fillRoundedRect(-220, -100, 440, 200, 16)
+    bg.lineStyle(2.5, 0xFF6B6B, 0.75)
+    bg.strokeRoundedRect(-220, -100, 440, 200, 16)
+
+    const title = this.add.text(0, -52, '⏻  Desligar o computador?', {
+      fontSize: '22px', fontFamily: 'Arial Black', color: '#FFFFFF',
+    }).setOrigin(0.5).setResolution(2)
+
+    const sub = this.add.text(0, -10, 'Certifique-se de salvar seu trabalho antes.', {
+      fontSize: '15px', fontFamily: 'Arial', color: '#AED6F1',
+    }).setOrigin(0.5).setResolution(2)
+
+    // Botão Sim
+    const simBg = this.add.graphics()
+    simBg.fillStyle(0x7B241C, 1)
+    simBg.fillRoundedRect(-110, 30, 100, 40, 20)
+    simBg.lineStyle(2, 0xFFFFFF, 0.9)
+    simBg.strokeRoundedRect(-110, 30, 100, 40, 20)
+    const simTxt = this.add.text(-60, 50, '✓  Sim', {
+      fontSize: '16px', fontFamily: 'Arial Black', color: '#FFFFFF',
+    }).setOrigin(0.5).setResolution(2)
+
+    // Botão Não
+    const naoBg = this.add.graphics()
+    naoBg.fillStyle(0x2E4A6A, 1)
+    naoBg.fillRoundedRect(10, 30, 100, 40, 20)
+    naoBg.lineStyle(2, 0xFFFFFF, 0.9)
+    naoBg.strokeRoundedRect(10, 30, 100, 40, 20)
+    const naoTxt = this.add.text(60, 50, '✕  Não', {
+      fontSize: '16px', fontFamily: 'Arial Black', color: '#FFFFFF',
+    }).setOrigin(0.5).setResolution(2)
+
+    modal.add([bg, title, sub, simBg, simTxt, naoBg, naoTxt])
+    modal.setScale(0.88).setAlpha(0)
+    this.tweens.add({ targets: modal, alpha: 1, scale: 1, duration: 200, ease: 'Back.Out' })
+
+    const dismiss = () => {
+      this.tweens.add({
+        targets: [modal, overlay], alpha: 0, duration: 160,
+        onComplete: () => { modal.destroy(); overlay.destroy() },
+      })
+    }
+
+    const simHit = this.add.zone(W / 2 - 60, H / 2 + 50, 100, 40).setDepth(252).setInteractive({ useHandCursor: true })
+    simHit.on('pointerdown', () => {
+      dismiss()
+      this.startTimerOnce()
+      this.playTone(330, 0.08, 'sine', 0.15)
+      this.time.delayedCall(200, () => {
+        EventBus.emit('app-action', { appId: 'power', actionKey: 'shutdown' })
+      })
+    })
+
+    const naoHit = this.add.zone(W / 2 + 60, H / 2 + 50, 100, 40).setDepth(252).setInteractive({ useHandCursor: true })
+    naoHit.on('pointerdown', dismiss)
   }
 
   private startTimer() {
@@ -488,122 +750,150 @@ export class GameScene extends Phaser.Scene {
 
   private createAppContent(appId: AppId): Phaser.GameObjects.GameObject[] {
     switch (appId) {
-      case 'camera':      return this.createCameraContent()
+      case 'relogio':     return this.createRelogioContent()
       case 'gravador':    return this.createGravadorContent()
       case 'desenho':     return this.createDesenhoContent()
       case 'calculadora': return this.createCalculadoraContent()
-      case 'navegador':   return this.createNavegadorContent()
+      case 'pasta':       return this.createPastaContent()
       case 'player':      return this.createPlayerContent()
+      case 'power':       return []
     }
   }
 
-  // ── Câmera ────────────────────────────────────────────────────────────────
+  // ── Relógio ───────────────────────────────────────────────────────────────
+  // Layout: área de conteúdo = y -126 a +170 (296px), centro em y=22
+  // Relógio pequeno no topo + digital + instrução + botão abaixo
 
-  private createCameraContent(): Phaser.GameObjects.GameObject[] {
+  private createRelogioContent(): Phaser.GameObjects.GameObject[] {
     const objects: Phaser.GameObjects.GameObject[] = []
-    const vx = 0, vy = CONTENT_CY - 40, vw = 340, vh = 180
 
-    // Fundo do visor — imagem real
-    const visorBg = this.add.image(vx, vy, 'camera-scene').setDisplaySize(vw, vh)
-    const visorFrame = this.add.rectangle(vx, vy, vw, vh, 0x000000, 0).setStrokeStyle(3, 0x2E86C1)
-    objects.push(visorBg, visorFrame)
+    // Relógio compacto no alto da área de conteúdo
+    const CX = 0
+    const CY = CONTENT_TOP + 74    // -126 + 74 = -52 (alto da área)
+    const R  = 58
 
-    // Sujeitos a fotografar — elementos animados dentro do visor
-    const subjectDefs: { x: number; y: number; em: string; fs: string; dy: number }[] = [
-      { x: -80, y: vy - 20, em: '🌳', fs: '32px', dy:  5 },
-      { x:   0, y: vy - 10, em: '⭐', fs: '28px', dy: -6 },
-      { x:  85, y: vy - 25, em: '🏠', fs: '30px', dy:  4 },
-      { x: -45, y: vy + 35, em: '🌸', fs: '22px', dy: -4 },
-      { x:  55, y: vy + 32, em: '🦋', fs: '20px', dy:  6 },
-    ]
-    subjectDefs.forEach(({ x, y, em, fs, dy }, i) => {
-      const s = this.add.text(x, y, em, { fontSize: fs }).setOrigin(0.5)
-      this.tweens.add({
-        targets: s, y: y + dy,
-        duration: 1400 + i * 300, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
-      })
-      objects.push(s)
+    // Fundo do mostrador
+    const face = this.add.graphics()
+    face.fillStyle(0x0A1F38, 1)
+    face.fillCircle(CX, CY, R)
+    face.lineStyle(4, 0x2E86C1, 0.95)
+    face.strokeCircle(CX, CY, R)
+    face.lineStyle(1, 0x2E86C1, 0.3)
+    face.strokeCircle(CX, CY, R - 8)
+    objects.push(face)
+
+    // Marcações das horas (12 traços)
+    const marks = this.add.graphics()
+    for (let i = 0; i < 12; i++) {
+      const a = (i * 30 - 90) * Math.PI / 180
+      const isMain = i % 3 === 0
+      marks.lineStyle(isMain ? 3 : 1.5, 0xAED6F1, isMain ? 0.9 : 0.45)
+      marks.lineBetween(
+        CX + Math.cos(a) * (R - (isMain ? 14 : 9)),
+        CY + Math.sin(a) * (R - (isMain ? 14 : 9)),
+        CX + Math.cos(a) * (R - 3),
+        CY + Math.sin(a) * (R - 3),
+      )
+    }
+    objects.push(marks)
+
+    // Números 12, 3, 6, 9
+    ;['12', '3', '6', '9'].forEach((n, i) => {
+      const a  = (i * 90 - 90) * Math.PI / 180
+      const nr = R - 22
+      objects.push(
+        this.add.text(CX + Math.cos(a) * nr, CY + Math.sin(a) * nr, n, {
+          fontSize: '13px', color: '#7FBBE8', fontFamily: 'Arial Black',
+        }).setOrigin(0.5).setResolution(2),
+      )
     })
 
-    // Linha de grade (regra dos terços — horizontal)
-    const grid = this.add.graphics()
-    grid.lineStyle(1, 0x5DADE2, 0.25)
-    grid.lineBetween(-vw / 2, vy - vh / 6, vw / 2, vy - vh / 6)
-    grid.lineBetween(-vw / 2, vy + vh / 6, vw / 2, vy + vh / 6)
-    grid.lineBetween(-vw / 3, vy - vh / 2, -vw / 3, vy + vh / 2)
-    grid.lineBetween( vw / 3, vy - vh / 2,  vw / 3, vy + vh / 2)
-    objects.push(grid)
+    // Ponteiros iniciais 8:45
+    const hands = this.add.graphics()
+    this.relogioHands = hands
+    this.drawClockHands(hands, CX, CY, R, 8, 45)
+    objects.push(hands)
 
-    // Linha de varredura (scan line animada)
-    const scanLine = this.add.rectangle(vx, vy - vh / 2 + 4, vw - 4, 3, 0x5DADE2, 0.35)
-    this.tweens.add({
-      targets: scanLine, y: vy + vh / 2 - 4,
-      duration: 2200, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+    // ── Área abaixo do relógio ──────────────────────────────────────────────
+
+    // Linha separadora
+    const sep = this.add.graphics()
+    sep.lineStyle(1, 0x2E86C1, 0.3)
+    sep.lineBetween(-160, CY + R + 16, 160, CY + R + 16)
+    objects.push(sep)
+
+    // Hora atual (digital)
+    const curY = CY + R + 36
+    objects.push(
+      this.add.text(-60, curY, 'Hora atual:', {
+        fontSize: '13px', color: '#7FBBE8', fontFamily: 'Arial',
+      }).setOrigin(0, 0.5).setResolution(2),
+    )
+    const digital = this.add.text(60, curY, '8:45', {
+      fontSize: '22px', color: '#5DADE2', fontFamily: 'Courier New, monospace',
+      stroke: '#071428', strokeThickness: 3,
+    }).setOrigin(0, 0.5).setResolution(2)
+    this.relogioDigital = digital
+    objects.push(digital)
+
+    // Seta → hora alvo
+    const arrowY = curY + 36
+    objects.push(
+      this.add.text(0, arrowY, '→  Sincronizar para  9:00', {
+        fontSize: '17px', color: '#F9E79F', fontFamily: 'Arial Black',
+      }).setOrigin(0.5).setResolution(2),
+    )
+
+    // Botão sincronizar (amplo, toque fácil)
+    const btnY = arrowY + 52
+    let synced = false
+    const syncBtn = this.createButton(CX, btnY, 260, 56, '⏰  Sincronizar', 0x1A3A6B, () => {
+      if (synced || this.gameEnded) return
+      synced = true
+      hands.clear()
+      this.drawClockHands(hands, CX, CY, R, 9, 0)
+      digital.setText('9:00')
+      EventBus.emit('app-action', { appId: 'relogio', actionKey: 'set-time' })
     })
-    objects.push(scanLine)
-
-    // Caixa de foco (AF box) — pisca levemente ao redor do sujeito central
-    const afBox = this.add.graphics()
-    const afSize = 42
-    afBox.lineStyle(2, 0x2ECC71, 1)
-    afBox.strokeRect(-afSize / 2, vy - 10 - afSize / 2, afSize, afSize)
-    this.tweens.add({ targets: afBox, alpha: { from: 1, to: 0.25 }, duration: 700, yoyo: true, repeat: -1 })
-    objects.push(afBox)
-
-    // Cantos do visor (decorativos)
-    const corners = this.add.graphics()
-    corners.lineStyle(4, 0x5DADE2)
-    const hw = vw / 2, hh = vh / 2
-    corners.lineBetween(-hw, vy - hh, -hw + 22, vy - hh)
-    corners.lineBetween(-hw, vy - hh, -hw, vy - hh + 22)
-    corners.lineBetween( hw, vy - hh,  hw - 22, vy - hh)
-    corners.lineBetween( hw, vy - hh,  hw, vy - hh + 22)
-    corners.lineBetween(-hw, vy + hh, -hw + 22, vy + hh)
-    corners.lineBetween(-hw, vy + hh, -hw, vy + hh - 22)
-    corners.lineBetween( hw, vy + hh,  hw - 22, vy + hh)
-    corners.lineBetween( hw, vy + hh,  hw, vy + hh - 22)
-    objects.push(corners)
-
-    // Indicador REC (canto superior esquerdo do visor)
-    const recDot = this.add.circle(-hw + 16, vy - hh + 14, 6, 0xE74C3C)
-    const recLbl = this.add.text(-hw + 28, vy - hh + 14, 'AO VIVO', {
-      fontSize: '11px', color: '#E74C3C', fontFamily: 'Arial Black',
-    }).setOrigin(0, 0.5)
-    this.tweens.add({ targets: [recDot, recLbl], alpha: { from: 1, to: 0.1 }, duration: 900, yoyo: true, repeat: -1 })
-    objects.push(recDot, recLbl)
-
-    // Botão Tirar Foto
-    const btn = this.createButton(0, CONTENT_CY + 80, 220, 64, '📷  Tirar Foto', 0x1A6B9A, () => {
-      this.flashCamera(objects)
-      this.time.delayedCall(400, () => {
-        EventBus.emit('app-action', { appId: 'camera', actionKey: 'take-photo' })
-        this.playSuccess()
-      })
-    })
-    objects.push(btn)
+    objects.push(syncBtn)
 
     return objects
   }
 
-  private flashCamera(cameraObjects?: Phaser.GameObjects.GameObject[]) {
-    const vx = 0, vy = CONTENT_CY - 40, vw = 340, vh = 180
-    const flash = this.add.rectangle(vx, vy, vw, vh, 0xFFFFFF, 0.95).setDepth(100)
-    this.tweens.add({ targets: flash, alpha: 0, duration: 350, onComplete: () => flash.destroy() })
-    // Congela brevemente a varredura (pausa tweens dos sujeitos por 500ms)
-    if (cameraObjects) {
-      cameraObjects.forEach(o => {
-        if (o instanceof Phaser.GameObjects.Text) {
-          this.tweens.getTweensOf(o).forEach(t => { t.pause(); this.time.delayedCall(500, () => t.resume()) })
-        }
-      })
-    }
-    this.playTone(1200, 0.06, 'sine', 0.15)
+  private drawClockHands(
+    gfx: Phaser.GameObjects.Graphics,
+    cx: number, cy: number, r: number,
+    hour: number, minute: number,
+  ) {
+    gfx.clear()
+    const hAngle = ((hour % 12 + minute / 60) / 12 * 360 - 90) * Math.PI / 180
+    const mAngle = (minute / 60 * 360 - 90) * Math.PI / 180
+    const hLen = r * 0.52, mLen = r * 0.72
+
+    // Sombra (offset 2px)
+    gfx.lineStyle(6, 0x000000, 0.18)
+    gfx.lineBetween(cx + 2, cy + 2, cx + 2 + Math.cos(hAngle) * hLen, cy + 2 + Math.sin(hAngle) * hLen)
+    gfx.lineBetween(cx + 2, cy + 2, cx + 2 + Math.cos(mAngle) * mLen, cy + 2 + Math.sin(mAngle) * mLen)
+
+    // Ponteiro das horas
+    gfx.lineStyle(5, 0xFFFFFF, 0.95)
+    gfx.lineBetween(cx, cy, cx + Math.cos(hAngle) * hLen, cy + Math.sin(hAngle) * hLen)
+
+    // Ponteiro dos minutos
+    gfx.lineStyle(3, 0xAED6F1, 0.90)
+    gfx.lineBetween(cx, cy, cx + Math.cos(mAngle) * mLen, cy + Math.sin(mAngle) * mLen)
+
+    // Centro
+    gfx.fillStyle(0xE74C3C, 1); gfx.fillCircle(cx, cy, 5)
+    gfx.fillStyle(0xFFFFFF, 1); gfx.fillCircle(cx, cy, 2.5)
   }
 
   // ── Gravador ──────────────────────────────────────────────────────────────
 
   private createGravadorContent(): Phaser.GameObjects.GameObject[] {
     const objects: Phaser.GameObjects.GameObject[] = []
+    this.gravadorSaved = false   // reset ao abrir nova janela do gravador
+    this.gravadorState = 'idle'
 
     // Status
     const status = this.add.text(0, CONTENT_CY - 90, '⏹  Parado', {
@@ -612,9 +902,14 @@ export class GameScene extends Phaser.Scene {
     this.gravadorStatusText = status
     objects.push(status)
 
-    // Forma de onda estática
+    // Fundo da área de waveform
+    objects.push(
+      this.add.image(0, CONTENT_CY - 40, 'gravador-bg').setDisplaySize(340, 100)
+    )
+
+    // Forma de onda estática (sobre o fundo)
     const wave = this.add.graphics()
-    this.drawWaveform(wave, 0, CONTENT_CY - 40, 320, 60, 0x2C3E50)
+    this.drawWaveform(wave, 0, CONTENT_CY - 40, 320, 60, 0x5DADE2)
     objects.push(wave)
 
     // Nível de gravação (animado quando recording)
@@ -682,14 +977,13 @@ export class GameScene extends Phaser.Scene {
       this.playTone(330, 0.08, 'sine', 0.12)
 
     } else {
-      // Salvar
+      // Salvar — guarda único para evitar duplo disparo
+      if (this.gravadorSaved || this.gameEnded) return
+      this.gravadorSaved = true
       this.gravadorState = 'idle'
       btnText.setText('🎙️  Gravar')
       this.gravadorStatusText?.setText('✅  Salvo!').setColor('#2ECC71')
-      this.playSuccess()
-      this.time.delayedCall(600, () => {
-        EventBus.emit('app-action', { appId: 'gravador', actionKey: 'save-recording' })
-      })
+      EventBus.emit('app-action', { appId: 'gravador', actionKey: 'save-recording' })
     }
   }
 
@@ -698,15 +992,20 @@ export class GameScene extends Phaser.Scene {
   private createDesenhoContent(): Phaser.GameObjects.GameObject[] {
     const objects: Phaser.GameObjects.GameObject[] = []
 
-    // Canvas de desenho
-    const canvas = this.add.rectangle(0, CONTENT_CY - 50, 370, 190, 0xFFFDF6)
-      .setStrokeStyle(3, 0x76448A)
+    // Canvas de desenho com textura de papel
+    const canvas = this.add.image(0, CONTENT_CY - 50, 'desenho-canvas').setDisplaySize(370, 190)
     objects.push(canvas)
 
-    // Hint
+    // Borda roxa sobre a imagem
+    const canvasBorder = this.add.graphics()
+    canvasBorder.lineStyle(3, 0x76448A)
+    canvasBorder.strokeRect(-185, CONTENT_TOP + 8, 370, 190)
+    objects.push(canvasBorder)
+
+    // Hint sobreposto
     objects.push(
       this.add.text(0, CONTENT_CY - 50, '✏️  Desenhe aqui!', {
-        fontSize: '14px', color: '#BDC3C7', fontFamily: 'Arial',
+        fontSize: '14px', color: '#76448A', fontFamily: 'Arial', fontStyle: 'bold',
       }).setOrigin(0.5)
     )
 
@@ -730,9 +1029,11 @@ export class GameScene extends Phaser.Scene {
     })
 
     // Botão Pronto (desabilitado até o jogador desenhar)
+    let desenhoConfirmed = false
     const readyBtn = this.createButton(100, CONTENT_CY + 88, 150, 56, '✅ Pronto!', 0x1E8449, () => {
+      if (desenhoConfirmed || this.gameEnded) return
+      desenhoConfirmed = true
       EventBus.emit('app-action', { appId: 'desenho', actionKey: 'confirm-drawing' })
-      this.playSuccess()
     })
     readyBtn.setAlpha(0.3)
     this.desenho.readyBtn = readyBtn
@@ -745,6 +1046,11 @@ export class GameScene extends Phaser.Scene {
 
   private createCalculadoraContent(): Phaser.GameObjects.GameObject[] {
     const objects: Phaser.GameObjects.GameObject[] = []
+
+    // Fundo texturizado da calculadora (atrás de tudo)
+    objects.push(
+      this.add.image(0, CONTENT_CY + 30, 'calc-bg').setDisplaySize(420, 210)
+    )
 
     // Visor
     const visorBg = this.add.rectangle(0, CONTENT_TOP + 36, 340, 56, 0x1A252F)
@@ -824,54 +1130,151 @@ export class GameScene extends Phaser.Scene {
     this.calcText?.setText(this.calcDisplay || '0')
   }
 
-  // ── Navegador ─────────────────────────────────────────────────────────────
+  // ── Pasta ─────────────────────────────────────────────────────────────────
 
-  private createNavegadorContent(): Phaser.GameObjects.GameObject[] {
+  private createPastaContent(): Phaser.GameObjects.GameObject[] {
     const objects: Phaser.GameObjects.GameObject[] = []
+    this.pastaFilesDone = 0
 
-    // Barra de endereço
-    const addrBar = this.add.rectangle(0, CONTENT_TOP + 28, 360, 36, 0xFFFFFF)
-      .setStrokeStyle(2, 0xCA6F1E)
-    objects.push(addrBar)
-    objects.push(
-      this.add.text(-166, CONTENT_TOP + 28, '🌐  escola.edu.br', {
-        fontSize: '14px', color: '#7F8C8D', fontFamily: 'Courier New',
-      }).setOrigin(0, 0.5)
-    )
+    const FOLDER_CX = 0
+    const FOLDER_CY = CONTENT_CY + 18   // centro da zona-alvo (local da janela)
+    const FOLDER_W  = 320
+    const FOLDER_H  = 68
 
-    // Área de página — imagem da Biblioteca Digital
-    objects.push(
-      this.add.image(0, CONTENT_CY - 20, 'browser-page').setDisplaySize(362, 260)
-    )
-
-    // Links clicáveis
-    const links = [
-      '📖  Livros de Histórias',
-      '🔬  Ciências e Natureza',
-      '🎨  Arte e Cultura',
+    const fileDefs = [
+      { label: 'Matemática', textureKey: 'pasta-doc-matematica', ix: -130, iy: CONTENT_CY - 96 },
+      { label: 'Leitura',    textureKey: 'pasta-doc-leitura',    ix:    0, iy: CONTENT_CY - 96 },
+      { label: 'Arte',       textureKey: 'pasta-doc-arte',       ix:  130, iy: CONTENT_CY - 96 },
     ]
 
-    links.forEach((txt, i) => {
-      const ly = CONTENT_CY - 16 + i * 46
-      const linkBg = this.add.rectangle(0, ly, 320, 38, 0xEAF4FB)
-        .setStrokeStyle(1, 0xAED6F1)
-        .setInteractive({ useHandCursor: true })
+    // Instrução
+    const counter = this.add.text(0, CONTENT_CY - 136,
+      '✋  Arraste os arquivos para a pasta: 0 / 3', {
+        fontSize: '13px', color: '#AED6F1', fontFamily: 'Arial',
+        wordWrap: { width: 380 }, align: 'center',
+      }).setOrigin(0.5)
+    objects.push(counter)
 
-      const linkTxt = this.add.text(-148, ly, txt, {
-        fontSize: '14px', color: '#1A6B9A', fontFamily: 'Arial',
-      }).setOrigin(0, 0.5)
+    // Zona destino — pasta
+    const folderGfx = this.add.graphics()
+    const drawFolder = (highlight: boolean) => {
+      folderGfx.clear()
+      folderGfx.fillStyle(0xB7770D, highlight ? 0.38 : 0.18)
+      folderGfx.fillRoundedRect(-FOLDER_W / 2, FOLDER_CY - FOLDER_H / 2, FOLDER_W, FOLDER_H, 10)
+      folderGfx.lineStyle(2, highlight ? 0xFFD700 : 0xF1C40F, highlight ? 1 : 0.60)
+      folderGfx.strokeRoundedRect(-FOLDER_W / 2, FOLDER_CY - FOLDER_H / 2, FOLDER_W, FOLDER_H, 10)
+    }
+    drawFolder(false)
+    objects.push(folderGfx)
 
-      linkBg.on('pointerover', () => { linkBg.setFillStyle(0xD6EAF8); linkTxt.setColor('#0E4D7B') })
-      linkBg.on('pointerout',  () => { linkBg.setFillStyle(0xEAF4FB); linkTxt.setColor('#1A6B9A') })
-      linkBg.on('pointerdown', () => {
-        linkTxt.setStyle({ color: '#7D3C98' })
-        this.playSuccess()
-        this.time.delayedCall(300, () => {
-          EventBus.emit('app-action', { appId: 'navegador', actionKey: 'navigate' })
-        })
+    objects.push(
+      this.add.text(FOLDER_CX, FOLDER_CY, '📁  Pasta da Turma', {
+        fontSize: '17px', color: '#F1C40F', fontFamily: 'Arial Black',
+      }).setOrigin(0.5),
+    )
+
+    // Botão confirmar
+    let pastaConfirmed = false
+    const confirmBtn = this.createButton(0, CONTENT_CY + 108, 220, 54, '✔  Confirmar', 0x1E8449, () => {
+      if (pastaConfirmed || this.gameEnded) return
+      pastaConfirmed = true
+      EventBus.emit('app-action', { appId: 'pasta', actionKey: 'organize-files' })
+    })
+    confirmBtn.setAlpha(0.3)
+    this.pastaConfirmBtn = confirmBtn
+    objects.push(confirmBtn)
+
+    // Arquivos arrastáveis
+    fileDefs.forEach((fd) => {
+      const fileC = this.add.container(fd.ix, fd.iy)
+      let dropped = false
+
+      const hasPng = this.textures.exists(fd.textureKey)
+      if (hasPng) {
+        fileC.add(this.add.image(0, 0, fd.textureKey).setDisplaySize(90, 70))
+      } else {
+        const bg = this.add.graphics()
+        bg.fillStyle(0x1A3A6B, 0.92)
+        bg.fillRoundedRect(-45, -35, 90, 70, 8)
+        bg.lineStyle(1.5, 0xFFFFFF, 0.25)
+        bg.strokeRoundedRect(-45, -35, 90, 70, 8)
+        fileC.add([bg, this.add.text(0, 0, fd.label, {
+          fontSize: '13px', color: '#FFFFFF', fontFamily: 'Arial Black',
+        }).setOrigin(0.5)])
+      }
+
+      const hit = this.add.zone(0, 0, 94, 74).setInteractive({ useHandCursor: true })
+      fileC.add(hit)
+      objects.push(fileC)
+
+      // ── Drag state (local por arquivo) ──────────────────────────────────────
+      let isDragging = false
+      let offX = 0, offY = 0
+
+      hit.on('pointerdown', (ptr: Phaser.Input.Pointer) => {
+        if (dropped || this.gameEnded) return
+        isDragging = true
+        this.tweens.killTweensOf(fileC)
+        const win = fileC.parentContainer
+        const wx = win ? win.x : 0
+        const wy = win ? win.y : 0
+        offX = fileC.x - (ptr.worldX - wx)
+        offY = fileC.y - (ptr.worldY - wy)
+        fileC.setAlpha(0.85)
       })
 
-      objects.push(linkBg, linkTxt)
+      const onMove = (ptr: Phaser.Input.Pointer) => {
+        if (!isDragging || dropped || !fileC.active) return
+        const win = fileC.parentContainer
+        const wx = win ? win.x : 0
+        const wy = win ? win.y : 0
+        fileC.x = ptr.worldX - wx + offX
+        fileC.y = ptr.worldY - wy + offY
+
+        // Destaca pasta quando está sobre ela
+        const over = Math.abs(fileC.x - FOLDER_CX) < FOLDER_W / 2 &&
+                     Math.abs(fileC.y - FOLDER_CY) < FOLDER_H / 2
+        drawFolder(over)
+      }
+
+      const onUp = () => {
+        if (!isDragging || !fileC.active) return
+        isDragging = false
+        fileC.setAlpha(1)
+        drawFolder(false)
+
+        if (dropped) return
+
+        const inFolder = Math.abs(fileC.x - FOLDER_CX) < FOLDER_W / 2 &&
+                         Math.abs(fileC.y - FOLDER_CY) < FOLDER_H / 2
+
+        if (inFolder) {
+          dropped = true
+          this.tweens.add({
+            targets: fileC,
+            x: FOLDER_CX, y: FOLDER_CY,
+            scaleX: 0.3, scaleY: 0.3, alpha: 0,
+            duration: 300, ease: 'Power2',
+          })
+          this.playTone(880, 0.05, 'sine', 0.14)
+          this.pastaFilesDone++
+          counter.setText(`✋  Arraste os arquivos para a pasta: ${this.pastaFilesDone} / ${this.pastaTotal}`)
+          if (this.pastaFilesDone >= this.pastaTotal) {
+            this.tweens.add({ targets: confirmBtn, alpha: 1, duration: 280 })
+            this.playTone(1046, 0.06, 'sine', 0.16)
+          }
+        } else {
+          // Devolve ao lugar original
+          this.tweens.add({
+            targets: fileC,
+            x: fd.ix, y: fd.iy,
+            duration: 220, ease: 'Back.Out',
+          })
+        }
+      }
+
+      this.input.on('pointermove', onMove)
+      this.input.on('pointerup', onUp)
     })
 
     return objects
@@ -890,7 +1293,7 @@ export class GameScene extends Phaser.Scene {
 
     // Título
     objects.push(
-      this.add.text(0, CONTENT_CY + 32, '🌙  Canção da Lua', {
+      this.add.text(0, CONTENT_CY + 32, '🎵  Música da Aula', {
         fontSize: '18px', color: '#1A252F', fontFamily: 'Arial Black',
       }).setOrigin(0.5)
     )
@@ -901,6 +1304,7 @@ export class GameScene extends Phaser.Scene {
     objects.push(trackBg, trackBar)
 
     // Botão Play/Pause
+    let playerStarted = false
     const playBtn = this.createButton(0, CONTENT_CY + 100, 160, 64, '▶  Tocar', 0x1A252F, () => {
       playing = !playing
       const btnTxt = playBtn.getAt(2) as Phaser.GameObjects.Text
@@ -911,12 +1315,12 @@ export class GameScene extends Phaser.Scene {
         this.playTone(330, 0.15, 'sine', 0.18, 0.20)
         this.playTone(392, 0.25, 'sine', 0.22, 0.40)
 
-        // Anima barra de progresso
         this.tweens.add({ targets: trackBar, scaleX: 300, duration: 8000, ease: 'Linear' })
 
-        this.time.delayedCall(500, () => {
+        if (!playerStarted && !this.gameEnded) {
+          playerStarted = true
           EventBus.emit('app-action', { appId: 'player', actionKey: 'play-music' })
-        })
+        }
       } else {
         this.tweens.killTweensOf(trackBar)
       }
@@ -994,6 +1398,7 @@ export class GameScene extends Phaser.Scene {
 
     // Missão completa
     this.completedMissions++
+    this.updateChecklist()
     this.currentPoints += 5
     this.playRoundComplete()
 
@@ -1040,254 +1445,142 @@ export class GameScene extends Phaser.Scene {
   // ── Intro de nível ────────────────────────────────────────────────────────
 
   private getLevelInstructions(): { objective: string; detail: string; tip: string } {
-    const apps    = this.levelConfig.availableApps.length
     const missions = this.levelConfig.missions.length
 
     if (this.levelConfig.level === 1) {
       return {
-        objective: `Complete ${missions} missões usando ${apps} apps disponíveis.`,
-        detail:    'Abra a Câmera e a Calculadora para ajudar a Lua!',
+        objective: `Complete ${missions} tarefas de computador!`,
+        detail:    'Use o Relógio e a Calculadora.',
         tip:       'Dê duplo toque no ícone para abrir um app.',
       }
     }
     if (this.levelConfig.level === 2) {
       return {
-        objective: `Complete ${missions} missões usando ${apps} apps disponíveis.`,
-        detail:    'Câmera, Calculadora, Desenho e Gravador estão disponíveis.',
-        tip:       'Algumas missões têm dois passos — siga as dicas da barra!',
+        objective: `Complete ${missions} tarefas de computador!`,
+        detail:    'Relógio, Calculadora, Pasta e Gravador disponíveis.',
+        tip:       'Algumas tarefas têm dois passos — leia o checklist!',
       }
     }
     return {
-      objective: `Complete ${missions} missões usando ${apps} apps disponíveis.`,
-      detail:    'Todos os 6 apps estão desbloqueados neste nível!',
-      tip:       'Atenção à sequência: algumas missões têm vários passos.',
+      objective: `Complete ${missions} tarefas de computador!`,
+      detail:    'Todos os apps desbloqueados. Lembre de desligar o PC!',
+      tip:       'Siga o checklist de missões no canto direito.',
     }
   }
 
   private showStartScreen() {
-    const info = this.getLevelInstructions()
-    const lvl = this.levelConfig.level
+    const info    = this.getLevelInstructions()
+    const missions = this.levelConfig.missions
     const W = 1280, H = 720
+    const MW = 560  // modal width
 
-    const overlay = this.add.rectangle(W / 2, H / 2, W, H, 0x0A1628, 0.72)
+    // altura dinâmica: ~180px fixo + 30px por missão + 80px botão
+    const HALF_H = 90 + missions.length * 28 + 90
+
+    const overlay = this.add.rectangle(W / 2, H / 2, W, H, 0x12324a, 0.58)
       .setDepth(60).setInteractive()
 
-    const modal = this.add.container(W / 2, H / 2)
-    modal.setDepth(61)
+    const modal = this.add.container(W / 2, H / 2).setDepth(61)
 
+    // ── Fundo ──────────────────────────────────────────────────────────────────
     const shadow = this.add.graphics()
     shadow.fillStyle(0x000000, 0.18)
-    shadow.fillRoundedRect(-302, -218, 604, 434, 28)
+    shadow.fillRoundedRect(-MW / 2 + 8, -HALF_H + 8, MW, HALF_H * 2, 28)
 
     const bg = this.add.graphics()
-    bg.fillStyle(0xF0F7FF, 0.98)
-    bg.fillRoundedRect(-310, -230, 620, 434, 28)
-    bg.lineStyle(5, 0xFFFFFF, 0.95)
-    bg.strokeRoundedRect(-310, -230, 620, 434, 28)
+    bg.fillStyle(0xfff6e8, 0.98)
+    bg.fillRoundedRect(-MW / 2, -HALF_H, MW, HALF_H * 2, 28)
+    bg.lineStyle(5, 0xffffff, 0.95)
+    bg.strokeRoundedRect(-MW / 2, -HALF_H, MW, HALF_H * 2, 28)
 
-    const ribbon = this.add.graphics()
-    ribbon.fillStyle(0x1A6B9A, 1)
-    ribbon.fillRoundedRect(-220, -246, 440, 30, 15)
-    ribbon.lineStyle(3, 0xFFFFFF, 0.82)
-    ribbon.strokeRoundedRect(-220, -246, 440, 30, 15)
+    // ── Faixa superior ─────────────────────────────────────────────────────────
+    const topBar = this.add.graphics()
+    topBar.fillStyle(0x1A6B9A, 1)
+    topBar.fillRoundedRect(-196, -HALF_H - 16, 392, 28, 14)
+    topBar.lineStyle(3, 0xffffff, 0.82)
+    topBar.strokeRoundedRect(-196, -HALF_H - 16, 392, 28, 14)
 
-    const stars = this.add.text(0, -186, '★'.repeat(lvl) + '☆'.repeat(3 - lvl), {
-      fontSize: '30px', color: '#FFD700',
-    }).setOrigin(0.5)
-
-    const title = this.add.text(0, -148, `Nível ${lvl} — Desktop da Lua`, {
-      fontFamily: 'Arial', fontSize: '30px', fontStyle: 'bold',
-      color: '#0A3D62', stroke: '#FFFFFF', strokeThickness: 4,
+    // ── Conteúdo ───────────────────────────────────────────────────────────────
+    const yTitle = -HALF_H + 54
+    const title = this.add.text(0, yTitle, `Nível ${this.levelConfig.level}`, {
+      fontFamily: 'Arial', fontSize: '36px', fontStyle: 'bold',
+      color: '#25327a', stroke: '#ffffff', strokeThickness: 5,
     }).setOrigin(0.5).setResolution(2)
 
-    const objective = this.add.text(0, -96, `🎯  ${info.objective}`, {
-      fontFamily: 'Arial', fontSize: '17px', fontStyle: 'bold',
-      color: '#1A6B9A', align: 'center', wordWrap: { width: 560 },
+    const yInfo = yTitle + 52
+    const detail = this.add.text(0, yInfo, `${info.detail}  •  ⏱ ${this.levelConfig.timeLimit}s`, {
+      fontFamily: 'Arial', fontSize: '14px', fontStyle: 'bold',
+      color: '#1A6B9A', align: 'center', wordWrap: { width: MW - 60 },
     }).setOrigin(0.5).setResolution(2)
 
-    const detail = this.add.text(0, -44, `🖥️  ${info.detail}`, {
-      fontFamily: 'Arial', fontSize: '15px',
-      color: '#4E342E', align: 'center', wordWrap: { width: 560 },
-    }).setOrigin(0.5).setResolution(2)
+    // ── Separador + lista de missões ───────────────────────────────────────────
+    const ySep = yInfo + 22
+    const sepLine = this.add.graphics()
+    sepLine.lineStyle(1, 0x1A6B9A, 0.22)
+    sepLine.lineBetween(-MW / 2 + 24, ySep, MW / 2 - 24, ySep)
 
-    const tip = this.add.text(0, 12, `💡  ${info.tip}`, {
-      fontFamily: 'Arial', fontSize: '14px',
-      color: '#7D6608', align: 'center', wordWrap: { width: 560 },
-    }).setOrigin(0.5).setResolution(2)
+    const yListLabel = ySep + 16
+    const listLabel = this.add.text(-MW / 2 + 28, yListLabel, 'O que fazer neste nível:', {
+      fontFamily: 'Arial', fontSize: '13px', fontStyle: 'bold', color: '#1A6B9A',
+    }).setOrigin(0, 0.5).setResolution(2)
 
-    const timerTxt = this.add.text(0, 54, `⏱  ${this.levelConfig.timeLimit} segundos`, {
-      fontFamily: 'Arial', fontSize: '13px', color: '#8D6E63',
-    }).setOrigin(0.5)
+    const missionItems = missions.map((m, i) => {
+      const short = m.text.length > 54 ? m.text.substring(0, 52) + '…' : m.text
+      return this.add.text(-MW / 2 + 28, yListLabel + 22 + i * 28, `${i + 1}.  ${short}`, {
+        fontFamily: 'Arial', fontSize: '14px',
+        color: '#3b3b3b', wordWrap: { width: MW - 56 },
+      }).setOrigin(0, 0.5).setResolution(2)
+    })
 
-    const mascot = this.add.image(330, -20, 'mascot-lua').setDisplaySize(120, 150)
-
-    const btnCont = this.add.container(0, 130)
-    const btnShadow = this.add.graphics()
-    btnShadow.fillStyle(0x000000, 0.16)
-    btnShadow.fillRoundedRect(-126, -18, 252, 44, 22)
-    const btnBg = this.add.graphics()
-    btnBg.fillStyle(0x1E8449, 1)
-    btnBg.fillRoundedRect(-130, -24, 260, 50, 25)
-    btnBg.lineStyle(4, 0xFFFFFF, 1)
-    btnBg.strokeRoundedRect(-130, -24, 260, 50, 25)
-    const btnText = this.add.text(0, 0, '▶  Iniciar', {
-      fontFamily: 'Arial', fontSize: '22px', fontStyle: 'bold',
-      color: '#FFFFFF', stroke: '#1B5E20', strokeThickness: 3,
-    }).setOrigin(0.5).setResolution(2)
-    btnCont.add([btnShadow, btnBg, btnText])
-
-    modal.add([shadow, bg, ribbon, stars, title, objective, detail, tip, timerTxt, mascot, btnCont])
-    modal.setScale(0.9).setAlpha(0)
-    this.tweens.add({ targets: modal, alpha: 1, scale: 1, duration: 260, ease: 'Back.easeOut' })
-
-    const btnHitbox = this.add.zone(W / 2, H / 2 + 130, 260, 50)
-    btnHitbox.setDepth(62).setInteractive({ useHandCursor: true })
-
-    btnHitbox.on('pointerover', () =>
-      this.tweens.add({ targets: btnCont, scale: 1.04, duration: 90, ease: 'Sine.easeOut' }))
-    btnHitbox.on('pointerout', () =>
-      this.tweens.add({ targets: btnCont, scale: 1, duration: 90, ease: 'Sine.easeOut' }))
-    btnHitbox.on('pointerdown', () => {
+    // ── Botão ──────────────────────────────────────────────────────────────────
+    const yButton = HALF_H - 48
+    const startBtn = this.createButton(0, yButton, 280, 52, '▶  Iniciar nível', 0x1A6B9A, () => {
       this.playTone(523, 0.10, 'sine', 0.20)
       overlay.destroy()
-      btnHitbox.destroy()
       modal.destroy()
 
       runtimeGameBridge.emit({ type: 'GAME_READY', gameId: GAME_ID })
       EventBus.emit('scene-ready', { levelConfig: this.levelConfig })
       this.broadcastMissionState()
       this.emitCheckpoint()
-
-      if (this.levelConfig.level === 1) {
-        this.showTutorialStep(0)
-        return
-      }
-      this.showFirstMissionBanner(this.levelConfig.missions[0].text)
+      this.levelStarted = true
     })
+
+    modal.add([shadow, bg, topBar, title, detail, sepLine, listLabel, ...missionItems, startBtn])
+    modal.setScale(0.9).setAlpha(0)
+    this.tweens.add({ targets: modal, alpha: 1, scale: 1, duration: 260, ease: 'Back.easeOut' })
   }
 
-  private showTutorialStep(stepIndex: number) {
-    const steps = [
-      {
-        title: 'Dê duplo toque',
-        description: 'Para abrir um aplicativo, toque duas vezes no ícone.',
-        emoji: '👆',
-      },
-      {
-        title: 'Leia a missão',
-        description: 'Veja a missão na barra superior e siga a dica do passo atual.',
-        emoji: '🎯',
-      },
-      {
-        title: 'Use o app correto',
-        description: 'Abra o aplicativo certo e faça a ação pedida para completar a missão.',
-        emoji: '🖥️',
-      },
-    ]
-
-    const step = steps[stepIndex]
-    const isLast = stepIndex >= steps.length - 1
-
-    const overlay = this.add
-      .rectangle(640, 360, 1280, 720, 0x000000, 0.72)
-      .setDepth(400)
-      .setInteractive()
-
-    const card = this.add
-      .rectangle(640, 300, 880, 270, 0xffffff, 1)
-      .setStrokeStyle(6, 0x2e86c1)
-      .setDepth(401)
-
-    const emoji = this.add
-      .text(640, 220, step.emoji, {
-        fontSize: '64px',
-        fontFamily: 'Arial',
-        padding: {
-          top: 14,
-          bottom: 14,
-          left: 14,
-          right: 14,
-        },
-      })
-      .setOrigin(0.5)
-      .setDepth(402)
-
-    const title = this.add
-      .text(640, 305, step.title, {
-        fontSize: '38px',
-        fontFamily: 'Arial Black, Arial',
-        color: '#1a6b9a',
-        align: 'center',
-      })
-      .setOrigin(0.5)
-      .setDepth(402)
-
-    const description = this.add
-      .text(640, 375, step.description, {
-        fontSize: '24px',
-        fontFamily: 'Arial',
-        color: '#334155',
-        align: 'center',
-        wordWrap: { width: 680 },
-      })
-      .setOrigin(0.5)
-      .setDepth(402)
-
-    const button = this.add
-      .rectangle(1020, 300, 80, 80, 0x2e86c1, 1)
-      .setStrokeStyle(4, 0xffffff)
-      .setInteractive({ useHandCursor: true })
-      .setDepth(403)
-
-    const buttonText = this.add
-      .text(1020, 300, isLast ? '▶' : '→', {
-        fontSize: '40px',
-        fontFamily: 'Arial Black, Arial',
-        color: '#ffffff',
-      })
-      .setOrigin(0.5)
-      .setDepth(404)
-
-    const cleanup = () => {
-      overlay.destroy()
-      card.destroy()
-      emoji.destroy()
-      title.destroy()
-      description.destroy()
-      button.destroy()
-      buttonText.destroy()
-    }
-
-    const next = () => {
-      this.playTone(523, 0.08, 'sine', 0.18)
-
-      cleanup()
-
-      if (isLast) {
-        this.showFirstMissionBanner(this.levelConfig.missions[0].text)
-        return
-      }
-
-      this.showTutorialStep(stepIndex + 1)
-    }
-
-    button.on('pointerdown', next)
-    buttonText.setInteractive({ useHandCursor: true })
-    buttonText.on('pointerdown', next)
-  }
 
   // ── Efeitos visuais ───────────────────────────────────────────────────────
 
   private showStepCompleteEffect() {
-    const txt = this.add.text(640, 380, '✅ Passo concluído!', {
-      fontSize: '32px', fontFamily: 'Arial Black', color: '#2ECC71',
-      stroke: '#000', strokeThickness: 5,
-    }).setOrigin(0.5).setDepth(201).setAlpha(0)
+    const W = 1280, H = 720
+    const modal = this.add.container(W / 2, H / 2 - 40).setDepth(200)
 
+    const bg = this.add.graphics()
+    bg.fillStyle(0xfff6e8, 0.97)
+    bg.fillRoundedRect(-160, -28, 320, 56, 28)
+    bg.lineStyle(3, 0x2ECC71, 1)
+    bg.strokeRoundedRect(-160, -28, 320, 56, 28)
+
+    const txt = this.add.text(0, 0, '✅  Passo concluído!', {
+      fontFamily: 'Arial', fontSize: '22px', fontStyle: 'bold',
+      color: '#25327a', stroke: '#ffffff', strokeThickness: 3,
+    }).setOrigin(0.5).setResolution(2)
+
+    modal.add([bg, txt])
+    modal.setAlpha(0).setScale(0.85)
     this.tweens.add({
-      targets: txt, alpha: { from: 0, to: 1 }, y: 340, duration: 300,
-      yoyo: true, hold: 500,
-      onComplete: () => txt.destroy(),
+      targets: modal, alpha: 1, scale: 1, duration: 220, ease: 'Back.easeOut',
+      onComplete: () => {
+        this.time.delayedCall(480, () => {
+          this.tweens.add({
+            targets: modal, alpha: 0, y: H / 2 - 80, duration: 200,
+            onComplete: () => modal.destroy(),
+          })
+        })
+      },
     })
   }
 
@@ -1295,37 +1588,56 @@ export class GameScene extends Phaser.Scene {
     if (this.missionEffectActive) return
     this.missionEffectActive = true
 
-    const overlay = this.add.rectangle(640, 360, 1280, 720, 0x000000, 0.45)
+    const W = 1280, H = 720
+
+    const overlay = this.add.rectangle(W / 2, H / 2, W, H, 0x12324a, 0.52)
       .setDepth(200).setInteractive()
 
-    const panel = this.add.rectangle(640, 360, 860, 320, 0x0A1628, 0.96)
-      .setStrokeStyle(3, 0x2ECC71).setDepth(201)
+    const modal = this.add.container(W / 2, H / 2).setDepth(201)
 
-    const title = this.add.text(640, 285, '✅ Missão concluída!', {
-      fontSize: '36px', fontFamily: 'Arial Black', color: '#2ECC71',
-      stroke: '#000', strokeThickness: 6,
-    }).setOrigin(0.5).setDepth(202)
+    const shadow = this.add.graphics()
+    shadow.fillStyle(0x000000, 0.18)
+    shadow.fillRoundedRect(-242, -118, 484, 236, 24)
 
-    const subtitle = this.add.text(640, 355, nextMissionText ? 'Próxima missão:' : 'Todas as missões foram concluídas!', {
-      fontSize: '22px', fontFamily: 'Arial', color: '#AED6F1',
-      align: 'center',
-    }).setOrigin(0.5).setDepth(202)
+    const bg = this.add.graphics()
+    bg.fillStyle(0xfff6e8, 0.98)
+    bg.fillRoundedRect(-250, -126, 500, 236, 24)
+    bg.lineStyle(5, 0xffffff, 0.95)
+    bg.strokeRoundedRect(-250, -126, 500, 236, 24)
 
-    const nextTxt = this.add.text(640, 420, nextMissionText ?? 'Preparando resultado...', {
-      fontSize: '26px', fontFamily: 'Arial Black', color: '#FFFFFF',
-      stroke: '#000', strokeThickness: 5,
-      wordWrap: { width: 760 }, align: 'center',
-    }).setOrigin(0.5).setDepth(202)
+    const topBar = this.add.graphics()
+    topBar.fillStyle(0x2ECC71, 1)
+    topBar.fillRoundedRect(-176, -142, 352, 28, 14)
+    topBar.lineStyle(3, 0xffffff, 0.82)
+    topBar.strokeRoundedRect(-176, -142, 352, 28, 14)
 
-    const all = [overlay, panel, title, subtitle, nextTxt]
-    all.forEach(obj => obj.setAlpha(0))
-    this.tweens.add({ targets: all, alpha: 1, duration: 300 })
+    const title = this.add.text(0, -62, '✅  Missão concluída!', {
+      fontFamily: 'Arial', fontSize: '30px', fontStyle: 'bold',
+      color: '#25327a', stroke: '#ffffff', strokeThickness: 4,
+    }).setOrigin(0.5).setResolution(2)
 
-    this.time.delayedCall(1400, () => {
+    const subtitle = this.add.text(0, 0,
+      nextMissionText ? 'Próxima missão:' : 'Todas as missões concluídas!', {
+        fontFamily: 'Arial', fontSize: '16px', fontStyle: 'bold',
+        color: '#1A6B9A', align: 'center',
+      }).setOrigin(0.5).setResolution(2)
+
+    const nextTxt = this.add.text(0, 52,
+      nextMissionText ?? 'Preparando resultado...', {
+        fontFamily: 'Arial', fontSize: '17px', fontStyle: 'bold',
+        color: '#3b3b3b', wordWrap: { width: 440 }, align: 'center',
+      }).setOrigin(0.5).setResolution(2)
+
+    modal.add([shadow, bg, topBar, title, subtitle, nextTxt])
+    modal.setScale(0.9).setAlpha(0)
+    this.tweens.add({ targets: modal, alpha: 1, scale: 1, duration: 200, ease: 'Back.easeOut' })
+
+    this.time.delayedCall(700, () => {
       this.tweens.add({
-        targets: all, alpha: 0, duration: 250,
+        targets: [overlay, modal], alpha: 0, duration: 180,
         onComplete: () => {
-          all.forEach(obj => obj.destroy())
+          overlay.destroy()
+          modal.destroy()
           this.missionEffectActive = false
           onDone()
         },
@@ -1333,42 +1645,6 @@ export class GameScene extends Phaser.Scene {
     })
   }
 
-  private showFirstMissionBanner(missionText: string) {
-    this.input.enabled = false
-
-    const overlay = this.add.rectangle(640, 360, 1280, 720, 0x000000, 0.55)
-      .setDepth(200).setInteractive()
-
-    const label = this.add.text(640, 280, 'PRIMEIRO DESAFIO:', {
-      fontSize: '30px', fontFamily: 'Arial Black', color: '#AED6F1',
-      stroke: '#000', strokeThickness: 6,
-    }).setOrigin(0.5).setDepth(201).setAlpha(0)
-
-    const missionTxt = this.add.text(640, 370, missionText, {
-      fontSize: '36px', fontFamily: 'Arial Black', color: '#FFFFFF',
-      stroke: '#000', strokeThickness: 7,
-      wordWrap: { width: 900 }, align: 'center',
-    }).setOrigin(0.5).setDepth(201).setAlpha(0)
-
-    const hint = this.add.text(640, 470, '⬆️  Veja a dica na barra acima!', {
-      fontSize: '20px', fontFamily: 'Arial', color: '#F9E79F',
-      stroke: '#000', strokeThickness: 3,
-    }).setOrigin(0.5).setDepth(201).setAlpha(0)
-
-    this.tweens.add({ targets: [label, missionTxt, hint], alpha: 1, duration: 350, ease: 'Power2' })
-    this.playTone(784, 0.10, 'sine', 0.20)
-
-    this.time.delayedCall(2200, () => {
-      this.tweens.add({
-        targets: [overlay, label, missionTxt, hint], alpha: 0, duration: 350,
-        onComplete: () => {
-          overlay.destroy(); label.destroy(); missionTxt.destroy(); hint.destroy()
-          this.input.enabled = true
-          this.levelStarted = true
-        },
-      })
-    })
-  }
 
   // Feedback quando o jogador usa o app errado para o passo atual
   private showWrongAppHint(correctAppId: AppId) {
@@ -1415,7 +1691,7 @@ export class GameScene extends Phaser.Scene {
     this.input.enabled = true
     const W = 1280, H = 720
 
-    this.add.rectangle(W / 2, H / 2, W, H, 0x0A1628, 0.75)
+    this.add.rectangle(W / 2, H / 2, W, H, 0x12324a, 0.72)
       .setDepth(400).setInteractive()
 
     const modal = this.add.container(W / 2, H / 2)
@@ -1426,35 +1702,35 @@ export class GameScene extends Phaser.Scene {
     shadow.fillRoundedRect(-270, -166, 540, 330, 28)
 
     const bg = this.add.graphics()
-    bg.fillStyle(0xF0F7FF, 0.98)
+    bg.fillStyle(0xfff6e8, 0.98)
     bg.fillRoundedRect(-278, -178, 556, 330, 28)
-    bg.lineStyle(5, 0xFFFFFF, 0.95)
+    bg.lineStyle(5, 0xffffff, 0.95)
     bg.strokeRoundedRect(-278, -178, 556, 330, 28)
 
-    const ribbon = this.add.graphics()
-    ribbon.fillStyle(0xC62828, 1)
-    ribbon.fillRoundedRect(-196, -194, 392, 28, 14)
-    ribbon.lineStyle(3, 0xFFFFFF, 0.82)
-    ribbon.strokeRoundedRect(-196, -194, 392, 28, 14)
+    const topBar = this.add.graphics()
+    topBar.fillStyle(0xc62828, 1)
+    topBar.fillRoundedRect(-196, -194, 392, 28, 14)
+    topBar.lineStyle(3, 0xffffff, 0.82)
+    topBar.strokeRoundedRect(-196, -194, 392, 28, 14)
 
     const title = this.add.text(0, -110, 'Tempo Esgotado!', {
       fontFamily: 'Arial', fontSize: '36px', fontStyle: 'bold',
-      color: '#B71C1C', stroke: '#FFFFFF', strokeThickness: 5,
+      color: '#b71c1c', stroke: '#ffffff', strokeThickness: 5,
     }).setOrigin(0.5).setResolution(2)
 
     const sub = this.add.text(0, -58, `⏰  O tempo acabou no Nível ${this.levelConfig.level}`, {
-      fontFamily: 'Arial', fontSize: '18px', color: '#4E342E',
-      align: 'center', wordWrap: { width: 480 },
+      fontFamily: 'Arial', fontSize: '18px', fontStyle: 'bold',
+      color: '#3b3b3b', align: 'center', wordWrap: { width: 480 },
     }).setOrigin(0.5).setResolution(2)
 
     const retryBtn = this.add.container(-90, 60)
     const retryBg = this.add.graphics()
-    retryBg.fillStyle(0x1E8449, 1)
+    retryBg.fillStyle(0x1A6B9A, 1)
     retryBg.fillRoundedRect(-100, -22, 200, 44, 22)
-    retryBg.lineStyle(3, 0xFFFFFF, 1)
+    retryBg.lineStyle(3, 0xffffff, 1)
     retryBg.strokeRoundedRect(-100, -22, 200, 44, 22)
     const retryText = this.add.text(0, 0, 'Tentar Novamente', {
-      fontFamily: 'Arial', fontSize: '16px', fontStyle: 'bold', color: '#FFFFFF',
+      fontFamily: 'Arial', fontSize: '16px', fontStyle: 'bold', color: '#ffffff',
     }).setOrigin(0.5).setResolution(2)
     retryBtn.add([retryBg, retryText])
 
@@ -1462,14 +1738,14 @@ export class GameScene extends Phaser.Scene {
     const exitBg = this.add.graphics()
     exitBg.fillStyle(0x757575, 1)
     exitBg.fillRoundedRect(-80, -22, 160, 44, 22)
-    exitBg.lineStyle(3, 0xFFFFFF, 1)
+    exitBg.lineStyle(3, 0xffffff, 1)
     exitBg.strokeRoundedRect(-80, -22, 160, 44, 22)
     const exitText = this.add.text(0, 0, 'Sair', {
-      fontFamily: 'Arial', fontSize: '16px', fontStyle: 'bold', color: '#FFFFFF',
+      fontFamily: 'Arial', fontSize: '16px', fontStyle: 'bold', color: '#ffffff',
     }).setOrigin(0.5).setResolution(2)
     exitBtn.add([exitBg, exitText])
 
-    modal.add([shadow, bg, ribbon, title, sub, retryBtn, exitBtn])
+    modal.add([shadow, bg, topBar, title, sub, retryBtn, exitBtn])
     modal.setScale(0.9).setAlpha(0)
     this.tweens.add({ targets: modal, alpha: 1, scale: 1, duration: 260, ease: 'Back.easeOut' })
 
@@ -1492,7 +1768,7 @@ export class GameScene extends Phaser.Scene {
     this.playRoundComplete()
     const W = 1280, H = 720
 
-    const overlay = this.add.rectangle(W / 2, H / 2, W, H, 0x0A1628, 0.60)
+    const overlay = this.add.rectangle(W / 2, H / 2, W, H, 0x12324a, 0.56)
       .setDepth(300).setInteractive()
 
     const modal = this.add.container(W / 2, H / 2)
@@ -1503,40 +1779,45 @@ export class GameScene extends Phaser.Scene {
     shadow.fillRoundedRect(-270, -166, 540, 330, 28)
 
     const bg = this.add.graphics()
-    bg.fillStyle(0xF0F7FF, 0.98)
+    bg.fillStyle(0xfff6e8, 0.98)
     bg.fillRoundedRect(-278, -178, 556, 330, 28)
-    bg.lineStyle(5, 0xFFFFFF, 0.95)
+    bg.lineStyle(5, 0xffffff, 0.95)
     bg.strokeRoundedRect(-278, -178, 556, 330, 28)
 
-    const ribbon = this.add.graphics()
-    ribbon.fillStyle(0x1E8449, 1)
-    ribbon.fillRoundedRect(-196, -194, 392, 28, 14)
-    ribbon.lineStyle(3, 0xFFFFFF, 0.82)
-    ribbon.strokeRoundedRect(-196, -194, 392, 28, 14)
+    const topBar = this.add.graphics()
+    topBar.fillStyle(0x1A6B9A, 1)
+    topBar.fillRoundedRect(-196, -194, 392, 28, 14)
+    topBar.lineStyle(3, 0xffffff, 0.82)
+    topBar.strokeRoundedRect(-196, -194, 392, 28, 14)
 
     const title = this.add.text(0, -110, 'Parabéns!', {
       fontFamily: 'Arial', fontSize: '40px', fontStyle: 'bold',
-      color: '#1B5E20', stroke: '#FFFFFF', strokeThickness: 5,
+      color: '#25327a', stroke: '#ffffff', strokeThickness: 5,
     }).setOrigin(0.5).setResolution(2)
 
-    const sub = this.add.text(0, -56, `Nível ${this.levelConfig.level} concluído`, {
-      fontFamily: 'Arial', fontSize: '26px', fontStyle: 'bold', color: '#0A3D62',
+    const completed = this.add.text(0, -50, 'Nível concluído', {
+      fontFamily: 'Arial', fontSize: '26px', fontStyle: 'bold', color: '#1A6B9A',
+    }).setOrigin(0.5).setResolution(2)
+
+    const successMsg = this.add.text(0, 8, 'Continue assim! Próximo nível carregando...', {
+      fontFamily: 'Arial', fontSize: '17px', fontStyle: 'bold',
+      color: '#3b3b3b', align: 'center', wordWrap: { width: 430 },
     }).setOrigin(0.5).setResolution(2)
 
     const dots = [1, 2, 3].map((level, index) => {
       const dot = this.add.graphics()
-      dot.fillStyle(level <= this.levelConfig.level ? 0x2ECC71 : level === nextLevel ? 0xFF9800 : 0xD8DDE8, 1)
-      dot.fillCircle(-28 + index * 28, 48, 8)
-      dot.lineStyle(2, 0xFFFFFF, 0.9)
-      dot.strokeCircle(-28 + index * 28, 48, 8)
+      dot.fillStyle(level <= this.levelConfig.level ? 0x2ECC71 : level === nextLevel ? 0xFF9800 : 0xd8dde8, 1)
+      dot.fillCircle(-28 + index * 28, 72, 8)
+      dot.lineStyle(2, 0xffffff, 0.9)
+      dot.strokeCircle(-28 + index * 28, 72, 8)
       return dot
     })
 
-    const waitText = this.add.text(0, 94, 'Preparando o próximo nível...', {
-      fontFamily: 'Arial', fontSize: '15px', fontStyle: 'bold', color: '#1B5E20',
+    const waitText = this.add.text(0, 116, 'Preparando o próximo nível...', {
+      fontFamily: 'Arial', fontSize: '15px', fontStyle: 'bold', color: '#25327a',
     }).setOrigin(0.5).setResolution(2)
 
-    modal.add([shadow, bg, ribbon, title, sub, ...dots, waitText])
+    modal.add([shadow, bg, topBar, title, completed, successMsg, ...dots, waitText])
     modal.setScale(0.9).setAlpha(0)
     this.tweens.add({ targets: modal, alpha: 1, scale: 1, duration: 260, ease: 'Back.easeOut' })
 
@@ -1551,7 +1832,7 @@ export class GameScene extends Phaser.Scene {
     this.playRoundComplete()
     const W = 1280, H = 720
 
-    const overlay = this.add.rectangle(W / 2, H / 2, W, H, 0x0A1628, 0.60)
+    const overlay = this.add.rectangle(W / 2, H / 2, W, H, 0x12324a, 0.56)
       .setDepth(300).setInteractive()
 
     const modal = this.add.container(W / 2, H / 2)
@@ -1562,40 +1843,36 @@ export class GameScene extends Phaser.Scene {
     shadow.fillRoundedRect(-270, -166, 540, 330, 28)
 
     const bg = this.add.graphics()
-    bg.fillStyle(0xF0F7FF, 0.98)
+    bg.fillStyle(0xfff6e8, 0.98)
     bg.fillRoundedRect(-278, -178, 556, 330, 28)
-    bg.lineStyle(5, 0xFFFFFF, 0.95)
+    bg.lineStyle(5, 0xffffff, 0.95)
     bg.strokeRoundedRect(-278, -178, 556, 330, 28)
 
-    const ribbon = this.add.graphics()
-    ribbon.fillStyle(0x1E8449, 1)
-    ribbon.fillRoundedRect(-196, -194, 392, 28, 14)
-    ribbon.lineStyle(3, 0xFFFFFF, 0.82)
-    ribbon.strokeRoundedRect(-196, -194, 392, 28, 14)
+    const topBar = this.add.graphics()
+    topBar.fillStyle(0x1A6B9A, 1)
+    topBar.fillRoundedRect(-196, -194, 392, 28, 14)
+    topBar.lineStyle(3, 0xffffff, 0.82)
+    topBar.strokeRoundedRect(-196, -194, 392, 28, 14)
 
     const title = this.add.text(0, -110, 'Parabéns!', {
       fontFamily: 'Arial', fontSize: '40px', fontStyle: 'bold',
-      color: '#1B5E20', stroke: '#FFFFFF', strokeThickness: 5,
+      color: '#25327a', stroke: '#ffffff', strokeThickness: 5,
     }).setOrigin(0.5).setResolution(2)
 
-    const sub = this.add.text(0, -56, 'Nível 3 concluído', {
-      fontFamily: 'Arial', fontSize: '26px', fontStyle: 'bold', color: '#0A3D62',
+    const completed = this.add.text(0, -50, 'Nível concluído', {
+      fontFamily: 'Arial', fontSize: '26px', fontStyle: 'bold', color: '#1A6B9A',
     }).setOrigin(0.5).setResolution(2)
 
-    const dots = [1, 2, 3].map((_, index) => {
-      const dot = this.add.graphics()
-      dot.fillStyle(0x2ECC71, 1)
-      dot.fillCircle(-28 + index * 28, 48, 8)
-      dot.lineStyle(2, 0xFFFFFF, 0.9)
-      dot.strokeCircle(-28 + index * 28, 48, 8)
-      return dot
-    })
-
-    const waitText = this.add.text(0, 94, 'Preparando a finalização...', {
-      fontFamily: 'Arial', fontSize: '15px', fontStyle: 'bold', color: '#1B5E20',
+    const message = this.add.text(0, 8, 'Você completou todos os desafios do Desktop!', {
+      fontFamily: 'Arial', fontSize: '17px', fontStyle: 'bold',
+      color: '#3b3b3b', align: 'center', wordWrap: { width: 430 },
     }).setOrigin(0.5).setResolution(2)
 
-    modal.add([shadow, bg, ribbon, title, sub, ...dots, waitText])
+    const waitText = this.add.text(0, 116, 'Preparando a finalização...', {
+      fontFamily: 'Arial', fontSize: '15px', fontStyle: 'bold', color: '#25327a',
+    }).setOrigin(0.5).setResolution(2)
+
+    modal.add([shadow, bg, topBar, title, completed, message, waitText])
     modal.setScale(0.9).setAlpha(0)
     this.tweens.add({ targets: modal, alpha: 1, scale: 1, duration: 260, ease: 'Back.easeOut' })
 
@@ -1609,7 +1886,7 @@ export class GameScene extends Phaser.Scene {
   private showGameCompleteScreen() {
     const W = 1280, H = 720
 
-    this.add.rectangle(W / 2, H / 2, W, H, 0x0A1628, 0.72)
+    this.add.rectangle(W / 2, H / 2, W, H, 0x12324a, 0.62)
       .setDepth(300).setInteractive()
 
     const panel = this.add.container(W / 2, H / 2)
@@ -1617,44 +1894,44 @@ export class GameScene extends Phaser.Scene {
 
     const shadow = this.add.graphics()
     shadow.fillStyle(0x000000, 0.18)
-    shadow.fillRoundedRect(-302, -188, 604, 376, 34)
+    shadow.fillRoundedRect(-292, -178, 584, 366, 34)
 
     const bg = this.add.graphics()
-    bg.fillStyle(0xF0F7FF, 0.98)
-    bg.fillRoundedRect(-310, -200, 620, 376, 34)
-    bg.lineStyle(6, 0xFFFFFF, 0.96)
-    bg.strokeRoundedRect(-310, -200, 620, 376, 34)
+    bg.fillStyle(0xfff6e8, 0.98)
+    bg.fillRoundedRect(-304, -190, 608, 370, 34)
+    bg.lineStyle(6, 0xffffff, 0.96)
+    bg.strokeRoundedRect(-304, -190, 608, 370, 34)
 
     const ribbon = this.add.graphics()
     ribbon.fillStyle(0x1A6B9A, 1)
-    ribbon.fillRoundedRect(-220, -218, 440, 34, 17)
-    ribbon.lineStyle(4, 0xFFFFFF, 0.9)
-    ribbon.strokeRoundedRect(-220, -218, 440, 34, 17)
+    ribbon.fillRoundedRect(-214, -208, 428, 34, 17)
+    ribbon.lineStyle(4, 0xffffff, 0.9)
+    ribbon.strokeRoundedRect(-214, -208, 428, 34, 17)
 
-    const title = this.add.text(0, -138, '🏆 Desktop dominado!', {
-      fontFamily: 'Arial', fontSize: '36px', fontStyle: 'bold',
-      color: '#0A3D62', stroke: '#FFFFFF', strokeThickness: 6,
+    const title = this.add.text(0, -128, 'Jogo concluído!', {
+      fontFamily: 'Arial', fontSize: '38px', fontStyle: 'bold',
+      color: '#25327a', stroke: '#ffffff', strokeThickness: 6,
     }).setOrigin(0.5).setResolution(2)
 
-    const subtitle = this.add.text(0, -80, 'Você concluiu todos os níveis!', {
+    const subtitle = this.add.text(0, -74, 'Você dominou o Desktop Digital Infantil!', {
       fontFamily: 'Arial', fontSize: '20px', fontStyle: 'bold',
-      color: '#4E342E', align: 'center', wordWrap: { width: 520 },
+      color: '#3b3b3b', align: 'center', wordWrap: { width: 500 },
     }).setOrigin(0.5).setResolution(2)
 
-    const badgeColors = [0x1A6B9A, 0xFF8A2A, 0x1E8449]
+    const badgeColors = [0x1A6B9A, 0xff8a2a, 0x1E8449]
     const badges = [1, 2, 3].map((lvl, index) => {
       const item = this.add.container(-190 + index * 190, 54)
       const badge = this.add.graphics()
       badge.fillStyle(badgeColors[index], 1)
       badge.fillRoundedRect(-54, -42, 108, 84, 18)
-      badge.lineStyle(4, 0xFFFFFF, 0.95)
+      badge.lineStyle(4, 0xffffff, 0.95)
       badge.strokeRoundedRect(-54, -42, 108, 84, 18)
       const num = this.add.text(0, -13, String(lvl), {
         fontFamily: 'Arial', fontSize: '30px', fontStyle: 'bold',
-        color: '#FFFFFF', stroke: '#0A3D62', strokeThickness: 4,
+        color: '#ffffff', stroke: '#25327a', strokeThickness: 4,
       }).setOrigin(0.5).setResolution(2)
       const label = this.add.text(0, 23, 'concluído', {
-        fontFamily: 'Arial', fontSize: '13px', fontStyle: 'bold', color: '#FFFFFF',
+        fontFamily: 'Arial', fontSize: '13px', fontStyle: 'bold', color: '#ffffff',
       }).setOrigin(0.5).setResolution(2)
       item.add([badge, num, label])
       return item

@@ -25,6 +25,11 @@ export class UIScene extends Phaser.Scene {
   private stepHint!: Phaser.GameObjects.Text
   private missionDots: Phaser.GameObjects.Graphics[] = []
   private levelStars!: Phaser.GameObjects.Text
+  private timerFill?: Phaser.GameObjects.Graphics
+  private readonly TIMER_X = 240
+  private readonly TIMER_Y = 115
+  private readonly TIMER_W = 800
+  private readonly TIMER_H = 18
 
   constructor() {
     super({ key: 'UIScene' })
@@ -37,7 +42,8 @@ export class UIScene extends Phaser.Scene {
 
   shutdown() {
     EventBus.off('mission-update', undefined, this)
-    EventBus.off('mute-audio', undefined, this)
+    EventBus.off('mute-audio',     undefined, this)
+    EventBus.off('timer-tick',     undefined, this)
   }
 
   // ── Barra superior (112px de altura) ─────────────────────────────────────
@@ -90,11 +96,45 @@ export class UIScene extends Phaser.Scene {
       fontSize: '20px', color: '#F1C40F',
     }).setOrigin(0.5)
 
+    // Barra de timer (bottom do HUD, acima do separador)
+    this.createTimerBar()
+
     // Botão instruções (canto direito, à esquerda do mute)
     this.createInstructionsButton()
 
     // Botão mute (canto direito)
     this.createMuteButton()
+  }
+
+  // ── Timer bar ─────────────────────────────────────────────────────────────
+
+  private createTimerBar() {
+    const { TIMER_X: x, TIMER_Y: y, TIMER_W: w, TIMER_H: h } = this
+
+    const bg = this.add.graphics()
+    bg.fillStyle(0x33190A, 0.82)
+    bg.fillRoundedRect(x, y, w, h, 6)
+    bg.lineStyle(2, 0x7A4A10, 0.9)
+    bg.strokeRoundedRect(x, y, w, h, 6)
+
+    this.timerFill = this.add.graphics()
+    this.drawTimer(1)
+
+    const shine = this.add.graphics()
+    shine.fillStyle(0xFFFFFF, 0.15)
+    shine.fillRoundedRect(x + 1, y + 1, w - 2, 5, { tl: 5, tr: 5, bl: 0, br: 0 })
+  }
+
+  private drawTimer(progress: number) {
+    if (!this.timerFill) return
+    const { TIMER_X: x, TIMER_Y: y, TIMER_W: w, TIMER_H: h } = this
+    const fill = progress > 0.5 ? 0x2ECC71 : progress > 0.25 ? 0xF39C12 : 0xE74C3C
+    const width = w * Phaser.Math.Clamp(progress, 0, 1)
+    this.timerFill.clear()
+    if (width > 0) {
+      this.timerFill.fillStyle(fill, 1)
+      this.timerFill.fillRoundedRect(x, y, width, h, h / 2)
+    }
   }
 
   // ── Botão instruções ──────────────────────────────────────────────────────
@@ -139,6 +179,10 @@ export class UIScene extends Phaser.Scene {
       this.stepHint.setText(data.stepHint)
       this.levelStars.setText('★'.repeat(data.level) + '☆'.repeat(3 - data.level))
       this.updateDots(data.missionIndex, data.totalMissions)
+    }, this)
+
+    EventBus.on('timer-tick', (progress: number) => {
+      this.drawTimer(progress)
     }, this)
   }
 
