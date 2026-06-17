@@ -15,7 +15,7 @@ export const LEVELS: InfoLevel[] = [
     level: 1,
     title: "Convite da Festa",
     instruction: "Escolha os dados certos para completar o convite.",
-    timeLimit: 45,
+    timeLimit: 25,
     mode: "invite",
     fields: [
       { id: "day", label: "Dia", accepts: "date-day" },
@@ -38,7 +38,7 @@ export const LEVELS: InfoLevel[] = [
     level: 2,
     title: "Envelope de Entrega",
     instruction: "Monte o endereço para a encomenda chegar ao destino.",
-    timeLimit: 60,
+    timeLimit: 35,
     mode: "address",
     fields: [
       { id: "street", label: "Rua", accepts: "address-street" },
@@ -65,7 +65,7 @@ export const LEVELS: InfoLevel[] = [
     level: 3,
     title: "Ficha da Luna",
     instruction: "Complete a ficha para conhecer a personagem.",
-    timeLimit: 75,
+    timeLimit: 45,
     mode: "character",
     fields: [
       { id: "name", label: "Nome", accepts: "character-name" },

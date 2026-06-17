@@ -8,8 +8,8 @@ import type { FieldId, InfoLevel, InfoPiece, InfoPieceId } from "../types";
 const GAME_ID = "montador-de-informacoes";
 const TIMER_BAR_W = 980;
 const TIMER_BAR_Y = 42;
-const CARD_W = 180;
-const CARD_H = 136;
+const CARD_W = 150;
+const CARD_H = 155;
 const SLOT_W = CARD_W;
 const SLOT_H = CARD_H;
 const MODAL_SCALE = 1.14;
@@ -19,6 +19,8 @@ const COLORS = {
   cyan: 0x38bdf8,
   green: 0x22c55e,
   orange: 0xf59e0b,
+  softOrange: 0xff8a2a,
+  cream: 0xfff6e8,
   purple: 0x8b5cf6,
   red: 0xef4444,
   ink: 0x102a43,
@@ -30,6 +32,7 @@ type CardRecord = {
   hitbox: Phaser.GameObjects.Zone;
   homeX: number;
   homeY: number;
+  homeScale: number;
   slotId: FieldId | null;
 };
 
@@ -79,7 +82,6 @@ export class GameScene extends Phaser.Scene {
     this.createHeader();
     this.createFieldPanel();
     this.createPiecesPanel();
-    this.createResultPanel();
     this.createActionButton();
     this.registerPlatformCommands();
 
@@ -101,45 +103,205 @@ export class GameScene extends Phaser.Scene {
   }
 
   private createBackground() {
+    const theme = this.getBackgroundTheme();
+    const backgroundKey = this.getBackgroundAssetKey();
     const bg = this.add.graphics().setDepth(-100);
-    bg.fillGradientStyle(0x67e8f9, 0xa78bfa, 0xffd166, 0xf9a8d4, 1);
+    bg.fillGradientStyle(theme.topLeft, theme.topRight, theme.bottomLeft, theme.bottomRight, 1);
     bg.fillRect(0, 0, 1280, 720);
 
-    const desk = this.add.graphics().setDepth(-99);
-    desk.fillStyle(0xffffff, 0.22);
-    desk.fillRoundedRect(66, 86, 1148, 560, 44);
-    desk.lineStyle(5, 0xffffff, 0.35);
-    desk.strokeRoundedRect(66, 86, 1148, 560, 44);
+    if (this.textures.exists(backgroundKey)) {
+      this.coverImage(this.add.image(640, 360, backgroundKey), 1280, 720).setDepth(-99.9);
+      this.add.rectangle(640, 360, 1280, 720, theme.panelTint, 0.08).setDepth(-99.7);
+      this.add.rectangle(640, 360, 1280, 720, 0xffffff, 0.08).setDepth(-99.6);
+    } else {
+      this.drawThemedBackdrop();
+    }
 
-    const screen = this.add.graphics().setDepth(-98);
-    screen.fillStyle(0x0f172a, 0.12);
-    screen.fillRoundedRect(188, 122, 904, 474, 38);
-    screen.fillStyle(0xffffff, 0.12);
-    screen.fillRoundedRect(218, 146, 844, 58, 28);
+    this.add.rectangle(640, 360, 1280, 720, 0xffffff, 0.06).setDepth(-95);
+  }
 
-    const accents = [
-      { x: 116, y: 166, w: 82, h: 82, c: COLORS.orange },
-      { x: 1058, y: 128, w: 96, h: 96, c: COLORS.green },
-      { x: 112, y: 548, w: 118, h: 62, c: COLORS.purple },
-      { x: 1054, y: 558, w: 132, h: 58, c: COLORS.cyan },
-    ];
-    accents.forEach((item) => {
-      const shape = this.add.graphics().setDepth(-97);
-      shape.fillStyle(item.c, 0.34);
-      shape.fillRoundedRect(item.x, item.y, item.w, item.h, 24);
-      shape.lineStyle(3, 0xffffff, 0.32);
-      shape.strokeRoundedRect(item.x, item.y, item.w, item.h, 24);
+  private getBackgroundTheme() {
+    if (this.levelConfig.mode === "address") {
+      return {
+        topLeft: 0x67e8f9,
+        topRight: 0x60a5fa,
+        bottomLeft: 0xfef08a,
+        bottomRight: 0x34d399,
+        panelTint: 0x0f766e,
+        dots: [COLORS.blue, COLORS.cyan, COLORS.green, COLORS.orange],
+        accents: [
+          { x: 116, y: 166, w: 112, h: 70, c: COLORS.cyan },
+          { x: 1044, y: 136, w: 112, h: 92, c: COLORS.green },
+          { x: 112, y: 548, w: 142, h: 62, c: COLORS.orange },
+          { x: 1036, y: 552, w: 148, h: 58, c: COLORS.blue },
+        ],
+      };
+    }
+
+    if (this.levelConfig.mode === "character") {
+      return {
+        topLeft: 0xf0abfc,
+        topRight: 0x93c5fd,
+        bottomLeft: 0xfde68a,
+        bottomRight: 0x86efac,
+        panelTint: 0x6d28d9,
+        dots: [COLORS.purple, COLORS.pink, COLORS.cyan, COLORS.green, COLORS.orange],
+        accents: [
+          { x: 108, y: 160, w: 104, h: 104, c: COLORS.purple },
+          { x: 1054, y: 132, w: 104, h: 104, c: COLORS.pink },
+          { x: 120, y: 552, w: 134, h: 62, c: COLORS.green },
+          { x: 1040, y: 556, w: 144, h: 56, c: COLORS.cyan },
+        ],
+      };
+    }
+
+    return {
+      topLeft: 0x7dd3fc,
+      topRight: 0xc084fc,
+      bottomLeft: 0xfbbf24,
+      bottomRight: 0xfb7185,
+      panelTint: 0x1e3a8a,
+      dots: [COLORS.blue, COLORS.cyan, COLORS.green, COLORS.orange, COLORS.purple],
+      accents: [
+        { x: 116, y: 166, w: 82, h: 82, c: COLORS.orange },
+        { x: 1058, y: 128, w: 96, h: 96, c: COLORS.green },
+        { x: 112, y: 548, w: 118, h: 62, c: COLORS.purple },
+        { x: 1054, y: 558, w: 132, h: 58, c: COLORS.cyan },
+      ],
+    };
+  }
+
+  private getBackgroundAssetKey() {
+    return {
+      invite: "bg-invite-party",
+      address: "bg-address-delivery",
+      character: "bg-character-profile",
+    }[this.levelConfig.mode];
+  }
+
+  private drawThemedBackdrop() {
+    if (this.levelConfig.mode === "address") {
+      this.drawAddressBackdrop();
+      return;
+    }
+    if (this.levelConfig.mode === "character") {
+      this.drawCharacterBackdrop();
+      return;
+    }
+    this.drawInviteBackdrop();
+  }
+
+  private drawInviteBackdrop() {
+    const g = this.add.graphics().setDepth(-99.8);
+    g.lineStyle(8, 0xffffff, 0.24);
+    g.beginPath();
+    g.moveTo(70, 122);
+    g.lineTo(248, 176);
+    g.lineTo(426, 132);
+    g.lineTo(604, 182);
+    g.lineTo(782, 136);
+    g.lineTo(960, 178);
+    g.lineTo(1170, 126);
+    g.strokePath();
+
+    const colors = [COLORS.orange, COLORS.purple, COLORS.green, COLORS.cyan, COLORS.red];
+    for (let i = 0; i < 11; i++) {
+      const x = 94 + i * 108;
+      const y = i % 2 === 0 ? 150 : 178;
+      g.fillStyle(colors[i % colors.length], 0.42);
+      g.fillTriangle(x, y, x + 44, y + 8, x + 16, y + 58);
+      g.lineStyle(2, 0xffffff, 0.32);
+      g.strokeTriangle(x, y, x + 44, y + 8, x + 16, y + 58);
+    }
+
+    this.addDecorativeAsset("data-calendar-day", 188, 512, 190, 140, -11, 0.2);
+    this.addDecorativeAsset("data-calendar-month", 1052, 502, 210, 150, 10, 0.2);
+    this.addDecorativeAsset("data-calendar-year", 1042, 206, 180, 130, -8, 0.16);
+  }
+
+  private drawAddressBackdrop() {
+    const road = this.add.graphics().setDepth(-99.8);
+    road.fillStyle(0xffffff, 0.2);
+    road.fillRoundedRect(118, 492, 1044, 90, 45);
+    road.fillStyle(0x2563eb, 0.16);
+    road.fillRoundedRect(160, 518, 960, 24, 12);
+    for (let i = 0; i < 8; i++) {
+      road.fillStyle(0xffffff, 0.36);
+      road.fillRoundedRect(218 + i * 118, 528, 58, 8, 4);
+    }
+
+    const city = this.add.graphics().setDepth(-99.7);
+    [156, 234, 324, 920, 1014, 1102].forEach((x, index) => {
+      const h = [116, 84, 132, 104, 146, 92][index];
+      city.fillStyle([COLORS.blue, COLORS.green, COLORS.orange, COLORS.purple][index % 4], 0.22);
+      city.fillRoundedRect(x, 294 - h, 58, h, 12);
+      city.lineStyle(2, 0xffffff, 0.28);
+      city.strokeRoundedRect(x, 294 - h, 58, h, 12);
     });
 
-    for (let i = 0; i < 22; i++) {
-      const shape = this.add.graphics().setDepth(-96);
-      const color = Phaser.Utils.Array.GetRandom([COLORS.blue, COLORS.cyan, COLORS.green, COLORS.orange, COLORS.purple]);
-      const x = Phaser.Math.Between(96, 1168);
-      const y = Phaser.Math.Between(116, 616);
-      shape.fillStyle(color, 0.18);
-      shape.fillCircle(x, y, Phaser.Math.Between(6, 14));
+    this.addDecorativeAsset("data-zip-envelope", 194, 196, 210, 150, -12, 0.2);
+    this.addDecorativeAsset("data-neighborhood-map", 1040, 210, 230, 160, 12, 0.18);
+    this.addDecorativeAsset("data-city-buildings", 636, 564, 300, 190, 0, 0.12);
+  }
+
+  private drawCharacterBackdrop() {
+    const profile = this.add.graphics().setDepth(-99.8);
+    profile.fillStyle(0xffffff, 0.22);
+    profile.fillRoundedRect(112, 154, 196, 248, 34);
+    profile.fillStyle(COLORS.purple, 0.28);
+    profile.fillCircle(210, 232, 52);
+    profile.fillStyle(0xffffff, 0.28);
+    profile.fillRoundedRect(152, 306, 116, 18, 9);
+    profile.fillRoundedRect(140, 340, 140, 16, 8);
+
+    const stars = this.add.graphics().setDepth(-99.7);
+    for (let i = 0; i < 13; i++) {
+      const x = Phaser.Math.Between(86, 1184);
+      const y = Phaser.Math.Between(116, 612);
+      stars.fillStyle(Phaser.Utils.Array.GetRandom([COLORS.orange, COLORS.green, COLORS.cyan, COLORS.pink]), 0.32);
+      stars.fillPoints([
+        new Phaser.Geom.Point(x, y - 16),
+        new Phaser.Geom.Point(x + 6, y - 5),
+        new Phaser.Geom.Point(x + 18, y - 4),
+        new Phaser.Geom.Point(x + 9, y + 4),
+        new Phaser.Geom.Point(x + 12, y + 16),
+        new Phaser.Geom.Point(x, y + 9),
+        new Phaser.Geom.Point(x - 12, y + 16),
+        new Phaser.Geom.Point(x - 9, y + 4),
+        new Phaser.Geom.Point(x - 18, y - 4),
+        new Phaser.Geom.Point(x - 6, y - 5),
+      ], true);
     }
-    this.add.rectangle(640, 360, 1280, 720, 0xffffff, 0.12).setDepth(-95);
+
+    this.addDecorativeAsset("data-name-tag", 1040, 184, 220, 140, 8, 0.2);
+    this.addDecorativeAsset("data-color-palette", 214, 548, 220, 150, -8, 0.18);
+    this.addDecorativeAsset("data-pet-cat", 1058, 542, 220, 160, 12, 0.2);
+  }
+
+  private addDecorativeAsset(
+    key: string,
+    x: number,
+    y: number,
+    maxWidth: number,
+    maxHeight: number,
+    angle: number,
+    alpha: number,
+  ) {
+    if (!this.textures.exists(key)) return;
+    const image = this.fitImage(this.add.image(x, y, key), maxWidth, maxHeight);
+    image.setDepth(-99.6);
+    image.setAngle(angle);
+    image.setAlpha(alpha);
+  }
+
+  private coverImage(image: Phaser.GameObjects.Image, width: number, height: number) {
+    const source = image.texture.getSourceImage() as HTMLImageElement | HTMLCanvasElement;
+    const sourceWidth = source.width || width;
+    const sourceHeight = source.height || height;
+    const scale = Math.max(width / sourceWidth, height / sourceHeight);
+    image.setDisplaySize(sourceWidth * scale, sourceHeight * scale);
+    image.setOrigin(0.5);
+    return image;
   }
 
   private createTimerBar() {
@@ -161,7 +323,7 @@ export class GameScene extends Phaser.Scene {
 
   private createHeader() {
     this.addSharpText(640, 104, this.levelConfig.title, {
-      fontSize: "42px",
+      fontSize: "40px",
       fontFamily: "Arial Black, Arial",
       color: "#ffffff",
       stroke: "#1e3a8a",
@@ -169,7 +331,7 @@ export class GameScene extends Phaser.Scene {
     }).setOrigin(0.5);
 
     this.addSharpText(640, 150, this.levelConfig.instruction, {
-      fontSize: "21px",
+      fontSize: "20px",
       fontFamily: "Arial Black, Arial",
       color: "#ffffff",
       stroke: "#1e3a8a",
@@ -188,8 +350,8 @@ export class GameScene extends Phaser.Scene {
   }
 
   private createFieldPanel() {
-    this.drawPanel(52, 184, 1176, 204, COLORS.blue, 1);
-    this.drawPanelHeader(640, 194, 420, this.getFieldPanelTitle(), COLORS.blue);
+    this.drawPanel(58, 176, 1164, 220, COLORS.blue, 1);
+    this.drawPanelHeader(640, 186, 420, this.getFieldPanelTitle(), COLORS.blue);
 
     const count = this.levelConfig.fields.length;
     const startX = count <= 3 ? 322 : 166;
@@ -202,14 +364,12 @@ export class GameScene extends Phaser.Scene {
       this.slotRects.set(field.id, new Phaser.Geom.Rectangle(x - SLOT_W / 2, y - SLOT_H / 2, SLOT_W, SLOT_H));
 
       const slot = this.add.graphics().setDepth(4);
-      slot.fillStyle(0xffffff, 0.58);
+      slot.fillStyle(COLORS.cream, 0.78);
       slot.fillRoundedRect(x - SLOT_W / 2, y - SLOT_H / 2, SLOT_W, SLOT_H, 22);
-      slot.fillStyle(0xffffff, 0.22);
-      slot.fillRoundedRect(x - SLOT_W / 2 + 12, y - SLOT_H / 2 + 12, SLOT_W - 24, 30, 15);
-      slot.lineStyle(5, this.getFieldColor(index), 0.92);
+      slot.fillStyle(0xffffff, 0.28);
+      slot.fillRoundedRect(x - SLOT_W / 2 + 12, y - SLOT_H / 2 + 12, SLOT_W - 24, 34, 16);
+      slot.lineStyle(6, COLORS.softOrange, 0.95);
       slot.strokeRoundedRect(x - SLOT_W / 2, y - SLOT_H / 2, SLOT_W, SLOT_H, 22);
-      slot.lineStyle(2, 0xffffff, 0.88);
-      slot.strokeRoundedRect(x - SLOT_W / 2 + 6, y - SLOT_H / 2 + 6, SLOT_W - 12, SLOT_H - 12, 18);
 
       this.addSharpText(x, y - 30, field.label, {
         fontSize: count > 5 ? "15px" : "17px",
@@ -224,73 +384,68 @@ export class GameScene extends Phaser.Scene {
   }
 
   private createPiecesPanel() {
-    this.drawPanel(52, 410, 1176, 204, COLORS.purple, 1);
-    this.drawPanelHeader(640, 420, 420, "Dados recebidos", COLORS.purple);
+    this.drawPanel(58, 410, 1164, 208, COLORS.purple, 1);
+    this.drawPanelHeader(640, 410, 420, "Dados recebidos", COLORS.purple);
 
-    const count = this.pieces.length;
-    const startX = count <= 5 ? 170 : 110;
-    const gap = count <= 5 ? 235 : 206;
+    const positions = this.getPieceCardPositions();
+    const cardScale = 1;
 
     this.pieces.forEach((piece, index) => {
-      const x = startX + index * gap;
-      const y = 528;
-      const { card, hitbox } = this.createDataCard(piece, x, y);
-      this.cards.set(piece.id, { id: piece.id, card, hitbox, homeX: x, homeY: y, slotId: null });
+      const { x, y } = positions[index];
+      const { card, hitbox } = this.createDataCard(piece, x, y, cardScale);
+      this.cards.set(piece.id, { id: piece.id, card, hitbox, homeX: x, homeY: y, homeScale: cardScale, slotId: null });
     });
   }
 
-  private createResultPanel() {
-    this.drawPanel(52, 628, 748, 76, COLORS.green, 1);
-    this.drawPanelHeader(426, 630, 260, "Resultado", COLORS.green);
-    this.drawResult(false);
+  private getPieceCardPositions() {
+    const spacing = this.pieces.length <= 5 ? 235 : 165;
+    const startX = 640 - ((this.pieces.length - 1) * spacing) / 2;
+    return this.pieces.map((_, index) => ({ x: startX + index * spacing, y: 528 }));
   }
 
   private createActionButton() {
-    this.createUiButton(1032, 666, 360, 70, "Validar informação", COLORS.green, () => this.validateInformation());
+    this.createUiButton(640, 654, 360, 70, "Validar informação", COLORS.green, () => this.validateInformation());
   }
 
-  private createDataCard(piece: InfoPiece, x: number, y: number) {
-    const card = this.add.container(x, y).setDepth(20);
+  private createDataCard(piece: InfoPiece, x: number, y: number, scale = 1) {
+    const card = this.add.container(x, y).setDepth(20).setScale(scale);
     const shadow = this.add.graphics();
-    shadow.fillStyle(0x0f172a, 0.2);
-    shadow.fillRoundedRect(-CARD_W / 2 + 8, -CARD_H / 2 + 10, CARD_W, CARD_H, 22);
+    shadow.fillStyle(0x000000, 0.13);
+    shadow.fillRoundedRect(-CARD_W / 2 + 3, -CARD_H / 2 + 10, CARD_W - 6, CARD_H - 4, 20);
 
     const bg = this.add.graphics();
-    bg.fillStyle(0xffffff, 0.98);
-    bg.fillRoundedRect(-CARD_W / 2, -CARD_H / 2, CARD_W, CARD_H, 22);
-    bg.fillStyle(piece.color, 0.1);
-    bg.fillRoundedRect(-CARD_W / 2 + 10, -CARD_H / 2 + 10, CARD_W - 20, CARD_H - 20, 18);
-    bg.lineStyle(4, piece.color, 0.88);
-    bg.strokeRoundedRect(-CARD_W / 2, -CARD_H / 2, CARD_W, CARD_H, 22);
+    bg.fillStyle(COLORS.cream, 0.96);
+    bg.fillRoundedRect(-CARD_W / 2, -CARD_H / 2, CARD_W, CARD_H, 20);
+    bg.fillStyle(0xffffff, 0.22);
+    bg.fillRoundedRect(-CARD_W / 2 + 14, -CARD_H / 2 + 12, CARD_W - 28, 34, 16);
+    bg.lineStyle(4, piece.color, 0.82);
+    bg.strokeRoundedRect(-CARD_W / 2, -CARD_H / 2, CARD_W, CARD_H, 20);
+    bg.lineStyle(2, 0xffffff, 0.76);
+    bg.strokeRoundedRect(-CARD_W / 2, -CARD_H / 2, CARD_W, CARD_H, 20);
 
-    const chip = this.add.graphics();
-    chip.fillStyle(piece.color, 1);
-    chip.fillRoundedRect(-44, -54, 88, 48, 22);
-    chip.fillStyle(0xffffff, 0.2);
-    chip.fillRoundedRect(-34, -46, 68, 16, 8);
-    chip.lineStyle(4, 0xffffff, 0.95);
-    chip.strokeRoundedRect(-44, -54, 88, 48, 22);
+    const assetKey = this.getPieceAssetKey(piece);
+    const icon = assetKey && this.textures.exists(assetKey)
+      ? this.fitImage(this.add.image(0, -28, assetKey), 112, 92)
+      : this.addSharpText(0, -28, this.getPieceSymbol(piece), {
+          fontSize: "28px",
+          fontFamily: "Arial Black, Arial",
+          color: "#ffffff",
+          stroke: "#0f172a",
+          strokeThickness: 3,
+        }).setOrigin(0.5);
 
-    const icon = this.addSharpText(0, -31, this.getPieceSymbol(piece), {
-      fontSize: "24px",
-      fontFamily: "Arial Black, Arial",
-      color: "#ffffff",
-      stroke: "#0f172a",
-      strokeThickness: 3,
-    }).setOrigin(0.5);
-
-    const label = this.addSharpText(0, 34, piece.shortLabel, {
-      fontSize: piece.shortLabel.length > 12 ? "15px" : "19px",
-      fontFamily: "Arial Black, Arial",
-      color: "#1f2937",
+    const label = this.addSharpText(0, 54, piece.shortLabel, {
+      fontSize: piece.shortLabel.length > 12 ? "13px" : "16px",
+      fontFamily: "Arial, sans-serif",
+      color: "#3b3b3b",
       stroke: "#ffffff",
-      strokeThickness: 3,
+      strokeThickness: 2,
       align: "center",
-      wordWrap: { width: 158 },
+      wordWrap: { width: 132 },
     }).setOrigin(0.5);
-    card.add([shadow, bg, chip, icon, label]);
+    card.add([shadow, bg, icon, label]);
 
-    const hitbox = this.add.zone(x, y, CARD_W + 28, CARD_H + 24).setDepth(80);
+    const hitbox = this.add.zone(x, y, CARD_W * scale + 28, CARD_H * scale + 24).setDepth(80);
     hitbox.setInteractive({ draggable: true, useHandCursor: true });
     this.input.setDraggable(hitbox);
     hitbox.on("pointerdown", () => {
@@ -359,7 +514,7 @@ export class GameScene extends Phaser.Scene {
     const record = this.cards.get(id);
     if (!record) return;
     this.removeFromSlot(id);
-    record.card.setScale(1);
+    record.card.setScale(record.homeScale);
     this.tweens.add({ targets: record.card, x: record.homeX, y: record.homeY, duration: 160, ease: "Sine.easeOut" });
     this.tweens.add({ targets: record.hitbox, x: record.homeX, y: record.homeY, duration: 160, ease: "Sine.easeOut" });
     this.emitProgress();
@@ -378,6 +533,40 @@ export class GameScene extends Phaser.Scene {
     if (piece.id.includes("color")) return "C";
     if (piece.id.includes("pet")) return "P";
     return "?";
+  }
+
+  private getPieceAssetKey(piece: InfoPiece) {
+    const assets: Partial<Record<InfoPieceId, string>> = {
+      "date-day": "data-calendar-day",
+      "date-month": "data-calendar-month",
+      "date-year": "data-calendar-year",
+      "date-place-extra": "data-street-sign",
+      "date-color-extra": "data-color-palette",
+      "address-street": "data-street-sign",
+      "address-number": "data-house-number",
+      "address-neighborhood": "data-neighborhood-map",
+      "address-city": "data-city-buildings",
+      "address-zip": "data-zip-envelope",
+      "address-age-extra": "data-age-cake",
+      "address-month-extra": "data-calendar-month",
+      "character-name": "data-name-tag",
+      "character-age": "data-age-cake",
+      "character-city": "data-city-buildings",
+      "character-color": "data-color-palette",
+      "character-pet": "data-pet-cat",
+      "character-street-extra": "data-street-sign",
+    };
+    return assets[piece.id];
+  }
+
+  private fitImage(image: Phaser.GameObjects.Image, maxWidth: number, maxHeight: number) {
+    const source = image.texture.getSourceImage() as HTMLImageElement | HTMLCanvasElement;
+    const width = source.width || maxWidth;
+    const height = source.height || maxHeight;
+    const scale = Math.min(maxWidth / width, maxHeight / height);
+    image.setDisplaySize(width * scale, height * scale);
+    image.setOrigin(0.5);
+    return image;
   }
 
   private async validateInformation() {
@@ -404,7 +593,6 @@ export class GameScene extends Phaser.Scene {
     this.hits += 1;
     this.playCorrect();
     runtimeGameBridge.emit({ type: "CORRECT_ANSWER", gameId: GAME_ID, stage: this.levelConfig.level, pointsEarned: 10 });
-    this.drawResult(true);
     await this.showInformationReveal();
     this.handleLevelSuccess();
   }
@@ -413,12 +601,12 @@ export class GameScene extends Phaser.Scene {
     this.resultObjects.forEach((object) => object.destroy());
     this.resultObjects = [];
     const icon = this.createResultIcon(isComplete).setDepth(12);
-    const label = this.addSharpText(462, 672, isComplete ? this.levelConfig.resultText : "Dados aguardando combinação", {
+    const label = this.addSharpText(468, 658, isComplete ? this.levelConfig.resultText : "Dados aguardando combinação", {
       fontSize: isComplete ? "17px" : "19px",
       fontFamily: "Arial Black, Arial",
-      color: "#ffffff",
-      stroke: "#0f172a",
-      strokeThickness: 4,
+      color: "#1e3a8a",
+      stroke: "#ffffff",
+      strokeThickness: 3,
       align: "center",
       wordWrap: { width: 560 },
     }).setOrigin(0.5).setDepth(12);
@@ -426,7 +614,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private createResultIcon(isComplete: boolean) {
-    const container = this.add.container(166, 666);
+    const container = this.add.container(166, 654);
     const bg = this.add.graphics();
     bg.fillStyle(isComplete ? COLORS.green : 0x64748b, 1);
     bg.fillRoundedRect(-34, -28, 68, 56, 16);
@@ -508,7 +696,7 @@ export class GameScene extends Phaser.Scene {
         hits: this.hits,
         errors: this.errors,
       });
-      this.showNextLevelStartTransition(nextLevel as 1 | 2 | 3);
+      this.showLevelCompleteTransition(nextLevel as 1 | 2 | 3);
       return;
     }
     runtimeGameBridge.emit({ type: "GAME_COMPLETED", gameId: GAME_ID, stage: this.levelConfig.level });
@@ -547,6 +735,38 @@ export class GameScene extends Phaser.Scene {
     });
     modal.add([title, objective, detail, button]);
     this.animateModal(modal);
+  }
+
+  private showLevelCompleteTransition(nextLevel: 1 | 2 | 3) {
+    this.clearOverlay();
+    const overlay = this.addOverlayObject(this.add.rectangle(640, 360, 1280, 720, 0x12324a, 0.56).setDepth(450));
+    overlay.setInteractive();
+    const modal = this.createModalBase(640, 360, COLORS.orange);
+
+    const badgeIcon = this.add.image(0, -114, "success-badge");
+    this.fitImage(badgeIcon, 82, 82);
+    const title = this.addSharpText(0, -58, "Parabéns!", this.modalTitleStyle()).setOrigin(0.5);
+    const score = this.addSharpText(0, -5, `Nível ${this.levelConfig.level} concluído`, {
+      fontSize: "26px",
+      fontFamily: "Arial Black, Arial",
+      color: "#7c3aed",
+    }).setOrigin(0.5);
+    const detail = this.addSharpText(0, 48, this.levelConfig.successMessage, {
+      fontSize: "20px",
+      fontFamily: "Arial Black, Arial",
+      color: "#334155",
+      align: "center",
+      wordWrap: { width: 430 },
+    }).setOrigin(0.5);
+    const waitText = this.addSharpText(0, 122, "Preparando a próxima informação...", {
+      fontSize: "15px",
+      fontFamily: "Arial Black, Arial",
+      color: "#25327a",
+    }).setOrigin(0.5);
+
+    modal.add([badgeIcon, title, score, detail, waitText]);
+    this.animateModal(modal);
+    this.time.delayedCall(1800, () => this.showNextLevelStartTransition(nextLevel));
   }
 
   private showGameCompleteScreen() {
@@ -588,6 +808,23 @@ export class GameScene extends Phaser.Scene {
       align: "center",
       wordWrap: { width: 470 },
     }).setOrigin(0.5);
+    const sparkles = Array.from({ length: 14 }, (_, index) => {
+      const sparkle = this.add.graphics();
+      const x = Phaser.Math.Between(-278, 278);
+      const y = Phaser.Math.Between(-168, 158);
+      sparkle.fillStyle(index % 3 === 0 ? COLORS.cyan : index % 3 === 1 ? COLORS.orange : COLORS.green, 0.9);
+      sparkle.fillCircle(x, y, Phaser.Math.Between(4, 8));
+      this.tweens.add({
+        targets: sparkle,
+        alpha: { from: 0.35, to: 1 },
+        scale: { from: 0.8, to: 1.35 },
+        duration: 720 + index * 35,
+        yoyo: true,
+        repeat: -1,
+        ease: "Sine.easeInOut",
+      });
+      return sparkle;
+    });
     const levelLabels = [1, 2, 3].map((level, index) => {
       const item = this.add.container(-190 + index * 190, 54);
       const badgeBg = this.add.graphics();
@@ -612,7 +849,7 @@ export class GameScene extends Phaser.Scene {
     });
     const playAgain = this.createFinalButton(-158, 138, "Jogar novamente", COLORS.green, () => this.scene.restart({ level: 1 }));
     const exit = this.createFinalButton(158, 138, "Voltar aos jogos", COLORS.orange, () => EventBus.emit("exit-game"));
-    panel.add([shadow, bg, ribbon, title, subtitle, message, ...levelLabels, playAgain, exit]);
+    panel.add([shadow, bg, ribbon, ...sparkles, title, subtitle, message, ...levelLabels, playAgain, exit]);
     this.animateModal(panel);
   }
 
@@ -727,38 +964,30 @@ export class GameScene extends Phaser.Scene {
 
   private drawPanel(x: number, y: number, width: number, height: number, _accentColor: number, depth: number) {
     const shadow = this.add.graphics();
-    shadow.fillStyle(0x0f172a, 0.18);
-    shadow.fillRoundedRect(x + 10, y + 12, width, height, 32);
+    shadow.fillStyle(0x5b3410, 0.16);
+    shadow.fillRoundedRect(x + 9, y + 12, width, height, 30);
     shadow.setDepth(depth);
+
     const panel = this.add.graphics();
-    panel.fillStyle(0xffffff, 0.46);
-    panel.fillRoundedRect(x, y, width, height, 32);
-    panel.fillStyle(0xffffff, 0.24);
-    panel.fillRoundedRect(x + 10, y + 10, width - 20, height - 20, 24);
-    panel.fillStyle(_accentColor, 0.08);
-    panel.fillRoundedRect(x + 18, y + 18, width - 36, height - 36, 20);
-    panel.lineStyle(5, 0xffffff, 0.94);
-    panel.strokeRoundedRect(x, y, width, height, 32);
-    panel.lineStyle(2, 0xffffff, 0.54);
-    panel.strokeRoundedRect(x + 7, y + 7, width - 14, height - 14, 26);
+    panel.fillStyle(0xffffff, 0.34);
+    panel.fillRoundedRect(x, y, width, height, 30);
+    panel.fillStyle(0xfff1d6, 0.18);
+    panel.fillRoundedRect(x + 12, y + 12, width - 24, height - 24, 24);
+    panel.fillStyle(0xffffff, 0.2);
+    panel.fillRoundedRect(x + 20, y + 16, width - 40, Math.min(42, height - 28), 18);
+    panel.lineStyle(7, 0xffffff, 0.95);
+    panel.strokeRoundedRect(x, y, width, height, 30);
     panel.setDepth(depth + 0.1);
     return panel;
   }
 
   private drawPanelHeader(x: number, y: number, _width: number, label: string, _color: number) {
-    const header = this.add.graphics().setDepth(10);
-    header.fillStyle(_color, 0.96);
-    header.fillRoundedRect(x - _width / 2, y + 2, _width, 44, 22);
-    header.fillStyle(0xffffff, 0.16);
-    header.fillRoundedRect(x - _width / 2 + 16, y + 8, _width - 32, 12, 6);
-    header.lineStyle(4, 0xffffff, 0.92);
-    header.strokeRoundedRect(x - _width / 2, y + 2, _width, 44, 22);
-    const text = this.addSharpText(x, y + 20, label, {
-      fontSize: "20px",
+    const text = this.addSharpText(x, y + 16, label, {
+      fontSize: "21px",
       fontFamily: "Arial Black, Arial",
-      color: "#ffffff",
-      stroke: "#1e3a8a",
-      strokeThickness: 3,
+      color: "#1e3a8a",
+      stroke: "#ffffff",
+      strokeThickness: 4,
     }).setOrigin(0.5).setDepth(11);
     return text;
   }
