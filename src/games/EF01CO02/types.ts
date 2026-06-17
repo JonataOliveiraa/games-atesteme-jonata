@@ -4,6 +4,8 @@ export interface RobotPart {
     assetKey: string; 
 }
 
+export type LevelLayoutMode = 'regular' | 'compact' | 'stg';
+
 export interface OrigamiStep {
     id: number;
     label: string;
@@ -15,6 +17,7 @@ export interface LevelConfig {
     name: string;
     steps: RobotPart[];
     timeLimit: number;
+    layoutMode: LevelLayoutMode;
 }
 
 export interface RuntimeGameBridge {

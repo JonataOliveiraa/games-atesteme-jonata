@@ -1,5 +1,11 @@
 import Phaser from 'phaser';
 import startScreen from '../../../assets/games/EF01CO02/TelaInicial.png';
+import metaBee2Abdomen from '../../../assets/games/EF01CO02/MetaBee2_Abdomen.png';
+import metaBee2BracoDireito from '../../../assets/games/EF01CO02/MetaBee2_BracoDireito.png';
+import metaBee2BracoEsquerdo from '../../../assets/games/EF01CO02/MetaBee2_BracoEsquerdo.png';
+import metaBee2Cabeca from '../../../assets/games/EF01CO02/MetaBee2_Cabeca.png';
+import metaBee2Cintura from '../../../assets/games/EF01CO02/MetaBee2_Cintura.png';
+import metaBee2PernaDireita from '../../../assets/games/EF01CO02/MetaBee2_PernaDireita.png';
 
 export class BootScene extends Phaser.Scene {
     constructor() { super('BootScene'); }
@@ -16,14 +22,15 @@ export class BootScene extends Phaser.Scene {
         this.load.image('robot_kbt_legs', '/assets/medabot/robot_legs.png');
         this.load.image('robot_kbt_full_v2', '/assets/medabot/robot_full.png');
         this.load.image('start_screen_ef01co02', startScreen);
+        this.load.image('robot_metabee2_head', metaBee2Cabeca);
+        this.load.image('robot_metabee2_arm_l', metaBee2BracoEsquerdo);
+        this.load.image('robot_metabee2_arm_r', metaBee2BracoDireito);
+        this.load.image('robot_metabee2_abdomen', metaBee2Abdomen);
+        this.load.image('robot_metabee2_waist', metaBee2Cintura);
+        this.load.image('robot_metabee2_leg_r', metaBee2PernaDireita);
 
+        // TODO: substituir os assets STG por imagens reais.
         const fallbackKeys = [
-            'robot_kwg_head',
-            'robot_kwg_shoulder_l',
-            'robot_kwg_shoulder_r',
-            'robot_kwg_torso',
-            'robot_kwg_sword',
-            'robot_kwg_legs',
             'robot_stg_head',
             'robot_stg_torso',
             'robot_stg_legs',
@@ -33,5 +40,8 @@ export class BootScene extends Phaser.Scene {
             this.load.image(key, '/assets/medabot/robot_full.png');
         });
     }
-    create() { this.scene.start('GameScene'); }
+    create() {
+        this.scene.launch('UIScene');
+        this.scene.start('GameScene', { levelIndex: 0 });
+    }
 }
