@@ -24,6 +24,7 @@ const SLUG_TO_CODE: Record<string, GameCode> = {
   "desfile-do-robo-repetidor": "EF02CO02",
   "fabrica-de-maquinas": "EF02CO03",
   "montador-de-informacoes": "EF03CO04",
+  "formato-certo": "EF03CO05",
 };
 
 const GAME_CONFIG_LOADERS: Partial<
@@ -39,6 +40,7 @@ const GAME_CONFIG_LOADERS: Partial<
   EF02CO02: () => import("../games/EF02CO02/index"),
   EF02CO03: () => import("../games/EF02CO03/index"),
   EF03CO04: () => import("../games/EF03CO04/index"),
+  EF03CO05: () => import("../games/EF03CO05/index"),
 };
 
 const GAMES_WITH_IN_GAME_COMPLETION_SCREEN = new Set([
@@ -48,6 +50,7 @@ const GAMES_WITH_IN_GAME_COMPLETION_SCREEN = new Set([
   "desfile-do-robo-repetidor",
   "fabrica-de-maquinas",
   "montador-de-informacoes",
+  "formato-certo",
 ]);
 
 export default function GameDetailsPage() {
@@ -496,6 +499,12 @@ export default function GameDetailsPage() {
       "Arraste cada dado solto para o campo correto.",
       "Clique em Validar informação para testar a combinação.",
       "Dados isolados podem não informar muito, mas juntos formam uma informação útil.",
+    ],
+    "formato-certo": [
+      "Observe qual informação precisa ser guardada.",
+      "Escolha a caixa de formato mais adequada.",
+      "Arraste os dados para os campos na ordem certa.",
+      "Clique em Verificar formato para testar se a informação pode ser lida.",
     ],
   };
 

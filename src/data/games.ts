@@ -10,6 +10,7 @@ import robotParadeThumbnail from "../assets/games/EF02CO02/cover.png";
 import hangarThumbnail from "../assets/games/EF02CO01/cover-hangar.png";
 import machineFactoryThumbnail from "../assets/games/EF02CO03/cover.png";
 import informationBuilderThumbnail from "../assets/games/EF03CO04/cover-montador-informacoes.png";
+import correctFormatThumbnail from "../assets/games/EF03CO05/cover-formato-certo.png";
 
 export const games: Game[] = [
   {
@@ -190,5 +191,15 @@ export const games: Game[] = [
     icon: "🧩",
     slug: "montador-de-informacoes",
     thumbnail: informationBuilderThumbnail,
+  },
+  {
+    id: 18,
+    title: "Formato Certo",
+    description: "Escolha a estrutura certa para guardar datas, pixels e sequencias de caracteres.",
+    category: "Mundo Digital",
+    points: 60,
+    icon: "[]",
+    slug: "formato-certo",
+    thumbnail: correctFormatThumbnail,
   },
 ];
