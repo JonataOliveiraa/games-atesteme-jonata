@@ -11,6 +11,12 @@ import hangarThumbnail from "../assets/games/EF02CO01/cover-hangar.png";
 import machineFactoryThumbnail from "../assets/games/EF02CO03/cover.png";
 import informationBuilderThumbnail from "../assets/games/EF03CO04/cover-montador-informacoes.png";
 import correctFormatThumbnail from "../assets/games/EF03CO05/cover-formato-certo.png";
+import museumThumbnail from "../assets/games/EF02CO04/cover.png";
+import checklistThumbnail from "../assets/games/EF02CO06/cover.png";
+import tribunalThumbnail from "../assets/games/EF03CO01/cover.png";
+import cityThumbnail from "../assets/games/EF02CO05/cover.png";
+import chefThumbnail from "../assets/games/EF03CO03/cover.png";
+import mazeThumbnail from "../assets/games/EF03CO02/cover.png";
 
 export const games: Game[] = [
   {
@@ -201,5 +207,65 @@ export const games: Game[] = [
     icon: "[]",
     slug: "formato-certo",
     thumbnail: correctFormatThumbnail,
+  },
+  {
+    id: 19,
+    title: "Museu Vivo do Computador",
+    description: "Explore peças de computador e descubra qual é hardware, qual é software e como elas funcionam juntas.",
+    category: "Mundo Digital",
+    points: 60,
+    icon: "🏛️",
+    slug: "museu-vivo-do-computador",
+    thumbnail: museumThumbnail,
+  },
+  {
+    id: 20,
+    title: "Checklist do Jogador Seguro",
+    description: "Configure as proteções do dispositivo e reaja a riscos antes de entrar no jogo online.",
+    category: "Cultura Digital",
+    points: 60,
+    icon: "🛡️",
+    slug: "checklist-do-jogador-seguro",
+    thumbnail: checklistThumbnail,
+  },
+  {
+    id: 21,
+    title: "Tribunal do Verdadeiro ou Falso",
+    description: "Julgue sentenças do dia a dia e fique atento à palavra NÃO antes de decidir.",
+    category: "Pensamento Computacional",
+    points: 55,
+    icon: "⚖️",
+    slug: "tribunal-do-verdadeiro-ou-falso",
+    thumbnail: tribunalThumbnail,
+  },
+  {
+    id: 22,
+    title: "Cidade das Tecnologias",
+    description: "Explore o mapa da cidade e escolha a tecnologia certa para cada situação do dia a dia.",
+    category: "Cultura Digital",
+    points: 55,
+    icon: "🏙️",
+    slug: "cidade-das-tecnologias",
+    thumbnail: cityThumbnail,
+  },
+  {
+    id: 23,
+    title: "Chef dos Subproblemas",
+    description: "Decomponha missões da cozinha em subtarefas e monte o plano certo na linha do tempo.",
+    category: "Pensamento Computacional",
+    points: 60,
+    icon: "👨‍🍳",
+    slug: "chef-dos-subproblemas",
+    thumbnail: chefThumbnail,
+  },
+  {
+    id: 24,
+    title: "Labirinto do Enquanto",
+    description: "Monte o laço enquanto, escolha a condição certa e preveja onde o robô vai parar.",
+    category: "Pensamento Computacional",
+    points: 60,
+    icon: "🤖",
+    slug: "labirinto-do-enquanto",
+    thumbnail: mazeThumbnail,
   },
 ];
