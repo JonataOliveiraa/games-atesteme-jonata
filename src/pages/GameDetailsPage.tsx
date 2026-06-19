@@ -31,6 +31,7 @@ const SLUG_TO_CODE: Record<string, GameCode> = {
   "labirinto-do-enquanto": "EF03CO02",
   "montador-de-informacoes": "EF03CO04",
   "formato-certo": "EF03CO05",
+  "central-de-entrada-e-saida": "EF03CO06",
 };
 
 const GAME_CONFIG_LOADERS: Partial<
@@ -53,6 +54,7 @@ const GAME_CONFIG_LOADERS: Partial<
   EF03CO02: () => import("../games/EF03CO02/index"),
   EF03CO04: () => import("../games/EF03CO04/index"),
   EF03CO05: () => import("../games/EF03CO05/index"),
+  EF03CO06: () => import("../games/EF03CO06/index"),
 };
 
 const GAMES_WITH_IN_GAME_COMPLETION_SCREEN = new Set([
@@ -63,6 +65,7 @@ const GAMES_WITH_IN_GAME_COMPLETION_SCREEN = new Set([
   "fabrica-de-maquinas",
   "montador-de-informacoes",
   "formato-certo",
+  "central-de-entrada-e-saida",
 ]);
 
 export default function GameDetailsPage() {
@@ -553,6 +556,12 @@ export default function GameDetailsPage() {
       "Escolha a caixa de formato mais adequada.",
       "Arraste os dados para os campos na ordem certa.",
       "Clique em Verificar formato para testar se a informação pode ser lida.",
+    ],
+    "central-de-entrada-e-saida": [
+      "Observe o pedido da central.",
+      "Arraste o dispositivo correto para Entrada ou Saída.",
+      "Entrada leva informação para o computador; Saída mostra ou toca informação para fora.",
+      "Clique em Testar conexão para verificar sua escolha.",
     ],
   };
 
