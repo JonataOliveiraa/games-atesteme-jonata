@@ -17,6 +17,7 @@ import mazeThumbnail from "../assets/games/EF03CO02/cover.png";
 import chefThumbnail from "../assets/games/EF03CO03/cover.png";
 import informationBuilderThumbnail from "../assets/games/EF03CO04/cover-montador-informacoes.png";
 import correctFormatThumbnail from "../assets/games/EF03CO05/cover-formato-certo.png";
+import inputOutputThumbnail from "../assets/games/EF03CO06/cover-central-entrada-saida.png";
 
 const placeholderGame = (code: string, index: number): Game => ({
   id: index,
@@ -190,7 +191,7 @@ const gameByCode: Partial<Record<string, Omit<Game, "id">>> = {
     points: 60,
     icon: "🔌",
     slug: "central-de-entrada-e-saida",
-    thumbnail: heroThumbnail,
+    thumbnail: inputOutputThumbnail,
   },
 };
 

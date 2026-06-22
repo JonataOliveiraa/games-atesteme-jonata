@@ -54,7 +54,7 @@ const GAME_CONFIG_LOADERS: Partial<
   EF03CO02: () => import("../games/EF03CO02/index"),
   EF03CO04: () => import("../games/EF03CO04/index"),
   EF03CO05: () => import("../games/EF03CO05/index"),
-  //EF03CO06: () => import("../games/EF03CO06/index"),
+  EF03CO06: () => import("../games/EF03CO06/index"),
 };
 
 const GAMES_WITH_IN_GAME_COMPLETION_SCREEN = new Set([
