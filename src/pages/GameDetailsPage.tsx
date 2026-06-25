@@ -32,6 +32,7 @@ const SLUG_TO_CODE: Record<string, GameCode> = {
   "montador-de-informacoes": "EF03CO04",
   "formato-certo": "EF03CO05",
   "central-de-entrada-e-saida": "EF03CO06",
+  "detetives-da-busca": "EF03CO07",
 };
 
 const GAME_CONFIG_LOADERS: Partial<
@@ -55,6 +56,7 @@ const GAME_CONFIG_LOADERS: Partial<
   EF03CO04: () => import("../games/EF03CO04/index"),
   EF03CO05: () => import("../games/EF03CO05/index"),
   EF03CO06: () => import("../games/EF03CO06/index"),
+  EF03CO07: () => import("../games/EF03CO07/index"),
 };
 
 const GAMES_WITH_IN_GAME_COMPLETION_SCREEN = new Set([
@@ -66,6 +68,7 @@ const GAMES_WITH_IN_GAME_COMPLETION_SCREEN = new Set([
   "montador-de-informacoes",
   "formato-certo",
   "central-de-entrada-e-saida",
+  "detetives-da-busca",
 ]);
 
 export default function GameDetailsPage() {
@@ -562,6 +565,12 @@ export default function GameDetailsPage() {
       "Arraste o dispositivo correto para Entrada ou Saída.",
       "Entrada leva informação para o computador; Saída mostra ou toca informação para fora.",
       "Clique em Testar conexão para verificar sua escolha.",
+    ],
+    "detetives-da-busca": [
+      "Leia a pergunta da missão.",
+      "Escolha palavras-chave e filtros para melhorar os resultados.",
+      "Compare os cartões e selecione a resposta mais útil.",
+      "No desafio final, marque também a estratégia de busca usada.",
     ],
   };
 

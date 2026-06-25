@@ -18,6 +18,7 @@ import chefThumbnail from "../assets/games/EF03CO03/cover.png";
 import informationBuilderThumbnail from "../assets/games/EF03CO04/cover-montador-informacoes.png";
 import correctFormatThumbnail from "../assets/games/EF03CO05/cover-formato-certo.png";
 import inputOutputThumbnail from "../assets/games/EF03CO06/cover-central-entrada-saida.png";
+import searchDetectivesThumbnail from "../assets/games/EF03CO07/cover-detetives-da-busca.png";
 
 const placeholderGame = (code: string, index: number): Game => ({
   id: index,
@@ -192,6 +193,15 @@ const gameByCode: Partial<Record<string, Omit<Game, "id">>> = {
     icon: "🔌",
     slug: "central-de-entrada-e-saida",
     thumbnail: inputOutputThumbnail,
+  },
+  EF03CO07: {
+    title: "Detetives da Busca",
+    description: "Use palavras-chave, filtros e comparação de resultados em um navegador seguro.",
+    category: "Cultura Digital",
+    points: 60,
+    icon: "🔍",
+    slug: "detetives-da-busca",
+    thumbnail: searchDetectivesThumbnail,
   },
 };
 
