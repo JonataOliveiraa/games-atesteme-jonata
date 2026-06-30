@@ -33,6 +33,7 @@ const SLUG_TO_CODE: Record<string, GameCode> = {
   "formato-certo": "EF03CO05",
   "central-de-entrada-e-saida": "EF03CO06",
   "detetives-da-busca": "EF03CO07",
+  "baralho-das-listas": "EF05CO01",
 };
 
 const GAME_CONFIG_LOADERS: Partial<
@@ -57,6 +58,7 @@ const GAME_CONFIG_LOADERS: Partial<
   EF03CO05: () => import("../games/EF03CO05/index"),
   EF03CO06: () => import("../games/EF03CO06/index"),
   EF03CO07: () => import("../games/EF03CO07/index"),
+  EF05CO01: () => import("../games/EF05CO01/index"),
 };
 
 const GAMES_WITH_IN_GAME_COMPLETION_SCREEN = new Set([
@@ -69,6 +71,7 @@ const GAMES_WITH_IN_GAME_COMPLETION_SCREEN = new Set([
   "formato-certo",
   "central-de-entrada-e-saida",
   "detetives-da-busca",
+  "baralho-das-listas",
 ]);
 
 export default function GameDetailsPage() {

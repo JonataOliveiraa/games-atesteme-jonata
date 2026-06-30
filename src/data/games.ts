@@ -19,6 +19,7 @@ import informationBuilderThumbnail from "../assets/games/EF03CO04/cover-montador
 import correctFormatThumbnail from "../assets/games/EF03CO05/cover-formato-certo.png";
 import inputOutputThumbnail from "../assets/games/EF03CO06/cover-central-entrada-saida.png";
 import searchDetectivesThumbnail from "../assets/games/EF03CO07/cover-detetives-da-busca.png";
+import cardListThumbnail from "../assets/games/EF05CO01/cover-baralho-das-listas.png";
 
 const placeholderGame = (code: string, index: number): Game => ({
   id: index,
@@ -202,6 +203,15 @@ const gameByCode: Partial<Record<string, Omit<Game, "id">>> = {
     icon: "🔍",
     slug: "detetives-da-busca",
     thumbnail: searchDetectivesThumbnail,
+  },
+  EF05CO01: {
+    title: "Baralho das Listas",
+    description: "Insira, remova, substitua e busque cartas mantendo a lista em ordem.",
+    category: "Pensamento Computacional",
+    points: 65,
+    icon: "🃏",
+    slug: "baralho-das-listas",
+    thumbnail: cardListThumbnail,
   },
 };
 
