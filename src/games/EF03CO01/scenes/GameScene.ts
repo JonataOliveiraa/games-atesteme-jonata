@@ -79,6 +79,7 @@ export class GameScene extends Phaser.Scene {
       this.showNextLevelStartScreen()
     } else {
       this.showCurrentSentence()
+      if (this.levelConfig.level === 1) this.showTutorialOverlay()
     }
   }
 
@@ -202,15 +203,24 @@ export class GameScene extends Phaser.Scene {
   private buildSentenceUI() {
     this.sentenceCard = this.add.container(720, 300).setDepth(5)
 
-    const card = this.add.image(0, 0, 'card-sentence').setDisplaySize(620, 220).setOrigin(0.5)
+    const CARD_W = 640, CARD_H = 252
+    const cardShadow = this.add.graphics()
+    cardShadow.fillStyle(0x000000, 0.15)
+    cardShadow.fillRoundedRect(-CARD_W / 2 + 4, -CARD_H / 2 + 6, CARD_W, CARD_H, 22)
+
+    const cardBg = this.add.graphics()
+    cardBg.fillStyle(0xffffff, 1)
+    cardBg.fillRoundedRect(-CARD_W / 2, -CARD_H / 2, CARD_W, CARD_H, 22)
+    cardBg.lineStyle(3, 0xe2e8f0, 1)
+    cardBg.strokeRoundedRect(-CARD_W / 2, -CARD_H / 2, CARD_W, CARD_H, 22)
 
     this.sentenceText = this.add.text(0, 0, '', {
       fontFamily: 'Arial', fontStyle: 'bold',
-      fontSize: '26px', color: '#2a1a0d',
-      align: 'center', wordWrap: { width: 520 },
+      fontSize: '24px', color: '#1e293b',
+      align: 'center', wordWrap: { width: 560 },
     }).setOrigin(0.5).setResolution(2)
 
-    this.sentenceCard.add([card, this.sentenceText])
+    this.sentenceCard.add([cardShadow, cardBg, this.sentenceText])
 
     this.negationBadge = this.add.container(720, 168).setDepth(6).setAlpha(0)
     const badgeBg = this.add.graphics()
@@ -223,17 +233,38 @@ export class GameScene extends Phaser.Scene {
     }).setOrigin(0.5).setResolution(2)
     this.negationBadge.add([badgeBg, badgeTxt])
 
-    this.trueBtn = this.makeAnswerButton(560, 540, 'btn-verdadeiro', true)
-    this.falseBtn = this.makeAnswerButton(880, 540, 'btn-falso', false)
+    this.trueBtn  = this.makeAnswerButton(560, 540, true)
+    this.falseBtn = this.makeAnswerButton(880, 540, false)
   }
 
-  private makeAnswerButton(x: number, y: number, textureKey: string, value: boolean): Phaser.GameObjects.Container {
+  private makeAnswerButton(x: number, y: number, value: boolean): Phaser.GameObjects.Container {
     const btn = this.add.container(x, y).setDepth(5)
-    const img = this.add.image(0, 0, textureKey).setDisplaySize(280, 92).setOrigin(0.5)
-    btn.add(img)
-    btn.setSize(280, 92)
+    const W = 288, H = 100
+
+    const shadow = this.add.graphics()
+    shadow.fillStyle(0x000000, 0.20)
+    shadow.fillRoundedRect(-W / 2 + 4, -H / 2 + 6, W, H, 22)
+
+    const bg = this.add.graphics()
+    bg.fillStyle(value ? 0x22c55e : 0xef4444, 1)
+    bg.fillRoundedRect(-W / 2, -H / 2, W, H, 22)
+    bg.lineStyle(4, 0xffffff, 0.9)
+    bg.strokeRoundedRect(-W / 2, -H / 2, W, H, 22)
+
+    const icon = this.add.text(-84, 0, value ? '✅' : '❌', {
+      fontSize: '34px',
+    }).setOrigin(0.5)
+
+    const label = this.add.text(22, 0, value ? 'VERDADEIRO' : 'FALSO', {
+      fontFamily: 'Arial Black, Arial', fontStyle: 'bold',
+      fontSize: '22px', color: '#ffffff',
+      stroke: value ? '#14532d' : '#7f1d1d', strokeThickness: 3,
+    }).setOrigin(0.5).setResolution(2)
+
+    btn.add([shadow, bg, icon, label])
+    btn.setSize(W, H)
     btn.setInteractive({ useHandCursor: true })
-    btn.on('pointerover', () => this.tweens.add({ targets: btn, scale: 1.05, duration: 90 }))
+    btn.on('pointerover', () => this.tweens.add({ targets: btn, scale: 1.06, duration: 90 }))
     btn.on('pointerout',  () => this.tweens.add({ targets: btn, scale: 1, duration: 90 }))
     btn.on('pointerdown', () => this.handleAnswer(value))
     return btn
@@ -449,6 +480,82 @@ export class GameScene extends Phaser.Scene {
       } else {
         this.showGameCompleteScreen()
       }
+    })
+  }
+
+  private showTutorialOverlay() {
+    const overlay = this.add.rectangle(640, 360, 1280, 720, 0x000000, 0.68)
+      .setDepth(200).setInteractive()
+
+    const modal = this.add.container(640, 360).setDepth(201)
+    const W = 540, H = 400
+
+    const modalShadow = this.add.graphics()
+    modalShadow.fillStyle(0x000000, 0.20)
+    modalShadow.fillRoundedRect(-W / 2 + 6, -H / 2 + 8, W, H, 28)
+
+    const modalBg = this.add.graphics()
+    modalBg.fillStyle(0xfff6e8, 1)
+    modalBg.fillRoundedRect(-W / 2, -H / 2, W, H, 28)
+    modalBg.lineStyle(5, 0xffffff, 0.95)
+    modalBg.strokeRoundedRect(-W / 2, -H / 2, W, H, 28)
+
+    const header = this.add.graphics()
+    header.fillStyle(0x1e3a5f, 1)
+    header.fillRoundedRect(-W / 2, -H / 2, W, 58, 28)
+    header.fillRect(-W / 2, -H / 2 + 30, W, 28)
+
+    const headerText = this.add.text(0, -H / 2 + 29, '📰 Como jogar', {
+      fontFamily: 'Arial Black, Arial', fontStyle: 'bold',
+      fontSize: '22px', color: '#ffffff',
+    }).setOrigin(0.5).setResolution(2)
+
+    const steps = [
+      { icon: '📰', text: 'Leia a manchete no cartão com atenção' },
+      { icon: '🤔', text: 'Pense: essa notícia parece real ou inventada?' },
+      { icon: '✅', text: 'Toque em VERDADEIRO ou FALSO para julgar' },
+      { icon: '⚠️', text: 'No Nível 2, a palavra NÃO pode mudar tudo!' },
+    ]
+
+    const stepItems = steps.flatMap((step, i) => {
+      const baseY = -H / 2 + 90 + i * 64
+      const iconTxt = this.add.text(-200, baseY, step.icon, {
+        fontSize: '28px',
+      }).setOrigin(0.5).setResolution(2)
+      const stepTxt = this.add.text(-168, baseY, step.text, {
+        fontFamily: 'Arial', fontStyle: 'bold',
+        fontSize: '18px', color: '#1e293b',
+        wordWrap: { width: 374 },
+      }).setOrigin(0, 0.5).setResolution(2)
+      return [iconTxt, stepTxt]
+    })
+
+    const btnY = H / 2 - 50
+    const btnShadow = this.add.graphics()
+    btnShadow.fillStyle(0x000000, 0.16)
+    btnShadow.fillRoundedRect(-142, btnY - 20 + 4, 284, 48, 24)
+    const btnBg = this.add.graphics()
+    btnBg.fillStyle(0xf57c00, 1)
+    btnBg.fillRoundedRect(-146, btnY - 26, 292, 52, 26)
+    btnBg.lineStyle(4, 0xffffff, 1)
+    btnBg.strokeRoundedRect(-146, btnY - 26, 292, 52, 26)
+    const btnText = this.add.text(0, btnY, '▶ Vamos julgar!', {
+      fontFamily: 'Arial Black, Arial', fontStyle: 'bold',
+      fontSize: '20px', color: '#ffffff',
+      stroke: '#9a3f00', strokeThickness: 3,
+    }).setOrigin(0.5).setResolution(2)
+
+    modal.add([modalShadow, modalBg, header, headerText, ...stepItems, btnShadow, btnBg, btnText])
+    modal.setScale(0.88).setAlpha(0)
+    this.tweens.add({ targets: modal, alpha: 1, scale: 1, duration: 260, ease: 'Back.Out' })
+
+    const btnAbsY = 360 + H / 2 - 50
+    const hitbox = this.add.zone(640, btnAbsY, 292, 60).setDepth(202).setInteractive({ useHandCursor: true })
+    hitbox.on('pointerdown', () => {
+      this.playTick()
+      overlay.destroy()
+      modal.destroy()
+      hitbox.destroy()
     })
   }
 

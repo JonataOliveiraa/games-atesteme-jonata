@@ -18,8 +18,10 @@ const BOTTOM_Y     = 638
 const PANEL_LEFT_X = 860
 const PANEL_W      = 400
 
-const CARD_W = 150
-const CARD_H = 150
+const CARD_W = 160
+const CARD_H = 162
+const CONFIRM_X = 430   // centro da área de grid (areaX=20, areaW=820 → centro=430)
+const CONFIRM_Y = 658
 
 type RoundPhase =
   | 'intro'
@@ -105,6 +107,9 @@ export class GameScene extends Phaser.Scene {
       this.showNextLevelStartScreen()
     } else {
       this.startTimer()
+      if (this.levelConfig.level === 1) {
+        this.showTutorialOverlay()
+      }
     }
   }
 
@@ -262,6 +267,7 @@ export class GameScene extends Phaser.Scene {
   private startLevel() {
     this.buildRound()
     this.buildQuestionPanel()
+    this.buildConfirmButton()
     this.showCurrentRound()
   }
 
@@ -272,7 +278,8 @@ export class GameScene extends Phaser.Scene {
 
     round.items.forEach((state, i) => {
       const item = ALL_SECURITY_ITEMS.find(it => it.id === state.itemId)!
-      const card = this.makeToggleCard(item.id, state.initialOn, slots[i].x, slots[i].y, i)
+      const isTrap = this.levelConfig.level === 2 && state.initialOn !== item.shouldBeOn
+      const card = this.makeToggleCard(item.id, state.initialOn, slots[i].x, slots[i].y, i, false, isTrap)
       this.toggleCards.push(card)
     })
 
@@ -312,29 +319,33 @@ export class GameScene extends Phaser.Scene {
     return slots
   }
 
-  private makeToggleCard(itemId: string, initialOn: boolean, cx: number, cy: number, animIndex: number, isNew = false): ToggleCard {
+  private makeToggleCard(itemId: string, initialOn: boolean, cx: number, cy: number, animIndex: number, isNew = false, isTrap = false): ToggleCard {
     const item = ALL_SECURITY_ITEMS.find(it => it.id === itemId)!
 
+    const cardShadow = this.add.graphics()
+    cardShadow.fillStyle(0x000000, 0.10)
+    cardShadow.fillRoundedRect(-CARD_W / 2 + 3, -CARD_H / 2 + 5, CARD_W, CARD_H, 16)
+
     const bg = this.add.graphics()
-    bg.fillStyle(0xfff8f0, 0.96)
+    bg.fillStyle(0xffffff, 1)
     bg.fillRoundedRect(-CARD_W / 2, -CARD_H / 2, CARD_W, CARD_H, 16)
-    bg.lineStyle(3, 0x4FC3F7, 0.7)
+    bg.lineStyle(2, 0xe2e8f0, 1)
     bg.strokeRoundedRect(-CARD_W / 2, -CARD_H / 2, CARD_W, CARD_H, 16)
 
-    const icon = this.add.image(0, -38, item.iconKey).setDisplaySize(56, 56).setOrigin(0.5)
+    const icon = this.add.image(0, -36, item.iconKey).setDisplaySize(80, 80).setOrigin(0.5)
 
-    const label = this.add.text(0, 6, item.label, {
+    const label = this.add.text(0, 14, item.label, {
       fontSize: '13px', fontFamily: 'Arial Black, Arial',
       color: '#0f172a', align: 'center', wordWrap: { width: CARD_W - 16 },
     }).setOrigin(0.5)
 
-    const toggle = this.add.image(0, 52, initialOn ? 'toggle-on' : 'toggle-off')
-      .setDisplaySize(70, 32).setOrigin(0.5)
+    const toggle = this.add.image(0, 58, initialOn ? 'toggle-on' : 'toggle-off')
+      .setDisplaySize(74, 34).setOrigin(0.5)
 
     const feedbackIcon = this.add.image(CARD_W / 2 - 14, -CARD_H / 2 + 16, 'icon-shield-ok')
-      .setDisplaySize(28, 28).setOrigin(0.5).setAlpha(0)
+      .setDisplaySize(30, 30).setOrigin(0.5).setAlpha(0)
 
-    const container = this.add.container(cx, cy, [bg, icon, label, toggle, feedbackIcon])
+    const container = this.add.container(cx, cy, [cardShadow, bg, icon, label, toggle, feedbackIcon])
     container.setSize(CARD_W, CARD_H)
     container.setInteractive({ useHandCursor: true })
 
@@ -354,6 +365,23 @@ export class GameScene extends Phaser.Scene {
       this.tweens.add({
         targets: container, alpha: 1, scaleX: 1, scaleY: 1,
         duration: 380, ease: 'Back.Out', delay: animIndex * 70,
+      })
+    }
+
+    // N2: flash vermelho breve em itens-armadilha para sinalizar "algo errado aqui"
+    if (isTrap) {
+      const trapGlow = this.add.graphics()
+      trapGlow.lineStyle(5, 0xef4444, 0.9)
+      trapGlow.strokeRoundedRect(-CARD_W / 2 - 3, -CARD_H / 2 - 3, CARD_W + 6, CARD_H + 6, 18)
+      trapGlow.setAlpha(0)
+      container.add(trapGlow)
+      this.time.delayedCall(500 + animIndex * 70, () => {
+        this.tweens.add({
+          targets: trapGlow, alpha: 1, duration: 200,
+          onComplete: () => {
+            this.tweens.add({ targets: trapGlow, alpha: 0, duration: 700, onComplete: () => trapGlow.destroy() })
+          },
+        })
       })
     }
 
@@ -397,9 +425,9 @@ export class GameScene extends Phaser.Scene {
 
     const bg = this.add.graphics()
     bg.fillStyle(0x102a43, 0.9)
-    bg.fillRoundedRect(0, 0, PANEL_W, 310, 22)
+    bg.fillRoundedRect(0, 0, PANEL_W, 230, 22)
     bg.lineStyle(3, 0x4FC3F7, 0.85)
-    bg.strokeRoundedRect(0, 0, PANEL_W, 310, 22)
+    bg.strokeRoundedRect(0, 0, PANEL_W, 230, 22)
 
     const qText = this.add.text(PANEL_W / 2, 24, '', {
       fontFamily: 'Arial', fontStyle: 'bold',
@@ -414,25 +442,41 @@ export class GameScene extends Phaser.Scene {
       align: 'center', wordWrap: { width: 340 },
     }).setOrigin(0.5, 0).setResolution(2)
 
-    this.confirmBtn = this.add.container(PANEL_W / 2, 240)
-    const btnBg = this.add.graphics()
-    btnBg.fillStyle(0x42d640, 1)
-    btnBg.fillRoundedRect(-130, -26, 260, 52, 26)
-    btnBg.lineStyle(3, 0xffffff, 1)
-    btnBg.strokeRoundedRect(-130, -26, 260, 52, 26)
-    const btnTxt = this.add.text(0, 0, '✔  Entrar com segurança', {
-      fontFamily: 'Arial', fontStyle: 'bold',
-      fontSize: '17px', color: '#ffffff',
-      stroke: '#00000040', strokeThickness: 2,
-    }).setOrigin(0.5).setResolution(2)
-    this.confirmBtn.add([btnBg, btnTxt])
-    this.confirmBtn.setSize(260, 76)
-    this.confirmBtn.setData('btnBg', btnBg)
-    this.confirmBtn.on('pointerdown', () => this.confirmChecklist())
-
     this.questionPanel.setData('qText', qText)
     this.questionPanel.setData('hintText', hintText)
-    this.questionPanel.add([bg, qText, hintText, this.confirmBtn])
+    this.questionPanel.add([bg, qText, hintText])
+  }
+
+  private buildConfirmButton() {
+    this.confirmBtn = this.add.container(CONFIRM_X, CONFIRM_Y).setDepth(10)
+
+    const btnShadow = this.add.graphics()
+    btnShadow.fillStyle(0x000000, 0.18)
+    btnShadow.fillRoundedRect(-152, -26, 308, 58, 29)
+
+    const btnBg = this.add.graphics()
+    btnBg.fillStyle(0x42d640, 1)
+    btnBg.fillRoundedRect(-156, -30, 312, 60, 30)
+    btnBg.lineStyle(3, 0xffffff, 1)
+    btnBg.strokeRoundedRect(-156, -30, 312, 60, 30)
+
+    const btnTxt = this.add.text(0, 0, 'Entrar com segurança  ✔', {
+      fontFamily: 'Arial', fontStyle: 'bold',
+      fontSize: '20px', color: '#ffffff',
+      stroke: '#1a5c1a', strokeThickness: 3,
+    }).setOrigin(0.5).setResolution(2)
+
+    this.confirmBtn.add([btnShadow, btnBg, btnTxt])
+    this.confirmBtn.setSize(312, 64)
+    this.confirmBtn.setData('btnBg', btnBg)
+    this.confirmBtn.setInteractive({ useHandCursor: true })
+    this.confirmBtn.on('pointerover', () => {
+      if (!this.confirmLocked) this.tweens.add({ targets: this.confirmBtn, scale: 1.04, duration: 90 })
+    })
+    this.confirmBtn.on('pointerout', () => {
+      this.tweens.add({ targets: this.confirmBtn, scale: 1, duration: 90 })
+    })
+    this.confirmBtn.on('pointerdown', () => this.confirmChecklist())
   }
 
   private showCurrentRound() {
@@ -458,8 +502,13 @@ export class GameScene extends Phaser.Scene {
 
   private updateConfirmButton() {
     if (!this.confirmBtn) return
-    this.confirmBtn.setInteractive({ useHandCursor: !this.confirmLocked })
-    this.confirmBtn.setAlpha(this.confirmLocked ? 0.5 : 1)
+    if (this.confirmLocked) {
+      this.confirmBtn.disableInteractive()
+      this.confirmBtn.setAlpha(0.5)
+    } else {
+      this.confirmBtn.setInteractive({ useHandCursor: true })
+      this.confirmBtn.setAlpha(1)
+    }
   }
 
   private confirmChecklist() {
@@ -488,7 +537,7 @@ export class GameScene extends Phaser.Scene {
       this.tweens.add({ targets: feedbackIcon, alpha: 1, duration: 200 })
 
       bgGraphic.clear()
-      bgGraphic.fillStyle(0xfff8f0, 0.96)
+      bgGraphic.fillStyle(0xffffff, 1)
       bgGraphic.fillRoundedRect(-CARD_W / 2, -CARD_H / 2, CARD_W, CARD_H, 16)
       bgGraphic.lineStyle(4, correct ? 0x42d640 : 0xef4444, 1)
       bgGraphic.strokeRoundedRect(-CARD_W / 2, -CARD_H / 2, CARD_W, CARD_H, 16)
@@ -726,6 +775,92 @@ export class GameScene extends Phaser.Scene {
         this.showGameCompleteScreen()
       }
     })
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  //  TUTORIAL (Nível 1)
+  // ══════════════════════════════════════════════════════════════════════════
+
+  private showTutorialOverlay() {
+    this.timerTween?.pause()
+    this.timerActive = false
+
+    const overlay = this.add.rectangle(640, 360, 1280, 720, 0x000000, 0.54)
+      .setDepth(300).setInteractive()
+
+    const modal = this.add.container(640, 360).setDepth(301)
+
+    const shadow = this.add.graphics()
+    shadow.fillStyle(0x000000, 0.16)
+    shadow.fillRoundedRect(-264, -208, 528, 420, 30)
+
+    const bg = this.add.graphics()
+    bg.fillStyle(0xffffff, 1)
+    bg.fillRoundedRect(-272, -216, 544, 420, 30)
+    bg.lineStyle(3, 0xe2e8f0, 1)
+    bg.strokeRoundedRect(-272, -216, 544, 420, 30)
+
+    const header = this.add.graphics()
+    header.fillStyle(0x102a43, 1)
+    header.fillRoundedRect(-272, -216, 544, 56, 30)
+    header.fillRect(-272, -188, 544, 28)
+
+    const titleTxt = this.add.text(0, -188, '🔒  Checklist do Jogador Seguro', {
+      fontFamily: 'Arial', fontStyle: 'bold',
+      fontSize: '24px', color: '#ffffff',
+    }).setOrigin(0.5).setResolution(2)
+
+    const steps = [
+      { icon: '👀', text: 'Veja cada configuração do dispositivo' },
+      { icon: '🔘', text: 'Toque no toggle para LIGAR ou DESLIGAR' },
+      { icon: '✅', text: 'Senha forte e perfil privado → LIGADOS' },
+      { icon: '❌', text: 'Câmera, localização e compras → DESLIGADOS' },
+      { icon: '🚀', text: 'Quando tudo estiver certo, toque no botão verde em baixo' },
+    ]
+
+    const stepObjs = steps.flatMap((s, i) => {
+      const rowY = -126 + i * 62
+      const iconTxt = this.add.text(-218, rowY, s.icon, { fontSize: '26px' }).setOrigin(0.5)
+      const stepTxt = this.add.text(-188, rowY, s.text, {
+        fontFamily: 'Arial', fontStyle: 'bold',
+        fontSize: '17px', color: '#1e293b',
+        wordWrap: { width: 390 },
+      }).setOrigin(0, 0.5).setResolution(2)
+      return [iconTxt, stepTxt]
+    })
+
+    const btnBg = this.add.graphics()
+    btnBg.fillStyle(0x42d640, 1)
+    btnBg.fillRoundedRect(-148, 162, 296, 54, 27)
+    btnBg.lineStyle(3, 0xffffff, 1)
+    btnBg.strokeRoundedRect(-148, 162, 296, 54, 27)
+
+    const btnTxt = this.add.text(0, 189, '▶  Entendido! Vamos começar', {
+      fontFamily: 'Arial', fontStyle: 'bold',
+      fontSize: '20px', color: '#ffffff',
+      stroke: '#1a5c1a', strokeThickness: 3,
+    }).setOrigin(0.5).setResolution(2)
+
+    const btnZone = this.add.zone(640, 360 + 189, 296, 58)
+    btnZone.setDepth(302).setInteractive({ useHandCursor: true })
+    btnZone.on('pointerover', () => {
+      this.tweens.add({ targets: [btnBg, btnTxt], scaleX: 1.04, scaleY: 1.04, duration: 90 })
+    })
+    btnZone.on('pointerout', () => {
+      this.tweens.add({ targets: [btnBg, btnTxt], scaleX: 1, scaleY: 1, duration: 90 })
+    })
+    btnZone.on('pointerdown', () => {
+      this.playTick()
+      overlay.destroy()
+      btnZone.destroy()
+      modal.destroy()
+      this.timerTween?.resume()
+      this.timerActive = true
+    })
+
+    modal.add([shadow, bg, header, titleTxt, ...stepObjs, btnBg, btnTxt])
+    modal.setScale(0.9).setAlpha(0)
+    this.tweens.add({ targets: modal, alpha: 1, scale: 1, duration: 280, ease: 'Back.easeOut' })
   }
 
   private showNextLevelStartScreen() {

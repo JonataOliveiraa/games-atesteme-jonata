@@ -9,6 +9,9 @@ import { ALL_TECH } from '../data/tech'
 const GAME_ID = 'cidade-das-tecnologias'
 const MAX_CONSECUTIVE_ERRORS = 3
 
+const OPT_CARD_W = 140
+const OPT_CARD_H = 162
+
 type RoundPhase = 'intro' | 'waiting-answer' | 'feedback' | 'level-complete'
 
 export class GameScene extends Phaser.Scene {
@@ -76,6 +79,9 @@ export class GameScene extends Phaser.Scene {
       this.showNextLevelStartScreen()
     } else {
       this.beginLevel()
+      if (this.levelConfig.level === 1) {
+        this.showTutorialOverlay()
+      }
     }
   }
 
@@ -334,16 +340,19 @@ export class GameScene extends Phaser.Scene {
 
     this.phase = 'waiting-answer'
     const card = this.add.container(640, 280).setDepth(5)
+    const shadow = this.add.graphics()
+    shadow.fillStyle(0x000000, 0.12)
+    shadow.fillRoundedRect(-356, -84, 720, 180, 24)
     const bg = this.add.graphics()
-    bg.fillStyle(0xfff6e8, 0.96)
+    bg.fillStyle(0xffffff, 1)
     bg.fillRoundedRect(-360, -90, 720, 180, 24)
-    bg.lineStyle(4, 0xA5D6A7, 0.9)
+    bg.lineStyle(2, 0xe2e8f0, 1)
     bg.strokeRoundedRect(-360, -90, 720, 180, 24)
     const promptTxt = this.add.text(0, 0, situation.prompt, {
       fontFamily: 'Arial', fontStyle: 'bold', fontSize: '22px', color: '#0c3b2e',
       align: 'center', wordWrap: { width: 660 },
     }).setOrigin(0.5).setResolution(2)
-    card.add([bg, promptTxt])
+    card.add([shadow, bg, promptTxt])
     this.sequentialCard = card
 
     const buttons = this.buildOptionButtons(situation, 640, 480, (optionId) => {
@@ -385,32 +394,38 @@ export class GameScene extends Phaser.Scene {
 
   private buildOptionButtons(situation: Situation, centerX: number, centerY: number, onPick: (id: string) => void): Phaser.GameObjects.Container[] {
     const count = situation.options.length
-    const cardW = 140, cardH = 150, gap = 18
-    const totalW = count * cardW + (count - 1) * gap
-    const startX = centerX - totalW / 2 + cardW / 2
+    const gap = 18
+    const totalW = count * OPT_CARD_W + (count - 1) * gap
+    const startX = centerX - totalW / 2 + OPT_CARD_W / 2
 
     return situation.options.map((optId, i) => {
       const tech = ALL_TECH.find(t => t.id === optId)!
-      const x = startX + i * (cardW + gap)
+      const x = startX + i * (OPT_CARD_W + gap)
       const y = centerY
 
       const btn = this.add.container(x, y)
+
+      const cardShadow = this.add.graphics()
+      cardShadow.fillStyle(0x000000, 0.10)
+      cardShadow.fillRoundedRect(-OPT_CARD_W / 2 + 3, -OPT_CARD_H / 2 + 5, OPT_CARD_W, OPT_CARD_H, 16)
+
       const bg = this.add.graphics()
-      bg.fillStyle(0xffffff, 0.96)
-      bg.fillRoundedRect(-cardW / 2, -cardH / 2, cardW, cardH, 16)
-      bg.lineStyle(3, 0x4FC3F7, 0.7)
-      bg.strokeRoundedRect(-cardW / 2, -cardH / 2, cardW, cardH, 16)
-      const icon = this.add.image(0, -28, tech.textureKey).setDisplaySize(72, 72).setOrigin(0.5)
-      const label = this.add.text(0, 46, tech.label, {
-        fontSize: '13px', fontFamily: 'Arial Black, Arial', color: '#0c3b2e',
-        align: 'center', wordWrap: { width: cardW - 14 },
+      bg.fillStyle(0xffffff, 1)
+      bg.fillRoundedRect(-OPT_CARD_W / 2, -OPT_CARD_H / 2, OPT_CARD_W, OPT_CARD_H, 16)
+      bg.lineStyle(2, 0xe2e8f0, 1)
+      bg.strokeRoundedRect(-OPT_CARD_W / 2, -OPT_CARD_H / 2, OPT_CARD_W, OPT_CARD_H, 16)
+
+      const icon = this.add.image(0, -24, tech.textureKey).setDisplaySize(88, 88).setOrigin(0.5)
+      const label = this.add.text(0, 52, tech.label, {
+        fontSize: '13px', fontFamily: 'Arial Black, Arial', color: '#1e293b',
+        align: 'center', wordWrap: { width: OPT_CARD_W - 14 },
       }).setOrigin(0.5)
 
-      btn.add([bg, icon, label])
-      btn.setSize(cardW, cardH)
+      btn.add([cardShadow, bg, icon, label])
+      btn.setSize(OPT_CARD_W, OPT_CARD_H)
       btn.setData('bg', bg)
       btn.setInteractive({ useHandCursor: true })
-      btn.on('pointerover', () => this.tweens.add({ targets: btn, scale: 1.05, duration: 90 }))
+      btn.on('pointerover', () => this.tweens.add({ targets: btn, scale: 1.06, duration: 90 }))
       btn.on('pointerout',  () => this.tweens.add({ targets: btn, scale: 1, duration: 90 }))
       btn.on('pointerdown', () => onPick(optId))
 
@@ -440,10 +455,10 @@ export class GameScene extends Phaser.Scene {
       if (!isCorrectOpt && !isChosen) return
 
       bg.clear()
-      bg.fillStyle(0xffffff, 0.96)
-      bg.fillRoundedRect(-70, -75, 140, 150, 16)
+      bg.fillStyle(0xffffff, 1)
+      bg.fillRoundedRect(-OPT_CARD_W / 2, -OPT_CARD_H / 2, OPT_CARD_W, OPT_CARD_H, 16)
       bg.lineStyle(4, isCorrectOpt ? 0x42d640 : 0xef4444, 1)
-      bg.strokeRoundedRect(-70, -75, 140, 150, 16)
+      bg.strokeRoundedRect(-OPT_CARD_W / 2, -OPT_CARD_H / 2, OPT_CARD_W, OPT_CARD_H, 16)
     })
   }
 
@@ -552,6 +567,86 @@ export class GameScene extends Phaser.Scene {
         this.showGameCompleteScreen()
       }
     })
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  //  TUTORIAL (Nível 1)
+  // ══════════════════════════════════════════════════════════════════════════
+
+  private showTutorialOverlay() {
+    const overlay = this.add.rectangle(640, 360, 1280, 720, 0x000000, 0.52)
+      .setDepth(300).setInteractive()
+
+    const modal = this.add.container(640, 360).setDepth(301)
+
+    const shadow = this.add.graphics()
+    shadow.fillStyle(0x000000, 0.16)
+    shadow.fillRoundedRect(-264, -192, 528, 388, 30)
+
+    const bg = this.add.graphics()
+    bg.fillStyle(0xffffff, 1)
+    bg.fillRoundedRect(-272, -200, 544, 388, 30)
+    bg.lineStyle(3, 0xe2e8f0, 1)
+    bg.strokeRoundedRect(-272, -200, 544, 388, 30)
+
+    const accent = this.add.graphics()
+    accent.fillStyle(0x0c3b2e, 1)
+    accent.fillRoundedRect(-272, -200, 544, 52, 30)
+    accent.fillRect(-272, -168, 544, 20)
+
+    const titleTxt = this.add.text(0, -174, '🏙️  Como jogar', {
+      fontFamily: 'Arial', fontStyle: 'bold',
+      fontSize: '26px', color: '#ffffff',
+    }).setOrigin(0.5).setResolution(2)
+
+    const steps = [
+      { icon: '📍', text: 'Toque em um local do mapa\n(casa, escola, rua...)' },
+      { icon: '📖', text: 'Leia com atenção a situação\napresentada' },
+      { icon: '🎯', text: 'Escolha a tecnologia que\nmelhor resolve o problema' },
+      { icon: '✅', text: 'Veja a explicação e aprenda\ncom cada resposta!' },
+    ]
+
+    const stepObjects = steps.flatMap((s, i) => {
+      const rowY = -116 + i * 68
+      const iconTxt = this.add.text(-218, rowY, s.icon, { fontSize: '28px' }).setOrigin(0.5)
+      const stepTxt = this.add.text(-188, rowY, s.text, {
+        fontFamily: 'Arial', fontStyle: 'bold',
+        fontSize: '17px', color: '#1e293b',
+        wordWrap: { width: 390 },
+      }).setOrigin(0, 0.5).setResolution(2)
+      return [iconTxt, stepTxt]
+    })
+
+    const btnBg = this.add.graphics()
+    btnBg.fillStyle(0xf57c00, 1)
+    btnBg.fillRoundedRect(-140, 154, 280, 52, 26)
+    btnBg.lineStyle(3, 0xffffff, 1)
+    btnBg.strokeRoundedRect(-140, 154, 280, 52, 26)
+
+    const btnTxt = this.add.text(0, 180, '▶  Vamos lá!', {
+      fontFamily: 'Arial', fontStyle: 'bold',
+      fontSize: '22px', color: '#ffffff',
+      stroke: '#9a3f00', strokeThickness: 3,
+    }).setOrigin(0.5).setResolution(2)
+
+    const btnZone = this.add.zone(640, 360 + 180, 280, 58)
+    btnZone.setDepth(302).setInteractive({ useHandCursor: true })
+    btnZone.on('pointerover', () => {
+      this.tweens.add({ targets: [btnBg, btnTxt], scaleX: 1.04, scaleY: 1.04, duration: 90 })
+    })
+    btnZone.on('pointerout', () => {
+      this.tweens.add({ targets: [btnBg, btnTxt], scaleX: 1, scaleY: 1, duration: 90 })
+    })
+    btnZone.on('pointerdown', () => {
+      this.playTick()
+      overlay.destroy()
+      btnZone.destroy()
+      modal.destroy()
+    })
+
+    modal.add([shadow, bg, accent, titleTxt, ...stepObjects, btnBg, btnTxt])
+    modal.setScale(0.9).setAlpha(0)
+    this.tweens.add({ targets: modal, alpha: 1, scale: 1, duration: 280, ease: 'Back.easeOut' })
   }
 
   private showNextLevelStartScreen() {

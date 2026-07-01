@@ -10,6 +10,8 @@ const GAME_ID = 'labirinto-do-enquanto'
 const MAX_CONSECUTIVE_ERRORS = 3
 const TILE = 96
 const GRID_Y = 440
+const BLOCK_Y = 165   // vertical center of the while-block header
+const BLOCK_H = 84    // height of the while-block header
 
 type RoundPhase = 'intro' | 'choosing' | 'predicting' | 'ready' | 'running' | 'level-complete'
 
@@ -36,6 +38,7 @@ export class GameScene extends Phaser.Scene {
   private executeBtn?: Phaser.GameObjects.Container
   private optionCards: Phaser.GameObjects.Container[] = []
   private challengeRoot?: Phaser.GameObjects.Container
+  private conditionCheckOverlay?: Phaser.GameObjects.Rectangle
 
   private overlayObjects: Phaser.GameObjects.GameObject[] = []
   private unsubPlatform?: () => void
@@ -62,6 +65,7 @@ export class GameScene extends Phaser.Scene {
     this.gridTiles             = []
     this.optionCards           = []
     this.overlayObjects        = []
+    this.conditionCheckOverlay = undefined
   }
 
   create() {
@@ -79,6 +83,7 @@ export class GameScene extends Phaser.Scene {
       this.showNextLevelStartScreen()
     } else {
       this.startChallenge()
+      if (this.levelConfig.level === 1) this.showTutorialOverlay()
     }
   }
 
@@ -147,6 +152,8 @@ export class GameScene extends Phaser.Scene {
   private startChallenge() {
     this.challengeRoot?.destroy()
     this.challengeRoot = this.add.container(0, 0)
+    this.conditionCheckOverlay?.destroy()
+    this.conditionCheckOverlay = undefined
     this.gridTiles = []
     this.optionCards = []
     this.selectedConditionId = null
@@ -177,28 +184,101 @@ export class GameScene extends Phaser.Scene {
   }
 
   private buildWhileBlock(challenge: MazeChallenge) {
-    const blockWhile = this.add.image(640, 190, 'block-while').setDisplaySize(680, 96)
-    const blockCond = this.add.image(490, 190, 'block-condition').setDisplaySize(280, 56)
-    const blockAction = this.add.image(800, 190, 'block-action').setDisplaySize(220, 56)
+    // Block spans x:190–1090 (900px), centered at x=640
+    const BL = 190, BT = BLOCK_Y - BLOCK_H / 2  // left=190, top=123
 
-    this.conditionLabel = this.add.text(490, 190, challenge.fixedConditionId ? CONDITION_LABELS[challenge.fixedConditionId] : 'Escolha abaixo', {
-      fontFamily: 'Arial Black, Arial', fontSize: '14px', color: '#0f172a',
-      align: 'center', wordWrap: { width: 260 },
-    }).setOrigin(0.5).setResolution(2)
+    // ── Outer dark-navy background ────────────────────────────────────────
+    const outerBg = this.add.graphics().setDepth(3)
+    outerBg.fillStyle(0x1e3a5f, 1)
+    outerBg.fillRoundedRect(BL, BT, 900, BLOCK_H, 16)
+    outerBg.lineStyle(2, 0x4FC3F7, 0.5)
+    outerBg.strokeRoundedRect(BL, BT, 900, BLOCK_H, 16)
 
-    const actionLabel = this.add.text(800, 190, 'Mover para frente', {
-      fontFamily: 'Arial Black, Arial', fontSize: '14px', color: '#0f172a',
-      align: 'center', wordWrap: { width: 200 },
-    }).setOrigin(0.5).setResolution(2)
+    // ── KEYWORD section (x:190–350, width=160) ────────────────────────────
+    const kwBg = this.add.graphics().setDepth(4)
+    kwBg.fillStyle(0x0f2544, 1)
+    kwBg.fillRoundedRect(BL, BT, 160, BLOCK_H, 16)
+    kwBg.fillRect(BL + 144, BT, 16, BLOCK_H)     // square-off right corners
 
-    this.challengeRoot?.add([blockWhile, blockCond, blockAction, this.conditionLabel, actionLabel])
+    const kwIcon = this.add.text(270, BLOCK_Y - 12, '🔁', { fontSize: '22px' })
+      .setOrigin(0.5).setDepth(5)
+    const kwLabel = this.add.text(270, BLOCK_Y + 14, 'ENQUANTO', {
+      fontFamily: 'Arial Black, Arial', fontSize: '13px', color: '#e0f2fe',
+    }).setOrigin(0.5).setDepth(5).setResolution(2)
+
+    // Divider left
+    const div1 = this.add.graphics().setDepth(5)
+    div1.lineStyle(2, 0x4FC3F7, 0.35)
+    div1.lineBetween(350, BT + 8, 350, BT + BLOCK_H - 8)
+
+    // ── CONDITION section (x:350–710, width=360) ─────────────────────────
+    const condBg = this.add.graphics().setDepth(3)
+    condBg.fillStyle(0x78350f, 0.45)
+    condBg.fillRect(351, BT, 359, BLOCK_H)
+
+    const condMiniLabel = this.add.text(358, BT + 7, 'CONDIÇÃO', {
+      fontFamily: 'Arial', fontStyle: 'bold', fontSize: '11px', color: '#fbbf24',
+    }).setDepth(5).setResolution(2)
+
+    const hasFixed = !!challenge.fixedConditionId
+    this.conditionLabel = this.add.text(530, BLOCK_Y + 6, hasFixed
+      ? CONDITION_LABELS[challenge.fixedConditionId!]
+      : '▼ Escolha abaixo', {
+      fontFamily: 'Arial', fontStyle: 'bold',
+      fontSize: '15px', color: hasFixed ? '#fef3c7' : '#f59e0b',
+      align: 'center', wordWrap: { width: 344 },
+    }).setOrigin(0.5).setDepth(5).setResolution(2)
+
+    // Separator arrow
+    const div2 = this.add.graphics().setDepth(5)
+    div2.lineStyle(2, 0x4FC3F7, 0.35)
+    div2.lineBetween(710, BT + 8, 710, BT + BLOCK_H - 8)
+
+    const arrowTxt = this.add.text(735, BLOCK_Y, '▶', {
+      fontSize: '20px', color: '#64748b',
+    }).setOrigin(0.5).setDepth(5)
+
+    // ── ACTION section (x:760–1090, width=330) ────────────────────────────
+    const actBg = this.add.graphics().setDepth(3)
+    actBg.fillStyle(0x14532d, 0.55)
+    actBg.fillRoundedRect(761, BT, 329, BLOCK_H, 16)
+    actBg.fillRect(761, BT, 16, BLOCK_H)          // square-off left corners
+
+    const actMiniLabel = this.add.text(768, BT + 7, 'AÇÃO', {
+      fontFamily: 'Arial', fontStyle: 'bold', fontSize: '11px', color: '#4ade80',
+    }).setDepth(5).setResolution(2)
+
+    const actLabel = this.add.text(925, BLOCK_Y + 6, '▶ Mover para frente', {
+      fontFamily: 'Arial', fontStyle: 'bold',
+      fontSize: '15px', color: '#dcfce7',
+      align: 'center', wordWrap: { width: 318 },
+    }).setOrigin(0.5).setDepth(5).setResolution(2)
+
+    // Loop-back indicator at top-right corner
+    const loopIco = this.add.text(1082, BT + 5, '↺', {
+      fontSize: '22px', color: '#4FC3F7',
+    }).setOrigin(1, 0).setDepth(5)
+
+    this.challengeRoot?.add([
+      outerBg, kwBg, kwIcon, kwLabel, div1,
+      condBg, condMiniLabel, this.conditionLabel,
+      div2, arrowTxt,
+      actBg, actMiniLabel, actLabel,
+      loopIco,
+    ])
+
+    // Condition-check overlay lives outside challengeRoot so we can safely tween it
+    this.conditionCheckOverlay = this.add.rectangle(530, BLOCK_Y, 360, BLOCK_H, 0x000000, 0)
+      .setDepth(6)
   }
 
   private updateConditionLabel() {
     if (!this.conditionLabel) return
-    this.conditionLabel.setText(
-      this.selectedConditionId ? CONDITION_LABELS[this.selectedConditionId] : 'Escolha abaixo'
-    )
+    if (this.selectedConditionId) {
+      this.conditionLabel.setText(CONDITION_LABELS[this.selectedConditionId]).setColor('#fef3c7')
+    } else {
+      this.conditionLabel.setText('▼ Escolha abaixo').setColor('#f59e0b')
+    }
   }
 
   private buildGrid(challenge: MazeChallenge) {
@@ -336,29 +416,53 @@ export class GameScene extends Phaser.Scene {
 
     const totalW = challenge.corridorLength * TILE
     const startX = 640 - totalW / 2 + TILE / 2
+    const MOVE_DUR = 260
 
     let stepIdx = 0
-    const stepDelay = 320
 
     const animateStep = () => {
-      if (!this.robot) return
       if (stepIdx >= result.path.length) {
-        this.finishExecution(challenge, result)
+        // Final check: condition is now false — flash red then finish
+        this.flashCondition(false, () => this.finishExecution(challenge, result))
         return
       }
-      const col = result.path[stepIdx]
-      this.robot.setTexture(stepIdx % 2 === 0 ? 'robot-walk' : 'robot-idle')
-      this.tweens.add({
-        targets: this.robot, x: startX + col * TILE,
-        duration: stepDelay - 40, ease: 'Sine.easeInOut',
-        onComplete: () => {
-          stepIdx++
-          this.time.delayedCall(40, animateStep)
-        },
+      // Check condition → flash green → move one step
+      this.flashCondition(true, () => {
+        if (!this.robot) return
+        const col = result.path[stepIdx]
+        this.robot.setTexture(stepIdx % 2 === 0 ? 'robot-walk' : 'robot-idle')
+        this.tweens.add({
+          targets: this.robot, x: startX + col * TILE,
+          duration: MOVE_DUR, ease: 'Sine.easeInOut',
+          onComplete: () => {
+            stepIdx++
+            this.time.delayedCall(40, animateStep)
+          },
+        })
       })
     }
 
     animateStep()
+  }
+
+  private flashCondition(isTrue: boolean, onDone: () => void) {
+    const overlay = this.conditionCheckOverlay
+    if (!overlay || !overlay.active) { onDone(); return }
+
+    overlay.setFillStyle(isTrue ? 0x22c55e : 0xef4444).setAlpha(0.65)
+    this.tweens.add({ targets: overlay, alpha: 0, duration: 300, ease: 'Sine.In' })
+
+    // Small ✅/❌ badge near the arrow separator
+    const badge = this.add.text(748, BLOCK_Y, isTrue ? '✅' : '❌', {
+      fontSize: '24px',
+    }).setOrigin(0.5).setDepth(10).setAlpha(0)
+    this.tweens.add({
+      targets: badge, alpha: { from: 0, to: 1 },
+      duration: 90, yoyo: true, hold: 110,
+      onComplete: () => badge.destroy(),
+    })
+
+    this.time.delayedCall(340, onDone)
   }
 
   private finishExecution(challenge: MazeChallenge, result: { finalCol: number; crashed: boolean }) {
@@ -496,9 +600,9 @@ export class GameScene extends Phaser.Scene {
     }).setOrigin(0.5).setResolution(2)
 
     const successTexts: Record<number, string> = {
-      1: 'Você viu o laço enquanto funcionar até parar!',
-      2: 'Você escolheu a condição certa para chegar ao objetivo!',
-      3: 'Você previu corretamente onde o robô ia parar!',
+      1: 'Você viu a condição ser verificada antes de cada passo!',
+      2: 'Você escolheu a condição certa para controlar o laço!',
+      3: 'Você previu onde a condição falsa iria parar o robô!',
     }
     const next = this.add.text(0, 8, successTexts[lvl] ?? '', {
       fontFamily: 'Arial', fontStyle: 'bold',
@@ -536,6 +640,82 @@ export class GameScene extends Phaser.Scene {
       } else {
         this.showGameCompleteScreen()
       }
+    })
+  }
+
+  private showTutorialOverlay() {
+    const overlay = this.add.rectangle(640, 360, 1280, 720, 0x000000, 0.70)
+      .setDepth(200).setInteractive()
+
+    const modal = this.add.container(640, 360).setDepth(201)
+    const W = 560, H = 420
+
+    const modalShadow = this.add.graphics()
+    modalShadow.fillStyle(0x000000, 0.22)
+    modalShadow.fillRoundedRect(-W / 2 + 7, -H / 2 + 9, W, H, 28)
+
+    const modalBg = this.add.graphics()
+    modalBg.fillStyle(0xf0f9ff, 1)
+    modalBg.fillRoundedRect(-W / 2, -H / 2, W, H, 28)
+    modalBg.lineStyle(5, 0xffffff, 0.95)
+    modalBg.strokeRoundedRect(-W / 2, -H / 2, W, H, 28)
+
+    const header = this.add.graphics()
+    header.fillStyle(0x1e3a5f, 1)
+    header.fillRoundedRect(-W / 2, -H / 2, W, 58, 28)
+    header.fillRect(-W / 2, -H / 2 + 30, W, 28)
+
+    const headerText = this.add.text(0, -H / 2 + 29, '🤖 O Laço ENQUANTO', {
+      fontFamily: 'Arial Black, Arial', fontStyle: 'bold',
+      fontSize: '21px', color: '#e0f2fe',
+    }).setOrigin(0.5).setResolution(2)
+
+    const steps = [
+      { icon: '🔁', text: 'O laço ENQUANTO repete uma ação enquanto a condição for verdadeira' },
+      { icon: '✅', text: 'O robô verifica a condição ANTES de cada passo — veja o destaque em verde!' },
+      { icon: '🛑', text: 'Quando a condição é falsa — destaque vermelho — o robô para imediatamente' },
+      { icon: '💡', text: 'Diferente de contar passos: não sabemos de antemão quantas vezes vai repetir!' },
+    ]
+
+    const stepItems = steps.flatMap((step, i) => {
+      const baseY = -H / 2 + 92 + i * 68
+      const iconTxt = this.add.text(-212, baseY, step.icon, {
+        fontSize: '28px',
+      }).setOrigin(0.5).setResolution(2)
+      const stepTxt = this.add.text(-182, baseY, step.text, {
+        fontFamily: 'Arial', fontStyle: 'bold',
+        fontSize: '17px', color: '#1e293b',
+        wordWrap: { width: 400 },
+      }).setOrigin(0, 0.5).setResolution(2)
+      return [iconTxt, stepTxt]
+    })
+
+    const btnY = H / 2 - 50
+    const btnShadow = this.add.graphics()
+    btnShadow.fillStyle(0x000000, 0.16)
+    btnShadow.fillRoundedRect(-142, btnY - 20 + 4, 284, 48, 24)
+    const btnBg = this.add.graphics()
+    btnBg.fillStyle(0x1d4ed8, 1)
+    btnBg.fillRoundedRect(-146, btnY - 26, 292, 52, 26)
+    btnBg.lineStyle(4, 0xffffff, 1)
+    btnBg.strokeRoundedRect(-146, btnY - 26, 292, 52, 26)
+    const btnText = this.add.text(0, btnY, '▶ Vamos testar!', {
+      fontFamily: 'Arial Black, Arial', fontStyle: 'bold',
+      fontSize: '20px', color: '#ffffff',
+      stroke: '#1e3a8a', strokeThickness: 3,
+    }).setOrigin(0.5).setResolution(2)
+
+    modal.add([modalShadow, modalBg, header, headerText, ...stepItems, btnShadow, btnBg, btnText])
+    modal.setScale(0.88).setAlpha(0)
+    this.tweens.add({ targets: modal, alpha: 1, scale: 1, duration: 260, ease: 'Back.Out' })
+
+    const btnAbsY = 360 + H / 2 - 50
+    const hitbox = this.add.zone(640, btnAbsY, 292, 60).setDepth(202).setInteractive({ useHandCursor: true })
+    hitbox.on('pointerdown', () => {
+      this.playTick()
+      overlay.destroy()
+      modal.destroy()
+      hitbox.destroy()
     })
   }
 
@@ -648,7 +828,7 @@ export class GameScene extends Phaser.Scene {
       stroke: '#ffffff', strokeThickness: 6,
     }).setOrigin(0.5).setResolution(2)
 
-    const subtitle = this.add.text(0, -74, 'Você dominou o laço enquanto!', {
+    const subtitle = this.add.text(0, -74, 'Você dominou o laço ENQUANTO!', {
       fontFamily: 'Arial', fontStyle: 'bold',
       fontSize: '20px', color: '#3b3b3b',
       align: 'center', wordWrap: { width: 500 },

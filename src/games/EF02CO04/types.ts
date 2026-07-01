@@ -1,4 +1,4 @@
-export type ItemCategory = 'hardware' | 'software'
+export type ItemCategory = 'pecas' | 'programas'
 
 export interface MuseumItem {
   id: string
@@ -10,9 +10,11 @@ export interface MuseumItem {
 /** Missão: jogador toca nos itens que correspondem ao critério da rodada */
 export interface MuseumMission {
   id: string
-  question: string   // "Quais são HARDWARE? 🔧"
-  hint: string        // "Toque nos itens físicos do computador"
+  question: string
+  hint: string
   correctIds: string[]
+  /** Pool de itens exclusivo desta missão — quando definido, o grid é reconstruído ao entrar na missão */
+  itemIds?: string[]
 }
 
 export interface LevelConfig {

@@ -22,12 +22,7 @@ const PANEL_W      = 400
 
 // Cartão
 const CARD_W       = 155
-const CARD_H       = 132
-
-const CATEGORY_COLOR: Record<MuseumItem['category'], number> = {
-  hardware: 0xff8a2a,
-  software: 0xa78bfa,
-}
+const CARD_H       = 142
 
 // ── Tipos internos ────────────────────────────────────────────────────────────
 
@@ -383,7 +378,7 @@ export class GameScene extends Phaser.Scene {
     }).setOrigin(0.5).setResolution(2)
 
     const successTexts: Record<number, string> = {
-      1: 'Você aprendeu a diferenciar hardware de software!',
+      1: 'Você aprendeu a diferenciar peças de programas!',
       2: 'Você descobriu quais programas dão vida a cada peça!',
       3: 'Você montou os kits completos do museu!',
     }
@@ -708,18 +703,17 @@ export class GameScene extends Phaser.Scene {
   }
 
   private buildItemGrid() {
-    const items = this.levelConfig.itemIds
-      .map(id => ALL_ITEMS.find(v => v.id === id)!)
-      .filter(Boolean)
+    this.buildItemGridFromIds(this.levelConfig.itemIds)
+  }
 
-    // Embaralhar para não dar pistas visuais sobre a missão atual
+  private buildItemGridFromIds(itemIds: string[]) {
+    const items = itemIds.map(id => ALL_ITEMS.find(v => v.id === id)!).filter(Boolean)
     Phaser.Utils.Array.Shuffle(items)
 
     const count = items.length
-    const cols = count <= 6 ? 3 : count <= 10 ? 5 : 4
+    const cols = count <= 4 ? 2 : count <= 6 ? 3 : count <= 10 ? 5 : 4
     const rows = Math.ceil(count / cols)
 
-    // Área de cards: x 20–840, y 140–630
     const areaX = 20, areaW = 820
     const areaY = 140, areaH = 490
 
@@ -737,19 +731,15 @@ export class GameScene extends Phaser.Scene {
   }
 
   private makeItemCard(item: MuseumItem, cx: number, cy: number): ItemCard {
-    const accent = CATEGORY_COLOR[item.category]
-
     const bg = this.add.graphics()
-    bg.fillStyle(0xfff8f0, 0.96)
+    bg.fillStyle(0xffffff, 0.97)
     bg.fillRoundedRect(-CARD_W / 2, -CARD_H / 2, CARD_W, CARD_H, 16)
-    bg.lineStyle(4, accent, 0.95)
-    bg.strokeRoundedRect(-CARD_W / 2, -CARD_H / 2, CARD_W, CARD_H, 16)
 
-    const img = this.add.image(0, -12, item.textureKey)
-      .setDisplaySize(92, 92).setOrigin(0.5)
+    const img = this.add.image(0, -14, item.textureKey)
+      .setDisplaySize(104, 104).setOrigin(0.5)
 
     const nameBg = this.add.graphics()
-    nameBg.fillStyle(accent, 0.92)
+    nameBg.fillStyle(0x1e3a5f, 0.88)
     nameBg.fillRoundedRect(-CARD_W / 2 + 4, CARD_H / 2 - 26, CARD_W - 8, 22, { tl: 0, tr: 0, bl: 12, br: 12 })
 
     const name = this.add.text(0, CARD_H / 2 - 15, item.name, {
@@ -842,6 +832,14 @@ export class GameScene extends Phaser.Scene {
   private showCurrentMission() {
     if (!this.questionPanel) return
     const mission = this.levelConfig.missions[this.currentMissionIndex]
+
+    // Quando a missão tem pool próprio, destrói o grid atual e reconstrói
+    if (mission.itemIds) {
+      this.itemCards.forEach(c => c.container.destroy())
+      this.itemCards = []
+      this.selectedItemIds.clear()
+      this.buildItemGridFromIds(mission.itemIds)
+    }
 
     const qText = this.questionPanel.getData('qText') as Phaser.GameObjects.Text
     const hintText = this.questionPanel.getData('hintText') as Phaser.GameObjects.Text

@@ -24,6 +24,12 @@ const COLORS = {
   ink: 0x102a43,
 };
 
+const LEVEL_CATEGORIES: Record<number, { icon: string; label: string; color: number }> = {
+  1: { icon: "🎵", label: "Áudio", color: COLORS.blue },
+  2: { icon: "🎥", label: "Vídeo", color: COLORS.purple },
+  3: { icon: "⌨", label: "Periféricos", color: COLORS.green },
+};
+
 const DEVICE_TEXTURES: Partial<Record<DeviceId, string>> = {
   camera: "device-camera",
   controller: "device-controller",
@@ -137,7 +143,8 @@ export class GameScene extends Phaser.Scene {
       strokeThickness: 5,
     }).setOrigin(0.5);
 
-    this.addSharpText(1084, 96, `Nível ${this.levelConfig.level}/3`, {
+    const headerCat = LEVEL_CATEGORIES[this.levelConfig.level];
+    this.addSharpText(1084, 96, `${headerCat.icon}  Nível ${this.levelConfig.level}/3`, {
       fontSize: "18px",
       fontFamily: "Arial Black, Arial",
       color: "#1e3a8a",
@@ -506,11 +513,10 @@ export class GameScene extends Phaser.Scene {
     this.hasStartedTimer = true;
     this.timerEvent = this.time.delayedCall(this.levelConfig.timeLimit * 1000, () => {
       if (this.commandLocked) return;
+      this.commandLocked = true;
       this.errors += 1;
-      this.playWrong();
-      this.showToast("O tempo acabou. Tente este nível de novo.", COLORS.red, 2100);
       runtimeGameBridge.emit({ type: "WRONG_ANSWER", gameId: GAME_ID, stage: this.levelConfig.level, pointsEarned: -5 });
-      this.time.delayedCall(1200, () => this.scene.restart({ level: this.levelConfig.level, hits: this.hits, errors: this.errors }));
+      this.showGameOverScreen();
     });
   }
 
@@ -518,43 +524,119 @@ export class GameScene extends Phaser.Scene {
     this.clearOverlay();
     const overlay = this.addOverlayObject(this.add.rectangle(640, 360, 1280, 720, 0x12324a, 0.56).setDepth(450));
     overlay.setInteractive();
-    const modal = this.createModalBase(640, 360, COLORS.orange);
-    const badgeIcon = this.add.image(0, -114, "success-badge");
-    this.fitImage(badgeIcon, 82, 82);
-    const title = this.addSharpText(0, -58, "Parabéns!", this.modalTitleStyle()).setOrigin(0.5);
-    const score = this.addSharpText(0, -5, `Nível ${this.levelConfig.level} concluído`, {
-      fontSize: "26px",
+
+    const modal = this.addOverlayObject(this.add.container(640, 360).setDepth(451));
+    const shadow = this.add.graphics();
+    shadow.fillStyle(0x000000, 0.18);
+    shadow.fillRoundedRect(-292, -178, 584, 370, 30);
+    const bg = this.add.graphics();
+    bg.fillStyle(0xffffff, 0.98);
+    bg.fillRoundedRect(-304, -190, 608, 376, 30);
+    bg.lineStyle(6, 0xffffff, 0.96);
+    bg.strokeRoundedRect(-304, -190, 608, 376, 30);
+    const topBar = this.add.graphics();
+    topBar.fillStyle(COLORS.orange, 1);
+    topBar.fillRoundedRect(-214, -207, 428, 30, 15);
+    topBar.lineStyle(3, 0xffffff, 0.82);
+    topBar.strokeRoundedRect(-214, -207, 428, 30, 15);
+
+    const lvl = this.levelConfig.level;
+    const cat = LEVEL_CATEGORIES[lvl];
+    const title = this.addSharpText(0, -138, "⭐  Parabéns!", {
+      fontSize: "40px",
       fontFamily: "Arial Black, Arial",
-      color: "#7c3aed",
+      color: "#25327a",
+      stroke: "#ffffff",
+      strokeThickness: 5,
     }).setOrigin(0.5);
-    const dots = [1, 2, 3].map((level, index) => {
-      const dot = this.add.graphics();
-      dot.fillStyle(level <= this.levelConfig.level ? COLORS.green : level === nextLevel ? COLORS.orange : 0xd8dde8, 1);
-      dot.fillCircle(-28 + index * 28, 58, 8);
-      dot.lineStyle(2, 0xffffff, 0.9);
-      dot.strokeCircle(-28 + index * 28, 58, 8);
-      return dot;
+    const subtitle = this.addSharpText(0, -82, `Nível ${lvl} concluído  —  ${cat.icon} ${cat.label}`, {
+      fontSize: "22px",
+      fontFamily: "Arial Black, Arial",
+      color: this.toCssColor(cat.color),
+    }).setOrigin(0.5);
+    const learnedTexts: Record<number, string> = {
+      1: "Microfone → entra  •  Alto-falante → sai",
+      2: "Câmera → entra  •  Monitor → sai",
+      3: "Teclado + Mouse → entram  •  Monitor + Impressora → saem",
+    };
+    const learned = this.addSharpText(0, -36, learnedTexts[lvl] ?? "", {
+      fontSize: "16px",
+      fontFamily: "Arial Black, Arial",
+      color: "#475569",
+      align: "center",
+      wordWrap: { width: 520 },
+    }).setOrigin(0.5);
+
+    const chipPositions = [-190, 0, 190] as const;
+    const chips = ([1, 2, 3] as const).map((level, index) => {
+      const chip = this.add.container(chipPositions[index], 30);
+      const catDef = LEVEL_CATEGORIES[level];
+      const isDone = level <= lvl;
+      const isNext = level === nextLevel;
+      const chipBg = this.add.graphics();
+      chipBg.fillStyle(isDone ? COLORS.green : isNext ? COLORS.orange : 0xd8dde8, isDone || isNext ? 1 : 0.7);
+      chipBg.fillRoundedRect(-84, -28, 168, 56, 16);
+      chipBg.lineStyle(3, 0xffffff, isDone || isNext ? 1 : 0.5);
+      chipBg.strokeRoundedRect(-84, -28, 168, 56, 16);
+      const chipIcon = this.addSharpText(-30, 0, catDef.icon, { fontSize: "20px" }).setOrigin(0.5);
+      const chipLabel = this.addSharpText(16, -5, catDef.label, {
+        fontSize: "14px",
+        fontFamily: "Arial Black, Arial",
+        color: isDone || isNext ? "#ffffff" : "#64748b",
+      }).setOrigin(0, 0.5);
+      if (isDone) {
+        const check = this.addSharpText(70, -12, "✓", {
+          fontSize: "15px",
+          fontFamily: "Arial Black, Arial",
+          color: "#ffffff",
+        }).setOrigin(0.5);
+        chip.add([chipBg, chipIcon, chipLabel, check]);
+      } else {
+        chip.add([chipBg, chipIcon, chipLabel]);
+      }
+      return chip;
     });
-    modal.add([badgeIcon, title, score, ...dots]);
+
+    const waitText = this.addSharpText(0, 102, "Preparando o próximo nível...", {
+      fontSize: "15px",
+      fontFamily: "Arial Black, Arial",
+      color: "#94a3b8",
+    }).setOrigin(0.5);
+
+    modal.add([shadow, bg, topBar, title, subtitle, learned, ...chips, waitText]);
     this.animateModal(modal);
-    this.time.delayedCall(3000, () => this.showNextLevelStartTransition(nextLevel));
+    this.time.delayedCall(3500, () => this.showNextLevelStartTransition(nextLevel));
   }
 
   private showNextLevelStartTransition(nextLevel: 1 | 2 | 3) {
     this.clearOverlay();
     const nextConfig = LEVELS.find((item) => item.level === nextLevel);
+    const cat = LEVEL_CATEGORIES[nextLevel];
+
     const overlay = this.addOverlayObject(this.add.rectangle(640, 360, 1280, 720, 0x12324a, 0.58).setDepth(450));
     overlay.setInteractive();
-    const modal = this.createModalBase(640, 360, COLORS.green);
-    const title = this.addSharpText(0, -102, `Nível ${nextLevel} liberado!`, this.modalTitleStyle()).setOrigin(0.5);
-    const objective = this.addSharpText(0, -24, nextConfig?.title ?? "Nova conexão", {
-      fontSize: "24px",
+    const modal = this.createModalBase(640, 360, cat.color);
+
+    const catIcon = this.addSharpText(0, -118, cat.icon, { fontSize: "52px" }).setOrigin(0.5);
+    const nextLabel = this.addSharpText(0, -64, `Próximo:  ${cat.label}`, {
+      fontSize: "28px",
       fontFamily: "Arial Black, Arial",
-      color: "#7c3aed",
+      color: this.toCssColor(cat.color),
+    }).setOrigin(0.5);
+    const title = this.addSharpText(0, -18, nextConfig?.title ?? "Nova conexão", {
+      fontSize: "20px",
+      fontFamily: "Arial Black, Arial",
+      color: "#334155",
       align: "center",
       wordWrap: { width: 430 },
     }).setOrigin(0.5);
-    const button = this.createModalButton(0, 104, "Iniciar nível", COLORS.orange);
+    const deviceCount = nextConfig?.devices.length ?? 2;
+    const deviceHint = this.addSharpText(0, 26, `${deviceCount} dispositivo${deviceCount > 1 ? "s" : ""} para classificar`, {
+      fontSize: "17px",
+      fontFamily: "Arial Black, Arial",
+      color: "#94a3b8",
+    }).setOrigin(0.5);
+    const button = this.createModalButton(0, 104, "Iniciar ▶", COLORS.orange);
 
     let hasStartedNextLevel = false;
     const startNextLevel = () => {
@@ -578,7 +660,7 @@ export class GameScene extends Phaser.Scene {
       this.playClick();
       startNextLevel();
     });
-    modal.add([title, objective, button]);
+    modal.add([catIcon, nextLabel, title, deviceHint, button]);
     this.animateModal(modal);
   }
 
@@ -607,7 +689,7 @@ export class GameScene extends Phaser.Scene {
       stroke: "#ffffff",
       strokeThickness: 6,
     }).setOrigin(0.5);
-    const subtitle = this.addSharpText(0, -74, `Pontuação final: ${this.getScore()} • Acertos: ${this.hits} • Erros: ${this.errors}`, {
+    const subtitle = this.addSharpText(0, -74, "Você dominou os 3 padrões de entrada e saída!", {
       fontSize: "20px",
       fontFamily: "Arial Black, Arial",
       color: "#334155",
@@ -633,30 +715,104 @@ export class GameScene extends Phaser.Scene {
     });
     const levelLabels = [1, 2, 3].map((level, index) => {
       const item = this.add.container(-190 + index * 190, 42);
+      const catDef = LEVEL_CATEGORIES[level];
       const badge = this.add.graphics();
-      badge.fillStyle(index === 0 ? COLORS.orange : index === 1 ? COLORS.cyan : COLORS.green, 1);
+      badge.fillStyle(catDef.color, 1);
       badge.fillRoundedRect(-54, -42, 108, 84, 18);
       badge.lineStyle(4, 0xffffff, 0.95);
       badge.strokeRoundedRect(-54, -42, 108, 84, 18);
-      const number = this.addSharpText(0, -13, String(level), {
-        fontSize: "30px",
-        fontFamily: "Arial Black, Arial",
-        color: "#ffffff",
-        stroke: "#25327a",
-        strokeThickness: 4,
-      }).setOrigin(0.5);
-      const label = this.addSharpText(0, 23, "concluído", {
+      const catIconText = this.addSharpText(0, -18, catDef.icon, { fontSize: "26px" }).setOrigin(0.5);
+      const catLabelText = this.addSharpText(0, 12, catDef.label, {
         fontSize: "12px",
         fontFamily: "Arial Black, Arial",
         color: "#ffffff",
       }).setOrigin(0.5);
-      item.add([badge, number, label]);
+      const checkText = this.addSharpText(0, 32, "✓ ok", {
+        fontSize: "10px",
+        fontFamily: "Arial Black, Arial",
+        color: "rgba(255,255,255,0.85)",
+      }).setOrigin(0.5);
+      item.add([badge, catIconText, catLabelText, checkText]);
       return item;
     });
     const playAgain = this.createFinalButton(-158, 138, "Jogar novamente", COLORS.green, () => this.scene.restart({ level: 1 }));
     const exit = this.createFinalButton(158, 138, "Voltar aos jogos", COLORS.orange, () => EventBus.emit("exit-game"));
     panel.add([shadow, bg, ribbon, ...sparkles, title, subtitle, ...levelLabels, playAgain, exit]);
     this.animateModal(panel);
+  }
+
+  private showGameOverScreen() {
+    this.clearOverlay();
+    const overlay = this.addOverlayObject(this.add.rectangle(640, 360, 1280, 720, 0x12324a, 0.60).setDepth(450));
+    overlay.setInteractive();
+
+    const modal = this.addOverlayObject(this.add.container(640, 360).setDepth(451));
+    const shadow = this.add.graphics();
+    shadow.fillStyle(0x000000, 0.18);
+    shadow.fillRoundedRect(-270, -152, 540, 316, 28);
+    const bg = this.add.graphics();
+    bg.fillStyle(0xffffff, 0.98);
+    bg.fillRoundedRect(-278, -164, 556, 320, 28);
+    bg.lineStyle(5, 0xffffff, 0.95);
+    bg.strokeRoundedRect(-278, -164, 556, 320, 28);
+    const topBar = this.add.graphics();
+    topBar.fillStyle(COLORS.red, 1);
+    topBar.fillRoundedRect(-196, -180, 392, 28, 14);
+    topBar.lineStyle(3, 0xffffff, 0.82);
+    topBar.strokeRoundedRect(-196, -180, 392, 28, 14);
+
+    const cat = LEVEL_CATEGORIES[this.levelConfig.level];
+    const icon = this.addSharpText(0, -104, "⏱", { fontSize: "52px" }).setOrigin(0.5);
+    const title = this.addSharpText(0, -46, "Tempo esgotado!", this.modalTitleStyle()).setOrigin(0.5);
+    const levelLine = this.addSharpText(0, 4, `${cat.icon}  Nível ${this.levelConfig.level}  —  ${cat.label}`, {
+      fontSize: "20px",
+      fontFamily: "Arial Black, Arial",
+      color: this.toCssColor(cat.color),
+    }).setOrigin(0.5);
+    const hint = this.addSharpText(0, 44, "Tente conectar os dispositivos mais rápido!", {
+      fontSize: "17px",
+      fontFamily: "Arial Black, Arial",
+      color: "#475569",
+      align: "center",
+      wordWrap: { width: 460 },
+    }).setOrigin(0.5);
+
+    const retryBtn = this.createModalButton(-132, 108, "🔄 Tentar novamente", COLORS.green);
+    const exitBtn = this.createModalButton(132, 108, "Sair", COLORS.orange);
+
+    const retryHitbox = this.addOverlayObject(this.add.zone(640 - 132 * MODAL_SCALE, 360 + 108 * MODAL_SCALE, 268 * MODAL_SCALE, 70 * MODAL_SCALE).setDepth(452));
+    retryHitbox.setInteractive({ useHandCursor: true });
+    retryHitbox.on("pointerover", () => {
+      this.input.setDefaultCursor("pointer");
+      this.tweens.add({ targets: retryBtn, scale: 1.04, duration: 90, ease: "Sine.easeOut" });
+    });
+    retryHitbox.on("pointerout", () => {
+      this.input.setDefaultCursor("default");
+      this.tweens.add({ targets: retryBtn, scale: 1, duration: 90, ease: "Sine.easeOut" });
+    });
+    retryHitbox.on("pointerdown", () => {
+      this.playClick();
+      this.scene.restart({ level: this.levelConfig.level, hits: this.hits, errors: this.errors });
+    });
+
+    const exitHitbox = this.addOverlayObject(this.add.zone(640 + 132 * MODAL_SCALE, 360 + 108 * MODAL_SCALE, 268 * MODAL_SCALE, 70 * MODAL_SCALE).setDepth(452));
+    exitHitbox.setInteractive({ useHandCursor: true });
+    exitHitbox.on("pointerover", () => {
+      this.input.setDefaultCursor("pointer");
+      this.tweens.add({ targets: exitBtn, scale: 1.04, duration: 90, ease: "Sine.easeOut" });
+    });
+    exitHitbox.on("pointerout", () => {
+      this.input.setDefaultCursor("default");
+      this.tweens.add({ targets: exitBtn, scale: 1, duration: 90, ease: "Sine.easeOut" });
+    });
+    exitHitbox.on("pointerdown", () => {
+      this.playClick();
+      EventBus.emit("exit-game");
+    });
+
+    modal.add([shadow, bg, topBar, icon, title, levelLine, hint, retryBtn, exitBtn]);
+    this.animateModal(modal);
+    this.playWrong();
   }
 
   private createModalBase(x: number, y: number, color: number) {
@@ -856,10 +1012,10 @@ export class GameScene extends Phaser.Scene {
 
   private emitProgress() {
     runtimeGameBridge.emit({
-      type: "LEVEL_PROGRESS",
+      type: "CHECKPOINT",
       gameId: GAME_ID,
       stage: this.levelConfig.level,
-      progress: this.levelConfig.level / 3,
+      progress: Math.round((this.levelConfig.level / 3) * 100),
       score: this.getScore(),
       hits: this.hits,
       errors: this.errors,
