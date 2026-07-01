@@ -33,6 +33,7 @@ const SLUG_TO_CODE: Record<string, GameCode> = {
   "formato-certo": "EF03CO05",
   "central-de-entrada-e-saida": "EF03CO06",
   "detetives-da-busca": "EF03CO07",
+  "estudio-multiformato": "EF03CO08",
   "baralho-das-listas": "EF05CO01",
 };
 
@@ -58,6 +59,7 @@ const GAME_CONFIG_LOADERS: Partial<
   EF03CO05: () => import("../games/EF03CO05/index"),
   EF03CO06: () => import("../games/EF03CO06/index"),
   EF03CO07: () => import("../games/EF03CO07/index"),
+  EF03CO08: () => import("../games/EF03CO08/index"),
   EF05CO01: () => import("../games/EF05CO01/index"),
 };
 
@@ -71,6 +73,7 @@ const GAMES_WITH_IN_GAME_COMPLETION_SCREEN = new Set([
   "formato-certo",
   "central-de-entrada-e-saida",
   "detetives-da-busca",
+  "estudio-multiformato",
   "baralho-das-listas",
 ]);
 
@@ -574,6 +577,12 @@ export default function GameDetailsPage() {
       "Escolha palavras-chave e filtros para melhorar os resultados.",
       "Compare os cartões e selecione a resposta mais útil.",
       "No desafio final, marque também a estratégia de busca usada.",
+    ],
+    "estudio-multiformato": [
+      "No Nível 1, leia a tarefa e toque no formato digital certo (Desenho, Texto, Som ou Foto).",
+      "No Nível 2, pinte manchas no canvas para criar um desenho e selecione palavras para a mensagem.",
+      "Toque em 'Publicar no Mural' quando sua criação estiver pronta.",
+      "No Nível 3, escolha o formato correto para cada missão, crie e publique.",
     ],
   };
 
