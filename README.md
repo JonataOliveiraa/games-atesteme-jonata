@@ -282,8 +282,28 @@ Os `load.audio(...)` e `load.atlas(...)` já estão comentados em cada `BootScen
 | Código | Nome | Ano | Eixo | Slug |
 |--------|------|-----|------|------|
 | EF01CO01 | Base dos Classificadores | 1º | Pensamento Computacional | `base-dos-classificadores` |
+| EF01CO02 | Trilha do Passo a Passo | 1º | Pensamento Computacional | `trilha-do-passo-a-passo` |
+| EF01CO03 | Oficina dos Algoritmos | 1º | Pensamento Computacional | `oficina-dos-algoritmos` |
+| EF01CO05 | Pixel Secreto | 1º | Mundo Digital | `pixel-secreto` |
 | EF01CO06 | Desktop Digital Infantil | 1º | Cultura Digital | `desktop-digital-infantil` |
+| EF01CO07 | Guardiões dos Dados | 1º | Cultura Digital | `guardioes-dos-dados` |
 | EF02CO01 | Hangar dos Modelos | 2º | Pensamento Computacional | `hangar-dos-modelos` |
+| EF02CO02 | Desfile do Robô Repetidor | 2º | Pensamento Computacional | `desfile-do-robo-repetidor` |
+| EF02CO03 | Fábrica de Máquinas | 2º | Mundo Digital | `fabrica-de-maquinas` |
+| EF02CO04 | Museu Vivo do Computador | 2º | Mundo Digital | `museu-vivo-do-computador` |
+| EF02CO05 | Cidade das Tecnologias | 2º | Cultura Digital | `cidade-das-tecnologias` |
+| EF02CO06 | Checklist do Jogador Seguro | 2º | Cultura Digital | `checklist-do-jogador-seguro` |
+| EF03CO01 | Tribunal do Verdadeiro ou Falso | 3º | Pensamento Computacional | `tribunal-do-verdadeiro-ou-falso` |
+| EF03CO02 | Labirinto do Enquanto | 3º | Pensamento Computacional | `labirinto-do-enquanto` |
+| EF03CO03 | Chef dos Subproblemas | 3º | Pensamento Computacional | `chef-dos-subproblemas` |
+| EF03CO04 | Montador de Informações | 3º | Mundo Digital | `montador-de-informacoes` |
+| EF03CO05 | Formato Certo | 3º | Mundo Digital | `formato-certo` |
+| EF03CO06 | Central de Entrada e Saída | 3º | Mundo Digital | `central-de-entrada-e-saida` |
+| EF03CO07 | Detetives da Busca | 3º | Cultura Digital | `detetives-da-busca` |
+| EF03CO08 | Estúdio Multiformato | 3º | Cultura Digital | `estudio-multiformato` |
+| EF05CO01 | Baralho das Listas | 5º | Pensamento Computacional | `baralho-das-listas` |
+
+> **21 de 45 jogos implementados** · EF01CO04 é a única lacuna do 1º ano (pendente)
 
 ---
 
@@ -302,28 +322,44 @@ Jogo de drag & drop onde o aluno classifica formas geométricas por cor, forma o
 
 Simulador de desktop infantil onde o aluno recebe missões narradas e precisa identificar e usar o app correto para completá-las.
 
-- **6 mini-apps funcionais**: Câmera (flash + foto), Gravador (gravar → parar → salvar), Desenho (canvas livre + paleta de 5 cores), Calculadora (pad numérico + avaliação de expressão), Navegador (links clicáveis), Player (play/pause com barra de progresso)
-- **Sistema de janelas**: `Container` Phaser com header arrastável via `pointermove`, `setDepth` para z-order, animação de abertura/fechamento; guard de double-close via `Set<AppId>`
-- **3 níveis**: 2 apps + 2 missões + 20s (N1) → 4 apps + 4 missões + 25s (N2) → 6 apps + 6 missões + 30s (N3)
-- **Timer bar**: barra em y=118 verde→laranja→vermelho, pausa durante animações de missão; beep de aviso quando < 25% do tempo
-- **Double-tap** nos ícones para abrir apps (400ms); hint contextual ao usar app errado: "Use / Comece com / Agora use"
-- **Banner de próxima missão**: ao concluir cada desafio exibe "🌟 Missão Concluída!" e depois "PRÓXIMO DESAFIO: [texto]" antes de liberar o desktop
-- **Ícones desenhados**: formas específicas por app (lente, microfone, paleta, grade de botões, globo, triângulo-play) com realce iOS-style — sem emojis sobrepostos
-- **HUD**: barra superior 112px com texto da missão (26px, centralizado), dica do passo (17px amarelo), dots de progresso, estrelas de nível, botão mute
+- **6 mini-apps funcionais**: Câmera, Gravador, Desenho (canvas livre + paleta), Calculadora, Navegador, Player
+- **Sistema de janelas**: `Container` arrastável via `pointermove`, `setDepth` para z-order
+- **3 níveis**: 2 apps + 20s (N1) → 4 apps + 25s (N2) → 6 apps + 30s (N3)
 - **Áudio sintético**: Web Audio API — sem arquivos externos
 
 ---
 
 ### EF02CO01 — Hangar dos Modelos
 
-Showroom de veículos onde o aluno usa filtros para agrupá-los e descobre padrões e atributos em comum — trabalhando modelagem de objetos e pensamento computacional.
+Showroom de veículos onde o aluno usa filtros para agrupá-los e descobre padrões e atributos em comum.
 
-- **3 níveis com mecânicas distintas**:
-  - **N1 — Filtro binário**: 6 veículos em grid, painel de filtro "Voa?", veículos animam para zonas match/non-match, MCQ de contagem valida
-  - **N2 — Comparação lado a lado**: 2 veículos exibidos com tabela de 4 atributos; aluno marca cada um como "IGUAL" ou "DIFERENTE"
-  - **N3 — Descoberta do atributo**: 12 veículos com um grupo destacado em dourado; aluno identifica qual atributo une o grupo via MCQ
-- **12 veículos**: avião, helicóptero, foguete, balão, carro, ônibus, bicicleta, trem, barco, lancha, patinete, submarino — com atributos `voa`, `temRodas`, `temMotor`, `meio`
-- **MissionPhase state machine**: controla `intro → waiting-filter → animating → question → feedback → next-mission → level-complete`
-- **Progressão em-cena**: missões avançam dentro da mesma Scene (sem restart) — veículos voltam para posição home via tween
-- **Áudio sintético**: Web Audio API — tick, acerto (arpejo C-E-G), erro (buzz descendente), fanfarra — sem arquivos externos
+- **N1**: filtro binário "Voa?" com animação de separação em zonas
+- **N2**: comparação lado a lado de 2 veículos com 4 atributos (IGUAL / DIFERENTE)
+- **N3**: descoberta do atributo que une um grupo destacado em dourado (MCQ)
+- **12 veículos** com atributos `voa`, `temRodas`, `temMotor`, `meio`
+- **Assets PNG reais** via import Vite em `src/assets/games/EF02CO01/`
+
+---
+
+### EF03CO07 — Detetives da Busca
+
+Buscador digital simulado onde o aluno digita palavras-chave, aplica filtros e avalia relevância e confiabilidade dos resultados.
+
+- **N1**: 3 missões de busca simples — escolhe keyword em chips + identifica o resultado relevante
+- **N2**: acrescenta filtros toggle (Sites / Imagens) que reordenam os resultados
+- **N3**: combina keyword + filtro; resultados com indicador de confiabilidade (✅ / ⚠️)
+- **Layout de referência**: padrão `drawPanel(72, 142, 1136, 486)` adotado como padrão visual do projeto a partir deste jogo
+- **Assets PNG reais** via import Vite em `src/assets/games/EF03CO07/`
+
+---
+
+### EF03CO08 — Estúdio Multiformato
+
+Estúdio criativo digital onde o aluno escolhe a ferramenta certa para cada tarefa, cria produções e as publica no mural da turma.
+
+- **N1** (30s): 3 matchings de formato — toca no card correto (Desenho 🎨 / Texto 📝 / Som 🎵 / Foto 📷)
+- **N2** (50s): fase de desenho livre (≥8 manchas) + fase de texto (banco de palavras, ≥3 palavras) — ambas publicam no mural com tween de voo
+- **N3** (60s): 2 ciclos — escolhe formato entre 3 opções → mini-editor → publica no mural
+- **Painel dividido** em N2/N3: zona editora (esquerda) + mural da turma (direita) dentro do mesmo `drawPanel`
+- **Assets placeholder** em `src/assets/games/EF03CO08/` — substituir pelos PNGs reais gerados via IA
 - **Texturas programáticas**: cartões de veículo com rounded rect colorido + emoji + nome
