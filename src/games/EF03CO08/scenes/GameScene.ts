@@ -119,18 +119,16 @@ export class GameScene extends Phaser.Scene {
   // ─── Background ───────────────────────────────────────────────────────────
 
   private createBackground() {
-    const g = this.add.graphics().setDepth(-10);
-    g.fillGradientStyle(0x4c1d95, 0x1e1b4b, 0x312e81, 0x1e3a8a, 1);
-    g.fillRect(0, 0, 1280, 720);
-    // Subtle pattern dots
-    for (let i = 0; i < 24; i++) {
-      const x = Phaser.Math.Between(20, 1260);
-      const y = Phaser.Math.Between(20, 700);
-      const c = [COLORS.purple, COLORS.amber, COLORS.green, COLORS.blue, COLORS.pink][i % 5];
-      const d = this.add.graphics().setDepth(-9);
-      d.fillStyle(c, 0.12);
-      d.fillCircle(x, y, Phaser.Math.Between(5, 16));
-    }
+    const bgKey =
+      this.levelConfig.level === 1 ? "bg-format-workshop"
+      : this.levelConfig.level === 2 ? "bg-creative-studio"
+      : "bg-mission-studio";
+    const bg = this.add.image(640, 360, bgKey).setDepth(-100);
+    bg.texture.setFilter(Phaser.Textures.FilterMode.LINEAR);
+    const scale = Math.max(1280 / bg.width, 720 / bg.height);
+    bg.setScale(scale);
+    this.add.rectangle(640, 360, 1280, 720, 0xffffff, 0.06).setDepth(-90);
+    this.add.rectangle(640, 360, 1280, 720, 0x1e1b4b, 0.22).setDepth(-89);
   }
 
   // ─── Timer Bar ────────────────────────────────────────────────────────────
@@ -297,9 +295,16 @@ export class GameScene extends Phaser.Scene {
   // ─── Mural Section (right zone of panel, x=858–1208) ─────────────────────
 
   private createMuralSection() {
-    // Subtle divider
+    // Mural board PNG background
+    const MURAL_W = PANEL_X + PANEL_W - SPLIT_X - 8;
+    const muralBg = this.add.image(RIGHT_CX, PANEL_Y + PANEL_H / 2, "studio-mural-board").setDepth(3);
+    muralBg.texture.setFilter(Phaser.Textures.FilterMode.LINEAR);
+    this.fitImage(muralBg, MURAL_W, PANEL_H - 12);
+    muralBg.setAlpha(0.88);
+
+    // Subtle divider line on top of bg
     const div = this.add.graphics().setDepth(9);
-    div.lineStyle(2, COLORS.purple, 0.28);
+    div.lineStyle(2, COLORS.purple, 0.22);
     div.lineBetween(SPLIT_X, PANEL_Y + 24, SPLIT_X, PANEL_Y + PANEL_H - 24);
 
     this.addSharpText(RIGHT_CX, PANEL_Y + 30, "🖼 Mural da Turma", {
@@ -390,7 +395,7 @@ export class GameScene extends Phaser.Scene {
     const startX = 640 - totalW / 2 + btnW / 2;
     FORMAT_OPTIONS.forEach((fmt, i) => {
       const bx = startX + i * (btnW + gap);
-      this.createFormatBtn(bx, btnY, btnW, btnH, fmt.icon, fmt.label, fmt.color, () => {
+      this.createFormatBtn(bx, btnY, btnW, btnH, fmt.id, fmt.icon, fmt.label, fmt.color, () => {
         if (this.gameEnded) return;
         this.onN1FormatSelected(fmt.id, task.correctFormat, task.hint);
       });
@@ -418,20 +423,29 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
-  private createFormatBtn(x: number, y: number, w: number, h: number, icon: string, label: string, color: number, onClick: () => void) {
+  private createFormatBtn(x: number, y: number, w: number, h: number, formatId: FormatId, icon: string, label: string, color: number, onClick: () => void) {
     const btn = this.addTask(this.add.container(x, y).setDepth(20));
-    const bg = this.add.graphics();
-    bg.fillStyle(0xffffff, 0.88);
-    bg.fillRoundedRect(-w / 2, -h / 2, w, h, 22);
-    bg.fillStyle(color, 0.14);
-    bg.fillRoundedRect(-w / 2 + 10, -h / 2 + 10, w - 20, h * 0.4, 12);
-    bg.lineStyle(4, color, 0.85);
-    bg.strokeRoundedRect(-w / 2, -h / 2, w, h, 22);
-    const iconTxt = this.addSharpText(0, -16, icon, { fontSize: "44px", fontFamily: "Arial Black, Arial" }).setOrigin(0.5);
-    const lblTxt = this.addSharpText(0, 32, label, {
-      fontSize: "19px", fontFamily: "Arial Black, Arial", color: this.toCssColor(color), stroke: "#ffffff", strokeThickness: 4,
+    const textureKey = `format-card-${formatId}`;
+    if (this.textures.exists(textureKey) && this.textures.get(textureKey).getSourceImage().width > 4) {
+      const cardImg = this.add.image(0, 0, textureKey);
+      cardImg.texture.setFilter(Phaser.Textures.FilterMode.LINEAR);
+      this.fitImage(cardImg, w, h);
+      btn.add(cardImg);
+    } else {
+      const bg = this.add.graphics();
+      bg.fillStyle(0xffffff, 0.88);
+      bg.fillRoundedRect(-w / 2, -h / 2, w, h, 22);
+      bg.fillStyle(color, 0.14);
+      bg.fillRoundedRect(-w / 2 + 10, -h / 2 + 10, w - 20, h * 0.4, 12);
+      bg.lineStyle(4, color, 0.85);
+      bg.strokeRoundedRect(-w / 2, -h / 2, w, h, 22);
+      const iconTxt = this.addSharpText(0, -16, icon, { fontSize: "44px", fontFamily: "Arial Black, Arial" }).setOrigin(0.5);
+      btn.add([bg, iconTxt]);
+    }
+    const lblTxt = this.addSharpText(0, h / 2 - 20, label, {
+      fontSize: "18px", fontFamily: "Arial Black, Arial", color: "#ffffff", stroke: "#1e1b4b", strokeThickness: 4,
     }).setOrigin(0.5);
-    btn.add([bg, iconTxt, lblTxt]);
+    btn.add(lblTxt);
     const zone = this.addTask(this.add.zone(x, y, w + 14, h + 14).setDepth(55));
     zone.setInteractive({ useHandCursor: true });
     zone.on("pointerover", () => { this.input.setDefaultCursor("pointer"); this.tweens.add({ targets: btn, scale: 1.06, duration: 80 }); });
@@ -462,11 +476,11 @@ export class GameScene extends Phaser.Scene {
     const CANVAS_TOP = PANEL_Y + 80;
     const CANVAS_W = SPLIT_X - PANEL_X - 32;  // ≈ 770
     const CANVAS_H = 330;
-    const canvasBg = this.addPhase(this.add.graphics().setDepth(10));
-    canvasBg.fillStyle(0xffffff, 0.96);
-    canvasBg.fillRoundedRect(CANVAS_LEFT, CANVAS_TOP, CANVAS_W, CANVAS_H, 14);
-    canvasBg.lineStyle(3, COLORS.pink, 0.6);
-    canvasBg.strokeRoundedRect(CANVAS_LEFT, CANVAS_TOP, CANVAS_W, CANVAS_H, 14);
+    const CANVAS_CX = CANVAS_LEFT + CANVAS_W / 2;
+    const CANVAS_CY = CANVAS_TOP + CANVAS_H / 2;
+    const studioCanvas = this.addPhase(this.add.image(CANVAS_CX, CANVAS_CY, "studio-canvas").setDepth(10));
+    studioCanvas.texture.setFilter(Phaser.Textures.FilterMode.LINEAR);
+    this.fitImage(studioCanvas, CANVAS_W, CANVAS_H);
 
     this.drawCanvas = this.addPhase(this.add.graphics().setDepth(11)) as Phaser.GameObjects.Graphics;
 
@@ -628,7 +642,7 @@ export class GameScene extends Phaser.Scene {
     goalCard.setAlpha(0);
     this.tweens.add({ targets: goalCard, alpha: 1, duration: 220 });
 
-    // Format buttons (3 in left zone)
+    // Format buttons (3 in left zone) — PNG cards
     const btnW = 210;
     const btnH = 116;
     const gap = 14;
@@ -639,18 +653,27 @@ export class GameScene extends Phaser.Scene {
       const fmt = FORMAT_OPTIONS.find((f) => f.id === fmtId)!;
       const bx = startX + i * (btnW + gap);
       const btn = this.addCycle(this.add.container(bx, btnY).setDepth(20));
-      const bg = this.add.graphics();
-      bg.fillStyle(0xffffff, 0.88);
-      bg.fillRoundedRect(-btnW / 2, -btnH / 2, btnW, btnH, 22);
-      bg.fillStyle(fmt.color, 0.14);
-      bg.fillRoundedRect(-btnW / 2 + 10, -btnH / 2 + 10, btnW - 20, btnH * 0.38, 12);
-      bg.lineStyle(4, fmt.color, 0.85);
-      bg.strokeRoundedRect(-btnW / 2, -btnH / 2, btnW, btnH, 22);
-      const iconTxt = this.addSharpText(0, -14, fmt.icon, { fontSize: "42px", fontFamily: "Arial Black, Arial" }).setOrigin(0.5);
-      const lblTxt = this.addSharpText(0, 30, fmt.label, {
-        fontSize: "18px", fontFamily: "Arial Black, Arial", color: this.toCssColor(fmt.color), stroke: "#ffffff", strokeThickness: 4,
+      const textureKey = `format-card-${fmtId}`;
+      if (this.textures.exists(textureKey) && this.textures.get(textureKey).getSourceImage().width > 4) {
+        const cardImg = this.add.image(0, 0, textureKey);
+        cardImg.texture.setFilter(Phaser.Textures.FilterMode.LINEAR);
+        this.fitImage(cardImg, btnW, btnH);
+        btn.add(cardImg);
+      } else {
+        const bg = this.add.graphics();
+        bg.fillStyle(0xffffff, 0.88);
+        bg.fillRoundedRect(-btnW / 2, -btnH / 2, btnW, btnH, 22);
+        bg.fillStyle(fmt.color, 0.14);
+        bg.fillRoundedRect(-btnW / 2 + 10, -btnH / 2 + 10, btnW - 20, btnH * 0.38, 12);
+        bg.lineStyle(4, fmt.color, 0.85);
+        bg.strokeRoundedRect(-btnW / 2, -btnH / 2, btnW, btnH, 22);
+        const iconTxt = this.addSharpText(0, -14, fmt.icon, { fontSize: "42px", fontFamily: "Arial Black, Arial" }).setOrigin(0.5);
+        btn.add([bg, iconTxt]);
+      }
+      const lblTxt = this.addSharpText(0, btnH / 2 - 20, fmt.label, {
+        fontSize: "18px", fontFamily: "Arial Black, Arial", color: "#ffffff", stroke: "#1e1b4b", strokeThickness: 4,
       }).setOrigin(0.5);
-      btn.add([bg, iconTxt, lblTxt]);
+      btn.add(lblTxt);
       const zone = this.addCycle(this.add.zone(bx, btnY, btnW + 14, btnH + 14).setDepth(55));
       zone.setInteractive({ useHandCursor: true });
       zone.on("pointerover", () => { this.input.setDefaultCursor("pointer"); this.tweens.add({ targets: btn, scale: 1.06, duration: 80 }); });
@@ -703,11 +726,9 @@ export class GameScene extends Phaser.Scene {
     const CANVAS_W = SPLIT_X - PANEL_X - 32;
     const CANVAS_H = 310;
 
-    const canvasBg = this.addPhase(this.add.graphics().setDepth(10));
-    canvasBg.fillStyle(0xffffff, 0.96);
-    canvasBg.fillRoundedRect(CANVAS_LEFT, CANVAS_TOP, CANVAS_W, CANVAS_H, 14);
-    canvasBg.lineStyle(3, COLORS.pink, 0.6);
-    canvasBg.strokeRoundedRect(CANVAS_LEFT, CANVAS_TOP, CANVAS_W, CANVAS_H, 14);
+    const studioCanvas = this.addPhase(this.add.image(CANVAS_LEFT + CANVAS_W / 2, CANVAS_TOP + CANVAS_H / 2, "studio-canvas").setDepth(10));
+    studioCanvas.texture.setFilter(Phaser.Textures.FilterMode.LINEAR);
+    this.fitImage(studioCanvas, CANVAS_W, CANVAS_H);
     this.drawCanvas = this.addPhase(this.add.graphics().setDepth(11)) as Phaser.GameObjects.Graphics;
 
     this.activeColor = ch.colors[0];
@@ -1139,6 +1160,12 @@ export class GameScene extends Phaser.Scene {
 
   private getScore() { return Math.max(0, this.hits * 20 - this.errors * 5); }
   private toCssColor(c: number) { return `#${c.toString(16).padStart(6, "0")}`; }
+
+  private fitImage(image: Phaser.GameObjects.Image, maxW: number, maxH: number) {
+    const scale = Math.min(maxW / image.width, maxH / image.height);
+    image.setScale(scale);
+    return image;
+  }
 
   private addSharpText(x: number, y: number, text: string, style: Phaser.Types.GameObjects.Text.TextStyle) {
     const obj = this.add.text(x, y, text, style);
