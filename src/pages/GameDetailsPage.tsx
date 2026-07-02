@@ -34,6 +34,9 @@ const SLUG_TO_CODE: Record<string, GameCode> = {
   "central-de-entrada-e-saida": "EF03CO06",
   "detetives-da-busca": "EF03CO07",
   "estudio-multiformato": "EF03CO08",
+  "investigacao-dados-risco": "EF03CO09",
+  "batalha-das-coordenadas": "EF04CO01",
+  "arquivo-dos-registros": "EF04CO02",
   "baralho-das-listas": "EF05CO01",
 };
 
@@ -60,6 +63,9 @@ const GAME_CONFIG_LOADERS: Partial<
   EF03CO06: () => import("../games/EF03CO06/index"),
   EF03CO07: () => import("../games/EF03CO07/index"),
   EF03CO08: () => import("../games/EF03CO08/index"),
+  EF03CO09: () => import("../games/EF03CO09/index"),
+  EF04CO01: () => import("../games/EF04CO01/index"),
+  EF04CO02: () => import("../games/EF04CO02/index"),
   EF05CO01: () => import("../games/EF05CO01/index"),
 };
 
@@ -74,6 +80,9 @@ const GAMES_WITH_IN_GAME_COMPLETION_SCREEN = new Set([
   "central-de-entrada-e-saida",
   "detetives-da-busca",
   "estudio-multiformato",
+  "investigacao-dados-risco",
+  "batalha-das-coordenadas",
+  "arquivo-dos-registros",
   "baralho-das-listas",
 ]);
 
@@ -583,6 +592,24 @@ export default function GameDetailsPage() {
       "No Nível 2, pinte manchas no canvas para criar um desenho e selecione palavras para a mensagem.",
       "Toque em 'Publicar no Mural' quando sua criação estiver pronta.",
       "No Nível 3, escolha o formato correto para cada missão, crie e publique.",
+    ],
+    "investigacao-dados-risco": [
+      "No Nível 1, decida se cada informação é Segura ou Perigosa de compartilhar.",
+      "No Nível 2, leia o cenário e toque na consequência correta do compartilhamento.",
+      "No Nível 3, analise o incidente em dois passos: identifique o erro e escolha a atitude certa.",
+      "Dados pessoais como endereço, senha e nome da escola nunca devem ser compartilhados online.",
+    ],
+    "batalha-das-coordenadas": [
+      "No Nível 1, toque na célula da grade que corresponde à coordenada chamada (ex: B-3).",
+      "No Nível 2, observe onde está o objeto e selecione a coordenada correta entre as opções.",
+      "No Nível 3, clique nas células para atacar e encontre todos os navios escondidos.",
+      "Coordenadas têm linha (letra) e coluna (número): A-1 é linha A, coluna 1.",
+    ],
+    "arquivo-dos-registros": [
+      "No Nível 1, leia a pergunta e toque na ficha que tem o valor correto no campo pedido.",
+      "No Nível 2, examine a ficha aberta e selecione o valor correto do campo perguntado.",
+      "No Nível 3, percorra todos os registros e responda à pergunta sobre o conjunto.",
+      "Cada ficha é um registro com campos nomeados — como Nome, Cidade, Hobby e Animal.",
     ],
   };
 

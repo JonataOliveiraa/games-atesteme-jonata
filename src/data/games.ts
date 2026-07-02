@@ -20,6 +20,9 @@ import correctFormatThumbnail from "../assets/games/EF03CO05/cover-formato-certo
 import inputOutputThumbnail from "../assets/games/EF03CO06/cover-central-entrada-saida.png";
 import searchDetectivesThumbnail from "../assets/games/EF03CO07/cover-detetives-da-busca.png";
 import multiFormatStudioThumbnail from "../assets/games/EF03CO08/cover-estudio-multiformato.png";
+import investigationThumbnail from "../assets/games/EF03CO09/cover-investigacao-dados-risco.png";
+import battleCoordsThumbnail from "../assets/games/EF04CO01/cover-batalha-coordenadas.png";
+import archiveRecordsThumbnail from "../assets/games/EF04CO02/cover-arquivo-registros.png";
 import cardListThumbnail from "../assets/games/EF05CO01/cover-baralho-das-listas.png";
 
 const placeholderGame = (code: string, index: number): Game => ({
@@ -213,6 +216,33 @@ const gameByCode: Partial<Record<string, Omit<Game, "id">>> = {
     icon: "🎨",
     slug: "estudio-multiformato",
     thumbnail: multiFormatStudioThumbnail,
+  },
+  EF03CO09: {
+    title: "Investigação: Dados em Risco",
+    description: "Identifique dados pessoais perigosos, descubra consequências do compartilhamento e investigue incidentes de privacidade online.",
+    category: "Cultura Digital",
+    points: 60,
+    icon: "🔍",
+    slug: "investigacao-dados-risco",
+    thumbnail: investigationThumbnail,
+  },
+  EF04CO01: {
+    title: "Batalha das Coordenadas",
+    description: "Localize células em grades matriciais usando coordenadas (linha, coluna) e afunde navios escondidos no mapa.",
+    category: "Pensamento Computacional",
+    points: 65,
+    icon: "🗺️",
+    slug: "batalha-das-coordenadas",
+    thumbnail: battleCoordsThumbnail,
+  },
+  EF04CO02: {
+    title: "Arquivo dos Registros",
+    description: "Leia fichas com campos nomeados, filtre registros por campo e responda perguntas sobre o conjunto de dados.",
+    category: "Pensamento Computacional",
+    points: 65,
+    icon: "🗂️",
+    slug: "arquivo-dos-registros",
+    thumbnail: archiveRecordsThumbnail,
   },
   EF05CO01: {
     title: "Baralho das Listas",
