@@ -301,9 +301,15 @@ Os `load.audio(...)` e `load.atlas(...)` já estão comentados em cada `BootScen
 | EF03CO06 | Central de Entrada e Saída | 3º | Mundo Digital | `central-de-entrada-e-saida` |
 | EF03CO07 | Detetives da Busca | 3º | Cultura Digital | `detetives-da-busca` |
 | EF03CO08 | Estúdio Multiformato | 3º | Cultura Digital | `estudio-multiformato` |
+| EF03CO09 | Investigação: Dados em Risco | 3º | Cultura Digital | `investigacao-dados-risco` |
+| EF04CO01 | Batalha das Coordenadas | 4º | Pensamento Computacional | `batalha-das-coordenadas` |
+| EF04CO02 | Arquivo dos Registros | 4º | Pensamento Computacional | `arquivo-dos-registros` |
+| EF04CO03 | Prédio dos Laços | 4º | Pensamento Computacional | `predio-dos-lacos` |
+| EF04CO04 | Tradutor da Máquina | 4º | Mundo Digital | `tradutor-da-maquina` |
+| EF04CO05 | Ateliê de Códigos Digitais | 4º | Mundo Digital | `atelier-codigos-digitais` |
 | EF05CO01 | Baralho das Listas | 5º | Pensamento Computacional | `baralho-das-listas` |
 
-> **21 de 45 jogos implementados** · EF01CO04 é a única lacuna do 1º ano (pendente)
+> **27 de 45 jogos implementados** · EF01CO04 é a única lacuna do 1º ano (pendente)
 
 ---
 
@@ -361,5 +367,74 @@ Estúdio criativo digital onde o aluno escolhe a ferramenta certa para cada tare
 - **N2** (50s): fase de desenho livre (≥8 manchas) + fase de texto (banco de palavras, ≥3 palavras) — ambas publicam no mural com tween de voo
 - **N3** (60s): 2 ciclos — escolhe formato entre 3 opções → mini-editor → publica no mural
 - **Painel dividido** em N2/N3: zona editora (esquerda) + mural da turma (direita) dentro do mesmo `drawPanel`
-- **Assets placeholder** em `src/assets/games/EF03CO08/` — substituir pelos PNGs reais gerados via IA
-- **Texturas programáticas**: cartões de veículo com rounded rect colorido + emoji + nome
+- **Assets PNG reais** em `src/assets/games/EF03CO08/`
+
+---
+
+### EF03CO09 — Investigação: Dados em Risco
+
+Jogo investigativo onde o aluno aprende a reconhecer o impacto de compartilhar dados pessoais online.
+
+- **N1** (30s): 6 cards de informação em sequência — tap "🔒 Seguro" ou "⚠️ Perigoso"
+- **N2** (45s): 3 cenários de compartilhamento → escolher a consequência correta entre 3 opções
+- **N3** (55s): 2 incidentes × 2 perguntas — identificar o erro cometido e a atitude correta
+- **Paleta investigação**: vermelho (#dc2626) + âmbar (#f59e0b); backgrounds de cena do crime
+- **Assets PNG reais** em `src/assets/games/EF03CO09/`
+
+---
+
+### EF04CO01 — Batalha das Coordenadas
+
+Jogo de grade matricial onde o aluno localiza células usando coordenadas (linha-letra × coluna-número).
+
+- **N1** (35s): grade 4×4 — toca na célula da coordenada chamada (ex: "B-3")
+- **N2** (45s): grade 4×4 com emoji posicionado — seleciona a coordenada correta em MCQ
+- **N3** (55s): grade 5×5 — batalha naval; 4 navios escondidos, click para atacar (💥 hit / 🌊 miss)
+- **Assets PNG reais** em `src/assets/games/EF04CO01/`
+
+---
+
+### EF04CO02 — Arquivo dos Registros
+
+Jogo de fichas de dados onde o aluno lê registros com campos nomeados, filtra e responde perguntas.
+
+- **N1** (35s): 4 fichas horizontais visíveis → toca a que satisfaz o campo pedido
+- **N2** (45s): ficha expandida com todos os campos → MCQ para o valor do campo perguntado
+- **N3** (55s): grade 4×2 com 8 registros completos → perguntas de contagem e filtro
+- **Dataset**: 8 estudantes com campos Nome, Cidade, Hobby, Idade, Animal
+- **Assets PNG reais** em `src/assets/games/EF04CO02/`
+
+---
+
+### EF04CO03 — Prédio dos Laços
+
+Editor visual de laços onde o aluno programa o limpador de janelas para percorrer andares e janelas.
+
+- **N1** (35s): laço simples — MCQ para o count correto → animação do limpador
+- **N2** (45s): laço aninhado — botões +/- para outer (andares) e inner (janelas/andar) → executar
+- **N3** (55s): eficiência — configura ambos os laços + prevê quantas janelas sujas serão limpas
+- **Cores de laço**: externo azul (#1e40af), interno verde (#16a34a)
+- **Assets PNG reais** em `src/assets/games/EF04CO03/`
+
+---
+
+### EF04CO04 — Tradutor da Máquina
+
+Máquina de codificação onde o aluno traduz letras para binário (e vice-versa) usando tabela de referência.
+
+- **Codificação**: 8 letras A–H com códigos 3-bit (A=000 … H=111) — tabela sempre visível
+- **N1** (35s): letra destacada no teclado virtual → MCQ do código binário correspondente
+- **N2** (45s): palavra de 3 letras → codificar letra a letra, acumulando código no visor
+- **N3** (55s): código binário no visor → decodificar grupo a grupo para recuperar a palavra
+- **Assets PNG reais** em `src/assets/games/EF04CO04/`
+
+---
+
+### EF04CO05 — Ateliê de Códigos Digitais
+
+Três oficinas de codificação: binária (PBM), ASCII e cores RGB.
+
+- **N1** (35s): grade 4×4 clicável (0=branco/1=preto) — reproduzir padrão-alvo PBM
+- **N2** (45s): grupos binários exibidos → selecionar letra correspondente em MCQ (tabela visível)
+- **N3** (55s): sliders R/G/B com 5 passos (0–255) — misturar a cor-alvo com tolerância ±32
+- **Assets PNG reais** em `src/assets/games/EF04CO05/`
