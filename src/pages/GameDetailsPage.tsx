@@ -37,6 +37,9 @@ const SLUG_TO_CODE: Record<string, GameCode> = {
   "investigacao-dados-risco": "EF03CO09",
   "batalha-das-coordenadas": "EF04CO01",
   "arquivo-dos-registros": "EF04CO02",
+  "predio-dos-lacos": "EF04CO03",
+  "tradutor-da-maquina": "EF04CO04",
+  "atelier-codigos-digitais": "EF04CO05",
   "baralho-das-listas": "EF05CO01",
 };
 
@@ -66,6 +69,9 @@ const GAME_CONFIG_LOADERS: Partial<
   EF03CO09: () => import("../games/EF03CO09/index"),
   EF04CO01: () => import("../games/EF04CO01/index"),
   EF04CO02: () => import("../games/EF04CO02/index"),
+  EF04CO03: () => import("../games/EF04CO03/index"),
+  EF04CO04: () => import("../games/EF04CO04/index"),
+  EF04CO05: () => import("../games/EF04CO05/index"),
   EF05CO01: () => import("../games/EF05CO01/index"),
 };
 
@@ -83,6 +89,9 @@ const GAMES_WITH_IN_GAME_COMPLETION_SCREEN = new Set([
   "investigacao-dados-risco",
   "batalha-das-coordenadas",
   "arquivo-dos-registros",
+  "predio-dos-lacos",
+  "tradutor-da-maquina",
+  "atelier-codigos-digitais",
   "baralho-das-listas",
 ]);
 
@@ -610,6 +619,24 @@ export default function GameDetailsPage() {
       "No Nível 2, examine a ficha aberta e selecione o valor correto do campo perguntado.",
       "No Nível 3, percorra todos os registros e responda à pergunta sobre o conjunto.",
       "Cada ficha é um registro com campos nomeados — como Nome, Cidade, Hobby e Animal.",
+    ],
+    "predio-dos-lacos": [
+      "No Nível 1, escolha quantas vezes o laço deve repetir para limpar todas as janelas.",
+      "No Nível 2, configure o laço externo (andares) e o laço interno (janelas por andar).",
+      "No Nível 3, programe os dois laços e preveja quantas janelas sujas serão limpas.",
+      "O laço externo (azul) controla os andares; o laço interno (verde) controla as janelas.",
+    ],
+    "tradutor-da-maquina": [
+      "No Nível 1, veja qual letra está destacada e selecione o código binário correto.",
+      "No Nível 2, traduza cada letra da palavra para binário usando a tabela de referência.",
+      "No Nível 3, faça o caminho inverso: leia o binário e descubra qual letra ele representa.",
+      "Use a tabela sempre visível: A=000, B=001, C=010, D=011, E=100, F=101, G=110, H=111.",
+    ],
+    "atelier-codigos-digitais": [
+      "No Nível 1, clique nas células da grade para reproduzir o padrão binário (preto=1, branco=0).",
+      "No Nível 2, use a tabela de referência para descobrir qual letra corresponde a cada código.",
+      "No Nível 3, ajuste os sliders de Vermelho, Verde e Azul para misturar a cor pedida.",
+      "Toda informação digital pode ser representada em binário, letras ou valores de cor RGB!",
     ],
   };
 

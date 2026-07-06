@@ -23,6 +23,9 @@ import multiFormatStudioThumbnail from "../assets/games/EF03CO08/cover-estudio-m
 import investigationThumbnail from "../assets/games/EF03CO09/cover-investigacao-dados-risco.png";
 import battleCoordsThumbnail from "../assets/games/EF04CO01/cover-batalha-coordenadas.png";
 import archiveRecordsThumbnail from "../assets/games/EF04CO02/cover-arquivo-registros.png";
+import buildingLoopsThumbnail from "../assets/games/EF04CO03/cover-predio-dos-lacos.png";
+import machineTranslatorThumbnail from "../assets/games/EF04CO04/cover-tradutor-da-maquina.png";
+import digitalAtelierThumbnail from "../assets/games/EF04CO05/cover-atelier-codigos-digitais.png";
 import cardListThumbnail from "../assets/games/EF05CO01/cover-baralho-das-listas.png";
 
 const placeholderGame = (code: string, index: number): Game => ({
@@ -243,6 +246,33 @@ const gameByCode: Partial<Record<string, Omit<Game, "id">>> = {
     icon: "🗂️",
     slug: "arquivo-dos-registros",
     thumbnail: archiveRecordsThumbnail,
+  },
+  EF04CO03: {
+    title: "Prédio dos Laços",
+    description: "Configure laços simples e aninhados para guiar o limpador de janelas pelo prédio e limpar todos os andares.",
+    category: "Pensamento Computacional",
+    points: 65,
+    icon: "🔁",
+    slug: "predio-dos-lacos",
+    thumbnail: buildingLoopsThumbnail,
+  },
+  EF04CO04: {
+    title: "Tradutor da Máquina",
+    description: "Traduza letras para código binário e vice-versa usando a tabela ASCII simplificada.",
+    category: "Mundo Digital",
+    points: 60,
+    icon: "💻",
+    slug: "tradutor-da-maquina",
+    thumbnail: machineTranslatorThumbnail,
+  },
+  EF04CO05: {
+    title: "Ateliê de Códigos Digitais",
+    description: "Explore três oficinas: reproduza padrões binários, decodifique ASCII e misture cores RGB.",
+    category: "Mundo Digital",
+    points: 65,
+    icon: "🎨",
+    slug: "atelier-codigos-digitais",
+    thumbnail: digitalAtelierThumbnail,
   },
   EF05CO01: {
     title: "Baralho das Listas",
