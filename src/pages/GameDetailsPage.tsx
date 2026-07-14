@@ -40,6 +40,9 @@ const SLUG_TO_CODE: Record<string, GameCode> = {
   "predio-dos-lacos": "EF04CO03",
   "tradutor-da-maquina": "EF04CO04",
   "atelier-codigos-digitais": "EF04CO05",
+  "estudio-producao-digital": "EF04CO06",
+  "missao-etica-digital": "EF04CO07",
+  "caca-fonte-confiavel": "EF04CO08",
   "baralho-das-listas": "EF05CO01",
 };
 
@@ -72,6 +75,9 @@ const GAME_CONFIG_LOADERS: Partial<
   EF04CO03: () => import("../games/EF04CO03/index"),
   EF04CO04: () => import("../games/EF04CO04/index"),
   EF04CO05: () => import("../games/EF04CO05/index"),
+  EF04CO06: () => import("../games/EF04CO06/index"),
+  EF04CO07: () => import("../games/EF04CO07/index"),
+  EF04CO08: () => import("../games/EF04CO08/index"),
   EF05CO01: () => import("../games/EF05CO01/index"),
 };
 
@@ -92,6 +98,9 @@ const GAMES_WITH_IN_GAME_COMPLETION_SCREEN = new Set([
   "predio-dos-lacos",
   "tradutor-da-maquina",
   "atelier-codigos-digitais",
+  "estudio-producao-digital",
+  "missao-etica-digital",
+  "caca-fonte-confiavel",
   "baralho-das-listas",
 ]);
 

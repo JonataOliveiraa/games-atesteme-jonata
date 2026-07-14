@@ -26,6 +26,9 @@ import archiveRecordsThumbnail from "../assets/games/EF04CO02/cover-arquivo-regi
 import buildingLoopsThumbnail from "../assets/games/EF04CO03/cover-predio-dos-lacos.png";
 import machineTranslatorThumbnail from "../assets/games/EF04CO04/cover-tradutor-da-maquina.png";
 import digitalAtelierThumbnail from "../assets/games/EF04CO05/cover-atelier-codigos-digitais.png";
+import digitalStudioThumbnail from "../assets/games/EF04CO06/cover-estudio-producao-digital.png";
+import ethicMissionThumbnail from "../assets/games/EF04CO07/cover-missao-etica-digital.png";
+import sourceHuntThumbnail from "../assets/games/EF04CO08/cover-caca-fonte-confiavel.png";
 import cardListThumbnail from "../assets/games/EF05CO01/cover-baralho-das-listas.png";
 
 const placeholderGame = (code: string, index: number): Game => ({
@@ -273,6 +276,33 @@ const gameByCode: Partial<Record<string, Omit<Game, "id">>> = {
     icon: "🎨",
     slug: "atelier-codigos-digitais",
     thumbnail: digitalAtelierThumbnail,
+  },
+  EF04CO06: {
+    title: "Estúdio de Produção Digital",
+    description: "Escolha o formato certo para cada missão, produza conteúdo em texto, slides ou vídeo e publique após revisão.",
+    category: "Cultura Digital",
+    points: 65,
+    icon: "🎬",
+    slug: "estudio-producao-digital",
+    thumbnail: digitalStudioThumbnail,
+  },
+  EF04CO07: {
+    title: "Missão Ética Digital",
+    description: "Tome decisões éticas ao lidar com arquivos digitais alheios e mantenha sua reputação digital em alta.",
+    category: "Cultura Digital",
+    points: 65,
+    icon: "⚖️",
+    slug: "missao-etica-digital",
+    thumbnail: ethicMissionThumbnail,
+  },
+  EF04CO08: {
+    title: "Caça à Fonte Confiável",
+    description: "Avalie critérios de confiabilidade em páginas simuladas, compare fontes e classifique as mais confiáveis.",
+    category: "Cultura Digital",
+    points: 65,
+    icon: "🔍",
+    slug: "caca-fonte-confiavel",
+    thumbnail: sourceHuntThumbnail,
   },
   EF05CO01: {
     title: "Baralho das Listas",
