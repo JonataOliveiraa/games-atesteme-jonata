@@ -247,7 +247,7 @@ export class GameScene extends Phaser.Scene {
     const label = this.add.text(0, -34, 'Quer receber por:', {
       fontFamily: 'Arial, sans-serif',
       fontSize: '13px',
-      color: '#333333',
+      color: '#333334',
       fontStyle: 'bold',
       align: 'center',
       backgroundColor: '#ffffffcc',
