@@ -30,6 +30,7 @@ import digitalStudioThumbnail from "../assets/games/EF04CO06/cover-estudio-produ
 import ethicMissionThumbnail from "../assets/games/EF04CO07/cover-missao-etica-digital.png";
 import sourceHuntThumbnail from "../assets/games/EF04CO08/cover-caca-fonte-confiavel.png";
 import cardListThumbnail from "../assets/games/EF05CO01/cover-baralho-das-listas.png";
+import correioThumbnail from "../assets/games/EF01CO04/cover-correio-multimidia.png";
 
 const placeholderGame = (code: string, index: number): Game => ({
   id: index,
@@ -60,6 +61,15 @@ const gameByCode: Partial<Record<string, Omit<Game, "id">>> = {
     icon: "👣",
     slug: "trilha-do-passo-a-passo",
     thumbnail: trilhaThumbnail,
+  },
+  EF01CO04: {
+    title: "Correio Multimídia",
+    description: "Envie mensagens por áudio, texto ou desenho e descubra que a informação continua a mesma, não importa o formato!",
+    category: "Mundo Digital",
+    points: 50,
+    icon: "📬",
+    slug: "correio-multimidia",
+    thumbnail: correioThumbnail,
   },
   EF01CO03: {
     title: "Oficina dos Algoritmos",
