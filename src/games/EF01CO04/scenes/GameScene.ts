@@ -9,10 +9,15 @@ const GAME_ID = 'correio-multimidia'
 type SceneState = 'map' | 'registering' | 'transmitting' | 'comparing'
 
 const INSTRUCTIONS_BY_MODE: Record<string, string> = {
-  single: 'Escolha a estação certa e registre a mensagem!',
-  dual: 'Envie a mesma mensagem pelos dois caminhos indicados!',
-  mastery: 'Escolha o melhor caminho pra essa situação!'
+  single: 'Veja o que o destino quer receber e escolha a estação certa!',
+  dual: 'O destino quer receber por dois caminhos! Envie pelos dois indicados.',
+  mastery: 'Escolha com cuidado: só o caminho pedido pelo destino é o certo!'
 }
+
+/** Pontos concedidos por canal corretamente entregue. */
+const POINTS_PER_CHANNEL = 5
+/** Pontos perdidos ao entregar por um canal que o destino não pediu. */
+const WRONG_CHANNEL_PENALTY = 5
 
 export class GameScene extends Phaser.Scene {
   private currentLevelIndex = 0
@@ -30,8 +35,11 @@ export class GameScene extends Phaser.Scene {
   private registerContainer!: Phaser.GameObjects.Container
   private overlay?: Phaser.GameObjects.Rectangle
 
+  /** Indicador acima do painel de destino mostrando o(s) canal(is) pedido(s) nesta rodada. */
+  private requestIndicatorContainer!: Phaser.GameObjects.Container
+  private requestBadges: Map<ChannelType, Phaser.GameObjects.Image> = new Map()
+
   private completedChannelsThisRound: Set<ChannelType> = new Set()
-  private pulseTween?: Phaser.Tweens.Tween
   private isDrawing = false
   private removeCommandListener!: () => void
 
@@ -151,6 +159,7 @@ export class GameScene extends Phaser.Scene {
 
     this.resultContainer = this.add.container(1080, 250).setAlpha(0)
     this.registerContainer = this.add.container(640, 420).setAlpha(0)
+    this.requestIndicatorContainer = this.add.container(1080, 128).setDepth(5)
   }
 
   private buildStations() {
@@ -219,30 +228,75 @@ export class GameScene extends Phaser.Scene {
       this.overlay = undefined
     }
 
+    this.buildRequestIndicator()
     this.updateStationAvailability()
   }
 
-  private updateStationAvailability() {
-    if (this.pulseTween) {
-      this.pulseTween.stop()
-      this.pulseTween = undefined
-    }
+  /**
+   * Monta os "selos de pedido" acima do painel de destino, mostrando qual(is)
+   * canal(is) o destino quer receber nesta rodada (1 ou 2, conforme a missão).
+   */
+  private buildRequestIndicator() {
+    this.requestIndicatorContainer.removeAll(true)
+    this.requestBadges.clear()
 
+    const channels = this.currentMission.requiredChannels
+    const spacing = 56
+    const startX = -(spacing * (channels.length - 1)) / 2
+
+    const label = this.add.text(0, -34, 'Quer receber por:', {
+      fontFamily: 'Arial, sans-serif',
+      fontSize: '13px',
+      color: '#333333',
+      fontStyle: 'bold',
+      align: 'center',
+      backgroundColor: '#ffffffcc',
+      padding: { x: 8, y: 3 }
+    }).setOrigin(0.5)
+
+    this.requestIndicatorContainer.add(label)
+
+    channels.forEach((channel, i) => {
+      const station = STATIONS.find(s => s.channel === channel)!
+      const badge = this.add.image(startX + i * spacing, 0, station.textureKey)
+      badge.setScale(46 / badge.width)
+      this.requestIndicatorContainer.add(badge)
+      this.requestBadges.set(channel, badge)
+    })
+
+    this.requestIndicatorContainer.setAlpha(0).setScale(0.85)
+    this.tweens.add({
+      targets: this.requestIndicatorContainer,
+      alpha: 1,
+      scale: 1,
+      duration: 300,
+      ease: 'Back.out'
+    })
+  }
+
+  /** Marca visualmente um selo de pedido como já entregue nesta rodada. */
+  private markRequestFulfilled(channel: ChannelType) {
+    const badge = this.requestBadges.get(channel)
+    if (!badge) return
+    badge.setAlpha(0.35)
+    this.tweens.add({ targets: badge, scale: badge.scale * 1.15, yoyo: true, duration: 160 })
+  }
+
+  /**
+   * Todas as estações ficam sempre disponíveis pro jogador escolher livremente —
+   * é o painel de destino (buildRequestIndicator) que indica o canal certo.
+   * A única exceção é um canal já entregue com sucesso nesta rodada (não faz
+   * sentido reenviar) e o microfone quando o item não tem som natural.
+   */
+  private updateStationAvailability() {
     const item = this.currentMission.item
-    const mode = this.levelConfig.mode
 
     this.stationSprites.forEach((sprite, channel) => {
       const station = sprite.getData('station') as DeliveryStation
       const baseScale = sprite.getData('baseScale') as number
 
-      let selectable: boolean
-      if (mode === 'single') {
-        selectable = this.currentMission.requiredChannels.includes(channel)
-      } else if (mode === 'dual') {
-        selectable = this.currentMission.requiredChannels.includes(channel) && !this.completedChannelsThisRound.has(channel)
-      } else {
-        selectable = item.validChannels.includes(channel)
-      }
+      const alreadySent = this.completedChannelsThisRound.has(channel)
+      const selectable = !alreadySent
 
       sprite.setScale(baseScale)
       sprite.setAlpha(selectable ? 1 : 0.35)
@@ -251,22 +305,6 @@ export class GameScene extends Phaser.Scene {
 
       sprite.setTexture(channel === 'audio' && !item.soundKey ? 'microfone_indisponivel' : station.textureKey)
     })
-
-    if (mode === 'single') {
-      const targetChannel = this.currentMission.requiredChannels[0]
-      const targetSprite = this.stationSprites.get(targetChannel)
-      if (targetSprite) {
-        const baseScale = targetSprite.getData('baseScale') as number
-        this.pulseTween = this.tweens.add({
-          targets: targetSprite,
-          scale: baseScale * 1.12,
-          duration: 500,
-          yoyo: true,
-          repeat: -1,
-          ease: 'Sine.inOut'
-        })
-      }
-    }
   }
 
   private onStationClicked(station: DeliveryStation, sprite: Phaser.GameObjects.Image) {
@@ -279,10 +317,6 @@ export class GameScene extends Phaser.Scene {
       return
     }
 
-    if (this.pulseTween) {
-      this.pulseTween.stop()
-      this.pulseTween = undefined
-    }
     sprite.setScale(sprite.getData('baseScale'))
 
     this.sound.play('som_click_ui')
@@ -523,7 +557,6 @@ export class GameScene extends Phaser.Scene {
       duration: 250,
       onComplete: () => {
         this.registerContainer.removeAll(true)
-        this.completedChannelsThisRound.add(channel)
         this.playTransmission(channel, drawKey)
       }
     })
@@ -729,31 +762,65 @@ export class GameScene extends Phaser.Scene {
     })
   }
   private evaluateDelivery(channel: ChannelType) {
-    const item = this.currentMission.item
-    const mode = this.levelConfig.mode
+    const isRequested = this.currentMission.requiredChannels.includes(channel)
 
-    if (mode === 'dual') {
+    if (!isRequested) {
+      this.registerWrongDelivery()
+      return
+    }
+
+    this.completedChannelsThisRound.add(channel)
+    this.markRequestFulfilled(channel)
+
+    const allDone = this.currentMission.requiredChannels.every(c => this.completedChannelsThisRound.has(c))
+
+    if (!allDone) {
       this.showChannelBadge(channel)
+      this.state = 'map'
+      this.updateStationAvailability()
+      return
+    }
 
-      const bothDone = this.currentMission.requiredChannels.every(c => this.completedChannelsThisRound.has(c))
-      if (!bothDone) {
-        this.state = 'map'
-        this.updateStationAvailability()
-        return
-      }
-
+    if (this.currentMission.requiredChannels.length > 1) {
       this.state = 'transmitting'
       this.time.delayedCall(1500, () => {
         this.clearAccumulatedBadges()
-        this.showSuccessComparison()
+        this.registerCorrectDelivery()
       })
       return
     }
 
-    const success = mode === 'mastery' ? item.validChannels.includes(channel) : true
+    this.registerCorrectDelivery()
+  }
 
-    if (success) this.showSuccessComparison()
-    else this.showLossComparison()
+  /** Envio pelo canal certo (todos os pedidos cumpridos) — pontua e avança a missão. */
+  private registerCorrectDelivery() {
+    const pointsEarned = POINTS_PER_CHANNEL * this.currentMission.requiredChannels.length
+
+    runtimeGameBridge.emit({
+      type: 'CORRECT_ANSWER',
+      gameId: GAME_ID,
+      pointsEarned,
+      stage: this.levelConfig.level
+    })
+
+    this.points += pointsEarned
+    this.showSuccessComparison()
+  }
+
+  /** Envio por um canal que o destino não pediu — perde a rodada. */
+  private registerWrongDelivery() {
+    this.clearAccumulatedBadges()
+
+    runtimeGameBridge.emit({
+      type: 'WRONG_ANSWER',
+      gameId: GAME_ID,
+      pointsEarned: -WRONG_CHANNEL_PENALTY,
+      stage: this.levelConfig.level
+    })
+
+    this.points = Math.max(0, this.points - WRONG_CHANNEL_PENALTY)
+    this.showLossComparison()
   }
 
   private clearAccumulatedBadges() {
@@ -884,16 +951,6 @@ export class GameScene extends Phaser.Scene {
   }
 
   private finishMission() {
-    const pointsEarned = this.levelConfig.mode === 'dual' ? 10 : 5
-    this.points += pointsEarned
-
-    runtimeGameBridge.emit({
-      type: 'CORRECT_ANSWER',
-      gameId: GAME_ID,
-      pointsEarned,
-      stage: this.levelConfig.level
-    })
-
     this.currentMissionIndex++
     this.registry.set('roundIndex', this.currentMissionIndex)
 
