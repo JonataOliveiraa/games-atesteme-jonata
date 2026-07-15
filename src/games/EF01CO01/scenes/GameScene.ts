@@ -19,16 +19,16 @@ const ITEM_SCALE_MAX = 0.70 // escala máxima dos itens — diminua para figuras
 const GAME_ID = 'base-dos-classificadores'
 
 const COLORS = {
-  green:     0x4CAF50,
+  green: 0x4CAF50,
   darkGreen: 0x2E7D32,
   deepGreen: 0x1B5E20,
-  cream:     0xF1F8E9,
-  gold:      0xFFD700,
-  brown:     0x8D6E63,
+  cream: 0xF1F8E9,
+  gold: 0xFFD700,
+  brown: 0x8D6E63,
 }
 
 const DEV_START_LEVEL: 1 | 2 | 3 = 1  // ← mude para 2 ou 3 para testar; volte para 1 antes de publicar
-const DEV_NO_TIMER    = true      // ← true = pula tela inicial e não inicia timer (ajuste visual)
+const DEV_NO_TIMER = true      // ← true = pula tela inicial e não inicia timer (ajuste visual)
 
 
 export class GameScene extends Phaser.Scene {
@@ -89,6 +89,7 @@ export class GameScene extends Phaser.Scene {
 
     if (DEV_NO_TIMER) {
       this.revealItems()
+      if (this.levelConfig.timeLimit) this.startTimer()
     } else {
       this.showStartScreen()
     }
@@ -180,8 +181,8 @@ export class GameScene extends Phaser.Scene {
 
     const timerText = this.levelConfig.timeLimit
       ? this.add.text(0, 64, `⏱  ${this.levelConfig.timeLimit} segundos`, {
-          fontFamily: 'Arial', fontSize: '13px', color: '#8D6E63',
-        }).setOrigin(0.5)
+        fontFamily: 'Arial', fontSize: '13px', color: '#8D6E63',
+      }).setOrigin(0.5)
       : null
 
     const btnCont = this.add.container(0, 120)
@@ -476,7 +477,7 @@ export class GameScene extends Phaser.Scene {
     const retryHit = this.add.zone(W / 2 - 90, H / 2 + 60, 200, 44)
     retryHit.setDepth(62).setInteractive({ useHandCursor: true })
     retryHit.on('pointerover', () => this.tweens.add({ targets: retryBtn, scale: 1.05, duration: 80 }))
-    retryHit.on('pointerout',  () => this.tweens.add({ targets: retryBtn, scale: 1, duration: 80 }))
+    retryHit.on('pointerout', () => this.tweens.add({ targets: retryBtn, scale: 1, duration: 80 }))
     retryHit.on('pointerdown', () => {
       this.scene.restart({ level: this.levelConfig.level, points: this.currentPoints, lives: this.currentLives })
     })
@@ -484,7 +485,7 @@ export class GameScene extends Phaser.Scene {
     const exitHit = this.add.zone(W / 2 + 110, H / 2 + 60, 160, 44)
     exitHit.setDepth(62).setInteractive({ useHandCursor: true })
     exitHit.on('pointerover', () => this.tweens.add({ targets: exitBtn, scale: 1.05, duration: 80 }))
-    exitHit.on('pointerout',  () => this.tweens.add({ targets: exitBtn, scale: 1, duration: 80 }))
+    exitHit.on('pointerout', () => this.tweens.add({ targets: exitBtn, scale: 1, duration: 80 }))
     exitHit.on('pointerdown', () => EventBus.emit('exit-game'))
   }
 
@@ -573,8 +574,8 @@ export class GameScene extends Phaser.Scene {
     const rows = n > 9 ? [ITEM_Y_ROW1, ITEM_Y_ROW2] : [ITEM_Y]
     const useImage = this.textures.exists('shelf-wood')
 
-    const SHELF_W    = 1500
-    const SHELF_H    = 380
+    const SHELF_W = 1500
+    const SHELF_H = 380
     const PLANK_FRAC = 0.35
     const plankOffset = Math.round(SHELF_H * PLANK_FRAC)
 
@@ -641,15 +642,15 @@ export class GameScene extends Phaser.Scene {
     } else {
       // Fallback programático (sem imagem disponível)
       const bColor = this.getBaseColor(baseData)
-      const bDark  = this.darkenColor(bColor, 0.58)
+      const bDark = this.darkenColor(bColor, 0.58)
       const bLight = this.lightenColor(bColor, 0.32)
-      const rimH   = 16
-      const soilH  = 22
+      const rimH = 16
+      const soilH = 22
       const innerW = w - 22
       const panelW = w - 14
       const panelH = 58
       const panelY = 27
-      const gfx    = this.add.graphics()
+      const gfx = this.add.graphics()
 
       gfx.fillStyle(0x000000, 0.30)
       gfx.fillRoundedRect(-w / 2 + 7, -h / 2 + 9, w, h - 6, 12)
@@ -679,9 +680,9 @@ export class GameScene extends Phaser.Scene {
       gfx.lineStyle(2, bDark, 0.45)
       gfx.strokeRoundedRect(-panelW / 2, panelY - panelH / 2, panelW, panelH, 9)
 
-      const flX     = -panelW / 2 + 30
-      const flY     = panelY - 1
-      const swatch  = this.add.graphics()
+      const flX = -panelW / 2 + 30
+      const flY = panelY - 1
+      const swatch = this.add.graphics()
       swatch.fillStyle(0x000000, 0.22)
       swatch.fillRoundedRect(flX - 14 + 2, flY - 10 + 2, 28, 20, 5)
       swatch.fillStyle(bColor, 1)
@@ -1334,17 +1335,17 @@ export class GameScene extends Phaser.Scene {
     if (attribute === 'cor') {
       const map: Record<string, string> = {
         vermelho: 'planter-box-red',
-        azul:     'planter-box-blue',
-        verde:    'planter-box-green',
-        amarelo:  'planter-box-yellow',
+        azul: 'planter-box-blue',
+        verde: 'planter-box-green',
+        amarelo: 'planter-box-yellow',
       }
       const key = map[value]
       return key && this.textures.exists(key) ? key : null
     }
     if (attribute === 'forma') {
       const map: Record<string, string> = {
-        circulo:   'planter-box-purple-circle',
-        quadrado:  'planter-box-red-square',
+        circulo: 'planter-box-purple-circle',
+        quadrado: 'planter-box-red-square',
         triangulo: 'planter-box-blue-triangle',
         retangulo: 'planter-box-green-rectangle',
       }
@@ -1360,18 +1361,18 @@ export class GameScene extends Phaser.Scene {
     if (attribute === 'cor') {
       const map: Record<string, number> = {
         vermelho: 0xe53935,
-        azul:     0x1e88e5,
-        verde:    0x43a047,
-        amarelo:  0xfdd835,
-        roxo:     0x8e24aa,
+        azul: 0x1e88e5,
+        verde: 0x43a047,
+        amarelo: 0xfdd835,
+        roxo: 0x8e24aa,
       }
       return map[value] ?? 0x9e9e9e
     }
 
     if (attribute === 'forma') {
       const map: Record<string, number> = {
-        circulo:   0xab47bc,
-        quadrado:  0xff7043,
+        circulo: 0xab47bc,
+        quadrado: 0xff7043,
         triangulo: 0x26c6da,
         retangulo: 0x8bc34a,
       }
