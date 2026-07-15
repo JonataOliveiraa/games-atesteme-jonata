@@ -842,8 +842,7 @@ export class GameScene extends Phaser.Scene {
       }).setOrigin(0.5).setResolution(2),
     )
 
-    // Botão sincronizar (amplo, toque fácil)
-    const btnY = arrowY + 52
+    const btnY = arrowY + 45
     let synced = false
     const syncBtn = this.createButton(CX, btnY, 260, 56, '⏰  Sincronizar', 0x1A3A6B, () => {
       if (synced || this.gameEnded) return

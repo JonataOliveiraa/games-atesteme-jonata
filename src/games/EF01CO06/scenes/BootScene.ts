@@ -1,20 +1,21 @@
 import Phaser from 'phaser'
 import { APP_DEFS } from '../types'
-import desktopBgUrl       from '../../../assets/games/EF01CO06/desktop-bg.png'
-import loadingBgUrl       from '../../../assets/games/EF01CO06/loading-bg.png'
-import iconGravadorUrl    from '../../../assets/games/EF01CO06/icon-gravador.png'
-import iconDesenhoUrl     from '../../../assets/games/EF01CO06/icon-desenho.png'
+import desktopBgUrl from '../../../assets/games/EF01CO06/desktop-bg.png'
+import loadingBgUrl from '../../../assets/games/EF01CO06/loading-bg.png'
+import iconGravadorUrl from '../../../assets/games/EF01CO06/icon-gravador.png'
+import iconPastaUrl from '../../../assets/games/EF01CO06/icon-pasta.png'
+import iconDesenhoUrl from '../../../assets/games/EF01CO06/icon-desenho.png'
 import iconCalculadoraUrl from '../../../assets/games/EF01CO06/icon-calculadora.png'
-import iconPlayerUrl      from '../../../assets/games/EF01CO06/icon-player.png'
-import iconRelogioUrl     from '../../../assets/games/EF01CO06/icon-relogio.png'
-import albumArtUrl        from '../../../assets/games/EF01CO06/album-art.png'
-import gravadorBgUrl      from '../../../assets/games/EF01CO06/gravador-bg.png'
-import desenhoCanvasUrl   from '../../../assets/games/EF01CO06/desenho-canvas.png'
-import calcBgUrl          from '../../../assets/games/EF01CO06/calculadora-bg.png'
-import pastaDocMatUrl     from '../../../assets/games/EF01CO06/pasta-doc-matematica.png'
-import pastaDocLeitUrl    from '../../../assets/games/EF01CO06/pasta-doc-leitura.png'
-import pastaDocArteUrl    from '../../../assets/games/EF01CO06/pasta-doc-arte.png'
-import iconPowerUrl       from '../../../assets/games/EF01CO06/icon-power.png'
+import iconPlayerUrl from '../../../assets/games/EF01CO06/icon-player.png'
+import iconRelogioUrl from '../../../assets/games/EF01CO06/icon-relogio.png'
+import albumArtUrl from '../../../assets/games/EF01CO06/album-art.png'
+import gravadorBgUrl from '../../../assets/games/EF01CO06/gravador-bg.png'
+import desenhoCanvasUrl from '../../../assets/games/EF01CO06/desenho-canvas.png'
+import calcBgUrl from '../../../assets/games/EF01CO06/calculadora-bg.png'
+import pastaDocMatUrl from '../../../assets/games/EF01CO06/pasta-doc-matematica.png'
+import pastaDocLeitUrl from '../../../assets/games/EF01CO06/pasta-doc-leitura.png'
+import pastaDocArteUrl from '../../../assets/games/EF01CO06/pasta-doc-arte.png'
+import iconPowerUrl from '../../../assets/games/EF01CO06/icon-power.png'
 
 export class BootScene extends Phaser.Scene {
   constructor() {
@@ -29,21 +30,25 @@ export class BootScene extends Phaser.Scene {
       const img = this.add.image(640, 360, 'loading-bg').setDisplaySize(1280, 720)
       this.children.sendToBack(img)
     })
+    this.load.on('loaderror', (file: Phaser.Loader.File) => {
+      console.error('❌ Falha ao carregar asset:', file.key, '->', file.url);
+    });
 
-    this.load.image('desktop-bg',     desktopBgUrl)
-    this.load.image('icon-gravador',  iconGravadorUrl)
-    this.load.image('icon-desenho',   iconDesenhoUrl)
+    this.load.image('desktop-bg', desktopBgUrl)
+    this.load.image('icon-pasta', iconPastaUrl)
+    this.load.image('icon-gravador', iconGravadorUrl)
+    this.load.image('icon-desenho', iconDesenhoUrl)
     this.load.image('icon-calculadora', iconCalculadoraUrl)
-    this.load.image('icon-player',    iconPlayerUrl)
-    this.load.image('icon-relogio',   iconRelogioUrl)
-    this.load.image('album-art',      albumArtUrl)
-    this.load.image('gravador-bg',    gravadorBgUrl)
+    this.load.image('icon-player', iconPlayerUrl)
+    this.load.image('icon-relogio', iconRelogioUrl)
+    this.load.image('album-art', albumArtUrl)
+    this.load.image('gravador-bg', gravadorBgUrl)
     this.load.image('desenho-canvas', desenhoCanvasUrl)
-    this.load.image('calc-bg',        calcBgUrl)
+    this.load.image('calc-bg', calcBgUrl)
     this.load.image('pasta-doc-matematica', pastaDocMatUrl)
-    this.load.image('pasta-doc-leitura',    pastaDocLeitUrl)
-    this.load.image('pasta-doc-arte',       pastaDocArteUrl)
-    this.load.image('icon-power',           iconPowerUrl)
+    this.load.image('pasta-doc-leitura', pastaDocLeitUrl)
+    this.load.image('pasta-doc-arte', pastaDocArteUrl)
+    this.load.image('icon-power', iconPowerUrl)
 
     // TODO: this.load.audio('sfx-open',    ['assets/audio/window-open.ogg', 'assets/audio/window-open.mp3'])
     // TODO: this.load.audio('sfx-success', ['assets/audio/success.ogg',     'assets/audio/success.mp3'])
@@ -158,7 +163,7 @@ export class BootScene extends Phaser.Scene {
     const miniIcons = [
       { x: cx - 72, y: cy - 44, c: 0x1A3A6B },
       { x: cx - 40, y: cy - 44, c: 0x1E8449 },
-      { x: cx - 8,  y: cy - 44, c: 0xB7770D },
+      { x: cx - 8, y: cy - 44, c: 0xB7770D },
     ]
     miniIcons.forEach(({ x, y, c }) => {
       g.fillStyle(c, 0.9)
@@ -207,13 +212,13 @@ export class BootScene extends Phaser.Scene {
       gfx.strokeRoundedRect(1, 1, SIZE - 2, SIZE - 2, 19)
 
       switch (app.id) {
-        case 'relogio':     this.drawRelogioIcon(gfx);     break
-        case 'gravador':    this.drawGravadorIcon(gfx);    break
-        case 'desenho':     this.drawDesenhoIcon(gfx);     break
+        case 'relogio': this.drawRelogioIcon(gfx); break
+        case 'gravador': this.drawGravadorIcon(gfx); break
+        case 'desenho': this.drawDesenhoIcon(gfx); break
         case 'calculadora': this.drawCalculadoraIcon(gfx); break
-        case 'pasta':       this.drawPastaIcon(gfx);       break
-        case 'player':      this.drawPlayerIcon(gfx);      break
-        case 'power':       this.drawPowerIcon(gfx);       break
+        case 'pasta': this.drawPastaIcon(gfx); break
+        case 'player': this.drawPlayerIcon(gfx); break
+        case 'power': this.drawPowerIcon(gfx); break
       }
 
       gfx.generateTexture(key, SIZE + 8, SIZE + 8)
@@ -232,10 +237,10 @@ export class BootScene extends Phaser.Scene {
     g.strokeCircle(cx, cy, r)
     // Marcas das horas (4 principais)
     g.lineStyle(2.5, 0xFFFFFF, 0.8)
-    g.lineBetween(cx,      cy - r + 5, cx,      cy - r + 12)  // 12h
-    g.lineBetween(cx + r - 5, cy,      cx + r - 12, cy)        // 3h
-    g.lineBetween(cx,      cy + r - 5, cx,      cy + r - 12)  // 6h
-    g.lineBetween(cx - r + 5, cy,      cx - r + 12, cy)        // 9h
+    g.lineBetween(cx, cy - r + 5, cx, cy - r + 12)  // 12h
+    g.lineBetween(cx + r - 5, cy, cx + r - 12, cy)        // 3h
+    g.lineBetween(cx, cy + r - 5, cx, cy + r - 12)  // 6h
+    g.lineBetween(cx - r + 5, cy, cx - r + 12, cy)        // 9h
     // Ponteiros: 9:00
     const hAngle = (9 / 12 * 360 - 90) * Math.PI / 180
     const mAngle = -90 * Math.PI / 180  // minutos em 12 (0 min)
@@ -352,8 +357,8 @@ export class BootScene extends Phaser.Scene {
     const bw = 10, bh = 8, gap = 3
     const gLeft = left + 5, gTop = top + 28
     const colors = [0xFFFFFF, 0xFFFFFF, 0xFFFFFF, 0xE74C3C,
-                    0xFFFFFF, 0xFFFFFF, 0xFFFFFF, 0xFFFFFF,
-                    0xFFFFFF, 0xFFFFFF, 0xFFFFFF, 0x2ECC71]
+      0xFFFFFF, 0xFFFFFF, 0xFFFFFF, 0xFFFFFF,
+      0xFFFFFF, 0xFFFFFF, 0xFFFFFF, 0x2ECC71]
     for (let r = 0; r < 3; r++) {
       for (let c = 0; c < 4; c++) {
         const idx = r * 4 + c
