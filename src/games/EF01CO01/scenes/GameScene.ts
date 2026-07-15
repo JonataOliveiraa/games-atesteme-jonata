@@ -15,7 +15,7 @@ interface DraggableItem extends Phaser.GameObjects.Image {
 const ITEM_Y = 295          // linha única (n ≤ 9)
 const ITEM_Y_ROW1 = 205     // primeira linha (n > 9)
 const ITEM_Y_ROW2 = 345     // segunda linha  (n > 9)
-const ITEM_SCALE_MAX = 0.70 // escala máxima dos itens — diminua para figuras menores
+const ITEM_SCALE_MAX = 0.66 // escala máxima dos itens — diminua para figuras menores
 const GAME_ID = 'base-dos-classificadores'
 
 const COLORS = {
@@ -902,7 +902,7 @@ export class GameScene extends Phaser.Scene {
     )
 
     this.input.on('dragend', (_: Phaser.Input.Pointer, obj: DraggableItem, dropped: boolean) => {
-      obj.setDepth(0).setAngle(0)
+      obj.setDepth(4).setAngle(0)
       this.tweens.add({ targets: obj, scaleX: 1, scaleY: 1, duration: 120 })
 
       if (!dropped) {
