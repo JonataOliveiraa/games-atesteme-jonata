@@ -9,17 +9,6 @@ interface MissionUpdatePayload {
   level: number
 }
 
-/**
- * UIScene — HUD paralelo do Desktop Digital Infantil.
- *
- * Layout (canvas 1280×720, y=0–112):
- *   ┌──────────────────────────────────────────────────────────────────────┐
- *   │              🎯 Texto da missão — centralizado, grande              │  ← y=34
- *   │                👉 Dica do passo atual — centralizada               │  ← y=80
- *   │                                              ●●○  ★★☆   🔊       │
- *   └──────────────────────────────────────────────────────────────────────┘
- *   ━━━━ timer bar (GameScene, y=118) ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
- */
 export class UIScene extends Phaser.Scene {
   private missionText!: Phaser.GameObjects.Text
   private stepHint!: Phaser.GameObjects.Text
