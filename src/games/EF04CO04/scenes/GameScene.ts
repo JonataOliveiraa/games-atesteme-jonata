@@ -16,10 +16,8 @@ const PANEL_H = 486;
 const MODAL_SCALE = 1.12;
 
 // Zone x-boundaries within the panel
-const ZONE_KB_X1   = PANEL_X + 16;          // Keyboard zone left edge
-const ZONE_KB_X2   = PANEL_X + 308;         // Keyboard zone right edge  (~292px wide)
-const ZONE_REF_X1  = PANEL_X + 328;         // Reference table left edge
-const ZONE_REF_X2  = PANEL_X + 620;         // Reference table right edge (~292px wide)
+const ZONE_DICT_X1 = PANEL_X + 16;          // Dictionary zone left edge
+const ZONE_DICT_X2 = PANEL_X + 620;         // Dictionary zone right edge (~604px wide)
 const ZONE_VIS_X1  = PANEL_X + 640;         // Visor/MCQ zone left edge
 const ZONE_VIS_X2  = PANEL_X + PANEL_W - 16; // Visor/MCQ zone right edge
 
@@ -262,8 +260,7 @@ export class GameScene extends Phaser.Scene {
   private buildLevelUI() {
     this.createHeader();
     this.drawPanelBg();
-    this.createKeyboard();
-    this.createReferenceTable();
+    this.createDictionary();
     if (this.levelConfig.level === 1) {
       this.showN1Round();
     } else if (this.levelConfig.level === 2) {
@@ -315,160 +312,100 @@ export class GameScene extends Phaser.Scene {
     panel.lineStyle(4, COLORS.cyan, 0.5);
     panel.strokeRoundedRect(PANEL_X, PANEL_Y, PANEL_W, PANEL_H, 30);
 
-    // Zone dividers
+    // Zone divider
     panel.lineStyle(2, COLORS.cyan, 0.2);
-    panel.lineBetween(ZONE_KB_X2 + 16, PANEL_Y + 20, ZONE_KB_X2 + 16, PANEL_Y + PANEL_H - 20);
-    panel.lineBetween(ZONE_REF_X2 + 10, PANEL_Y + 20, ZONE_REF_X2 + 10, PANEL_Y + PANEL_H - 20);
+    panel.lineBetween(ZONE_DICT_X2 + 10, PANEL_Y + 20, ZONE_DICT_X2 + 10, PANEL_Y + PANEL_H - 20);
 
     // Zone labels
-    this.addSharpText((ZONE_KB_X1 + ZONE_KB_X2) / 2, PANEL_Y + 22, "TECLADO", {
+    this.addSharpText((ZONE_DICT_X1 + ZONE_DICT_X2) / 2, PANEL_Y + 22, "DICIONÁRIO", {
       fontSize: "13px", fontFamily: "Arial Black, Arial", color: "#06b6d4",
     }).setOrigin(0.5).setDepth(4);
-    this.addSharpText((ZONE_REF_X1 + ZONE_REF_X2) / 2, PANEL_Y + 22, "TABELA", {
-      fontSize: "13px", fontFamily: "Arial Black, Arial", color: "#06b6d4",
-    }).setOrigin(0.5).setDepth(4);
-    this.addSharpText((ZONE_VIS_X1 + ZONE_VIS_X2) / 2, PANEL_Y + 22, "VISOR / PERGUNTA", {
+    this.addSharpText((ZONE_VIS_X1 + ZONE_VIS_X2) / 2, PANEL_Y + 22, "TRADUÇÃO", {
       fontSize: "13px", fontFamily: "Arial Black, Arial", color: "#06b6d4",
     }).setOrigin(0.5).setDepth(4);
   }
 
-  // ─── Keyboard Zone ───────────────────────────────────────────────────────────
+  // ─── Dictionary Zone (merged keyboard + reference table) ────────────────────
 
-  private createKeyboard() {
+  private createDictionary() {
     const letters: TranslatorLetter[] = ["A", "B", "C", "D", "E", "F", "G", "H"];
-    const cols = 2;
-    const keyW = 110;
-    const keyH = 80;
-    const gapX = 14;
-    const gapY = 12;
-    const kbW = cols * keyW + (cols - 1) * gapX;
-    const kbStartX = (ZONE_KB_X1 + ZONE_KB_X2) / 2 - kbW / 2;
-    const kbStartY = PANEL_Y + 46;
+    const dictX = ZONE_DICT_X1;
+    const dictW = ZONE_DICT_X2 - ZONE_DICT_X1;
+    const rowH = 48;
+    const startY = PANEL_Y + 46;
+
+    const hdrBg = this.add.graphics().setDepth(10);
+    hdrBg.fillStyle(COLORS.cyan, 0.18);
+    hdrBg.fillRoundedRect(dictX, startY - 4, dictW, 34, 10);
+    this.addSharpText(dictX + dictW / 2, startY + 13, "LETRA  =  CÓDIGO BINÁRIO", {
+      fontSize: "14px", fontFamily: "Arial Black, Arial", color: "#06b6d4",
+    }).setOrigin(0.5).setDepth(12);
 
     letters.forEach((letter, idx) => {
-      const col = idx % cols;
-      const row = Math.floor(idx / cols);
-      const kx = kbStartX + col * (keyW + gapX);
-      const ky = kbStartY + row * (keyH + gapY);
+      const ry = startY + 38 + idx * rowH;
 
-      const keyBg = this.add.graphics().setDepth(10);
-      keyBg.fillStyle(COLORS.purple, 0.8);
-      keyBg.fillRoundedRect(kx, ky, keyW, keyH, 14);
-      keyBg.lineStyle(3, COLORS.violet, 0.8);
-      keyBg.strokeRoundedRect(kx, ky, keyW, keyH, 14);
-      this.keyGraphics.set(letter, keyBg);
+      const rowBg = this.add.graphics().setDepth(10);
+      rowBg.fillStyle(COLORS.dark, 0.5);
+      rowBg.fillRoundedRect(dictX, ry, dictW, rowH - 4, 8);
+      rowBg.lineStyle(1, COLORS.cyan, 0.18);
+      rowBg.strokeRoundedRect(dictX, ry, dictW, rowH - 4, 8);
+      this.keyGraphics.set(letter, rowBg);
+      this.refRowGraphics.set(letter, rowBg);
 
-      this.addSharpText(kx + keyW / 2, ky + keyH / 2, letter, {
-        fontSize: "38px", fontFamily: "Arial Black, Arial", color: "#e2e8f0",
-        stroke: "#4c1d95", strokeThickness: 5,
+      // Key chip (letter)
+      const chipBg = this.add.graphics().setDepth(11);
+      chipBg.fillStyle(COLORS.purple, 0.82);
+      chipBg.fillRoundedRect(dictX + 8, ry + 4, 52, rowH - 12, 8);
+      chipBg.lineStyle(2, COLORS.violet, 0.7);
+      chipBg.strokeRoundedRect(dictX + 8, ry + 4, 52, rowH - 12, 8);
+
+      this.addSharpText(dictX + 34, ry + (rowH - 4) / 2, letter, {
+        fontSize: "26px", fontFamily: "Arial Black, Arial", color: "#e2e8f0",
+        stroke: "#4c1d95", strokeThickness: 4,
+      }).setOrigin(0.5).setDepth(12);
+
+      this.addSharpText(dictX + 84, ry + (rowH - 4) / 2, "=", {
+        fontSize: "18px", fontFamily: "Arial Black, Arial", color: "#64748b",
+      }).setOrigin(0.5).setDepth(12);
+
+      this.addSharpText(dictX + 240, ry + (rowH - 4) / 2, LETTER_CODE[letter], {
+        fontSize: "26px", fontFamily: "Courier New, monospace", color: "#84cc16",
+        stroke: "#0d0528", strokeThickness: 3,
       }).setOrigin(0.5).setDepth(12);
     });
   }
 
   private highlightKey(letter: TranslatorLetter | null) {
     const letters: TranslatorLetter[] = ["A", "B", "C", "D", "E", "F", "G", "H"];
-    const cols = 2;
-    const keyW = 110;
-    const keyH = 80;
-    const gapX = 14;
-    const gapY = 12;
-    const kbW = cols * keyW + (cols - 1) * gapX;
-    const kbStartX = (ZONE_KB_X1 + ZONE_KB_X2) / 2 - kbW / 2;
-    const kbStartY = PANEL_Y + 46;
+    const dictX = ZONE_DICT_X1;
+    const dictW = ZONE_DICT_X2 - ZONE_DICT_X1;
+    const rowH = 48;
+    const startY = PANEL_Y + 46;
 
     letters.forEach((l, idx) => {
-      const col = idx % cols;
-      const row = Math.floor(idx / cols);
-      const kx = kbStartX + col * (keyW + gapX);
-      const ky = kbStartY + row * (keyH + gapY);
+      const ry = startY + 38 + idx * rowH;
       const g = this.keyGraphics.get(l);
       if (!g) return;
       g.clear();
       const isActive = l === letter;
       if (isActive) {
-        g.fillStyle(COLORS.cyan, 1);
-        g.fillRoundedRect(kx, ky, keyW, keyH, 14);
-        g.lineStyle(4, COLORS.white, 1);
-        g.strokeRoundedRect(kx, ky, keyW, keyH, 14);
-        // Glow rings
-        g.lineStyle(2, COLORS.cyan, 0.4);
-        g.strokeRoundedRect(kx - 4, ky - 4, keyW + 8, keyH + 8, 18);
+        g.fillStyle(COLORS.cyan, 0.22);
+        g.fillRoundedRect(dictX, ry, dictW, rowH - 4, 8);
+        g.lineStyle(2, COLORS.cyan, 0.9);
+        g.strokeRoundedRect(dictX, ry, dictW, rowH - 4, 8);
+        g.lineStyle(1, COLORS.cyan, 0.35);
+        g.strokeRoundedRect(dictX - 3, ry - 3, dictW + 6, rowH + 2, 11);
       } else {
-        g.fillStyle(COLORS.purple, 0.8);
-        g.fillRoundedRect(kx, ky, keyW, keyH, 14);
-        g.lineStyle(3, COLORS.violet, 0.8);
-        g.strokeRoundedRect(kx, ky, keyW, keyH, 14);
+        g.fillStyle(COLORS.dark, 0.5);
+        g.fillRoundedRect(dictX, ry, dictW, rowH - 4, 8);
+        g.lineStyle(1, COLORS.cyan, 0.18);
+        g.strokeRoundedRect(dictX, ry, dictW, rowH - 4, 8);
       }
-    });
-  }
-
-  // ─── Reference Table Zone ─────────────────────────────────────────────────────
-
-  private createReferenceTable() {
-    const letters: TranslatorLetter[] = ["A", "B", "C", "D", "E", "F", "G", "H"];
-    const refX = ZONE_REF_X1;
-    const refW = ZONE_REF_X2 - ZONE_REF_X1;
-    const rowH = 48;
-    const startY = PANEL_Y + 46;
-
-    // Table header
-    const hdrBg = this.add.graphics().setDepth(10);
-    hdrBg.fillStyle(COLORS.cyan, 0.18);
-    hdrBg.fillRoundedRect(refX, startY - 4, refW, 34, 10);
-    this.addSharpText(refX + refW / 2, startY + 13, "LETRA  =  CÓDIGO", {
-      fontSize: "14px", fontFamily: "Arial Black, Arial", color: "#06b6d4",
-    }).setOrigin(0.5).setDepth(12);
-
-    letters.forEach((letter, idx) => {
-      const ry = startY + 38 + idx * rowH;
-      const rowBg = this.add.graphics().setDepth(10);
-      rowBg.fillStyle(COLORS.dark, 0.5);
-      rowBg.fillRoundedRect(refX, ry, refW, rowH - 4, 8);
-      rowBg.lineStyle(1, COLORS.cyan, 0.2);
-      rowBg.strokeRoundedRect(refX, ry, refW, rowH - 4, 8);
-      this.refRowGraphics.set(letter, rowBg);
-
-      this.addSharpText(refX + 32, ry + (rowH - 4) / 2, letter, {
-        fontSize: "22px", fontFamily: "Arial Black, Arial", color: "#e2e8f0",
-        stroke: "#0d0528", strokeThickness: 3,
-      }).setOrigin(0.5).setDepth(12);
-
-      this.addSharpText(refX + 70, ry + (rowH - 4) / 2, "=", {
-        fontSize: "18px", fontFamily: "Arial Black, Arial", color: "#94a3b8",
-      }).setOrigin(0.5).setDepth(12);
-
-      this.addSharpText(refX + 130, ry + (rowH - 4) / 2, LETTER_CODE[letter], {
-        fontSize: "22px", fontFamily: "Courier New, monospace", color: "#84cc16",
-        stroke: "#0d0528", strokeThickness: 3,
-      }).setOrigin(0.5).setDepth(12);
     });
   }
 
   private highlightRefRow(letter: TranslatorLetter | null) {
-    const letters: TranslatorLetter[] = ["A", "B", "C", "D", "E", "F", "G", "H"];
-    const refX = ZONE_REF_X1;
-    const refW = ZONE_REF_X2 - ZONE_REF_X1;
-    const rowH = 48;
-    const startY = PANEL_Y + 46;
-
-    letters.forEach((l, idx) => {
-      const ry = startY + 38 + idx * rowH;
-      const g = this.refRowGraphics.get(l);
-      if (!g) return;
-      g.clear();
-      const isActive = l === letter;
-      if (isActive) {
-        g.fillStyle(COLORS.cyan, 0.22);
-        g.fillRoundedRect(refX, ry, refW, rowH - 4, 8);
-        g.lineStyle(2, COLORS.cyan, 0.8);
-        g.strokeRoundedRect(refX, ry, refW, rowH - 4, 8);
-      } else {
-        g.fillStyle(COLORS.dark, 0.5);
-        g.fillRoundedRect(refX, ry, refW, rowH - 4, 8);
-        g.lineStyle(1, COLORS.cyan, 0.2);
-        g.strokeRoundedRect(refX, ry, refW, rowH - 4, 8);
-      }
-    });
+    this.highlightKey(letter);
   }
 
   // ─── Visor Zone ──────────────────────────────────────────────────────────────
@@ -573,20 +510,13 @@ export class GameScene extends Phaser.Scene {
 
   private showCircuitAnimation(letter: TranslatorLetter) {
     const letters: TranslatorLetter[] = ["A", "B", "C", "D", "E", "F", "G", "H"];
-    const cols = 2;
-    const keyW = 110;
-    const keyH = 80;
-    const gapX = 14;
-    const gapY = 12;
-    const kbW = cols * keyW + (cols - 1) * gapX;
-    const kbStartX = (ZONE_KB_X1 + ZONE_KB_X2) / 2 - kbW / 2;
-    const kbStartY = PANEL_Y + 46;
+    const rowH = 48;
+    const startY = PANEL_Y + 46;
 
     const idx = letters.indexOf(letter);
-    const col = idx % cols;
-    const row = Math.floor(idx / cols);
-    const fromX = kbStartX + col * (keyW + gapX) + keyW;
-    const fromY = kbStartY + row * (keyH + gapY) + keyH / 2;
+    const ry = startY + 38 + idx * rowH;
+    const fromX = ZONE_DICT_X2;
+    const fromY = ry + (rowH - 4) / 2;
 
     const toX = ZONE_VIS_X1 + 8;
     const toY = PANEL_Y + 46 + 50;

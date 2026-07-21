@@ -6,19 +6,29 @@ import type { FilterId, ResultId, SearchLevel, SearchLevelNumber } from "../type
 
 const GAME_ID = "detetives-da-busca";
 const TIMER_BAR_W = 980;
-const TIMER_BAR_Y = 30;
+const TIMER_BAR_Y = 22;   // bar from y=6 to y=38
 const MODAL_SCALE = 1.14;
 
+// Layout constants
+const CHIP_PANEL_Y   = 108; // chip panels top (inside browser panel)
+const CHIP_PANEL_H   = 116; // panel height (label 24px + chip 88px + padding)
+const CHIP_H         = 88;  // chip height — mobile-first minimum
+const CHIP_Y         = 174; // chip center y (128 to 218 = 90px ≈ 88)
+const RESULT_Y_START = 238; // top of first result card
+const RESULT_H       = 112; // result card height (mobile-first minimum)
+const RESULT_STEP    = 122; // height + gap
+const VALIDATE_Y     = 662; // validate button center
+
 const COLORS = {
-  blue: 0x2563eb,
-  cyan: 0x38bdf8,
-  green: 0x22c55e,
+  blue:   0x2563eb,
+  cyan:   0x38bdf8,
+  green:  0x22c55e,
   orange: 0xf59e0b,
   purple: 0x8b5cf6,
-  red: 0xef4444,
+  red:    0xef4444,
   yellow: 0xfacc15,
-  cream: 0xfff6e8,
-  ink: 0x102a43,
+  cream:  0xfff6e8,
+  ink:    0x102a43,
 };
 
 type Selectable = {
@@ -89,6 +99,10 @@ export class GameScene extends Phaser.Scene {
     this.input.setDefaultCursor("default");
   }
 
+  // ══════════════════════════════════════════════════════════════════════════
+  //  BACKGROUND + CHROME
+  // ══════════════════════════════════════════════════════════════════════════
+
   private createBackground() {
     const bgKey =
       this.levelConfig.level === 1
@@ -99,13 +113,12 @@ export class GameScene extends Phaser.Scene {
     const bg = this.add.image(640, 360, bgKey).setDepth(-100);
     bg.texture.setFilter(Phaser.Textures.FilterMode.LINEAR);
     bg.setDisplaySize(1280, 720);
-    this.add.rectangle(640, 360, 1280, 720, 0xffffff, 0.08).setDepth(-90);
-    this.add.rectangle(640, 360, 1280, 720, 0x0f172a, 0.12).setDepth(-89);
+    this.add.rectangle(640, 360, 1280, 720, 0x0f172a, 0.15).setDepth(-89);
   }
 
   private createTimerBar() {
     const track = this.add.graphics().setDepth(45);
-    track.fillStyle(0x334155, 0.16);
+    track.fillStyle(0x334155, 0.20);
     track.fillRoundedRect(640 - TIMER_BAR_W / 2, TIMER_BAR_Y - 16, TIMER_BAR_W, 32, 16);
     this.timerBar = this.add.graphics().setDepth(46);
     this.drawTimerFill(TIMER_BAR_W, COLORS.green);
@@ -119,67 +132,58 @@ export class GameScene extends Phaser.Scene {
     this.timerBar.fillRoundedRect(640 - TIMER_BAR_W / 2, TIMER_BAR_Y - 16, Math.max(0, width), 32, 16);
   }
 
+  // Header: compact single-line mission card (no big title)
   private createHeader() {
-    this.addSharpText(640, 68, this.levelConfig.title, {
-      fontSize: "40px",
-      fontFamily: "Arial Black, Arial",
-      color: "#ffffff",
-      stroke: "#1e3a8a",
-      strokeThickness: 6,
-    }).setOrigin(0.5);
-
     const missionCard = this.add.graphics().setDepth(5);
-    missionCard.fillStyle(0xffffff, 0.82);
-    missionCard.fillRoundedRect(230, 96, 820, 44, 22);
-    missionCard.fillStyle(COLORS.yellow, 0.18);
-    missionCard.fillRoundedRect(242, 104, 796, 20, 10);
-    missionCard.lineStyle(4, COLORS.orange, 0.9);
-    missionCard.strokeRoundedRect(230, 96, 820, 44, 22);
-    missionCard.lineStyle(3, 0xffffff, 0.95);
-    missionCard.strokeRoundedRect(234, 100, 812, 36, 18);
+    missionCard.fillStyle(0xffffff, 0.88);
+    missionCard.fillRoundedRect(76, 46, 1130, 46, 23);
+    missionCard.lineStyle(3, COLORS.orange, 0.85);
+    missionCard.strokeRoundedRect(76, 46, 1130, 46, 23);
 
-    this.addSharpText(640, 119, this.levelConfig.objective, {
+    this.addSharpText(640, 69, this.levelConfig.objective, {
       fontSize: "21px",
       fontFamily: "Arial Black, Arial",
       color: "#1e3a8a",
       stroke: "#ffffff",
       strokeThickness: 3,
       align: "center",
-      wordWrap: { width: 760 },
+      wordWrap: { width: 940 },
     }).setOrigin(0.5).setDepth(6);
 
-    this.addSharpText(1146, 100, `Nível ${this.levelConfig.level}/3`, {
-      fontSize: "18px",
+    // Level badge — compact, top-right
+    this.addSharpText(1230, 69, `N ${this.levelConfig.level}/3`, {
+      fontSize: "17px",
       fontFamily: "Arial Black, Arial",
       color: "#1e3a8a",
-      backgroundColor: "rgba(255,255,255,0.78)",
-      padding: { x: 14, y: 8 },
-    }).setOrigin(0.5);
+      stroke: "#ffffff",
+      strokeThickness: 3,
+    }).setOrigin(0.5).setDepth(6);
   }
 
   private createInfoButton() {
-    const x = 202;
-    const y = 96;
+    const x = 40;
+    const y = 69;
     const button = this.add.container(x, y).setDepth(120);
     const bg = this.add.graphics();
-    bg.fillStyle(COLORS.blue, 0.96);
-    bg.fillCircle(0, 0, 24);
-    bg.lineStyle(4, 0xffffff, 0.96);
-    bg.strokeCircle(0, 0, 24);
+    bg.fillStyle(COLORS.blue, 0.92);
+    bg.fillCircle(0, 0, 20);
+    bg.lineStyle(3, 0xffffff, 0.94);
+    bg.strokeCircle(0, 0, 20);
     const label = this.addSharpText(0, -1, "i", {
-      fontSize: "28px",
+      fontSize: "24px",
       fontFamily: "Arial Black, Arial",
       color: "#ffffff",
       stroke: "#1e3a8a",
-      strokeThickness: 3,
+      strokeThickness: 2,
     }).setOrigin(0.5);
     button.add([bg, label]);
 
-    const hitbox = this.add.zone(x, y, 64, 64).setDepth(121);
+    // 88×88 hitbox for touch
+    const hitbox = this.add.zone(x, y, 88, 88).setDepth(121);
     hitbox.setInteractive({ useHandCursor: true });
     hitbox.on("pointerover", () => {
       this.input.setDefaultCursor("pointer");
-      this.tweens.add({ targets: button, scale: 1.08, duration: 90, ease: "Sine.easeOut" });
+      this.tweens.add({ targets: button, scale: 1.10, duration: 90, ease: "Sine.easeOut" });
     });
     hitbox.on("pointerout", () => {
       this.input.setDefaultCursor("default");
@@ -191,58 +195,51 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
+  // Browser panel — no fake URL bar, just the panel chrome
   private createBrowserPanel() {
-    this.drawPanel(72, 142, 1136, 486, COLORS.blue, 1);
-    this.createBrowserTopBar();
+    this.drawPanel(72, 96, 1136, 552, COLORS.blue, 1);
     this.createSearchControls();
   }
 
-  private createBrowserTopBar() {
-    const browser = this.add.graphics().setDepth(5);
-    browser.fillStyle(0xffffff, 0.64);
-    browser.fillRoundedRect(112, 168, 1056, 76, 28);
-    browser.fillStyle(0xffffff, 0.9);
-    browser.fillRoundedRect(220, 188, 650, 38, 19);
-    browser.lineStyle(4, 0x38bdf8, 0.85);
-    browser.strokeRoundedRect(220, 188, 650, 38, 19);
-    browser.fillStyle(COLORS.red, 0.95);
-    browser.fillCircle(146, 206, 10);
-    browser.fillStyle(COLORS.orange, 0.95);
-    browser.fillCircle(176, 206, 10);
-    browser.fillStyle(COLORS.green, 0.95);
-    browser.fillCircle(206, 206, 10);
-
-    this.addSharpText(244, 207, this.getSelectedKeywordLabel() || "Escolha uma palavra-chave", {
-      fontSize: "19px",
-      fontFamily: "Arial Black, Arial",
-      color: "#1e3a8a",
-    }).setOrigin(0, 0.5).setDepth(6).setName("queryText");
-
-    this.addSharpText(978, 207, "Busca segura", {
-      fontSize: "20px",
-      fontFamily: "Arial Black, Arial",
-      color: "#ffffff",
-      stroke: "#1e3a8a",
-      strokeThickness: 4,
-    }).setOrigin(0.5).setDepth(6);
-
-  }
+  // ══════════════════════════════════════════════════════════════════════════
+  //  SEARCH CONTROLS
+  // ══════════════════════════════════════════════════════════════════════════
 
   private createSearchControls() {
-    this.drawChoicePanel(120, 256, 600, 100, COLORS.blue);
-    this.drawChoicePanel(760, 256, 400, 100, COLORS.purple);
+    // ── Keyword panel ────────────────────────────────────────────────────────
+    this.drawChoicePanel(120, CHIP_PANEL_Y, 600, CHIP_PANEL_H, COLORS.blue);
+    this.addSharpText(420, CHIP_PANEL_Y + 18, "Palavra-chave", {
+      fontSize: "17px",
+      fontFamily: "Arial Black, Arial",
+      color: "#1e3a8a",
+      stroke: "#ffffff",
+      strokeThickness: 3,
+    }).setOrigin(0.5).setDepth(11);
 
-    this.drawSectionHeader(420, 276, "1. Palavra-chave");
     this.levelConfig.keywords.forEach((keyword, index) => {
       const x = 218 + index * 202;
-      const item = this.createChip(x, 324, 176, 62, keyword.label, keyword.id, "keyword", COLORS.blue);
+      const item = this.createChip(x, CHIP_Y, 176, CHIP_H, keyword.label, keyword.id, "keyword", COLORS.blue);
       this.selectables.push(item);
     });
 
-    this.drawSectionHeader(960, 276, "2. Filtro");
+    // ── Filter panel ─────────────────────────────────────────────────────────
+    this.drawChoicePanel(760, CHIP_PANEL_Y, 400, CHIP_PANEL_H, COLORS.purple);
+    this.addSharpText(960, CHIP_PANEL_Y + 18, "Filtro", {
+      fontSize: "17px",
+      fontFamily: "Arial Black, Arial",
+      color: "#6d28d9",
+      stroke: "#ffffff",
+      strokeThickness: 3,
+    }).setOrigin(0.5).setDepth(11);
+
+    const n = this.levelConfig.filters.length;
+    const chipW    = n >= 3 ? 112 : 126;
+    const chipStep = n >= 3 ? 134 : 148;
+    const chipStart = 960 - ((n - 1) * chipStep) / 2;
+
     this.levelConfig.filters.forEach((filter, index) => {
-      const x = this.levelConfig.filters.length === 1 ? 960 : 812 + index * 148;
-      const item = this.createChip(x, 324, 126, 62, filter.label, filter.id, "filter", COLORS.purple);
+      const x = chipStart + index * chipStep;
+      const item = this.createChip(x, CHIP_Y, chipW, CHIP_H, filter.label, filter.id, "filter", COLORS.purple);
       this.selectables.push(item);
     });
 
@@ -251,122 +248,95 @@ export class GameScene extends Phaser.Scene {
 
   private drawChoicePanel(x: number, y: number, width: number, height: number, color: number) {
     const panel = this.add.graphics().setDepth(8);
-    panel.fillStyle(0xffffff, 0.32);
-    panel.fillRoundedRect(x, y, width, height, 24);
-    panel.fillStyle(color, 0.12);
-    panel.fillRoundedRect(x + 10, y + 10, width - 20, height - 20, 18);
-    panel.lineStyle(4, color, 0.72);
-    panel.strokeRoundedRect(x, y, width, height, 24);
-    panel.lineStyle(3, 0xffffff, 0.86);
-    panel.strokeRoundedRect(x + 4, y + 4, width - 8, height - 8, 20);
+    panel.fillStyle(0xffffff, 0.24);
+    panel.fillRoundedRect(x, y, width, height, 20);
+    panel.lineStyle(3, color, 0.60);
+    panel.strokeRoundedRect(x, y, width, height, 20);
     return panel;
   }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  //  RESULTS
+  // ══════════════════════════════════════════════════════════════════════════
 
   private renderResults() {
     this.resultAreaObjects.forEach((object) => object.destroy());
     this.resultAreaObjects = [];
 
-    const title = this.addResultObject(this.drawSectionHeader(640, 382, "3. Veja as pistas e escolha a resposta"));
-    title.setDepth(18);
-
+    // ── State messages (no keyword / wrong keyword / need filter / wrong filter) ──
     if (!this.selectedKeywordId) {
       this.createSearchMessage("Toque em uma palavra-chave para abrir as pistas da busca.", "🔎");
       return;
     }
-
     if (this.selectedKeywordId !== this.levelConfig.correctKeywordId) {
       const keyword = this.levelConfig.keywords.find((item) => item.id === this.selectedKeywordId);
       const message = keyword?.quality === "weak"
-        ? "Essa palavra levou a pistas que não respondem à pergunta. Tente uma palavra melhor."
-        : "Você chegou perto, mas a busca ainda ficou aberta demais. Tente uma palavra mais específica.";
+        ? "Essa palavra levou a pistas que não respondem à pergunta. Tente outra."
+        : "Você chegou perto, mas a busca ficou aberta demais. Tente uma palavra mais específica.";
       this.createSearchMessage(message, "?");
       return;
     }
-
     if (!this.hasClickedFilter) {
-      this.createSearchMessage("Boa palavra-chave. Agora toque em um filtro para liberar as pistas.", "2");
+      this.createSearchMessage("Boa palavra-chave! Agora toque em um filtro para ver as pistas.", "2");
       return;
     }
-
     if (this.selectedFilterId !== this.levelConfig.correctFilterId) {
-      this.createSearchMessage("A palavra está boa. Agora escolha o filtro que combina com a pergunta.", "⚙");
+      this.createSearchMessage("A palavra está boa. Escolha o filtro que combina com a pergunta.", "⚙");
       return;
     }
 
+    // ── Result cards ──────────────────────────────────────────────────────────
     const sorted = [...this.levelConfig.results].sort((a, b) => {
       return scoreResult(this.levelConfig, b.id, this.selectedKeywordId, this.selectedFilterId) -
         scoreResult(this.levelConfig, a.id, this.selectedKeywordId, this.selectedFilterId);
     });
 
     sorted.forEach((result, index) => {
-      const y = 430 + index * 76;
-      const score = scoreResult(this.levelConfig, result.id, this.selectedKeywordId, this.selectedFilterId);
-      const card = this.addResultObject(this.add.container(640, y).setDepth(20));
-      const bg = this.add.graphics();
+      const y = RESULT_Y_START + RESULT_H / 2 + index * RESULT_STEP;
       const selected = this.selectedResultId === result.id;
-      bg.fillStyle(selected ? 0xecfdf5 : 0xffffff, selected ? 0.98 : 0.84);
-      bg.fillRoundedRect(-510, -34, 1020, 68, 20);
-      bg.lineStyle(selected ? 5 : 3, selected ? COLORS.green : 0xffffff, 0.96);
-      bg.strokeRoundedRect(-510, -34, 1020, 68, 20);
+      const card = this.addResultObject(this.add.container(640, y).setDepth(20));
 
-      const rankColor = score > 115 ? COLORS.green : score > 80 ? COLORS.orange : COLORS.purple;
-      const rank = this.addSharpText(-478, 0, `${index + 1}`, {
+      const bg = this.add.graphics();
+      bg.fillStyle(selected ? 0xecfdf5 : 0xffffff, selected ? 0.97 : 0.86);
+      bg.fillRoundedRect(-510, -RESULT_H / 2, 1020, RESULT_H, 22);
+      bg.lineStyle(selected ? 5 : 2, selected ? COLORS.green : 0xffffff, 0.96);
+      bg.strokeRoundedRect(-510, -RESULT_H / 2, 1020, RESULT_H, 22);
+
+      const titleText = this.addSharpText(-476, -18, result.title, {
         fontSize: "20px",
         fontFamily: "Arial Black, Arial",
-        color: this.toCssColor(rankColor),
-        stroke: "#ffffff",
-        strokeThickness: 4,
-      }).setOrigin(0.5);
-      const titleText = this.addSharpText(-360, -12, result.title, {
-        fontSize: "19px",
-        fontFamily: "Arial Black, Arial",
         color: "#1e3a8a",
-        wordWrap: { width: 660 },
+        wordWrap: { width: 870 },
       }).setOrigin(0, 0.5);
 
-      const snippet = this.addSharpText(-410, 13, `${result.source} • ${result.snippet}`, {
-        fontSize: "13px",
+      const snippet = this.addSharpText(-476, 16, `${result.source}  ·  ${result.snippet}`, {
+        fontSize: "15px",
         fontFamily: "Arial Black, Arial",
         color: "#475569",
-        wordWrap: { width: 780 },
+        wordWrap: { width: 870 },
       }).setOrigin(0, 0.5);
 
-      const selectedLabel = selected ? this.addSharpText(270, 0, "Selecionado", {
-        fontSize: "13px",
-        fontFamily: "Arial Black, Arial",
-        color: "#ffffff",
-        stroke: "#166534",
-        strokeThickness: 3,
-      }).setOrigin(0.5) : null;
-      const selectedBg = selected ? this.add.graphics() : null;
-      if (selectedBg) {
-        selectedBg.fillStyle(COLORS.green, 0.96);
-        selectedBg.fillRoundedRect(164, -18, 160, 36, 18);
-        selectedBg.lineStyle(3, 0xffffff, 0.95);
-        selectedBg.strokeRoundedRect(164, -18, 160, 36, 18);
-      }
+      // Selection checkmark (no separate badge — just icon)
+      const check = selected
+        ? this.addSharpText(468, 0, "✓", {
+            fontSize: "34px",
+            color: "#22c55e",
+            stroke: "#ffffff",
+            strokeThickness: 4,
+          }).setOrigin(0.5)
+        : null;
 
-      const why = this.addSharpText(452, 0, "?", {
-        fontSize: "24px",
-        fontFamily: "Arial Black, Arial",
-        color: "#ffffff",
-        stroke: "#1e3a8a",
-        strokeThickness: 3,
-      }).setOrigin(0.5);
-      const whyBg = this.add.graphics();
-      whyBg.fillStyle(COLORS.cyan, 0.95);
-      whyBg.fillRoundedRect(426, -22, 52, 44, 22);
-      whyBg.lineStyle(3, 0xffffff, 0.95);
-      whyBg.strokeRoundedRect(426, -22, 52, 44, 22);
+      card.add([bg, titleText, snippet, ...(check ? [check] : [])]);
 
-      card.add([bg, rank, titleText, snippet, ...(selectedBg && selectedLabel ? [selectedBg, selectedLabel] : []), whyBg, why]);
-      const hitbox = this.addResultObject(this.add.zone(640, y, 1040, 76).setDepth(80));
+      // Full-row hitbox — 88px+ height, mobile-friendly
+      const hitbox = this.addResultObject(this.add.zone(640, y, 1040, RESULT_H).setDepth(80));
       hitbox.setInteractive({ useHandCursor: true });
       hitbox.on("pointerover", () => this.input.setDefaultCursor("pointer"));
-      hitbox.on("pointerout", () => this.input.setDefaultCursor("default"));
-      hitbox.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
+      hitbox.on("pointerout",  () => this.input.setDefaultCursor("default"));
+      hitbox.on("pointerdown", () => {
         this.startTimerOnce();
-        if (pointer.x > 1060) {
+        if (this.selectedResultId === result.id) {
+          // Second tap on selected card = show explanation hint
           this.showToast(result.explanation, COLORS.cyan, 2500);
           return;
         }
@@ -379,54 +349,54 @@ export class GameScene extends Phaser.Scene {
   }
 
   private createActionButton() {
-    this.createUiButton(640, 676, 360, 50, "Validar resposta", COLORS.green, () => this.validateSearch());
+    this.createUiButton(640, VALIDATE_Y, 360, 64, "Validar resposta", COLORS.green, () => this.validateSearch());
   }
 
   private createSearchMessage(message: string, iconLabel: string) {
-    const emptyCard = this.addResultObject(this.add.container(640, 486).setDepth(20));
+    // Centered in the results area
+    const centerY = RESULT_Y_START + (RESULT_H * 1.5 + RESULT_STEP);  // ≈ center of 3-card area
+    const emptyCard = this.addResultObject(this.add.container(640, centerY).setDepth(20));
     const bg = this.add.graphics();
-    bg.fillStyle(0xffffff, 0.78);
+    bg.fillStyle(0xffffff, 0.80);
     bg.fillRoundedRect(-460, -58, 920, 116, 24);
-    bg.lineStyle(4, 0xffffff, 0.96);
+    bg.lineStyle(3, 0xffffff, 0.96);
     bg.strokeRoundedRect(-460, -58, 920, 116, 24);
     const messageTexture = this.getMessageTexture(iconLabel);
     const icon = messageTexture && this.textures.exists(messageTexture)
-      ? this.fitImage(this.add.image(-360, 0, messageTexture), 76, 76)
+      ? this.fitImage(this.add.image(-360, 0, messageTexture), 72, 72)
       : this.addSharpText(-360, 0, iconLabel, {
-          fontSize: "46px",
+          fontSize: "44px",
           fontFamily: "Arial Black, Arial",
           color: "#1e3a8a",
           stroke: "#ffffff",
           strokeThickness: 4,
         }).setOrigin(0.5);
     const text = this.addSharpText(20, 0, message, {
-      fontSize: "22px",
+      fontSize: "21px",
       fontFamily: "Arial Black, Arial",
       color: "#1e3a8a",
       stroke: "#ffffff",
-      strokeThickness: 4,
+      strokeThickness: 3,
       align: "center",
-      wordWrap: { width: 680 },
+      wordWrap: { width: 700 },
     }).setOrigin(0.5);
     emptyCard.add([bg, icon, text]);
   }
 
   private getMessageTexture(iconLabel: string) {
-    if (iconLabel === "2") return "search-filter-card";
-    if (iconLabel === "?") return "search-result-card";
-    if (iconLabel === "âš™") return "filter-sites";
+    if (iconLabel === "2")  return "search-filter-card";
+    if (iconLabel === "?")  return "search-result-card";
+    if (iconLabel === "⚙") return "filter-sites";
     return "search-magnifier";
   }
 
+  // ══════════════════════════════════════════════════════════════════════════
+  //  CHIPS
+  // ══════════════════════════════════════════════════════════════════════════
+
   private createChip(
-    x: number,
-    y: number,
-    width: number,
-    height: number,
-    label: string,
-    id: string,
-    kind: Selectable["kind"],
-    color: number,
+    x: number, y: number, width: number, height: number,
+    label: string, id: string, kind: Selectable["kind"], color: number,
   ) {
     const container = this.add.container(x, y).setDepth(25);
     const bg = this.add.graphics();
@@ -443,14 +413,14 @@ export class GameScene extends Phaser.Scene {
     const hitbox = this.add.zone(x, y, width + 18, height + 18).setDepth(90);
     hitbox.setInteractive({ useHandCursor: true });
     hitbox.on("pointerover", () => this.input.setDefaultCursor("pointer"));
-    hitbox.on("pointerout", () => this.input.setDefaultCursor("default"));
+    hitbox.on("pointerout",  () => this.input.setDefaultCursor("default"));
     hitbox.on("pointerdown", () => {
       this.startTimerOnce();
       this.playClick();
       if (kind === "keyword") {
         this.selectedKeywordId = id;
-        this.selectedResultId = null;
-        this.hasClickedFilter = false;
+        this.selectedResultId  = null;
+        this.hasClickedFilter  = false;
       } else if (kind === "filter") {
         if (!this.selectedKeywordId || this.selectedKeywordId !== this.levelConfig.correctKeywordId) {
           this.showToast("Primeiro escolha uma boa palavra-chave.", COLORS.orange, 2100);
@@ -460,7 +430,6 @@ export class GameScene extends Phaser.Scene {
         this.selectedResultId = null;
         this.hasClickedFilter = true;
       }
-      this.updateSearchBarText();
       this.updateSelectableStyles();
       this.renderResults();
     });
@@ -473,24 +442,28 @@ export class GameScene extends Phaser.Scene {
     this.selectables.forEach((item) => {
       const active =
         (item.kind === "keyword" && item.id === this.selectedKeywordId) ||
-        (item.kind === "filter" && item.id === this.selectedFilterId);
+        (item.kind === "filter"  && item.id === this.selectedFilterId);
       const color = item.kind === "filter" ? COLORS.purple : COLORS.blue;
       this.drawChipBackground(item, color, active);
     });
   }
 
   private drawChipBackground(item: Selectable, color: number, active: boolean) {
-    const hit = item.hitbox.input?.hitArea as Phaser.Geom.Rectangle | undefined;
-    const width = hit?.width ? hit.width - 18 : 160;
-    const height = hit?.height ? hit.height - 18 : 52;
+    const hit    = item.hitbox.input?.hitArea as Phaser.Geom.Rectangle | undefined;
+    const width  = hit?.width  ? hit.width  - 18 : 160;
+    const height = hit?.height ? hit.height - 18 : CHIP_H;
     item.bg.clear();
     item.bg.fillStyle(active ? color : 0xffffff, active ? 1 : 0.34);
     item.bg.fillRoundedRect(-width / 2, -height / 2, width, height, height / 2);
     item.bg.fillStyle(0xffffff, active ? 0.18 : 0.28);
-    item.bg.fillRoundedRect(-width / 2 + 12, -height / 2 + 8, width - 24, Math.max(12, height * 0.35), 14);
+    item.bg.fillRoundedRect(-width / 2 + 12, -height / 2 + 8, width - 24, Math.max(12, height * 0.30), 12);
     item.bg.lineStyle(active ? 4 : 3, active ? 0xffffff : color, 0.95);
     item.bg.strokeRoundedRect(-width / 2, -height / 2, width, height, height / 2);
   }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  //  VALIDATION + GAME FLOW
+  // ══════════════════════════════════════════════════════════════════════════
 
   private validateSearch() {
     if (this.commandLocked) return;
@@ -512,8 +485,8 @@ export class GameScene extends Phaser.Scene {
     }
     const correct =
       this.selectedKeywordId === this.levelConfig.correctKeywordId &&
-      this.selectedFilterId === this.levelConfig.correctFilterId &&
-      this.selectedResultId === this.levelConfig.correctResultId;
+      this.selectedFilterId  === this.levelConfig.correctFilterId  &&
+      this.selectedResultId  === this.levelConfig.correctResultId;
 
     if (!correct) {
       this.errors += 1;
@@ -523,7 +496,6 @@ export class GameScene extends Phaser.Scene {
       this.emitProgress();
       return;
     }
-
     this.completeLevel();
   }
 
@@ -560,6 +532,10 @@ export class GameScene extends Phaser.Scene {
       this.time.delayedCall(2200, () => this.scene.restart({ level: this.levelConfig.level, hits: this.hits, errors: this.errors }));
     });
   }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  //  MODALS (flow screens)
+  // ══════════════════════════════════════════════════════════════════════════
 
   private showInfoModal() {
     this.clearOverlay();
@@ -712,7 +688,7 @@ export class GameScene extends Phaser.Scene {
       stroke: "#ffffff",
       strokeThickness: 6,
     }).setOrigin(0.5);
-    const subtitle = this.addSharpText(0, -74, `Pontuação final: ${this.getScore()} • Acertos: ${this.hits} • Erros: ${this.errors}`, {
+    const subtitle = this.addSharpText(0, -74, `Pontuação: ${this.getScore()} · Acertos: ${this.hits} · Erros: ${this.errors}`, {
       fontSize: "20px",
       fontFamily: "Arial Black, Arial",
       color: "#334155",
@@ -736,16 +712,11 @@ export class GameScene extends Phaser.Scene {
       badge.lineStyle(4, 0xffffff, 0.95);
       badge.strokeRoundedRect(-54, -42, 108, 84, 18);
       const number = this.addSharpText(0, -13, String(level), {
-        fontSize: "30px",
-        fontFamily: "Arial Black, Arial",
-        color: "#ffffff",
-        stroke: "#25327a",
-        strokeThickness: 4,
+        fontSize: "30px", fontFamily: "Arial Black, Arial",
+        color: "#ffffff", stroke: "#25327a", strokeThickness: 4,
       }).setOrigin(0.5);
       const label = this.addSharpText(0, 23, "concluído", {
-        fontSize: "12px",
-        fontFamily: "Arial Black, Arial",
-        color: "#ffffff",
+        fontSize: "12px", fontFamily: "Arial Black, Arial", color: "#ffffff",
       }).setOrigin(0.5);
       item.add([badge, number, label]);
       return item;
@@ -755,6 +726,10 @@ export class GameScene extends Phaser.Scene {
     panel.add([shadow, bg, ribbon, ...sparkles, title, subtitle, ...levelLabels, playAgain, exit]);
     this.animateModal(panel);
   }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  //  UI HELPERS
+  // ══════════════════════════════════════════════════════════════════════════
 
   private createModalBase(x: number, y: number, color: number) {
     const modal = this.addOverlayObject(this.add.container(x, y).setDepth(451));
@@ -769,8 +744,6 @@ export class GameScene extends Phaser.Scene {
     const topBar = this.add.graphics();
     topBar.fillStyle(color, 1);
     topBar.fillRoundedRect(-196, -194, 392, 28, 14);
-    topBar.lineStyle(3, 0xffffff, 0.82);
-    topBar.strokeRoundedRect(-196, -194, 392, 28, 14);
     modal.add([shadow, bg, topBar]);
     return modal;
   }
@@ -836,12 +809,12 @@ export class GameScene extends Phaser.Scene {
     const bg = this.add.graphics();
     bg.fillStyle(color, 0.98);
     bg.fillRoundedRect(-width / 2, -height / 2, width, height, height / 2);
-    bg.fillStyle(0xffffff, 0.16);
+    bg.fillStyle(0xffffff, 0.14);
     bg.fillRoundedRect(-width / 2 + 16, -height / 2 + 10, width - 32, 18, 9);
     bg.lineStyle(3, 0xffffff, 0.92);
     bg.strokeRoundedRect(-width / 2, -height / 2, width, height, height / 2);
     const text = this.addSharpText(0, 0, label, {
-      fontSize: "22px",
+      fontSize: "24px",
       fontFamily: "Arial Black, Arial",
       color: "#ffffff",
       stroke: "#0f172a",
@@ -851,56 +824,38 @@ export class GameScene extends Phaser.Scene {
     const zone = this.add.zone(x, y, width + 18, height + 18).setDepth(90);
     zone.setInteractive({ useHandCursor: true });
     zone.on("pointerover", () => this.input.setDefaultCursor("pointer"));
-    zone.on("pointerout", () => this.input.setDefaultCursor("default"));
+    zone.on("pointerout",  () => this.input.setDefaultCursor("default"));
     zone.on("pointerdown", onClick);
     return button;
   }
 
   private drawPanel(x: number, y: number, width: number, height: number, _accentColor: number, depth: number) {
-    const shadow = this.add.graphics();
-    shadow.fillStyle(0x5b3410, 0.16);
-    shadow.fillRoundedRect(x + 9, y + 12, width, height, 30);
-    shadow.setDepth(depth);
     const panel = this.add.graphics();
-    panel.fillStyle(0xffffff, 0.34);
-    panel.fillRoundedRect(x, y, width, height, 30);
-    panel.fillStyle(0xfff1d6, 0.18);
-    panel.fillRoundedRect(x + 12, y + 12, width - 24, height - 24, 24);
-    panel.fillStyle(0xffffff, 0.2);
-    panel.fillRoundedRect(x + 20, y + 16, width - 40, Math.min(42, height - 28), 18);
-    panel.lineStyle(7, 0xffffff, 0.95);
-    panel.strokeRoundedRect(x, y, width, height, 30);
+    panel.fillStyle(0xffffff, 0.20);
+    panel.fillRoundedRect(x, y, width, height, 24);
+    panel.lineStyle(4, 0xffffff, 0.75);
+    panel.strokeRoundedRect(x, y, width, height, 24);
     panel.setDepth(depth + 0.1);
     return panel;
   }
 
-  private drawSectionHeader(x: number, y: number, label: string) {
-    return this.addSharpText(x, y, label, {
-      fontSize: "21px",
-      fontFamily: "Arial Black, Arial",
-      color: "#1e3a8a",
-      stroke: "#ffffff",
-      strokeThickness: 4,
-    }).setOrigin(0.5).setDepth(11);
-  }
-
   private showToast(message: string, color: number, duration = 2300) {
-    const container = this.add.container(640, 620).setDepth(200);
+    const container = this.add.container(640, 636).setDepth(200);
     const bg = this.add.graphics();
     bg.fillStyle(color, 0.96);
-    bg.fillRoundedRect(-500, -52, 1000, 104, 28);
-    bg.lineStyle(4, 0xffffff, 0.94);
-    bg.strokeRoundedRect(-500, -52, 1000, 104, 28);
+    bg.fillRoundedRect(-480, -40, 960, 80, 24);
+    bg.lineStyle(3, 0xffffff, 0.94);
+    bg.strokeRoundedRect(-480, -40, 960, 80, 24);
     const text = this.addSharpText(0, 0, message, {
-      fontSize: "21px",
+      fontSize: "20px",
       fontFamily: "Arial Black, Arial",
       color: "#ffffff",
       align: "center",
-      lineSpacing: 5,
-      wordWrap: { width: 900 },
+      lineSpacing: 4,
+      wordWrap: { width: 880 },
     }).setOrigin(0.5);
     container.add([bg, text]);
-    this.tweens.add({ targets: container, y: 600, alpha: 0, duration: 320, delay: duration, onComplete: () => container.destroy() });
+    this.tweens.add({ targets: container, y: 618, alpha: 0, duration: 300, delay: duration, onComplete: () => container.destroy() });
   }
 
   private addResultObject<T extends Phaser.GameObjects.GameObject>(object: T) {
@@ -942,26 +897,11 @@ export class GameScene extends Phaser.Scene {
     return obj;
   }
 
-  private updateSearchBarText() {
-    const query = this.getSelectedKeywordLabel() || "Escolha uma palavra-chave";
-    this.children.getAll("queryText").forEach((child) => {
-      if (child instanceof Phaser.GameObjects.Text) child.setText(query);
-    });
-  }
-
-  private getSelectedKeywordLabel() {
-    return this.levelConfig.keywords.find((item) => item.id === this.selectedKeywordId)?.label ?? "";
-  }
-
   private fitImage(image: Phaser.GameObjects.Image, maxW: number, maxH: number) {
     image.texture.setFilter(Phaser.Textures.FilterMode.LINEAR);
     const scale = Math.min(maxW / image.width, maxH / image.height);
     image.setScale(scale);
     return image;
-  }
-
-  private toCssColor(color: number) {
-    return `#${color.toString(16).padStart(6, "0")}`;
   }
 
   private getScore() {
@@ -977,21 +917,16 @@ export class GameScene extends Phaser.Scene {
       score: this.getScore(),
       hits: this.hits,
       errors: this.errors,
-    });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any);
   }
 
-  private playClick() {
-    this.playTone(520, 0.05, "sine", 0.05);
-  }
-
+  private playClick()   { this.playTone(520, 0.05, "sine", 0.05) }
   private playSuccess() {
     this.playTone(740, 0.12, "triangle", 0.06);
     this.time.delayedCall(90, () => this.playTone(980, 0.12, "triangle", 0.05));
   }
-
-  private playWrong() {
-    this.playTone(190, 0.16, "sawtooth", 0.04);
-  }
+  private playWrong()   { this.playTone(190, 0.16, "sawtooth", 0.04) }
 
   private playTone(frequency: number, duration: number, type: OscillatorType, volume: number) {
     const AudioContextClass = window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;

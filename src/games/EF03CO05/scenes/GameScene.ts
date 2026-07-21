@@ -82,6 +82,7 @@ export class GameScene extends Phaser.Scene {
   private timerBar?: Phaser.GameObjects.Graphics;
   private hasStartedTimer = false;
   private unsubscribePlatformCommands?: () => void;
+  private structurePiecesRevealed = false;
 
   constructor() {
     super({ key: "GameScene" });
@@ -105,6 +106,7 @@ export class GameScene extends Phaser.Scene {
     this.timerEvent = undefined;
     this.timerBar = undefined;
     this.hasStartedTimer = false;
+    this.structurePiecesRevealed = false;
   }
 
   create() {
@@ -112,13 +114,31 @@ export class GameScene extends Phaser.Scene {
     this.createTimerBar();
     this.createHeader();
     this.createFormatPanel();
-    this.createStructurePanel();
-    this.createPiecesPanel();
-    this.createActionButton();
     this.registerPlatformCommands();
 
     runtimeGameBridge.emit({ type: "GAME_READY", gameId: GAME_ID });
     this.emitProgress();
+  }
+
+  private revealStructurePieces() {
+    if (this.structurePiecesRevealed) return;
+    this.structurePiecesRevealed = true;
+
+    const before = new Set(this.children.list.slice());
+
+    this.createStructurePanel();
+    this.createPiecesPanel();
+    this.createActionButton();
+
+    const newObjs = this.children.list.filter(o => !before.has(o));
+    newObjs.forEach(o => { (o as any).setAlpha?.(0); });
+
+    this.tweens.add({
+      targets: newObjs as unknown as Phaser.GameObjects.GameObject[],
+      alpha: 1,
+      duration: 380,
+      ease: "Power1.easeOut",
+    });
   }
 
   update() {
@@ -194,25 +214,29 @@ export class GameScene extends Phaser.Scene {
   }
 
   private createHeader() {
-    this.addSharpText(640, 74, this.levelConfig.title, {
-      fontSize: "40px",
+    this.addSharpText(640, 72, this.levelConfig.title, {
+      fontSize: "36px",
       fontFamily: "Arial Black, Arial",
       color: "#ffffff",
       stroke: "#1e3a8a",
       strokeThickness: 6,
     }).setOrigin(0.5);
 
-    this.addSharpText(640, 112, this.levelConfig.instruction, {
-      fontSize: "20px",
+    const scenarioBg = this.add.graphics().setDepth(20);
+    scenarioBg.fillStyle(0xffffff, 0.2);
+    scenarioBg.fillRoundedRect(160, 94, 960, 40, 14);
+
+    this.addSharpText(640, 114, `📋  ${this.levelConfig.scenario}`, {
+      fontSize: "18px",
       fontFamily: "Arial Black, Arial",
-      color: "#ffffff",
-      stroke: "#1e3a8a",
-      strokeThickness: 4,
+      color: "#fef9c3",
+      stroke: "#78350f",
+      strokeThickness: 3,
       align: "center",
       wordWrap: { width: 920 },
-    }).setOrigin(0.5);
+    }).setOrigin(0.5).setDepth(21);
 
-    this.addSharpText(1086, 74, `Nível ${this.levelConfig.level}/3`, {
+    this.addSharpText(1086, 72, `Nível ${this.levelConfig.level}/3`, {
       fontSize: "18px",
       fontFamily: "Arial Black, Arial",
       color: "#1e3a8a",
@@ -222,13 +246,12 @@ export class GameScene extends Phaser.Scene {
   }
 
   private createFormatPanel() {
-    this.drawPanel(72, 126, 1136, 148, COLORS.blue, 1);
-    this.drawPanelHeader(640, 128, "1. Escolha a caixa certa");
+    this.drawPanel(72, 143, 1136, 130, COLORS.blue, 1);
 
     const shuffledOptions = Phaser.Utils.Array.Shuffle([...FORMAT_OPTIONS]);
     shuffledOptions.forEach((option, index) => {
       const x = 294 + index * 346;
-      const card = this.createFormatCard(option.id, x, 212, option.title, option.subtitle, option.color);
+      const card = this.createFormatCard(option.id, x, 208, option.title, option.subtitle, option.color);
       this.formatCards.set(option.id, card);
     });
   }
@@ -296,12 +319,12 @@ export class GameScene extends Phaser.Scene {
       this.tweens.add({ targets: card, scale: formatId === id ? 1.08 : 0.96, alpha: formatId === id ? 1 : 0.82, duration: 140 });
     });
     this.showToast("Caixa certa! Agora encaixe os dados.", COLORS.green);
+    this.time.delayedCall(200, () => this.revealStructurePieces());
     this.emitProgress();
   }
 
   private createStructurePanel() {
     this.drawPanel(72, 274, 1136, 204, COLORS.purple, 1);
-    this.drawPanelHeader(640, 276, "2. Encaixe os dados");
 
     const spacing = this.levelConfig.slots.length <= 3 ? 250 : 190;
     const startX = 640 - ((this.levelConfig.slots.length - 1) * spacing) / 2;
@@ -334,7 +357,6 @@ export class GameScene extends Phaser.Scene {
 
   private createPiecesPanel() {
     this.drawPanel(72, 478, 1136, 196, COLORS.orange, 1);
-    this.drawPanelHeader(640, 480, "Dados disponíveis");
     const spacing = this.pieces.length <= 5 ? 210 : 170;
     const startX = 640 - ((this.pieces.length - 1) * spacing) / 2;
     this.pieces.forEach((piece, index) => {

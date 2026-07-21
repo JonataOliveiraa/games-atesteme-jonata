@@ -387,10 +387,10 @@ export class GameScene extends Phaser.Scene {
     this.tweens.add({ targets: taskCard, alpha: 1, duration: 200, ease: "Sine.easeOut" });
 
     // Format buttons — 4 in a row
-    const btnY = PANEL_Y + 340;
-    const btnW = 220;
-    const btnH = 120;
-    const gap = 14;
+    const btnY = PANEL_Y + 336;
+    const btnW = 256;
+    const btnH = 144;
+    const gap = 8;
     const totalW = 4 * btnW + 3 * gap;
     const startX = 640 - totalW / 2 + btnW / 2;
     FORMAT_OPTIONS.forEach((fmt, i) => {

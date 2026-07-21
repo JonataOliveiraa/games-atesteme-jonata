@@ -51,6 +51,7 @@ export interface FormatSlot {
 export interface FormatLevel {
   level: 1 | 2 | 3;
   title: string;
+  scenario: string;
   instruction: string;
   timeLimit: number;
   requiredFormat: FormatId;

@@ -4,16 +4,16 @@ import { runtimeGameBridge } from '../../../shared/bridge/runtimeGameBridge'
 import type { PlatformCommand } from '../../../shared/contracts/platformCommands'
 import type { LevelConfig, MazeChallenge } from '../types'
 import { LEVELS } from '../data/levels'
-import { CONDITION_LABELS, simulate } from '../data/conditions'
+import { CONDITION_LABELS, simulate, conditionHolds } from '../data/conditions'
 
 const GAME_ID = 'labirinto-do-enquanto'
 const MAX_CONSECUTIVE_ERRORS = 3
-const TILE = 96
-const GRID_Y = 440
-const BLOCK_Y = 165   // vertical center of the while-block header
-const BLOCK_H = 84    // height of the while-block header
+const TILE = 120
+const GRID_Y = 488
+const BLOCK_Y = 140   // vertical center of the while-block header (below 72px UIScene bar)
+const BLOCK_H = 88    // height of the while-block header
 
-type RoundPhase = 'intro' | 'choosing' | 'predicting' | 'ready' | 'running' | 'level-complete'
+type RoundPhase = 'intro' | 'choosing' | 'predicting' | 'stepping' | 'step-predict' | 'running' | 'level-complete'
 
 export class GameScene extends Phaser.Scene {
 
@@ -31,11 +31,15 @@ export class GameScene extends Phaser.Scene {
 
   private selectedConditionId: string | null = null
   private predictedCol: number | null = null
+  private currentRobotCol = 0
   private robot?: Phaser.GameObjects.Image
-  private gridTiles: Phaser.GameObjects.Image[] = []
+  private gridTiles: Phaser.GameObjects.Zone[] = []
   private predictMarker?: Phaser.GameObjects.Text
   private conditionLabel?: Phaser.GameObjects.Text
   private executeBtn?: Phaser.GameObjects.Container
+  private executeBtnText?: Phaser.GameObjects.Text
+  private stepCountText?: Phaser.GameObjects.Text
+  private stepPredictBtns: Phaser.GameObjects.Container[] = []
   private optionCards: Phaser.GameObjects.Container[] = []
   private challengeRoot?: Phaser.GameObjects.Container
   private conditionCheckOverlay?: Phaser.GameObjects.Rectangle
@@ -62,7 +66,10 @@ export class GameScene extends Phaser.Scene {
     this.shouldShowLevelStart  = data?.showLevelStart ?? false
     this.selectedConditionId   = null
     this.predictedCol          = null
+    this.currentRobotCol       = 0
     this.gridTiles             = []
+    this.stepCountText         = undefined
+    this.stepPredictBtns       = []
     this.optionCards           = []
     this.overlayObjects        = []
     this.conditionCheckOverlay = undefined
@@ -72,6 +79,7 @@ export class GameScene extends Phaser.Scene {
     this.drawBackground()
     this.registerPlatformCommands()
     EventBus.on('mute-audio', (m: boolean) => { this.isMuted = m }, this)
+    EventBus.on('show-tutorial', this.showTutorialOverlay, this)
 
     runtimeGameBridge.emit({ type: 'GAME_READY', gameId: GAME_ID })
     this.broadcastMissionState()
@@ -91,7 +99,9 @@ export class GameScene extends Phaser.Scene {
 
   shutdown() {
     this.clearOverlay()
+    this.clearStepPredictButtons()
     EventBus.off('mute-audio', undefined, this)
+    EventBus.off('show-tutorial', undefined, this)
     this.unsubPlatform?.()
     this.unsubPlatform = undefined
   }
@@ -142,7 +152,12 @@ export class GameScene extends Phaser.Scene {
   // ══════════════════════════════════════════════════════════════════════════
 
   private drawBackground() {
-    this.add.image(640, 400, 'wallpaper').setDisplaySize(1280, 608).setDepth(-1)
+    this.add.rectangle(640, 360, 1280, 720, 0x0d1b2a).setDepth(-2)
+    const bg = this.add.image(640, 360, 'wallpaper').setDepth(-1)
+    const scale = Math.max(1280 / bg.width, 720 / bg.height)
+    bg.setScale(scale)
+    // Dark tint so drawn elements have good contrast
+    this.add.rectangle(640, 360, 1280, 720, 0x000000, 0.32).setDepth(-1)
   }
 
   // ══════════════════════════════════════════════════════════════════════════
@@ -154,10 +169,12 @@ export class GameScene extends Phaser.Scene {
     this.challengeRoot = this.add.container(0, 0)
     this.conditionCheckOverlay?.destroy()
     this.conditionCheckOverlay = undefined
+    this.robot = undefined   // cleared with challengeRoot; will be rebuilt
     this.gridTiles = []
     this.optionCards = []
     this.selectedConditionId = null
     this.predictedCol = null
+    this.currentRobotCol = 0
 
     const challenge = this.levelConfig.challenges[this.currentChallengeIndex]
 
@@ -166,108 +183,135 @@ export class GameScene extends Phaser.Scene {
 
     if (challenge.conditionOptions) {
       this.phase = 'choosing'
+      this.stepCountText?.setAlpha(0)
+      this.clearStepPredictButtons()
+      this.executeBtn?.setVisible(true)
       this.buildConditionOptions(challenge)
       this.setExecuteEnabled(false)
     } else if (challenge.predictMode) {
       this.phase = 'predicting'
+      this.stepCountText?.setAlpha(0)
+      this.clearStepPredictButtons()
+      this.executeBtn?.setVisible(true)
       this.selectedConditionId = challenge.fixedConditionId ?? 'path_clear'
       this.enableGridPrediction(challenge)
       this.setExecuteEnabled(false)
-    } else {
-      this.phase = 'ready'
+    } else if (challenge.stepPredictMode) {
+      this.phase = 'step-predict'
       this.selectedConditionId = challenge.fixedConditionId ?? 'path_clear'
+      this.currentRobotCol = 0
+      this.executeBtn?.setVisible(false)
+      this.stepCountText?.setAlpha(1).setText('Passo  0')
+      this.buildStepPredictButtons()
+    } else {
+      this.phase = 'stepping'
+      this.selectedConditionId = challenge.fixedConditionId ?? 'path_clear'
+      this.currentRobotCol = 0
+      this.clearStepPredictButtons()
+      this.executeBtn?.setVisible(true)
+      this.executeBtnText?.setText('▶ Verificar Condição')
       this.setExecuteEnabled(true)
+      this.stepCountText?.setAlpha(1).setText('Passo  0')
     }
+
+    // Phase instruction inline (below while-block)
+    const phaseHint =
+      this.phase === 'choosing'      ? '👆  Escolha a condição que vai parar o robô no objetivo ⭐' :
+      this.phase === 'predicting'    ? '🔮  Toque no quadrado onde o robô vai parar' :
+      this.phase === 'step-predict'  ? '💭  A condição é VERDADEIRA ou FALSA agora? Decida!' :
+      '👀  Clique em "Verificar Condição" a cada passo — veja o laço ENQUANTO em ação!'
+    const phaseLabel = this.add.text(640, BLOCK_Y + BLOCK_H / 2 + 26, phaseHint, {
+      fontFamily: 'Arial Black, Arial', fontSize: '20px', color: '#e2e8f0',
+      stroke: '#0d1b2a', strokeThickness: 4, align: 'center',
+      wordWrap: { width: 860 },
+    }).setOrigin(0.5).setDepth(5).setResolution(2)
+    this.challengeRoot?.add(phaseLabel)
 
     this.updateConditionLabel()
     this.broadcastMissionState()
   }
 
   private buildWhileBlock(challenge: MazeChallenge) {
-    // Block spans x:190–1090 (900px), centered at x=640
-    const BL = 190, BT = BLOCK_Y - BLOCK_H / 2  // left=190, top=123
+    const BL = 190, BT = BLOCK_Y - BLOCK_H / 2
 
-    // ── Outer dark-navy background ────────────────────────────────────────
-    const outerBg = this.add.graphics().setDepth(3)
-    outerBg.fillStyle(0x1e3a5f, 1)
-    outerBg.fillRoundedRect(BL, BT, 900, BLOCK_H, 16)
-    outerBg.lineStyle(2, 0x4FC3F7, 0.5)
-    outerBg.strokeRoundedRect(BL, BT, 900, BLOCK_H, 16)
+    // ── PNG panel backgrounds ──────────────────────────────────────────────
+    // keyword: x 190–350 (width 160, center 270)
+    const kwImg = this.add.image(270, BLOCK_Y, 'block-keyword')
+      .setDisplaySize(160, BLOCK_H).setOrigin(0.5).setDepth(3)
+    // condition: x 350–710 (width 360, center 530)
+    const condImg = this.add.image(530, BLOCK_Y, 'block-condition')
+      .setDisplaySize(360, BLOCK_H).setOrigin(0.5).setDepth(3)
+    // action: x 710–1090 (width 380, center 900)
+    const actImg = this.add.image(900, BLOCK_Y, 'block-action')
+      .setDisplaySize(380, BLOCK_H).setOrigin(0.5).setDepth(3)
 
-    // ── KEYWORD section (x:190–350, width=160) ────────────────────────────
-    const kwBg = this.add.graphics().setDepth(4)
-    kwBg.fillStyle(0x0f2544, 1)
-    kwBg.fillRoundedRect(BL, BT, 160, BLOCK_H, 16)
-    kwBg.fillRect(BL + 144, BT, 16, BLOCK_H)     // square-off right corners
+    // ── Outer frame ───────────────────────────────────────────────────────
+    const frame = this.add.graphics().setDepth(4)
+    frame.lineStyle(2, 0x4FC3F7, 0.55)
+    frame.strokeRoundedRect(BL, BT, 900, BLOCK_H, 16)
 
-    const kwIcon = this.add.text(270, BLOCK_Y - 12, '🔁', { fontSize: '22px' })
+    // ── KEYWORD text ──────────────────────────────────────────────────────
+    const kwIcon = this.add.text(270, BLOCK_Y - 16, '🔁', { fontSize: '28px' })
       .setOrigin(0.5).setDepth(5)
-    const kwLabel = this.add.text(270, BLOCK_Y + 14, 'ENQUANTO', {
-      fontFamily: 'Arial Black, Arial', fontSize: '13px', color: '#e0f2fe',
+    const kwLabel = this.add.text(270, BLOCK_Y + 18, 'ENQUANTO', {
+      fontFamily: 'Arial Black, Arial', fontSize: '16px', color: '#e0f2fe',
+      stroke: '#0a1628', strokeThickness: 3,
     }).setOrigin(0.5).setDepth(5).setResolution(2)
 
-    // Divider left
+    // ── Dividers ──────────────────────────────────────────────────────────
     const div1 = this.add.graphics().setDepth(5)
     div1.lineStyle(2, 0x4FC3F7, 0.35)
     div1.lineBetween(350, BT + 8, 350, BT + BLOCK_H - 8)
 
-    // ── CONDITION section (x:350–710, width=360) ─────────────────────────
-    const condBg = this.add.graphics().setDepth(3)
-    condBg.fillStyle(0x78350f, 0.45)
-    condBg.fillRect(351, BT, 359, BLOCK_H)
-
-    const condMiniLabel = this.add.text(358, BT + 7, 'CONDIÇÃO', {
-      fontFamily: 'Arial', fontStyle: 'bold', fontSize: '11px', color: '#fbbf24',
+    // ── CONDITION text ────────────────────────────────────────────────────
+    const condMiniLabel = this.add.text(364, BT + 7, 'CONDIÇÃO', {
+      fontFamily: 'Arial', fontStyle: 'bold', fontSize: '13px', color: '#fbbf24',
+      stroke: '#0d1b2a', strokeThickness: 2,
     }).setDepth(5).setResolution(2)
 
     const hasFixed = !!challenge.fixedConditionId
-    this.conditionLabel = this.add.text(530, BLOCK_Y + 6, hasFixed
+    this.conditionLabel = this.add.text(530, BLOCK_Y + 8, hasFixed
       ? CONDITION_LABELS[challenge.fixedConditionId!]
       : '▼ Escolha abaixo', {
       fontFamily: 'Arial', fontStyle: 'bold',
-      fontSize: '15px', color: hasFixed ? '#fef3c7' : '#f59e0b',
-      align: 'center', wordWrap: { width: 344 },
+      fontSize: '18px', color: hasFixed ? '#fef3c7' : '#f59e0b',
+      align: 'center', wordWrap: { width: 334 },
     }).setOrigin(0.5).setDepth(5).setResolution(2)
 
-    // Separator arrow
+    // ── Separator arrow ───────────────────────────────────────────────────
     const div2 = this.add.graphics().setDepth(5)
     div2.lineStyle(2, 0x4FC3F7, 0.35)
     div2.lineBetween(710, BT + 8, 710, BT + BLOCK_H - 8)
 
-    const arrowTxt = this.add.text(735, BLOCK_Y, '▶', {
-      fontSize: '20px', color: '#64748b',
+    const arrowTxt = this.add.text(730, BLOCK_Y, '▶', {
+      fontSize: '22px', color: '#64748b',
     }).setOrigin(0.5).setDepth(5)
 
-    // ── ACTION section (x:760–1090, width=330) ────────────────────────────
-    const actBg = this.add.graphics().setDepth(3)
-    actBg.fillStyle(0x14532d, 0.55)
-    actBg.fillRoundedRect(761, BT, 329, BLOCK_H, 16)
-    actBg.fillRect(761, BT, 16, BLOCK_H)          // square-off left corners
-
+    // ── ACTION text ───────────────────────────────────────────────────────
     const actMiniLabel = this.add.text(768, BT + 7, 'AÇÃO', {
-      fontFamily: 'Arial', fontStyle: 'bold', fontSize: '11px', color: '#4ade80',
+      fontFamily: 'Arial', fontStyle: 'bold', fontSize: '13px', color: '#4ade80',
+      stroke: '#021a08', strokeThickness: 2,
     }).setDepth(5).setResolution(2)
 
-    const actLabel = this.add.text(925, BLOCK_Y + 6, '▶ Mover para frente', {
+    const actLabel = this.add.text(910, BLOCK_Y + 8, '▶ Mover para frente', {
       fontFamily: 'Arial', fontStyle: 'bold',
-      fontSize: '15px', color: '#dcfce7',
-      align: 'center', wordWrap: { width: 318 },
+      fontSize: '18px', color: '#dcfce7',
+      stroke: '#021a08', strokeThickness: 2,
+      align: 'center', wordWrap: { width: 300 },
     }).setOrigin(0.5).setDepth(5).setResolution(2)
 
-    // Loop-back indicator at top-right corner
-    const loopIco = this.add.text(1082, BT + 5, '↺', {
-      fontSize: '22px', color: '#4FC3F7',
+    const loopIco = this.add.text(1082, BT + 4, '↺', {
+      fontSize: '26px', color: '#4FC3F7',
     }).setOrigin(1, 0).setDepth(5)
 
     this.challengeRoot?.add([
-      outerBg, kwBg, kwIcon, kwLabel, div1,
-      condBg, condMiniLabel, this.conditionLabel,
+      kwImg, condImg, actImg, frame,
+      kwIcon, kwLabel, div1,
+      condMiniLabel, this.conditionLabel,
       div2, arrowTxt,
-      actBg, actMiniLabel, actLabel,
-      loopIco,
+      actMiniLabel, actLabel, loopIco,
     ])
 
-    // Condition-check overlay lives outside challengeRoot so we can safely tween it
     this.conditionCheckOverlay = this.add.rectangle(530, BLOCK_Y, 360, BLOCK_H, 0x000000, 0)
       .setDepth(6)
   }
@@ -285,33 +329,89 @@ export class GameScene extends Phaser.Scene {
     const totalW = challenge.corridorLength * TILE
     const startX = 640 - totalW / 2 + TILE / 2
 
+    // Corridor backing strip
+    const strip = this.add.graphics().setDepth(2)
+    strip.fillStyle(0x1e3a5f, 0.55)
+    strip.fillRoundedRect(startX - TILE / 2 - 8, GRID_Y - TILE / 2 - 8, totalW + 16, TILE + 16, 18)
+    strip.lineStyle(2, 0x4fc3f7, 0.20)
+    strip.strokeRoundedRect(startX - TILE / 2 - 8, GRID_Y - TILE / 2 - 8, totalW + 16, TILE + 16, 18)
+    this.challengeRoot?.add(strip)
+
     for (let col = 0; col < challenge.corridorLength; col++) {
       const x = startX + col * TILE
-      const isWall = challenge.walls.includes(col)
-      const isGoal = challenge.goalCol === col
-      const key = isWall ? 'tile-wall' : isGoal ? 'tile-goal' : 'tile-floor'
-      const tile = this.add.image(x, GRID_Y, key).setDisplaySize(TILE - 6, TILE - 6).setData('col', col)
-      this.challengeRoot?.add(tile)
-      this.gridTiles.push(tile)
+      const isWall  = challenge.walls.includes(col)
+      const isGoal  = !challenge.predictMode && (challenge.goalCol !== undefined) && challenge.goalCol === col
+      const S = TILE - 8   // 112px inner tile
+
+      const gfx = this.add.graphics().setDepth(3)
+
+      if (isWall) {
+        gfx.fillStyle(0x7f1d1d, 1)
+        gfx.fillRoundedRect(x - S / 2, GRID_Y - S / 2, S, S, 12)
+        gfx.lineStyle(3, 0x991b1b, 1)
+        gfx.strokeRoundedRect(x - S / 2, GRID_Y - S / 2, S, S, 12)
+        // brick texture lines
+        gfx.lineStyle(1.5, 0xfca5a5, 0.22)
+        gfx.lineBetween(x - S / 2 + 8, GRID_Y, x + S / 2 - 8, GRID_Y)
+        gfx.lineBetween(x, GRID_Y - S / 2 + 8, x, GRID_Y - 8)
+        const wallTxt = this.add.text(x, GRID_Y, '🧱', { fontSize: '32px' })
+          .setOrigin(0.5).setDepth(4).setResolution(2)
+        this.challengeRoot?.add(wallTxt)
+      } else if (isGoal) {
+        gfx.fillStyle(0x14532d, 1)
+        gfx.fillRoundedRect(x - S / 2, GRID_Y - S / 2, S, S, 12)
+        gfx.lineStyle(3, 0x4ade80, 1)
+        gfx.strokeRoundedRect(x - S / 2, GRID_Y - S / 2, S, S, 12)
+        gfx.fillStyle(0x86efac, 0.30)
+        gfx.fillCircle(x, GRID_Y - 8, 32)
+        const goalTxt = this.add.text(x, GRID_Y - 10, '⭐', { fontSize: '36px' })
+          .setOrigin(0.5).setDepth(4).setResolution(2)
+        const goalLbl = this.add.text(x, GRID_Y + S / 2 - 18, 'Objetivo', {
+          fontFamily: 'Arial Black, Arial', fontSize: '12px', color: '#4ade80',
+        }).setOrigin(0.5).setDepth(4).setResolution(2)
+        this.challengeRoot?.add(goalTxt)
+        this.challengeRoot?.add(goalLbl)
+      } else {
+        gfx.fillStyle(0x1e3a5f, 0.80)
+        gfx.fillRoundedRect(x - S / 2, GRID_Y - S / 2, S, S, 12)
+        gfx.lineStyle(1.5, 0x4fc3f7, 0.25)
+        gfx.strokeRoundedRect(x - S / 2, GRID_Y - S / 2, S, S, 12)
+      }
+
+      this.challengeRoot?.add(gfx)
+
+      // Invisible zone for interactivity
+      const zone = this.add.zone(x, GRID_Y, TILE, TILE).setDepth(5).setData('col', col)
+      this.challengeRoot?.add(zone)
+      this.gridTiles.push(zone)
     }
 
-    this.robot = this.add.image(startX, GRID_Y - 10, 'robot-idle').setDisplaySize(72, 72).setDepth(3)
+    // Robot PNG at start position
+    this.robot = this.buildRobot(startX, GRID_Y)
     this.challengeRoot?.add(this.robot)
   }
 
+  private buildRobot(x: number, y: number): Phaser.GameObjects.Image {
+    return this.add.image(x, y, 'robot-idle')
+      .setScale(0.20)
+      .setDepth(8)
+      .setOrigin(0.5, 0.5)
+  }
+
   private enableGridPrediction(challenge: MazeChallenge) {
-    this.predictMarker = this.add.text(0, GRID_Y - 70, '❓', { fontSize: '30px' }).setOrigin(0.5).setAlpha(0)
+    this.predictMarker = this.add.text(0, GRID_Y - 80, '❓', { fontSize: '38px' })
+      .setOrigin(0.5).setAlpha(0).setDepth(6).setResolution(2)
     this.challengeRoot?.add(this.predictMarker)
 
     const totalW = challenge.corridorLength * TILE
     const startX = 640 - totalW / 2 + TILE / 2
 
-    this.gridTiles.forEach((tile, col) => {
-      tile.setInteractive({ useHandCursor: true })
-      tile.on('pointerdown', () => {
+    this.gridTiles.forEach((zone, col) => {
+      zone.setInteractive({ useHandCursor: true })
+      zone.on('pointerdown', () => {
         if (this.phase !== 'predicting') return
         this.predictedCol = col
-        this.predictMarker?.setPosition(startX + col * TILE, GRID_Y - 70).setAlpha(1)
+        this.predictMarker?.setPosition(startX + col * TILE, GRID_Y - 80).setAlpha(1)
         this.setExecuteEnabled(true)
         this.playTick()
       })
@@ -320,27 +420,28 @@ export class GameScene extends Phaser.Scene {
 
   private buildConditionOptions(challenge: MazeChallenge) {
     const options = challenge.conditionOptions ?? []
-    const cardW = 360, gap = 20
+    const cardW = 310, cardH = 108, gap = 20
     const totalW = options.length * cardW + (options.length - 1) * gap
     const startX = 640 - totalW / 2 + cardW / 2
 
     options.forEach((condId, i) => {
       const x = startX + i * (cardW + gap)
-      const y = 290
+      const y = 305
 
       const card = this.add.container(x, y)
       const bg = this.add.graphics()
-      bg.fillStyle(0xfff8f0, 0.96)
-      bg.fillRoundedRect(-cardW / 2, -32, cardW, 64, 16)
-      bg.lineStyle(3, 0x4FC3F7, 0.8)
-      bg.strokeRoundedRect(-cardW / 2, -32, cardW, 64, 16)
+      bg.fillStyle(0x0f172a, 0.90)
+      bg.fillRoundedRect(-cardW / 2, -cardH / 2, cardW, cardH, 18)
+      bg.lineStyle(3, 0x4fc3f7, 0.75)
+      bg.strokeRoundedRect(-cardW / 2, -cardH / 2, cardW, cardH, 18)
       const label = this.add.text(0, 0, CONDITION_LABELS[condId], {
-        fontFamily: 'Arial Black, Arial', fontSize: '15px', color: '#0f172a',
-        align: 'center', wordWrap: { width: cardW - 24 },
-      }).setOrigin(0.5)
+        fontFamily: 'Arial Black, Arial', fontSize: '19px', color: '#e0f2fe',
+        stroke: '#0d1b2a', strokeThickness: 3,
+        align: 'center', wordWrap: { width: cardW - 28 },
+      }).setOrigin(0.5).setResolution(2)
 
       card.add([bg, label])
-      card.setSize(cardW, 64)
+      card.setSize(cardW, cardH)
       card.setData('bg', bg)
       card.setData('conditionId', condId)
       card.setInteractive({ useHandCursor: true })
@@ -361,41 +462,185 @@ export class GameScene extends Phaser.Scene {
       const bg = card.getData('bg') as Phaser.GameObjects.Graphics
       const isSelected = card.getData('conditionId') === condId
       bg.clear()
-      bg.fillStyle(0xfff8f0, 0.96)
-      bg.fillRoundedRect(-180, -32, 360, 64, 16)
-      bg.lineStyle(isSelected ? 4 : 3, isSelected ? 0x42d640 : 0x4FC3F7, isSelected ? 1 : 0.8)
-      bg.strokeRoundedRect(-180, -32, 360, 64, 16)
+      bg.fillStyle(isSelected ? 0x14532d : 0x0f172a, isSelected ? 1 : 0.90)
+      bg.fillRoundedRect(-155, -54, 310, 108, 18)
+      bg.lineStyle(isSelected ? 4 : 3, isSelected ? 0x4ade80 : 0x4fc3f7, isSelected ? 1 : 0.75)
+      bg.strokeRoundedRect(-155, -54, 310, 108, 18)
     })
 
     this.setExecuteEnabled(true)
   }
 
+  // ══════════════════════════════════════════════════════════════════════════
+  //  STEP-PREDICT MODE (NÍVEL 1)
+  // ══════════════════════════════════════════════════════════════════════════
+
+  private clearStepPredictButtons() {
+    this.stepPredictBtns.forEach(b => b.destroy())
+    this.stepPredictBtns = []
+  }
+
+  private buildStepPredictButtons() {
+    this.clearStepPredictButtons()
+    const BTN_W = 460, BTN_H = 92, GAP = 20
+    const centerX = 640, y = 634
+
+    const makeBtn = (xOffset: number, label: string, sub: string, color: number, answer: boolean) => {
+      const btn = this.add.container(centerX + xOffset, y).setDepth(6)
+      const bg = this.add.graphics()
+      bg.fillStyle(color, 1)
+      bg.fillRoundedRect(-BTN_W / 2, -BTN_H / 2, BTN_W, BTN_H, 22)
+      bg.lineStyle(4, 0xffffff, 0.9)
+      bg.strokeRoundedRect(-BTN_W / 2, -BTN_H / 2, BTN_W, BTN_H, 22)
+      const title = this.add.text(0, -14, label, {
+        fontFamily: 'Arial Black, Arial', fontSize: '24px', color: '#ffffff',
+        stroke: '#00000088', strokeThickness: 3,
+      }).setOrigin(0.5).setResolution(2)
+      const desc = this.add.text(0, 18, sub, {
+        fontFamily: 'Arial, Arial', fontSize: '17px', color: '#ffffffcc',
+        stroke: '#00000066', strokeThickness: 2,
+      }).setOrigin(0.5).setResolution(2)
+      btn.add([bg, title, desc])
+      btn.setSize(BTN_W, BTN_H)
+      btn.setData('bg', bg)
+      btn.setInteractive({ useHandCursor: true })
+      btn.on('pointerover', () => { bg.clear(); bg.fillStyle(color, 0.85); bg.fillRoundedRect(-BTN_W/2,-BTN_H/2,BTN_W,BTN_H,22) })
+      btn.on('pointerout',  () => { bg.clear(); bg.fillStyle(color, 1);    bg.fillRoundedRect(-BTN_W/2,-BTN_H/2,BTN_W,BTN_H,22); bg.lineStyle(4,0xffffff,0.9); bg.strokeRoundedRect(-BTN_W/2,-BTN_H/2,BTN_W,BTN_H,22) })
+      btn.on('pointerdown', () => this.handleStepPrediction(answer))
+      return btn
+    }
+
+    const half = BTN_W / 2 + GAP / 2
+    const trueBtn  = makeBtn(-half, '✅ VERDADEIRA', 'O robô avança!',   0x15803d, true)
+    const falseBtn = makeBtn( half, '❌ FALSA',      'O robô para aqui!', 0xb91c1c, false)
+    this.stepPredictBtns = [trueBtn, falseBtn]
+  }
+
+  private handleStepPrediction(predicted: boolean) {
+    if (this.phase !== 'step-predict' || this.gameEnded) return
+
+    const challenge = this.levelConfig.challenges[this.currentChallengeIndex]
+    const goalCol   = challenge.goalCol ?? -1
+    const isTrue    = conditionHolds(this.selectedConditionId!, {
+      col:             this.currentRobotCol,
+      goalCol,
+      walls:           challenge.walls,
+      corridorLength:  challenge.corridorLength,
+      stepsTaken:      this.currentRobotCol,
+    })
+
+    // Disable buttons during feedback
+    this.stepPredictBtns.forEach(b => b.disableInteractive())
+    this.phase = 'running'
+
+    const correct = predicted === isTrue
+
+    if (correct) {
+      // ── Resposta correta ─────────────────────────────────────────────────
+      this.hits++
+      this.consecutiveErrors = 0
+      this.playTick()
+
+      this.flashCondition(isTrue, () => {
+        const totalW = challenge.corridorLength * TILE
+        const startX = 640 - totalW / 2 + TILE / 2
+
+        if (isTrue) {
+          // Condição verdadeira → robô avança um passo
+          this.currentRobotCol++
+          this.stepCountText?.setText(`Passo  ${this.currentRobotCol}`)
+          this.tweens.add({
+            targets: this.robot,
+            x: startX + this.currentRobotCol * TILE,
+            y: GRID_Y - 8,
+            duration: 260, ease: 'Sine.easeInOut',
+            onComplete: () => {
+              this.tweens.add({ targets: this.robot, y: GRID_Y, duration: 120 })
+              this.time.delayedCall(200, () => {
+                this.phase = 'step-predict'
+                this.stepPredictBtns.forEach(b => b.setInteractive({ useHandCursor: true }))
+              })
+            },
+          })
+        } else {
+          // Condição falsa → robô para aqui
+          this.robot?.setTexture(this.currentRobotCol === goalCol ? 'robot-happy' : 'robot-bump')
+          const success = this.currentRobotCol === goalCol
+          this.time.delayedCall(200, () => {
+            if (success) {
+              this.playCorrect()
+              this.showResultPanel(true, false, '✅ Perfeito! Você identificou quando o laço para!')
+            } else {
+              this.showResultPanel(false, false, '⚠️ O robô parou antes do objetivo. Tente novamente!')
+            }
+            this.time.delayedCall(1800, () => {
+              this.robot?.setTexture('robot-idle')
+              this.advanceChallenge()
+            })
+          })
+        }
+      })
+
+    } else {
+      // ── Resposta errada → feedback + reinicia desafio ────────────────────
+      this.errors++
+      this.consecutiveErrors++
+      this.playError()
+
+      const msg = isTrue
+        ? '❌ Era VERDADEIRA — o robô deveria avançar!'
+        : '❌ Era FALSA — o robô deveria parar aqui!'
+
+      this.showResultPanel(false, false, msg)
+      runtimeGameBridge.emit({ type: 'WRONG_ANSWER', gameId: GAME_ID, pointsEarned: -2, stage: this.levelConfig.level })
+      this.emitCheckpoint()
+
+      this.time.delayedCall(2000, () => {
+        this.robot?.setTexture('robot-idle')
+        if (this.consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
+          this.onTooManyErrors()
+        } else {
+          this.startChallenge()   // reinicia o desafio desde o col 0
+        }
+      })
+    }
+  }
+
   private buildExecuteButton() {
-    this.executeBtn = this.add.container(640, 600).setDepth(5)
+    this.executeBtn = this.add.container(640, 632).setDepth(5)
     const bg = this.add.graphics()
     bg.fillStyle(0x42d640, 1)
-    bg.fillRoundedRect(-150, -28, 300, 56, 26)
-    bg.lineStyle(3, 0xffffff, 1)
-    bg.strokeRoundedRect(-150, -28, 300, 56, 26)
-    const txt = this.add.text(0, 0, '▶  Executar', {
-      fontFamily: 'Arial', fontStyle: 'bold', fontSize: '18px', color: '#ffffff',
-      stroke: '#00000040', strokeThickness: 2,
+    bg.fillRoundedRect(-168, -32, 336, 64, 32)
+    bg.lineStyle(4, 0xffffff, 1)
+    bg.strokeRoundedRect(-168, -32, 336, 64, 32)
+    this.executeBtnText = this.add.text(0, 0, '▶  Executar', {
+      fontFamily: 'Arial Black, Arial', fontSize: '22px', color: '#ffffff',
+      stroke: '#1b7d1c', strokeThickness: 3,
     }).setOrigin(0.5).setResolution(2)
-    this.executeBtn.add([bg, txt])
-    this.executeBtn.setSize(300, 64)
+    this.executeBtn.add([bg, this.executeBtnText])
+    this.executeBtn.setSize(336, 72)
     this.executeBtn.setData('bg', bg)
-    this.executeBtn.on('pointerdown', () => this.executeChallenge())
+    this.executeBtn.on('pointerdown', () => {
+      if (this.phase === 'stepping') this.executeOneStep()
+      else this.executeChallenge()
+    })
     this.setExecuteEnabled(false)
+
+    // Step counter — shown only during L1 stepping
+    this.stepCountText = this.add.text(246, 632, 'Passo  0', {
+      fontFamily: 'Arial Black, Arial', fontSize: '19px', color: '#e0f2fe',
+      stroke: '#0d1b2a', strokeThickness: 4,
+    }).setOrigin(0.5).setDepth(5).setAlpha(0).setResolution(2)
   }
 
   private setExecuteEnabled(enabled: boolean) {
     if (!this.executeBtn) return
     const bg = this.executeBtn.getData('bg') as Phaser.GameObjects.Graphics
     bg.clear()
-    bg.fillStyle(enabled ? 0x42d640 : 0xb8c0cc, 1)
-    bg.fillRoundedRect(-150, -28, 300, 56, 26)
-    bg.lineStyle(3, 0xffffff, enabled ? 1 : 0.8)
-    bg.strokeRoundedRect(-150, -28, 300, 56, 26)
+    bg.fillStyle(enabled ? 0x42d640 : 0x334155, 1)
+    bg.fillRoundedRect(-168, -32, 336, 64, 32)
+    bg.lineStyle(4, 0xffffff, enabled ? 1 : 0.5)
+    bg.strokeRoundedRect(-168, -32, 336, 64, 32)
     if (enabled) this.executeBtn.setInteractive({ useHandCursor: true })
     else this.executeBtn.disableInteractive()
   }
@@ -403,6 +648,118 @@ export class GameScene extends Phaser.Scene {
   // ══════════════════════════════════════════════════════════════════════════
   //  EXECUÇÃO DA SIMULAÇÃO
   // ══════════════════════════════════════════════════════════════════════════
+
+  private executeOneStep() {
+    if (this.gameEnded) return
+    const challenge = this.levelConfig.challenges[this.currentChallengeIndex]
+    const totalW = challenge.corridorLength * TILE
+    const startX = 640 - totalW / 2 + TILE / 2
+    const nextCol = this.currentRobotCol + 1
+    const pathClear = nextCol < challenge.corridorLength && !challenge.walls.includes(nextCol)
+
+    this.phase = 'running'
+    this.setExecuteEnabled(false)
+
+    // Thought bubble above robot before condition flash
+    this.showThoughtBubble(pathClear)
+
+    this.time.delayedCall(380, () => {
+      this.flashCondition(pathClear, () => {
+        if (pathClear) {
+          this.currentRobotCol = nextCol
+          this.stepCountText?.setText(`Passo  ${this.currentRobotCol}`)
+          this.tweens.add({
+            targets: this.robot,
+            x: startX + nextCol * TILE,
+            duration: 260,
+            ease: 'Sine.easeInOut',
+            onComplete: () => {
+              if (this.currentRobotCol === challenge.goalCol) {
+                this.robot?.setTexture('robot-happy')
+                this.hits++
+                this.consecutiveErrors = 0
+                this.playCorrect()
+                runtimeGameBridge.emit({ type: 'CORRECT_ANSWER', gameId: GAME_ID, pointsEarned: 10, stage: this.levelConfig.level })
+                this.emitCheckpoint()
+                this.showResultPanel(true, false)
+                this.time.delayedCall(1700, () => this.advanceChallenge())
+              } else {
+                this.phase = 'stepping'
+                this.executeBtnText?.setText('▶ Verificar Condição')
+                this.setExecuteEnabled(true)
+              }
+            },
+          })
+        } else {
+          // Condition false — robot stays, shake animation
+          this.robot?.setTexture('robot-bump')
+          if (this.robot) {
+            this.tweens.add({ targets: this.robot, x: this.robot.x - 7, duration: 45, yoyo: true, repeat: 3,
+              onComplete: () => {
+                this.time.delayedCall(500, () => this.robot?.setTexture('robot-idle'))
+              },
+            })
+          }
+
+          const correct = this.currentRobotCol === challenge.goalCol
+          if (correct) {
+            this.robot?.setTexture('robot-happy')
+            this.hits++
+            this.consecutiveErrors = 0
+            this.playCorrect()
+            runtimeGameBridge.emit({ type: 'CORRECT_ANSWER', gameId: GAME_ID, pointsEarned: 10, stage: this.levelConfig.level })
+            this.emitCheckpoint()
+            this.showResultPanel(true, false)
+            this.time.delayedCall(1700, () => this.advanceChallenge())
+          } else {
+            this.errors++
+            this.consecutiveErrors++
+            this.playError()
+            runtimeGameBridge.emit({ type: 'WRONG_ANSWER', gameId: GAME_ID, pointsEarned: -2, stage: this.levelConfig.level })
+            this.emitCheckpoint()
+            const hitWall = challenge.walls.includes(nextCol)
+            const msg = hitWall
+              ? '💥 Parede à frente! O robô não avançou — recomeça do início.'
+              : '⚠️ O corredor acabou antes do objetivo — tente novamente!'
+            this.showResultPanel(false, hitWall, msg)
+
+            if (this.consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
+              this.time.delayedCall(1900, () => this.onTooManyErrors())
+            } else {
+              this.time.delayedCall(2300, () => {
+                this.robot?.setTexture('robot-idle')
+                this.startChallenge()
+              })
+            }
+          }
+        }
+      })
+    })
+  }
+
+  private showThoughtBubble(pathClear: boolean) {
+    if (!this.robot) return
+    const x = this.robot.x
+    const y = GRID_Y - 90
+    const label = pathClear ? 'Caminho livre? ✅' : 'Caminho livre? ❌'
+    const bubble = this.add.text(x, y, label, {
+      fontFamily: 'Arial Black, Arial', fontSize: '15px',
+      color: pathClear ? '#dcfce7' : '#fecaca',
+      backgroundColor: pathClear ? '#166534' : '#7f1d1d',
+      padding: { x: 10, y: 5 },
+      stroke: '#0d1b2a', strokeThickness: 2,
+    }).setOrigin(0.5, 1).setDepth(12).setAlpha(0).setResolution(2)
+
+    this.tweens.add({
+      targets: bubble, alpha: 1, y: y - 10,
+      duration: 180, ease: 'Sine.Out',
+      onComplete: () => {
+        this.time.delayedCall(220, () => {
+          this.tweens.add({ targets: bubble, alpha: 0, duration: 160, onComplete: () => bubble.destroy() })
+        })
+      },
+    })
+  }
 
   private executeChallenge() {
     if (!this.selectedConditionId) return
@@ -430,7 +787,8 @@ export class GameScene extends Phaser.Scene {
       this.flashCondition(true, () => {
         if (!this.robot) return
         const col = result.path[stepIdx]
-        this.robot.setTexture(stepIdx % 2 === 0 ? 'robot-walk' : 'robot-idle')
+        // Subtle y-bob during movement (no scale distortion)
+        this.tweens.add({ targets: this.robot, y: GRID_Y - 8, duration: MOVE_DUR / 2, yoyo: true, ease: 'Sine.easeInOut' })
         this.tweens.add({
           targets: this.robot, x: startX + col * TILE,
           duration: MOVE_DUR, ease: 'Sine.easeInOut',
@@ -449,24 +807,24 @@ export class GameScene extends Phaser.Scene {
     const overlay = this.conditionCheckOverlay
     if (!overlay || !overlay.active) { onDone(); return }
 
-    overlay.setFillStyle(isTrue ? 0x22c55e : 0xef4444).setAlpha(0.65)
-    this.tweens.add({ targets: overlay, alpha: 0, duration: 300, ease: 'Sine.In' })
+    overlay.setFillStyle(isTrue ? 0x22c55e : 0xef4444).setAlpha(0.70)
+    this.tweens.add({ targets: overlay, alpha: 0, duration: 420, ease: 'Sine.In' })
 
-    // Small ✅/❌ badge near the arrow separator
+    // Bigger ✅/❌ badge, more prominent
     const badge = this.add.text(748, BLOCK_Y, isTrue ? '✅' : '❌', {
-      fontSize: '24px',
-    }).setOrigin(0.5).setDepth(10).setAlpha(0)
+      fontSize: '34px',
+    }).setOrigin(0.5).setDepth(10).setAlpha(0).setResolution(2)
     this.tweens.add({
       targets: badge, alpha: { from: 0, to: 1 },
-      duration: 90, yoyo: true, hold: 110,
+      duration: 110, yoyo: true, hold: 180,
       onComplete: () => badge.destroy(),
     })
 
-    this.time.delayedCall(340, onDone)
+    this.time.delayedCall(460, onDone)
   }
 
   private finishExecution(challenge: MazeChallenge, result: { finalCol: number; crashed: boolean }) {
-    this.robot?.setTexture('robot-idle')
+    if (this.robot) this.tweens.add({ targets: this.robot, y: GRID_Y, duration: 80 })
 
     let correct: boolean
     if (challenge.predictMode) {
@@ -476,8 +834,11 @@ export class GameScene extends Phaser.Scene {
     }
 
     if (result.crashed && this.robot) {
+      this.robot.setTexture('robot-bump')
       this.tweens.add({ targets: this.robot, x: this.robot.x - 8, duration: 60, yoyo: true, repeat: 4, ease: 'Power2' })
       this.cameras.main.flash(150, 239, 68, 68)
+    } else if (correct) {
+      this.robot?.setTexture('robot-happy')
     }
 
     this.showResultPanel(correct, result.crashed)
@@ -499,26 +860,29 @@ export class GameScene extends Phaser.Scene {
       if (this.consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
         this.time.delayedCall(1900, () => this.onTooManyErrors())
       } else {
-        this.time.delayedCall(2200, () => this.startChallenge())
+        this.time.delayedCall(2200, () => {
+          this.robot?.setTexture('robot-idle')
+          this.startChallenge()
+        })
       }
     }
   }
 
-  private showResultPanel(correct: boolean, crashed: boolean) {
+  private showResultPanel(correct: boolean, crashed: boolean, customMsg?: string) {
     const panel = this.addOverlayObject(this.add.container(640, 250).setDepth(70))
     const bg = this.add.graphics()
     bg.fillStyle(correct ? 0x1b5e20 : 0x7f0000, 0.95)
-    bg.fillRoundedRect(-260, -36, 520, 72, 18)
+    bg.fillRoundedRect(-280, -38, 560, 76, 18)
     bg.lineStyle(3, 0xffffff, 0.9)
-    bg.strokeRoundedRect(-260, -36, 520, 72, 18)
-    const msg = correct
+    bg.strokeRoundedRect(-280, -38, 560, 76, 18)
+    const msg = customMsg ?? (correct
       ? '✅ O robô parou no lugar certo!'
       : crashed
         ? '💥 O robô bateu em uma parede!'
-        : '⚠️ O robô não parou no lugar certo.'
+        : '⚠️ O robô não parou no lugar certo.')
     const txt = this.add.text(0, 0, msg, {
       fontFamily: 'Arial', fontStyle: 'bold', fontSize: '18px', color: '#ffffff',
-      align: 'center', wordWrap: { width: 480 },
+      align: 'center', wordWrap: { width: 520 },
     }).setOrigin(0.5).setResolution(2)
     panel.add([bg, txt])
     panel.setAlpha(0).setScale(0.9)

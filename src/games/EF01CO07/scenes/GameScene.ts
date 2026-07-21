@@ -435,6 +435,18 @@ private showTutorialStep(stepIndex: number) {
     return object;
   }
 
+  private markStory<T extends Phaser.GameObjects.GameObject>(object: T): T {
+    object.setData("dynamic", true);
+    object.setData("story", true);
+    return object;
+  }
+
+  private clearStoryLayer() {
+    [...this.children.list]
+      .filter(c => c.getData("story") === true)
+      .forEach(c => c.destroy());
+  }
+
   private createRoundedBox(
     x: number,
     y: number,
@@ -495,20 +507,6 @@ private showTutorialStep(stepIndex: number) {
         .setDepth(20)
     );
 
-    this.markDynamic(
-      this.add
-        .text(640, 165, this.levelConfig.objective, {
-          fontSize: "22px",
-          fontFamily: "Arial Black, Arial",
-          color: "#ffffff",
-          stroke: "#0f172a",
-          strokeThickness: 4,
-          align: "center",
-        })
-        .setOrigin(0.5)
-        .setDepth(20)
-    );
-
     this.createRoundedBox(1040, 118, 150, 46, 0xffffff, 0.9, 0xffffff, 0.92, 8, 20, 3);
 
     this.markDynamic(
@@ -551,11 +549,12 @@ private showTutorialStep(stepIndex: number) {
     shadow.fillStyle(0x0f172a, 0.24);
     shadow.fillRoundedRect(154, 496, 972, 144, 20);
     shadow.setDepth(9);
-    this.markDynamic(shadow);
+    this.markStory(shadow);
 
-    this.createRoundedBox(640, 564, 980, 140, 0xffffff, 0.86, 0xffffff, 0.96, 20, 10, 5);
+    const storyBox = this.createRoundedBox(640, 564, 980, 140, 0xffffff, 0.86, 0xffffff, 0.96, 20, 10, 5);
+    storyBox.setData("story", true);
 
-    this.markDynamic(
+    this.markStory(
       this.add
         .text(640, 516, scene.title, {
           fontSize: "28px",
@@ -568,7 +567,7 @@ private showTutorialStep(stepIndex: number) {
         .setDepth(12)
     );
 
-    this.markDynamic(
+    this.markStory(
       this.add.text(640, 558, scene.situation, {
           fontSize: "25px",
           fontFamily: "Arial Black, Arial",
@@ -581,7 +580,7 @@ private showTutorialStep(stepIndex: number) {
         .setDepth(13)
     );
 
-    this.markDynamic(
+    this.markStory(
       this.add
         .text(640, 606, scene.question, {
           fontSize: "28px",
@@ -611,13 +610,14 @@ private showTutorialStep(stepIndex: number) {
     choices.forEach((choice, index) => {
       const pos = positions[index];
       const button = this.createRoundedBox(pos.x, pos.y, 380, 62, 0x2563eb, 0.96, 0xffffff, 0.96, 15, 20, 4);
+      button.setData("story", true);
       button.setInteractive(
         new Phaser.Geom.Rectangle(pos.x - 190, pos.y - 31, 380, 62),
         Phaser.Geom.Rectangle.Contains
       );
       button.input!.cursor = "pointer";
 
-      const text = this.markDynamic(
+      const text = this.markStory(
         this.add
           .text(pos.x, pos.y, choice.text, {
             fontSize: "23px",
@@ -680,6 +680,7 @@ this.playClick();
 this.startTimerOnce();
 
     this.answeredCurrentScene = true;
+    this.clearStoryLayer();
 
     if (choice.isSafe) {
       this.hits += 1;
@@ -713,8 +714,8 @@ this.startTimerOnce();
     this.showFeedback(choice.feedback, 0xef4444, "⚠️");
     this.emitProgress();
 
-    this.time.delayedCall(1600, () => {
-      this.answeredCurrentScene = false;
+    this.time.delayedCall(1800, () => {
+      if (this.levelStarted) this.renderCurrentScene();
     });
   }
 
@@ -722,28 +723,29 @@ this.startTimerOnce();
     const isCorrect = color === 0x22c55e;
     const accent = isCorrect ? this.paletteColors.green : 0xef4444;
 
-    const container = this.markDynamic(this.add.container(640, 478).setDepth(100));
+    const container = this.markDynamic(this.add.container(640, 620).setDepth(100));
+
     const shadow = this.add.graphics();
     shadow.fillStyle(0x0f172a, 0.24);
-    shadow.fillRoundedRect(-402, -50, 804, 104, 26);
+    shadow.fillRoundedRect(-452, -68, 908, 148, 28);
 
     const panel = this.add.graphics();
-    panel.fillStyle(0xffffff, 0.9);
-    panel.fillRoundedRect(-410, -58, 820, 104, 26);
+    panel.fillStyle(0xffffff, 0.92);
+    panel.fillRoundedRect(-460, -75, 920, 150, 28);
     panel.lineStyle(5, 0xffffff, 0.96);
-    panel.strokeRoundedRect(-410, -58, 820, 104, 26);
+    panel.strokeRoundedRect(-460, -75, 920, 150, 28);
 
     const accentBar = this.add.graphics();
     accentBar.fillStyle(accent, 1);
-    accentBar.fillRoundedRect(-410, -58, 22, 104, 12);
+    accentBar.fillRoundedRect(-460, -75, 24, 150, 14);
 
     const glow = this.add.graphics();
     glow.fillStyle(accent, 0.18);
-    glow.fillCircle(-332, -6, 48);
+    glow.fillCircle(-350, 0, 56);
 
     const title = this.add
-      .text(-255, -25, isCorrect ? "Boa escolha!" : "Atenção!", {
-        fontSize: "22px",
+      .text(-270, -28, isCorrect ? "Boa escolha!" : "Atenção!", {
+        fontSize: "28px",
         fontFamily: "Arial Black, Arial",
         color: isCorrect ? "#166534" : "#991b1b",
         stroke: "#ffffff",
@@ -751,36 +753,33 @@ this.startTimerOnce();
       })
       .setOrigin(0, 0.5);
 
-    const text =
-      this.add
-        .text(-255, 14, message, {
-          fontSize: "18px",
-          fontFamily: "Arial Black, Arial",
-          color: "#25327a",
-          align: "left",
-          wordWrap: { width: 600 },
-          lineSpacing: 4,
-        })
-        .setOrigin(0, 0.5);
+    const text = this.add
+      .text(-270, 22, message, {
+        fontSize: "22px",
+        fontFamily: "Arial Black, Arial",
+        color: "#25327a",
+        align: "left",
+        wordWrap: { width: 650 },
+        lineSpacing: 4,
+      })
+      .setOrigin(0, 0.5);
 
-    const feedbackIcon =
-      this.add
-        .image(-332, -6, isCorrect ? "guardians-icon-check" : "guardians-icon-alert")
-        .setDisplaySize(74, 74);
+    const feedbackIcon = this.add
+      .image(-350, 0, isCorrect ? "guardians-icon-check" : "guardians-icon-alert")
+      .setDisplaySize(86, 86);
 
     container.add([shadow, panel, accentBar, glow, feedbackIcon, title, text]);
-    container.setScale(0.94);
+    container.setScale(0.92);
     container.setAlpha(0);
 
     this.tweens.add({
       targets: container,
       alpha: 1,
-      y: 460,
+      y: 585,
       scale: 1,
-      duration: 220,
+      duration: 240,
       ease: "Back.easeOut",
     });
-
   }
 
   private goToNextScene() {

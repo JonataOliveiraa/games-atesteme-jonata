@@ -560,11 +560,12 @@ export class GameScene extends Phaser.Scene {
       color: "#f0abfc", stroke: "#7e22ce", strokeThickness: 4, letterSpacing: 8,
     }).setOrigin(0.5, 0).setDepth(12));
 
-    // ── LEFT: Reference table ─────────────────────────────────────────────
+    // ── LEFT: Key (only the 3 groups needed for this message) ────────────────
     const refX = PANEL_X + 16;
     const refY = PANEL_Y + 128;
     const refW = 260;
     const refH = PANEL_H - 140;
+    const rowH = 90;
 
     const refBg = this.addContent(this.add.graphics().setDepth(10));
     refBg.fillStyle(COLORS.darkPanel, 0.85);
@@ -572,34 +573,32 @@ export class GameScene extends Phaser.Scene {
     refBg.lineStyle(3, COLORS.purple, 0.6);
     refBg.strokeRoundedRect(refX, refY, refW, refH, 16);
 
-    this.addContent(this.addSharpText(refX + refW / 2, refY + 16, "📋 Tabela ASCII", {
+    this.addContent(this.addSharpText(refX + refW / 2, refY + 16, "🔑 Guia:", {
       fontSize: "17px", fontFamily: "Arial Black, Arial", color: "#f0abfc",
     }).setOrigin(0.5, 0).setDepth(12));
 
-    const letters = Object.keys(ASCII_MAP).sort();
-    letters.forEach((code, i) => {
+    msg.groups.forEach((code, i) => {
       const letter = ASCII_MAP[code];
-      const ry = refY + 46 + i * 38;
-      const isActive = msg.groups.includes(code);
+      const ry = refY + 48 + i * rowH;
 
       const rowBg = this.addContent(this.add.graphics().setDepth(11));
-      if (isActive) {
-        rowBg.fillStyle(COLORS.magenta, 0.18);
-        rowBg.fillRoundedRect(refX + 8, ry - 2, refW - 16, 34, 8);
-      }
+      rowBg.fillStyle(COLORS.magenta, 0.22);
+      rowBg.fillRoundedRect(refX + 8, ry - 4, refW - 16, rowH - 8, 12);
+      rowBg.lineStyle(2, COLORS.magenta, 0.5);
+      rowBg.strokeRoundedRect(refX + 8, ry - 4, refW - 16, rowH - 8, 12);
 
-      this.addContent(this.addSharpText(refX + 44, ry + 12, letter, {
-        fontSize: "22px", fontFamily: "Arial Black, Arial",
-        color: isActive ? "#f0abfc" : "#d8b4fe",
+      this.addContent(this.addSharpText(refX + 52, ry + rowH / 2 - 8, letter, {
+        fontSize: "44px", fontFamily: "Arial Black, Arial",
+        color: "#f0abfc", stroke: "#4c1d95", strokeThickness: 5,
       }).setOrigin(0.5).setDepth(12));
 
-      this.addContent(this.addSharpText(refX + 130, ry + 12, "=", {
-        fontSize: "18px", fontFamily: "Arial Black, Arial", color: "#64748b",
+      this.addContent(this.addSharpText(refX + 124, ry + rowH / 2 - 8, "=", {
+        fontSize: "28px", fontFamily: "Arial Black, Arial", color: "#94a3b8",
       }).setOrigin(0.5).setDepth(12));
 
-      this.addContent(this.addSharpText(refX + 210, ry + 12, code, {
-        fontSize: "20px", fontFamily: "Courier New, Courier, monospace",
-        color: isActive ? "#fbbf24" : "#94a3b8",
+      this.addContent(this.addSharpText(refX + 206, ry + rowH / 2 - 8, code, {
+        fontSize: "36px", fontFamily: "Courier New, Courier, monospace",
+        color: "#fbbf24", stroke: "#7e22ce", strokeThickness: 4,
       }).setOrigin(0.5).setDepth(12));
     });
 
