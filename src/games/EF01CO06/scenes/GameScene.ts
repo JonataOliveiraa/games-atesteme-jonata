@@ -7,7 +7,7 @@ import { APP_DEFS, type AppDef, type AppId, type LevelConfig } from '../types'
 import { LEVELS } from '../data/levels'
 
 const WIN_W = 440
-const WIN_H = 340
+const WIN_H = 360
 const HEADER_H = 52
 const CONTENT_TOP = -(WIN_H / 2) + HEADER_H       // -126
 const CONTENT_H = WIN_H - HEADER_H               // 296
@@ -1046,7 +1046,7 @@ export class GameScene extends Phaser.Scene {
 
     // Fundo texturizado da calculadora (atrás de tudo)
     objects.push(
-      this.add.image(0, CONTENT_CY + 30, 'calc-bg').setDisplaySize(420, 210)
+      this.add.image(0, CONTENT_CY + 30, 'calc-bg').setDisplaySize(420, 260)
     )
 
     // Visor
@@ -1069,7 +1069,7 @@ export class GameScene extends Phaser.Scene {
       ['C', '0', '=', '+'],
     ]
 
-    const BTN_W = 84, BTN_H = 54, GAP = 6
+    const BTN_W = 84, BTN_H = 54, GAP = 10
     const gridW = 4 * BTN_W + 3 * GAP
     const startX = -gridW / 2 + BTN_W / 2
     const startY = CONTENT_TOP + 85

@@ -274,20 +274,13 @@ export class GameScene extends Phaser.Scene {
     })
   }
 
-  /** Marca visualmente um selo de pedido como já entregue nesta rodada. */
   private markRequestFulfilled(channel: ChannelType) {
     const badge = this.requestBadges.get(channel)
     if (!badge) return
     badge.setAlpha(0.35)
     this.tweens.add({ targets: badge, scale: badge.scale * 1.15, yoyo: true, duration: 160 })
   }
-
-  /**
-   * Todas as estações ficam sempre disponíveis pro jogador escolher livremente —
-   * é o painel de destino (buildRequestIndicator) que indica o canal certo.
-   * A única exceção é um canal já entregue com sucesso nesta rodada (não faz
-   * sentido reenviar) e o microfone quando o item não tem som natural.
-   */
+  
   private updateStationAvailability() {
     const item = this.currentMission.item
 
@@ -808,7 +801,6 @@ export class GameScene extends Phaser.Scene {
     this.showSuccessComparison()
   }
 
-  /** Envio por um canal que o destino não pediu — perde a rodada. */
   private registerWrongDelivery() {
     this.clearAccumulatedBadges()
 

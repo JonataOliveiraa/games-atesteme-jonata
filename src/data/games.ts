@@ -1,7 +1,7 @@
 import type { Game } from "../types/game";
 import heroThumbnail from "../assets/hero.png";
 import classificadoresThumbnail from "../assets/games/EF01CO01/cover-01.png";
-import trilhaThumbnail from "../assets/games/EF01CO02/Trilha.png";
+import trilhaThumbnail from "../assets/games/EF01CO02/splash_art.png";
 import algorithmsThumbnail from "../assets/games/EF01CO03/algorithm-game-cover.png";
 import pixelSecretThumbnail from "../assets/games/EF01CO05/cover5.png";
 import desktopThumbnail from "../assets/games/EF01CO06/cover.png";

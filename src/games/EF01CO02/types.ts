@@ -1,32 +1,22 @@
-export interface RobotPart {
-    id: number;
-    label: string;
-    assetKey: string; 
-}
+export type RobotPartId = 'head' | 'body' | 'left_arm' | 'right_arm' | 'left_leg' | 'right_leg';
 
-export type LevelLayoutMode = 'regular' | 'compact' | 'stg';
-
-export interface OrigamiStep {
-    id: number;
-    label: string;
-    assetKey: string;
+export interface RobotPartDef {
+  id: RobotPartId;
+  label: string;
+  cardAssetKey: string;
+  anchorAssetKey: string;
+  anchorGlowAssetKey: string;
 }
 
 export interface LevelConfig {
-    id: number;
-    name: string;
-    steps: RobotPart[];
-    timeLimit: number;
-    layoutMode: LevelLayoutMode;
+  id: number;
+  name: string;
+  timeLimit: number;
+  missingParts: RobotPartId[]; // 2 a 6 peças, NA ORDEM de montagem
 }
 
 export interface RuntimeGameBridge {
-  emit: (data: {
-    type: string;
-    gameId: string;
-    stage: number;
-    [key: string]: any;
-  }) => void;
+  emit: (data: { type: string; gameId: string; stage: number; [key: string]: any }) => void;
 }
 
 declare global {
