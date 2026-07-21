@@ -5,10 +5,13 @@ export const CONDITION_LABELS: Record<string, string> = {
   not_at_goal:  'Enquanto não chegar ao objetivo',
   count_lt_2:   'Enquanto andou menos de 2 passos',
   count_lt_3:   'Enquanto andou menos de 3 passos',
+  count_lt_4:   'Enquanto andou menos de 4 passos',
   count_lt_5:   'Enquanto andou menos de 5 passos',
+  count_lt_6:   'Enquanto andou menos de 6 passos',
+  count_lt_7:   'Enquanto andou menos de 7 passos',
 }
 
-function conditionHolds(
+export function conditionHolds(
   conditionId: string,
   ctx: { col: number; goalCol: number; walls: number[]; corridorLength: number; stepsTaken: number },
 ): boolean {

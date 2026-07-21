@@ -34,6 +34,7 @@ export const LEVELS: FormatLevel[] = [
   {
     level: 1,
     title: "Guardar uma imagem",
+    scenario: "Tina quer salvar no tablet uma faixa colorida que ela pintou.",
     instruction: "Escolha a caixa de pixels e monte a faixa: vermelho, azul e amarelo.",
     timeLimit: 25,
     requiredFormat: "pixels",
@@ -58,6 +59,7 @@ export const LEVELS: FormatLevel[] = [
   {
     level: 2,
     title: "Guardar uma data",
+    scenario: "João quer registrar no computador quando foi a viagem de férias da família.",
     instruction: "Escolha a caixa que guarda uma data e encaixe dia, mês e ano.",
     timeLimit: 35,
     requiredFormat: "date",
@@ -82,6 +84,7 @@ export const LEVELS: FormatLevel[] = [
   {
     level: 3,
     title: "Guardar um código",
+    scenario: "A professora quer guardar no sistema o código de acesso de cada aluno.",
     instruction: "Escolha a caixa de sequência e monte o código: A-12.",
     timeLimit: 45,
     requiredFormat: "text",

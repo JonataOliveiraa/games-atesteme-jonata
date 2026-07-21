@@ -18,9 +18,9 @@ export const LEVELS: StudioLevel[] = [
     formatMatchTasks: [
       {
         id: "t1",
-        goal: "Bina quer criar um retrato colorido do pôr do sol para o mural da escola.",
+        goal: "Bina quer criar uma ilustração colorida do pôr do sol para o mural da escola.",
         correctFormat: "drawing",
-        hint: "Para criar imagens e retratos, use o Editor de Desenho! 🎨",
+        hint: "Para criar ilustrações, use o Editor de Desenho! 🎨",
       },
       {
         id: "t2",

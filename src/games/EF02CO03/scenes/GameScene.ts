@@ -259,7 +259,7 @@ export class GameScene extends Phaser.Scene {
 
     const stageAssetKey = this.getStageAssetKey(stage.id);
     const icon = this.textures.exists(stageAssetKey)
-      ? this.fitImage(this.add.image(0, -15, stageAssetKey), 168, 88)
+      ? this.fitImage(this.add.image(0, -15, stageAssetKey), 188, 110)
       : this.addSharpText(0, -15, stage.icon, {
           fontSize: "24px",
           fontFamily: "Arial Black, Arial",

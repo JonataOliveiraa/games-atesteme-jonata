@@ -1,24 +1,22 @@
 import Phaser from 'phaser'
 
-import bgKitchenUrl  from '../../../assets/games/EF03CO03/bg-kitchen.png'
-import bgLoadingUrl  from '../../../assets/games/EF03CO03/bg-loading.png'
+import bgKitchenUrl     from '../../../assets/games/EF03CO03/bg-kitchen.png'
+import bgLoadingUrl     from '../../../assets/games/EF03CO03/bg-loading.png'
 import characterChefUrl from '../../../assets/games/EF03CO03/character-chef.png'
-import cardSubtaskUrl from '../../../assets/games/EF03CO03/ard-subtask.png'
-import missionBoardUrl from '../../../assets/games/EF03CO03/mission-board.png'
-import timelineSlotUrl from '../../../assets/games/EF03CO03/timeline-slot.png'
-import timelineSlotFilledUrl from '../../../assets/games/EF03CO03/timeline-slot-filled.png'
-import timelineLaneParallelUrl from '../../../assets/games/EF03CO03/timeline-lane-parallel.png'
-import iconCheckSubtaskUrl from '../../../assets/games/EF03CO03/icon-check-subtask.png'
+import iconCheckUrl     from '../../../assets/games/EF03CO03/icon-check-subtask.png'
+import cardTaskUrl      from '../../../assets/games/EF03CO03/ard-subtask.png'
+import missionBoardUrl  from '../../../assets/games/EF03CO03/mission-board.png'
+import panelHeaderUrl   from '../../../assets/games/EF03CO03/panel-header.png'
+import slotBgUrl        from '../../../assets/games/EF03CO03/slot-bg.png'
 
 const ASSETS: Array<[string, string]> = [
-  ['bg-kitchen',       bgKitchenUrl],
-  ['character-chef',    characterChefUrl],
-  ['card-subtask',      cardSubtaskUrl],
-  ['mission-board',     missionBoardUrl],
-  ['timeline-slot',         timelineSlotUrl],
-  ['timeline-slot-filled',  timelineSlotFilledUrl],
-  ['timeline-lane-parallel', timelineLaneParallelUrl],
-  ['icon-check-subtask',     iconCheckSubtaskUrl],
+  ['bg-kitchen',     bgKitchenUrl],
+  ['character-chef', characterChefUrl],
+  ['icon-check',     iconCheckUrl],
+  ['card-task',      cardTaskUrl],
+  ['mission-board',  missionBoardUrl],
+  ['panel-header',   panelHeaderUrl],
+  ['slot-bg',        slotBgUrl],
 ]
 
 export class BootScene extends Phaser.Scene {
@@ -44,30 +42,22 @@ export class BootScene extends Phaser.Scene {
       this.add.image(640, 360, 'bg-loading').setDisplaySize(1280, 720).setDepth(0)
     })
 
-    this.add.text(640, 310, '👨‍🍳  Chef dos Subproblemas', {
-      fontSize: '40px',
-      fontFamily: 'Arial Black, Arial',
-      color: '#FFF3E0',
-      stroke: '#000000',
-      strokeThickness: 6,
+    this.add.text(640, 300, '👨‍🍳  Chef dos Subproblemas', {
+      fontSize: '40px', fontFamily: 'Arial Black, Arial',
+      color: '#FFF3E0', stroke: '#000000', strokeThickness: 6,
       align: 'center',
-      wordWrap: { width: 900 },
     }).setOrigin(0.5).setDepth(1)
 
-    this.add.text(640, 390, 'Organizando a cozinha...', {
-      fontSize: '22px',
-      fontFamily: 'Arial',
-      color: '#FFCC80',
+    this.add.text(640, 386, 'Preparando os subproblemas...', {
+      fontSize: '22px', fontFamily: 'Arial', color: '#FFCC80',
     }).setOrigin(0.5).setDepth(1)
 
     const barW = 500
     const barBg = this.add.rectangle(640, 450, barW + 8, 20, 0x3e2723)
       .setStrokeStyle(2, 0xFFCC80).setDepth(1)
-    const bar = this.add.rectangle(640 - barW / 2, 450, 4, 16, 0xFFCC80).setOrigin(0, 0.5).setDepth(1)
+    const bar = this.add.rectangle(640 - barW / 2, 450, 4, 16, 0xFFCC80)
+      .setOrigin(0, 0.5).setDepth(2)
     void barBg
-
-    this.load.on('progress', (v: number) => {
-      bar.setSize(Math.max(4, barW * v), 16)
-    })
+    this.load.on('progress', (v: number) => { bar.setSize(Math.max(4, barW * v), 16) })
   }
 }

@@ -1,15 +1,20 @@
-export interface Subtask {
+export interface ActionCard {
   id: string
   label: string
 }
 
-/** slots: lista ordenada de posições da linha do tempo.
- *  Cada posição contém 1 id (sequencial) ou 2 ids (lane paralela — Nível 3). */
+export interface Subproblem {
+  id: string
+  label: string
+  correctCardIds: string[]  // ordered if challenge.orderedWithin === true
+}
+
 export interface DecompChallenge {
   id: string
   mainTask: string
-  subtasks: Subtask[]
-  slots: string[][]
+  subproblems: Subproblem[]
+  allCards: ActionCard[]
+  orderedWithin?: boolean   // N2: position within each subproblem matters
 }
 
 export interface LevelConfig {

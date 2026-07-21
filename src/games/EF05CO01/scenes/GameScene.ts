@@ -199,12 +199,10 @@ export class GameScene extends Phaser.Scene {
   }
 
   private createStaticLayout() {
-    this.drawPanel(110, 174, 1060, 126, COLORS.blue, 1);
+    this.drawPanel(110, 174, 1060, 164, COLORS.blue, 1);
     this.drawSectionHeader(640, 164, "Lista ordenada");
-    this.drawPanel(110, 318, 1060, 142, COLORS.purple, 1);
-    this.drawSectionHeader(640, 334, "Cartas para usar");
-    this.drawPanel(110, 480, 1060, 116, COLORS.cyan, 1);
-    this.drawSectionHeader(640, 496, "Vizinhos da posição");
+    this.drawPanel(110, 354, 1060, 234, COLORS.purple, 1);
+    this.drawSectionHeader(640, 344, "Cartas para usar");
   }
 
   private renderBoard() {
@@ -215,7 +213,6 @@ export class GameScene extends Phaser.Scene {
 
     this.renderList();
     this.renderActionCards();
-    this.renderNeighborPanel();
   }
 
   private renderList() {
@@ -225,7 +222,7 @@ export class GameScene extends Phaser.Scene {
     const spacing = 14;
     const totalW = this.currentCards.length * cardW + gapCount * gapW + (this.currentCards.length + gapCount - 1) * spacing;
     let x = 640 - totalW / 2 + gapW / 2;
-    const y = 250;
+    const y = 264;
 
     for (let i = 0; i < gapCount; i += 1) {
       this.createGap(x, y, i);
@@ -239,7 +236,7 @@ export class GameScene extends Phaser.Scene {
 
   private renderActionCards() {
     if (this.actionCards.length === 0) {
-      const text = this.addDynamic(this.addSharpText(640, 397, "Toque nas cartas da lista para trocar por coringa.", {
+      const text = this.addDynamic(this.addSharpText(640, 472, "Toque nas cartas da lista para trocar por coringa.", {
         fontSize: "24px",
         fontFamily: "Arial Black, Arial",
         color: "#ffffff",
@@ -252,38 +249,8 @@ export class GameScene extends Phaser.Scene {
 
     const startX = 640 - ((this.actionCards.length - 1) * 120) / 2;
     this.actionCards.forEach((card, index) => {
-      this.createCard(card, startX + index * 120, 398, "action");
+      this.createCard(card, startX + index * 120, 472, "action");
     });
-  }
-
-  private renderNeighborPanel() {
-    const text = this.getNeighborText();
-    const marker = this.textures.exists("neighbor-marker")
-      ? this.addDynamic(this.fitImage(this.add.image(226, 550, "neighbor-marker").setDepth(12), 72, 72))
-      : null;
-    this.addDynamic(this.addSharpText(marker ? 670 : 640, 550, text, {
-      fontSize: "23px",
-      fontFamily: "Arial Black, Arial",
-      color: "#ffffff",
-      stroke: "#1e3a8a",
-      strokeThickness: 4,
-      align: "center",
-      wordWrap: { width: marker ? 800 : 920 },
-    }).setOrigin(0.5).setDepth(12));
-  }
-
-  private getNeighborText() {
-    if (this.levelConfig.mode === "replace") {
-      const count = this.currentCards.filter((card) => card.value === this.levelConfig.targetValue && !card.joker).length;
-      return count > 0 ? `Ainda faltam ${count} carta(s) de valor 7.` : "Todos os 7 foram substituídos.";
-    }
-    if (!this.selectedActionId) return this.levelConfig.instruction;
-    const card = this.actionCards.find((item) => item.id === this.selectedActionId);
-    if (!card) return this.levelConfig.instruction;
-    const insertIndex = this.findSortedIndex(card.value);
-    const left = this.currentCards[insertIndex - 1]?.label ?? "início";
-    const right = this.currentCards[insertIndex]?.label ?? "fim";
-    return `${card.label} deve ficar depois de ${left} e antes de ${right}.`;
   }
 
   private createGap(x: number, y: number, index: number) {
@@ -321,24 +288,19 @@ export class GameScene extends Phaser.Scene {
   private createCard(card: CardData, x: number, y: number, area: "list" | "action") {
     const selected = area === "action" && this.selectedActionId === card.id;
     const container = this.addDynamic(this.add.container(x, y).setDepth(25));
-    const shadow = this.add.graphics();
-    shadow.fillStyle(0x0f172a, 0.22);
-    shadow.fillRoundedRect(-42, -52, 88, 106, 14);
     const border = selected ? COLORS.yellow : this.getSuitColor(card);
     const textureKey = this.getCardTexture(card);
     if (textureKey && this.textures.exists(textureKey)) {
       const image = this.fitImage(this.add.image(0, -2, textureKey), 88, 108);
       const outline = this.add.graphics();
-      outline.lineStyle(selected ? 6 : 0, border, 1);
+      outline.lineStyle(selected ? 4 : 0, border, 1);
       if (selected) outline.strokeRoundedRect(-48, -60, 96, 116, 16);
-      container.add(selected ? [shadow, image, outline] : [shadow, image]);
+      container.add(selected ? [image, outline] : [image]);
     } else {
       const bg = this.add.graphics();
-      bg.fillStyle(card.joker ? 0xfef3c7 : 0xffffff, 0.98);
+      bg.fillStyle(card.joker ? 0xfef3c7 : 0xffffff, 0.95);
       bg.fillRoundedRect(-44, -56, 88, 106, 14);
-      bg.fillStyle(card.joker ? 0xfacc15 : 0xffffff, 0.18);
-      bg.fillRoundedRect(-34, -46, 68, 28, 12);
-      bg.lineStyle(selected ? 6 : 4, border, 1);
+      bg.lineStyle(selected ? 4 : 2, border, selected ? 1 : 0.85);
       bg.strokeRoundedRect(-44, -56, 88, 106, 14);
       const label = this.addSharpText(0, -13, card.joker ? "★" : card.label, {
         fontSize: card.joker ? "38px" : "36px",
@@ -352,7 +314,7 @@ export class GameScene extends Phaser.Scene {
         fontFamily: "Arial Black, Arial",
         color: this.toCssColor(this.getSuitColor(card)),
       }).setOrigin(0.5);
-      container.add([shadow, bg, label, suit]);
+      container.add([bg, label, suit]);
     }
 
     const hitbox = this.addDynamic(this.add.zone(x, y, 112, 128).setDepth(90));
