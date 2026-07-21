@@ -12,17 +12,18 @@ import { ALL_VEHICLES } from '../data/vehicles'
 
 // ── Constantes de layout ─────────────────────────────────────────────────────
 
-const GAME_ID      = 'hangar-dos-modelos'
-const TOP_Y        = 95       // base da UIScene superior
-const BOTTOM_Y     = 638      // topo da UIScene inferior
+const GAME_ID = 'hangar-dos-modelos'
+const TOP_Y = 95       // base da UIScene superior
+const BOTTOM_Y = 638      // topo da UIScene inferior
 
 // Painel de filtros (direita)
 const PANEL_LEFT_X = 860
-const PANEL_W      = 400
+const PANEL_W = 400
 
-// Cartão
-const CARD_W       = 155
-const CARD_H       = 132
+// NOVA constante, perto de CARD_W/CARD_H
+const CARD_TINT_PALETTE = [0xffffff, 0xffe9c7, 0xd7f2ff, 0xe3ffd9, 0xffe0f0, 0xfff6c2]
+const CARD_W = 155
+const CARD_H = 132
 
 // ── Tipos internos ────────────────────────────────────────────────────────────
 
@@ -41,10 +42,10 @@ export class GameScene extends Phaser.Scene {
   // Dados
   private levelConfig!: LevelConfig
   private currentMissionIndex = 0
-  private hits   = 0
+  private hits = 0
   private errors = 0
   private currentPoints = 0
-  private currentLives  = 1
+  private currentLives = 1
   private isMuted = false
   private phase: MissionPhase = 'intro'
   private gameEnded = false
@@ -81,22 +82,22 @@ export class GameScene extends Phaser.Scene {
 
   init(data: { level?: number; points?: number; lives?: number; showLevelStart?: boolean }) {
     const lvl = (data?.level ?? 1) as 1 | 2 | 3
-    this.levelConfig         = LEVELS.find((l) => l.level === lvl) ?? LEVELS[0]
+    this.levelConfig = LEVELS.find((l) => l.level === lvl) ?? LEVELS[0]
     this.currentMissionIndex = 0
-    this.hits                = 0
-    this.errors              = 0
-    this.currentPoints       = data?.points ?? 0
-    this.currentLives        = data?.lives  ?? 1
-    this.isMuted             = false
-    this.phase               = 'intro'
-    this.gameEnded           = false
+    this.hits = 0
+    this.errors = 0
+    this.currentPoints = data?.points ?? 0
+    this.currentLives = data?.lives ?? 1
+    this.isMuted = false
+    this.phase = 'intro'
+    this.gameEnded = false
     this.shouldShowLevelStart = data?.showLevelStart ?? false
     this.missionEffectActive = false
-    this.vehicleCards        = []
-    this.overlayObjects      = []
-    this.selectedVehicleIds  = new Set()
-    this.timerActive      = false
-    this.timerWarned      = false
+    this.vehicleCards = []
+    this.overlayObjects = []
+    this.selectedVehicleIds = new Set()
+    this.timerActive = false
+    this.timerWarned = false
     this.timerState.progress = 1
     this.warningBeepTimer = null
   }
@@ -112,12 +113,7 @@ export class GameScene extends Phaser.Scene {
     this.emitCheckpoint()
 
     this.startLevel()
-
-    if (this.shouldShowLevelStart && this.levelConfig.level > 1) {
-      this.showNextLevelStartScreen()
-    } else {
-      this.startTimer()
-    }
+    this.showNextLevelStartScreen()
   }
 
   update() {
@@ -135,9 +131,15 @@ export class GameScene extends Phaser.Scene {
     this.unsubPlatform = undefined
   }
 
-  // ══════════════════════════════════════════════════════════════════════════
-  //  OVERLAY MANAGEMENT
-  // ══════════════════════════════════════════════════════════════════════════
+  private dedupeRepeatedLabel(text: string): string {
+    const words = text.trim().split(/\s+/)
+    const result: string[] = []
+    for (const w of words) {
+      const last = result[result.length - 1]
+      if (!last || last.toLowerCase() !== w.toLowerCase()) result.push(w)
+    }
+    return result.join(' ')
+  }
 
   private addOverlayObject<T extends Phaser.GameObjects.GameObject>(obj: T): T {
     this.overlayObjects.push(obj)
@@ -183,10 +185,10 @@ export class GameScene extends Phaser.Scene {
     this.drawTimeBar(1)
 
     this.timerTween = this.tweens.add({
-      targets:  this.timerState,
+      targets: this.timerState,
       progress: 0,
       duration: this.levelConfig.timeLimit * 1000,
-      ease:     'Linear',
+      ease: 'Linear',
       onUpdate: () => {
         this.drawTimeBar(this.timerState.progress)
         if (!this.timerWarned && this.timerState.progress <= 0.25) {
@@ -212,18 +214,18 @@ export class GameScene extends Phaser.Scene {
 
   private onTimeUp() {
     if (this.gameEnded) return
-    this.gameEnded   = true
+    this.gameEnded = true
     this.timerActive = false
     this.drawTimeBar(0)
     this.warningBeepTimer?.destroy()
     this.warningBeepTimer = null
-    this.input.enabled    = false
+    this.input.enabled = false
 
     runtimeGameBridge.emit({
-      type:         'WRONG_ANSWER',
-      gameId:       GAME_ID,
+      type: 'WRONG_ANSWER',
+      gameId: GAME_ID,
       pointsEarned: 0,
-      stage:        this.levelConfig.level,
+      stage: this.levelConfig.level,
     })
     this.showGameOverScreen('timeout')
   }
@@ -238,22 +240,22 @@ export class GameScene extends Phaser.Scene {
     EventBus.emit('mission-update', {
       instruction: mission.question,
       hint: mission.hint,
-      missionIndex:  this.currentMissionIndex,
+      missionIndex: this.currentMissionIndex,
       totalMissions: missions.length,
-      level:         this.levelConfig.level,
+      level: this.levelConfig.level,
     })
   }
 
   private emitCheckpoint() {
     const progress = Math.round((this.currentMissionIndex / this.levelConfig.missions.length) * 100)
     runtimeGameBridge.emit({
-      type:     'CHECKPOINT',
-      gameId:   GAME_ID,
+      type: 'CHECKPOINT',
+      gameId: GAME_ID,
       progress,
-      score:    this.currentPoints,
-      stage:    this.levelConfig.level,
-      hits:     this.hits,
-      errors:   this.errors,
+      score: this.currentPoints,
+      stage: this.levelConfig.level,
+      hits: this.hits,
+      errors: this.errors,
     })
   }
 
@@ -396,7 +398,7 @@ export class GameScene extends Phaser.Scene {
       dot.fillStyle(
         level <= lvl ? 0x42d640
           : level === nextLvl ? 0xff8a2a
-          : 0xd8dde8,
+            : 0xd8dde8,
         1
       )
       dot.fillCircle(-28 + index * 28, 72, 8)
@@ -734,8 +736,9 @@ export class GameScene extends Phaser.Scene {
 
   private makeVehicleCard(vehicle: Vehicle, cx: number, cy: number): VehicleCard {
     const bg = this.add.image(0, 0, `card-${vehicle.attributes.meio}`)
-      .setDisplaySize(CARD_W, CARD_H).setOrigin(0.5)
-
+    .setDisplaySize(CARD_W, CARD_H).setOrigin(0.5)
+    .setTint(Phaser.Utils.Array.GetRandom(CARD_TINT_PALETTE))
+    
     const img = this.add.image(0, -12, `veh-${vehicle.id}`)
       .setDisplaySize(96, 96).setOrigin(0.5)
 
@@ -743,7 +746,7 @@ export class GameScene extends Phaser.Scene {
     nameBg.fillStyle(0x000000, 0.45)
     nameBg.fillRoundedRect(-CARD_W / 2 + 4, CARD_H / 2 - 26, CARD_W - 8, 22, { tl: 0, tr: 0, bl: 12, br: 12 })
 
-    const name = this.add.text(0, CARD_H / 2 - 15, vehicle.name, {
+    const name = this.add.text(0, CARD_H / 2 - 15, this.dedupeRepeatedLabel(vehicle.name), {
       fontSize: '13px', fontFamily: 'Arial Black, Arial',
       color: '#FFFFFF', stroke: '#000000', strokeThickness: 2,
     }).setOrigin(0.5)
@@ -789,10 +792,21 @@ export class GameScene extends Phaser.Scene {
     const bg = this.add.image(PANEL_W / 2, 155, 'panel-filter')
       .setDisplaySize(PANEL_W, 310).setOrigin(0.5)
 
-    const qText = this.add.text(PANEL_W / 2, 28, '', {
+    const qCardBg = this.add.graphics()
+    qCardBg.fillStyle(0xfff6e8, 0.97)
+    qCardBg.fillRoundedRect(20, 2, PANEL_W - 40, 86, 16)
+    qCardBg.lineStyle(3, 0x42d640, 0.9)
+    qCardBg.strokeRoundedRect(20, 2, PANEL_W - 40, 86, 16)
+
+    const qLabel = this.add.text(PANEL_W / 2, 12, '🎯  O QUE FAZER', {
       fontFamily: 'Arial', fontStyle: 'bold',
-      fontSize: '22px', color: '#25327a',
-      align: 'center', wordWrap: { width: 360 },
+      fontSize: '13px', color: '#f57c00',
+    }).setOrigin(0.5, 0).setResolution(2)
+
+    const qText = this.add.text(PANEL_W / 2, 32, '', {
+      fontFamily: 'Arial', fontStyle: 'bold',
+      fontSize: '21px', color: '#1a2b6b',
+      align: 'center', wordWrap: { width: 340 },
     }).setOrigin(0.5, 0).setResolution(2)
 
     this.selectionCountText = this.add.text(PANEL_W / 2, 100, '0 selecionados', {
@@ -827,7 +841,7 @@ export class GameScene extends Phaser.Scene {
 
     this.questionPanel.setData('qText', qText)
     this.questionPanel.setData('hintText', hintText)
-    this.questionPanel.add([bg, qText, this.selectionCountText!, this.confirmBtn, hintText])
+    this.questionPanel.add([bg, qCardBg, qLabel, qText, this.selectionCountText!, this.confirmBtn, hintText])
   }
 
   private showCurrentMission() {
@@ -942,11 +956,11 @@ export class GameScene extends Phaser.Scene {
 
     const matchesAttr = (v: Vehicle): boolean => {
       switch (mission.attribute) {
-        case 'voa':       return v.attributes.voa       === mission.value
-        case 'temRodas':  return v.attributes.temRodas  === mission.value
-        case 'temMotor':  return v.attributes.temMotor  === mission.value
-        case 'meio':      return v.attributes.meio       === mission.value
-        default:          return false
+        case 'voa': return v.attributes.voa === mission.value
+        case 'temRodas': return v.attributes.temRodas === mission.value
+        case 'temMotor': return v.attributes.temMotor === mission.value
+        case 'meio': return v.attributes.meio === mission.value
+        default: return false
       }
     }
     const correctIds = new Set(vehicles.filter(matchesAttr).map(v => v.id))
@@ -1103,7 +1117,7 @@ export class GameScene extends Phaser.Scene {
     const ctx = this.getAudioCtx()
     if (!ctx) return
     const osc = ctx.createOscillator()
-    const g   = ctx.createGain()
+    const g = ctx.createGain()
     osc.connect(g); g.connect(ctx.destination)
     osc.type = type
     osc.frequency.setValueAtTime(freq, ctx.currentTime)
@@ -1112,12 +1126,12 @@ export class GameScene extends Phaser.Scene {
     osc.start(); osc.stop(ctx.currentTime + dur)
   }
 
-  private playTick()   { this.playTone(520, 0.04, 'sine', 0.08) }
+  private playTick() { this.playTone(520, 0.04, 'sine', 0.08) }
   private playCorrect() {
     this.playTone(660, 0.08, 'sine', 0.15)
     this.time.delayedCall(100, () => this.playTone(880, 0.08, 'sine', 0.12))
   }
-  private playError()  { this.playTone(330, 0.20, 'square', 0.15) }
+  private playError() { this.playTone(330, 0.20, 'square', 0.15) }
   private playFanfare() {
     [523, 659, 784, 1047].forEach((f, i) =>
       this.time.delayedCall(i * 125, () => this.playTone(f, 0.22, 'sine', 0.32)),
@@ -1132,7 +1146,7 @@ export class GameScene extends Phaser.Scene {
     this.unsubPlatform = runtimeGameBridge.onCommand((cmd: PlatformCommand) => {
       if (cmd.type === 'START_GAME') {
         this.currentPoints = cmd.points ?? 0
-        this.currentLives  = cmd.lives  ?? 1
+        this.currentLives = cmd.lives ?? 1
       }
     })
   }

@@ -10,21 +10,15 @@ import type {
 import { LEVELS } from '../data/levels'
 import { ALL_ITEMS } from '../data/items'
 
-// ── Constantes de layout ─────────────────────────────────────────────────────
+const GAME_ID = 'museu-vivo-do-computador'
+const TOP_Y = 95
+const BOTTOM_Y = 638
 
-const GAME_ID      = 'museu-vivo-do-computador'
-const TOP_Y        = 95       // base da UIScene superior
-const BOTTOM_Y     = 638      // topo da UIScene inferior
-
-// Painel de filtros (direita)
 const PANEL_LEFT_X = 860
-const PANEL_W      = 400
+const PANEL_W = 400
 
-// Cartão
-const CARD_W       = 155
-const CARD_H       = 142
-
-// ── Tipos internos ────────────────────────────────────────────────────────────
+const CARD_W = 180
+const CARD_H = 160
 
 type MissionPhase =
   | 'intro'
@@ -34,36 +28,29 @@ type MissionPhase =
   | 'feedback-err'
   | 'level-complete'
 
-// ── GameScene ─────────────────────────────────────────────────────────────────
-
 export class GameScene extends Phaser.Scene {
 
-  // Dados
   private levelConfig!: LevelConfig
   private currentMissionIndex = 0
-  private hits   = 0
+  private hits = 0
   private errors = 0
   private currentPoints = 0
-  private currentLives  = 1
+  private currentLives = 1
   private isMuted = false
   private phase: MissionPhase = 'intro'
   private gameEnded = false
   private shouldShowLevelStart = false
   private missionEffectActive = false
-
-  // Objetos de jogo
+private missionQuestionText?: Phaser.GameObjects.Text;
   private itemCards: ItemCard[] = []
 
-  // Seleção
   private selectedItemIds = new Set<string>()
   private questionPanel?: Phaser.GameObjects.Container
   private confirmBtn?: Phaser.GameObjects.Container
   private selectionCountText?: Phaser.GameObjects.Text
 
-  // Overlay (modais de fluxo)
   private overlayObjects: Phaser.GameObjects.GameObject[] = []
 
-  // Timer (padrão EF02CO01)
   private timeBarFill?: Phaser.GameObjects.Graphics
   private timerTween?: Phaser.Tweens.Tween
   private timerState = { progress: 1 }
@@ -77,26 +64,24 @@ export class GameScene extends Phaser.Scene {
     super({ key: 'GameScene' })
   }
 
-  // ── Lifecycle ─────────────────────────────────────────────────────────────
-
   init(data: { level?: number; points?: number; lives?: number; showLevelStart?: boolean }) {
     const lvl = (data?.level ?? 1) as 1 | 2 | 3
-    this.levelConfig         = LEVELS.find((l) => l.level === lvl) ?? LEVELS[0]
+    this.levelConfig = LEVELS.find((l) => l.level === lvl) ?? LEVELS[0]
     this.currentMissionIndex = 0
-    this.hits                = 0
-    this.errors              = 0
-    this.currentPoints       = data?.points ?? 0
-    this.currentLives        = data?.lives  ?? 1
-    this.isMuted             = false
-    this.phase               = 'intro'
-    this.gameEnded           = false
+    this.hits = 0
+    this.errors = 0
+    this.currentPoints = data?.points ?? 0
+    this.currentLives = data?.lives ?? 1
+    this.isMuted = false
+    this.phase = 'intro'
+    this.gameEnded = false
     this.shouldShowLevelStart = data?.showLevelStart ?? false
     this.missionEffectActive = false
-    this.itemCards           = []
-    this.overlayObjects      = []
-    this.selectedItemIds     = new Set()
-    this.timerActive      = false
-    this.timerWarned      = false
+    this.itemCards = []
+    this.overlayObjects = []
+    this.selectedItemIds = new Set()
+    this.timerActive = false
+    this.timerWarned = false
     this.timerState.progress = 1
     this.warningBeepTimer = null
   }
@@ -104,6 +89,15 @@ export class GameScene extends Phaser.Scene {
   create() {
     this.drawBackground()
     this.createTimerBar()
+    this.missionQuestionText = this.add.text(640, 130, '', {
+      fontFamily: 'Arial Black',
+      fontSize: '32px',
+      color: '#ffffff',
+      stroke: '#0f172a',
+      strokeThickness: 6,
+      align: 'center',
+      wordWrap: { width: 900 }
+    }).setOrigin(0.5).setDepth(10).setResolution(2);
     this.registerPlatformCommands()
     EventBus.on('mute-audio', (m: boolean) => { this.isMuted = m }, this)
 
@@ -112,16 +106,10 @@ export class GameScene extends Phaser.Scene {
     this.emitCheckpoint()
 
     this.startLevel()
-
-    if (this.shouldShowLevelStart && this.levelConfig.level > 1) {
-      this.showNextLevelStartScreen()
-    } else {
-      this.startTimer()
-    }
+    this.showLevelIntroScreen()
   }
 
   update() {
-    // timer is tween-driven — no per-frame update needed
   }
 
   shutdown() {
@@ -135,10 +123,6 @@ export class GameScene extends Phaser.Scene {
     this.unsubPlatform = undefined
   }
 
-  // ══════════════════════════════════════════════════════════════════════════
-  //  OVERLAY MANAGEMENT
-  // ══════════════════════════════════════════════════════════════════════════
-
   private addOverlayObject<T extends Phaser.GameObjects.GameObject>(obj: T): T {
     this.overlayObjects.push(obj)
     return obj
@@ -149,12 +133,8 @@ export class GameScene extends Phaser.Scene {
     this.overlayObjects = []
   }
 
-  // ══════════════════════════════════════════════════════════════════════════
-  //  TIMER (padrão EF02CO01)
-  // ══════════════════════════════════════════════════════════════════════════
-
   private createTimerBar() {
-    const barX = 200, barY = 106, barW = 880, barH = 24
+    const barX = 200, barY = 160, barW = 880, barH = 24
 
     const bg = this.add.graphics()
     bg.fillStyle(0xdff2bc, 1)
@@ -182,10 +162,10 @@ export class GameScene extends Phaser.Scene {
     this.drawTimeBar(1)
 
     this.timerTween = this.tweens.add({
-      targets:  this.timerState,
+      targets: this.timerState,
       progress: 0,
       duration: this.levelConfig.timeLimit * 1000,
-      ease:     'Linear',
+      ease: 'Linear',
       onUpdate: () => {
         this.drawTimeBar(this.timerState.progress)
         if (!this.timerWarned && this.timerState.progress <= 0.25) {
@@ -211,25 +191,21 @@ export class GameScene extends Phaser.Scene {
 
   private onTimeUp() {
     if (this.gameEnded) return
-    this.gameEnded   = true
+    this.gameEnded = true
     this.timerActive = false
     this.drawTimeBar(0)
     this.warningBeepTimer?.destroy()
     this.warningBeepTimer = null
-    this.input.enabled    = false
+    this.input.enabled = false
 
     runtimeGameBridge.emit({
-      type:         'WRONG_ANSWER',
-      gameId:       GAME_ID,
+      type: 'WRONG_ANSWER',
+      gameId: GAME_ID,
       pointsEarned: 0,
-      stage:        this.levelConfig.level,
+      stage: this.levelConfig.level,
     })
     this.showGameOverScreen('timeout')
   }
-
-  // ══════════════════════════════════════════════════════════════════════════
-  //  BROADCAST PARA UISCENE
-  // ══════════════════════════════════════════════════════════════════════════
 
   private broadcastMissionState() {
     const missions = this.levelConfig.missions
@@ -237,28 +213,28 @@ export class GameScene extends Phaser.Scene {
     EventBus.emit('mission-update', {
       instruction: mission.question,
       hint: mission.hint,
-      missionIndex:  this.currentMissionIndex,
+      missionIndex: this.currentMissionIndex,
       totalMissions: missions.length,
-      level:         this.levelConfig.level,
+      level: this.levelConfig.level,
     })
   }
 
   private emitCheckpoint() {
     const progress = Math.round((this.currentMissionIndex / this.levelConfig.missions.length) * 100)
     runtimeGameBridge.emit({
-      type:     'CHECKPOINT',
-      gameId:   GAME_ID,
+      type: 'CHECKPOINT',
+      gameId: GAME_ID,
       progress,
-      score:    this.currentPoints,
-      stage:    this.levelConfig.level,
-      hits:     this.hits,
-      errors:   this.errors,
+      score: this.currentPoints,
+      stage: this.levelConfig.level,
+      hits: this.hits,
+      errors: this.errors,
     })
   }
 
-  // ══════════════════════════════════════════════════════════════════════════
-  //  TELAS DE FEEDBACK DE NÍVEL (padrão EF02CO01)
-  // ══════════════════════════════════════════════════════════════════════════
+  private localizeText(text: string): string {
+    return text.replace(/hardware/gi, 'Equipamentos').replace(/software/gi, 'Programas')
+  }
 
   private showMissionCompleteEffect(nextInstruction: string | null, onDone: () => void) {
     if (this.missionEffectActive) return
@@ -313,7 +289,7 @@ export class GameScene extends Phaser.Scene {
         fontSize: '17px', color: '#f57c00',
       }).setOrigin(0.5).setResolution(2)
 
-      const nextTxt = this.add.text(0, 42, nextInstruction, {
+      const nextTxt = this.add.text(0, 42, this.localizeText(nextInstruction), {
         fontFamily: 'Arial', fontStyle: 'bold',
         fontSize: '20px', color: '#3b3b3b',
         align: 'center', wordWrap: { width: 460 },
@@ -388,14 +364,13 @@ export class GameScene extends Phaser.Scene {
       align: 'center', wordWrap: { width: 430 },
     }).setOrigin(0.5).setResolution(2)
 
-    // Dots de progresso de nível (igual EF02CO01)
     const nextLvl = nextLevel ?? (lvl + 1)
     const dots = [1, 2, 3].map((level, index) => {
       const dot = this.add.graphics()
       dot.fillStyle(
         level <= lvl ? 0x42d640
           : level === nextLvl ? 0xff8a2a
-          : 0xd8dde8,
+            : 0xd8dde8,
         1
       )
       dot.fillCircle(-28 + index * 28, 72, 8)
@@ -422,7 +397,7 @@ export class GameScene extends Phaser.Scene {
     })
   }
 
-  private showNextLevelStartScreen() {
+  private showLevelIntroScreen() {
     const overlay = this.add.rectangle(640, 360, 1280, 720, 0x12324a, 0.58)
       .setDepth(450).setInteractive()
 
@@ -430,41 +405,47 @@ export class GameScene extends Phaser.Scene {
 
     const shadow = this.add.graphics()
     shadow.fillStyle(0x000000, 0.18)
-    shadow.fillRoundedRect(-270, -154, 540, 312, 28)
+    shadow.fillRoundedRect(-270, -170, 540, 340, 28)
 
     const bg = this.add.graphics()
     bg.fillStyle(0xfff6e8, 0.98)
-    bg.fillRoundedRect(-278, -166, 556, 312, 28)
+    bg.fillRoundedRect(-278, -178, 556, 340, 28)
     bg.lineStyle(5, 0xffffff, 0.95)
-    bg.strokeRoundedRect(-278, -166, 556, 312, 28)
+    bg.strokeRoundedRect(-278, -178, 556, 340, 28)
 
     const topBar = this.add.graphics()
     topBar.fillStyle(0x42d640, 1)
-    topBar.fillRoundedRect(-196, -182, 392, 28, 14)
+    topBar.fillRoundedRect(-196, -194, 392, 28, 14)
     topBar.lineStyle(3, 0xffffff, 0.82)
-    topBar.strokeRoundedRect(-196, -182, 392, 28, 14)
+    topBar.strokeRoundedRect(-196, -194, 392, 28, 14)
 
     const lvl = this.levelConfig.level
-    const title = this.add.text(0, -102, `Nível ${lvl}`, {
+    const title = this.add.text(0, -112, `Nível ${lvl}`, {
       fontFamily: 'Arial', fontStyle: 'bold',
       fontSize: '38px', color: '#25327a',
       stroke: '#ffffff', strokeThickness: 5,
     }).setOrigin(0.5).setResolution(2)
 
     const info = this.getLevelInfo(lvl)
-    const objective = this.add.text(0, -42, info.objective, {
+    const objective = this.add.text(0, -52, info.objective, {
       fontFamily: 'Arial', fontStyle: 'bold',
       fontSize: '24px', color: '#f57c00',
       align: 'center', wordWrap: { width: 430 },
     }).setOrigin(0.5).setResolution(2)
 
-    const detail = this.add.text(0, 12, info.tip, {
+    const detail = this.add.text(0, 4, info.tip, {
       fontFamily: 'Arial', fontStyle: 'bold',
       fontSize: '16px', color: '#3b3b3b',
       align: 'center', wordWrap: { width: 420 },
     }).setOrigin(0.5).setResolution(2)
 
-    const button = this.add.container(0, 104)
+    const tutorialText = this.add.text(0, 48, 'Clique nos itens para selecionar e depois em Confirmar.', {
+      fontFamily: 'Arial', fontStyle: 'bold',
+      fontSize: '14px', color: '#1e3a5f',
+      align: 'center', wordWrap: { width: 420 },
+    }).setOrigin(0.5).setResolution(2)
+
+    const button = this.add.container(0, 120)
     const buttonShadow = this.add.graphics()
     buttonShadow.fillStyle(0x000000, 0.16)
     buttonShadow.fillRoundedRect(-136, -20, 272, 48, 24)
@@ -480,7 +461,7 @@ export class GameScene extends Phaser.Scene {
     }).setOrigin(0.5).setResolution(2)
     button.add([buttonShadow, buttonBg, buttonText])
 
-    const buttonHitbox = this.add.zone(640, 360 + 104, 280, 58)
+    const buttonHitbox = this.add.zone(640, 360 + 120, 280, 58)
     buttonHitbox.setDepth(452).setInteractive({ useHandCursor: true })
     buttonHitbox.on('pointerover', () => {
       this.tweens.add({ targets: button, scale: 1.04, duration: 90, ease: 'Sine.easeOut' })
@@ -496,7 +477,7 @@ export class GameScene extends Phaser.Scene {
       this.startTimer()
     })
 
-    modal.add([shadow, bg, topBar, title, objective, detail, button])
+    modal.add([shadow, bg, topBar, title, objective, detail, tutorialText, button])
     modal.setScale(0.9).setAlpha(0)
     this.tweens.add({ targets: modal, alpha: 1, scale: 1, duration: 260, ease: 'Back.easeOut' })
   }
@@ -681,20 +662,12 @@ export class GameScene extends Phaser.Scene {
     this.time.delayedCall(100, () => this.playTone(220, 0.40, 'square', 0.16))
   }
 
-  // ══════════════════════════════════════════════════════════════════════════
-  //  FUNDO
-  // ══════════════════════════════════════════════════════════════════════════
-
   private drawBackground() {
     this.add.image(640, 360, 'bg-museum').setDisplaySize(1280, 720).setDepth(-1)
     const g = this.add.graphics()
     g.lineStyle(1, 0x4FC3F7, 0.2)
     g.lineBetween(PANEL_LEFT_X - 10, TOP_Y, PANEL_LEFT_X - 10, BOTTOM_Y)
   }
-
-  // ══════════════════════════════════════════════════════════════════════════
-  //  GRID UNIFICADA DE ITENS
-  // ══════════════════════════════════════════════════════════════════════════
 
   private startLevel() {
     this.buildItemGrid()
@@ -735,26 +708,25 @@ export class GameScene extends Phaser.Scene {
     bg.fillStyle(0xffffff, 0.97)
     bg.fillRoundedRect(-CARD_W / 2, -CARD_H / 2, CARD_W, CARD_H, 16)
 
-    const img = this.add.image(0, -14, item.textureKey)
-      .setDisplaySize(104, 104).setOrigin(0.5)
+    const img = this.add.image(0, -18, item.textureKey)
+      .setDisplaySize(130, 130).setOrigin(0.5)
 
     const nameBg = this.add.graphics()
     nameBg.fillStyle(0x1e3a5f, 0.88)
     nameBg.fillRoundedRect(-CARD_W / 2 + 4, CARD_H / 2 - 26, CARD_W - 8, 22, { tl: 0, tr: 0, bl: 12, br: 12 })
 
     const name = this.add.text(0, CARD_H / 2 - 15, item.name, {
-      fontSize: '13px', fontFamily: 'Arial Black, Arial',
+      fontSize: '14px', fontFamily: 'Arial Black, Arial',
       color: '#FFFFFF', stroke: '#000000', strokeThickness: 2,
     }).setOrigin(0.5)
 
-    // Seleção visual: glow border + checkmark (inicialmente ocultos)
     const selGlow = this.add.graphics()
     selGlow.lineStyle(5, 0x42d640, 1)
     selGlow.strokeRoundedRect(-CARD_W / 2 - 4, -CARD_H / 2 - 4, CARD_W + 8, CARD_H + 8, 18)
     selGlow.setAlpha(0)
 
     const checkmark = this.add.text(CARD_W / 2 - 10, -CARD_H / 2 + 8, '✔', {
-      fontSize: '22px', color: '#42d640',
+      fontSize: '24px', color: '#42d640',
       stroke: '#000000', strokeThickness: 3,
     }).setOrigin(1, 0).setAlpha(0)
 
@@ -781,26 +753,26 @@ export class GameScene extends Phaser.Scene {
 
   private buildQuestionPanel() {
     const panelY = TOP_Y + 35
+    const panelH = 340
 
     this.questionPanel = this.add.container(PANEL_LEFT_X, panelY).setDepth(10)
 
-    const bg = this.add.image(PANEL_W / 2, 155, 'category-hw')
-      .setDisplaySize(PANEL_W, 310).setOrigin(0.5)
+    const bg = this.add.image(PANEL_W / 2, panelH / 2, 'category-hw')
+      .setDisplaySize(PANEL_W, panelH).setOrigin(0.5)
 
-    const qText = this.add.text(PANEL_W / 2, 28, '', {
+    const qText = this.add.text(PANEL_W / 2, 20, '', {
       fontFamily: 'Arial', fontStyle: 'bold',
       fontSize: '22px', color: '#ffffff',
       stroke: '#0f172a', strokeThickness: 4,
       align: 'center', wordWrap: { width: 360 },
     }).setOrigin(0.5, 0).setResolution(2)
 
-    this.selectionCountText = this.add.text(PANEL_W / 2, 100, '0 selecionados', {
+    this.selectionCountText = this.add.text(PANEL_W / 2, 90, '0 selecionados', {
       fontFamily: 'Arial', fontStyle: 'bold',
       fontSize: '17px', color: '#e2e8f0',
     }).setOrigin(0.5, 0).setResolution(2)
 
-    // Botão Confirmar
-    this.confirmBtn = this.add.container(PANEL_W / 2, 185)
+    this.confirmBtn = this.add.container(PANEL_W / 2, 175)
     const btnBg = this.add.graphics()
     btnBg.fillStyle(0xb8c0cc, 1)
     btnBg.fillRoundedRect(-120, -24, 240, 48, 24)
@@ -818,7 +790,7 @@ export class GameScene extends Phaser.Scene {
     this.confirmBtn.setData('enabled', false)
     this.confirmBtn.on('pointerdown', () => this.confirmAnswer())
 
-    const hintText = this.add.text(PANEL_W / 2, 242, '', {
+    const hintText = this.add.text(PANEL_W / 2, 238, '', {
       fontFamily: 'Arial', fontStyle: 'bold',
       fontSize: '14px', color: '#cbd5e1',
       align: 'center', wordWrap: { width: 340 },
@@ -831,9 +803,8 @@ export class GameScene extends Phaser.Scene {
 
   private showCurrentMission() {
     if (!this.questionPanel) return
-    const mission = this.levelConfig.missions[this.currentMissionIndex]
+const mission = this.levelConfig.missions[this.currentMissionIndex]
 
-    // Quando a missão tem pool próprio, destrói o grid atual e reconstrói
     if (mission.itemIds) {
       this.itemCards.forEach(c => c.container.destroy())
       this.itemCards = []
@@ -841,17 +812,18 @@ export class GameScene extends Phaser.Scene {
       this.buildItemGridFromIds(mission.itemIds)
     }
 
-    const qText = this.questionPanel.getData('qText') as Phaser.GameObjects.Text
     const hintText = this.questionPanel.getData('hintText') as Phaser.GameObjects.Text
-    qText.setText(mission.question)
-    hintText.setText(mission.hint)
+    if (this.missionQuestionText) {
+        this.missionQuestionText.setText(this.localizeText(mission.question));
+    }
+
+    hintText.setText(this.localizeText(mission.hint))
 
     this.selectedItemIds.clear()
     this.itemCards.forEach(vc => this.setCardSelected(vc.container, false))
     this.updateConfirmButton()
     this.phase = 'waiting-answer'
 
-    // Retoma o timer pausado por confirmAnswer() (só se a cena não encerrou)
     if (!this.gameEnded && this.timerTween) {
       this.timerActive = true
       this.timerTween.resume()
@@ -1036,10 +1008,6 @@ export class GameScene extends Phaser.Scene {
     this.time.delayedCall(400, () => this.showLevelCompleteTransition(nextLevel))
   }
 
-  // ══════════════════════════════════════════════════════════════════════════
-  //  HELPERS DE MODAL
-  // ══════════════════════════════════════════════════════════════════════════
-
   private createModalButton(x: number, y: number, label: string, color: number, onClick: () => void) {
     const button = this.add.container(x, y)
     const bg = this.add.graphics()
@@ -1068,10 +1036,6 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
-  // ══════════════════════════════════════════════════════════════════════════
-  //  ÁUDIO SINTÉTICO
-  // ══════════════════════════════════════════════════════════════════════════
-
   private getAudioCtx(): AudioContext | null {
     if (this.isMuted) return null
     try {
@@ -1085,7 +1049,7 @@ export class GameScene extends Phaser.Scene {
     const ctx = this.getAudioCtx()
     if (!ctx) return
     const osc = ctx.createOscillator()
-    const g   = ctx.createGain()
+    const g = ctx.createGain()
     osc.connect(g); g.connect(ctx.destination)
     osc.type = type
     osc.frequency.setValueAtTime(freq, ctx.currentTime)
@@ -1094,27 +1058,23 @@ export class GameScene extends Phaser.Scene {
     osc.start(); osc.stop(ctx.currentTime + dur)
   }
 
-  private playTick()   { this.playTone(520, 0.04, 'sine', 0.08) }
+  private playTick() { this.playTone(520, 0.04, 'sine', 0.08) }
   private playCorrect() {
     this.playTone(660, 0.08, 'sine', 0.15)
     this.time.delayedCall(100, () => this.playTone(880, 0.08, 'sine', 0.12))
   }
-  private playError()  { this.playTone(330, 0.20, 'square', 0.15) }
+  private playError() { this.playTone(330, 0.20, 'square', 0.15) }
   private playFanfare() {
     [523, 659, 784, 1047].forEach((f, i) =>
       this.time.delayedCall(i * 125, () => this.playTone(f, 0.22, 'sine', 0.32)),
     )
   }
 
-  // ══════════════════════════════════════════════════════════════════════════
-  //  PLATFORM BRIDGE
-  // ══════════════════════════════════════════════════════════════════════════
-
   private registerPlatformCommands() {
     this.unsubPlatform = runtimeGameBridge.onCommand((cmd: PlatformCommand) => {
       if (cmd.type === 'START_GAME') {
         this.currentPoints = cmd.points ?? 0
-        this.currentLives  = cmd.lives  ?? 1
+        this.currentLives = cmd.lives ?? 1
       }
     })
   }
