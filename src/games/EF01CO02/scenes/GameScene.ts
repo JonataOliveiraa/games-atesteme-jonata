@@ -2,9 +2,9 @@ import Phaser from 'phaser';
 import { LEVELS } from '../data/levels';
 import { ROBOT_PARTS } from '../data/parts';
 import type { RobotPartId } from '../types';
+import { runtimeGameBridge } from '../../../shared/bridge/runtimeGameBridge';
 
-const GAME_ID = 'EF01CO02';
-const MAX_MISTAKES = 2;
+const GAME_ID = 'trilha-do-passo-a-passo';
 const VISIBLE_SLOTS = 3;
 const ROBOT_W = 420;
 const ROBOT_H = 600;
@@ -53,7 +53,6 @@ export class GameScene extends Phaser.Scene {
 
     private timerBar?: Phaser.GameObjects.Rectangle;
     private timerEvent?: Phaser.Time.TimerEvent;
-    private heartIcons: Phaser.GameObjects.Text[] = [];
 
     constructor() {
         super('GameScene');
@@ -73,7 +72,6 @@ export class GameScene extends Phaser.Scene {
         this.traySlotPositions = [];
         this.orderIcons = [];
         this.orderRings = [];
-        this.heartIcons = [];
     }
 
     create() {
@@ -94,8 +92,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     private emitPlatformEvent(type: PlatformEventType, extra: Record<string, any> = {}) {
-        if (!window.runtimeGameBridge) return;
-        window.runtimeGameBridge.emit({ type, gameId: GAME_ID, stage: this.currentLevelIdx + 1, ...extra });
+        runtimeGameBridge.emit({ type, gameId: GAME_ID, stage: this.currentLevelIdx + 1, ...extra });
     }
 
     private showStartScreen() {
@@ -142,7 +139,6 @@ export class GameScene extends Phaser.Scene {
         this.createTray(width * 0.20, height * 0.5);
         this.createOrderPanel(width);
         this.createTimerBar(width);
-        this.createHearts(width);
         this.startTimer();
     }
 
@@ -367,14 +363,12 @@ export class GameScene extends Phaser.Scene {
 
             if (this.placedCount === this.missingParts.length) this.handleLevelWin();
         } else {
-            this.mistakes++;
             this.cameras.main.shake(150, 0.01);
             this.playWrong();
             this.emitPlatformEvent('WRONG_ANSWER', { pointsEarned: -5 });
             this.tweenCardHome(card);
-            this.updateHearts();
 
-            if (this.mistakes >= MAX_MISTAKES) this.handleGameOver();
+            this.handleGameOver();
         }
     }
 
@@ -382,7 +376,6 @@ export class GameScene extends Phaser.Scene {
         this.tweens.add({ targets: card.container, x: card.homeX, y: card.homeY, duration: 260, ease: 'Back.Out' });
     }
 
-    // ── Timer ────────────────────────────────────────────────────
     private createTimerBar(width: number) {
         const x = width / 2 - 180, y = 40;
         const bg = this.add.graphics();
@@ -399,24 +392,6 @@ export class GameScene extends Phaser.Scene {
         });
     }
 
-    private createHearts(width: number) {
-        for (let i = 0; i < MAX_MISTAKES; i++) {
-            this.heartIcons.push(
-                this.add.text(width - 60 - i * 46, 62, '❤️', { fontSize: '32px' }).setOrigin(0.5).setDepth(20),
-            );
-        }
-    }
-
-    private updateHearts() {
-        const heart = this.heartIcons[this.mistakes - 1];
-        if (!heart) return;
-        this.tweens.add({
-            targets: heart, scale: 0, duration: 200, ease: 'Back.In',
-            onComplete: () => heart.setText('🖤').setScale(1),
-        });
-    }
-
-    // ── Fim de jogo ──────────────────────────────────────────────
     private handleLevelWin() {
         this.gameEnded = true;
         this.timerEvent?.remove();
@@ -426,17 +401,11 @@ export class GameScene extends Phaser.Scene {
     private handleGameOver() {
         if (this.gameEnded) return;
         this.gameEnded = true;
-        this.input.enabled = false;
         this.timerEvent?.remove();
 
-        if (window.runtimeGameBridge) {
-            window.runtimeGameBridge.emit({
-                type: 'GAME_OVER',
-                gameId: GAME_ID,
-                stage: this.currentLevelIdx + 1,
-                pointsEarned: -5
-            });
-        }
+        this.emitPlatformEvent('GAME_OVER', { pointsEarned: -5 });
+
+        this.time.delayedCall(300, () => this.showEndScreen(false));
     }
 
     private showEndScreen(won: boolean) {
