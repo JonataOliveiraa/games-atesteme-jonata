@@ -892,6 +892,7 @@ export class GameScene extends Phaser.Scene {
     const targetScale = destinoIcon.scaleX
     destinoIcon.setScale(0)
 
+    this.resultContainer.add(destinoIcon)
     this.resultContainer.setAlpha(1)
 
     this.playSuccess()
