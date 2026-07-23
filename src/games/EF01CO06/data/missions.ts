@@ -1,101 +1,95 @@
 import type { Mission } from '../types'
 
-// ── Nível 1: Introdução ──────────────────────────────────────────────────────
-// Apps disponíveis: Relógio + Calculadora
-// Tarefas básicas: ajustar horário, fazer uma conta simples
-
 export const MISSIONS_L1: Mission[] = [
   {
     id: 'm1-1',
-    text: 'Atualize o horário do computador para 9h00',
+    text: 'Ajuste o relógio do computador para 9:00',
     steps: [
-      { appId: 'relogio', actionKey: 'set-time', hint: 'Abra o Relógio e clique em Sincronizar' },
+      { appId: 'relogio', actionKey: 'set-time', hint: 'Abra o Relógio e use os botões + e -',
+        clockStart: { h: 8, m: 45 }, clockTarget: { h: 9, m: 0 } },
     ],
   },
   {
     id: 'm1-2',
-    text: 'Calcule quantos alunos há na turma: 12 + 8 = ?',
+    text: 'Some os alunos da turma: 12 + 8',
     steps: [
-      { appId: 'calculadora', actionKey: 'calculate', hint: 'Abra a Calculadora e pressione =' },
+      { appId: 'calculadora', actionKey: 'calculate', hint: 'Digite 12 + 8 e pressione =',
+        expectedExpr: '12 + 8', expectedAnswer: 20 },
     ],
   },
 ]
-
-// ── Nível 2: Desenvolvimento ─────────────────────────────────────────────────
-// Apps disponíveis: Relógio + Calculadora + Pasta + Gravador
-// Progressão: um app novo por missão, sem repetição
 
 export const MISSIONS_L2: Mission[] = [
   {
     id: 'm2-1',
-    text: 'Atualize o horário do computador para 9h00',
+    text: 'Ajuste o relógio para 10:30',
     steps: [
-      { appId: 'relogio', actionKey: 'set-time', hint: 'Abra o Relógio e clique em Sincronizar' },
+      { appId: 'relogio', actionKey: 'set-time', hint: 'Use os botões de hora e minuto',
+        clockStart: { h: 9, m: 45 }, clockTarget: { h: 10, m: 30 } },
     ],
   },
   {
     id: 'm2-2',
-    text: 'Calcule o número de alunos presentes: 15 + 7 = ?',
+    text: 'Some os presentes: 15 + 7',
     steps: [
-      { appId: 'calculadora', actionKey: 'calculate', hint: 'Abra a Calculadora e pressione =' },
+      { appId: 'calculadora', actionKey: 'calculate', hint: 'Digite 15 + 7 e pressione =',
+        expectedExpr: '15 + 7', expectedAnswer: 22 },
     ],
   },
   {
     id: 'm2-3',
-    text: 'Organize os arquivos de aula na Pasta da Turma',
+    text: 'Guarde os arquivos na Pasta da Turma',
     steps: [
-      { appId: 'pasta', actionKey: 'organize-files', hint: 'Mova todos os arquivos para a pasta e confirme' },
+      { appId: 'pasta', actionKey: 'organize-files', hint: 'Arraste os 3 arquivos e confirme' },
     ],
   },
   {
     id: 'm2-4',
-    text: 'Grave uma mensagem de boas-vindas para a turma',
+    text: 'Grave uma mensagem de boas-vindas',
     steps: [
-      { appId: 'gravador', actionKey: 'save-recording', hint: 'Grave e salve sua mensagem no Gravador' },
+      { appId: 'gravador', actionKey: 'save-recording', hint: 'Grave, pare e salve' },
     ],
   },
 ]
 
-// ── Nível 3: Domínio ─────────────────────────────────────────────────────────
-// Apps disponíveis: todos (+ botão Desligar no desktop)
-// Tarefas: sequências com 3 passos, uso do botão desligar
-
 export const MISSIONS_L3: Mission[] = [
   {
     id: 'm3-1',
-    text: 'Organize os arquivos e atualize o relógio da sala',
+    text: 'Guarde os arquivos e ajuste o relógio para 8:00',
     steps: [
-      { appId: 'pasta',   actionKey: 'organize-files', hint: 'Mova os arquivos para a Pasta da Turma' },
-      { appId: 'relogio', actionKey: 'set-time',       hint: 'Agora sincronize o horário no Relógio' },
+      { appId: 'pasta',   actionKey: 'organize-files', hint: 'Primeiro arraste os arquivos para a pasta' },
+      { appId: 'relogio', actionKey: 'set-time', hint: 'Agora ajuste o relógio para 8:00',
+        clockStart: { h: 7, m: 15 }, clockTarget: { h: 8, m: 0 } },
     ],
   },
   {
     id: 'm3-2',
-    text: 'Grave a lição do dia e faça um desenho para a capa',
+    text: 'Grave a lição e desenhe a capa',
     steps: [
-      { appId: 'gravador', actionKey: 'save-recording',  hint: 'Grave a lição de hoje no Gravador' },
-      { appId: 'desenho',  actionKey: 'confirm-drawing', hint: 'Desenhe a capa e pressione Pronto!' },
+      { appId: 'gravador', actionKey: 'save-recording',  hint: 'Grave a lição no Gravador' },
+      { appId: 'desenho',  actionKey: 'confirm-drawing', hint: 'Desenhe e toque em Pronto' },
     ],
   },
   {
     id: 'm3-3',
-    text: 'Calcule o total de materiais: 5 + 7 + 3 = ?',
+    text: 'Conte os materiais: 5 + 7 + 3',
     steps: [
-      { appId: 'calculadora', actionKey: 'calculate', hint: 'Calcule na Calculadora e pressione =' },
+      { appId: 'calculadora', actionKey: 'calculate', hint: 'Digite 5 + 7 + 3 e pressione =',
+        expectedExpr: '5 + 7 + 3', expectedAnswer: 15 },
     ],
   },
   {
     id: 'm3-4',
-    text: 'Ouça a música do encerramento da aula',
+    text: 'Toque a música do encerramento',
     steps: [
-      { appId: 'player', actionKey: 'play-music', hint: 'Abra Músicas e clique em Tocar' },
+      { appId: 'player', actionKey: 'play-music', hint: 'Abra Músicas e toque em Tocar' },
     ],
   },
   {
     id: 'm3-5',
-    text: 'Encerre a sessão: desligue o computador corretamente',
+    text: 'Desligue o computador corretamente',
     steps: [
-      { appId: 'power', actionKey: 'shutdown', hint: 'Clique no botão Desligar no canto inferior direito' },
+      { appId: 'power', actionKey: 'shutdown', hint: 'Use o botão Desligar na barra de tarefas' },
     ],
   },
 ]
