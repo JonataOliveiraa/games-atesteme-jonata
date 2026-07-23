@@ -6,18 +6,20 @@ import { LEVELS, STATIONS, CONCEPTS } from '../data/levels'
 
 const GAME_ID = 'correio-multimidia'
 
-type SceneState = 'map' | 'registering' | 'transmitting' | 'comparing'
+type SceneState = 'tutorial' | 'map' | 'registering' | 'transmitting' | 'comparing'
 
-const INSTRUCTIONS_BY_MODE: Record<string, string> = {
-  single: 'Veja o que o destino quer receber e escolha a estação certa!',
-  dual: 'O destino quer receber por dois caminhos! Envie pelos dois indicados.',
-  mastery: 'Escolha com cuidado: só o caminho pedido pelo destino é o certo!'
-}
-
-/** Pontos concedidos por canal corretamente entregue. */
 const POINTS_PER_CHANNEL = 5
-/** Pontos perdidos ao entregar por um canal que o destino não pediu. */
 const WRONG_CHANNEL_PENALTY = 5
+
+const ORIGIN_X = 200, ORIGIN_Y = 250
+const DEST_X = 1080, DEST_Y = 250
+const REQUEST_Y = 458
+const STATION_Y = 618
+const MODAL_X = 640, MODAL_Y = 380
+const BRUSH_KEY = 'brush_dot'
+const MASK_CIRCLE = 'tut_mask_circle'
+const MASK_RECT = 'tut_mask_rect'
+const MIN_STROKES = 55
 
 export class GameScene extends Phaser.Scene {
   private currentLevelIndex = 0
@@ -26,7 +28,6 @@ export class GameScene extends Phaser.Scene {
   private currentMission!: MissionConfig
   private points = 0
   private state: SceneState = 'map'
-  private drawingRT?: Phaser.GameObjects.RenderTexture
   private accumulatedBadges: Phaser.GameObjects.Image[] = []
 
   private stationSprites: Map<ChannelType, Phaser.GameObjects.Image> = new Map()
@@ -35,92 +36,29 @@ export class GameScene extends Phaser.Scene {
   private registerContainer!: Phaser.GameObjects.Container
   private overlay?: Phaser.GameObjects.Rectangle
 
-  /** Indicador acima do painel de destino mostrando o(s) canal(is) pedido(s) nesta rodada. */
   private requestIndicatorContainer!: Phaser.GameObjects.Container
   private requestBadges: Map<ChannelType, Phaser.GameObjects.Image> = new Map()
 
-  private completedChannelsThisRound: Set<ChannelType> = new Set()
+
+
+  private tutorialObjects: Phaser.GameObjects.GameObject[] = []
+  private tutorialDone = false
+
+  private drawMask?: Phaser.GameObjects.RenderTexture
+  private revealImage?: Phaser.GameObjects.Image
+  private strokeCount = 0
   private isDrawing = false
+
+  private completedChannelsThisRound: Set<ChannelType> = new Set()
   private removeCommandListener!: () => void
 
   constructor() {
     super({ key: 'GameScene' })
   }
 
-  private createThemedButton(width: number, height: number, text: string): Phaser.GameObjects.Container {
-    const w = width
-    const h = height
-    const radius = 12
-    const borderColor = 0x000f00
-    const shadowColor = 0x4e9b35
-    const fillColor = 0x87d251
-    const borderWidth = 3
-    const shadowWidth = 4
-
-    const bg = this.add.graphics()
-    // Sombra interna (fundo maior)
-    bg.fillStyle(shadowColor, 1)
-    bg.fillRoundedRect(-w / 2, -h / 2, w, h, radius)
-    // Preenchimento principal
-    bg.fillStyle(fillColor, 1)
-    bg.fillRoundedRect(
-      -w / 2 + shadowWidth,
-      -h / 2 + shadowWidth,
-      w - shadowWidth * 2,
-      h - shadowWidth * 2,
-      radius - 2
-    )
-    // Borda
-    bg.lineStyle(borderWidth, borderColor, 1)
-    bg.strokeRoundedRect(-w / 2, -h / 2, w, h, radius)
-
-    const label = this.add.text(0, 0, text, {
-      fontFamily: 'Arial, sans-serif',
-      fontSize: '18px',
-      color: '#ffffff',       // texto branco para contraste
-      fontStyle: 'bold'
-    }).setOrigin(0.5).setDepth(10)
-
-    const container = this.add.container(0, 0, [bg, label])
-    container.setSize(w, h)
-    container.setData('bg', bg)   // guardamos referência para mudar cor depois
-
-    return container
-  }
-
-  private createModalBackground(width: number, height: number): Phaser.GameObjects.Graphics {
-    const g = this.add.graphics()
-    const w = width
-    const h = height
-    const radius = 20
-    const borderColor = 0x000f00
-    const shadowColor = 0x4e9b35
-    const fillColor = 0x87d251
-    const borderWidth = 4
-    const shadowWidth = 6   // espessura da faixa de sombra interna
-
-    // Desenha a sombra interna (retângulo arredondado maior)
-    g.fillStyle(shadowColor, 1)
-    g.fillRoundedRect(-w / 2, -h / 2, w, h, radius)
-
-    // Desenha o preenchimento principal (retângulo arredondado ligeiramente menor)
-    g.fillStyle(fillColor, 1)
-    g.fillRoundedRect(
-      -w / 2 + shadowWidth,
-      -h / 2 + shadowWidth,
-      w - shadowWidth * 2,
-      h - shadowWidth * 2,
-      radius - 2
-    )
-
-    // Desenha a borda externa
-    g.lineStyle(borderWidth, borderColor, 1)
-    g.strokeRoundedRect(-w / 2, -h / 2, w, h, radius)
-
-    return g
-  }
-
   create() {
+    this.buildHelperTextures()
+
     this.removeCommandListener = runtimeGameBridge.onCommand((cmd: PlatformCommand) => {
       if (cmd.type === 'START_GAME' && cmd.gameId === GAME_ID) {
         this.startGame(cmd.stage, cmd.points)
@@ -130,15 +68,60 @@ export class GameScene extends Phaser.Scene {
     this.startGame(1, 0)
   }
 
+  shutdown() {
+    if (this.removeCommandListener) this.removeCommandListener()
+  }
+
+  private srcSize(key: string) {
+    const src = this.textures.get(key).getSourceImage() as { width: number; height: number }
+    return { w: src.width, h: src.height }
+  }
+
+  private fitted(x: number, y: number, key: string, targetW: number) {
+    const { w, h } = this.srcSize(key)
+    return this.add.image(x, y, key).setDisplaySize(targetW, (h / w) * targetW)
+  }
+
+  private buildHelperTextures() {
+    if (!this.textures.exists(BRUSH_KEY)) {
+      const g = this.add.graphics()
+      g.fillStyle(0xffffff, 1)
+      g.fillCircle(15, 15, 15)
+      g.generateTexture(BRUSH_KEY, 30, 30)
+      g.destroy()
+    }
+    if (!this.textures.exists(MASK_CIRCLE)) {
+      const g = this.add.graphics()
+      g.fillStyle(0xffffff, 1)
+      g.fillCircle(100, 100, 100)
+      g.generateTexture(MASK_CIRCLE, 200, 200)
+      g.destroy()
+    }
+    if (!this.textures.exists(MASK_RECT)) {
+      const g = this.add.graphics()
+      g.fillStyle(0xffffff, 1)
+      g.fillRoundedRect(0, 0, 200, 200, 40)
+      g.generateTexture(MASK_RECT, 200, 200)
+      g.destroy()
+    }
+  }
+
+  //ciclo do jogo (nao meche)
   private startGame(stage: number, initialPoints: number) {
     this.points = initialPoints
     this.currentLevelIndex = Math.max(0, LEVELS.findIndex(l => l.level === stage))
     this.currentMissionIndex = 0
+    this.tutorialObjects = []
 
     this.children.removeAll()
     this.stationSprites.clear()
     this.buildEnvironment()
     this.startMission()
+
+    if (!this.tutorialDone && this.currentLevelIndex === 0) {
+      this.tutorialDone = true
+      this.showTutorial()
+    }
   }
 
   private buildEnvironment() {
@@ -146,20 +129,15 @@ export class GameScene extends Phaser.Scene {
 
     this.add.image(width / 2, height / 2, 'bg_mapa').setDisplaySize(width, height)
 
-    const origemPanel = this.add.image(200, 250, 'painel_origem')
-    origemPanel.setScale(320 / origemPanel.width)
-
-    this.originPanelIcon = this.add.image(200, 250, 'info_cachorro') // y = 250 (mesmo do painel)
-    this.originPanelIcon.setScale(80 / this.originPanelIcon.width)
-
-    const destinoPanel = this.add.image(1080, 250, 'painel_destino')
-    destinoPanel.setScale(320 / destinoPanel.width)
+    this.fitted(ORIGIN_X, ORIGIN_Y, 'painel_origem', 300)
+    this.originPanelIcon = this.fitted(ORIGIN_X, ORIGIN_Y, 'info_cachorro', 80)
+    this.fitted(DEST_X, DEST_Y, 'painel_destino', 280)
 
     this.buildStations()
 
-    this.resultContainer = this.add.container(1080, 250).setAlpha(0)
-    this.registerContainer = this.add.container(640, 420).setAlpha(0)
-    this.requestIndicatorContainer = this.add.container(1080, 128).setDepth(5)
+    this.resultContainer = this.add.container(DEST_X, DEST_Y).setAlpha(0)
+    this.registerContainer = this.add.container(MODAL_X, MODAL_Y).setAlpha(0)
+    this.requestIndicatorContainer = this.add.container(DEST_X, REQUEST_Y).setDepth(5)
   }
 
   private buildStations() {
@@ -168,18 +146,21 @@ export class GameScene extends Phaser.Scene {
     const count = STATIONS.length
 
     STATIONS.forEach((station, i) => {
-      const x = marginX + (usableWidth / (count - 1)) * i
-      const sprite = this.add.image(x, 600, station.textureKey)
-      const baseScale = 170 / sprite.width
-      sprite.setScale(baseScale)
+      const x = count === 1 ? 640 : marginX + (usableWidth / (count - 1)) * i
+      const sprite = this.fitted(x, STATION_Y, station.textureKey, 160)
+      const baseScale = sprite.scaleX
       sprite.setData('station', station)
       sprite.setData('baseScale', baseScale)
 
       sprite.on('pointerover', () => {
         if (this.state !== 'map') return
+        sprite.setTexture(station.activeTextureKey)
         sprite.setScale(baseScale * 1.08)
       })
-      sprite.on('pointerout', () => sprite.setScale(baseScale))
+      sprite.on('pointerout', () => {
+        sprite.setTexture(station.textureKey)
+        sprite.setScale(baseScale)
+      })
       sprite.on('pointerdown', () => this.onStationClicked(station, sprite))
 
       this.tweens.add({
@@ -197,7 +178,6 @@ export class GameScene extends Phaser.Scene {
 
   private startMission() {
     this.levelConfig = LEVELS[this.currentLevelIndex]
-    this.drawingRT = undefined
     this.accumulatedBadges = []
 
     if (this.currentMissionIndex >= this.levelConfig.missions.length) {
@@ -207,19 +187,17 @@ export class GameScene extends Phaser.Scene {
 
     this.currentMission = this.levelConfig.missions[this.currentMissionIndex]
     this.completedChannelsThisRound = new Set()
-    this.state = 'map'
+    if (this.state !== 'tutorial') this.state = 'map'
 
-    this.resultContainer.setAlpha(0)
-    this.resultContainer.removeAll(true)
-    this.registerContainer.setAlpha(0)
-    this.registerContainer.removeAll(true)
+    this.resultContainer.setAlpha(0).removeAll(true)
+    this.registerContainer.setAlpha(0).removeAll(true)
 
     if (this.originPanelIcon) {
       this.originPanelIcon.setTexture(this.currentMission.item.textureKey)
-      this.originPanelIcon.setScale(80 / this.originPanelIcon.width)
+      const { w, h } = this.srcSize(this.currentMission.item.textureKey)
+      this.originPanelIcon.setDisplaySize(80, (h / w) * 80)
     }
 
-    this.registry.set('instructionText', INSTRUCTIONS_BY_MODE[this.levelConfig.mode])
     this.registry.set('roundTotal', this.levelConfig.missions.length)
     this.registry.set('roundIndex', this.currentMissionIndex)
 
@@ -232,34 +210,40 @@ export class GameScene extends Phaser.Scene {
     this.updateStationAvailability()
   }
 
-  /**
-   * Monta os "selos de pedido" acima do painel de destino, mostrando qual(is)
-   * canal(is) o destino quer receber nesta rodada (1 ou 2, conforme a missão).
-   */
+  // ── Pedido do destino ──────────────────────────────────────────────────
+
   private buildRequestIndicator() {
     this.requestIndicatorContainer.removeAll(true)
     this.requestBadges.clear()
 
     const channels = this.currentMission.requiredChannels
-    const spacing = 56
+    const spacing = 86
     const startX = -(spacing * (channels.length - 1)) / 2
+    const cardW = Math.max(280, channels.length * spacing + 80)
+    const cardH = 118
+    const headerH = 38
 
-    const label = this.add.text(0, -34, 'Quer receber por:', {
-      fontFamily: 'Arial, sans-serif',
-      fontSize: '13px',
-      color: '#333334',
-      fontStyle: 'bold',
-      align: 'center',
-      backgroundColor: '#ffffffcc',
-      padding: { x: 8, y: 3 }
-    }).setOrigin(0.5)
+    const card = this.add.graphics()
+    card.fillStyle(0x000000, 0.18)
+    card.fillRoundedRect(-cardW / 2 + 5, -cardH / 2 + 6, cardW, cardH, 20)
+    card.fillStyle(0xffffff, 0.97)
+    card.fillRoundedRect(-cardW / 2, -cardH / 2, cardW, cardH, 20)
+    card.lineStyle(4, 0x4e9b35, 1)
+    card.strokeRoundedRect(-cardW / 2, -cardH / 2, cardW, cardH, 20)
+    card.fillStyle(0x87d251, 1)
+    card.fillRoundedRect(-cardW / 2, -cardH / 2, cardW, headerH, { tl: 20, tr: 20, bl: 0, br: 0 })
 
-    this.requestIndicatorContainer.add(label)
+    const label = this.add.text(0, -cardH / 2 + headerH / 2, 'QUER RECEBER POR', {
+      fontFamily: 'Arial Black, Arial',
+      fontSize: '17px',
+      color: '#ffffff'
+    }).setOrigin(0.5).setResolution(2)
+
+    this.requestIndicatorContainer.add([card, label])
 
     channels.forEach((channel, i) => {
       const station = STATIONS.find(s => s.channel === channel)!
-      const badge = this.add.image(startX + i * spacing, 0, station.textureKey)
-      badge.setScale(46 / badge.width)
+      const badge = this.fitted(startX + i * spacing, 22, station.textureKey, 58)
       this.requestIndicatorContainer.add(badge)
       this.requestBadges.set(channel, badge)
     })
@@ -277,39 +261,28 @@ export class GameScene extends Phaser.Scene {
   private markRequestFulfilled(channel: ChannelType) {
     const badge = this.requestBadges.get(channel)
     if (!badge) return
-    badge.setAlpha(0.35)
-    this.tweens.add({ targets: badge, scale: badge.scale * 1.15, yoyo: true, duration: 160 })
+    badge.setAlpha(0.3)
+    this.tweens.add({ targets: badge, scale: badge.scaleX * 1.15, yoyo: true, duration: 160 })
   }
-  
-  private updateStationAvailability() {
-    const item = this.currentMission.item
 
+  private updateStationAvailability() {
     this.stationSprites.forEach((sprite, channel) => {
       const station = sprite.getData('station') as DeliveryStation
       const baseScale = sprite.getData('baseScale') as number
-
       const alreadySent = this.completedChannelsThisRound.has(channel)
-      const selectable = !alreadySent
 
+      sprite.setTexture(station.textureKey)
       sprite.setScale(baseScale)
-      sprite.setAlpha(selectable ? 1 : 0.35)
+      sprite.setAlpha(alreadySent ? 0.35 : 1)
       sprite.disableInteractive()
-      if (selectable) sprite.setInteractive({ cursor: 'pointer' })
-
-      sprite.setTexture(channel === 'audio' && !item.soundKey ? 'microfone_indisponivel' : station.textureKey)
+      if (!alreadySent) sprite.setInteractive({ cursor: 'pointer' })
     })
   }
 
   private onStationClicked(station: DeliveryStation, sprite: Phaser.GameObjects.Image) {
     if (this.state !== 'map') return
 
-    const item = this.currentMission.item
-
-    if (station.channel === 'audio' && !item.soundKey) {
-      this.cameras.main.shake(150, 0.002)
-      return
-    }
-
+    sprite.setTexture(station.textureKey)
     sprite.setScale(sprite.getData('baseScale'))
 
     this.sound.play('som_click_ui')
@@ -317,215 +290,357 @@ export class GameScene extends Phaser.Scene {
     this.openRegistration(station)
   }
 
+  // ── Tutorial ───────────────────────────────────────────────────────────
+
+  private tut<T extends Phaser.GameObjects.GameObject>(obj: T): T {
+    this.tutorialObjects.push(obj)
+    return obj
+  }
+
+  private clearTutorial() {
+    this.tutorialObjects.forEach(o => o.destroy())
+    this.tutorialObjects = []
+  }
+
+  /** Escurece a tela e abre um recorte (círculo ou retângulo) sem borda. */
+  private spotlight(
+    rt: Phaser.GameObjects.RenderTexture,
+    shape: 'circle' | 'rect',
+    x: number, y: number, w: number, h: number,
+  ) {
+    rt.clear()
+    rt.fill(0x0b1220, 0.8)
+    const cut = this.make.image({ key: shape === 'circle' ? MASK_CIRCLE : MASK_RECT }, false)
+    cut.setDisplaySize(w, h)
+    rt.erase(cut, x, y)
+    cut.destroy()
+  }
+
+  private showTutorial() {
+    this.state = 'tutorial'
+
+    this.tut(this.add.rectangle(640, 360, 1280, 720, 0x000000, 0.001).setDepth(299).setInteractive())
+    const spot = this.tut(this.add.renderTexture(0, 0, 1280, 720).setOrigin(0).setDepth(300))
+
+    const balloon = this.tut(this.add.container(640, 0).setDepth(320))
+    const balloonBg = this.add.graphics()
+    const balloonTxt = this.add.text(0, 0, '', {
+      fontFamily: 'Arial Black, Arial',
+      fontSize: '21px',
+      color: '#1a3b1a',
+      align: 'center',
+      wordWrap: { width: 520 }
+    }).setOrigin(0.5).setResolution(2)
+    balloon.add([balloonBg, balloonTxt])
+
+    const setBalloon = (text: string, x: number, y: number) => {
+      balloonTxt.setText(text)
+      const w = 580
+      const h = Math.max(80, balloonTxt.height + 44)
+      balloonBg.clear()
+      balloonBg.fillStyle(0x000000, 0.18)
+      balloonBg.fillRoundedRect(-w / 2 + 5, -h / 2 + 6, w, h, 20)
+      balloonBg.fillStyle(0xffffff, 0.98)
+      balloonBg.fillRoundedRect(-w / 2, -h / 2, w, h, 20)
+      balloon.setPosition(x, y).setAlpha(0)
+      this.tweens.add({ targets: balloon, alpha: 1, duration: 200 })
+    }
+
+    const nextBtn = this.tut(this.createThemedButton(280, 56, 'Próximo').setDepth(321))
+    nextBtn.setInteractive({ cursor: 'pointer' })
+    const nextLabel = nextBtn.getAt(1) as Phaser.GameObjects.Text
+
+    const setNext = (x: number, y: number, label: string, action: () => void) => {
+      nextBtn.setPosition(x, y)
+      nextLabel.setText(label)
+      nextBtn.removeAllListeners('pointerdown')
+      nextBtn.on('pointerdown', () => {
+        this.sound.play('som_click_ui')
+        action()
+      })
+    }
+
+    const step1 = () => {
+      this.spotlight(spot, 'circle', ORIGIN_X, ORIGIN_Y, 330, 330)
+      setBalloon('Esta é a mensagem que você precisa enviar.', 700, 200)
+      setNext(700, 310, 'Próximo', step2)
+    }
+
+    const step2 = () => {
+      this.spotlight(spot, 'rect', DEST_X, REQUEST_Y, 360, 160)
+      setBalloon('O destino mostra aqui por qual caminho quer receber.', 520, 250)
+      setNext(520, 360, 'Próximo', step3)
+    }
+
+    const step3 = () => {
+      this.spotlight(spot, 'rect', 640, STATION_Y, 940, 200)
+      setBalloon('Toque na estação que combina com o pedido do destino.', 640, 230)
+      setNext(640, 340, 'Vamos começar!', finish)
+
+      const target = this.stationSprites.get(this.currentMission.requiredChannels[0])
+      if (!target) return
+
+      const cursor = this.tut(this.fitted(640, 450, 'cursor_tutorial', 60).setDepth(322))
+      this.tweens.add({
+        targets: cursor,
+        x: target.x,
+        y: target.y + 30,
+        duration: 1100,
+        ease: 'Sine.easeInOut',
+        repeat: -1,
+        repeatDelay: 600,
+        hold: 400,
+        onRepeat: () => cursor.setPosition(640, 450)
+      })
+    }
+
+    const finish = () => {
+      this.tweens.add({
+        targets: this.tutorialObjects,
+        alpha: 0,
+        duration: 250,
+        onComplete: () => {
+          this.clearTutorial()
+          this.state = 'map'
+          this.updateStationAvailability()
+        }
+      })
+    }
+
+    step1()
+  }
+
+  // ── Registro da mensagem ───────────────────────────────────────────────
+
   private openRegistration(station: DeliveryStation) {
     this.registerContainer.removeAll(true)
-    this.registerContainer.setAlpha(0)
-    this.registerContainer.y = 460
+    this.registerContainer.setAlpha(0).setScale(0.9)
 
-    // Overlay escuro (já existente)
     if (this.overlay) this.overlay.destroy()
     this.overlay = this.add.rectangle(640, 360, 1280, 720, 0x000000, 0.5)
       .setInteractive()
       .setDepth(10)
 
-    // Fundo estilizado com bordas arredondadas, sombra e borda
-    const modalBg = this.createModalBackground(540, 550)
-    modalBg.setDepth(0)
-    this.registerContainer.add(modalBg)
+    this.registerContainer.add(this.createModalBackground(600, 600))
 
-    // Interação específica do canal
     if (station.channel === 'image') this.buildDrawingInteraction()
-    else if (station.channel === 'text') this.buildWordSelectionInteraction()
+    else if (station.channel === 'text') this.buildPhraseInteraction()
     else this.buildSoundInteraction()
 
     this.registerContainer.setDepth(20)
-
     this.tweens.add({
       targets: this.registerContainer,
       alpha: 1,
-      y: 420,
-      duration: 350,
+      scale: 1,
+      duration: 300,
       ease: 'Back.out'
     })
   }
 
+  /** Desenho por revelação: o pincel descobre a figura escondida no quadro. */
   private buildDrawingInteraction() {
     const item = this.currentMission.item
+    this.strokeCount = 0
 
-    const instructionText = this.add.text(0, -200, `Desenhe um(a) ${item.nameKey} para sua amiga`, {
+    const title = this.add.text(0, -252, `Passe o pincel e revele o(a) ${item.nameKey}`, {
       fontFamily: 'Arial, sans-serif',
       fontSize: '20px',
       color: '#1a3b1a',
       fontStyle: 'bold',
       align: 'center',
-      wordWrap: { width: 460 }
-    }).setOrigin(0.5, 2.5).setDepth(10)
+      wordWrap: { width: 480 }
+    }).setOrigin(0.5)
 
-    // Quadro de desenho (movido um pouco para baixo para dar espaço ao texto)
-    const boardY = -20
-    const board = this.add.image(0, boardY, 'quadro_desenho')
-    const boardScale = 420 / board.width
-    board.setScale(boardScale)
+    const boardY = -40
+    const board = this.fitted(0, boardY, 'quadro_desenho', 380)
 
-    const rt = this.add.renderTexture(0, boardY, board.width, board.height)
-    rt.setScale(boardScale)
+    const ART = 230
+    const guide = this.fitted(0, boardY, item.textureKey, ART).setAlpha(0.16)
 
-    const brushKey = 'brush_dot'
-    if (!this.textures.exists(brushKey)) {
-      const g = this.add.graphics()
-      g.fillStyle(0x333333, 1)
-      g.fillCircle(4, 4, 4)
-      g.generateTexture(brushKey, 8, 8)
-      g.destroy()
+    const reveal = this.fitted(0, boardY, item.textureKey, ART)
+    const maskRT = this.make.renderTexture(
+      { x: MODAL_X, y: MODAL_Y + boardY, width: ART, height: ART }, false
+    )
+
+    this.drawMask = maskRT
+    this.revealImage = reveal
+    maskRT.setOrigin(0.5)
+    reveal.setMask(maskRT.createBitmapMask())
+    this.drawMask = maskRT
+
+    const hitZone = this.add.zone(0, boardY, ART, ART).setInteractive({ cursor: 'crosshair' })
+
+    const confirmBtn = this.buildConfirmButton(60, 220, () => {
+      if (this.strokeCount < MIN_STROKES) return
+      this.completeRegistration('image')
+    })
+    confirmBtn.setAlpha(0.35)
+
+    const paint = (pointer: Phaser.Input.Pointer) => {
+      const lx = pointer.worldX - MODAL_X
+      const ly = pointer.worldY - (MODAL_Y + boardY)
+      if (Math.abs(lx) > ART / 2 || Math.abs(ly) > ART / 2) return
+      maskRT.draw(BRUSH_KEY, lx + ART / 2, ly + ART / 2)
+      this.strokeCount++
+      if (this.strokeCount === MIN_STROKES) {
+        this.tweens.add({ targets: confirmBtn, alpha: 1, duration: 250 })
+      }
     }
 
-    const hitZone = this.add.zone(0, boardY, board.width * boardScale, board.height * boardScale)
-    hitZone.setInteractive({ cursor: 'crosshair' })
-
-    const draw = (pointer: Phaser.Input.Pointer) => {
-      const matrix = board.getWorldTransformMatrix()
-      const point = matrix.applyInverse(pointer.worldX, pointer.worldY)
-      rt.draw(brushKey, point.x + board.width / 2, point.y + board.height / 2)
-    }
-
-    hitZone.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
-      this.isDrawing = true
-      draw(pointer)
-    })
-    hitZone.on('pointermove', (pointer: Phaser.Input.Pointer) => {
-      if (this.isDrawing) draw(pointer)
-    })
+    hitZone.on('pointerdown', (p: Phaser.Input.Pointer) => { this.isDrawing = true; paint(p) })
+    hitZone.on('pointermove', (p: Phaser.Input.Pointer) => { if (this.isDrawing) paint(p) })
     this.input.on('pointerup', () => { this.isDrawing = false })
 
-    // Botões movidos para baixo proporcionalmente
-    const confirmBtn = this.buildConfirmButton(0, 200, () => this.completeRegistration('image'))
-    const backBtn = this.buildBackButton(-190, 200, () => this.cancelRegistration())
+    const backBtn = this.buildBackButton(-150, 220, () => this.cancelRegistration())
 
-    this.registerContainer.add([instructionText, board, rt, hitZone, confirmBtn, backBtn])
-    this.drawingRT = rt
+    this.registerContainer.add([title, board, guide, reveal, hitZone, confirmBtn, backBtn])
   }
 
-  private buildWordSelectionInteraction() {
+  private disposeDrawMask() {
+    this.revealImage?.clearMask(true)
+    this.revealImage = undefined
+    this.drawMask?.destroy()
+    this.drawMask = undefined
+  }
+
+  // Escolha de frase: uma descreve a mensagem, as outras não
+  private buildPhraseInteraction() {
     const item = this.currentMission.item
-    const options = this.buildWordOptions(item)
+    const options = this.buildPhraseOptions(item)
 
-    const label = this.add.text(0, -110, 'Escolha a palavra certa:', {
+    const title = this.add.text(0, -230, 'Qual frase conta a mesma mensagem?', {
       fontFamily: 'Arial, sans-serif',
-      fontSize: '18px',
-      color: '#ffffff',        // texto claro sobre fundo verde
-      fontStyle: 'bold'
-    }).setOrigin(0.5).setDepth(10)
+      fontSize: '20px',
+      color: '#ffffff',
+      fontStyle: 'bold',
+      align: 'center',
+      wordWrap: { width: 480 }
+    }).setOrigin(0.5)
 
-    const spacing = 160
-    const startX = -((options.length - 1) * spacing) / 2
+    const icon = this.fitted(0, -140, item.textureKey, 90)
+
     const buttons: Phaser.GameObjects.Container[] = []
-
-    options.forEach((word, i) => {
-      const btn = this.createThemedButton(140, 50, word)
-      btn.setPosition(startX + i * spacing, -40)
+    options.forEach((phrase, i) => {
+      const btn = this.createThemedButton(470, 62, phrase)
+      btn.setPosition(0, -30 + i * 82)
       btn.setInteractive({ cursor: 'pointer' })
 
       btn.on('pointerdown', () => {
-        if (word === item.nameKey) {
+        if (phrase === item.phrase) {
           this.sound.play('som_click_ui')
           this.completeRegistration('text')
-        } else {
-          this.cameras.main.shake(120, 0.0015)
-          // Feedback visual de erro: troca o preenchimento para tom avermelhado
-          const bg = btn.getData('bg') as Phaser.GameObjects.Graphics
-          if (bg) {
-            bg.clear()
-            const w = 140, h = 50, radius = 12
-            // Redesenha com cor de erro mantendo borda e sombra
-            bg.fillStyle(0x4e9b35, 1)  // sombra ainda igual
-            bg.fillRoundedRect(-w / 2, -h / 2, w, h, radius)
-            bg.fillStyle(0xff6b6b, 1)  // vermelho claro para erro
-            bg.fillRoundedRect(-w / 2 + 4, -h / 2 + 4, w - 8, h - 8, radius - 2)
-            bg.lineStyle(3, 0x000f00, 1)
-            bg.strokeRoundedRect(-w / 2, -h / 2, w, h, radius)
-          }
-          this.time.delayedCall(300, () => {
-            // Restaura o original
-            const bg2 = btn.getData('bg') as Phaser.GameObjects.Graphics
-            if (bg2) {
-              bg2.clear()
-              this.redrawThemedButtonBg(bg2, 140, 50)
-            }
-          })
+          return
         }
+        this.cameras.main.shake(120, 0.0015)
+        this.flashButtonError(btn, 470, 62)
       })
 
       buttons.push(btn)
     })
 
-    const backBtn = this.buildBackButton(0, 60, () => this.cancelRegistration())
+    const backBtn = this.buildBackButton(0, 230, () => this.cancelRegistration())
 
-    this.registerContainer.add([label, ...buttons, backBtn])
+    this.registerContainer.add([title, icon, ...buttons, backBtn])
   }
 
-  private redrawThemedButtonBg(graphics: Phaser.GameObjects.Graphics, width: number, height: number) {
-    const w = width, h = height, radius = 12
-    graphics.fillStyle(0x4e9b35, 1)
-    graphics.fillRoundedRect(-w / 2, -h / 2, w, h, radius)
-    graphics.fillStyle(0x87d251, 1)
-    graphics.fillRoundedRect(-w / 2 + 4, -h / 2 + 4, w - 8, h - 8, radius - 2)
-    graphics.lineStyle(3, 0x000f00, 1)
-    graphics.strokeRoundedRect(-w / 2, -h / 2, w, h, radius)
-  }
-
-  private buildWordOptions(item: GameItem): string[] {
+  private buildPhraseOptions(item: GameItem): string[] {
     const others = Object.values(CONCEPTS)
-      .map(c => c.nameKey)
-      .filter(name => name !== item.nameKey)
-    const distractor = Phaser.Utils.Array.GetRandom(others)
-    return Phaser.Utils.Array.Shuffle([item.nameKey, distractor])
+      .filter(c => c.id !== item.id)
+      .map(c => c.phrase)
+    const distractors = Phaser.Utils.Array.Shuffle(others).slice(0, 2)
+    return Phaser.Utils.Array.Shuffle([item.phrase, ...distractors])
   }
 
+  /** Escolha de som: o jogador ouve e identifica o som certo. */
   private buildSoundInteraction() {
     const item = this.currentMission.item
+    const options = this.buildSoundOptions(item)
+    let selected: string | null = null
 
-    const instructionText = this.add.text(0, -120, `Ouça o som do(a) ${item.nameKey}`, {
+    const title = this.add.text(0, -230, 'Ouça e escolha o som certo', {
       fontFamily: 'Arial, sans-serif',
       fontSize: '20px',
       color: '#ffffff',
       fontStyle: 'bold'
-    }).setOrigin(0.5).setDepth(10).setDepth(10)
+    }).setOrigin(0.5)
 
-    const micIcon = this.add.image(0, -20, 'estacao_microfone_ativa')
-    micIcon.setScale(140 / micIcon.width)
-    micIcon.setInteractive({ cursor: 'pointer' })
-    micIcon.on('pointerdown', () => {
-      if (item.soundKey) this.sound.play(item.soundKey)
-      this.tweens.add({ targets: micIcon, scale: micIcon.scale * 1.15, yoyo: true, duration: 150 })
+    const icon = this.fitted(0, -140, item.textureKey, 90)
+
+    const spacing = 160
+    const startX = -((options.length - 1) * spacing) / 2
+    const rings: Phaser.GameObjects.Graphics[] = []
+
+    const confirmBtn = this.buildConfirmButton(60, 200, () => {
+      if (!selected) return
+      if (selected !== item.soundKey) {
+        this.cameras.main.shake(120, 0.002)
+        this.sound.play('som_perda')
+        return
+      }
+      this.sound.play('som_click_ui')
+      this.completeRegistration('audio')
+    })
+    confirmBtn.setAlpha(0.35)
+
+    const drawRing = (g: Phaser.GameObjects.Graphics, x: number, on: boolean) => {
+      g.clear()
+      g.fillStyle(on ? 0xffe08a : 0xffffff, 0.95)
+      g.fillCircle(x, 20, 52)
+      g.lineStyle(5, on ? 0xffb703 : 0x4e9b35, 1)
+      g.strokeCircle(x, 20, 52)
+    }
+
+    options.forEach((soundKey, i) => {
+      const x = startX + i * spacing
+      const ring = this.add.graphics()
+      drawRing(ring, x, false)
+      rings.push(ring)
+
+      const label = this.add.text(x, 20, `Som ${i + 1}`, {
+        fontFamily: 'Arial Black, Arial',
+        fontSize: '18px',
+        color: '#1a3b1a'
+      }).setOrigin(0.5)
+
+      const hit = this.add.zone(x, 20, 110, 110).setInteractive({ cursor: 'pointer' })
+      hit.on('pointerdown', () => {
+        this.sound.play(soundKey)
+        selected = soundKey
+        rings.forEach((r, ri) => drawRing(r, startX + ri * spacing, ri === i))
+        confirmBtn.setAlpha(1)
+      })
+
+      this.registerContainer.add([ring, label, hit])
     })
 
-    const hint = this.add.text(0, 60, 'Toque para ouvir o som', {
+    const hint = this.add.text(0, 110, 'Toque em cada som para ouvir', {
       fontFamily: 'Arial, sans-serif',
       fontSize: '16px',
       color: '#ffffff'
-    }).setOrigin(0.5).setDepth(10).setDepth(10)
+    }).setOrigin(0.5)
 
-    const confirmBtn = this.buildConfirmButton(0, 150, () => this.completeRegistration('audio'))
-    const backBtn = this.buildBackButton(-190, 150, () => this.cancelRegistration())
+    const backBtn = this.buildBackButton(-150, 200, () => this.cancelRegistration())
 
-    this.registerContainer.add([instructionText, micIcon, hint, confirmBtn, backBtn])
+    this.registerContainer.add([title, icon, hint, confirmBtn, backBtn])
   }
 
-  private buildConfirmButton(x: number, y: number, onClick: () => void): Phaser.GameObjects.Image {
-    const btn = this.add.image(x, y, 'botao_confirmar')
-    btn.setScale(120 / btn.width)
-    btn.setInteractive({ cursor: 'pointer' })
-    btn.on('pointerdown', onClick)
-    return btn
+  private buildSoundOptions(item: GameItem): string[] {
+    const others = Object.values(CONCEPTS)
+      .filter(c => c.soundKey && c.soundKey !== item.soundKey)
+      .map(c => c.soundKey!)
+    const distractors = Phaser.Utils.Array.Shuffle(others).slice(0, 2)
+    return Phaser.Utils.Array.Shuffle([item.soundKey!, ...distractors])
   }
 
-  private buildBackButton(x: number, y: number, onClick: () => void): Phaser.GameObjects.Image {
-    const btn = this.add.image(x, y, 'botao_avancar')
-    const scale = 90 / btn.width
-    btn.setScale(-scale, scale)
-    btn.setInteractive({ cursor: 'pointer' })
-    btn.on('pointerdown', onClick)
-    return btn
+  private flashButtonError(btn: Phaser.GameObjects.Container, w: number, h: number) {
+    const bg = btn.getData('bg') as Phaser.GameObjects.Graphics
+    if (!bg) return
+    bg.clear()
+    bg.fillStyle(0x4e9b35, 1)
+    bg.fillRoundedRect(-w / 2, -h / 2, w, h, 12)
+    bg.fillStyle(0xff6b6b, 1)
+    bg.fillRoundedRect(-w / 2 + 4, -h / 2 + 4, w - 8, h - 8, 10)
+    this.time.delayedCall(300, () => this.redrawThemedButtonBg(bg, w, h))
   }
 
   private completeRegistration(channel: ChannelType) {
@@ -536,21 +651,15 @@ export class GameScene extends Phaser.Scene {
       this.overlay = undefined
     }
 
-    let drawKey: string | undefined
-    if (channel === 'image' && this.drawingRT) {
-      drawKey = 'draw_' + this.currentMission.id + '_' + Date.now()
-      this.drawingRT.saveTexture(drawKey)
-      this.drawingRT = undefined
-    }
-
     this.tweens.add({
       targets: this.registerContainer,
       alpha: 0,
-      y: this.registerContainer.y - 30,
+      scale: 0.9,
       duration: 250,
       onComplete: () => {
+        this.disposeDrawMask()
         this.registerContainer.removeAll(true)
-        this.playTransmission(channel, drawKey)
+        this.playTransmission(channel)
       }
     })
   }
@@ -566,6 +675,7 @@ export class GameScene extends Phaser.Scene {
       alpha: 0,
       duration: 200,
       onComplete: () => {
+        this.disposeDrawMask()
         this.registerContainer.removeAll(true)
         this.state = 'map'
         this.updateStationAvailability()
@@ -573,70 +683,52 @@ export class GameScene extends Phaser.Scene {
     })
   }
 
-  private playTransmission(channel: ChannelType, drawKey?: string) {
+  private playTransmission(channel: ChannelType) {
     this.state = 'transmitting'
-    if (channel === 'audio') {
-      this.playAudioTransmission()
-    } else if (channel === 'image') {
-      this.playImageTransmission(drawKey)
-    } else if (channel === 'text') {
-      this.playTextTransmission()
-    }
+    if (channel === 'audio') this.playAudioTransmission()
+    else if (channel === 'image') this.playImageTransmission()
+    else this.playTextTransmission()
   }
 
   private playAudioTransmission() {
     const item = this.currentMission.item
     const stationSprite = this.stationSprites.get('audio')!
 
-    const icon = this.add.image(stationSprite.x, stationSprite.y, item.textureKey)
-    icon.setScale(50 / icon.width)
-    icon.setDepth(50)
+    const icon = this.fitted(stationSprite.x, stationSprite.y, item.textureKey, 50).setDepth(50)
 
     this.tweens.add({
       targets: icon,
-      x: 320,
-      y: 250,
+      x: ORIGIN_X + 60,
+      y: ORIGIN_Y,
       duration: 500,
       ease: 'Cubic.inOut',
       onComplete: () => {
-        icon.destroy()
-
-        const speaker = this.add.image(320, 250, 'estacao_alto_falante_ativa')
-          .setScale(0.01).setAlpha(0).setDepth(50)
-
         this.tweens.add({
-          targets: speaker,
-          scale: 70 / speaker.width,  // menor (antes 90)
-          alpha: 1,
-          duration: 300,
-          ease: 'Back.out',
-          onComplete: () => {
-            this.emitSoundWaves(320, 250, item.soundKey, () => {
-              speaker.destroy()
-              this.evaluateDelivery('audio')
-            })
-          }
+          targets: icon,
+          alpha: 0,
+          duration: 260,
+          onComplete: () => icon.destroy()
+        })
+        this.emitSoundWaves(ORIGIN_X + 90, ORIGIN_Y, item.soundKey, () => {
+          this.evaluateDelivery('audio')
         })
       }
     })
   }
 
-  private emitSoundWaves(x: number, y: number, soundKey?: string, onComplete?: () => void) {
+  private emitSoundWaves(x: number, y: number, soundKey: string | undefined, onComplete: () => void) {
     let soundPlayed = false
     const waveCount = 3
-    let completedWaves = 0
+    let completed = 0
 
     for (let i = 0; i < waveCount; i++) {
       this.time.delayedCall(i * 300, () => {
-        const wave = this.add.image(x, y, 'onda_de_som')
-          .setAlpha(0).setScale(0.1).setDepth(50)
+        const wave = this.fitted(x, y, 'onda_de_som', 90).setAlpha(0).setDepth(50)
 
         this.tweens.add({
           targets: wave,
-          x: 1080,
+          x: DEST_X,
           alpha: { from: 0.8, to: 0 },
-          scaleX: 1.8,
-          scaleY: 1.8,
           duration: 900,
           ease: 'Linear',
           onUpdate: () => {
@@ -647,105 +739,60 @@ export class GameScene extends Phaser.Scene {
           },
           onComplete: () => {
             wave.destroy()
-            completedWaves++
-            if (completedWaves === waveCount && onComplete) {
-              this.time.delayedCall(200, onComplete)
-            }
+            completed++
+            if (completed === waveCount) this.time.delayedCall(200, onComplete)
           }
         })
       })
     }
   }
 
-  private playImageTransmission(drawKey?: string) {
-    if (!drawKey) {
-      this.time.delayedCall(100, () => this.evaluateDelivery('image'))
-      return
-    }
-
-    // Papel desenhado sai da ORIGEM e vai para o destino
-    const paper = this.add.image(200, 250, 'papel_desenhado')
-      .setScale(60 / 200)
-      .setDepth(50)
+  private playImageTransmission() {
+    const paper = this.fitted(ORIGIN_X, ORIGIN_Y, 'papel_desenhado', 60).setDepth(50)
 
     this.tweens.add({
       targets: paper,
-      x: 1080,
-      y: 250,
+      x: DEST_X,
+      y: DEST_Y,
       duration: 800,
       ease: 'Cubic.inOut',
       onComplete: () => {
         paper.destroy()
-
-        // --- Cena de análise ---
-        const analysisOverlay = this.add.rectangle(640, 360, 1280, 720, 0x000000, 0.7)
-          .setDepth(40).setInteractive()
-
-        // Container para centralizar os dois elementos
-        const analysisGroup = this.add.container(0, 0).setDepth(41)
-
-        // Personagem (esquerda)
-        const personagem = this.add.image(0, 0, 'destino_analisa_desenho')
-          .setScale(0.6)
-
-        // Quadro + desenho (direita)
-        const board = this.add.image(0, 0, 'quadro_desenho')
-        const boardScale = 0.5  // ajuste fino conforme necessário
-        board.setScale(boardScale)
-
-        const desenho = this.add.image(0, 0, drawKey)
-          .setScale(boardScale)  // mesma escala do quadro
-
-        // Agrupa o quadro e o desenho em um sub-container para manter alinhamento
-        const drawingGroup = this.add.container(0, 0, [board, desenho])
-
-        analysisGroup.add([personagem, drawingGroup])
-
-        const spacing = 450  // espaço entre o centro do personagem e o centro do quadro
-        personagem.setX(-spacing / 2)
-        drawingGroup.setX(spacing / 2)
-
-        // Centraliza o grupo inteiro na tela
-        analysisGroup.setX(680)
-        analysisGroup.setY(290)
-
-        this.time.delayedCall(2000, () => {
-          analysisOverlay.destroy()
-          analysisGroup.destroy()
-          this.textures.remove(drawKey)
-
-          this.evaluateDelivery('image')
-        })
+        this.showDrawingAnalysis()
       }
     })
   }
 
-  private showChannelBadge(channel: ChannelType) {
-    const station = STATIONS.find(s => s.channel === channel)!
-    const count = this.accumulatedBadges.length
-    const spacing = 70                    // distância entre centros
-    const startX = -(spacing * (this.currentMission.requiredChannels.length - 1)) / 2
-    const xOffset = startX + count * spacing
-    const yOffset = 0                     // centralizado verticalmente no destino
-    const badge = this.add.image(xOffset, yOffset, station.textureKey)
-    const badgeScale = 60 / badge.width   // escala maior, visível
-    badge.setScale(badgeScale)
-    badge.setDepth(15)
+  private showDrawingAnalysis() {
+    const item = this.currentMission.item
 
-    this.accumulatedBadges.push(badge)
-    this.resultContainer.add(badge)
-    this.resultContainer.setAlpha(1)
+    const analysisOverlay = this.add.rectangle(640, 360, 1280, 720, 0x000000, 0.7)
+      .setDepth(40).setInteractive()
+
+    const group = this.add.container(640, 360).setDepth(41)
+
+    const personagem = this.fitted(-230, 0, 'destino_analisa_desenho', 300)
+    const board = this.fitted(230, 0, 'quadro_desenho', 330)
+    const art = this.fitted(230, 0, item.textureKey, 200)
+
+    group.add([personagem, board, art])
+    group.setScale(0.9).setAlpha(0)
+    this.tweens.add({ targets: group, alpha: 1, scale: 1, duration: 260, ease: 'Back.out' })
+
+    this.time.delayedCall(2000, () => {
+      analysisOverlay.destroy()
+      group.destroy()
+      this.evaluateDelivery('image')
+    })
   }
 
   private playTextTransmission() {
-    const envelope = this.add.image(200, 250, 'estacao_envelope')
-      .setScale(35 / 200)   // envelope menor, antes 80
-      .setDepth(50)
+    const envelope = this.fitted(ORIGIN_X, ORIGIN_Y, 'estacao_envelope', 60).setDepth(50)
 
     this.tweens.add({
       targets: envelope,
-      x: 1080,
-      y: 250,
+      x: DEST_X,
+      y: DEST_Y,
       duration: 700,
       ease: 'Cubic.inOut',
       onComplete: () => {
@@ -754,10 +801,11 @@ export class GameScene extends Phaser.Scene {
       }
     })
   }
-  private evaluateDelivery(channel: ChannelType) {
-    const isRequested = this.currentMission.requiredChannels.includes(channel)
 
-    if (!isRequested) {
+  // ── Avaliação ──────────────────────────────────────────────────────────
+
+  private evaluateDelivery(channel: ChannelType) {
+    if (!this.currentMission.requiredChannels.includes(channel)) {
       this.registerWrongDelivery()
       return
     }
@@ -765,7 +813,9 @@ export class GameScene extends Phaser.Scene {
     this.completedChannelsThisRound.add(channel)
     this.markRequestFulfilled(channel)
 
-    const allDone = this.currentMission.requiredChannels.every(c => this.completedChannelsThisRound.has(c))
+    const allDone = this.currentMission.requiredChannels.every(
+      c => this.completedChannelsThisRound.has(c)
+    )
 
     if (!allDone) {
       this.showChannelBadge(channel)
@@ -784,6 +834,23 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.registerCorrectDelivery()
+  }
+
+  private showChannelBadge(channel: ChannelType) {
+    const station = STATIONS.find(s => s.channel === channel)!
+    const count = this.accumulatedBadges.length
+    const spacing = 70
+    const startX = -(spacing * (this.currentMission.requiredChannels.length - 1)) / 2
+    const badge = this.fitted(startX + count * spacing, 0, station.textureKey, 60).setDepth(15)
+
+    this.accumulatedBadges.push(badge)
+    this.resultContainer.add(badge)
+    this.resultContainer.setAlpha(1)
+  }
+
+  private clearAccumulatedBadges() {
+    this.accumulatedBadges.forEach(badge => badge.destroy())
+    this.accumulatedBadges = []
   }
 
   private registerCorrectDelivery() {
@@ -814,26 +881,18 @@ export class GameScene extends Phaser.Scene {
     this.showLossComparison()
   }
 
-  private clearAccumulatedBadges() {
-    this.accumulatedBadges.forEach(badge => badge.destroy())
-    this.accumulatedBadges = []
-  }
-
   private showSuccessComparison() {
     this.state = 'comparing'
     const item = this.currentMission.item
 
     this.resultContainer.removeAll(true)
 
-    const starburst = this.add.image(0, 0, 'efeito_starburst').setAlpha(0)
-    starburst.setScale(280 / starburst.width)
-
-    const destinoIcon = this.add.image(0, 0, item.textureKey).setAlpha(0)
-    const targetScale = 90 / destinoIcon.width
+    const starburst = this.fitted(0, 0, 'efeito_starburst', 260).setAlpha(0)
+    const destinoIcon = this.fitted(0, 0, item.textureKey, 90).setAlpha(0)
+    const targetScale = destinoIcon.scaleX
     destinoIcon.setScale(0)
 
     this.resultContainer.add([starburst, destinoIcon])
-    this.resultContainer.y = 250
     this.resultContainer.setAlpha(1)
 
     this.sound.play('som_sucesso')
@@ -856,15 +915,15 @@ export class GameScene extends Phaser.Scene {
 
     this.resultContainer.removeAll(true)
 
-    const destinoIcon = this.add.image(0, 0, item.textureKey)
-    destinoIcon.setScale(90 / destinoIcon.width)
-    destinoIcon.setTint(0x999999)
+    const destinoIcon = this.fitted(0, 0, item.textureKey, 90).setTint(0x999999)
 
-    const lossIcon = this.add.image(0, -60, 'indicador_perda').setAlpha(0)
-    lossIcon.setScale(50 / lossIcon.width)
+    const cross = this.add.graphics().setAlpha(0)
+    cross.lineStyle(11, 0xc62828, 1)
+    cross.lineBetween(-30, -30, 30, 30)
+    cross.lineBetween(30, -30, -30, 30)
+    cross.setPosition(0, -78)
 
-    this.resultContainer.add([destinoIcon, lossIcon])
-    this.resultContainer.y = 250
+    this.resultContainer.add([destinoIcon, cross])
     this.resultContainer.setAlpha(1)
 
     this.sound.play('som_perda')
@@ -878,66 +937,13 @@ export class GameScene extends Phaser.Scene {
     })
 
     this.tweens.add({
-      targets: lossIcon,
+      targets: cross,
       alpha: 1,
+      scale: { from: 0.6, to: 1 },
       duration: 300,
       delay: 200,
-      onComplete: () => this.time.delayedCall(1600, () => this.finishMission())
-    })
-  }
-
-  private showDualComparison() {
-    this.state = 'comparing'
-    const item = this.currentMission.item
-    const channels = this.currentMission.requiredChannels
-
-    this.resultContainer.removeAll(true)
-
-    const title = this.add.text(0, -90, 'Mesma mensagem, dois caminhos!', {
-      fontFamily: 'Arial, sans-serif',
-      fontSize: '16px',
-      color: '#333333',
-      fontStyle: 'bold',
-      align: 'center',
-      backgroundColor: '#ffffffcc',
-      padding: { x: 8, y: 5 }
-    }).setOrigin(0.5).setDepth(10)
-
-    const positions = [-60, 60]
-    const elements: Phaser.GameObjects.GameObject[] = [title]
-
-    channels.forEach((channel, i) => {
-      const station = STATIONS.find(s => s.channel === channel)!
-      const icon = this.add.image(positions[i], -10, item.textureKey)
-      icon.setScale(60 / icon.width)
-      const badge = this.add.image(positions[i], 30, station.textureKey)
-      badge.setScale(36 / badge.width)
-      elements.push(icon, badge)
-    })
-
-    const preserved = this.add.text(0, 75, 'A ideia continua a mesma!', {
-      fontFamily: 'Arial, sans-serif',
-      fontSize: '15px',
-      color: '#2f7a3d',
-      fontStyle: 'bold',
-      backgroundColor: '#ffffffcc',
-      padding: { x: 8, y: 5 }
-    }).setOrigin(0.5).setDepth(10)
-    elements.push(preserved)
-
-    this.resultContainer.add(elements)
-    this.resultContainer.y = 250
-    this.resultContainer.setAlpha(1)
-    this.resultContainer.setScale(0.9)
-
-    this.sound.play('som_sucesso')
-
-    this.tweens.add({
-      targets: this.resultContainer,
-      scale: 1,
-      duration: 300,
       ease: 'Back.out',
-      onComplete: () => this.time.delayedCall(1800, () => this.finishMission())
+      onComplete: () => this.time.delayedCall(1600, () => this.finishMission())
     })
   }
 
@@ -968,7 +974,64 @@ export class GameScene extends Phaser.Scene {
     })
   }
 
-  shutdown() {
-    if (this.removeCommandListener) this.removeCommandListener()
+  // ── UI ─────────────────────────────────────────────────────────────────
+
+  private createThemedButton(width: number, height: number, text: string) {
+    const bg = this.add.graphics()
+    this.redrawThemedButtonBg(bg, width, height)
+
+    const label = this.add.text(0, 0, text, {
+      fontFamily: 'Arial, sans-serif',
+      fontSize: '18px',
+      color: '#ffffff',
+      fontStyle: 'bold',
+      align: 'center',
+      wordWrap: { width: width - 30 }
+    }).setOrigin(0.5).setResolution(2)
+
+    const container = this.add.container(0, 0, [bg, label])
+    container.setSize(width, height)
+    container.setData('bg', bg)
+    return container
+  }
+
+  private redrawThemedButtonBg(g: Phaser.GameObjects.Graphics, width: number, height: number) {
+    const w = width, h = height, radius = 12
+    g.clear()
+    g.fillStyle(0x4e9b35, 1)
+    g.fillRoundedRect(-w / 2, -h / 2, w, h, radius)
+    g.fillStyle(0x87d251, 1)
+    g.fillRoundedRect(-w / 2 + 4, -h / 2 + 4, w - 8, h - 8, radius - 2)
+    g.lineStyle(3, 0x000f00, 1)
+    g.strokeRoundedRect(-w / 2, -h / 2, w, h, radius)
+  }
+
+  private createModalBackground(width: number, height: number) {
+    const g = this.add.graphics()
+    const w = width, h = height, radius = 20, shadow = 6
+
+    g.fillStyle(0x4e9b35, 1)
+    g.fillRoundedRect(-w / 2, -h / 2, w, h, radius)
+    g.fillStyle(0x87d251, 1)
+    g.fillRoundedRect(-w / 2 + shadow, -h / 2 + shadow, w - shadow * 2, h - shadow * 2, radius - 2)
+    g.lineStyle(4, 0x000f00, 1)
+    g.strokeRoundedRect(-w / 2, -h / 2, w, h, radius)
+
+    return g
+  }
+
+  private buildConfirmButton(x: number, y: number, onClick: () => void) {
+    const btn = this.fitted(x, y, 'botao_confirmar', 120)
+    btn.setInteractive({ cursor: 'pointer' })
+    btn.on('pointerdown', onClick)
+    return btn
+  }
+
+  private buildBackButton(x: number, y: number, onClick: () => void) {
+    const btn = this.fitted(x, y, 'botao_avancar', 90)
+    btn.setScale(-btn.scaleX, btn.scaleY)
+    btn.setInteractive({ cursor: 'pointer' })
+    btn.on('pointerdown', onClick)
+    return btn
   }
 }

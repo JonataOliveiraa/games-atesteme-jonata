@@ -14,8 +14,6 @@ import estacaoLapisUrl from '../../../assets/games/EF01CO04/estacao_lapis.png'
 import estacaoLapisAtivaUrl from '../../../assets/games/EF01CO04/estacao_lapis_ativa.png'
 import estacaoEnvelopeUrl from '../../../assets/games/EF01CO04/estacao_envelope.png'
 import estacaoEnvelopeAtivaUrl from '../../../assets/games/EF01CO04/estacao_envelope_ativa.png'
-import estacaoAltoFalanteUrl from '../../../assets/games/EF01CO04/estacao_alto_falante.png'
-import estacaoAltoFalanteAtivaUrl from '../../../assets/games/EF01CO04/estacao_alto_falante_ativa.png'
 
 import infoCachorroUrl from '../../../assets/games/EF01CO04/info_cachorro.png'
 import infoGatoUrl from '../../../assets/games/EF01CO04/info_gato.png'
@@ -27,9 +25,7 @@ import infoCasaUrl from '../../../assets/games/EF01CO04/info_casa.png'
 import botaoAvancarUrl from '../../../assets/games/EF01CO04/botao_avancar.png'
 import botaoConfirmarUrl from '../../../assets/games/EF01CO04/botao_confirmar.png'
 import cursorTutorialUrl from '../../../assets/games/EF01CO04/cursor_tutorial.png'
-import indicadorPerdaUrl from '../../../assets/games/EF01CO04/indicador_perda.png'
 import indicadorProgressoUrl from '../../../assets/games/EF01CO04/indicador_progresso.png'
-import microfoneIndisponivelUrl from '../../../assets/games/EF01CO04/microfone_indisponivel.png'
 import quadroDesenhoUrl from '../../../assets/games/EF01CO04/quadro_desenho.png'
 import efeitoStarburstUrl from '../../../assets/games/EF01CO04/efeito-starburst.png'
 import ondaDeSom from '../../../assets/games/EF01CO04/onda_de_som.png'
@@ -92,8 +88,6 @@ export class BootScene extends Phaser.Scene {
     this.load.image('estacao_lapis_ativa', estacaoLapisAtivaUrl)
     this.load.image('estacao_envelope', estacaoEnvelopeUrl)
     this.load.image('estacao_envelope_ativa', estacaoEnvelopeAtivaUrl)
-    this.load.image('estacao_alto_falante', estacaoAltoFalanteUrl)
-    this.load.image('estacao_alto_falante_ativa', estacaoAltoFalanteAtivaUrl)
 
     this.load.image('info_cachorro', infoCachorroUrl)
     this.load.image('info_gato', infoGatoUrl)
@@ -105,9 +99,7 @@ export class BootScene extends Phaser.Scene {
     this.load.image('botao_avancar', botaoAvancarUrl)
     this.load.image('botao_confirmar', botaoConfirmarUrl)
     this.load.image('cursor_tutorial', cursorTutorialUrl)
-    this.load.image('indicador_perda', indicadorPerdaUrl)
     this.load.image('indicador_progresso', indicadorProgressoUrl)
-    this.load.image('microfone_indisponivel', microfoneIndisponivelUrl)
     this.load.image('quadro_desenho', quadroDesenhoUrl)
     this.load.image('efeito_starburst', efeitoStarburstUrl)
     this.load.image('onda_de_som', ondaDeSom)
