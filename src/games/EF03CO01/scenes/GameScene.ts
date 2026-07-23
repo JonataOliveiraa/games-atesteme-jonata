@@ -14,16 +14,21 @@ export class GameScene extends Phaser.Scene {
 
   private levelConfig!: LevelConfig
   private currentSentenceIndex = 0
-  private hits   = 0
+  private hits = 0
   private errors = 0
   private consecutiveErrors = 0
   private currentPoints = 0
-  private currentLives  = 1
+  private currentLives = 1
   private isMuted = false
   private phase: RoundPhase = 'intro'
   private gameEnded = false
   private shouldShowLevelStart = false
   private missionEffectActive = false
+
+  private sourceText?: Phaser.GameObjects.Text
+  private cardShadow?: Phaser.GameObjects.Graphics
+  private cardBg?: Phaser.GameObjects.Graphics
+  private gavel?: Phaser.GameObjects.Image
 
   private sentenceCard?: Phaser.GameObjects.Container
   private sentenceText?: Phaser.GameObjects.Text
@@ -46,21 +51,21 @@ export class GameScene extends Phaser.Scene {
 
   init(data: { level?: number; points?: number; lives?: number; showLevelStart?: boolean }) {
     const lvl = (data?.level ?? 1) as 1 | 2 | 3
-    this.levelConfig          = LEVELS.find((l) => l.level === lvl) ?? LEVELS[0]
+    this.levelConfig = LEVELS.find((l) => l.level === lvl) ?? LEVELS[0]
     this.currentSentenceIndex = 0
-    this.hits                 = 0
-    this.errors               = 0
-    this.consecutiveErrors    = 0
-    this.currentPoints        = data?.points ?? 0
-    this.currentLives         = data?.lives  ?? 1
-    this.isMuted              = false
-    this.phase                = 'intro'
-    this.gameEnded            = false
+    this.hits = 0
+    this.errors = 0
+    this.consecutiveErrors = 0
+    this.currentPoints = data?.points ?? 0
+    this.currentLives = data?.lives ?? 1
+    this.isMuted = false
+    this.phase = 'intro'
+    this.gameEnded = false
     this.shouldShowLevelStart = data?.showLevelStart ?? false
-    this.missionEffectActive  = false
-    this.overlayObjects       = []
-    this.timerActive          = false
-    this.timerState.progress  = 1
+    this.missionEffectActive = false
+    this.overlayObjects = []
+    this.timerActive = false
+    this.timerState.progress = 1
   }
 
   create() {
@@ -83,7 +88,7 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
-  update() {}
+  update() { }
 
   shutdown() {
     this.timerActive = false
@@ -141,10 +146,10 @@ export class GameScene extends Phaser.Scene {
     this.drawTimeBar(1)
 
     this.timerTween = this.tweens.add({
-      targets:  this.timerState,
+      targets: this.timerState,
       progress: 0,
       duration: this.levelConfig.perSentenceTimer * 1000,
-      ease:     'Linear',
+      ease: 'Linear',
       onUpdate: () => this.drawTimeBar(this.timerState.progress),
       onComplete: () => {
         if (!this.timerActive) return
@@ -168,22 +173,22 @@ export class GameScene extends Phaser.Scene {
     EventBus.emit('mission-update', {
       instruction: this.levelConfig.title,
       hint: this.levelConfig.tip,
-      missionIndex:  this.currentSentenceIndex,
+      missionIndex: this.currentSentenceIndex,
       totalMissions: this.levelConfig.sentences.length,
-      level:         this.levelConfig.level,
+      level: this.levelConfig.level,
     })
   }
 
   private emitCheckpoint() {
     const progress = Math.round((this.currentSentenceIndex / this.levelConfig.sentences.length) * 100)
     runtimeGameBridge.emit({
-      type:     'CHECKPOINT',
-      gameId:   GAME_ID,
+      type: 'CHECKPOINT',
+      gameId: GAME_ID,
       progress,
-      score:    this.currentPoints,
-      stage:    this.levelConfig.level,
-      hits:     this.hits,
-      errors:   this.errors,
+      score: this.currentPoints,
+      stage: this.levelConfig.level,
+      hits: this.hits,
+      errors: this.errors,
     })
   }
 
@@ -203,40 +208,104 @@ export class GameScene extends Phaser.Scene {
   private buildSentenceUI() {
     this.sentenceCard = this.add.container(720, 300).setDepth(5)
 
-    const CARD_W = 640, CARD_H = 252
-    const cardShadow = this.add.graphics()
-    cardShadow.fillStyle(0x000000, 0.15)
-    cardShadow.fillRoundedRect(-CARD_W / 2 + 4, -CARD_H / 2 + 6, CARD_W, CARD_H, 22)
+    this.cardShadow = this.add.graphics()
+    this.cardBg = this.add.graphics()
 
-    const cardBg = this.add.graphics()
-    cardBg.fillStyle(0xffffff, 1)
-    cardBg.fillRoundedRect(-CARD_W / 2, -CARD_H / 2, CARD_W, CARD_H, 22)
-    cardBg.lineStyle(3, 0xe2e8f0, 1)
-    cardBg.strokeRoundedRect(-CARD_W / 2, -CARD_H / 2, CARD_W, CARD_H, 22)
+    this.sourceText = this.add.text(0, 0, '', {
+      fontFamily: 'Arial', fontStyle: 'bold',
+      fontSize: '15px', color: '#FFCC80',
+    }).setOrigin(0, 0.5).setResolution(2)
 
     this.sentenceText = this.add.text(0, 0, '', {
       fontFamily: 'Arial', fontStyle: 'bold',
-      fontSize: '24px', color: '#1e293b',
-      align: 'center', wordWrap: { width: 560 },
+      fontSize: '23px', color: '#FFF3E0',
+      align: 'center', wordWrap: { width: 580 },
+      lineSpacing: 6,
     }).setOrigin(0.5).setResolution(2)
 
-    this.sentenceCard.add([cardShadow, cardBg, this.sentenceText])
+    this.sentenceCard.add([this.cardShadow, this.cardBg, this.sourceText, this.sentenceText])
 
-    this.negationBadge = this.add.container(720, 168).setDepth(6).setAlpha(0)
+    this.negationBadge = this.add.container(720, 150).setDepth(6).setAlpha(0)
     const badgeBg = this.add.graphics()
     badgeBg.fillStyle(0xef4444, 0.95)
     badgeBg.fillRoundedRect(-150, -18, 300, 36, 18)
     badgeBg.lineStyle(2, 0xffffff, 0.9)
     badgeBg.strokeRoundedRect(-150, -18, 300, 36, 18)
-    const badgeTxt = this.add.text(0, 0, '⚠️ Atenção à palavra NÃO!', {
+    const badgeTxt = this.add.text(0, 0, 'Atenção à palavra NÃO!', {
       fontFamily: 'Arial', fontStyle: 'bold', fontSize: '15px', color: '#ffffff',
     }).setOrigin(0.5).setResolution(2)
     this.negationBadge.add([badgeBg, badgeTxt])
 
-    this.trueBtn  = this.makeAnswerButton(560, 540, true)
+    this.trueBtn = this.makeAnswerButton(560, 540, true)
     this.falseBtn = this.makeAnswerButton(880, 540, false)
+
+    this.createButtonLegend()
+    this.createGavel()
   }
 
+  private createButtonLegend() {
+    const y = 640
+    const bg = this.add.graphics().setDepth(4)
+    bg.fillStyle(0x2a1a0d, 0.92)
+    bg.fillRoundedRect(420, y - 24, 600, 48, 16)
+    bg.lineStyle(2, 0xFFCC80, 0.5)
+    bg.strokeRoundedRect(420, y - 24, 600, 48, 16)
+
+    this.add.text(560, y, '✅ VERDADEIRO = a notícia é real', {
+      fontFamily: 'Arial', fontStyle: 'bold', fontSize: '15px', color: '#86efac',
+    }).setOrigin(0.5).setDepth(5).setResolution(2)
+
+    this.add.text(880, y, '❌ FALSO = a notícia é inventada', {
+      fontFamily: 'Arial', fontStyle: 'bold', fontSize: '15px', color: '#fca5a5',
+    }).setOrigin(0.5).setDepth(5).setResolution(2)
+  }
+
+  private createGavel() {
+    this.gavel = this.add.image(0, 0, 'hammer')
+      .setDisplaySize(76, 76).setOrigin(0.5).setDepth(30).setAlpha(0)
+  }
+
+  private showGavel(x: number, y: number) {
+    if (!this.gavel) return
+    this.tweens.killTweensOf(this.gavel)
+    this.gavel.setPosition(x, y).setAlpha(1).setAngle(-35)
+    this.tweens.add({
+      targets: this.gavel, angle: -5, duration: 240,
+      yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+    })
+  }
+
+  private hideGavel() {
+    if (!this.gavel) return
+    this.tweens.killTweensOf(this.gavel)
+    this.gavel.setAlpha(0)
+  }
+
+  private renderSentenceCard(sentence: LogicSentence) {
+    const CARD_W = 660, PAD = 34, HEADER_H = 46
+
+    this.sourceText!.setText(`${sentence.source}`)
+    this.sentenceText!.setText(sentence.text)
+
+    const textH = this.sentenceText!.height
+    const cardH = Math.max(190, HEADER_H + textH + PAD * 2)
+    const top = -cardH / 2
+
+    this.sourceText!.setPosition(-CARD_W / 2 + PAD, top + HEADER_H / 2)
+    this.sentenceText!.setPosition(0, top + HEADER_H + PAD / 2 + textH / 2)
+
+    this.cardShadow!.clear()
+    this.cardShadow!.fillStyle(0x000000, 0.28)
+    this.cardShadow!.fillRoundedRect(-CARD_W / 2 + 5, top + 7, CARD_W, cardH, 20)
+
+    this.cardBg!.clear()
+    this.cardBg!.fillStyle(0x3b2718, 0.97)
+    this.cardBg!.fillRoundedRect(-CARD_W / 2, top, CARD_W, cardH, 20)
+    this.cardBg!.lineStyle(4, 0xFFCC80, 0.9)
+    this.cardBg!.strokeRoundedRect(-CARD_W / 2, top, CARD_W, cardH, 20)
+    this.cardBg!.fillStyle(0x2a1a0d, 1)
+    this.cardBg!.fillRoundedRect(-CARD_W / 2, top, CARD_W, HEADER_H, { tl: 20, tr: 20, bl: 0, br: 0 })
+  }
   private makeAnswerButton(x: number, y: number, value: boolean): Phaser.GameObjects.Container {
     const btn = this.add.container(x, y).setDepth(5)
     const W = 288, H = 100
@@ -251,22 +320,28 @@ export class GameScene extends Phaser.Scene {
     bg.lineStyle(4, 0xffffff, 0.9)
     bg.strokeRoundedRect(-W / 2, -H / 2, W, H, 22)
 
-    const icon = this.add.text(-84, 0, value ? '✅' : '❌', {
-      fontSize: '34px',
-    }).setOrigin(0.5)
-
-    const label = this.add.text(22, 0, value ? 'VERDADEIRO' : 'FALSO', {
+    const label = this.add.text(0, 0, value ? 'VERDADEIRO' : 'FALSO', {
       fontFamily: 'Arial Black, Arial', fontStyle: 'bold',
       fontSize: '22px', color: '#ffffff',
       stroke: value ? '#14532d' : '#7f1d1d', strokeThickness: 3,
     }).setOrigin(0.5).setResolution(2)
 
-    btn.add([shadow, bg, icon, label])
+    btn.add([shadow, bg, label])
     btn.setSize(W, H)
     btn.setInteractive({ useHandCursor: true })
-    btn.on('pointerover', () => this.tweens.add({ targets: btn, scale: 1.06, duration: 90 }))
-    btn.on('pointerout',  () => this.tweens.add({ targets: btn, scale: 1, duration: 90 }))
-    btn.on('pointerdown', () => this.handleAnswer(value))
+    btn.on('pointerover', () => {
+      if (this.phase !== 'waiting-answer') return
+      this.tweens.add({ targets: btn, scale: 1.06, duration: 90 })
+      this.showGavel(x, y - 78)
+    })
+    btn.on('pointerout', () => {
+      this.tweens.add({ targets: btn, scale: 1, duration: 90 })
+      this.hideGavel()
+    })
+    btn.on('pointerdown', () => {
+      this.hideGavel()
+      this.handleAnswer(value)
+    })
     return btn
   }
 
@@ -274,8 +349,9 @@ export class GameScene extends Phaser.Scene {
     const sentence = this.levelConfig.sentences[this.currentSentenceIndex]
     if (!sentence || !this.sentenceText) return
 
-    this.sentenceText.setText(sentence.text)
+    this.renderSentenceCard(sentence)
     this.negationBadge?.setAlpha(sentence.hasNegation ? 1 : 0)
+    this.hideGavel()
 
     this.phase = 'waiting-answer'
     this.trueBtn?.setInteractive({ useHandCursor: true })
@@ -301,7 +377,8 @@ export class GameScene extends Phaser.Scene {
       this.consecutiveErrors = 0
       this.playCorrect()
       this.spawnConfetti()
-      this.time.delayedCall(1100, () => this.advanceSentence())
+      this.showExplanation(sentence)
+      this.time.delayedCall(sentence.hasNegation ? 3400 : 2600, () => this.advanceSentence())
     } else {
       this.errors++
       this.consecutiveErrors++
@@ -337,22 +414,45 @@ export class GameScene extends Phaser.Scene {
   }
 
   private showExplanation(sentence: LogicSentence) {
-    const panel = this.addOverlayObject(this.add.container(720, 470).setDepth(70))
+    const panel = this.addOverlayObject(this.add.container(720, 458).setDepth(70))
+    const W = 620, H = sentence.hasNegation ? 176 : 132
+
     const bg = this.add.graphics()
-    bg.fillStyle(0x2a1a0d, 0.95)
-    bg.fillRoundedRect(-300, -60, 600, 120, 18)
+    bg.fillStyle(0x2a1a0d, 0.96)
+    bg.fillRoundedRect(-W / 2, -H / 2, W, H, 18)
     bg.lineStyle(3, 0xFFCC80, 0.9)
-    bg.strokeRoundedRect(-300, -60, 600, 120, 18)
-    const icon = this.add.image(-250, 0, 'effect-wrong').setDisplaySize(40, 40).setOrigin(0.5)
-    const txt = this.add.text(20, 0, sentence.explanation, {
-      fontFamily: 'Arial', fontStyle: 'bold', fontSize: '15px', color: '#FFF3E0',
-      align: 'left', wordWrap: { width: 480 },
-    }).setOrigin(0.5).setResolution(2)
-    panel.add([bg, icon, txt])
+    bg.strokeRoundedRect(-W / 2, -H / 2, W, H, 18)
+
+    const rows: Phaser.GameObjects.GameObject[] = [bg]
+    let y = -H / 2 + 26
+
+    const addRow = (labelTxt: string, valueTxt: string, color: string) => {
+      rows.push(this.add.text(-W / 2 + 22, y, labelTxt, {
+        fontFamily: 'Arial', fontStyle: 'bold', fontSize: '14px', color: '#FFCC80',
+      }).setOrigin(0, 0.5).setResolution(2))
+      rows.push(this.add.text(-W / 2 + 190, y, valueTxt, {
+        fontFamily: 'Arial', fontStyle: 'bold', fontSize: '15px', color,
+        wordWrap: { width: W - 215 },
+      }).setOrigin(0, 0.5).setResolution(2))
+      y += 32
+    }
+
+    addRow('A frase afirma:', sentence.core, '#FFF3E0')
+    addRow('Isso é:', sentence.coreValue ? 'VERDADE' : 'MENTIRA',
+      sentence.coreValue ? '#86efac' : '#fca5a5')
+
+    if (sentence.hasNegation) {
+      addRow('Mas tem o NÃO:', 'a negação inverte o valor', '#fcd34d')
+    }
+
+    addRow('Logo, a frase é:', sentence.correctValue ? 'VERDADEIRA' : 'FALSA',
+      sentence.correctValue ? '#86efac' : '#fca5a5')
+
+    panel.add(rows)
     panel.setAlpha(0).setScale(0.9)
     this.tweens.add({ targets: panel, alpha: 1, scale: 1, duration: 220, ease: 'Back.Out' })
 
-    this.time.delayedCall(2000, () => {
+    this.time.delayedCall(sentence.hasNegation ? 3200 : 2400, () => {
       this.tweens.add({ targets: panel, alpha: 0, duration: 240, onComplete: () => panel.destroy() })
     })
   }
@@ -456,7 +556,7 @@ export class GameScene extends Phaser.Scene {
       dot.fillStyle(
         level <= lvl ? 0x42d640
           : level === nextLvl ? 0xff8a2a
-          : 0xd8dde8,
+            : 0xd8dde8,
         1
       )
       dot.fillCircle(-28 + index * 28, 72, 8)
@@ -511,23 +611,20 @@ export class GameScene extends Phaser.Scene {
     }).setOrigin(0.5).setResolution(2)
 
     const steps = [
-      { icon: '📰', text: 'Leia a manchete no cartão com atenção' },
-      { icon: '🤔', text: 'Pense: essa notícia parece real ou inventada?' },
-      { icon: '✅', text: 'Toque em VERDADEIRO ou FALSO para julgar' },
-      { icon: '⚠️', text: 'No Nível 2, a palavra NÃO pode mudar tudo!' },
+      { text: 'Leia a manchete no cartão com atenção' },
+      { text: 'Pense: essa notícia parece real ou inventada?' },
+      { text: 'Toque em VERDADEIRO ou FALSO para julgar' },
+      { text: 'No Nível 2, a palavra NÃO pode mudar tudo!' },
     ]
 
     const stepItems = steps.flatMap((step, i) => {
       const baseY = -H / 2 + 90 + i * 64
-      const iconTxt = this.add.text(-200, baseY, step.icon, {
-        fontSize: '28px',
-      }).setOrigin(0.5).setResolution(2)
       const stepTxt = this.add.text(-168, baseY, step.text, {
         fontFamily: 'Arial', fontStyle: 'bold',
         fontSize: '18px', color: '#1e293b',
         wordWrap: { width: 374 },
       }).setOrigin(0, 0.5).setResolution(2)
-      return [iconTxt, stepTxt]
+      return [stepTxt]
     })
 
     const btnY = H / 2 - 50
@@ -802,7 +899,7 @@ export class GameScene extends Phaser.Scene {
       align: 'center', wordWrap: { width: 440 },
     }).setOrigin(0.5).setResolution(2)
 
-    const retryBtn = this.createModalButton(-140, 118, '🔄 Tentar novamente', 0x42d640, () => {
+    const retryBtn = this.createModalButton(-140, 118, 'Tentar novamente', 0x42d640, () => {
       this.scene.restart({ level: this.levelConfig.level, points: this.currentPoints, lives: this.currentLives })
     })
     const exitBtn = this.createModalButton(140, 118, 'Sair', 0xf57c00, () => {
@@ -858,7 +955,7 @@ export class GameScene extends Phaser.Scene {
     const ctx = this.getAudioCtx()
     if (!ctx) return
     const osc = ctx.createOscillator()
-    const g   = ctx.createGain()
+    const g = ctx.createGain()
     osc.connect(g); g.connect(ctx.destination)
     osc.type = type
     osc.frequency.setValueAtTime(freq, ctx.currentTime)
@@ -867,12 +964,12 @@ export class GameScene extends Phaser.Scene {
     osc.start(); osc.stop(ctx.currentTime + dur)
   }
 
-  private playTick()   { this.playTone(520, 0.04, 'sine', 0.08) }
+  private playTick() { this.playTone(520, 0.04, 'sine', 0.08) }
   private playCorrect() {
     this.playTone(660, 0.08, 'sine', 0.15)
     this.time.delayedCall(100, () => this.playTone(880, 0.08, 'sine', 0.12))
   }
-  private playError()  { this.playTone(330, 0.20, 'square', 0.15) }
+  private playError() { this.playTone(330, 0.20, 'square', 0.15) }
   private playFanfare() {
     [523, 659, 784, 1047].forEach((f, i) =>
       this.time.delayedCall(i * 125, () => this.playTone(f, 0.22, 'sine', 0.32)),
@@ -887,7 +984,7 @@ export class GameScene extends Phaser.Scene {
     this.unsubPlatform = runtimeGameBridge.onCommand((cmd: PlatformCommand) => {
       if (cmd.type === 'START_GAME') {
         this.currentPoints = cmd.points ?? 0
-        this.currentLives  = cmd.lives  ?? 1
+        this.currentLives = cmd.lives ?? 1
       }
     })
   }

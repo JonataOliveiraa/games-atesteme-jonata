@@ -5,8 +5,7 @@ import bgLoadingUrl      from '../../../assets/games/EF03CO01/bg-loading.png'
 import characterJudgeUrl from '../../../assets/games/EF03CO01/character-judge.png'
 import characterWitnessUrl from '../../../assets/games/EF03CO01/character-witness.png'
 import cardSentenceUrl   from '../../../assets/games/EF03CO01/card-setence.png'
-import btnVerdadeiroUrl  from '../../../assets/games/EF03CO01/btn-verdadeiro.png'
-import btnFalsoUrl       from '../../../assets/games/EF03CO01/btn-falso.png'
+import hammerUrl  from '../../../assets/games/EF03CO01/hammer.png'
 import effectStarUrl     from '../../../assets/games/EF03CO01/effect-star.png'
 import effectWrongUrl    from '../../../assets/games/EF03CO01/effect-wrong.png'
 import badgeLevelUrl     from '../../../assets/games/EF03CO01/badge-level.png'
@@ -16,11 +15,10 @@ const ASSETS: Array<[string, string]> = [
   ['character-judge',   characterJudgeUrl],
   ['character-witness', characterWitnessUrl],
   ['card-sentence',     cardSentenceUrl],
-  ['btn-verdadeiro',    btnVerdadeiroUrl],
-  ['btn-falso',         btnFalsoUrl],
   ['effect-star',       effectStarUrl],
   ['effect-wrong',      effectWrongUrl],
   ['badge-level',       badgeLevelUrl],
+  ['hammer', hammerUrl]
 ]
 
 export class BootScene extends Phaser.Scene {
