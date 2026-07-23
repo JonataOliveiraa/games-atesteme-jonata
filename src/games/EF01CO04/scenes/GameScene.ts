@@ -3,6 +3,7 @@ import { runtimeGameBridge } from '../../../shared/bridge/runtimeGameBridge'
 import type { PlatformCommand } from '../../../shared/contracts/platformCommands'
 import type { LevelConfig, MissionConfig, GameItem, DeliveryStation, ChannelType } from '../types'
 import { LEVELS, STATIONS, CONCEPTS } from '../data/levels'
+import { EventBus } from '../../../shared/EventBus'
 
 const GAME_ID = 'correio-multimidia'
 
@@ -130,7 +131,7 @@ export class GameScene extends Phaser.Scene {
     this.add.image(width / 2, height / 2, 'bg_mapa').setDisplaySize(width, height)
 
     this.fitted(ORIGIN_X, ORIGIN_Y, 'painel_origem', 300)
-    this.originPanelIcon = this.fitted(ORIGIN_X, ORIGIN_Y, 'info_cachorro', 80)
+    this.originPanelIcon = this.fitted(ORIGIN_X, ORIGIN_Y, 'info_cachorro', 95)
     this.fitted(DEST_X, DEST_Y, 'painel_destino', 280)
 
     this.buildStations()
@@ -195,7 +196,7 @@ export class GameScene extends Phaser.Scene {
     if (this.originPanelIcon) {
       this.originPanelIcon.setTexture(this.currentMission.item.textureKey)
       const { w, h } = this.srcSize(this.currentMission.item.textureKey)
-      this.originPanelIcon.setDisplaySize(80, (h / w) * 80)
+      this.originPanelIcon.setDisplaySize(95, (h / w) * 95)
     }
 
     this.registry.set('roundTotal', this.levelConfig.missions.length)
@@ -285,7 +286,7 @@ export class GameScene extends Phaser.Scene {
     sprite.setTexture(station.textureKey)
     sprite.setScale(sprite.getData('baseScale'))
 
-    this.sound.play('som_click_ui')
+    this.playTick()
     this.state = 'registering'
     this.openRegistration(station)
   }
@@ -355,7 +356,7 @@ export class GameScene extends Phaser.Scene {
       nextLabel.setText(label)
       nextBtn.removeAllListeners('pointerdown')
       nextBtn.on('pointerdown', () => {
-        this.sound.play('som_click_ui')
+        this.playTick()
         action()
       })
     }
@@ -527,7 +528,7 @@ export class GameScene extends Phaser.Scene {
 
       btn.on('pointerdown', () => {
         if (phrase === item.phrase) {
-          this.sound.play('som_click_ui')
+          this.playTick()
           this.completeRegistration('text')
           return
         }
@@ -574,10 +575,10 @@ export class GameScene extends Phaser.Scene {
       if (!selected) return
       if (selected !== item.soundKey) {
         this.cameras.main.shake(120, 0.002)
-        this.sound.play('som_perda')
+        this.playError()
         return
       }
-      this.sound.play('som_click_ui')
+      this.playTick()
       this.completeRegistration('audio')
     })
     confirmBtn.setAlpha(0.35)
@@ -644,7 +645,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private completeRegistration(channel: ChannelType) {
-    this.sound.play('som_transmissao')
+    this.playSend();
 
     if (this.overlay) {
       this.overlay.destroy()
@@ -887,17 +888,14 @@ export class GameScene extends Phaser.Scene {
 
     this.resultContainer.removeAll(true)
 
-    const starburst = this.fitted(0, 0, 'efeito_starburst', 260).setAlpha(0)
     const destinoIcon = this.fitted(0, 0, item.textureKey, 90).setAlpha(0)
     const targetScale = destinoIcon.scaleX
     destinoIcon.setScale(0)
 
-    this.resultContainer.add([starburst, destinoIcon])
     this.resultContainer.setAlpha(1)
 
-    this.sound.play('som_sucesso')
+    this.playSuccess()
 
-    this.tweens.add({ targets: starburst, alpha: 1, duration: 300, ease: 'Back.out' })
     this.tweens.add({
       targets: destinoIcon,
       alpha: 1,
@@ -926,7 +924,7 @@ export class GameScene extends Phaser.Scene {
     this.resultContainer.add([destinoIcon, cross])
     this.resultContainer.setAlpha(1)
 
-    this.sound.play('som_perda')
+    this.playError()
 
     this.tweens.add({
       targets: destinoIcon,
@@ -959,6 +957,7 @@ export class GameScene extends Phaser.Scene {
     })
   }
 
+  // DEPOIS
   private advanceLevel() {
     if (this.currentLevelIndex < LEVELS.length - 1) {
       this.currentLevelIndex++
@@ -972,9 +971,57 @@ export class GameScene extends Phaser.Scene {
       gameId: GAME_ID,
       stage: this.levelConfig.level
     })
+
+    this.showGameCompleteScreen()
   }
 
-  // ── UI ─────────────────────────────────────────────────────────────────
+  private showGameCompleteScreen() {
+    this.state = 'comparing'
+
+    this.add.rectangle(640, 360, 1280, 720, 0x000000, 0.62)
+      .setDepth(400).setInteractive()
+
+    const panel = this.add.container(640, 360).setDepth(401)
+    panel.add(this.createModalBackground(620, 380))
+
+    const title = this.add.text(0, -110, 'Jogo concluído!', {
+      fontFamily: 'Arial Black, Arial',
+      fontSize: '36px',
+      color: '#ffffff',
+      stroke: '#1a3b1a',
+      strokeThickness: 5
+    }).setOrigin(0.5).setResolution(2)
+
+    const subtitle = this.add.text(0, -50, 'Você entregou todas as mensagens!', {
+      fontFamily: 'Arial, sans-serif',
+      fontSize: '20px',
+      color: '#ffffff',
+      fontStyle: 'bold',
+      align: 'center',
+      wordWrap: { width: 500 }
+    }).setOrigin(0.5).setResolution(2)
+
+    const againBtn = this.createThemedButton(360, 62, 'Jogar novamente')
+    againBtn.setPosition(0, 40)
+    againBtn.setInteractive({ cursor: 'pointer' })
+    againBtn.on('pointerdown', () => {
+      this.playTick()
+      panel.destroy()
+      this.startGame(1, 0)
+    })
+
+    const exitBtn = this.createThemedButton(360, 62, 'Outros jogos')
+    exitBtn.setPosition(0, 120)
+    exitBtn.setInteractive({ cursor: 'pointer' })
+    exitBtn.on('pointerdown', () => {
+      this.playTick()
+      EventBus.emit('exit-game')
+    })
+
+    panel.add([title, subtitle, againBtn, exitBtn])
+    panel.setScale(0.9).setAlpha(0)
+    this.tweens.add({ targets: panel, alpha: 1, scale: 1, duration: 280, ease: 'Back.out' })
+  }
 
   private createThemedButton(width: number, height: number, text: string) {
     const bg = this.add.graphics()
@@ -1033,5 +1080,42 @@ export class GameScene extends Phaser.Scene {
     btn.setInteractive({ cursor: 'pointer' })
     btn.on('pointerdown', onClick)
     return btn
+  }
+
+  private getAudioCtx(): AudioContext | null {
+    try {
+      return (this.sound as Phaser.Sound.WebAudioSoundManager).context
+    } catch { return null }
+  }
+
+  private playTone(freq: number, dur: number, type: OscillatorType = 'sine', gain = 0.25) {
+    const ctx = this.getAudioCtx()
+    if (!ctx) return
+    const osc = ctx.createOscillator()
+    const g = ctx.createGain()
+    osc.connect(g); g.connect(ctx.destination)
+    osc.type = type
+    osc.frequency.setValueAtTime(freq, ctx.currentTime)
+    g.gain.setValueAtTime(gain, ctx.currentTime)
+    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur)
+    osc.start(); osc.stop(ctx.currentTime + dur)
+  }
+
+  private playTick() { this.playTone(520, 0.04, 'sine', 0.08) }
+
+  private playSuccess() {
+    this.playTone(523, 0.10, 'sine', 0.22)
+    this.time.delayedCall(100, () => this.playTone(659, 0.10, 'sine', 0.22))
+    this.time.delayedCall(200, () => this.playTone(784, 0.18, 'sine', 0.26))
+  }
+
+  private playError() {
+    this.playTone(311, 0.16, 'square', 0.16)
+    this.time.delayedCall(150, () => this.playTone(233, 0.26, 'square', 0.14))
+  }
+
+  private playSend() {
+    this.playTone(660, 0.07, 'sine', 0.14)
+    this.time.delayedCall(70, () => this.playTone(880, 0.10, 'sine', 0.12))
   }
 }

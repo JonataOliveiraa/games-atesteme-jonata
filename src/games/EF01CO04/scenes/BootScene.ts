@@ -35,10 +35,6 @@ import destinoAnalisaDesenho from '../../../assets/games/EF01CO04/destino_analis
 import somLatidoUrl from '../../../assets/games/EF01CO04/audio/som_latido.ogg'
 import somMiadoUrl from '../../../assets/games/EF01CO04/audio/som_miado.ogg'
 import somBuzinaUrl from '../../../assets/games/EF01CO04/audio/som_buzina.ogg'
-import somTransmissaoUrl from '../../../assets/games/EF01CO04/audio/som_transmissao.ogg'
-import somSucessoUrl from '../../../assets/games/EF01CO04/audio/som_sucesso.ogg'
-import somPerdaUrl from '../../../assets/games/EF01CO04/audio/som_perda.ogg'
-import somClickUiUrl from '../../../assets/games/EF01CO04/audio/som_click_ui.ogg'
 
 export class BootScene extends Phaser.Scene {
   private progressBar!: Phaser.GameObjects.Graphics
@@ -110,10 +106,6 @@ export class BootScene extends Phaser.Scene {
     this.load.audio('som_latido', somLatidoUrl)
     this.load.audio('som_miado', somMiadoUrl)
     this.load.audio('som_buzina', somBuzinaUrl)
-    this.load.audio('som_transmissao', somTransmissaoUrl)
-    this.load.audio('som_sucesso', somSucessoUrl)
-    this.load.audio('som_perda', somPerdaUrl)
-    this.load.audio('som_click_ui', somClickUiUrl)
 
     this.load.once('complete', () => {
       this.scene.start('GameScene')
