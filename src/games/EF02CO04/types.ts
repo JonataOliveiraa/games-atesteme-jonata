@@ -1,25 +1,31 @@
 export type ItemCategory = 'pecas' | 'programas'
+export type ZoneKind = 'pecas' | 'programas' | 'maquina'
 
 export interface MuseumItem {
   id: string
   name: string
   category: ItemCategory
   textureKey: string
+  fact: string
 }
 
-/** Missão: jogador toca nos itens que correspondem ao critério da rodada */
+export interface DropZoneDef {
+  id: string
+  label: string
+  kind: ZoneKind
+  acceptIds: string[]
+}
+
 export interface MuseumMission {
   id: string
   question: string
   hint: string
-  correctIds: string[]
-  /** Pool de itens exclusivo desta missão — quando definido, o grid é reconstruído ao entrar na missão */
-  itemIds?: string[]
+  itemIds: string[]
+  zones: DropZoneDef[]
 }
 
 export interface LevelConfig {
   level: 1 | 2 | 3
-  itemIds: string[]
   timeLimit: number
   missions: MuseumMission[]
   title: string
@@ -32,4 +38,5 @@ export interface ItemCard {
   item: MuseumItem
   homeX: number
   homeY: number
+  placed: boolean
 }

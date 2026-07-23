@@ -2,8 +2,6 @@ import Phaser from 'phaser'
 
 import bgMuseumUrl   from '../../../assets/games/EF02CO04/bg-museum.png'
 import bgLoadingUrl  from '../../../assets/games/EF02CO04/bg-loading.png'
-import categoryHwUrl from '../../../assets/games/EF02CO04/category-hw.png'
-import categorySwUrl from '../../../assets/games/EF02CO04/category-sw.png'
 
 import hwKeyboardUrl from '../../../assets/games/EF02CO04/hw-keyboard.png'
 import hwMouseUrl    from '../../../assets/games/EF02CO04/hw-mouse.png'
@@ -21,8 +19,6 @@ import swPrinterDriverUrl from '../../../assets/games/EF02CO04/sw-printer-driver
 
 const ASSETS: Array<[string, string]> = [
   ['bg-museum',    bgMuseumUrl],
-  ['category-hw',  categoryHwUrl],
-  ['category-sw',  categorySwUrl],
   ['hw-keyboard',  hwKeyboardUrl],
   ['hw-mouse',     hwMouseUrl],
   ['hw-monitor',   hwMonitorUrl],

@@ -51,8 +51,6 @@ export class UIScene extends Phaser.Scene {
 
     this.add.rectangle(640, 58, 800, 1, 0x4FC3F7, 0.22)
 
-    this.add.text(186, 80, '👉', { fontSize: '16px' }).setOrigin(0.5)
-
     this.hintText = this.add.text(640, 80, '', {
       fontSize: '17px',
       fontFamily: 'Arial, sans-serif',

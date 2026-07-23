@@ -786,7 +786,6 @@ export class GameScene extends Phaser.Scene {
     this.registerCorrectDelivery()
   }
 
-  /** Envio pelo canal certo (todos os pedidos cumpridos) — pontua e avança a missão. */
   private registerCorrectDelivery() {
     const pointsEarned = POINTS_PER_CHANNEL * this.currentMission.requiredChannels.length
 
