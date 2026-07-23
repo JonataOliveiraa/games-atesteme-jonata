@@ -2,21 +2,18 @@ import Phaser from 'phaser'
 import { EventBus } from '../../../shared/EventBus'
 import { runtimeGameBridge } from '../../../shared/bridge/runtimeGameBridge'
 import type { PlatformCommand } from '../../../shared/contracts/platformCommands'
-import type {
-  LevelConfig,
-  ToggleCard,
-} from '../types'
+import type { SecurityItem, LevelConfig, ToggleCard } from '../types'
 import { LEVELS } from '../data/levels'
 import { ALL_SECURITY_ITEMS } from '../data/items'
 
 // ── Constantes de layout ─────────────────────────────────────────────────────
 
-const GAME_ID      = 'checklist-do-jogador-seguro'
-const TOP_Y        = 95
-const BOTTOM_Y     = 638
+const GAME_ID = 'checklist-do-jogador-seguro'
+const TOP_Y = 95
+const BOTTOM_Y = 638
 
 const PANEL_LEFT_X = 860
-const PANEL_W      = 400
+const PANEL_W = 400
 
 const CARD_W = 160
 const CARD_H = 162
@@ -35,10 +32,10 @@ export class GameScene extends Phaser.Scene {
 
   private levelConfig!: LevelConfig
   private currentRoundIndex = 0
-  private hits   = 0
+  private hits = 0
   private errors = 0
   private currentPoints = 0
-  private currentLives  = 1
+  private currentLives = 1
   private isMuted = false
   private phase: RoundPhase = 'intro'
   private gameEnded = false
@@ -71,22 +68,22 @@ export class GameScene extends Phaser.Scene {
 
   init(data: { level?: number; points?: number; lives?: number; showLevelStart?: boolean }) {
     const lvl = (data?.level ?? 1) as 1 | 2 | 3
-    this.levelConfig       = LEVELS.find((l) => l.level === lvl) ?? LEVELS[0]
+    this.levelConfig = LEVELS.find((l) => l.level === lvl) ?? LEVELS[0]
     this.currentRoundIndex = 0
-    this.hits               = 0
-    this.errors             = 0
-    this.currentPoints      = data?.points ?? 0
-    this.currentLives       = data?.lives  ?? 1
-    this.isMuted            = false
-    this.phase              = 'intro'
-    this.gameEnded          = false
+    this.hits = 0
+    this.errors = 0
+    this.currentPoints = data?.points ?? 0
+    this.currentLives = data?.lives ?? 1
+    this.isMuted = false
+    this.phase = 'intro'
+    this.gameEnded = false
     this.shouldShowLevelStart = data?.showLevelStart ?? false
     this.missionEffectActive = false
-    this.toggleCards        = []
-    this.confirmLocked      = false
-    this.overlayObjects     = []
-    this.timerActive      = false
-    this.timerWarned      = false
+    this.toggleCards = []
+    this.confirmLocked = false
+    this.overlayObjects = []
+    this.timerActive = false
+    this.timerWarned = false
     this.timerState.progress = 1
     this.warningBeepTimer = null
   }
@@ -174,10 +171,10 @@ export class GameScene extends Phaser.Scene {
     this.drawTimeBar(1)
 
     this.timerTween = this.tweens.add({
-      targets:  this.timerState,
+      targets: this.timerState,
       progress: 0,
       duration: this.levelConfig.timeLimit * 1000,
-      ease:     'Linear',
+      ease: 'Linear',
       onUpdate: () => {
         this.drawTimeBar(this.timerState.progress)
         if (!this.timerWarned && this.timerState.progress <= 0.25) {
@@ -203,19 +200,19 @@ export class GameScene extends Phaser.Scene {
 
   private onTimeUp() {
     if (this.gameEnded) return
-    this.gameEnded   = true
+    this.gameEnded = true
     this.timerActive = false
     this.drawTimeBar(0)
     this.warningBeepTimer?.destroy()
     this.warningBeepTimer = null
     this.delayedRiskTimer?.destroy()
-    this.input.enabled    = false
+    this.input.enabled = false
 
     runtimeGameBridge.emit({
-      type:         'WRONG_ANSWER',
-      gameId:       GAME_ID,
+      type: 'WRONG_ANSWER',
+      gameId: GAME_ID,
       pointsEarned: 0,
-      stage:        this.levelConfig.level,
+      stage: this.levelConfig.level,
     })
     this.showGameOverScreen('timeout')
   }
@@ -230,22 +227,22 @@ export class GameScene extends Phaser.Scene {
     EventBus.emit('mission-update', {
       instruction: round.question,
       hint: round.hint,
-      missionIndex:  this.currentRoundIndex,
+      missionIndex: this.currentRoundIndex,
       totalMissions: rounds.length,
-      level:         this.levelConfig.level,
+      level: this.levelConfig.level,
     })
   }
 
   private emitCheckpoint() {
     const progress = Math.round((this.currentRoundIndex / this.levelConfig.rounds.length) * 100)
     runtimeGameBridge.emit({
-      type:     'CHECKPOINT',
-      gameId:   GAME_ID,
+      type: 'CHECKPOINT',
+      gameId: GAME_ID,
       progress,
-      score:    this.currentPoints,
-      stage:    this.levelConfig.level,
-      hits:     this.hits,
-      errors:   this.errors,
+      score: this.currentPoints,
+      stage: this.levelConfig.level,
+      hits: this.hits,
+      errors: this.errors,
     })
   }
 
@@ -278,8 +275,7 @@ export class GameScene extends Phaser.Scene {
 
     round.items.forEach((state, i) => {
       const item = ALL_SECURITY_ITEMS.find(it => it.id === state.itemId)!
-      const isTrap = this.levelConfig.level === 2 && state.initialOn !== item.shouldBeOn
-      const card = this.makeToggleCard(item.id, state.initialOn, slots[i].x, slots[i].y, i, false, isTrap)
+      const card = this.makeToggleCard(item.id, state.initialOn, slots[i].x, slots[i].y, i, false)
       this.toggleCards.push(card)
     })
 
@@ -345,7 +341,10 @@ export class GameScene extends Phaser.Scene {
     const feedbackIcon = this.add.image(CARD_W / 2 - 14, -CARD_H / 2 + 16, 'icon-shield-ok')
       .setDisplaySize(30, 30).setOrigin(0.5).setAlpha(0)
 
-    const container = this.add.container(cx, cy, [cardShadow, bg, icon, label, toggle, feedbackIcon])
+    const feedbackBadge = this.add.text(CARD_W / 2 - 14, -CARD_H / 2 + 16, '🚫', {
+      fontSize: '22px',
+    }).setOrigin(0.5).setAlpha(0)
+    const container = this.add.container(cx, cy, [cardShadow, bg, icon, label, toggle, feedbackIcon, feedbackBadge])
     container.setSize(CARD_W, CARD_H)
     container.setInteractive({ useHandCursor: true })
 
@@ -354,6 +353,7 @@ export class GameScene extends Phaser.Scene {
     container.setData('toggleImg', toggle)
     container.setData('feedbackIcon', feedbackIcon)
     container.setData('bgGraphic', bg)
+    container.setData('feedbackBadge', feedbackBadge)
 
     container.on('pointerdown', () => this.toggleItem(container))
 
@@ -395,8 +395,15 @@ export class GameScene extends Phaser.Scene {
     container.setData('isOn', isOn)
     const toggle = container.getData('toggleImg') as Phaser.GameObjects.Image
     toggle.setTexture(isOn ? 'toggle-on' : 'toggle-off')
+    toggle.setDisplaySize(74, 34)
 
-    this.tweens.add({ targets: toggle, scaleX: 1.15, scaleY: 1.15, duration: 90, yoyo: true, ease: 'Power2' })
+    const baseX = toggle.scaleX
+    const baseY = toggle.scaleY
+    this.tweens.add({
+      targets: toggle,
+      scaleX: baseX * 1.15, scaleY: baseY * 1.15,
+      duration: 90, yoyo: true, ease: 'Power2',
+    })
     this.playTick()
   }
 
@@ -522,19 +529,31 @@ export class GameScene extends Phaser.Scene {
     this.warningBeepTimer = null
 
     let allCorrect = true
+    const wrongItems: SecurityItem[] = []
 
     this.toggleCards.forEach(card => {
       const item = ALL_SECURITY_ITEMS.find(it => it.id === card.itemId)!
       const isOn = card.container.getData('isOn') as boolean
       const correct = isOn === item.shouldBeOn
-      if (!correct) allCorrect = false
+      if (!correct) { allCorrect = false; wrongItems.push(item) }
 
+      // DEPOIS
       const feedbackIcon = card.container.getData('feedbackIcon') as Phaser.GameObjects.Image
+      const feedbackBadge = card.container.getData('feedbackBadge') as Phaser.GameObjects.Text
       const bgGraphic = card.container.getData('bgGraphic') as Phaser.GameObjects.Graphics
 
-      feedbackIcon.setTexture(correct ? 'icon-shield-ok' : 'icon-shield-warn')
       feedbackIcon.setAlpha(0)
-      this.tweens.add({ targets: feedbackIcon, alpha: 1, duration: 200 })
+      feedbackBadge.setAlpha(0)
+
+      if (!correct) {
+        feedbackIcon.setTexture('icon-shield-warn')
+        this.tweens.add({ targets: feedbackIcon, alpha: 1, duration: 200 })
+      } else if (item.shouldBeOn) {
+        feedbackIcon.setTexture('icon-shield-ok')
+        this.tweens.add({ targets: feedbackIcon, alpha: 1, duration: 200 })
+      } else {
+        this.tweens.add({ targets: feedbackBadge, alpha: 1, duration: 200 })
+      }
 
       bgGraphic.clear()
       bgGraphic.fillStyle(0xffffff, 1)
@@ -557,8 +576,54 @@ export class GameScene extends Phaser.Scene {
         stage: this.levelConfig.level,
       })
       this.emitCheckpoint()
-      this.time.delayedCall(1900, () => this.advanceRound())
+      this.time.delayedCall(900, () => {
+        this.showLearningPanel(wrongItems, () => this.advanceRound())
+      })
     }
+  }
+
+  private showLearningPanel(wrongItems: SecurityItem[], onDone: () => void) {
+    const shown = wrongItems.slice(0, 4)
+    const H = 200 + shown.length * 76
+
+    const overlay = this.add.rectangle(640, 360, 1280, 720, 0x0D1B2A, 0.74)
+      .setDepth(320).setInteractive()
+    const modal = this.add.container(640, 360).setDepth(321)
+
+    const bg = this.add.graphics()
+    bg.fillStyle(0xffffff, 0.98)
+    bg.fillRoundedRect(-340, -H / 2, 680, H, 26)
+    bg.lineStyle(4, 0xef4444, 0.9)
+    bg.strokeRoundedRect(-340, -H / 2, 680, H, 26)
+
+    const title = this.add.text(0, -H / 2 + 44, '🔎  Vamos revisar!', {
+      fontFamily: 'Arial', fontStyle: 'bold', fontSize: '30px', color: '#0f172a',
+    }).setOrigin(0.5).setResolution(2)
+
+    const rows = shown.flatMap((item, i) => {
+      const rowY = -H / 2 + 110 + i * 76
+      const icon = this.add.image(-278, rowY, item.iconKey).setDisplaySize(46, 46).setOrigin(0.5)
+      const state = this.add.text(-240, rowY - 14, item.shouldBeOn ? 'Deve ficar LIGADO' : 'Deve ficar DESLIGADO', {
+        fontFamily: 'Arial', fontStyle: 'bold', fontSize: '16px',
+        color: item.shouldBeOn ? '#1b7d1c' : '#c62828',
+      }).setOrigin(0, 0.5).setResolution(2)
+      const why = this.add.text(-240, rowY + 12, item.why, {
+        fontFamily: 'Arial', fontSize: '15px', color: '#334155',
+        wordWrap: { width: 500 },
+      }).setOrigin(0, 0.5).setResolution(2)
+      return [icon, state, why]
+    })
+
+    const btn = this.createModalButton(0, H / 2 - 52, 'Entendi! ✔', 0x42d640, () => {
+      this.tweens.add({
+        targets: [overlay, modal], alpha: 0, duration: 220,
+        onComplete: () => { overlay.destroy(); modal.destroy(); onDone() },
+      })
+    })
+
+    modal.add([bg, title, ...rows, btn])
+    modal.setScale(0.9).setAlpha(0)
+    this.tweens.add({ targets: modal, alpha: 1, scale: 1, duration: 260, ease: 'Back.easeOut' })
   }
 
   private advanceRound() {
@@ -750,7 +815,7 @@ export class GameScene extends Phaser.Scene {
       dot.fillStyle(
         level <= lvl ? 0x42d640
           : level === nextLvl ? 0xff8a2a
-          : 0xd8dde8,
+            : 0xd8dde8,
         1
       )
       dot.fillCircle(-28 + index * 28, 72, 8)
@@ -831,17 +896,17 @@ export class GameScene extends Phaser.Scene {
 
     const btnBg = this.add.graphics()
     btnBg.fillStyle(0x42d640, 1)
-    btnBg.fillRoundedRect(-148, 162, 296, 54, 27)
+    btnBg.fillRoundedRect(-176, 162, 352, 54, 27)
     btnBg.lineStyle(3, 0xffffff, 1)
-    btnBg.strokeRoundedRect(-148, 162, 296, 54, 27)
+    btnBg.strokeRoundedRect(-176, 162, 352, 54, 27)
 
     const btnTxt = this.add.text(0, 189, '▶  Entendido! Vamos começar', {
       fontFamily: 'Arial', fontStyle: 'bold',
-      fontSize: '20px', color: '#ffffff',
+      fontSize: '18px', color: '#ffffff',
       stroke: '#1a5c1a', strokeThickness: 3,
     }).setOrigin(0.5).setResolution(2)
 
-    const btnZone = this.add.zone(640, 360 + 189, 296, 58)
+    const btnZone = this.add.zone(640, 360 + 189, 352, 58)
     btnZone.setDepth(302).setInteractive({ useHandCursor: true })
     btnZone.on('pointerover', () => {
       this.tweens.add({ targets: [btnBg, btnTxt], scaleX: 1.04, scaleY: 1.04, duration: 90 })
@@ -1171,7 +1236,7 @@ export class GameScene extends Phaser.Scene {
     const ctx = this.getAudioCtx()
     if (!ctx) return
     const osc = ctx.createOscillator()
-    const g   = ctx.createGain()
+    const g = ctx.createGain()
     osc.connect(g); g.connect(ctx.destination)
     osc.type = type
     osc.frequency.setValueAtTime(freq, ctx.currentTime)
@@ -1180,13 +1245,13 @@ export class GameScene extends Phaser.Scene {
     osc.start(); osc.stop(ctx.currentTime + dur)
   }
 
-  private playTick()   { this.playTone(520, 0.04, 'sine', 0.08) }
+  private playTick() { this.playTone(520, 0.04, 'sine', 0.08) }
   private playCorrect() {
     this.playTone(660, 0.08, 'sine', 0.15)
     this.time.delayedCall(100, () => this.playTone(880, 0.08, 'sine', 0.12))
   }
-  private playError()  { this.playTone(330, 0.20, 'square', 0.15) }
-  private playAlert()  {
+  private playError() { this.playTone(330, 0.20, 'square', 0.15) }
+  private playAlert() {
     this.playTone(740, 0.10, 'square', 0.18)
     this.time.delayedCall(140, () => this.playTone(740, 0.10, 'square', 0.18))
   }
@@ -1204,7 +1269,7 @@ export class GameScene extends Phaser.Scene {
     this.unsubPlatform = runtimeGameBridge.onCommand((cmd: PlatformCommand) => {
       if (cmd.type === 'START_GAME') {
         this.currentPoints = cmd.points ?? 0
-        this.currentLives  = cmd.lives  ?? 1
+        this.currentLives = cmd.lives ?? 1
       }
     })
   }

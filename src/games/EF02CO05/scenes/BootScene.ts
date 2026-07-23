@@ -6,8 +6,14 @@ import bgLoadingUrl from '../../../assets/games/EF02CO05/bg-loading.png'
 import locationHouseUrl  from '../../../assets/games/EF02CO05/location-house.png'
 import locationSchoolUrl from '../../../assets/games/EF02CO05/location-school.png'
 import locationStreetUrl from '../../../assets/games/EF02CO05/location-street.png'
-import locationParkUrl   from '../../../assets/games/EF02CO05/location-park.png'
 import locationStoreUrl  from '../../../assets/games/EF02CO05/location-store.png'
+import locationBankUrl  from '../../../assets/games/EF02CO05/location-bank.png'
+
+import locationHouseSelectUrl  from '../../../assets/games/EF02CO05/location-house-select.png'
+import locationSchoolSelectUrl from '../../../assets/games/EF02CO05/location-school-select.png'
+import locationStreetSelectUrl from '../../../assets/games/EF02CO05/location-street-select.png'
+import locationStoreSelectUrl  from '../../../assets/games/EF02CO05/location-store-select.png'
+import locationBankSelectUrl  from '../../../assets/games/EF02CO05/location-bank-select.png'
 
 import techTvUrl         from '../../../assets/games/EF02CO05/tech-tv.png'
 import techComputerUrl   from '../../../assets/games/EF02CO05/tech-computer.png'
@@ -23,16 +29,21 @@ const ASSETS: Array<[string, string]> = [
   ['location-house',  locationHouseUrl],
   ['location-school', locationSchoolUrl],
   ['location-street', locationStreetUrl],
-  ['location-park',   locationParkUrl],
+  ['location-bank',   locationBankUrl],
   ['location-store',  locationStoreUrl],
+  ['location-house-select',  locationHouseSelectUrl],
+  ['location-school-select', locationSchoolSelectUrl],
+  ['location-street-select', locationStreetSelectUrl],
+  ['location-bank-select',   locationBankSelectUrl],
+  ['location-store-select',  locationStoreSelectUrl],
   ['tech-tv',         techTvUrl],
   ['tech-computer',   techComputerUrl],
   ['tech-tablet',     techTabletUrl],
   ['tech-smartphone', techSmartphoneUrl],
-  ['tech-radio',       techRadioUrl],
-  ['tech-camera',      techCameraUrl],
-  ['tech-gps',         techGpsUrl],
-  ['tech-atm',         techAtmUrl],
+  ['tech-radio',      techRadioUrl],
+  ['tech-camera',     techCameraUrl],
+  ['tech-gps',        techGpsUrl],
+  ['tech-atm',        techAtmUrl],
 ]
 
 export class BootScene extends Phaser.Scene {

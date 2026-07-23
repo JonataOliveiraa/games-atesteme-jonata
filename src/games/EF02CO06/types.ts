@@ -10,6 +10,14 @@ export interface RoundItemState {
   initialOn: boolean
 }
 
+export interface SecurityItem {
+  id: string
+  label: string
+  iconKey: string
+  shouldBeOn: boolean
+  why: string
+}
+
 /** Item que aparece com atraso durante a rodada (cenário de risco emergente — Nível 3) */
 export interface DelayedRiskItem extends RoundItemState {
   appearAfterMs: number
