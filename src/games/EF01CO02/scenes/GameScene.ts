@@ -3,11 +3,15 @@ import { LEVELS } from '../data/levels';
 import { ROBOT_PARTS } from '../data/parts';
 import type { RobotPartId } from '../types';
 import { runtimeGameBridge } from '../../../shared/bridge/runtimeGameBridge';
+import { EventBus } from '../../../shared/EventBus';
 
 const GAME_ID = 'trilha-do-passo-a-passo';
 const VISIBLE_SLOTS = 3;
-const ROBOT_W = 420;
-const ROBOT_H = 600;
+const ROBOT_W = 336;
+const ROBOT_H = 480;
+const ROBOT_CENTER_Y_RATIO = 0.63;   // centro vertical do robô
+const ORDER_PANEL_Y = 125;           // linha dos ícones de ordem
+const TRAY_CENTER_Y_RATIO = 0.54;    // centro vertical da bandeja
 
 const COLORS = {
     green: 0x2dd4bf,
@@ -135,15 +139,15 @@ export class GameScene extends Phaser.Scene {
         const { width, height } = this.scale;
         this.isGameStarted = true;
 
-        this.createRobot(width * 0.68, height * 0.56);
-        this.createTray(width * 0.20, height * 0.5);
+        this.createRobot(width * 0.68, height * ROBOT_CENTER_Y_RATIO);
+        this.createTray(width * 0.20, height * TRAY_CENTER_Y_RATIO);
         this.createOrderPanel(width);
         this.createTimerBar(width);
         this.startTimer();
     }
 
     private createOrderPanel(width: number) {
-        const y = 140;
+        const y = ORDER_PANEL_Y;
 
         this.add.text(width / 2, y - 40, '📋  Monte nesta ordem:', {
             fontSize: '20px', fontFamily: 'Arial Black, Arial', color: '#ffffff',
@@ -160,7 +164,9 @@ export class GameScene extends Phaser.Scene {
             const def = ROBOT_PARTS[partId];
 
             const ring = this.add.circle(x, y, ICON / 2 + 8, 0xffffff, 0.12).setDepth(19);
-            const icon = this.add.image(x, y, def.cardAssetKey).setDisplaySize(ICON, ICON).setDepth(20);
+            const icon = this.add.image(x, y, def.cardAssetKey)
+                .setDisplaySize(ICON, ICON).setDepth(20)
+                .setFlipX(this.isMirroredPart(partId));
             this.add.text(x, y + ICON / 2 + 14, `${i + 1}`, {
                 fontSize: '14px', fontFamily: 'Arial Black', color: '#ffffff',
                 stroke: '#1f2937', strokeThickness: 3,
@@ -268,7 +274,6 @@ export class GameScene extends Phaser.Scene {
         this.traySlots[slotIndex] = this.createTrayCard(pos.x, pos.y, partId, slotIndex, animateIn);
     }
 
-    // DEPOIS
     private createTrayCard(x: number, y: number, partId: RobotPartId, slotIndex: number, animateIn: boolean): TrayCard {
         const def = ROBOT_PARTS[partId];
         const W = 170, H = 130;
@@ -276,7 +281,10 @@ export class GameScene extends Phaser.Scene {
         const container = this.add.container(x, animateIn ? y + 70 : y).setDepth(10);
         if (animateIn) container.setAlpha(0);
 
-        const icon = this.add.image(0, -20, def.cardAssetKey).setDisplaySize(104, 104);
+        // DEPOIS
+        const icon = this.add.image(0, -20, def.cardAssetKey)
+            .setDisplaySize(104, 104)
+            .setFlipX(this.isMirroredPart(partId));
         const label = this.add.text(0, 52, def.label, {
             fontSize: '17px', fontFamily: 'Arial Black, Arial', color: '#1a73e8',
             align: 'center', wordWrap: { width: 168 },
@@ -392,6 +400,10 @@ export class GameScene extends Phaser.Scene {
         });
     }
 
+    private isMirroredPart(partId: RobotPartId): boolean {
+        return partId === 'right_arm' || partId === 'right_leg';
+    }
+
     private handleLevelWin() {
         this.gameEnded = true;
         this.timerEvent?.remove();
@@ -421,17 +433,41 @@ export class GameScene extends Phaser.Scene {
             stroke: won ? '#4f46e5' : '#ff6fb1', strokeThickness: 7,
         }).setOrigin(0.5);
 
-        const robotImg = this.add.image(width / 2, height * 0.55, 'full_robot').setDisplaySize(280, 400);
+        // DEPOIS
+        const isFinished = won && isLastLevel;
 
-        const btnLabel = won ? (isLastLevel ? 'FINALIZAR' : 'PRÓXIMO ROBÔ') : 'TENTAR DE NOVO';
-        const btn = this.createButton(width / 2, height * 0.86, 320, 70, btnLabel, won ? COLORS.green : COLORS.lemon, () => {
-            this.playClick();
-            if (!won) this.scene.restart({ levelIndex: this.currentLevelIdx });
-            else if (!isLastLevel) this.scene.restart({ levelIndex: this.currentLevelIdx + 1 });
-            else this.emitPlatformEvent('FINISH_GAME');
-        });
+        const robotImg = this.add.image(width / 2, height * (isFinished ? 0.47 : 0.55), 'full_robot')
+            .setDisplaySize(isFinished ? 230 : 280, isFinished ? 330 : 400);
 
-        container.add([overlay, title, robotImg, btn]);
+        if (isFinished) {
+            this.emitPlatformEvent('FINISH_GAME');
+
+            const subtitle = this.add.text(width / 2, height * 0.30, 'Você montou todos os robôs!', {
+                fontSize: '24px', fontFamily: 'Arial Black, Arial', color: '#fff7c2',
+                stroke: '#1f2937', strokeThickness: 4,
+            }).setOrigin(0.5);
+
+            const againBtn = this.createButton(width / 2, height * 0.79, 340, 64, 'JOGAR DE NOVO', COLORS.green, () => {
+                this.playClick();
+                this.scene.restart({ levelIndex: 0 });
+            });
+
+            const exitBtn = this.createButton(width / 2, height * 0.91, 340, 64, 'OUTROS JOGOS', COLORS.lemon, () => {
+                this.playClick();
+                EventBus.emit('exit-game');
+            });
+
+            container.add([overlay, title, subtitle, robotImg, againBtn, exitBtn]);
+        } else {
+            const btnLabel = won ? 'PRÓXIMO ROBÔ' : 'TENTAR DE NOVO';
+            const btn = this.createButton(width / 2, height * 0.86, 320, 70, btnLabel, won ? COLORS.green : COLORS.lemon, () => {
+                this.playClick();
+                if (!won) this.scene.restart({ levelIndex: this.currentLevelIdx });
+                else this.scene.restart({ levelIndex: this.currentLevelIdx + 1 });
+            });
+
+            container.add([overlay, title, robotImg, btn]);
+        }
     }
 
     // ── Botão reutilizável ─────────────────────────────────────────
