@@ -664,112 +664,22 @@ export class GameScene extends Phaser.Scene {
     this.testButton.input.cursor = enabled ? 'pointer' : 'default';
   }
 
+  // DEPOIS
   private showLevelCompleteScreen(nextLevel: 2 | 3) {
-    const overlay = this.add.rectangle(
-      GAME_WIDTH / 2,
-      GAME_HEIGHT / 2,
-      GAME_WIDTH,
-      GAME_HEIGHT,
-      0x12324a,
-      0.56
-    );
-    overlay.setDepth(450);
-    overlay.setInteractive();
-
-    const modal = this.add.container(GAME_WIDTH / 2, GAME_HEIGHT / 2);
-    modal.setDepth(451);
-
-    const shadow = this.add.graphics();
-    shadow.fillStyle(0x000000, 0.18);
-    shadow.fillRoundedRect(-270, -166, 540, 330, 28);
-
-    const bg = this.add.graphics();
-    bg.fillStyle(0xfff6e8, 0.98);
-    bg.fillRoundedRect(-278, -178, 556, 330, 28);
-    bg.lineStyle(5, 0xffffff, 0.95);
-    bg.strokeRoundedRect(-278, -178, 556, 330, 28);
-
-    const topBar = this.add.graphics();
-    topBar.fillStyle(COLORS.softOrange, 1);
-    topBar.fillRoundedRect(-196, -194, 392, 28, 14);
-    topBar.lineStyle(3, 0xffffff, 0.82);
-    topBar.strokeRoundedRect(-196, -194, 392, 28, 14);
-
-    const title = this.add
-      .text(0, -110, 'Parabéns!', {
-        fontFamily: 'Arial',
-        fontSize: '40px',
-        fontStyle: 'bold',
-        color: '#25327a',
-        stroke: '#ffffff',
-        strokeThickness: 5,
-      })
-      .setOrigin(0.5)
-      .setResolution(2);
-
-    const completed = this.add
-      .text(0, -50, 'Nível concluído', {
-        fontFamily: 'Arial',
-        fontSize: '26px',
-        fontStyle: 'bold',
-        color: '#f57c00',
-        align: 'center',
-        wordWrap: { width: 420 },
-      })
-      .setOrigin(0.5)
-      .setResolution(2);
-
-    const next = this.add
-      .text(0, 8, this.currentLevel.successMessage, {
-        fontFamily: 'Arial',
-        fontSize: '17px',
-        fontStyle: 'bold',
-        color: '#3b3b3b',
-        align: 'center',
-        wordWrap: { width: 430 },
-      })
-      .setOrigin(0.5)
-      .setResolution(2);
-
-    const dots = [1, 2, 3].map((level, index) => {
-      const dot = this.add.graphics();
-      dot.fillStyle(level <= this.currentLevel.level ? COLORS.green : level === nextLevel ? COLORS.orange : 0xd8dde8, 1);
-      dot.fillCircle(-28 + index * 28, 72, 8);
-      dot.lineStyle(2, 0xffffff, 0.9);
-      dot.strokeCircle(-28 + index * 28, 72, 8);
-      return dot;
-    });
-
-    modal.add([shadow, bg, topBar, title, completed, next, ...dots]);
-    modal.setScale(0.9);
-    modal.setAlpha(0);
-
-    this.tweens.add({
-      targets: modal,
-      alpha: 1,
-      scale: 1,
-      duration: 260,
-      ease: 'Back.easeOut',
-    });
-
-    const waitText = this.add
-      .text(0, 116, 'Preparando o próximo nível...', {
-        fontFamily: 'Arial',
-        fontSize: '15px',
-        fontStyle: 'bold',
-        color: '#25327a',
-      })
-      .setOrigin(0.5)
-      .setResolution(2);
-    modal.add(waitText);
-
-    this.time.delayedCall(2300, () => {
-      this.scene.restart({
-        level: nextLevel,
-        points: this.currentPoints,
-        lives: this.currentLives,
-        showLevelStart: true,
-      });
+    showLevelComplete(this, {
+      subtitle: 'Nível concluído',
+      message: this.currentLevel.successMessage,
+      accent: COLORS.softOrange,
+      progress: { total: 3, current: this.currentLevel.level },
+      autoAdvance: {
+        delay: 2300,
+        onComplete: () => this.scene.restart({
+          level: nextLevel,
+          points: this.currentPoints,
+          lives: this.currentLives,
+          showLevelStart: true,
+        }),
+      },
     });
   }
 

@@ -56,23 +56,45 @@ export const STATIONS: DeliveryStation[] = [
 
 const nivel1Missions: MissionConfig[] = [
   { id: 'm01', item: CONCEPTS.cachorro, requiredChannels: ['image'] },
-  { id: 'm02', item: CONCEPTS.sol, requiredChannels: ['text'] }
+  { id: 'm02', item: CONCEPTS.sol,      requiredChannels: ['text'] },
+  { id: 'm03', item: CONCEPTS.gato,     requiredChannels: ['audio'] },
+  { id: 'm04', item: CONCEPTS.casa,     requiredChannels: ['text'] }
 ]
 
 const nivel2Missions: MissionConfig[] = [
-  { id: 'm03', item: CONCEPTS.cachorro, requiredChannels: ['image', 'audio'] },
-  { id: 'm04', item: CONCEPTS.gato, requiredChannels: ['image', 'text'] },
-  { id: 'm05', item: CONCEPTS.carro, requiredChannels: ['text', 'audio'] }
+  { id: 'm05', item: CONCEPTS.cachorro, requiredChannels: ['image', 'audio'] },
+  { id: 'm06', item: CONCEPTS.gato,     requiredChannels: ['image', 'text'] },
+  { id: 'm07', item: CONCEPTS.carro,    requiredChannels: ['text', 'audio'] },
+  { id: 'm08', item: CONCEPTS.maca,     requiredChannels: ['image', 'text'] }
 ]
 
 const nivel3Missions: MissionConfig[] = [
-  { id: 'm06', item: CONCEPTS.cachorro, requiredChannels: ['image'], context: 'sem_som' },
-  { id: 'm07', item: CONCEPTS.gato, requiredChannels: ['text'], context: 'sem_lapis' },
-  { id: 'm08', item: CONCEPTS.carro, requiredChannels: ['image'], context: 'sem_som' }
+  { id: 'm09', item: CONCEPTS.carro,    requiredChannels: ['image'] },
+  { id: 'm10', item: CONCEPTS.cachorro, requiredChannels: ['text', 'audio'] },
+  { id: 'm11', item: CONCEPTS.maca,     requiredChannels: ['text'] },
+  { id: 'm12', item: CONCEPTS.gato,     requiredChannels: ['image', 'audio'] }
 ]
 
 export const LEVELS: LevelConfig[] = [
-  { level: 1, mode: 'single', missions: nivel1Missions },
-  { level: 2, mode: 'dual', missions: nivel2Missions },
-  { level: 3, mode: 'mastery', missions: nivel3Missions }
+  {
+    level: 1,
+    mode: 'single',
+    title: 'Um caminho de cada vez',
+    objective: 'Veja o que o destino pede e envie pela estação certa.',
+    missions: nivel1Missions
+  },
+  {
+    level: 2,
+    mode: 'dual',
+    title: 'Dois caminhos juntos',
+    objective: 'Agora o destino quer receber a mesma mensagem por dois caminhos.',
+    missions: nivel2Missions
+  },
+  {
+    level: 3,
+    mode: 'mastery',
+    title: 'Fique atento!',
+    objective: 'Às vezes é um caminho, às vezes são dois. Confira sempre antes de enviar.',
+    missions: nivel3Missions
+  }
 ]

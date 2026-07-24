@@ -8,11 +8,19 @@ export interface RobotPartDef {
   anchorGlowAssetKey: string;
 }
 
-export interface LevelConfig {
+export interface PhaseConfig {
   id: number;
   name: string;
   timeLimit: number;
-  missingParts: RobotPartId[]; // 2 a 6 peças, NA ORDEM de montagem
+  missingParts: RobotPartId[];
+}
+
+export interface LevelConfig {
+  level: 1 | 2 | 3;
+  title: string;
+  objective: string;
+  phases: PhaseConfig[];
+  name: string;
 }
 
 export interface RuntimeGameBridge {

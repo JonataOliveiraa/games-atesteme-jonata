@@ -1,10 +1,13 @@
 import Phaser from 'phaser'
-import { runtimeGameBridge } from '../../../shared/bridge/runtimeGameBridge'
+
 import type { PlatformCommand } from '../../../shared/contracts/platformCommands'
+import { runtimeGameBridge } from '../../../shared/bridge/runtimeGameBridge'
 import type { LevelConfig, MissionConfig, GameItem, DeliveryStation, ChannelType } from '../types'
 import { LEVELS, STATIONS, CONCEPTS } from '../data/levels'
 import { EventBus } from '../../../shared/EventBus'
 
+import { createTutorial } from '../../../shared/tutorial/createTutorial';
+import { showLevelComplete } from '../../../shared/level/showLevelComplete'
 const GAME_ID = 'correio-multimidia'
 
 type SceneState = 'tutorial' | 'map' | 'registering' | 'transmitting' | 'comparing'
@@ -18,8 +21,6 @@ const REQUEST_Y = 458
 const STATION_Y = 618
 const MODAL_X = 640, MODAL_Y = 380
 const BRUSH_KEY = 'brush_dot'
-const MASK_CIRCLE = 'tut_mask_circle'
-const MASK_RECT = 'tut_mask_rect'
 const MIN_STROKES = 55
 
 export class GameScene extends Phaser.Scene {
@@ -39,11 +40,6 @@ export class GameScene extends Phaser.Scene {
 
   private requestIndicatorContainer!: Phaser.GameObjects.Container
   private requestBadges: Map<ChannelType, Phaser.GameObjects.Image> = new Map()
-
-
-
-  private tutorialObjects: Phaser.GameObjects.GameObject[] = []
-  private tutorialDone = false
 
   private drawMask?: Phaser.GameObjects.RenderTexture
   private revealImage?: Phaser.GameObjects.Image
@@ -83,6 +79,7 @@ export class GameScene extends Phaser.Scene {
     return this.add.image(x, y, key).setDisplaySize(targetW, (h / w) * targetW)
   }
 
+  // DEPOIS
   private buildHelperTextures() {
     if (!this.textures.exists(BRUSH_KEY)) {
       const g = this.add.graphics()
@@ -91,38 +88,90 @@ export class GameScene extends Phaser.Scene {
       g.generateTexture(BRUSH_KEY, 30, 30)
       g.destroy()
     }
-    if (!this.textures.exists(MASK_CIRCLE)) {
-      const g = this.add.graphics()
-      g.fillStyle(0xffffff, 1)
-      g.fillCircle(100, 100, 100)
-      g.generateTexture(MASK_CIRCLE, 200, 200)
-      g.destroy()
+  }
+
+  private runLevelTutorial() {
+    const level = this.levelConfig.level
+    const back = () => {
+      this.state = 'map'
+      this.updateStationAvailability()
     }
-    if (!this.textures.exists(MASK_RECT)) {
-      const g = this.add.graphics()
-      g.fillStyle(0xffffff, 1)
-      g.fillRoundedRect(0, 0, 200, 200, 40)
-      g.generateTexture(MASK_RECT, 200, 200)
-      g.destroy()
+
+    if (level === 1) {
+      this.state = 'tutorial'
+      const target = this.stationSprites.get(this.currentMission.requiredChannels[0])
+
+      createTutorial(this, {
+        key: 'correio-l1',
+        accent: 0x4e9b35,
+        onFinish: back,
+        steps: [
+          {
+            text: 'Esta é a mensagem que você precisa enviar.',
+            shape: 'circle', x: ORIGIN_X, y: ORIGIN_Y, w: 330, h: 330,
+          },
+          {
+            text: 'O destino mostra aqui por qual caminho quer receber.',
+            shape: 'rect', x: DEST_X, y: REQUEST_Y, w: 400, h: 170,
+          },
+          {
+            text: 'Toque na estação que combina com o pedido do destino.',
+            shape: 'rect', x: 640, y: STATION_Y, w: 940, h: 210,
+            pointer: target
+              ? { fromX: 640, fromY: 440, toX: target.x, toY: STATION_Y - 20, textureKey: 'cursor_tutorial' }
+              : undefined,
+          },
+        ],
+      })
+      return
+    }
+
+    if (level === 2) {
+      this.state = 'tutorial'
+      createTutorial(this, {
+        key: 'correio-l2',
+        accent: 0x4e9b35,
+        onFinish: back,
+        steps: [
+          {
+            text: 'Agora o destino pede DOIS caminhos ao mesmo tempo!',
+            shape: 'rect', x: DEST_X, y: REQUEST_Y, w: 440, h: 180,
+          },
+          {
+            text: 'Envie por um caminho e depois pelo outro. A estação já usada fica apagada.',
+            shape: 'rect', x: 640, y: STATION_Y, w: 940, h: 210,
+          },
+        ],
+      })
+    }
+
+    if (level === 3) {
+      this.state = 'tutorial'
+      createTutorial(this, {
+        key: 'correio-l3',
+        accent: 0x4e9b35,
+        onFinish: back,
+        steps: [
+          {
+            text: 'Atenção: agora muda a cada rodada. Às vezes o destino pede um caminho, às vezes dois.',
+            shape: 'rect', x: DEST_X, y: REQUEST_Y, w: 440, h: 180,
+          },
+        ],
+      })
+      return
     }
   }
 
-  //ciclo do jogo (nao meche)
   private startGame(stage: number, initialPoints: number) {
     this.points = initialPoints
     this.currentLevelIndex = Math.max(0, LEVELS.findIndex(l => l.level === stage))
     this.currentMissionIndex = 0
-    this.tutorialObjects = []
 
     this.children.removeAll()
     this.stationSprites.clear()
     this.buildEnvironment()
     this.startMission()
-
-    if (!this.tutorialDone && this.currentLevelIndex === 0) {
-      this.tutorialDone = true
-      this.showTutorial()
-    }
+    this.runLevelTutorial()
   }
 
   private buildEnvironment() {
@@ -315,6 +364,57 @@ export class GameScene extends Phaser.Scene {
     cut.setDisplaySize(w, h)
     rt.erase(cut, x, y)
     cut.destroy()
+  }
+
+  private showLevelIntro(onStart: () => void) {
+    this.state = 'tutorial'
+    const level = this.levelConfig
+
+    const overlay = this.add.rectangle(640, 360, 1280, 720, 0x000000, 0.62)
+      .setDepth(600).setInteractive()
+    const panel = this.add.container(640, 360).setDepth(601)
+    panel.add(this.createModalBackground(620, 420))
+
+    const badge = this.add.text(0, -150, `NÍVEL ${level.level} DE ${LEVELS.length}`, {
+      fontFamily: 'Arial Black, Arial', fontSize: '20px', color: '#eaffea'
+    }).setOrigin(0.5).setResolution(2)
+
+    const title = this.add.text(0, -98, level.title, {
+      fontFamily: 'Arial Black, Arial', fontSize: '32px', color: '#ffffff',
+      align: 'center', wordWrap: { width: 520 }
+    }).setOrigin(0.5).setResolution(2)
+
+    const objective = this.add.text(0, -28, level.objective, {
+      fontFamily: 'Arial', fontStyle: 'bold', fontSize: '19px', color: '#eaffea',
+      align: 'center', wordWrap: { width: 500 }
+    }).setOrigin(0.5).setResolution(2)
+
+    const phaseLabel = this.add.text(0, 56, `${level.missions.length} fases neste nível`, {
+      fontFamily: 'Arial', fontStyle: 'bold', fontSize: '15px', color: '#c9f0c9'
+    }).setOrigin(0.5).setResolution(2)
+
+    const dots = this.add.graphics()
+    const gap = 30
+    const startX = -((level.missions.length - 1) * gap) / 2
+    level.missions.forEach((_, i) => {
+      dots.fillStyle(0xffffff, i === 0 ? 1 : 0.32)
+      dots.fillCircle(startX + i * gap, 90, 9)
+    })
+
+    const btn = this.createThemedButton(300, 60, 'Começar')
+    btn.setPosition(0, 152)
+    btn.setInteractive({ cursor: 'pointer' })
+    btn.on('pointerdown', () => {
+      this.playTick()
+      this.tweens.add({
+        targets: [overlay, panel], alpha: 0, duration: 240,
+        onComplete: () => { overlay.destroy(); panel.destroy(); onStart() }
+      })
+    })
+
+    panel.add([badge, title, objective, phaseLabel, dots, btn])
+    panel.setScale(0.9).setAlpha(0)
+    this.tweens.add({ targets: panel, alpha: 1, scale: 1, duration: 280, ease: 'Back.out' })
   }
 
   private showTutorial() {
@@ -959,11 +1059,30 @@ export class GameScene extends Phaser.Scene {
   }
 
   // DEPOIS
+  // DEPOIS
   private advanceLevel() {
+    const finishedLevel = this.levelConfig.level
+    this.state = 'comparing'
+
     if (this.currentLevelIndex < LEVELS.length - 1) {
-      this.currentLevelIndex++
-      this.currentMissionIndex = 0
-      this.startMission()
+      showLevelComplete(this, {
+        subtitle: `Nível ${finishedLevel} concluído`,
+        message: LEVELS[this.currentLevelIndex + 1].objective,
+        accent: 0x4e9b35,
+        overlayColor: 0x1a3b1a,
+        titleColor: '#1a3b1a',
+        subtitleColor: '#2f7a3d',
+        progress: { total: LEVELS.length, current: finishedLevel },
+        autoAdvance: {
+          delay: 2300,
+          onComplete: () => {
+            this.currentLevelIndex++
+            this.currentMissionIndex = 0
+            this.startMission()
+            this.showLevelIntro(() => this.runLevelTutorial())
+          },
+        },
+      })
       return
     }
 
@@ -973,7 +1092,19 @@ export class GameScene extends Phaser.Scene {
       stage: this.levelConfig.level
     })
 
-    this.showGameCompleteScreen()
+    showLevelComplete(this, {
+      title: 'Jogo concluído!',
+      subtitle: 'Você entregou todas as mensagens',
+      accent: 0x4e9b35,
+      overlayColor: 0x1a3b1a,
+      titleColor: '#1a3b1a',
+      subtitleColor: '#2f7a3d',
+      progress: { total: LEVELS.length, current: LEVELS.length },
+      buttons: [
+        { label: 'Jogar novamente', color: 0x4e9b35, onClick: () => this.startGame(1, 0) },
+        { label: 'Outros jogos', color: 0x2f7a3d, onClick: () => EventBus.emit('exit-game') },
+      ],
+    })
   }
 
   private showGameCompleteScreen() {

@@ -30,5 +30,7 @@ export interface MissionConfig {
 export interface LevelConfig {
   level: 1 | 2 | 3
   mode: LevelMode
+  title: string
+  objective: string
   missions: MissionConfig[]
 }
