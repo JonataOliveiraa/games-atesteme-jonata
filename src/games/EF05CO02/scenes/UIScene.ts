@@ -27,14 +27,12 @@ export class UIScene extends Phaser.Scene {
   }
 
   create() {
-    const bar = this.add.graphics()
-    bar.fillStyle(0x0f2547, 0.82)
-    bar.fillRect(0, 0, W, 120)
-
     this.instructionText = this.add.text(W / 2, 40, '', {
       fontFamily: 'Arial Black, Arial',
       fontSize: '25px',
       color: '#ffffff',
+      stroke: '#0f2547',
+      strokeThickness: 6,
       align: 'center',
       wordWrap: { width: 1120 },
     }).setOrigin(0.5).setResolution(2)
@@ -43,7 +41,9 @@ export class UIScene extends Phaser.Scene {
       fontFamily: 'Arial',
       fontStyle: 'bold',
       fontSize: '18px',
-      color: '#bfdbfe',
+      color: '#ffffff',
+      stroke: '#0f2547',
+      strokeThickness: 5,
       align: 'center',
       wordWrap: { width: 1040 },
     }).setOrigin(0.5).setResolution(2)
@@ -51,14 +51,18 @@ export class UIScene extends Phaser.Scene {
     this.levelText = this.add.text(28, 26, '', {
       fontFamily: 'Arial Black, Arial',
       fontSize: '15px',
-      color: '#93c5fd',
+      color: '#ffffff',
+      stroke: '#0f2547',
+      strokeThickness: 4,
     }).setOrigin(0, 0.5).setResolution(2)
 
     this.phaseText = this.add.text(28, 50, '', {
       fontFamily: 'Arial',
       fontStyle: 'bold',
       fontSize: '14px',
-      color: '#64748b',
+      color: '#e2e8f0',
+      stroke: '#0f2547',
+      strokeThickness: 3,
     }).setOrigin(0, 0.5).setResolution(2)
 
     this.timerTrack = this.add.graphics()
@@ -73,11 +77,6 @@ export class UIScene extends Phaser.Scene {
 
     const existing = this.registry.get('hud') as HudData | undefined
     if (existing) this.applyHud(existing)
-
-    const dimmer = this.add.rectangle(W / 2, 60, W, 120, 0x0b1220, 0).setDepth(50)
-    EventBus.on('hud-dim', (on: boolean) => {
-      this.tweens.add({ targets: dimmer, alpha: on ? 0.8 : 0, duration: 200 })
-    }, this)
   }
 
   shutdown() {
@@ -103,8 +102,10 @@ export class UIScene extends Phaser.Scene {
     this.timerState.p = 1
 
     this.timerTrack.clear()
-    this.timerTrack.fillStyle(0x000000, 0.4)
-    this.timerTrack.fillRoundedRect(W - 344, 34, 316, 20, 10)
+    this.timerTrack.fillStyle(0x0f2547, 0.55)
+    this.timerTrack.fillRoundedRect(W - 348, 30, 324, 28, 14)
+    this.timerTrack.lineStyle(2, 0x3b82f6, 0.7)
+    this.timerTrack.strokeRoundedRect(W - 348, 30, 324, 28, 14)
     this.drawTimer(1)
 
     this.timerTween = this.tweens.add({

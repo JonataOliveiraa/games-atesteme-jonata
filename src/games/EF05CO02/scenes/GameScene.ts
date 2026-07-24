@@ -237,9 +237,6 @@ export class GameScene extends Phaser.Scene {
     private paintNode(g: Phaser.GameObjects.Graphics, state: 'idle' | 'active' | 'route' | 'error') {
         g.clear()
 
-        g.fillStyle(0x0f2547, 0.3)
-        g.fillEllipse(0, NODE_R - 2, NODE_R * 1.7, 18)
-
         if (state === 'idle') return
 
         const color = state === 'active' ? C.amber : state === 'route' ? C.purple : C.red
