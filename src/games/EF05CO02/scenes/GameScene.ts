@@ -131,7 +131,7 @@ export class GameScene extends Phaser.Scene {
         veil.fillStyle(0x0f2547, this.phase.context === 'mapa' ? 0.05 : 0.28)
         veil.fillRect(0, 0, W, H)
     }
-
+    //setting
     private buildPhase() {
         this.edgeLayer = this.add.graphics().setDepth(8)
         this.elasticLayer = this.add.graphics().setDepth(9)
