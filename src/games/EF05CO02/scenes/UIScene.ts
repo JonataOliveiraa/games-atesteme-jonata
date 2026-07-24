@@ -73,6 +73,11 @@ export class UIScene extends Phaser.Scene {
 
     const existing = this.registry.get('hud') as HudData | undefined
     if (existing) this.applyHud(existing)
+
+    const dimmer = this.add.rectangle(W / 2, 60, W, 120, 0x0b1220, 0).setDepth(50)
+    EventBus.on('hud-dim', (on: boolean) => {
+      this.tweens.add({ targets: dimmer, alpha: on ? 0.8 : 0, duration: 200 })
+    }, this)
   }
 
   shutdown() {

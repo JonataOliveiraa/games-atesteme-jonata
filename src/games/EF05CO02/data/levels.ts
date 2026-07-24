@@ -1,23 +1,31 @@
 import type { LevelConfig } from '../types'
 
+const LOT = {
+  a1: { x: 215, y: 198 }, a2: { x: 495, y: 198 }, a3: { x: 775, y: 198 }, a4: { x: 1055, y: 198 },
+  b1: { x: 215, y: 479 }, b2: { x: 495, y: 479 }, b3: { x: 775, y: 479 }, b4: { x: 1055, y: 479 },
+}
+
+const on = (base: { id: string; label: string; textureKey: string }, lot: { x: number; y: number }) =>
+  ({ ...base, x: lot.x, y: lot.y })
+
 const L = {
-  casa:        { id: 'casa',        label: 'Casa',        textureKey: 'local-casa' },
-  escola:      { id: 'escola',      label: 'Escola',      textureKey: 'local-escola' },
-  mercado:     { id: 'mercado',     label: 'Mercado',     textureKey: 'local-mercado' },
-  praca:       { id: 'praca',       label: 'Praça',       textureKey: 'local-praca' },
-  hospital:    { id: 'hospital',    label: 'Hospital',    textureKey: 'local-hospital' },
-  padaria:     { id: 'padaria',     label: 'Padaria',     textureKey: 'local-padaria' },
-  biblioteca:  { id: 'biblioteca',  label: 'Biblioteca',  textureKey: 'local-biblioteca' },
-  sorveteria:  { id: 'sorveteria',  label: 'Sorveteria',  textureKey: 'local-sorveteria' },
+  casa: { id: 'casa', label: 'Casa', textureKey: 'local-casa' },
+  escola: { id: 'escola', label: 'Escola', textureKey: 'local-escola' },
+  mercado: { id: 'mercado', label: 'Mercado', textureKey: 'local-mercado' },
+  praca: { id: 'praca', label: 'Praça', textureKey: 'local-praca' },
+  hospital: { id: 'hospital', label: 'Hospital', textureKey: 'local-hospital' },
+  padaria: { id: 'padaria', label: 'Padaria', textureKey: 'local-padaria' },
+  biblioteca: { id: 'biblioteca', label: 'Biblioteca', textureKey: 'local-biblioteca' },
+  sorveteria: { id: 'sorveteria', label: 'Sorveteria', textureKey: 'local-sorveteria' },
 }
 
 const P = {
-  ana:   { id: 'ana',   label: 'Ana',   textureKey: 'avatar-ana' },
+  ana: { id: 'ana', label: 'Ana', textureKey: 'avatar-ana' },
   bruno: { id: 'bruno', label: 'Bruno', textureKey: 'avatar-bruno' },
-  caio:  { id: 'caio',  label: 'Caio',  textureKey: 'avatar-caio' },
-  duda:  { id: 'duda',  label: 'Duda',  textureKey: 'avatar-duda' },
-  elis:  { id: 'elis',  label: 'Elis',  textureKey: 'avatar-elis' },
-  nico:  { id: 'nico',  label: 'Nico',  textureKey: 'avatar-nico' },
+  caio: { id: 'caio', label: 'Caio', textureKey: 'avatar-caio' },
+  duda: { id: 'duda', label: 'Duda', textureKey: 'avatar-duda' },
+  elis: { id: 'elis', label: 'Elis', textureKey: 'avatar-elis' },
+  nico: { id: 'nico', label: 'Nico', textureKey: 'avatar-nico' },
 }
 
 const at = (base: { id: string; label: string; textureKey: string }, x: number, y: number) =>
@@ -37,14 +45,15 @@ export const LEVELS: LevelConfig[] = [
         instruction: 'Ligue os lugares que têm rua direta entre eles.',
         rule: 'A Casa e a Escola não têm rua direta: só dá para ir passando pela Praça.',
         nodes: [
-          at(L.escola, 350, 300),
-          at(L.praca, 640, 480),
-          at(L.casa, 930, 300),
+          on(L.escola, LOT.a1),
+          on(L.praca, LOT.b2),
+          on(L.casa, LOT.a3),
         ],
         edges: [
           { a: 'escola', b: 'praca' },
           { a: 'praca', b: 'casa' },
         ],
+
       },
       {
         id: 'l1f2',
@@ -54,10 +63,10 @@ export const LEVELS: LevelConfig[] = [
         instruction: 'Desenhe as quatro ruas que fecham o quarteirão.',
         rule: 'Cada lugar liga só com os dois vizinhos mais próximos, formando um anel.',
         nodes: [
-          at(L.casa, 300, 260),
-          at(L.escola, 700, 220),
-          at(L.mercado, 960, 400),
-          at(L.praca, 520, 520),
+          on(L.casa, LOT.a1),
+          on(L.escola, LOT.a3),
+          on(L.mercado, LOT.b3),
+          on(L.praca, LOT.b1),
         ],
         edges: [
           { a: 'casa', b: 'escola' },
@@ -74,11 +83,11 @@ export const LEVELS: LevelConfig[] = [
         instruction: 'Ligue os lugares seguindo o caminho das ruas.',
         rule: 'Um anel de cinco lugares: cada um liga com o anterior e o seguinte.',
         nodes: [
-          at(L.casa, 250, 320),
-          at(L.padaria, 500, 200),
-          at(L.escola, 820, 240),
-          at(L.mercado, 1010, 460),
-          at(L.praca, 560, 520),
+          on(L.casa, LOT.a1),
+          on(L.padaria, LOT.a3),
+          on(L.escola, LOT.a4),
+          on(L.mercado, LOT.b4),
+          on(L.praca, LOT.b2),
         ],
         edges: [
           { a: 'casa', b: 'padaria' },
@@ -96,11 +105,11 @@ export const LEVELS: LevelConfig[] = [
         instruction: 'Cuidado: nem todo lugar perto tem rua direta!',
         rule: 'A Biblioteca tem um atalho até a Praça. Já Casa e Escola, apesar de próximas, não se ligam.',
         nodes: [
-          at(L.casa, 240, 300),
-          at(L.biblioteca, 520, 200),
-          at(L.escola, 830, 230),
-          at(L.hospital, 1020, 450),
-          at(L.praca, 570, 510),
+          on(L.casa, LOT.a1),
+          on(L.biblioteca, LOT.a2),
+          on(L.escola, LOT.a4),
+          on(L.hospital, LOT.b4),
+          on(L.praca, LOT.b2),
         ],
         edges: [
           { a: 'casa', b: 'biblioteca' },
@@ -129,10 +138,10 @@ export const LEVELS: LevelConfig[] = [
         endId: 'escola',
         explanation: 'Qualquer caminho vale aqui — o importante é sair da Casa e chegar na Escola.',
         nodes: [
-          at(L.casa, 250, 320),
-          at(L.praca, 520, 490),
-          at(L.mercado, 810, 300),
-          at(L.escola, 1040, 450),
+          on(L.casa, LOT.a1),
+          on(L.praca, LOT.b2),
+          on(L.mercado, LOT.a3),
+          on(L.escola, LOT.b4),
         ],
         edges: [
           { a: 'casa', b: 'praca', weight: 3 },
@@ -152,11 +161,11 @@ export const LEVELS: LevelConfig[] = [
         mustPass: ['praca'],
         explanation: 'A rota precisava incluir a Praça, mesmo que exista um caminho mais curto sem ela.',
         nodes: [
-          at(L.casa, 240, 270),
-          at(L.padaria, 520, 190),
-          at(L.praca, 560, 500),
-          at(L.mercado, 880, 310),
-          at(L.escola, 1050, 490),
+          on(L.casa, LOT.a1),
+          on(L.padaria, LOT.a2),
+          on(L.praca, LOT.b1),
+          on(L.mercado, LOT.a3),
+          on(L.escola, LOT.b4),
         ],
         edges: [
           { a: 'casa', b: 'padaria', weight: 2 },
@@ -177,12 +186,12 @@ export const LEVELS: LevelConfig[] = [
         requireOptimal: true,
         explanation: 'O menor caminho custa 9 quadras: Casa, Praça, Hospital, Escola.',
         nodes: [
-          at(L.casa, 230, 380),
-          at(L.padaria, 460, 220),
-          at(L.praca, 480, 540),
-          at(L.mercado, 790, 250),
-          at(L.hospital, 810, 520),
-          at(L.escola, 1060, 380),
+          on(L.casa, LOT.a1),
+          on(L.padaria, LOT.a2),
+          on(L.praca, LOT.b1),
+          on(L.mercado, LOT.a3),
+          on(L.hospital, LOT.b3),
+          on(L.escola, LOT.a4),
         ],
         edges: [
           { a: 'casa', b: 'padaria', weight: 3 },
@@ -205,12 +214,12 @@ export const LEVELS: LevelConfig[] = [
         requireOptimal: true,
         explanation: 'O menor caminho custa 9 quadras: Casa, Biblioteca, Padaria, Escola.',
         nodes: [
-          at(L.casa, 200, 360),
-          at(L.biblioteca, 420, 210),
-          at(L.praca, 440, 530),
-          at(L.padaria, 720, 190),
-          at(L.hospital, 740, 510),
-          at(L.escola, 1030, 360),
+          on(L.casa, LOT.a1),
+          on(L.biblioteca, LOT.a2),
+          on(L.praca, LOT.b1),
+          on(L.padaria, LOT.a3),
+          on(L.hospital, LOT.b3),
+          on(L.escola, LOT.a4),
         ],
         edges: [
           { a: 'casa', b: 'biblioteca', weight: 2 },
@@ -243,12 +252,12 @@ export const LEVELS: LevelConfig[] = [
         requireOptimal: true,
         explanation: 'O menor caminho custa 8 quadras: Casa, Padaria, Mercado, Sorveteria.',
         nodes: [
-          at(L.casa, 230, 350),
-          at(L.padaria, 470, 220),
-          at(L.praca, 470, 520),
-          at(L.mercado, 780, 300),
-          at(L.hospital, 790, 540),
-          at(L.sorveteria, 1050, 400),
+          on(L.casa, LOT.a1),
+          on(L.padaria, LOT.a2),
+          on(L.praca, LOT.b1),
+          on(L.mercado, LOT.a3),
+          on(L.hospital, LOT.b3),
+          on(L.sorveteria, LOT.a4),
         ],
         edges: [
           { a: 'casa', b: 'padaria', weight: 2 },

@@ -45,9 +45,9 @@ export interface TutorialOptions {
     steps: TutorialStep[]
     accent?: number
     once?: boolean
+    safeTop?: number
     onFinish: () => void
 }
-
 function ensureMasks(scene: Phaser.Scene) {
     if (!scene.textures.exists(MASK_CIRCLE)) {
         const g = scene.make.graphics({ x: 0, y: 0 }, false)
@@ -155,14 +155,18 @@ export function createTutorial(scene: Phaser.Scene, options: TutorialOptions) {
         let bx = step.balloonX ?? W / 2
         let by = step.balloonY ?? 0
 
-        if (step.balloonY === undefined) {
+            if (step.balloonY === undefined) {
+            const safeTop = options.safeTop ?? 0
             const sy = step.y ?? H / 2
             const sh = step.h ?? 0
             const below = sy + sh / 2 + 40 + bh / 2
             const above = sy - sh / 2 - 40 - bh / 2
 
-            by = below + bh / 2 + 90 < H ? below : above
-            by = Phaser.Math.Clamp(by, bh / 2 + 20, H - bh / 2 - 110)
+            const belowFits = below + bh / 2 + 90 < H
+            const aboveFits = above - bh / 2 >= safeTop + 12
+
+            by = belowFits ? below : aboveFits ? above : H - bh / 2 - 110
+            by = Phaser.Math.Clamp(by, safeTop + bh / 2 + 16, H - bh / 2 - 110)
         }
 
         if (step.balloonX === undefined && step.shape && step.shape !== 'none') {
