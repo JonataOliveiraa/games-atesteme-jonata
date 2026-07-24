@@ -13,6 +13,7 @@ import planterBoxBlueTriangleUrl from '../../../assets/games/EF01CO01/planter-bo
 import planterBoxGreenRectangleUrl from '../../../assets/games/EF01CO01/planter-box-green-rectangle.png'
 import woodSignUrl from '../../../assets/games/EF01CO01/wood-sign.png'
 import flowerIconUrl from '../../../assets/games/EF01CO01/flower-icon.png'
+import { createLoadingScreen } from '../../../shared/loading/createLoadingScreen'
 
 /**
  * BootScene — carrega todos os assets e gera texturas programáticas.
@@ -37,7 +38,8 @@ export class BootScene extends Phaser.Scene {
   }
 
   preload() {
-    this.createLoadingBar()
+    // this.createLoadingBar()
+    createLoadingScreen(this, { background: 0xB0E8FF, accent: 0x2ECC71 })
 
     this.load.image('bg-garden', bgGardenUrl)
     this.load.image('shelf-wood', shelfWoodUrl)
