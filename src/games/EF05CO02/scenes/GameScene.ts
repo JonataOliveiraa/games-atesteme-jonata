@@ -202,7 +202,7 @@ export class GameScene extends Phaser.Scene {
             const ring = this.add.graphics()
             this.paintNode(ring, 'idle')
 
-            const icon = this.add.image(0, 0, def.textureKey).setDisplaySize(86, 86)
+            const icon = this.add.image(0, 0, def.textureKey).setDisplaySize(120, 120)
 
             const label = this.add.text(0, LABEL_DY, def.label, {
                 fontFamily: 'Arial Black, Arial',
@@ -233,7 +233,6 @@ export class GameScene extends Phaser.Scene {
         })
     }
 
-    // DEPOIS
     private paintNode(g: Phaser.GameObjects.Graphics, state: 'idle' | 'active' | 'route' | 'error') {
         g.clear()
 
