@@ -5,7 +5,6 @@ import { LEVELS } from '../data/levels'
 import { ALL_TECH } from '../data/tech'
 import type { CityLocation, LevelConfig, Situation } from '../types'
 
-// ⚠️ Confirme este slug no SLUG_TO_CODE do GameDetailsPage.tsx!
 const GAME_ID = 'cidade-das-tecnologias'
 
 const LAYOUT = {

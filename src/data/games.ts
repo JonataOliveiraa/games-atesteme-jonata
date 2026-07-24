@@ -31,6 +31,7 @@ import ethicMissionThumbnail from "../assets/games/EF04CO07/cover-missao-etica-d
 import sourceHuntThumbnail from "../assets/games/EF04CO08/cover-caca-fonte-confiavel.png";
 import cardListThumbnail from "../assets/games/EF05CO01/cover-baralho-das-listas.png";
 import correioThumbnail from "../assets/games/EF01CO04/cover-correio-multimidia.png";
+import networkMapsThumbnail from "../assets/games/EF05CO02/cover-mapas-em-rede.png";
 
 const placeholderGame = (code: string, index: number): Game => ({
   id: index,
@@ -323,6 +324,15 @@ const gameByCode: Partial<Record<string, Omit<Game, "id">>> = {
     slug: "baralho-das-listas",
     thumbnail: cardListThumbnail,
   },
+  EF05CO02: {
+    title: "Mapas em Rede",
+    "description": "Explore o mapa e trace caminhos entre dispositivos.",
+    category: "Pensamento Computacional",
+    points: 65,
+    icon: "🗺️",
+    slug: "mapas-em-rede",
+    thumbnail: networkMapsThumbnail,
+  }
 };
 
 const gameOrder = [

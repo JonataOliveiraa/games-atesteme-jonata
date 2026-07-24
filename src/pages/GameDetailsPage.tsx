@@ -45,6 +45,7 @@ const SLUG_TO_CODE: Record<string, GameCode> = {
   "missao-etica-digital": "EF04CO07",
   "caca-fonte-confiavel": "EF04CO08",
   "baralho-das-listas": "EF05CO01",
+  "mapas-em-rede": "EF05CO02",
 };
 
 const GAME_CONFIG_LOADERS: Partial<
@@ -81,6 +82,7 @@ const GAME_CONFIG_LOADERS: Partial<
   EF04CO07: () => import("../games/EF04CO07/index"),
   EF04CO08: () => import("../games/EF04CO08/index"),
   EF05CO01: () => import("../games/EF05CO01/index"),
+  EF05CO02: () => import("../games/EF05CO02/index"),
 };
 
 const GAMES_WITH_IN_GAME_COMPLETION_SCREEN = new Set([
@@ -104,6 +106,7 @@ const GAMES_WITH_IN_GAME_COMPLETION_SCREEN = new Set([
   "missao-etica-digital",
   "caca-fonte-confiavel",
   "baralho-das-listas",
+  "mapas-em-rede",
 ]);
 
 export default function GameDetailsPage() {

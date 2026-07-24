@@ -9,7 +9,13 @@ type Props = {
   game: Game;
 };
 
-export default function GameCard({ game }: Props) {
+export default function GameCard(props: Props) {
+  if (!props?.game) {
+    console.warn("GameCard chamado sem props. Origem:", new Error().stack);
+    return null;
+  }
+  const { game } = props;
+
   const { playBeep } = useBeepSound({
     frequency: 880,
     duration: 70,
@@ -84,10 +90,10 @@ export default function GameCard({ game }: Props) {
         message={
           blockedUntil
             ? `O jogo "${game.title}" está bloqueado até ${new Date(
-                blockedUntil
-              ).toLocaleString(
-                "pt-BR"
-              )} porque suas tentativas foram esgotadas. Deseja liberar o acesso por ${unlockCost} pontos?`
+              blockedUntil
+            ).toLocaleString(
+              "pt-BR"
+            )} porque suas tentativas foram esgotadas. Deseja liberar o acesso por ${unlockCost} pontos?`
             : `O jogo "${game.title}" está bloqueado porque suas tentativas foram esgotadas. Deseja liberar o acesso por ${unlockCost} pontos?`
         }
         confirmText="Confirmar"
