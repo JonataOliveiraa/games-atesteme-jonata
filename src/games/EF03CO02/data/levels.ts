@@ -1,81 +1,206 @@
 import type { LevelConfig } from '../types'
 
+const at = (c: number, r: number) => ({ c, r })
+
 export const LEVELS: LevelConfig[] = [
-  {
-    level: 1,
-    title: 'Verdadeiro ou Falso?',
-    objective: 'A condição é VERDADEIRA ou FALSA agora? Você decide — o robô age conforme sua resposta!',
-    tip: 'O laço ENQUANTO verifica a condição antes de cada passo. Verdadeiro = avança. Falso = para.',
-    challenges: [
-      // C1: path_clear — 3× verdadeiro, depois falso (parede em col 4, goalCol 3)
-      { id: 'l1-c1', corridorLength: 7, walls: [4], goalCol: 3,
-        fixedConditionId: 'path_clear', stepPredictMode: true },
-      // C2: not_at_goal — 4× verdadeiro, depois falso (chega ao objetivo em col 4)
-      { id: 'l1-c2', corridorLength: 7, walls: [], goalCol: 4,
-        fixedConditionId: 'not_at_goal', stepPredictMode: true },
-      // C3: count_lt_3 — 3× verdadeiro (0<3,1<3,2<3), depois falso (3<3=false)
-      { id: 'l1-c3', corridorLength: 7, walls: [], goalCol: 3,
-        fixedConditionId: 'count_lt_3', stepPredictMode: true },
-      // C4: path_clear curto — 2× verdadeiro, depois falso (parede em col 3, goalCol 2)
-      { id: 'l1-c4', corridorLength: 6, walls: [3], goalCol: 2,
-        fixedConditionId: 'path_clear', stepPredictMode: true },
-      // C5: count_lt_4 — 4× verdadeiro (0<4..3<4), depois falso (4<4=false)
-      { id: 'l1-c5', corridorLength: 7, walls: [], goalCol: 4,
-        fixedConditionId: 'count_lt_4', stepPredictMode: true },
-    ],
-  },
-  {
-    level: 2,
-    title: 'Escolha a condição certa',
-    objective: 'Qual condição faz o robô parar exatamente no objetivo ⭐?',
-    tip: 'Cada condição para o robô num lugar diferente — pense antes de escolher!',
-    challenges: [
-      // C1: not_at_goal ✓ — path_clear ultrapassa (para em 6), count_lt_2 para cedo (para em 2)
-      {
-        id: 'l2-c1', corridorLength: 9, walls: [7], goalCol: 4,
-        conditionOptions: ['path_clear', 'count_lt_2', 'not_at_goal'],
-      },
-      // C2: count_lt_5 ✓ — sem parede, path_clear vai até o fim (7), count_lt_3 para cedo (3)
-      // (sem not_at_goal para evitar empate com count_lt_5)
-      {
-        id: 'l2-c2', corridorLength: 8, walls: [], goalCol: 5,
-        conditionOptions: ['count_lt_3', 'path_clear', 'count_lt_5'],
-      },
-      // C3: count_lt_3 ✓ — sem parede, path_clear vai até o fim (7), count_lt_6 ultrapassa (6)
-      // (sem not_at_goal para evitar empate com count_lt_3)
-      {
-        id: 'l2-c3', corridorLength: 8, walls: [], goalCol: 3,
-        conditionOptions: ['count_lt_6', 'path_clear', 'count_lt_3'],
-      },
-      // C4: path_clear ✓ — parede em 5, para em 4; count_lt_2 para cedo (2); count_lt_7 bate na parede
-      // (sem not_at_goal para evitar empate com path_clear quando wall = goalCol+1)
-      {
-        id: 'l2-c4', corridorLength: 8, walls: [5], goalCol: 4,
-        conditionOptions: ['count_lt_2', 'count_lt_7', 'path_clear'],
-      },
-      // C5: not_at_goal ✓ — path_clear ultrapassa (para em 7), count_lt_3 para cedo (3)
-      {
-        id: 'l2-c5', corridorLength: 9, walls: [8], goalCol: 5,
-        conditionOptions: ['path_clear', 'count_lt_3', 'not_at_goal'],
-      },
-    ],
-  },
-  {
-    level: 3,
-    title: 'Preveja a parada',
-    objective: 'Leia a condição, analise o corredor e toque onde o robô vai parar.',
-    tip: 'Siga a lógica: enquanto a condição for verdadeira, o robô avança. Quando for falsa, para.',
-    challenges: [
-      // path_clear — para em col 4 (parede em 5)
-      { id: 'l3-c1', corridorLength: 8, walls: [5], fixedConditionId: 'path_clear', predictMode: true },
-      // count_lt_4 — para em col 4 (sem parede, conta 4 passos)
-      { id: 'l3-c2', corridorLength: 8, walls: [], fixedConditionId: 'count_lt_4', predictMode: true },
-      // path_clear — parede logo em col 3, para em col 2 (surpresa!)
-      { id: 'l3-c3', corridorLength: 9, walls: [3], fixedConditionId: 'path_clear', predictMode: true },
-      // count_lt_6 — parede em 7, mas CONTAGEM para em col 6 antes da parede (momento pedagógico rico)
-      { id: 'l3-c4', corridorLength: 9, walls: [7], fixedConditionId: 'count_lt_6', predictMode: true },
-      // path_clear — para em col 3 (parede em 4)
-      { id: 'l3-c5', corridorLength: 7, walls: [4], fixedConditionId: 'path_clear', predictMode: true },
-    ],
-  },
+    // ═══════════════════════════════════════════════════════════════════════
+    //  NÍVEL 1 — o laço já está montado; a criança prevê cada verificação
+    // ═══════════════════════════════════════════════════════════════════════
+    {
+        level: 1,
+        title: 'Verdadeiro ou falso?',
+        objective: 'Antes de cada passo o robô testa a condição. Você decide: verdadeira ou falsa?',
+        tip: 'Verdadeira, o robô repete o passo. Falsa, o laço para na hora.',
+        challenges: [
+            {
+                id: 'l1-c1',
+                mode: 'prever-condicao',
+                width: 6, height: 3,
+                start: at(0, 1), startDir: 1, goal: at(3, 1),
+                walls: [at(4, 1)],
+                given: { condition: 'caminho_livre', setup: [], body: ['avancar'] },
+                solution: { condition: 'caminho_livre', setup: [], body: ['avancar'] },
+                explanation: 'O robô andou até a parede aparecer na frente dele. Aí a condição virou falsa e o laço parou.',
+            },
+            {
+                id: 'l1-c2',
+                mode: 'prever-condicao',
+                width: 6, height: 3,
+                start: at(0, 1), startDir: 1, goal: at(4, 1),
+                walls: [],
+                given: { condition: 'nao_no_objetivo', setup: [], body: ['avancar'] },
+                solution: { condition: 'nao_no_objetivo', setup: [], body: ['avancar'] },
+                explanation: 'Aqui a condição olhava para o objetivo. Quando o robô pisou nele, ela virou falsa.',
+            },
+            {
+                id: 'l1-c3',
+                mode: 'prever-condicao',
+                width: 6, height: 3,
+                start: at(0, 1), startDir: 1, goal: at(3, 1),
+                walls: [],
+                given: { condition: 'passos_menos_de_3', setup: [], body: ['avancar'] },
+                solution: { condition: 'passos_menos_de_3', setup: [], body: ['avancar'] },
+                explanation: 'Esta condição só conta passos. Ao completar 3, ela virou falsa — nem olhou o que tinha em volta.',
+            },
+            {
+                id: 'l1-c4',
+                mode: 'prever-condicao',
+                width: 6, height: 4,
+                start: at(2, 3), startDir: 0, goal: at(2, 1),
+                walls: [at(2, 0)],
+                given: { condition: 'caminho_livre', setup: [], body: ['avancar'] },
+                solution: { condition: 'caminho_livre', setup: [], body: ['avancar'] },
+                explanation: 'O robô subiu em vez de ir para o lado, mas o laço funciona igual: testa, anda, testa de novo.',
+            },
+            {
+                id: 'l1-c5',
+                mode: 'prever-condicao',
+                width: 7, height: 3,
+                start: at(0, 1), startDir: 1, goal: at(5, 1),
+                walls: [],
+                given: { condition: 'passos_menos_de_5', setup: [], body: ['avancar'] },
+                solution: { condition: 'passos_menos_de_5', setup: [], body: ['avancar'] },
+                explanation: 'Cinco passos, cinco voltas do laço. Na sexta verificação a condição já era falsa.',
+            },
+        ],
+    },
+
+    // ═══════════════════════════════════════════════════════════════════════
+    //  NÍVEL 2 — a criança escolhe a condição entre três
+    // ═══════════════════════════════════════════════════════════════════════
+    {
+        level: 2,
+        title: 'Escolha a condição',
+        objective: 'Cada condição para o robô num lugar diferente. Qual delas o deixa no objetivo?',
+        tip: 'Pense onde cada uma vira falsa antes de escolher.',
+        challenges: [
+            {
+                id: 'l2-c1',
+                mode: 'escolher-condicao',
+                width: 7, height: 5,
+                start: at(0, 2), startDir: 1, goal: at(4, 2),
+                walls: [at(6, 2)],
+                given: { condition: 'nao_no_objetivo', setup: [], body: ['avancar'] },
+                conditionOptions: ['caminho_livre', 'nao_no_objetivo', 'passos_menos_de_2'],
+                solution: { condition: 'nao_no_objetivo', setup: [], body: ['avancar'] },
+                explanation: 'Só "não chegar ao objetivo" para exatamente na estrela. O caminho livre passaria direto.',
+            },
+            {
+                id: 'l2-c2',
+                mode: 'escolher-condicao',
+                width: 5, height: 6,
+                start: at(2, 5), startDir: 0, goal: at(2, 1),
+                walls: [],
+                given: { condition: 'passos_menos_de_4', setup: [], body: ['avancar'] },
+                conditionOptions: ['caminho_livre', 'passos_menos_de_2', 'passos_menos_de_4'],
+                solution: { condition: 'passos_menos_de_4', setup: [], body: ['avancar'] },
+                explanation: 'Sem parede nenhuma, o caminho livre iria até o fim do tabuleiro. Contar 4 passos era o que faltava.',
+            },
+            {
+                id: 'l2-c3',
+                mode: 'escolher-condicao',
+                width: 7, height: 5,
+                start: at(1, 4), startDir: 1, goal: at(1, 1),
+                walls: [at(1, 0)],
+                given: { condition: 'caminho_livre', setup: ['virar-esq'], body: ['avancar'] },
+                conditionOptions: ['passos_menos_de_2', 'caminho_livre', 'passos_menos_de_5'],
+                solution: { condition: 'caminho_livre', setup: ['virar-esq'], body: ['avancar'] },
+                explanation: 'A curva antes do laço apontou o robô para cima. Contar 5 passos o faria bater na parede — contar não enxerga obstáculo.',
+            },
+            {
+                id: 'l2-c4',
+                mode: 'escolher-condicao',
+                width: 9, height: 5,
+                start: at(0, 2), startDir: 1, goal: at(6, 2),
+                walls: [at(7, 2)],
+                given: { condition: 'caminho_livre', setup: [], body: ['avancar', 'avancar'] },
+                conditionOptions: ['passos_menos_de_2', 'passos_menos_de_3', 'caminho_livre'],
+                solution: { condition: 'caminho_livre', setup: [], body: ['avancar', 'avancar'] },
+                explanation: 'Repare: o corpo tem dois passos, então a condição só é testada a cada dois. Por isso o robô anda de dois em dois.',
+            },
+            {
+                id: 'l2-c5',
+                mode: 'escolher-condicao',
+                width: 7, height: 6,
+                start: at(0, 1), startDir: 2, goal: at(4, 1),
+                walls: [at(6, 1)],
+                given: { condition: 'nao_no_objetivo', setup: ['virar-esq'], body: ['avancar'] },
+                conditionOptions: ['caminho_livre', 'passos_menos_de_2', 'nao_no_objetivo'],
+                solution: { condition: 'nao_no_objetivo', setup: ['virar-esq'], body: ['avancar'] },
+                explanation: 'O robô começou olhando para baixo. A curva o virou, e a condição do objetivo o parou na hora certa.',
+            },
+        ],
+    },
+
+    // ═══════════════════════════════════════════════════════════════════════
+    //  NÍVEL 3 — a criança monta o programa inteiro e prevê onde ele para
+    // ═══════════════════════════════════════════════════════════════════════
+    {
+        level: 3,
+        title: 'Monte o programa',
+        objective: 'Aponte o robô, escolha a condição e diga antes onde ele vai parar.',
+        tip: 'Plante a bandeirinha no palpite. Acertar onde o laço para vale ponto extra.',
+        challenges: [
+            {
+                id: 'l3-c1',
+                mode: 'montar-programa',
+                width: 7, height: 5,
+                start: at(3, 4), startDir: 1, goal: at(3, 1),
+                walls: [at(3, 0), at(5, 2), at(1, 1)],
+                allowedActions: ['avancar', 'virar-dir', 'virar-esq'],
+                allowedConditions: ['caminho_livre', 'nao_no_objetivo', 'passos_menos_de_2'],
+                predictStop: true,
+                solution: { condition: 'caminho_livre', setup: ['virar-esq'], body: ['avancar'] },
+                explanation: 'Uma curva para apontar o robô e um laço para subir até a parede. Simples assim.',
+            },
+            {
+                id: 'l3-c2',
+                mode: 'montar-programa',
+                width: 8, height: 5,
+                start: at(1, 1), startDir: 2, goal: at(5, 1),
+                walls: [at(6, 1), at(3, 3), at(6, 3)],
+                allowedActions: ['avancar', 'virar-dir', 'virar-esq'],
+                allowedConditions: ['caminho_livre', 'passos_menos_de_2', 'passos_menos_de_6'],
+                predictStop: true,
+                solution: { condition: 'caminho_livre', setup: ['virar-esq'], body: ['avancar'] },
+                explanation: 'Olhando para baixo, virar à esquerda aponta para a direita. Depois é só deixar o laço correr até a parede.',
+            },
+            {
+                id: 'l3-c3',
+                mode: 'montar-programa',
+                width: 8, height: 5,
+                start: at(0, 2), startDir: 1, goal: at(4, 2),
+                walls: [at(5, 2)],
+                hidden: [at(5, 2), at(6, 2)],
+                allowedActions: ['avancar', 'virar-dir', 'virar-esq'],
+                allowedConditions: ['caminho_livre', 'nao_no_objetivo', 'passos_menos_de_6'],
+                solution: { condition: 'nao_no_objetivo', setup: [], body: ['avancar'] },
+                explanation: 'Havia névoa no caminho, e ninguém sabia o que tinha ali. Olhar para o objetivo funciona mesmo sem enxergar o resto.',
+            },
+            {
+                id: 'l3-c4',
+                mode: 'montar-programa',
+                width: 7, height: 6,
+                start: at(0, 4), startDir: 1, goal: at(0, 2),
+                walls: [at(2, 4), at(4, 1), at(2, 0)],
+                allowedActions: ['avancar', 'virar-dir', 'virar-esq'],
+                allowedConditions: ['caminho_livre', 'passos_menos_de_2', 'passos_menos_de_5'],
+                predictStop: true,
+                solution: { condition: 'passos_menos_de_2', setup: ['virar-esq'], body: ['avancar'] },
+                explanation: 'Aqui o caminho continuava livre depois da estrela. Só contando os passos dava para parar em cima dela.',
+            },
+            {
+                id: 'l3-c5',
+                mode: 'montar-programa',
+                width: 8, height: 6,
+                start: at(5, 4), startDir: 0, goal: at(2, 4),
+                walls: [at(1, 4), at(5, 1), at(3, 2), at(7, 3)],
+                allowedActions: ['avancar', 'virar-dir', 'virar-esq'],
+                allowedConditions: ['caminho_livre', 'nao_no_objetivo', 'passos_menos_de_5'],
+                predictStop: true,
+                solution: { condition: 'caminho_livre', setup: ['virar-esq'], body: ['avancar'] },
+                explanation: 'O robô olhava para cima e a estrela estava à esquerda. Uma curva, um laço, e a parede fez o resto.',
+            },
+        ],
+    },
 ]

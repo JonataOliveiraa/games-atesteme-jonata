@@ -875,7 +875,7 @@ export class GameScene extends Phaser.Scene {
                         w: LEAF_W + 60, h: LEAF_H + 60,
                     },
                     {
-                        text: 'Toque em V se for verdadeira e em F se for falsa.',
+                        text: 'Toque no botão ✓ para VERDADEIRO, e ✕ para FALSA.',
                         shape: 'rect', x: (BTN_V_X + BTN_F_X) / 2, y: first?.pos.y ?? 360, w: 230, h: 130,
                     },
                     {

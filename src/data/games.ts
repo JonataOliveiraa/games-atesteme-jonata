@@ -13,7 +13,7 @@ import museumThumbnail from "../assets/games/EF02CO04/cover.png";
 import cityThumbnail from "../assets/games/EF02CO05/cover.png";
 import checklistThumbnail from "../assets/games/EF02CO06/cover.png";
 import tribunalThumbnail from "../assets/games/EF03CO01/cover.png";
-import mazeThumbnail from "../assets/games/EF03CO02/cover.png";
+import mazeThumbnail from "../assets/games/EF03CO02/cover-labirinto-do-enquanto.png";
 import chefThumbnail from "../assets/games/EF03CO03/cover.png";
 import informationBuilderThumbnail from "../assets/games/EF03CO04/cover-montador-informacoes.png";
 import correctFormatThumbnail from "../assets/games/EF03CO05/cover-formato-certo.png";
