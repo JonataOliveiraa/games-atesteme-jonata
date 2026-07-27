@@ -4,6 +4,7 @@ import { runtimeGameBridge } from "../../../shared/bridge/runtimeGameBridge";
 import type { PlatformCommand } from "../../../shared/contracts/platformCommands";
 import { LEVELS, shuffleStages } from "../data/levels";
 import type { FactoryLevel, FactoryStage, FactoryStageId, ProductStage } from "../types";
+import { createTutorial, TutorialStep } from "../../../shared/tutorial/createTutorial";
 
 const GAME_ID = "fabrica-de-maquinas";
 const TIMER_BAR_W = 980;
@@ -88,6 +89,72 @@ export class GameScene extends Phaser.Scene {
 
     runtimeGameBridge.emit({ type: "GAME_READY", gameId: GAME_ID });
     this.emitProgress();
+
+    this.commandLocked = true;
+    this.runTutorials(() => {
+      this.commandLocked = false;
+    });
+
+    runtimeGameBridge.emit({ type: "GAME_READY", gameId: GAME_ID });
+    this.emitProgress();
+  }
+
+  private runTutorials(onDone: () => void) {
+    const cardArea = { x: 640, y: 520, w: 1100, h: 180 };
+    const slotArea = { x: 640, y: 290, w: 1100, h: 180 };
+    const prodBtn = { x: 1032, y: 666, w: 380, h: 90 };
+
+    const firstCard = this.shuffledStages[0];
+    const cardRecord = this.cards.get(firstCard.id);
+    const cardHomeX = cardRecord?.homeX ?? 170;
+    const cardHomeY = cardRecord?.homeY ?? 528;
+
+    const firstSlot = this.slotCenters[0] ?? { x: 166, y: 306 };
+
+    const steps: TutorialStep[] = [
+      {
+        text: "Estas são as máquinas",
+        shape: "rect",
+        x: cardArea.x,
+        y: cardArea.y,
+        w: cardArea.w,
+        h: cardArea.h,
+        balloonY: 300,
+      },
+      {
+        text: "A esteira mostra a sequência de produção. Coloque uma máquina em cada espaço.",
+        shape: "rect",
+        x: slotArea.x,
+        y: slotArea.y,
+        w: slotArea.w,
+        h: slotArea.h,
+        balloonY: 420,
+        pointer: {
+          fromX: cardHomeX,
+          fromY: cardHomeY,
+          toX: firstSlot.x,
+          toY: firstSlot.y,
+        },
+      },
+      {
+        text: "Depois de preencher todos os espaços, toque aqui para iniciar a produção.",
+        shape: "rect",
+        x: prodBtn.x,
+        y: prodBtn.y,
+        w: prodBtn.w,
+        h: prodBtn.h,
+        balloonY: prodBtn.y - 90, 
+      },
+    ];
+
+    createTutorial(this, {
+      key: "fabrica-de-maquinas-tutorial",
+      steps,
+      accent: 0x2563eb, // azul do tema
+      safeTop: 120,      // reserva espaço para o cabeçalho
+      once: true,
+      onFinish: onDone,
+    });
   }
 
   update() {
@@ -261,12 +328,12 @@ export class GameScene extends Phaser.Scene {
     const icon = this.textures.exists(stageAssetKey)
       ? this.fitImage(this.add.image(0, -15, stageAssetKey), 198, 119)
       : this.addSharpText(0, -15, stage.icon, {
-          fontSize: "24px",
-          fontFamily: "Arial Black, Arial",
-          color: "#ffffff",
-          stroke: "#0f172a",
-          strokeThickness: 4,
-        }).setOrigin(0.5);
+        fontSize: "24px",
+        fontFamily: "Arial Black, Arial",
+        color: "#ffffff",
+        stroke: "#0f172a",
+        strokeThickness: 4,
+      }).setOrigin(0.5);
 
     const label = this.addSharpText(0, 57, stage.shortLabel, {
       fontSize: stage.shortLabel.length > 15 ? "13px" : "15px",

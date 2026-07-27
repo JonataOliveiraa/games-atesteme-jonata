@@ -133,11 +133,32 @@ export function createTutorial(scene: Phaser.Scene, options: TutorialOptions) {
 
         if (!step.shape || step.shape === 'none') return
 
-        const key = step.shape === 'circle' ? MASK_CIRCLE : MASK_RECT
-        const cut = scene.make.image({ key }, false)
-        cut.setDisplaySize(step.w ?? 260, step.h ?? 260)
+        const w = step.w ?? 260
+        const h = step.h ?? 260
+        const x = (step.x ?? W / 2) - w / 2
+        const y = (step.y ?? H / 2) - h / 2
+
+        const maskGraphics = scene.add.graphics()
+        maskGraphics.fillStyle(0xffffff, 1)
+
+        if (step.shape === 'circle') {
+            const radius = Math.min(w, h) / 2
+            maskGraphics.fillCircle(w / 2, h / 2, radius)
+        } else {
+            const radius = Math.min(w, h) * 0.18 // 18% da menor dimensão (como 36 em 200)
+            maskGraphics.fillRoundedRect(0, 0, w, h, radius)
+        }
+
+        const maskKey = `__tut_mask_${Date.now()}`
+        maskGraphics.generateTexture(maskKey, w, h)
+        maskGraphics.destroy()
+
+        const cut = scene.make.image({ key: maskKey }, false)
+        cut.setDisplaySize(w, h)
         spot.erase(cut, step.x ?? W / 2, step.y ?? H / 2)
         cut.destroy()
+
+        scene.textures.remove(maskKey)
     }
 
     const placeBalloon = (step: TutorialStep) => {
@@ -155,7 +176,7 @@ export function createTutorial(scene: Phaser.Scene, options: TutorialOptions) {
         let bx = step.balloonX ?? W / 2
         let by = step.balloonY ?? 0
 
-            if (step.balloonY === undefined) {
+        if (step.balloonY === undefined) {
             const safeTop = options.safeTop ?? 0
             const sy = step.y ?? H / 2
             const sh = step.h ?? 0

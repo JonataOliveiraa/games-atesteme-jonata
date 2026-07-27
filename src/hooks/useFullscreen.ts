@@ -30,9 +30,7 @@ export function useFullscreen() {
     try {
       const orientation = screen.orientation as LockableOrientation | undefined;
       await orientation?.lock?.("landscape");
-    } catch {
-      // navegador não suporta travar orientação
-    }
+    } catch { }
 
     setIsFullscreen(true);
   }, []);
