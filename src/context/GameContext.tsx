@@ -56,7 +56,7 @@ type Props = {
 };
 
 const INITIAL_STATE: PlatformState = {
-  points: 0,
+  points: 1000000000,
   extraLifeCost: EXTRA_LIFE_COST,
   unlockCost: UNLOCK_COST,
   blockedGames: {},
@@ -156,7 +156,7 @@ function loadInitialState(): PlatformState {
     const parsed = JSON.parse(raw) as Partial<PlatformState>;
 
     return normalizeState({
-      points: parsed.points ?? INITIAL_STATE.points,
+      points: 9999999999,
       extraLifeCost: parsed.extraLifeCost ?? INITIAL_STATE.extraLifeCost,
       unlockCost: parsed.unlockCost ?? INITIAL_STATE.unlockCost,
       blockedGames: parsed.blockedGames ?? {},
