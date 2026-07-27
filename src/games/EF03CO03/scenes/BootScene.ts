@@ -1,22 +1,18 @@
 import Phaser from 'phaser'
 
-import bgKitchenUrl     from '../../../assets/games/EF03CO03/bg-kitchen.png'
-import bgLoadingUrl     from '../../../assets/games/EF03CO03/bg-loading.png'
+import bgKitchenUrl from '../../../assets/games/EF03CO03/bg-kitchen.png'
+import bgLoadingUrl from '../../../assets/games/EF03CO03/bg-loading.png'
 import characterChefUrl from '../../../assets/games/EF03CO03/character-chef.png'
-import iconCheckUrl     from '../../../assets/games/EF03CO03/icon-check-subtask.png'
-import cardTaskUrl      from '../../../assets/games/EF03CO03/ard-subtask.png'
-import missionBoardUrl  from '../../../assets/games/EF03CO03/mission-board.png'
-import panelHeaderUrl   from '../../../assets/games/EF03CO03/panel-header.png'
-import slotBgUrl        from '../../../assets/games/EF03CO03/slot-bg.png'
+import iconCheckUrl from '../../../assets/games/EF03CO03/icon-check-subtask.png'
+import cardTaskUrl from '../../../assets/games/EF03CO03/ard-subtask.png'
+import slotBgUrl from '../../../assets/games/EF03CO03/slot-bg.png'
 
 const ASSETS: Array<[string, string]> = [
-  ['bg-kitchen',     bgKitchenUrl],
+  ['bg-kitchen', bgKitchenUrl],
   ['character-chef', characterChefUrl],
-  ['icon-check',     iconCheckUrl],
-  ['card-task',      cardTaskUrl],
-  ['mission-board',  missionBoardUrl],
-  ['panel-header',   panelHeaderUrl],
-  ['slot-bg',        slotBgUrl],
+  ['icon-check', iconCheckUrl],
+  ['card-task', cardTaskUrl],
+  ['slot-bg', slotBgUrl],
 ]
 
 export class BootScene extends Phaser.Scene {
@@ -32,6 +28,7 @@ export class BootScene extends Phaser.Scene {
 
   create() {
     this.scene.start('GameScene')
+    this.scene.launch('UIScene')
   }
 
   private createLoadingScreen() {
@@ -42,14 +39,14 @@ export class BootScene extends Phaser.Scene {
       this.add.image(640, 360, 'bg-loading').setDisplaySize(1280, 720).setDepth(0)
     })
 
-    this.add.text(640, 300, '👨‍🍳  Chef dos Subproblemas', {
-      fontSize: '40px', fontFamily: 'Arial Black, Arial',
-      color: '#FFF3E0', stroke: '#000000', strokeThickness: 6,
+    this.add.text(640, 296, 'Chef dos Subproblemas', {
+      fontSize: '48px', fontFamily: 'Arial Black, Arial',
+      color: '#FFF3E0', stroke: '#000000', strokeThickness: 7,
       align: 'center',
     }).setOrigin(0.5).setDepth(1)
 
-    this.add.text(640, 386, 'Preparando os subproblemas...', {
-      fontSize: '22px', fontFamily: 'Arial', color: '#FFCC80',
+    this.add.text(640, 390, 'Preparando os subproblemas...', {
+      fontSize: '26px', fontFamily: 'Arial', color: '#FFCC80',
     }).setOrigin(0.5).setDepth(1)
 
     const barW = 500

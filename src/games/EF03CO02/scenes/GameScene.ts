@@ -10,8 +10,8 @@ const GAME_ID = 'labirinto-do-enquanto'
 const MAX_CONSECUTIVE_ERRORS = 3
 const TILE = 120
 const GRID_Y = 488
-const BLOCK_Y = 140   // vertical center of the while-block header (below 72px UIScene bar)
-const BLOCK_H = 88    // height of the while-block header
+const BLOCK_Y = 140
+const BLOCK_H = 88
 
 type RoundPhase = 'intro' | 'choosing' | 'predicting' | 'stepping' | 'step-predict' | 'running' | 'level-complete'
 

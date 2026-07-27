@@ -4,25 +4,23 @@ import { runtimeGameBridge } from '../../../shared/bridge/runtimeGameBridge'
 import type { PlatformCommand } from '../../../shared/contracts/platformCommands'
 import type { LevelConfig, DecompChallenge, ActionCard } from '../types'
 import { LEVELS } from '../data/challenges'
-
+import { createTutorial } from '../../../shared/tutorial/createTutorial'
 const GAME_ID = 'chef-dos-subproblemas'
 const MAX_CONSECUTIVE_ERRORS = 3
 
-// Panel accent colors per subproblem index
 const SP_FILL = [0xff8a2a, 0x29b6f6, 0x4caf50] as const
 const SP_DARK = [0xe65100, 0x0277bd, 0x2e7d32] as const
 
-// Layout
-const PANEL_TOP   = 82
-const HEADER_H    = 56
-const SLOT_H      = 92
-const SLOT_GAP    = 10
-const PANEL_PAD   = 14
-const PANEL_R     = 18
-const POOL_Y_SOLO = 548   // single-row pool (N1/N2, 6 cards)
-const POOL_Y_R1   = 516   // two-row pool top row (N3, 9 cards)
-const POOL_Y_R2   = 602   // two-row pool bottom row
-const CONFIRM_Y   = 658
+const PANEL_TOP = 98
+const HEADER_H = 58
+const SLOT_H = 82
+const SLOT_GAP = 8
+const PANEL_PAD = 12
+const PANEL_R = 20
+const POOL_Y_SOLO = 540
+const POOL_Y_R1 = 496
+const POOL_Y_R2 = 588
+const CONFIRM_Y = 678
 
 type RoundPhase = 'intro' | 'placing' | 'checking' | 'level-complete'
 
@@ -40,11 +38,11 @@ interface SlotInfo {
 export class GameScene extends Phaser.Scene {
   private levelConfig!: LevelConfig
   private currentChallengeIndex = 0
-  private hits   = 0
+  private hits = 0
   private errors = 0
   private consecutiveErrors = 0
   private currentPoints = 0
-  private currentLives  = 1
+  private currentLives = 1
   private isMuted = false
   private phase: RoundPhase = 'intro'
   private gameEnded = false
@@ -60,29 +58,33 @@ export class GameScene extends Phaser.Scene {
 
   private challengeObjects: Phaser.GameObjects.GameObject[] = []
   private overlayObjects: Phaser.GameObjects.GameObject[] = []
+  private markObjects: Phaser.GameObjects.GameObject[] = []
+  private hoverSlot: SlotInfo | null = null
   private unsubPlatform?: () => void
 
   constructor() { super({ key: 'GameScene' }) }
 
   init(data: { level?: number; points?: number; lives?: number }) {
     const lvl = (data?.level ?? 1) as 1 | 2 | 3
-    this.levelConfig           = LEVELS.find(l => l.level === lvl) ?? LEVELS[0]
+    this.levelConfig = LEVELS.find(l => l.level === lvl) ?? LEVELS[0]
     this.currentChallengeIndex = 0
-    this.hits                  = 0
-    this.errors                = 0
-    this.consecutiveErrors     = 0
-    this.currentPoints         = data?.points ?? 0
-    this.currentLives          = data?.lives  ?? 1
-    this.isMuted               = false
-    this.phase                 = 'intro'
-    this.gameEnded             = false
-    this.dragCard              = null
-    this.dragCardId            = null
-    this.poolCards             = new Map()
-    this.cardHomePos           = new Map()
-    this.slots                 = []
-    this.challengeObjects      = []
-    this.overlayObjects        = []
+    this.hits = 0
+    this.errors = 0
+    this.consecutiveErrors = 0
+    this.currentPoints = data?.points ?? 0
+    this.currentLives = data?.lives ?? 1
+    this.isMuted = false
+    this.phase = 'intro'
+    this.gameEnded = false
+    this.dragCard = null
+    this.dragCardId = null
+    this.poolCards = new Map()
+    this.cardHomePos = new Map()
+    this.slots = []
+    this.challengeObjects = []
+    this.overlayObjects = []
+    this.markObjects = []
+    this.hoverSlot = null
   }
 
   create() {
@@ -91,8 +93,8 @@ export class GameScene extends Phaser.Scene {
     EventBus.on('mute-audio', (m: boolean) => { this.isMuted = m }, this)
 
     // Global drag listeners
-    this.input.on('pointermove', this.onDragMove,  this)
-    this.input.on('pointerup',   this.onDragEnd,   this)
+    this.input.on('pointermove', this.onDragMove, this)
+    this.input.on('pointerup', this.onDragEnd, this)
 
     runtimeGameBridge.emit({ type: 'GAME_READY', gameId: GAME_ID })
     this.broadcastMissionState()
@@ -102,11 +104,11 @@ export class GameScene extends Phaser.Scene {
     this.showStartScreen()
   }
 
-  update() {}
+  update() { }
 
   shutdown() {
     this.input.off('pointermove', this.onDragMove, this)
-    this.input.off('pointerup',   this.onDragEnd,  this)
+    this.input.off('pointerup', this.onDragEnd, this)
     this.clearOverlay()
     this.clearChallenge()
     EventBus.off('mute-audio', undefined, this)
@@ -131,7 +133,13 @@ export class GameScene extends Phaser.Scene {
     this.overlayObjects = []
   }
 
+  private clearMarks() {
+    this.markObjects.forEach(o => { if (o.active) o.destroy() })
+    this.markObjects = []
+  }
+
   private clearChallenge() {
+    this.clearMarks()
     this.challengeObjects.forEach(o => { if (o.active) o.destroy() })
     this.challengeObjects = []
     this.poolCards.forEach(c => { if (c.active) c.destroy() })
@@ -142,17 +150,16 @@ export class GameScene extends Phaser.Scene {
     this.dragCardId = null
   }
 
-  // ══════════════════════════════════════════════════════════════════════════
-  //  BRIDGE / HUD
-  // ══════════════════════════════════════════════════════════════════════════
-
   private broadcastMissionState() {
+    const challenge = this.levelConfig.challenges[this.currentChallengeIndex]
     EventBus.emit('mission-update', {
-      instruction:   this.levelConfig.title,
-      hint:          this.levelConfig.tip,
-      missionIndex:  this.currentChallengeIndex,
+      instruction: challenge
+        ? `Como resolver: ${challenge.mainTask}?`
+        : this.levelConfig.title,
+      hint: this.levelConfig.tip,
+      missionIndex: this.currentChallengeIndex,
       totalMissions: this.levelConfig.challenges.length,
-      level:         this.levelConfig.level,
+      level: this.levelConfig.level,
     })
   }
 
@@ -165,29 +172,24 @@ export class GameScene extends Phaser.Scene {
     })
   }
 
-  // ══════════════════════════════════════════════════════════════════════════
-  //  BACKGROUND
-  // ══════════════════════════════════════════════════════════════════════════
-
   private drawBackground() {
-    this.add.image(640, 360, 'bg-kitchen').setDisplaySize(1280, 720).setDepth(-1)
-    this.add.image(1202, 598, 'character-chef').setDisplaySize(124, 162).setDepth(1).setAlpha(0.78)
-  }
+    const bg = this.add.image(640, 360, 'bg-kitchen').setDepth(-2)
+    bg.setScale(Math.max(1280 / bg.width, 720 / bg.height))
 
-  // ══════════════════════════════════════════════════════════════════════════
-  //  CONFIRM BUTTON
-  // ══════════════════════════════════════════════════════════════════════════
+    this.add.rectangle(640, 360, 1280, 720, 0x1c100a, 0.52).setDepth(-1)
+    this.add.image(1206, 636, 'character-chef').setDisplaySize(120, 156).setDepth(1).setAlpha(0.7)
+  }
 
   private buildConfirmButton() {
     this.confirmBtn = this.add.container(640, CONFIRM_Y).setDepth(5)
     const bg = this.add.graphics()
     this.redrawConfirmBg(bg, false)
-    const txt = this.add.text(0, 0, '✅  Confirmar plano', {
-      fontFamily: 'Arial Black, Arial', fontSize: '21px', color: '#ffffff',
+    const txt = this.add.text(0, 0, 'Confirmar plano', {
+      fontFamily: 'Arial Black, Arial', fontSize: '25px', color: '#ffffff',
       stroke: '#1b7d1c', strokeThickness: 3,
     }).setOrigin(0.5).setResolution(2)
     this.confirmBtn.add([bg, txt])
-    this.confirmBtn.setSize(320, 64)
+    this.confirmBtn.setSize(380, 72)
     this.confirmBtn.setData('bg', bg)
     this.confirmBtn.on('pointerdown', () => this.checkPlan())
     this.setConfirmEnabled(false)
@@ -196,41 +198,37 @@ export class GameScene extends Phaser.Scene {
   private redrawConfirmBg(g: Phaser.GameObjects.Graphics, enabled: boolean) {
     g.clear()
     g.fillStyle(enabled ? 0x42d640 : 0x9ca3af, 1)
-    g.fillRoundedRect(-160, -30, 320, 60, 30)
-    g.lineStyle(3, 0xffffff, enabled ? 1 : 0.4)
-    g.strokeRoundedRect(-160, -30, 320, 60, 30)
+    g.fillRoundedRect(-190, -34, 380, 68, 34)
+    g.lineStyle(4, 0xffffff, enabled ? 1 : 0.4)
+    g.strokeRoundedRect(-190, -34, 380, 68, 34)
   }
 
   private setConfirmEnabled(enabled: boolean) {
     if (!this.confirmBtn) return
     this.redrawConfirmBg(this.confirmBtn.getData('bg'), enabled)
-    if (enabled) this.confirmBtn.setInteractive({ useHandCursor: true })
-    else this.confirmBtn.disableInteractive()
-  }
 
-  // ══════════════════════════════════════════════════════════════════════════
-  //  CHALLENGE SETUP
-  // ══════════════════════════════════════════════════════════════════════════
+    if (enabled) {
+      this.confirmBtn.setInteractive({ useHandCursor: true })
+      this.confirmBtn.setVisible(true)
+      this.tweens.killTweensOf(this.confirmBtn)
+      this.confirmBtn.setAlpha(0).setScale(0.9)
+      this.tweens.add({
+        targets: this.confirmBtn,
+        alpha: 1, scale: 1, duration: 220, ease: 'Back.easeOut',
+      })
+    } else {
+      this.confirmBtn.disableInteractive()
+      this.tweens.killTweensOf(this.confirmBtn)
+      this.confirmBtn.setAlpha(0).setVisible(false)
+    }
+  }
 
   private startChallenge() {
     this.clearChallenge()
     this.phase = 'placing'
 
     const challenge = this.levelConfig.challenges[this.currentChallengeIndex]
-    const shuffled  = Phaser.Utils.Array.Shuffle([...challenge.allCards]) as ActionCard[]
-
-    // Challenge banner at top (mission-board PNG)
-    const bannerImg = this.addChallengeObject(
-      this.add.image(540, 38, 'mission-board').setDisplaySize(860, 58).setDepth(4)
-    )
-    void bannerImg
-    this.addChallengeObject(
-      this.add.text(540, 38, `Como resolver: ${challenge.mainTask}?`, {
-        fontFamily: 'Arial Black, Arial', fontSize: '18px', color: '#3e2723',
-        stroke: '#ffffff', strokeThickness: 2, align: 'center',
-        wordWrap: { width: 820 },
-      }).setOrigin(0.5).setDepth(5).setResolution(2)
-    )
+    const shuffled = Phaser.Utils.Array.Shuffle([...challenge.allCards]) as ActionCard[]
 
     this.buildPanels(challenge)
     this.buildPool(shuffled)
@@ -247,17 +245,17 @@ export class GameScene extends Phaser.Scene {
   }
 
   private buildPanels(challenge: DecompChallenge) {
-    const n      = challenge.subproblems.length
-    const panelW = n === 2 ? 560 : 358
-    const gap    = 20
+    const n = challenge.subproblems.length
+    const panelW = n === 2 ? 580 : 372
+    const gap = 20
     const totalW = n * panelW + (n - 1) * gap
     const startX = 640 - totalW / 2
 
     challenge.subproblems.forEach((sp, pi) => {
-      const cx     = startX + pi * (panelW + gap) + panelW / 2
+      const cx = startX + pi * (panelW + gap) + panelW / 2
       const slotCt = sp.correctCardIds.length
-      const pH     = this.panelH(slotCt)
-      const slotW  = panelW - 40
+      const pH = this.panelH(slotCt)
+      const slotW = panelW - 40
 
       // ── Panel background (drawn, keeps per-panel color flexibility) ──
       const shadow = this.addChallengeObject(this.add.graphics().setDepth(2))
@@ -270,38 +268,49 @@ export class GameScene extends Phaser.Scene {
       panelBg.lineStyle(3, SP_FILL[pi % 3], 0.9)
       panelBg.strokeRoundedRect(cx - panelW / 2, PANEL_TOP, panelW, pH, PANEL_R)
 
-      // ── Colored header using PNG (tinted per panel) ──
-      const headerImg = this.addChallengeObject(
-        this.add.image(cx, PANEL_TOP + HEADER_H / 2, 'panel-header')
-          .setDisplaySize(panelW, HEADER_H)
-          .setTint(SP_FILL[pi % 3])
-          .setDepth(4)
-      )
-      void headerImg
+      const hx = cx - panelW / 2 + 2
+      const hy = PANEL_TOP + 2
+      const hw = panelW - 4
+      const hh = HEADER_H - 2
 
-      // Number badge on header
+      const header = this.addChallengeObject(this.add.graphics().setDepth(4))
+      header.fillStyle(SP_FILL[pi % 3], 1)
+      header.fillRoundedRect(hx, hy, hw, hh, {
+        tl: PANEL_R - 2, tr: PANEL_R - 2, bl: 0, br: 0,
+      })
+      header.fillStyle(0xffffff, 0.16)
+      header.fillRoundedRect(hx, hy, hw, hh * 0.42, {
+        tl: PANEL_R - 2, tr: PANEL_R - 2, bl: 0, br: 0,
+      })
+      header.fillStyle(SP_DARK[pi % 3], 0.55)
+      header.fillRect(hx, hy + hh - 3, hw, 3)
+
+      const badgeCX = cx - panelW / 2 + 30
       const badgeBg = this.addChallengeObject(this.add.graphics().setDepth(5))
       badgeBg.fillStyle(SP_DARK[pi % 3], 1)
-      badgeBg.fillCircle(cx - panelW / 2 + 22, PANEL_TOP + HEADER_H / 2, 14)
+      badgeBg.fillCircle(badgeCX, PANEL_TOP + HEADER_H / 2, 18)
+      badgeBg.lineStyle(2, 0xffffff, 0.85)
+      badgeBg.strokeCircle(badgeCX, PANEL_TOP + HEADER_H / 2, 18)
       this.addChallengeObject(
-        this.add.text(cx - panelW / 2 + 22, PANEL_TOP + HEADER_H / 2, `${pi + 1}`, {
-          fontFamily: 'Arial Black, Arial', fontSize: '16px', color: '#ffffff',
+        this.add.text(badgeCX, PANEL_TOP + HEADER_H / 2, `${pi + 1}`, {
+          fontFamily: 'Arial Black, Arial', fontSize: '20px', color: '#ffffff',
         }).setOrigin(0.5).setDepth(6).setResolution(2)
       )
 
-      // Subproblem label in header
+      const labelLeft = badgeCX + 20
+      const labelRight = cx + panelW / 2 - 12
       this.addChallengeObject(
-        this.add.text(cx + 8, PANEL_TOP + HEADER_H / 2, sp.label, {
-          fontFamily: 'Arial Black, Arial', fontSize: '15px', color: '#ffffff',
-          align: 'center', wordWrap: { width: panelW - 60 },
-          stroke: `#${SP_DARK[pi % 3].toString(16).padStart(6, '0')}`, strokeThickness: 1,
+        this.add.text((labelLeft + labelRight) / 2, PANEL_TOP + HEADER_H / 2, sp.label, {
+          fontFamily: 'Arial Black, Arial', fontSize: '19px', color: '#ffffff',
+          align: 'center', wordWrap: { width: labelRight - labelLeft - 10 },
+          shadow: { offsetX: 0, offsetY: 2, color: '#00000066', blur: 3, fill: true },
         }).setOrigin(0.5).setDepth(6).setResolution(2)
       )
 
       // ── Slots ──
       for (let si = 0; si < slotCt; si++) {
         const slotTop = PANEL_TOP + HEADER_H + PANEL_PAD + si * (SLOT_H + SLOT_GAP)
-        const slotCY  = slotTop + SLOT_H / 2
+        const slotCY = slotTop + SLOT_H / 2
 
         // Slot PNG background (empty state)
         const slotBg = this.addChallengeObject(
@@ -314,7 +323,7 @@ export class GameScene extends Phaser.Scene {
         if (challenge.orderedWithin) {
           this.addChallengeObject(
             this.add.text(cx - slotW / 2 + 18, slotCY, `${si + 1}`, {
-              fontFamily: 'Arial Black, Arial', fontSize: '20px',
+              fontFamily: 'Arial Black, Arial', fontSize: '24px',
               color: `#${SP_FILL[pi % 3].toString(16).padStart(6, '0')}`,
             }).setOrigin(0.5).setDepth(5).setAlpha(0.5).setResolution(2)
           )
@@ -323,14 +332,14 @@ export class GameScene extends Phaser.Scene {
         // Placeholder text
         const placeholder = this.addChallengeObject(
           this.add.text(cx, slotCY, '+ soltar aqui', {
-            fontFamily: 'Arial', fontSize: '17px', color: '#bdbdbd',
+            fontFamily: 'Arial', fontSize: '19px', color: '#8d6e63',
           }).setOrigin(0.5).setDepth(5).setResolution(2)
         )
 
         // Label shown when filled
         const labelTxt = this.addChallengeObject(
           this.add.text(cx, slotCY, '', {
-            fontFamily: 'Arial Black, Arial', fontSize: '15px', color: '#3e2723',
+            fontFamily: 'Arial Black, Arial', fontSize: '18px', color: '#3e2723',
             align: 'center', wordWrap: { width: slotW - 28 },
           }).setOrigin(0.5).setDepth(5).setAlpha(0).setResolution(2)
         )
@@ -356,22 +365,20 @@ export class GameScene extends Phaser.Scene {
     })
   }
 
-  // ══════════════════════════════════════════════════════════════════════════
-  //  CARD POOL
-  // ══════════════════════════════════════════════════════════════════════════
+  private poolCardSize() {
+    const n = this.levelConfig.challenges[this.currentChallengeIndex].allCards.length
+    const twoRows = n > 6
+    return { w: twoRows ? 152 : 172, h: twoRows ? 84 : 96, gap: twoRows ? 14 : 18 }
+  }
 
   private buildPool(cards: ActionCard[]) {
-    const n        = cards.length
-    const use2Rows = n > 6
-    const CARD_W   = use2Rows ? 130 : 152
-    const CARD_H   = 88
-    const GAP      = use2Rows ? 12 : 16
+    const { w, h, gap } = this.poolCardSize()
 
-    if (use2Rows) {
-      this.layoutPoolRow(cards.slice(0, 5), CARD_W, CARD_H, GAP, POOL_Y_R1)
-      this.layoutPoolRow(cards.slice(5),    CARD_W, CARD_H, GAP, POOL_Y_R2)
+    if (cards.length > 6) {
+      this.layoutPoolRow(cards.slice(0, 5), w, h, gap, POOL_Y_R1)
+      this.layoutPoolRow(cards.slice(5), w, h, gap, POOL_Y_R2)
     } else {
-      this.layoutPoolRow(cards, CARD_W, CARD_H, GAP, POOL_Y_SOLO)
+      this.layoutPoolRow(cards, w, h, gap, POOL_Y_SOLO)
     }
   }
 
@@ -394,8 +401,8 @@ export class GameScene extends Phaser.Scene {
     const bg = this.add.image(0, 0, 'card-task').setDisplaySize(w, h)
 
     const label = this.add.text(0, 0, card.label, {
-      fontFamily: 'Arial Black, Arial', fontSize: w >= 148 ? '14px' : '12px', color: '#3e2723',
-      align: 'center', wordWrap: { width: w - 20 },
+      fontFamily: 'Arial Black, Arial', fontSize: w >= 170 ? '17px' : '15px', color: '#3e2723',
+      align: 'center', wordWrap: { width: w - 24 },
     }).setOrigin(0.5).setResolution(2)
 
     container.add([bg, label])
@@ -421,7 +428,7 @@ export class GameScene extends Phaser.Scene {
 
   private beginDrag(card: Phaser.GameObjects.Container, cardId: string) {
     if (this.phase !== 'placing' || this.gameEnded) return
-    this.dragCard   = card
+    this.dragCard = card
     this.dragCardId = cardId
     card.setDepth(20)
     this.tweens.killTweensOf(card)
@@ -433,19 +440,30 @@ export class GameScene extends Phaser.Scene {
     if (!this.dragCard || this.phase !== 'placing') return
     this.dragCard.x = pointer.x
     this.dragCard.y = pointer.y
+
+    const over = this.slots.find(
+      s => s.cardId === null && this.hitTestSlot(pointer.x, pointer.y, s),
+    ) ?? null
+
+    if (over === this.hoverSlot) return
+    if (this.hoverSlot?.cardId === null) this.hoverSlot.slotBg.clearTint()
+    this.hoverSlot = over
+    over?.slotBg.setTint(0xffd699)
   }
 
   private onDragEnd(pointer: Phaser.Input.Pointer) {
     if (!this.dragCard || !this.dragCardId) return
-    const card   = this.dragCard
+    const card = this.dragCard
     const cardId = this.dragCardId
-    this.dragCard   = null
+    this.dragCard = null
     this.dragCardId = null
 
     card.setDepth(8)
     this.tweens.add({ targets: card, scale: 1, duration: 90 })
 
-    // Find valid empty slot under the drop point
+    if (this.hoverSlot?.cardId === null) this.hoverSlot.slotBg.clearTint()
+    this.hoverSlot = null
+
     const dropSlot = this.slots.find(s => s.cardId === null && this.hitTestSlot(pointer.x, pointer.y, s))
 
     if (dropSlot) {
@@ -469,7 +487,7 @@ export class GameScene extends Phaser.Scene {
 
   private placeCardInSlot(cardId: string, slot: SlotInfo) {
     const challenge = this.levelConfig.challenges[this.currentChallengeIndex]
-    const cardData  = challenge.allCards.find(c => c.id === cardId)
+    const cardData = challenge.allCards.find(c => c.id === cardId)
     if (!cardData) return
 
     slot.cardId = cardId
@@ -488,29 +506,22 @@ export class GameScene extends Phaser.Scene {
     if (this.phase !== 'placing' || this.gameEnded || !slot.cardId) return
 
     const challenge = this.levelConfig.challenges[this.currentChallengeIndex]
-    const cardData  = challenge.allCards.find(c => c.id === slot.cardId)
+    const cardData = challenge.allCards.find(c => c.id === slot.cardId)
     if (!cardData) return
 
     const cardId = slot.cardId
-    slot.cardId  = null
+    slot.cardId = null
     slot.labelText.setAlpha(0)
     slot.placeholder.setAlpha(1)
     slot.slotBg.clearTint()
 
-    // Return card to its home position
     const home = this.cardHomePos.get(cardId) ?? { x: 640, y: POOL_Y_SOLO }
-    const n    = challenge.allCards.length
-    const cw   = n > 6 ? 130 : 152
-    const ch   = 88
-    this.makePoolCard(cardData, home.x, home.y, cw, ch, 0)
+    const { w, h } = this.poolCardSize()
+    this.makePoolCard(cardData, home.x, home.y, w, h, 0)
 
     this.setConfirmEnabled(false)
     this.playTick()
   }
-
-  // ══════════════════════════════════════════════════════════════════════════
-  //  VALIDATION
-  // ══════════════════════════════════════════════════════════════════════════
 
   private checkPlan() {
     if (this.phase !== 'placing' || this.gameEnded) return
@@ -522,7 +533,7 @@ export class GameScene extends Phaser.Scene {
 
     challenge.subproblems.forEach((sp, pi) => {
       const panelSlots = this.slots.filter(s => s.panelIndex === pi)
-      const placedIds  = panelSlots.map(s => s.cardId).filter(Boolean) as string[]
+      const placedIds = panelSlots.map(s => s.cardId).filter(Boolean) as string[]
 
       const panelOk = challenge.orderedWithin
         ? sp.correctCardIds.every((id, idx) => placedIds[idx] === id)
@@ -536,17 +547,21 @@ export class GameScene extends Phaser.Scene {
           : sp.correctCardIds.includes(slot.cardId ?? '')
 
         const zone = slot.container as unknown as Phaser.GameObjects.Zone
+        const mx = zone.x + slot.slotW / 2 - 16
+        const my = zone.y - SLOT_H / 2 + 14
+
         if (slotOk) {
-          const check = this.addChallengeObject(
-            this.add.image(zone.x + slot.slotW / 2 - 14, zone.y - SLOT_H / 2 + 14, 'icon-check')
-              .setDisplaySize(26, 26).setDepth(9).setAlpha(0)
-          )
+          const check = this.add.image(mx, my, 'icon-check')
+            .setDisplaySize(26, 26).setDepth(9).setAlpha(0)
+          this.markObjects.push(check)
           this.tweens.add({ targets: check, alpha: 1, duration: 180, delay: (pi * 3 + si) * 100 })
         } else {
-          this.addChallengeObject(
-            this.add.text(zone.x + slot.slotW / 2 - 14, zone.y - SLOT_H / 2 + 14, '❌', { fontSize: '20px' })
-              .setOrigin(0.5).setDepth(9)
-          )
+          const cross = this.add.text(mx, my, '✕', {
+            fontFamily: 'Arial Black, Arial', fontSize: '22px', color: '#ef4444',
+            stroke: '#ffffff', strokeThickness: 4,
+          }).setOrigin(0.5).setDepth(9).setResolution(2)
+          this.markObjects.push(cross)
+          slot.slotBg.setTint(0xffcdd2)
         }
       })
     })
@@ -566,9 +581,42 @@ export class GameScene extends Phaser.Scene {
       this.emitCheckpoint()
       this.time.delayedCall(2000, () => {
         if (this.consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) this.onTooManyErrors()
-        else this.startChallenge()
+        else this.returnWrongCards(challenge)
       })
     }
+  }
+
+  private returnWrongCards(challenge: DecompChallenge) {
+    this.clearMarks()
+
+    const { w: cw, h: ch } = this.poolCardSize()
+
+    challenge.subproblems.forEach((sp, pi) => {
+      this.slots.filter(s => s.panelIndex === pi).forEach((slot, si) => {
+        if (!slot.cardId) return
+
+        const ok = challenge.orderedWithin
+          ? slot.cardId === sp.correctCardIds[si]
+          : sp.correctCardIds.includes(slot.cardId)
+        if (ok) { slot.slotBg.setTint(0xc8e6c9); return }
+
+        const cardId = slot.cardId
+        const cardData = challenge.allCards.find(c => c.id === cardId)
+
+        slot.cardId = null
+        slot.labelText.setAlpha(0)
+        slot.placeholder.setAlpha(1)
+        slot.slotBg.clearTint()
+
+        if (cardData) {
+          const home = this.cardHomePos.get(cardId) ?? { x: 640, y: POOL_Y_SOLO }
+          this.makePoolCard(cardData, home.x, home.y, cw, ch, 0)
+        }
+      })
+    })
+
+    this.phase = 'placing'
+    this.setConfirmEnabled(this.slots.every(s => s.cardId !== null))
   }
 
   private advanceChallenge() {
@@ -650,12 +698,51 @@ export class GameScene extends Phaser.Scene {
     btn.setSize(264, 62)
     btn.setInteractive({ useHandCursor: true })
     btn.on('pointerover', () => this.tweens.add({ targets: btn, scale: 1.05, duration: 80 }))
-    btn.on('pointerout',  () => this.tweens.add({ targets: btn, scale: 1,    duration: 80 }))
-    btn.on('pointerdown', () => { this.playTick(); this.clearOverlay(); this.startChallenge() })
-
+    btn.on('pointerout', () => this.tweens.add({ targets: btn, scale: 1, duration: 80 }))
+    btn.on('pointerdown', () => {
+      this.playTick()
+      this.clearOverlay()
+      this.startChallenge()
+      this.runTutorial()
+    })
     modal.add([shadow, bg, topBar, titleTxt, objTxt, tipTxt, btn])
-    modal.setAlpha(0).setScale(0.9)
-    this.tweens.add({ targets: modal, alpha: 1, scale: 1, duration: 280, ease: 'Back.easeOut' })
+    modal.setAlpha(0).setScale(1.02)
+    this.tweens.add({ targets: modal, alpha: 1, scale: 1.14, duration: 280, ease: 'Back.easeOut' })
+  }
+
+  /** Roda uma vez, só no nível 1: os níveis 2 e 3 já usam a mesma mecânica. */
+  private runTutorial() {
+    if (this.levelConfig.level !== 1) return
+
+    this.phase = 'intro'
+    createTutorial(this, {
+      key: 'chef-decomposicao',
+      accent: 0xff8a2a,
+      safeTop: 100,
+      onFinish: () => { this.phase = 'placing' },
+      steps: [
+        {
+          text: 'Aqui em cima fica a tarefa principal. Leia antes de mexer nas cartas.',
+          shape: 'rect', x: 640, y: 48, w: 1264, h: 100,
+        },
+        {
+          text: 'Cada quadro é uma parte do problema. O título colorido diz do que ele cuida.',
+          shape: 'rect', x: 640, y: PANEL_TOP + 163, w: 1210, h: 368,
+        },
+        {
+          text: 'Arraste cada carta do balcão para o quadro a que ela pertence.',
+          shape: 'rect', x: 640, y: POOL_Y_SOLO, w: 1180, h: 130,
+        },
+        {
+          text: 'Colocou no lugar errado? Toque na carta já encaixada para devolvê-la ao balcão.',
+          shape: 'none', balloonY: 380,
+        },
+        {
+          text: 'Com todos os espaços cheios, toque em Confirmar plano.',
+          shape: 'none'
+        },
+      ],
+    })
   }
 
   private showLevelCompleteScreen(nextLevel: 2 | 3) {
@@ -704,8 +791,8 @@ export class GameScene extends Phaser.Scene {
     }).setOrigin(0.5).setResolution(2)
 
     modal.add([shadow, bg, topBar, stars, title, sub, next])
-    modal.setAlpha(0).setScale(0.9)
-    this.tweens.add({ targets: modal, alpha: 1, scale: 1, duration: 280, ease: 'Back.easeOut' })
+    modal.setAlpha(0).setScale(1.02)
+    this.tweens.add({ targets: modal, alpha: 1, scale: 1.14, duration: 280, ease: 'Back.easeOut' })
     this.time.delayedCall(1800, () => {
       this.scene.restart({ level: nextLevel, points: this.currentPoints, lives: this.currentLives })
     })
@@ -762,8 +849,8 @@ export class GameScene extends Phaser.Scene {
     )
 
     panel.add([shadow, bg, ribbon, ...sparkles, stars, title, sub, retryBtn, exitBtn])
-    panel.setAlpha(0).setScale(0.88)
-    this.tweens.add({ targets: panel, alpha: 1, scale: 1, duration: 300, ease: 'Back.easeOut' })
+    panel.setAlpha(0).setScale(1.0)
+    this.tweens.add({ targets: panel, alpha: 1, scale: 1.12, duration: 300, ease: 'Back.easeOut' })
   }
 
   private showGameOverScreen() {
@@ -790,15 +877,15 @@ export class GameScene extends Phaser.Scene {
     topBar.fillStyle(0xef4444, 1)
     topBar.fillRoundedRect(-190, -198, 380, 28, 14)
 
-    const icon   = this.add.text(0, -116, '😓', { fontSize: '56px' }).setOrigin(0.5)
-    const title  = this.add.text(0, -56, 'Que pena!', {
+    const icon = this.add.text(0, -116, '😓', { fontSize: '56px' }).setOrigin(0.5)
+    const title = this.add.text(0, -56, 'Que pena!', {
       fontFamily: 'Arial Black, Arial', fontSize: '36px', color: '#3e2723',
       stroke: '#ffffff', strokeThickness: 5,
     }).setOrigin(0.5).setResolution(2)
     const reason = this.add.text(0, 0, '3 planos errados seguidos!', {
       fontFamily: 'Arial', fontStyle: 'bold', fontSize: '20px', color: '#ef4444',
     }).setOrigin(0.5).setResolution(2)
-    const stats  = this.add.text(0, 46, `${this.currentChallengeIndex} de ${this.levelConfig.challenges.length} tarefas concluídas`, {
+    const stats = this.add.text(0, 46, `${this.currentChallengeIndex} de ${this.levelConfig.challenges.length} tarefas concluídas`, {
       fontFamily: 'Arial', fontSize: '17px', color: '#5d4037',
     }).setOrigin(0.5).setResolution(2)
 
@@ -810,8 +897,8 @@ export class GameScene extends Phaser.Scene {
     )
 
     panel.add([shadow, bg, topBar, icon, title, reason, stats, retryBtn, exitBtn])
-    panel.setAlpha(0).setScale(0.9)
-    this.tweens.add({ targets: panel, alpha: 1, scale: 1, duration: 260, ease: 'Back.easeOut' })
+    panel.setAlpha(0).setScale(1.02)
+    this.tweens.add({ targets: panel, alpha: 1, scale: 1.14, duration: 260, ease: 'Back.easeOut' })
 
     this.playTone(330, 0.30, 'square', 0.18)
     this.time.delayedCall(100, () => this.playTone(220, 0.40, 'square', 0.16))
@@ -819,7 +906,7 @@ export class GameScene extends Phaser.Scene {
 
   private makeModalBtn(x: number, y: number, label: string, color: number, stroke: string, onClick: () => void) {
     const btn = this.add.container(x, y)
-    const bg  = this.add.graphics()
+    const bg = this.add.graphics()
     bg.fillStyle(color, 1)
     bg.fillRoundedRect(-122, -25, 244, 50, 25)
     bg.lineStyle(4, 0xffffff, 1)
@@ -831,7 +918,7 @@ export class GameScene extends Phaser.Scene {
     btn.setSize(252, 62)
     btn.setInteractive({ useHandCursor: true })
     btn.on('pointerover', () => this.tweens.add({ targets: btn, scale: 1.05, duration: 80 }))
-    btn.on('pointerout',  () => this.tweens.add({ targets: btn, scale: 1,    duration: 80 }))
+    btn.on('pointerout', () => this.tweens.add({ targets: btn, scale: 1, duration: 80 }))
     btn.on('pointerdown', () => { this.playTick(); onClick() })
     return btn
   }
@@ -849,7 +936,7 @@ export class GameScene extends Phaser.Scene {
     const ctx = this.getAudioCtx()
     if (!ctx) return
     const osc = ctx.createOscillator()
-    const g   = ctx.createGain()
+    const g = ctx.createGain()
     osc.connect(g); g.connect(ctx.destination)
     osc.type = type
     osc.frequency.setValueAtTime(freq, ctx.currentTime)
@@ -858,12 +945,12 @@ export class GameScene extends Phaser.Scene {
     osc.start(); osc.stop(ctx.currentTime + dur)
   }
 
-  private playTick()    { this.playTone(520, 0.04, 'sine', 0.08) }
+  private playTick() { this.playTone(520, 0.04, 'sine', 0.08) }
   private playCorrect() {
     this.playTone(660, 0.08, 'sine', 0.15)
     this.time.delayedCall(100, () => this.playTone(880, 0.10, 'sine', 0.12))
   }
-  private playError()   { this.playTone(330, 0.20, 'square', 0.15) }
+  private playError() { this.playTone(330, 0.20, 'square', 0.15) }
   private playFanfare() {
     [523, 659, 784, 1047].forEach((f, i) =>
       this.time.delayedCall(i * 125, () => this.playTone(f, 0.22, 'sine', 0.32))
@@ -878,7 +965,7 @@ export class GameScene extends Phaser.Scene {
     this.unsubPlatform = runtimeGameBridge.onCommand((cmd: PlatformCommand) => {
       if (cmd.type === 'START_GAME') {
         this.currentPoints = cmd.points ?? 0
-        this.currentLives  = cmd.lives  ?? 1
+        this.currentLives = cmd.lives ?? 1
       }
     })
   }
