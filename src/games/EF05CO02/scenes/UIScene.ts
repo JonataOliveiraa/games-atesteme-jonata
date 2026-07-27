@@ -66,7 +66,7 @@ export class UIScene extends Phaser.Scene {
     }).setOrigin(0, 0.5).setResolution(2)
 
     this.timerTrack = this.add.graphics()
-    this.timerBar = this.add.graphics()
+    this.timerBar = this.add.graphics() 
 
     this.registry.events.on('changedata-hud', (_p: unknown, data: HudData) => {
       this.applyHud(data)

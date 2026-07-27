@@ -46,6 +46,7 @@ const SLUG_TO_CODE: Record<string, GameCode> = {
   "caca-fonte-confiavel": "EF04CO08",
   "baralho-das-listas": "EF05CO01",
   "mapas-em-rede": "EF05CO02",
+  "arena-da-lógica": "EF05CO03",
 };
 
 const GAME_CONFIG_LOADERS: Partial<
@@ -83,6 +84,7 @@ const GAME_CONFIG_LOADERS: Partial<
   EF04CO08: () => import("../games/EF04CO08/index"),
   EF05CO01: () => import("../games/EF05CO01/index"),
   EF05CO02: () => import("../games/EF05CO02/index"),
+  EF05CO03: () => import("../games/EF05CO03/index"),
 };
 
 const GAMES_WITH_IN_GAME_COMPLETION_SCREEN = new Set([

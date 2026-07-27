@@ -32,6 +32,7 @@ import sourceHuntThumbnail from "../assets/games/EF04CO08/cover-caca-fonte-confi
 import cardListThumbnail from "../assets/games/EF05CO01/cover-baralho-das-listas.png";
 import correioThumbnail from "../assets/games/EF01CO04/cover-correio-multimidia.png";
 import networkMapsThumbnail from "../assets/games/EF05CO02/cover-mapas-em-rede.png";
+import coverLogicArena from "../assets/games/EF05CO03/cover-arena-da-logica.png";
 
 const placeholderGame = (code: string, index: number): Game => ({
   id: index,
@@ -332,6 +333,15 @@ const gameByCode: Partial<Record<string, Omit<Game, "id">>> = {
     icon: "🗺️",
     slug: "mapas-em-rede",
     thumbnail: networkMapsThumbnail,
+  },
+  EF05CO03: {
+    title: "Arena da Lógica",
+    "description": "Resolva desafios de lógica com portões lógicos e circuitos digitais",
+    category: "Pensamento Computacional",
+    points: 65,
+    icon: "🧠",
+    slug: "arena-da-lógica",
+    thumbnail: coverLogicArena,
   }
 };
 
