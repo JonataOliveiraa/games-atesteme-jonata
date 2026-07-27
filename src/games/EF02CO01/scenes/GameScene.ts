@@ -10,8 +10,6 @@ import type {
 import { LEVELS } from '../data/levels'
 import { ALL_VEHICLES } from '../data/vehicles'
 
-// ── Constantes de layout ─────────────────────────────────────────────────────
-
 const GAME_ID = 'hangar-dos-modelos'
 const TOP_Y = 95       // base da UIScene superior
 const BOTTOM_Y = 638      // topo da UIScene inferior
@@ -785,7 +783,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private buildQuestionPanel() {
-    const panelY = TOP_Y + 35
+    const panelY = TOP_Y + 50
 
     this.questionPanel = this.add.container(PANEL_LEFT_X, panelY).setDepth(10)
 
@@ -814,7 +812,6 @@ export class GameScene extends Phaser.Scene {
       fontSize: '17px', color: '#607d8b',
     }).setOrigin(0.5, 0).setResolution(2)
 
-    // Botão Confirmar
     this.confirmBtn = this.add.container(PANEL_W / 2, 185)
     const btnBg = this.add.graphics()
     btnBg.fillStyle(0xb8c0cc, 1)
@@ -833,9 +830,9 @@ export class GameScene extends Phaser.Scene {
     this.confirmBtn.setData('enabled', false)
     this.confirmBtn.on('pointerdown', () => this.confirmAnswer())
 
-    const hintText = this.add.text(PANEL_W / 2, 242, '', {
+    const hintText = this.add.text(PANEL_W / 2, 226, '', {
       fontFamily: 'Arial', fontStyle: 'bold',
-      fontSize: '14px', color: '#607d8b',
+      fontSize: '17px', color: '#607d8b',
       align: 'center', wordWrap: { width: 340 },
     }).setOrigin(0.5, 0).setResolution(2)
 

@@ -2631,3 +2631,73 @@ touch-action: none;
     transform: translateY(-14px);
   }
 }
+
+.phaser-stage {
+  position: relative;
+}
+
+.phaser-stage.is-fullscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* DEPOIS */
+.phaser-stage.is-fullscreen .phaser-container {
+  width: 100vw;
+  height: 100vh;
+  width: 100dvw;
+  height: 100dvh;
+  max-width: none;
+  aspect-ratio: auto;
+  border-radius: 0;
+  box-shadow: none;
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.phaser-stage.is-fullscreen .phaser-container canvas {
+  width: auto !important;
+  height: auto !important;
+  max-width: 100% !important;
+  max-height: 100% !important;
+  aspect-ratio: auto !important;
+  margin: 0 !important;
+}
+
+body.game-fullscreen-active {
+  overflow: hidden;
+}
+
+.game-fullscreen-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 20;
+  padding: 8px 14px;
+  border: none;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.72);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  backdrop-filter: blur(4px);
+}
+
+.game-fullscreen-btn:hover {
+  background: rgba(15, 23, 42, 0.9);
+}
+
+@media (max-width: 640px) {
+  .game-fullscreen-btn {
+    font-size: 12px;
+    padding: 7px 12px;
+  }
+}
