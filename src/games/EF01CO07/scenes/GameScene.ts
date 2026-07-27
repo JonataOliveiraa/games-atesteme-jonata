@@ -44,18 +44,19 @@ export class GameScene extends Phaser.Scene {
     this.answeredCurrentScene = false;
     this.checklist = [];
     this.levelStarted = false;
-this.hasStartedTimer = false;
+    this.hasStartedTimer = false;
 
-this.timerEvent?.destroy();
-this.timerEvent = undefined;
+    this.timerEvent?.destroy();
+    this.timerEvent = undefined;
 
-this.timerBar = undefined;
-this.overlayObjects = [];
+    this.timerBar = undefined;
+    this.overlayObjects = [];
   }
 
   create() {
     this.createBackground();
     this.createTimerBar();
+    this.createInstructionsButton(); // ← adicionado
     this.registerPlatformCommands();
 
     runtimeGameBridge.emit({
@@ -92,256 +93,256 @@ this.overlayObjects = [];
   }
 
   private clearOverlay() {
-  this.overlayObjects.forEach((object) => object.destroy());
-  this.overlayObjects = [];
-}
-
-private addOverlayObject<T extends Phaser.GameObjects.GameObject>(object: T): T {
-  this.overlayObjects.push(object);
-  return object;
-}
-
-private startTimerOnce() {
-  if (this.hasStartedTimer) return;
-
-  this.hasStartedTimer = true;
-  this.startTimer();
-}
-
-private getLevelInstructions() {
-  if (this.levelConfig.level === 1) {
-    return {
-      title: "Nível 1 - Proteja seus dados",
-      objective: "Escolha atitudes seguras em situações digitais.",
-      tip: "Leia com atenção antes de responder.",
-    };
+    this.overlayObjects.forEach((object) => object.destroy());
+    this.overlayObjects = [];
   }
 
-  if (this.levelConfig.level === 2) {
-    return {
-      title: "Nível 2 - Atenção aos riscos",
-      objective: "Identifique comportamentos perigosos.",
-      tip: "Pense antes de clicar ou compartilhar.",
-    };
+  private addOverlayObject<T extends Phaser.GameObjects.GameObject>(object: T): T {
+    this.overlayObjects.push(object);
+    return object;
   }
 
-  return {
-    title: "Nível 3 - Guardião especialista",
-    objective: "Resolva situações mais difíceis.",
-    tip: "Proteja informações pessoais.",
-  };
-}
-private showStartScreen() {
-  this.clearOverlay();
+  private startTimerOnce() {
+    if (this.hasStartedTimer) return;
 
-  this.levelStarted = false;
-  this.input.enabled = true;
+    this.hasStartedTimer = true;
+    this.startTimer();
+  }
 
-  const info = this.getLevelInstructions();
+  private getLevelInstructions() {
+    if (this.levelConfig.level === 1) {
+      return {
+        title: "Nível 1 - Proteja seus dados",
+        objective: "Escolha atitudes seguras em situações digitais.",
+        tip: "Leia com atenção antes de responder.",
+      };
+    }
 
-  this.addOverlayObject(
-    this.add.rectangle(640, 360, 1280, 720, 0xeff6ff, 0.98).setDepth(300)
-  );
+    if (this.levelConfig.level === 2) {
+      return {
+        title: "Nível 2 - Atenção aos riscos",
+        objective: "Identifique comportamentos perigosos.",
+        tip: "Pense antes de clicar ou compartilhar.",
+      };
+    }
 
-  this.addOverlayObject(
-    this.add.text(640, 115, "🛡️", {
-      fontSize: "64px",
-      fontFamily: "Arial",
-      padding: {
-        top: 18,
-        bottom: 18,
-        left: 18,
-        right: 18,
-      },
-    })
-      .setOrigin(0.5)
-      .setDepth(301)
-  );
-
-  this.addOverlayObject(
-    this.add.text(640, 210, info.title, {
-      fontSize: "44px",
-      fontFamily: "Arial Black, Arial",
-      color: "#1d4ed8",
-      stroke: "#ffffff",
-      strokeThickness: 6,
-      align: "center",
-      wordWrap: { width: 920 },
-    })
-      .setOrigin(0.5)
-      .setDepth(301)
-  );
-
-  this.addOverlayObject(
-    this.add.rectangle(640, 380, 900, 230, 0xffffff, 0.92)
-      .setStrokeStyle(5, 0x60a5fa)
-      .setDepth(301)
-  );
-
-  this.addOverlayObject(
-    this.add.text(640, 335, `🎯 ${info.objective}`, {
-      fontSize: "28px",
-      fontFamily: "Arial Black, Arial",
-      color: "#334155",
-      align: "center",
-      wordWrap: { width: 760 },
-    })
-      .setOrigin(0.5)
-      .setDepth(302)
-  );
-
-  this.addOverlayObject(
-    this.add.text(640, 430, `💡 ${info.tip}`, {
-      fontSize: "24px",
-      fontFamily: "Arial",
-      color: "#475569",
-      align: "center",
-      wordWrap: { width: 760 },
-    })
-      .setOrigin(0.5)
-      .setDepth(302)
-  );
-
-  const button = this.addOverlayObject(
-    this.add.rectangle(640, 585, 330, 70, 0x2563eb, 1)
-      .setStrokeStyle(4, 0xffffff)
-      .setInteractive({ useHandCursor: true })
-      .setDepth(302)
-  );
-
-  const buttonText = this.addOverlayObject(
-    this.add.text(640, 585, "Iniciar nível", {
-      fontSize: "28px",
-      fontFamily: "Arial Black, Arial",
-      color: "#ffffff",
-    })
-      .setOrigin(0.5)
-      .setDepth(303)
-  );
-
-  const start = () => {
-    this.playClick();
+    return {
+      title: "Nível 3 - Guardião especialista",
+      objective: "Resolva situações mais difíceis.",
+      tip: "Proteja informações pessoais.",
+    };
+  }
+  private showStartScreen() {
     this.clearOverlay();
 
-    if (this.levelConfig.level === 1) {
-      this.showTutorialStep(0);
-      return;
-    }
+    this.levelStarted = false;
+    this.input.enabled = true;
 
-    this.levelStarted = true;
-  };
+    const info = this.getLevelInstructions();
 
-  button.on("pointerdown", start);
+    this.addOverlayObject(
+      this.add.rectangle(640, 360, 1280, 720, 0xeff6ff, 0.98).setDepth(300)
+    );
 
-  buttonText.setInteractive({ useHandCursor: true });
-  buttonText.on("pointerdown", start);
-}
+    this.addOverlayObject(
+      this.add.text(640, 115, "🛡️", {
+        fontSize: "64px",
+        fontFamily: "Arial",
+        padding: {
+          top: 18,
+          bottom: 18,
+          left: 18,
+          right: 18,
+        },
+      })
+        .setOrigin(0.5)
+        .setDepth(301)
+    );
 
-private showTutorialStep(stepIndex: number) {
-  this.clearOverlay();
+    this.addOverlayObject(
+      this.add.text(640, 210, info.title, {
+        fontSize: "44px",
+        fontFamily: "Arial Black, Arial",
+        color: "#1d4ed8",
+        stroke: "#ffffff",
+        strokeThickness: 6,
+        align: "center",
+        wordWrap: { width: 920 },
+      })
+        .setOrigin(0.5)
+        .setDepth(301)
+    );
 
-  const steps = [
-    {
-      title: "Leia a situação",
-      description: "Observe o problema apresentado.",
-      emoji: "👀",
-    },
-    {
-      title: "Escolha com segurança",
-      description: "Escolha a atitude mais segura.",
-      emoji: "🛡️",
-    },
-    {
-      title: "Aprenda com o feedback",
-      description: "Leia a explicação depois da resposta.",
-      emoji: "✅",
-    },
-  ];
+    this.addOverlayObject(
+      this.add.rectangle(640, 380, 900, 230, 0xffffff, 0.92)
+        .setStrokeStyle(5, 0x60a5fa)
+        .setDepth(301)
+    );
 
-  const step = steps[stepIndex];
-  const isLast = stepIndex >= steps.length - 1;
+    this.addOverlayObject(
+      this.add.text(640, 335, `🎯 ${info.objective}`, {
+        fontSize: "28px",
+        fontFamily: "Arial Black, Arial",
+        color: "#334155",
+        align: "center",
+        wordWrap: { width: 760 },
+      })
+        .setOrigin(0.5)
+        .setDepth(302)
+    );
 
-  this.addOverlayObject(
-    this.add.rectangle(640, 360, 1280, 720, 0x000000, 0.72)
-      .setDepth(400)
-  );
+    this.addOverlayObject(
+      this.add.text(640, 430, `💡 ${info.tip}`, {
+        fontSize: "24px",
+        fontFamily: "Arial",
+        color: "#475569",
+        align: "center",
+        wordWrap: { width: 760 },
+      })
+        .setOrigin(0.5)
+        .setDepth(302)
+    );
 
-  this.addOverlayObject(
-    this.add.rectangle(640, 300, 880, 270, 0xffffff, 1)
-      .setStrokeStyle(6, 0x2563eb)
-      .setDepth(401)
-  );
+    const button = this.addOverlayObject(
+      this.add.rectangle(640, 585, 330, 70, 0x2563eb, 1)
+        .setStrokeStyle(4, 0xffffff)
+        .setInteractive({ useHandCursor: true })
+        .setDepth(302)
+    );
 
-  this.addOverlayObject(
-    this.add.text(640, 225, step.emoji, {
-      fontSize: "64px",
-      fontFamily: "Arial",
-      padding: {
-        top: 14,
-        bottom: 14,
-      },
-    })
-      .setOrigin(0.5)
-      .setDepth(402)
-  );
+    const buttonText = this.addOverlayObject(
+      this.add.text(640, 585, "Iniciar nível", {
+        fontSize: "28px",
+        fontFamily: "Arial Black, Arial",
+        color: "#ffffff",
+      })
+        .setOrigin(0.5)
+        .setDepth(303)
+    );
 
-  this.addOverlayObject(
-    this.add.text(640, 300, step.title, {
-      fontSize: "38px",
-      fontFamily: "Arial Black, Arial",
-      color: "#1d4ed8",
-      align: "center",
-    })
-      .setOrigin(0.5)
-      .setDepth(402)
-  );
-
-  this.addOverlayObject(
-    this.add.text(640, 370, step.description, {
-      fontSize: "24px",
-      fontFamily: "Arial",
-      color: "#334155",
-      align: "center",
-      wordWrap: { width: 620 },
-    })
-      .setOrigin(0.5)
-      .setDepth(402)
-  );
-
-  const button = this.addOverlayObject(
-    this.add.rectangle(1020, 300, 80, 80, 0x2563eb, 1)
-      .setStrokeStyle(4, 0xffffff)
-      .setInteractive({ useHandCursor: true })
-      .setDepth(403)
-  );
-
-  const buttonText = this.addOverlayObject(
-    this.add.text(1020, 300, isLast ? "▶" : "→", {
-      fontSize: "40px",
-      fontFamily: "Arial Black, Arial",
-      color: "#ffffff",
-    })
-      .setOrigin(0.5)
-      .setDepth(404)
-  );
-
-  const next = () => {
-    this.playClick();
-
-    if (isLast) {
+    const start = () => {
+      this.playClick();
       this.clearOverlay();
+
+      if (this.levelConfig.level === 1) {
+        this.showTutorialStep(0);
+        return;
+      }
+
       this.levelStarted = true;
-      return;
-    }
+    };
 
-    this.showTutorialStep(stepIndex + 1);
-  };
+    button.on("pointerdown", start);
 
-  button.on("pointerdown", next);
+    buttonText.setInteractive({ useHandCursor: true });
+    buttonText.on("pointerdown", start);
+  }
 
-  buttonText.setInteractive({ useHandCursor: true });
-  buttonText.on("pointerdown", next);
-}
+  private showTutorialStep(stepIndex: number) {
+    this.clearOverlay();
+
+    const steps = [
+      {
+        title: "Leia a situação",
+        description: "Observe o problema apresentado.",
+        emoji: "👀",
+      },
+      {
+        title: "Escolha com segurança",
+        description: "Escolha a atitude mais segura.",
+        emoji: "🛡️",
+      },
+      {
+        title: "Aprenda com o feedback",
+        description: "Leia a explicação depois da resposta.",
+        emoji: "✅",
+      },
+    ];
+
+    const step = steps[stepIndex];
+    const isLast = stepIndex >= steps.length - 1;
+
+    this.addOverlayObject(
+      this.add.rectangle(640, 360, 1280, 720, 0x000000, 0.72)
+        .setDepth(400)
+    );
+
+    this.addOverlayObject(
+      this.add.rectangle(640, 300, 880, 270, 0xffffff, 1)
+        .setStrokeStyle(6, 0x2563eb)
+        .setDepth(401)
+    );
+
+    this.addOverlayObject(
+      this.add.text(640, 225, step.emoji, {
+        fontSize: "64px",
+        fontFamily: "Arial",
+        padding: {
+          top: 14,
+          bottom: 14,
+        },
+      })
+        .setOrigin(0.5)
+        .setDepth(402)
+    );
+
+    this.addOverlayObject(
+      this.add.text(640, 300, step.title, {
+        fontSize: "38px",
+        fontFamily: "Arial Black, Arial",
+        color: "#1d4ed8",
+        align: "center",
+      })
+        .setOrigin(0.5)
+        .setDepth(402)
+    );
+
+    this.addOverlayObject(
+      this.add.text(640, 370, step.description, {
+        fontSize: "24px",
+        fontFamily: "Arial",
+        color: "#334155",
+        align: "center",
+        wordWrap: { width: 620 },
+      })
+        .setOrigin(0.5)
+        .setDepth(402)
+    );
+
+    const button = this.addOverlayObject(
+      this.add.rectangle(1020, 300, 80, 80, 0x2563eb, 1)
+        .setStrokeStyle(4, 0xffffff)
+        .setInteractive({ useHandCursor: true })
+        .setDepth(403)
+    );
+
+    const buttonText = this.addOverlayObject(
+      this.add.text(1020, 300, isLast ? "▶" : "→", {
+        fontSize: "40px",
+        fontFamily: "Arial Black, Arial",
+        color: "#ffffff",
+      })
+        .setOrigin(0.5)
+        .setDepth(404)
+    );
+
+    const next = () => {
+      this.playClick();
+
+      if (isLast) {
+        this.clearOverlay();
+        this.levelStarted = true;
+        return;
+      }
+
+      this.showTutorialStep(stepIndex + 1);
+    };
+
+    button.on("pointerdown", next);
+
+    buttonText.setInteractive({ useHandCursor: true });
+    buttonText.on("pointerdown", next);
+  }
 
   private createBackground() {
     this.cameras.main.setBackgroundColor("#f8fbff");
@@ -375,12 +376,12 @@ private showTutorialStep(stepIndex: number) {
       });
     });
 
-      const cornerIcons = [
-  { x: 140, y: 160, icon: "🛡️" },
-  { x: 1120, y: 180, icon: "🔒" },
-  { x: 170, y: 585, icon: "💻" },
-  { x: 1080, y: 575, icon: "📱" },
-];
+    const cornerIcons = [
+      { x: 140, y: 160, icon: "🛡️" },
+      { x: 1120, y: 180, icon: "🔒" },
+      { x: 170, y: 585, icon: "💻" },
+      { x: 1080, y: 575, icon: "📱" },
+    ];
 
     cornerIcons.forEach((item, index) => {
       const icon = this.add
@@ -569,13 +570,13 @@ private showTutorialStep(stepIndex: number) {
 
     this.markStory(
       this.add.text(640, 558, scene.situation, {
-          fontSize: "25px",
-          fontFamily: "Arial Black, Arial",
-          color: "#0f172a",
-          align: "center",
-          wordWrap: { width: 910 },
-          lineSpacing: 4,
-        })
+        fontSize: "25px",
+        fontFamily: "Arial Black, Arial",
+        color: "#0f172a",
+        align: "center",
+        wordWrap: { width: 910 },
+        lineSpacing: 4,
+      })
         .setOrigin(0.5)
         .setDepth(13)
     );
@@ -672,15 +673,114 @@ private showTutorialStep(stepIndex: number) {
     }
   }
 
+  private createInstructionsButton() {
+    const button = this.add.circle(1220, 60, 24, 0xffffff, 0.9)
+      .setStrokeStyle(3, 0x2563eb)
+      .setInteractive({ useHandCursor: true })
+      .setDepth(30);
+
+    const icon = this.add.text(1220, 60, "?", {
+      fontSize: "24px",
+      fontFamily: "Arial Black, Arial",
+      color: "#2563eb",
+    }).setOrigin(0.5).setDepth(31);
+
+    const openInstructions = () => {
+      this.playClick();
+      this.showInstructionsPopup();
+    };
+
+    button.on("pointerdown", openInstructions);
+    icon.setInteractive({ useHandCursor: true });
+    icon.on("pointerdown", openInstructions);
+  }
+
+  private showInstructionsPopup() {
+    this.clearOverlay();
+
+    const info = this.getLevelInstructions();
+
+    this.addOverlayObject(
+      this.add.rectangle(640, 360, 1280, 720, 0x000000, 0.65).setDepth(400)
+    );
+
+    this.addOverlayObject(
+      this.add.rectangle(640, 360, 700, 400, 0xffffff, 0.96)
+        .setStrokeStyle(4, 0x2563eb)
+        .setDepth(401)
+    );
+
+    this.addOverlayObject(
+      this.add.text(640, 200, "📘 " + info.title, {
+        fontSize: "34px",
+        fontFamily: "Arial Black, Arial",
+        color: "#1d4ed8",
+        align: "center",
+        wordWrap: { width: 600 },
+      }).setOrigin(0.5).setDepth(402)
+    );
+
+    this.addOverlayObject(
+      this.add.text(640, 300, info.objective, {
+        fontSize: "22px",
+        fontFamily: "Arial",
+        color: "#334155",
+        align: "center",
+        wordWrap: { width: 600 },
+      }).setOrigin(0.5).setDepth(402)
+    );
+
+    this.addOverlayObject(
+      this.add.text(640, 370, info.tip, {
+        fontSize: "20px",
+        fontFamily: "Arial",
+        color: "#475569",
+        align: "center",
+        wordWrap: { width: 600 },
+      }).setOrigin(0.5).setDepth(402)
+    );
+
+    const closeButton = this.addOverlayObject(
+      this.add.rectangle(640, 475, 160, 50, 0x2563eb)
+        .setStrokeStyle(2, 0xffffff)
+        .setInteractive({ useHandCursor: true })
+        .setDepth(403)
+    );
+
+    const closeText = this.addOverlayObject(
+      this.add.text(640, 475, "Fechar", {
+        fontSize: "22px",
+        fontFamily: "Arial Black, Arial",
+        color: "#ffffff",
+      }).setOrigin(0.5).setDepth(404)
+    );
+
+    const close = () => {
+      this.playClick();
+      this.clearOverlay();
+    };
+
+    closeButton.on("pointerdown", close);
+    closeText.setInteractive({ useHandCursor: true });
+    closeText.on("pointerdown", close);
+  }
+
   private handleChoice(choice: SafetyChoice, scene: SafetyScene) {
     if (!this.levelStarted) return;
-if (this.answeredCurrentScene) return;
+    if (this.answeredCurrentScene) return;
 
-this.playClick();
-this.startTimerOnce();
+    this.playClick();
+    this.startTimerOnce();
 
     this.answeredCurrentScene = true;
     this.clearStoryLayer();
+
+    // Overlay escuro para limpar a tela e destacar apenas o feedback
+    const overlay = this.add.rectangle(640, 360, 1280, 720, 0x000000, 0.55)
+      .setDepth(90);
+    this.markDynamic(overlay);
+
+    const destroyOverlay = () => overlay.destroy();
 
     if (choice.isSafe) {
       this.hits += 1;
@@ -697,7 +797,10 @@ this.startTimerOnce();
       this.showFeedback(choice.feedback, 0x22c55e, "🛡️");
       this.emitProgress();
 
-      this.time.delayedCall(2000, () => this.goToNextScene());
+      this.time.delayedCall(2000, () => {
+        destroyOverlay();
+        this.goToNextScene();
+      });
       return;
     }
 
@@ -715,6 +818,7 @@ this.startTimerOnce();
     this.emitProgress();
 
     this.time.delayedCall(1800, () => {
+      destroyOverlay();
       if (this.levelStarted) this.renderCurrentScene();
     });
   }
@@ -1297,14 +1401,14 @@ this.startTimerOnce();
     const goNext = () => {
       this.playClick();
 
-  this.levelStarted = false;
-  this.hasStartedTimer = false;
+      this.levelStarted = false;
+      this.hasStartedTimer = false;
 
-  this.timerEvent?.destroy();
-  this.timerEvent = undefined;
+      this.timerEvent?.destroy();
+      this.timerEvent = undefined;
 
-  this.scene.restart({ level: nextLevel });
-};
+      this.scene.restart({ level: nextLevel });
+    };
 
     button.on("pointerdown", goNext);
     button.on("pointerover", () => button.setFillStyle(0x15803d));
