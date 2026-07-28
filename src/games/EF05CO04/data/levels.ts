@@ -61,12 +61,20 @@ export const LEVELS: LevelConfig[] = [
                 goalLabel: 'Chegar na escola',
                 scenarios: [S({ semaforoVerde: true }), S({ semaforoVerde: false })],
                 given: [
-                    { kind: 'se', condition: 'semaforo_verde', entao: ['andar', 'andar'], senao: ['esperar'] },
+                    {
+                        kind: 'se', condition: 'semaforo_verde',
+                        entao: ['andar', 'andar'],
+                        senao: ['esperar', 'andar', 'andar'],
+                    },
                 ],
                 solution: [
-                    { kind: 'se', condition: 'semaforo_verde', entao: ['andar', 'andar'], senao: ['esperar'] },
+                    {
+                        kind: 'se', condition: 'semaforo_verde',
+                        entao: ['andar', 'andar'],
+                        senao: ['esperar', 'andar', 'andar'],
+                    },
                 ],
-                explanation: 'A mesma regra serve para os dois casos: quando está verde ela atravessa, quando não está ela espera na calçada.',
+                explanation: 'A mesma regra serve para os dois casos: com verde ela atravessa direto; com vermelho ela espera primeiro e só depois atravessa.',
             },
             {
                 id: 'l1-c2',
@@ -122,14 +130,14 @@ export const LEVELS: LevelConfig[] = [
                 ],
                 start: at(2, 3), startDir: 0, goal: at(2, 1),
                 goalLabel: 'Entrar na biblioteca',
-                scenarios: [S({ temChave: true, portaAberta: false }), S({ temChave: false, portaAberta: false })],
+                scenarios: [S({ temChave: true, portaAberta: false }), S({ temChave: false, portaAberta: true })],
                 given: [
                     { kind: 'acao', action: 'andar' },
-                    { kind: 'se', condition: 'tem_chave', entao: ['abrir', 'andar'], senao: ['esperar'] },
+                    { kind: 'se', condition: 'tem_chave', entao: ['abrir', 'andar'], senao: ['andar'] },
                 ],
                 solution: [
                     { kind: 'acao', action: 'andar' },
-                    { kind: 'se', condition: 'tem_chave', entao: ['abrir', 'andar'], senao: ['esperar'] },
+                    { kind: 'se', condition: 'tem_chave', entao: ['abrir', 'andar'], senao: ['andar'] },
                 ],
                 explanation: 'Aqui a condição não olha para a cidade, e sim para a mochila. Sem a chave, sobra o SENÃO.',
             },

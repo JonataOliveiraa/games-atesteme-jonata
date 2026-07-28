@@ -10,17 +10,18 @@ export interface Rect { x: number; y: number; w: number; h: number }
 export const cx = (r: Rect) => r.x + r.w / 2
 export const cy = (r: Rect) => r.y + r.h / 2
 
-// ── Tabuleiro (esquerda) ──────────────────────────────────────────────────
+export const BOARD_AREA = { left: 16, right: 706, top: 96, bottom: 712 }
 
-export const BOARD_AREA = { left: 20, right: 700, top: 92, bottom: 700 }
+/** Faixa reservada ABAIXO do tabuleiro para o rótulo do objetivo. */
+export const LABEL_BAND = 48
 
 const AREA_W = BOARD_AREA.right - BOARD_AREA.left
-const AREA_H = BOARD_AREA.bottom - BOARD_AREA.top
+const AREA_H = BOARD_AREA.bottom - BOARD_AREA.top - LABEL_BAND
 
 export const BOARD_CX = (BOARD_AREA.left + BOARD_AREA.right) / 2
 
 export const tileSize = (ch: CityChallenge) =>
-    Math.floor(Math.min(AREA_W / ch.width, (AREA_H - 46) / ch.height, 116))
+    Math.floor(Math.min(AREA_W / ch.width, AREA_H / ch.height, 124))
 
 export function boardOrigin(ch: CityChallenge) {
     const t = tileSize(ch)
@@ -31,8 +32,18 @@ export function boardOrigin(ch: CityChallenge) {
         boardW,
         boardH,
         x: BOARD_AREA.left + (AREA_W - boardW) / 2 + t / 2,
-        y: BOARD_AREA.top + 46 + (AREA_H - 46 - boardH) / 2 + t / 2,
+        y: BOARD_AREA.top + (AREA_H - boardH) / 2 + t / 2,
     }
+}
+
+export function boardBottom(ch: CityChallenge) {
+    const o = boardOrigin(ch)
+    return o.y - o.tile / 2 + o.boardH
+}
+
+export function boardTop(ch: CityChallenge) {
+    const o = boardOrigin(ch)
+    return o.y - o.tile / 2
 }
 
 export function cellCenter(ch: CityChallenge, c: number, r: number) {
@@ -41,37 +52,30 @@ export function cellCenter(ch: CityChallenge, c: number, r: number) {
 }
 
 export const PROP_SCALE: Record<string, number> = {
-    escola: 1.45,
-    mercado: 1.45,
-    padaria: 1.45,
-    biblioteca: 1.45,
-    semaforo: 1.15,
-    porta: 0.86,
-    pedra: 0.72,
-    item: 0.56,
+    escola: 1.2,
+    mercado: 1.2,
+    padaria: 1.2,
+    biblioteca: 1.2,
+    semaforo: 1.05,
+    porta: 0.9,
+    pedra: 0.78,
+    item: 0.6,
 }
 
-// ── Painel do programa (direita) ──────────────────────────────────────────
-
-export const PANEL: Rect & { r: number } = { x: 716, y: 88, w: 548, h: 616, r: 26 }
-
+export const PANEL: Rect & { r: number } = { x: 720, y: 86, w: 544, h: 620, r: 26 }
 export const PANEL_TITLE_Y = 116
-
-export const SCRIPT: Rect = { x: 732, y: 138, w: 516, h: 302 }
-
-export const ROW_H = 46
-export const ROW_GAP = 6
-export const INDENT = 26
+export const SCRIPT: Rect = { x: 736, y: 140, w: 512, h: 300 }
+export const ROW_H = 52
+export const ROW_GAP = 7
+export const INDENT = 28
 
 export const SCROLLBAR_W = 10
-
 export const SCROLLBAR: Rect = {
     x: SCRIPT.x + SCRIPT.w - SCROLLBAR_W - 8,
     y: SCRIPT.y + 10,
     w: SCROLLBAR_W,
     h: SCRIPT.h - 20,
 }
-
 export function rowRect(index: number, depth = 0): Rect {
     return {
         x: SCRIPT.x + 12 + depth * INDENT,
@@ -80,21 +84,18 @@ export function rowRect(index: number, depth = 0): Rect {
         h: ROW_H,
     }
 }
-
 export const scriptContentHeight = (rows: number) =>
     rows * (ROW_H + ROW_GAP) + 20
 
-// ── Bandeja e controles ───────────────────────────────────────────────────
-
-export const TRAY_LABEL_Y = 460
+export const TRAY_LABEL_Y = 462
 
 export function trayGrid(count: number): Rect[] {
     const cols = count > 4 ? 3 : 2
     const gap = 10
     const x0 = SCRIPT.x
-    const y0 = 476
+    const y0 = 478
     const w = Math.floor((SCRIPT.w - gap * (cols - 1)) / cols)
-    const h = 60
+    const h = count > 4 ? 62 : 70
     return Array.from({ length: count }, (_, i) => ({
         x: x0 + (i % cols) * (w + gap),
         y: y0 + Math.floor(i / cols) * (h + gap),
@@ -103,15 +104,13 @@ export function trayGrid(count: number): Rect[] {
     }))
 }
 
-export const BTN_RUN: Rect = { x: 732, y: 630, w: 318, h: 58 }
-export const BTN_RESET: Rect = { x: 1064, y: 630, w: 184, h: 58 }
+export const BTN_RUN: Rect = { x: 736, y: 634, w: 314, h: 62 }
+export const BTN_RESET: Rect = { x: 1064, y: 634, w: 184, h: 62 }
 
 export const VF_BUTTONS: [Rect, Rect] = [
-    { x: 732, y: 476, w: 252, h: 138 },
-    { x: 996, y: 476, w: 252, h: 138 },
+    { x: 736, y: 478, w: 250, h: 148 },
+    { x: 998, y: 478, w: 250, h: 148 },
 ]
-
-// ── Layout resolvido por modo ─────────────────────────────────────────────
 
 export interface ProgramLayout {
     script: Rect

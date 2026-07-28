@@ -449,13 +449,17 @@ export class GameScene extends Phaser.Scene {
     private buildGoalLabel() {
         const g = this.add.graphics()
         const label = this.add.text(0, 0, this.challenge.goalLabel, {
-            fontFamily: 'Arial Black, Arial', fontSize: '16px', color: CSS.creme,
-            stroke: CSS.borda, strokeThickness: 4,
+            fontFamily: 'Arial Black, Arial', fontSize: '20px', color: CSS.creme,
+            stroke: CSS.borda, strokeThickness: 5,
         }).setOrigin(0.5).setResolution(2)
 
-        const w = label.width + 40
-        const rect: L.Rect = { x: L.BOARD_CX - w / 2, y: L.BOARD_AREA.top + 2, w, h: 38 }
-        this.drawCard(g, rect, C.escuro, C.amarelo, 19)
+        const w = label.width + 56
+        const rect: L.Rect = {
+            x: L.BOARD_CX - w / 2,
+            y: L.boardBottom(this.challenge) + 18,
+            w, h: 44,
+        }
+        this.drawCard(g, rect, C.escuro, C.amarelo, 22)
         label.setPosition(L.cx(rect), L.cy(rect))
 
         this.boardLayer.add([g, label])
@@ -511,7 +515,7 @@ export class GameScene extends Phaser.Scene {
 
     private panelLabel(y: number, label: string) {
         const t = this.add.text(L.PANEL.x + 30, y, label, {
-            fontFamily: 'Arial Black, Arial', fontSize: '14px', color: CSS.claro,
+            fontFamily: 'Arial Black, Arial', fontSize: '16px', color: CSS.claro,
             stroke: CSS.borda, strokeThickness: 3,
         }).setOrigin(0, 0.5).setResolution(2)
         this.panelLayer.add(t)
@@ -676,17 +680,17 @@ export class GameScene extends Phaser.Scene {
 
         if (icon.kind === 'seta') {
             return this.add.image(x, y, 'icon-seta')
-                .setDisplaySize(28, 28)
+                .setDisplaySize(32, 32)
                 .setAngle(icon.angle)
         }
-        const img = this.add.image(x, y, icon.key).setDisplaySize(30, 30)
+        const img = this.add.image(x, y, icon.key).setDisplaySize(34, 34)
         if (icon.frame !== undefined) img.setFrame(icon.frame)
         return img
     }
 
     private rowText(rect: L.Rect, label: string, color: string, left = 52) {
         return this.add.text(rect.x + left, L.cy(rect), label, {
-            fontFamily: 'Arial Black, Arial', fontSize: '15px', color,
+            fontFamily: 'Arial Black, Arial', fontSize: '17px', color,
             stroke: CSS.borda, strokeThickness: 3,
             wordWrap: { width: rect.w - left - 16 },
         }).setOrigin(0, 0.5).setResolution(2)
@@ -696,8 +700,8 @@ export class GameScene extends Phaser.Scene {
     private paintHexSlot(g: Phaser.GameObjects.Graphics, rect: L.Rect, cond: ConditionId | null) {
         const cxp = rect.x + 30
         const cyp = L.cy(rect)
-        const rw = 22
-        const rh = 16
+        const rw = 24
+        const rh = 18
 
         const pts = [
             { x: cxp - rw, y: cyp },
@@ -718,7 +722,7 @@ export class GameScene extends Phaser.Scene {
 
     private hexIcon(rect: L.Rect, cond: ConditionId) {
         const icon = CONDITION_ICON[cond]
-        const img = this.add.image(rect.x + 30, L.cy(rect), icon.key).setDisplaySize(24, 24)
+        const img = this.add.image(rect.x + 30, L.cy(rect), icon.key).setDisplaySize(28, 28)
         if (icon.frame !== undefined) img.setFrame(icon.frame)
         return img
     }
@@ -873,15 +877,15 @@ export class GameScene extends Phaser.Scene {
         const left = hideIcon ? 16 : 46
 
         if (!hideIcon) {
-            const icon = this.add.image(rect.x + 26, L.cy(rect), iconKey)
-                .setDisplaySize(30, 30).setAngle(angle)
+            const icon = this.add.image(rect.x + 28, L.cy(rect), iconKey)
+                .setDisplaySize(34, 34).setAngle(angle)
             if (iconFrame !== undefined) icon.setFrame(iconFrame)
             parts.push(icon)
         }
 
         const label = this.add.text(rect.x + left, L.cy(rect), text, {
-            fontFamily: 'Arial Black, Arial', fontSize: '14px', color: CSS.creme,
-            stroke: CSS.borda, strokeThickness: 3,
+            fontFamily: 'Arial Black, Arial', fontSize: '16px', color: CSS.creme,
+            stroke: CSS.borda, strokeThickness: 4,
             wordWrap: { width: rect.w - left - 12 },
         }).setOrigin(0, 0.5).setResolution(2)
         parts.push(label)
@@ -903,13 +907,13 @@ export class GameScene extends Phaser.Scene {
             const g = this.add.graphics()
             this.drawCard(g, rect, color, C.creme, 24)
 
-            const t1 = this.add.text(L.cx(rect), L.cy(rect) - 22, title, {
-                fontFamily: 'Arial Black, Arial', fontSize: '30px', color: CSS.creme,
-                stroke: CSS.borda, strokeThickness: 6,
+            const t1 = this.add.text(L.cx(rect), L.cy(rect) - 26, title, {
+                fontFamily: 'Arial Black, Arial', fontSize: '38px', color: CSS.creme,
+                stroke: CSS.borda, strokeThickness: 7,
             }).setOrigin(0.5).setResolution(2)
 
-            const t2 = this.add.text(L.cx(rect), L.cy(rect) + 24, sub, {
-                fontFamily: 'Arial', fontStyle: 'bold', fontSize: '15px', color: CSS.creme,
+            const t2 = this.add.text(L.cx(rect), L.cy(rect) + 28, sub, {
+                fontFamily: 'Arial', fontStyle: 'bold', fontSize: '17px', color: CSS.creme,
                 stroke: CSS.borda, strokeThickness: 3, align: 'center',
                 wordWrap: { width: rect.w - 30 },
             }).setOrigin(0.5).setResolution(2)
@@ -1089,9 +1093,9 @@ export class GameScene extends Phaser.Scene {
             return
         }
 
-        const y = L.BOARD_AREA.top + 62
+        const y = L.boardTop(this.challenge) + 24
         const g = this.add.graphics().setDepth(80)
-        const rect: L.Rect = { x: L.BOARD_CX - 150, y, w: 300, h: 56 }
+        const rect: L.Rect = { x: L.BOARD_CX - 160, y, w: 320, h: 60 }
 
         const t = this.add.text(L.cx(rect), L.cy(rect), `Cenário ${i + 1} de ${total}`, {
             fontFamily: 'Arial Black, Arial', fontSize: '22px', color: CSS.creme,
@@ -1285,9 +1289,10 @@ export class GameScene extends Phaser.Scene {
             })
         }
 
-        const x = L.BOARD_AREA.right - 32 - this.bagIcons.length * 42
-        const icon = this.add.image(x, L.BOARD_AREA.top + 24, 'itens', ITEM_FRAME[item])
-            .setDisplaySize(36, 36).setDepth(220).setScale(0)
+        const o = L.boardOrigin(this.challenge)
+        const x = o.x - o.tile / 2 + o.boardW - 32 - this.bagIcons.length * 46
+        const icon = this.add.image(x, L.boardTop(this.challenge) + 32, 'itens', ITEM_FRAME[item])
+            .setDisplaySize(42, 42).setDepth(220).setScale(0)
         this.bagIcons.push(icon)
         this.tweens.add({ targets: icon, scale: 1, duration: 260, ease: 'Back.easeOut' })
     }
@@ -1308,10 +1313,20 @@ export class GameScene extends Phaser.Scene {
         this.bubble = this.speechBubble(`${answer} → ${ramo}`, color, step.condition, big)
     }
 
+    private liveIcon(cond: ConditionId): { key: string; frame?: number } {
+        if (cond === 'semaforo_verde') {
+            return { key: this.envNow.semaforoVerde ? 'semaforo-verde' : 'semaforo-vermelho' }
+            }
+        if (cond === 'porta_aberta') {
+            return { key: this.envNow.portaAberta ? 'porta-aberta' : 'porta-fechada' }
+        }
+        return CONDITION_ICON[cond]
+    }
+
     private speechBubble(text: string, color: number, cond: ConditionId, big = false) {
         const box = this.add.container(0, 0).setDepth(230)
         const label = this.add.text(0, 0, text, {
-            fontFamily: 'Arial Black, Arial', fontSize: big ? '20px' : '17px', color: CSS.creme,
+            fontFamily: 'Arial Black, Arial', fontSize: big ? '24x' : '20px', color: CSS.creme,
             stroke: CSS.borda, strokeThickness: 4, align: 'center',
             wordWrap: { width: 300 },
         }).setOrigin(0.5).setResolution(2)
@@ -1327,8 +1342,9 @@ export class GameScene extends Phaser.Scene {
         g.lineBetween(-12, h / 2, 0, h / 2 + 16)
         g.lineBetween(12, h / 2, 0, h / 2 + 16)
 
-        const icon = this.add.image(-w / 2 + 30, 0, CONDITION_ICON[cond].key).setDisplaySize(30, 30)
-        if (CONDITION_ICON[cond].frame !== undefined) icon.setFrame(CONDITION_ICON[cond].frame!)
+        const li = this.liveIcon(cond)
+        const icon = this.add.image(-w / 2 + 30, 0, li.key).setDisplaySize(34, 34)
+        if (li.frame !== undefined) icon.setFrame(li.frame)
         label.setX(14)
 
         box.add([g, icon, label])
@@ -1388,17 +1404,15 @@ export class GameScene extends Phaser.Scene {
         }
     }
 
-    // ══════════════════════════════════════════════════════════════════════
-    //  RESULTADO
-    // ══════════════════════════════════════════════════════════════════════
-
-    private finishScenario() {
+private finishScenario() {
         const res = this.result
         if (!res) return
 
         this.hideBubble()
 
-        if (res.outcome !== 'chegou') {
+        const stepwise = this.challenge.mode === 'prever-decisao'
+
+        if (res.outcome !== 'chegou' && !stepwise) {
             this.setPose(POSE.confuso)
             this.registerError()
             this.showToast(outcomeMessage(res.outcome), false)
@@ -1683,10 +1697,12 @@ export class GameScene extends Phaser.Scene {
     }
 
     private showToast(message: string, good: boolean) {
-        const panel = this.add.container(L.BOARD_CX, L.BOARD_AREA.bottom - 46).setDepth(90)
+        const panel = this.add
+            .container(L.BOARD_CX, L.boardBottom(this.challenge) - 58)
+            .setDepth(90)
 
         const text = this.add.text(0, 0, message, {
-            fontFamily: 'Arial Black, Arial', fontSize: '16px', color: CSS.creme,
+            fontFamily: 'Arial Black, Arial', fontSize: '18px', color: CSS.creme,
             stroke: CSS.borda, strokeThickness: 4,
             align: 'center', wordWrap: { width: 600 },
         }).setOrigin(0.5).setResolution(2)
