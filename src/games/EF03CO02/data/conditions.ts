@@ -162,9 +162,8 @@ export function simulate(ch: MazeChallenge, program: Program): SimulationResult 
         final: state,
         iterations,
     }
-}
+}   
 
-/** Texto da condição pronto para a pastilha: "Enquanto o caminho estiver livre". */
 export function conditionSentence(id: ConditionId): string {
     return `Enquanto ${CONDITION_LABELS[id]}`
 }

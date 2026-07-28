@@ -5,6 +5,7 @@ import { gameBridge } from '../../../shared/bridge/gameBridge';
 import type { PlatformCommand } from '../../../shared/contracts/platformCommands';
 import { LEVELS } from '../data/levels';
 import type { AlgorithmCard, AlgorithmLevel } from '../types';
+import { showLevelComplete } from '../data/showLevelComplete';
 
 type AlgorithmStep = AlgorithmCard & {
   correctOrder: number | null;
@@ -664,7 +665,6 @@ export class GameScene extends Phaser.Scene {
     this.testButton.input.cursor = enabled ? 'pointer' : 'default';
   }
 
-  // DEPOIS
   private showLevelCompleteScreen(nextLevel: 2 | 3) {
     showLevelComplete(this, {
       subtitle: 'Nível concluído',

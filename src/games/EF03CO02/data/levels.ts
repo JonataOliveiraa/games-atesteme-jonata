@@ -3,9 +3,6 @@ import type { LevelConfig } from '../types'
 const at = (c: number, r: number) => ({ c, r })
 
 export const LEVELS: LevelConfig[] = [
-    // ═══════════════════════════════════════════════════════════════════════
-    //  NÍVEL 1 — o laço já está montado; a criança prevê cada verificação
-    // ═══════════════════════════════════════════════════════════════════════
     {
         level: 1,
         title: 'Verdadeiro ou falso?',
@@ -88,13 +85,13 @@ export const LEVELS: LevelConfig[] = [
             {
                 id: 'l2-c2',
                 mode: 'escolher-condicao',
-                width: 5, height: 6,
-                start: at(2, 5), startDir: 0, goal: at(2, 1),
+                width: 5, height: 5,
+                start: at(2, 4), startDir: 0, goal: at(2, 1),
                 walls: [],
-                given: { condition: 'passos_menos_de_4', setup: [], body: ['avancar'] },
-                conditionOptions: ['caminho_livre', 'passos_menos_de_2', 'passos_menos_de_4'],
-                solution: { condition: 'passos_menos_de_4', setup: [], body: ['avancar'] },
-                explanation: 'Sem parede nenhuma, o caminho livre iria até o fim do tabuleiro. Contar 4 passos era o que faltava.',
+                given: { condition: 'passos_menos_de_3', setup: [], body: ['avancar'] },
+                conditionOptions: ['caminho_livre', 'passos_menos_de_2', 'passos_menos_de_3'],
+                solution: { condition: 'passos_menos_de_3', setup: [], body: ['avancar'] },
+                explanation: 'Sem parede nenhuma, o caminho livre iria até o fim do tabuleiro. Contar 3 passos era o que faltava.',
             },
             {
                 id: 'l2-c3',
@@ -121,7 +118,7 @@ export const LEVELS: LevelConfig[] = [
             {
                 id: 'l2-c5',
                 mode: 'escolher-condicao',
-                width: 7, height: 6,
+                width: 7, height: 5,
                 start: at(0, 1), startDir: 2, goal: at(4, 1),
                 walls: [at(6, 1)],
                 given: { condition: 'nao_no_objetivo', setup: ['virar-esq'], body: ['avancar'] },
@@ -180,7 +177,7 @@ export const LEVELS: LevelConfig[] = [
             {
                 id: 'l3-c4',
                 mode: 'montar-programa',
-                width: 7, height: 6,
+                width: 7, height: 5,
                 start: at(0, 4), startDir: 1, goal: at(0, 2),
                 walls: [at(2, 4), at(4, 1), at(2, 0)],
                 allowedActions: ['avancar', 'virar-dir', 'virar-esq'],
@@ -192,7 +189,7 @@ export const LEVELS: LevelConfig[] = [
             {
                 id: 'l3-c5',
                 mode: 'montar-programa',
-                width: 8, height: 6,
+                width: 8, height: 5,
                 start: at(5, 4), startDir: 0, goal: at(2, 4),
                 walls: [at(1, 4), at(5, 1), at(3, 2), at(7, 3)],
                 allowedActions: ['avancar', 'virar-dir', 'virar-esq'],
