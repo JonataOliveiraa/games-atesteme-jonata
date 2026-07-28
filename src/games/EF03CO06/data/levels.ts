@@ -31,8 +31,8 @@ export const LEVELS: InterfaceLevel[] = [
     timeLimit: 25,
     devices: ["microphone", "speaker"],
     slots: [
-      { id: "input", label: "Entrada 🎙", accepts: ["microphone"] },
-      { id: "output", label: "Saída 🔊", accepts: ["speaker"] },
+      { id: "input", label: "Entrada", accepts: ["microphone"] },
+      { id: "output", label: "Saída", accepts: ["speaker"] },
     ],
     successMessage: "O microfone captura o som e envia ao computador (entrada). O alto-falante recebe o som do computador e reproduz para a pessoa ouvir (saída).",
     hint: "Áudio: microfone → entra. Alto-falante → sai.",
@@ -44,8 +44,8 @@ export const LEVELS: InterfaceLevel[] = [
     timeLimit: 28,
     devices: ["camera", "monitor"],
     slots: [
-      { id: "input", label: "Entrada 📷", accepts: ["camera"] },
-      { id: "output", label: "Saída 🖥", accepts: ["monitor"] },
+      { id: "input", label: "Entrada", accepts: ["camera"] },
+      { id: "output", label: "Saída", accepts: ["monitor"] },
     ],
     successMessage: "A câmera captura a imagem e envia ao computador (entrada). O monitor recebe a imagem do computador e a exibe para a pessoa ver (saída).",
     hint: "Vídeo: câmera → entra. Monitor → sai.",
@@ -57,8 +57,8 @@ export const LEVELS: InterfaceLevel[] = [
     timeLimit: 35,
     devices: ["keyboard", "mouse", "monitor", "printer"],
     slots: [
-      { id: "input", label: "Entrada ⌨", accepts: ["keyboard", "mouse"] },
-      { id: "output", label: "Saída 🖨", accepts: ["monitor", "printer"] },
+      { id: "input", label: "Entrada", accepts: ["keyboard", "mouse"] },
+      { id: "output", label: "Saída", accepts: ["monitor", "printer"] },
     ],
     successMessage: "Teclado e mouse enviam comandos ao computador (entrada). O monitor exibe o resultado na tela e a impressora imprime no papel (saída).",
     hint: "Periféricos: teclado e mouse → entram. Monitor e impressora → saem.",

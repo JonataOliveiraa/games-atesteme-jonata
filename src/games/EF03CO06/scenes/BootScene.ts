@@ -11,6 +11,9 @@ import deviceMouseUrl from "../../../assets/games/EF03CO06/device-mouse.png";
 import hwMonitorUrl from "../../../assets/games/EF02CO04/hw-monitor.png";
 import hwPrinterUrl from "../../../assets/games/EF02CO04/hw-printer.png";
 import hwSpeakerUrl from "../../../assets/games/EF02CO04/hw-speaker.png";
+import iconAudioUrl from "../../../assets/games/EF03CO06/icon-audio.png";
+import iconVideoUrl from "../../../assets/games/EF03CO06/icon-video.png";
+import iconPeriferUrl from "../../../assets/games/EF03CO06/icon-periferico.png";
 
 export class BootScene extends Phaser.Scene {
   constructor() {
@@ -30,6 +33,9 @@ export class BootScene extends Phaser.Scene {
     this.load.image("device-monitor", hwMonitorUrl);
     this.load.image("device-printer", hwPrinterUrl);
     this.load.image("device-speaker", hwSpeakerUrl);
+    this.load.image("icon-audio", iconAudioUrl);
+    this.load.image("icon-video", iconVideoUrl);
+    this.load.image("icon-periferico", iconPeriferUrl);
   }
 
   create() {
