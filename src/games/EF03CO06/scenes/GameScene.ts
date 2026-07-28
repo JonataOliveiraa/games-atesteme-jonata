@@ -30,6 +30,12 @@ const LEVEL_CATEGORIES: Record<number, { icon: string; label: string; color: num
   3: { icon: "⌨", label: "Periféricos", color: COLORS.green },
 };
 
+const LEVEL_ICON_KEYS: Record<number, string> = {
+  1: "icon-audio",
+  2: "icon-video",
+  3: "icon-periferico",
+};
+
 const DEVICE_TEXTURES: Partial<Record<DeviceId, string>> = {
   camera: "device-camera",
   controller: "device-controller",
@@ -246,40 +252,55 @@ export class GameScene extends Phaser.Scene {
   }
 
   private createComputerPanel() {
-    this.drawPanel(300, 124, 680, 82, COLORS.blue, 1);
+    const PX = 300, PY = 116, PW = 680, PH = 100;
+    const panelCX = PX + PW / 2;  // 640
+    const panelCY = PY + PH / 2;  // 166
 
-    const monitor = this.add.graphics().setDepth(6);
+    this.drawPanel(PX, PY, PW, PH, COLORS.blue, 1);
+
+    const ctr = this.add.container(panelCX, panelCY).setDepth(7);
+
+    // Title: 20px below panel top
+    const titleY = -PH / 2 + 20;  // container: -30, world: 136
+
+    // Arrow row: 32px below title, centred in the remaining space
+    const arrowY = titleY + 32;   // container: 2, world: 168
+
+    // Monitor icon — centred on arrow row, well within panel bounds
+    const monitor = this.add.graphics();
+    const mW = 60, mH = 34;
     monitor.fillStyle(0x1e293b, 0.95);
-    monitor.fillRoundedRect(584, 144, 112, 48, 12);
-    monitor.fillStyle(0x7dd3fc, 0.85);
-    monitor.fillRoundedRect(594, 153, 92, 25, 8);
-    monitor.fillStyle(0x334155, 1);
-    monitor.fillRoundedRect(626, 192, 28, 10, 5);
-    monitor.fillRoundedRect(608, 201, 64, 8, 4);
+    monitor.fillRoundedRect(-mW / 2, arrowY - mH / 2, mW, mH, 7);
+    monitor.fillStyle(0x7dd3fc, 0.9);
+    monitor.fillRoundedRect(-mW / 2 + 5, arrowY - mH / 2 + 5, mW - 10, mH - 10, 5);
 
-    this.addSharpText(640, 136, "Computador", {
-      fontSize: "20px",
+    const titleText = this.addSharpText(0, titleY, "Computador", {
+      fontSize: "18px",
       fontFamily: "Arial Black, Arial",
       color: "#ffffff",
       stroke: "#1e3a8a",
       strokeThickness: 4,
-    }).setOrigin(0.5).setDepth(7);
+    }).setOrigin(0.5);
 
-    this.addSharpText(480, 168, "ENTRA →", {
-      fontSize: "22px",
+    const textOffsetX = PW / 4;  // 170
+
+    const enterText = this.addSharpText(-textOffsetX, arrowY, "ENTRA →", {
+      fontSize: "20px",
       fontFamily: "Arial Black, Arial",
       color: "#ffffff",
       stroke: "#2563eb",
       strokeThickness: 5,
-    }).setOrigin(0.5).setDepth(7);
+    }).setOrigin(0.5);
 
-    this.addSharpText(800, 168, "→ SAI", {
-      fontSize: "22px",
+    const exitText = this.addSharpText(textOffsetX, arrowY, "→ SAI", {
+      fontSize: "20px",
       fontFamily: "Arial Black, Arial",
       color: "#ffffff",
       stroke: "#f59e0b",
       strokeThickness: 5,
-    }).setOrigin(0.5).setDepth(7);
+    }).setOrigin(0.5);
+
+    ctr.add([monitor, titleText, enterText, exitText]);
   }
 
   private createSlotsPanel() {
@@ -304,8 +325,9 @@ export class GameScene extends Phaser.Scene {
     g.fillRoundedRect(x - SLOT_W / 2 + 16, y - SLOT_H / 2 + 12, SLOT_W - 32, 34, 16);
     g.lineStyle(6, colors[index % colors.length], 0.9);
     g.strokeRoundedRect(x - SLOT_W / 2, y - SLOT_H / 2, SLOT_W, SLOT_H, 22);
-    this.addSharpText(x, y - 96, label, {
-      fontSize: "26px",
+    // Centered in the white header strip (strip top = y - SLOT_H/2 + 12, height 34)
+    this.addSharpText(x, y - SLOT_H / 2 + 29, label, {
+      fontSize: "21px",
       fontFamily: "Arial Black, Arial",
       color: "#25327a",
       stroke: "#ffffff",
@@ -327,7 +349,7 @@ export class GameScene extends Phaser.Scene {
     const startX = 640 - ((this.devices.length - 1) * spacing) / 2;
     this.devices.forEach((id, index) => {
       const x = startX + index * spacing;
-      const y = 554;
+      const y = 538;
       const { card, hitbox } = this.createDeviceCard(id, x, y);
       this.cards.set(id, { id, card, hitbox, homeX: x, homeY: y, slotId: null });
     });
@@ -549,11 +571,12 @@ export class GameScene extends Phaser.Scene {
       stroke: "#ffffff",
       strokeThickness: 5,
     }).setOrigin(0.5);
-    const subtitle = this.addSharpText(0, -82, `Nível ${lvl} concluído  —  ${cat.icon} ${cat.label}`, {
+    const subtitleIcon = this.fitImage(this.add.image(-130, -82, LEVEL_ICON_KEYS[lvl]), 26, 26).setOrigin(0.5);
+    const subtitle = this.addSharpText(-102, -82, `Nível ${lvl} concluído  —  ${cat.label}`, {
       fontSize: "22px",
       fontFamily: "Arial Black, Arial",
       color: this.toCssColor(cat.color),
-    }).setOrigin(0.5);
+    }).setOrigin(0, 0.5);
     const learnedTexts: Record<number, string> = {
       1: "Microfone → entra  •  Alto-falante → sai",
       2: "Câmera → entra  •  Monitor → sai",
@@ -578,7 +601,7 @@ export class GameScene extends Phaser.Scene {
       chipBg.fillRoundedRect(-84, -28, 168, 56, 16);
       chipBg.lineStyle(3, 0xffffff, isDone || isNext ? 1 : 0.5);
       chipBg.strokeRoundedRect(-84, -28, 168, 56, 16);
-      const chipIcon = this.addSharpText(-30, 0, catDef.icon, { fontSize: "20px" }).setOrigin(0.5);
+      const chipIcon = this.fitImage(this.add.image(-30, 0, LEVEL_ICON_KEYS[level]), 26, 26).setOrigin(0.5);
       const chipLabel = this.addSharpText(16, -5, catDef.label, {
         fontSize: "14px",
         fontFamily: "Arial Black, Arial",
@@ -603,7 +626,7 @@ export class GameScene extends Phaser.Scene {
       color: "#94a3b8",
     }).setOrigin(0.5);
 
-    modal.add([shadow, bg, topBar, title, subtitle, learned, ...chips, waitText]);
+    modal.add([shadow, bg, topBar, title, subtitleIcon, subtitle, learned, ...chips, waitText]);
     this.animateModal(modal);
     this.time.delayedCall(3500, () => this.showNextLevelStartTransition(nextLevel));
   }
@@ -617,7 +640,7 @@ export class GameScene extends Phaser.Scene {
     overlay.setInteractive();
     const modal = this.createModalBase(640, 360, cat.color);
 
-    const catIcon = this.addSharpText(0, -118, cat.icon, { fontSize: "52px" }).setOrigin(0.5);
+    const catIcon = this.fitImage(this.add.image(0, -118, LEVEL_ICON_KEYS[nextLevel]), 64, 64).setOrigin(0.5);
     const nextLabel = this.addSharpText(0, -64, `Próximo:  ${cat.label}`, {
       fontSize: "28px",
       fontFamily: "Arial Black, Arial",
@@ -721,18 +744,19 @@ export class GameScene extends Phaser.Scene {
       badge.fillRoundedRect(-54, -42, 108, 84, 18);
       badge.lineStyle(4, 0xffffff, 0.95);
       badge.strokeRoundedRect(-54, -42, 108, 84, 18);
-      const catIconText = this.addSharpText(0, -18, catDef.icon, { fontSize: "26px" }).setOrigin(0.5);
-      const catLabelText = this.addSharpText(0, 12, catDef.label, {
-        fontSize: "12px",
+      const iconKey = LEVEL_ICON_KEYS[level];
+      const catIconImg = this.fitImage(this.add.image(0, -16, iconKey), 52, 38).setOrigin(0.5);
+      const catLabelText = this.addSharpText(0, 16, catDef.label, {
+        fontSize: "13px",
         fontFamily: "Arial Black, Arial",
         color: "#ffffff",
       }).setOrigin(0.5);
-      const checkText = this.addSharpText(0, 32, "✓ ok", {
-        fontSize: "10px",
+      const checkText = this.addSharpText(0, 34, "✓ ok", {
+        fontSize: "11px",
         fontFamily: "Arial Black, Arial",
         color: "rgba(255,255,255,0.85)",
       }).setOrigin(0.5);
-      item.add([badge, catIconText, catLabelText, checkText]);
+      item.add([badge, catIconImg, catLabelText, checkText]);
       return item;
     });
     const playAgain = this.createFinalButton(-158, 138, "Jogar novamente", COLORS.green, () => this.scene.restart({ level: 1 }));
