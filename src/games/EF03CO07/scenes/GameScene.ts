@@ -11,10 +11,10 @@ const MODAL_SCALE = 1.14;
 
 // Layout constants
 const CHIP_PANEL_Y   = 108; // chip panels top (inside browser panel)
-const CHIP_PANEL_H   = 116; // panel height (label 24px + chip 88px + padding)
+const CHIP_PANEL_H   = 136; // panel height (label 24px + gap 24px + chip 88px)
 const CHIP_H         = 88;  // chip height — mobile-first minimum
-const CHIP_Y         = 174; // chip center y (128 to 218 = 90px ≈ 88)
-const RESULT_Y_START = 238; // top of first result card
+const CHIP_Y         = 192; // chip center y (148 to 236) — clear of label at y=126
+const RESULT_Y_START = 252; // top of first result card
 const RESULT_H       = 112; // result card height (mobile-first minimum)
 const RESULT_STEP    = 122; // height + gap
 const VALIDATE_Y     = 662; // validate button center
