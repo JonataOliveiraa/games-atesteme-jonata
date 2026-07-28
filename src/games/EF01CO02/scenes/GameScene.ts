@@ -9,10 +9,10 @@ import { showLevelComplete } from '../../../shared/level/showLevelComplete';
 
 const GAME_ID = 'trilha-do-passo-a-passo';
 const VISIBLE_SLOTS = 3;
-const ROBOT_W = 336;
-const ROBOT_H = 480;
-const ROBOT_CENTER_Y_RATIO = 0.63;   // centro vertical do robô
-const ORDER_PANEL_Y = 125;           // linha dos ícones de ordem
+const ROBOT_W = 436;
+const ROBOT_H = 580;
+const ROBOT_CENTER_Y_RATIO = 0.55;   // centro vertical do robô
+const ORDER_PANEL_Y = 155;           // linha dos ícones de ordem
 const TRAY_CENTER_Y_RATIO = 0.54;    // centro vertical da bandeja
 
 const COLORS = {
@@ -146,7 +146,7 @@ export class GameScene extends Phaser.Scene {
         const { width, height } = this.scale;
         this.isGameStarted = true;
 
-        this.createRobot(width * 0.68, height * ROBOT_CENTER_Y_RATIO);
+        this.createRobot(width * 0.80, height * ROBOT_CENTER_Y_RATIO);
         this.createTray(width * 0.20, height * TRAY_CENTER_Y_RATIO);
         this.createOrderPanel(width);
         this.createTimerBar(width);
@@ -170,7 +170,7 @@ export class GameScene extends Phaser.Scene {
 
         const panelW = n * 52 + (n - 1) * 44 + 90;
         const slotsCount = Math.min(VISIBLE_SLOTS, n);
-        const trayH = slotsCount * 130 + (slotsCount - 1) * 22 + 30;
+        const trayH = slotsCount * 130 + (slotsCount - 1) * 22 + 55;
         const trayX = width * 0.20;
         const trayY = height * TRAY_CENTER_Y_RATIO;
         const robotX = width * 0.68;
@@ -255,12 +255,12 @@ export class GameScene extends Phaser.Scene {
     private createOrderPanel(width: number) {
         const y = ORDER_PANEL_Y;
 
-        this.add.text(width / 2, y - 40, 'Monte nesta ordem:', {
+        this.add.text(width / 2, y - 70, 'Monte nesta ordem:', {
             fontSize: '20px', fontFamily: 'Arial Black, Arial', color: '#ffffff',
             stroke: '#1f2937', strokeThickness: 4,
         }).setOrigin(0.5).setDepth(20);
 
-        const ICON = 52, GAP = 44;
+        const ICON = 70, GAP = 44;
         const n = this.missingParts.length;
         const totalW = n * ICON + (n - 1) * GAP;
         const startX = width / 2 - totalW / 2 + ICON / 2;
@@ -383,7 +383,6 @@ export class GameScene extends Phaser.Scene {
             this.robotContainer.add(anchor);
         });
 
-        // Overlays de "brilho" — só para as peças que faltam
         this.missingParts.forEach((partId) => {
             const glow = this.add.image(0, 0, ROBOT_PARTS[partId].anchorGlowAssetKey)
                 .setDisplaySize(ROBOT_W, ROBOT_H).setAlpha(0);
@@ -399,10 +398,9 @@ export class GameScene extends Phaser.Scene {
         });
     }
 
-    // DEPOIS
     private createTray(cx: number, cyStart: number) {
         const slotsCount = Math.min(VISIBLE_SLOTS, this.missingParts.length);
-        const CARD_H = 130, GAP = 22;
+        const CARD_H = 160, GAP = 22;
         const totalH = slotsCount * CARD_H + (slotsCount - 1) * GAP;
         const startY = cyStart - totalH / 2 + CARD_H / 2;
 
@@ -448,9 +446,8 @@ export class GameScene extends Phaser.Scene {
         const container = this.add.container(x, animateIn ? y + 70 : y).setDepth(10);
         if (animateIn) container.setAlpha(0);
 
-        // DEPOIS
         const icon = this.add.image(0, -20, def.cardAssetKey)
-            .setDisplaySize(104, 104)
+            .setDisplaySize(134, 134)
             .setFlipX(this.isMirroredPart(partId));
         const label = this.add.text(0, 52, def.label, {
             fontSize: '17px', fontFamily: 'Arial Black, Arial', color: '#1a73e8',
