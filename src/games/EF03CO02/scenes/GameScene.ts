@@ -1,6 +1,7 @@
 import Phaser from 'phaser'
 import { EventBus } from '../../../shared/EventBus'
 import { runtimeGameBridge } from '../../../shared/bridge/runtimeGameBridge'
+import { createTutorial, type TutorialStep } from '../../../shared/tutorial/createTutorial'
 import type { PlatformCommand } from '../../../shared/contracts/platformCommands'
 import { LEVELS } from '../data/levels'
 import { C, CSS } from '../data/theme'
@@ -15,7 +16,6 @@ import * as L from '../data/layout'
 import type {
     ActionId,
     ConditionId,
-    Coord,
     LevelConfig,
     MazeChallenge,
     Program,
@@ -26,7 +26,8 @@ import type {
 const GAME_ID = 'labirinto-do-enquanto'
 const MAX_CONSECUTIVE_ERRORS = 3
 
-type Phase = 'montando' | 'prevendo' | 'rodando'
+type Phase = 'montando' | 'rodando'
+type SlotKind = 'setup' | 'body'
 
 interface SlotView {
     rect: L.Rect
@@ -42,16 +43,13 @@ export class GameScene extends Phaser.Scene {
     private errors = 0
     private consecutiveErrors = 0
     private points = 0
-    private isMuted = false
     private phase: Phase = 'montando'
-    private showIntro = false
 
     // ── Programa em construção ──
     private condition: ConditionId | null = null
     private setup: ActionId[] = []
     private body: ActionId[] = []
-    private selectedSlot: { kind: 'setup' | 'body'; index: number } | null = null
-    private predictedCell: Coord | null = null
+    private selectedSlot: { kind: SlotKind; index: number } | null = null
 
     // ── Execução ──
     private trace: TraceStep[] = []
@@ -62,15 +60,14 @@ export class GameScene extends Phaser.Scene {
     // ── Camadas e objetos ──
     private boardLayer!: Phaser.GameObjects.Container
     private trailLayer!: Phaser.GameObjects.Container
-    private trayLayer!: Phaser.GameObjects.Container
+    private panelLayer!: Phaser.GameObjects.Container
     private overlay: Phaser.GameObjects.GameObject[] = []
 
     private robot?: Phaser.GameObjects.Image
     private robotGlow?: Phaser.GameObjects.Image
     private badge?: Phaser.GameObjects.Image
-    private predictFlag?: Phaser.GameObjects.Image
-    private fogTiles = new Map<string, Phaser.GameObjects.Image>()
 
+    private lay!: L.ProgramLayout
     private chipBg!: Phaser.GameObjects.Graphics
     private chipIcon!: Phaser.GameObjects.Image
     private chipText!: Phaser.GameObjects.Text
@@ -84,7 +81,7 @@ export class GameScene extends Phaser.Scene {
         super({ key: 'GameScene' })
     }
 
-    init(data: { level?: number; points?: number; showIntro?: boolean }) {
+    init(data: { level?: number; points?: number }) {
         const lvl = (data?.level ?? 1) as 1 | 2 | 3
         this.levelConfig = LEVELS.find(l => l.level === lvl) ?? LEVELS[0]
         this.challengeIndex = 0
@@ -93,19 +90,16 @@ export class GameScene extends Phaser.Scene {
         this.consecutiveErrors = 0
         this.points = data?.points ?? 0
         this.phase = 'montando'
-        this.showIntro = data?.showIntro ?? false
         this.condition = null
         this.setup = []
         this.body = []
         this.selectedSlot = null
-        this.predictedCell = null
         this.trace = []
         this.traceIndex = 0
         this.result = undefined
         this.robotAngle = 0
         this.setupViews = []
         this.bodyViews = []
-        this.fogTiles = new Map()
         this.overlay = []
     }
 
@@ -118,31 +112,24 @@ export class GameScene extends Phaser.Scene {
 
         this.boardLayer = this.add.container(0, 0).setDepth(10)
         this.trailLayer = this.add.container(0, 0).setDepth(11)
-        this.trayLayer = this.add.container(0, 0).setDepth(21)
+        this.panelLayer = this.add.container(0, 0).setDepth(20)
 
-        this.buildPanelChrome()
         this.registerPlatformCommands()
+        EventBus.on('show-tutorial', () => this.runTutorial(true, () => { }), this)
 
-        EventBus.on('mute-audio', (m: boolean) => { this.isMuted = m }, this)
-        EventBus.on('show-tutorial', () => this.showTutorial(), this)
+        this.events.once('shutdown', () => {
+            this.clearOverlay()
+            EventBus.off('show-tutorial', undefined, this)
+            this.unsubPlatform?.()
+            this.unsubPlatform = undefined
+        })
 
         runtimeGameBridge.emit({ type: 'GAME_READY', gameId: GAME_ID })
         this.emitCheckpoint()
 
-        if (this.showIntro) {
-            this.showLevelStart(() => this.startChallenge())
-        } else {
-            this.startChallenge()
-            if (this.levelConfig.level === 1) this.showTutorial()
-        }
-    }
-
-    shutdown() {
-        this.clearOverlay()
-        EventBus.off('mute-audio', undefined, this)
-        EventBus.off('show-tutorial', undefined, this)
-        this.unsubPlatform?.()
-        this.unsubPlatform = undefined
+        // Desenha o desafio primeiro: o tutorial aponta para peças reais na tela.
+        this.startChallenge()
+        this.showLevelStart(() => this.runTutorial(false, () => { }))
     }
 
     // ══════════════════════════════════════════════════════════════════════
@@ -152,29 +139,42 @@ export class GameScene extends Phaser.Scene {
     private startChallenge() {
         const ch = this.challenge
 
-        this.phase = ch.predictStop ? 'prevendo' : 'montando'
+        this.phase = 'montando'
         this.condition = ch.mode === 'escolher-condicao' ? null : (ch.given?.condition ?? null)
         this.setup = [...(ch.given?.setup ?? [])]
         this.body = [...(ch.given?.body ?? [])]
         this.selectedSlot = null
-        this.predictedCell = null
         this.trace = []
         this.traceIndex = 0
         this.result = undefined
 
         this.drawBoard()
-        this.refreshProgram()
-        this.buildTray()
+        this.buildPanel()
+
+        // No nível 1 o programa já está pronto: a simulação roda de saída e a
+        // criança só responde às verificações, uma de cada vez.
+        if (ch.mode === 'prever-condicao') this.prepareStepwiseRun()
+
         this.broadcastMission()
     }
 
+    private prepareStepwiseRun() {
+        const program = this.buildProgram()
+        if (!program) return
+        this.result = simulate(this.challenge, program)
+        this.trace = this.result.trace
+        this.traceIndex = 0
+        while (this.trace[this.traceIndex] && this.trace[this.traceIndex].kind !== 'verificar') {
+            this.traceIndex++
+        }
+    }
+
     private broadcastMission() {
-        const ch = this.challenge
+        const mode = this.challenge.mode
         const instruction =
-            ch.mode === 'prever-condicao' ? 'A condição é verdadeira ou falsa agora?'
-                : ch.mode === 'escolher-condicao' ? 'Escolha a condição que para o robô na estrela'
-                    : this.phase === 'prevendo' ? 'Plante a bandeirinha onde o robô vai parar'
-                        : 'Monte o programa e execute'
+            mode === 'prever-condicao' ? 'A condição é verdadeira ou falsa agora?'
+                : mode === 'escolher-condicao' ? 'Escolha a condição que para o robô na estrela'
+                    : 'Monte o programa e toque em EXECUTAR'
 
         EventBus.emit('mission-update', {
             level: this.levelConfig.level,
@@ -207,15 +207,12 @@ export class GameScene extends Phaser.Scene {
     private drawBoard() {
         this.boardLayer.removeAll(true)
         this.trailLayer.removeAll(true)
-        this.fogTiles.clear()
         this.robot?.destroy()
         this.robotGlow?.destroy()
         this.badge?.destroy()
-        this.predictFlag?.destroy()
         this.robot = undefined
         this.robotGlow = undefined
         this.badge = undefined
-        this.predictFlag = undefined
 
         const ch = this.challenge
         const o = L.boardOrigin(ch)
@@ -233,7 +230,6 @@ export class GameScene extends Phaser.Scene {
                 const isWall = ch.walls.some(w => w.c === c && w.r === r)
                 const isGoal = ch.goal.c === c && ch.goal.r === r
                 const isStart = ch.start.c === c && ch.start.r === r
-                const isFog = ch.hidden?.some(w => w.c === c && w.r === r) ?? false
 
                 const key = isWall ? 'tile-parede'
                     : isGoal ? 'tile-objetivo'
@@ -253,17 +249,6 @@ export class GameScene extends Phaser.Scene {
                     this.boardLayer.add(glow)
                     this.tweens.add({ targets: glow, alpha: 0.62, duration: 950, yoyo: true, repeat: -1 })
                 }
-
-                if (isFog) {
-                    const fog = this.add.image(p.x, p.y, 'tile-oculto').setDisplaySize(L.TILE, L.TILE)
-                    this.boardLayer.add(fog)
-                    this.fogTiles.set(`${c},${r}`, fog)
-                }
-
-                // Tocar na célula só serve para plantar a bandeirinha do palpite
-                const zone = this.add.zone(p.x, p.y, L.TILE, L.TILE).setInteractive({ useHandCursor: true })
-                zone.on('pointerdown', () => this.onTileTap(c, r))
-                this.boardLayer.add(zone)
             }
         }
 
@@ -288,142 +273,127 @@ export class GameScene extends Phaser.Scene {
             .setAlpha(0)
     }
 
-    private onTileTap(c: number, r: number) {
-        if (this.phase !== 'prevendo') return
+    // ══════════════════════════════════════════════════════════════════════
+    //  PAINEL DO PROGRAMA — redesenhado a cada desafio, só com o necessário
+    // ══════════════════════════════════════════════════════════════════════
+
+    private buildPanel() {
+        this.panelLayer.removeAll(true)
+        this.setupViews = []
+        this.bodyViews = []
+        this.runBtn = undefined
+
         const ch = this.challenge
-        if (ch.walls.some(w => w.c === c && w.r === r)) return
+        this.lay = L.programLayout(ch.mode)
+        const lay = this.lay
 
-        this.predictedCell = { c, r }
-        const p = L.cellCenter(ch, c, r)
-
-        if (!this.predictFlag) {
-            this.predictFlag = this.add.image(p.x, p.y - 14, 'marca-palpite')
-                .setDisplaySize(50, 50).setDepth(12)
-        }
-        this.predictFlag.setPosition(p.x, p.y - 14)
-        this.tweens.add({ targets: this.predictFlag, y: p.y - 24, duration: 170, yoyo: true })
-
-        this.playTick()
-        this.phase = 'montando'
-        this.broadcastMission()
-        this.refreshRunButton()
-    }
-
-    private revealFogAround(cell: { c: number; r: number }) {
-        const keys = [
-            `${cell.c + 1},${cell.r}`, `${cell.c - 1},${cell.r}`,
-            `${cell.c},${cell.r + 1}`, `${cell.c},${cell.r - 1}`,
-        ]
-        keys.forEach(key => {
-            const fog = this.fogTiles.get(key)
-            if (!fog) return
-            this.fogTiles.delete(key)
-            this.tweens.add({
-                targets: fog, alpha: 0, scale: fog.scale * 1.15, duration: 320,
-                onComplete: () => fog.destroy(),
-            })
-        })
-    }
-
-    // ══════════════════════════════════════════════════════════════════════
-    //  PAINEL DO PROGRAMA
-    // ══════════════════════════════════════════════════════════════════════
-
-    private buildPanelChrome() {
-        const g = this.add.graphics().setDepth(19)
+        const g = this.add.graphics()
         g.fillStyle(C.borda, 0.30)
         g.fillRoundedRect(L.PANEL.x + 5, L.PANEL.y + 7, L.PANEL.w, L.PANEL.h, L.PANEL.r)
         g.fillStyle(C.escuro, 0.94)
         g.fillRoundedRect(L.PANEL.x, L.PANEL.y, L.PANEL.w, L.PANEL.h, L.PANEL.r)
         g.lineStyle(4, C.claro, 0.75)
         g.strokeRoundedRect(L.PANEL.x, L.PANEL.y, L.PANEL.w, L.PANEL.h, L.PANEL.r)
+        this.panelLayer.add(g)
 
-        this.add.text(L.PANEL.x + L.PANEL.w / 2, L.PANEL_TITLE_Y, 'PROGRAMA', {
-            fontFamily: 'Arial Black, Arial', fontSize: '20px', color: CSS.amarelo,
-            stroke: CSS.borda, strokeThickness: 3,
-        }).setOrigin(0.5).setDepth(20).setResolution(2)
+        this.panelLayer.add(
+            this.add.text(L.PANEL.x + L.PANEL.w / 2, L.PANEL_TITLE_Y, 'PROGRAMA', {
+                fontFamily: 'Arial Black, Arial', fontSize: '20px', color: CSS.amarelo,
+                stroke: CSS.borda, strokeThickness: 3,
+            }).setOrigin(0.5).setResolution(2),
+        )
 
-        this.panelLabel(L.SETUP_LABEL_Y, 'ANTES DO LAÇO')
+        if (lay.setupSlots.length) {
+            this.panelLabel(lay.setupLabelY, 'ANTES DO LAÇO')
+            lay.setupSlots.forEach((rect, i) => this.setupViews.push(this.buildSlot(rect, 'setup', i)))
+        }
 
-        const wb = this.add.graphics().setDepth(19)
+        const wb = this.add.graphics()
         wb.fillStyle(C.normal, 0.55)
-        wb.fillRoundedRect(L.WHILE_BLOCK.x, L.WHILE_BLOCK.y, L.WHILE_BLOCK.w, L.WHILE_BLOCK.h, 16)
+        wb.fillRoundedRect(lay.whileBlock.x, lay.whileBlock.y, lay.whileBlock.w, lay.whileBlock.h, 16)
         wb.lineStyle(3, C.amarelo, 0.8)
-        wb.strokeRoundedRect(L.WHILE_BLOCK.x, L.WHILE_BLOCK.y, L.WHILE_BLOCK.w, L.WHILE_BLOCK.h, 16)
+        wb.strokeRoundedRect(lay.whileBlock.x, lay.whileBlock.y, lay.whileBlock.w, lay.whileBlock.h, 16)
+        this.panelLayer.add(wb)
 
         this.buildChip()
-        this.panelLabel(L.BODY_LABEL_Y, 'REPITA')
-        this.panelLabel(L.TRAY_LABEL_Y, 'PEÇAS')
+        this.panelLabel(lay.bodyLabelY, 'REPITA')
+        lay.bodySlots.forEach((rect, i) => this.bodyViews.push(this.buildSlot(rect, 'body', i)))
 
-        L.SETUP_SLOTS.forEach((rect, i) => this.setupViews.push(this.buildSlot(rect, 'setup', i)))
-        L.BODY_SLOTS.forEach((rect, i) => this.bodyViews.push(this.buildSlot(rect, 'body', i)))
-
+        this.panelLabel(lay.trayLabelY, lay.trayLabel)
+        this.buildTray()
         this.buildControls()
+
+        this.refreshProgram()
     }
 
     private panelLabel(y: number, label: string) {
-        return this.add.text(L.PANEL.x + 34, y, label, {
+        const t = this.add.text(L.PANEL.x + 34, y, label, {
             fontFamily: 'Arial Black, Arial', fontSize: '14px', color: CSS.claro,
             stroke: CSS.borda, strokeThickness: 2,
-        }).setOrigin(0, 0.5).setDepth(20).setResolution(2)
+        }).setOrigin(0, 0.5).setResolution(2)
+        this.panelLayer.add(t)
+        return t
     }
 
     private buildChip() {
-        this.chipBg = this.add.graphics().setDepth(20)
+        const chip = this.lay.chip
 
-        this.chipIcon = this.add.image(L.CHIP.x + 32, L.cy(L.CHIP), 'icon-cond-caminho')
-            .setDisplaySize(36, 36).setDepth(21).setVisible(false)
-
-        this.chipText = this.add.text(L.CHIP.x + 60, L.cy(L.CHIP), '', {
+        this.chipBg = this.add.graphics()
+        this.chipIcon = this.add.image(chip.x + 32, L.cy(chip), 'icon-cond-caminho')
+            .setDisplaySize(36, 36).setVisible(false)
+        this.chipText = this.add.text(chip.x + 60, L.cy(chip), '', {
             fontFamily: 'Arial Black, Arial', fontSize: '15px', color: CSS.creme,
-            wordWrap: { width: L.CHIP.w - 76 },
-        }).setOrigin(0, 0.5).setDepth(21).setResolution(2)
+            wordWrap: { width: chip.w - 76 },
+        }).setOrigin(0, 0.5).setResolution(2)
 
-        const zone = this.add.zone(L.cx(L.CHIP), L.cy(L.CHIP), L.CHIP.w, L.CHIP.h)
-            .setDepth(22).setInteractive({ useHandCursor: true })
+        const zone = this.add.zone(L.cx(chip), L.cy(chip), chip.w, chip.h)
+            .setInteractive({ useHandCursor: true })
         zone.on('pointerdown', () => {
             if (this.phase === 'rodando') return
             if (this.challenge.mode !== 'montar-programa') return
             this.openConditionPicker()
         })
+
+        this.panelLayer.add([this.chipBg, this.chipIcon, this.chipText, zone])
     }
 
     private paintChip() {
+        const chip = this.lay.chip
         const filled = this.condition !== null
+
         this.chipBg.clear()
         this.chipBg.fillStyle(filled ? C.amarelo : C.borda, filled ? 1 : 0.55)
-        this.chipBg.fillRoundedRect(L.CHIP.x, L.CHIP.y, L.CHIP.w, L.CHIP.h, 14)
+        this.chipBg.fillRoundedRect(chip.x, chip.y, chip.w, chip.h, 14)
         this.chipBg.lineStyle(3, filled ? C.creme : C.claro, filled ? 0.95 : 0.5)
-        this.chipBg.strokeRoundedRect(L.CHIP.x, L.CHIP.y, L.CHIP.w, L.CHIP.h, 14)
+        this.chipBg.strokeRoundedRect(chip.x, chip.y, chip.w, chip.h, 14)
 
         if (filled) {
             this.chipIcon.setTexture(CONDITION_ICON[this.condition!]).setVisible(true)
             this.chipText.setText(conditionSentence(this.condition!))
                 .setColor(CSS.borda)
-                .setX(L.CHIP.x + 60)
+                .setX(chip.x + 60)
         } else {
             this.chipIcon.setVisible(false)
             this.chipText.setText('Enquanto ...   toque para escolher')
                 .setColor(CSS.claro)
-                .setX(L.CHIP.x + 16)
+                .setX(chip.x + 16)
         }
     }
 
-    private buildSlot(rect: L.Rect, kind: 'setup' | 'body', index: number): SlotView {
-        const bg = this.add.graphics().setDepth(20)
-
+    private buildSlot(rect: L.Rect, kind: SlotKind, index: number): SlotView {
+        const bg = this.add.graphics()
         const icon = this.add.image(rect.x + 26, L.cy(rect), 'icon-avancar')
-            .setDisplaySize(28, 28).setDepth(21).setVisible(false)
-
+            .setDisplaySize(28, 28).setVisible(false)
         const label = this.add.text(rect.x + 48, L.cy(rect), '', {
             fontFamily: 'Arial Black, Arial', fontSize: '14px', color: CSS.creme,
             wordWrap: { width: rect.w - 60 },
-        }).setOrigin(0, 0.5).setDepth(21).setResolution(2)
+        }).setOrigin(0, 0.5).setResolution(2)
 
         const zone = this.add.zone(L.cx(rect), L.cy(rect), rect.w, rect.h)
-            .setDepth(22).setInteractive({ useHandCursor: true })
+            .setInteractive({ useHandCursor: true })
         zone.on('pointerdown', () => this.onSlotTap(kind, index))
 
+        this.panelLayer.add([bg, icon, label, zone])
         return { rect, bg, icon, label }
     }
 
@@ -431,7 +401,7 @@ export class GameScene extends Phaser.Scene {
      * Toque em slot vazio seleciona (fica esperando uma peça da bandeja);
      * toque em slot cheio devolve a peça. Sem arrastar — funciona melhor no toque.
      */
-    private onSlotTap(kind: 'setup' | 'body', index: number) {
+    private onSlotTap(kind: SlotKind, index: number) {
         if (this.phase === 'rodando') return
         if (this.challenge.mode !== 'montar-programa') return
 
@@ -487,7 +457,6 @@ export class GameScene extends Phaser.Scene {
     // ══════════════════════════════════════════════════════════════════════
 
     private buildTray() {
-        this.trayLayer.removeAll(true)
         const ch = this.challenge
 
         if (ch.mode === 'prever-condicao') {
@@ -498,7 +467,7 @@ export class GameScene extends Phaser.Scene {
         if (ch.mode === 'escolher-condicao') {
             const options = ch.conditionOptions ?? []
             options.forEach((cond, i) => this.buildTrayCard(
-                L.TRAY_SLOTS[i], CONDITION_ICON[cond], conditionSentence(cond),
+                this.lay.traySlots[i], CONDITION_ICON[cond], conditionSentence(cond),
                 () => { this.condition = cond; this.playTick(); this.refreshProgram() },
             ))
             return
@@ -506,12 +475,14 @@ export class GameScene extends Phaser.Scene {
 
         const actions = ch.allowedActions ?? []
         actions.forEach((action, i) => this.buildTrayCard(
-            L.TRAY_SLOTS[i], ACTION_ICON[action], ACTION_LABELS[action],
+            this.lay.traySlots[i], ACTION_ICON[action], ACTION_LABELS[action],
             () => this.placeAction(action),
         ))
     }
 
-    private buildTrayCard(rect: L.Rect, iconKey: string, text: string, onTap: () => void) {
+    private buildTrayCard(rect: L.Rect | undefined, iconKey: string, text: string, onTap: () => void) {
+        if (!rect) return
+
         const card = this.add.image(L.cx(rect), L.cy(rect), 'card-acao')
             .setDisplaySize(rect.w, rect.h)
         const icon = this.add.image(rect.x + 34, L.cy(rect), iconKey).setDisplaySize(34, 34)
@@ -531,7 +502,7 @@ export class GameScene extends Phaser.Scene {
             onTap()
         })
 
-        this.trayLayer.add([card, icon, label, zone])
+        this.panelLayer.add([card, icon, label, zone])
     }
 
     private buildVFButtons() {
@@ -542,12 +513,12 @@ export class GameScene extends Phaser.Scene {
             g.lineStyle(4, C.creme, 0.9)
             g.strokeRoundedRect(rect.x, rect.y, rect.w, rect.h, 18)
 
-            const title = this.add.text(L.cx(rect), L.cy(rect) - 12, label, {
-                fontFamily: 'Arial Black, Arial', fontSize: '24px', color: CSS.creme,
+            const title = this.add.text(L.cx(rect), L.cy(rect) - 14, label, {
+                fontFamily: 'Arial Black, Arial', fontSize: '26px', color: CSS.creme,
                 stroke: CSS.borda, strokeThickness: 4,
             }).setOrigin(0.5).setResolution(2)
 
-            const desc = this.add.text(L.cx(rect), L.cy(rect) + 17, sub, {
+            const desc = this.add.text(L.cx(rect), L.cy(rect) + 19, sub, {
                 fontFamily: 'Arial', fontStyle: 'bold', fontSize: '15px', color: CSS.creme,
                 stroke: CSS.borda, strokeThickness: 3,
             }).setOrigin(0.5).setResolution(2)
@@ -560,15 +531,16 @@ export class GameScene extends Phaser.Scene {
                 this.answerCondition(answer)
             })
 
-            this.trayLayer.add([g, title, desc, zone])
+            this.panelLayer.add([g, title, desc, zone])
         }
 
-        make(L.VF_BUTTONS[0], 'VERDADEIRA', 'o robô repete', C.verde, true)
-        make(L.VF_BUTTONS[1], 'FALSA', 'o laço para', C.vermelho, false)
+        const [first, second] = this.lay.vfButtons
+        make(first, 'VERDADEIRA', 'o robô repete', C.verde, true)
+        make(second, 'FALSA', 'o laço para', C.vermelho, false)
     }
 
     private placeAction(action: ActionId) {
-        const target = this.selectedSlot ?? this.firstEmptySlot()
+        const target = this.selectedSlot ?? this.defaultSlot(action)
         if (!target) return
 
         const list = target.kind === 'setup' ? this.setup : this.body
@@ -578,13 +550,18 @@ export class GameScene extends Phaser.Scene {
         this.refreshProgram()
     }
 
-    private firstEmptySlot(): { kind: 'setup' | 'body'; index: number } | null {
-        for (let i = 0; i < L.MAX_BODY; i++) {
-            if (this.body[i] === undefined) return { kind: 'body', index: i }
+    /** Curva cai naturalmente antes do laço; andar cai dentro dele. */
+    private defaultSlot(action: ActionId): { kind: SlotKind; index: number } | null {
+        const bodyFree = this.body[0] === undefined && this.bodyViews.length > 0
+        const setupFree = this.setup[0] === undefined && this.setupViews.length > 0
+
+        if (action === 'avancar') {
+            if (bodyFree) return { kind: 'body', index: 0 }
+            if (setupFree) return { kind: 'setup', index: 0 }
+            return null
         }
-        for (let i = 0; i < L.MAX_SETUP; i++) {
-            if (this.setup[i] === undefined) return { kind: 'setup', index: i }
-        }
+        if (setupFree) return { kind: 'setup', index: 0 }
+        if (bodyFree) return { kind: 'body', index: 0 }
         return null
     }
 
@@ -593,12 +570,16 @@ export class GameScene extends Phaser.Scene {
     // ══════════════════════════════════════════════════════════════════════
 
     private buildControls() {
-        this.runBtn = this.makeButton(L.BTN_RUN, 'EXECUTAR', C.verde, () => this.run())
-        this.makeButton(L.BTN_RESET, 'LIMPAR', C.normal, () => this.resetProgram())
+        if (this.lay.btnRun) {
+            this.runBtn = this.makeButton(this.lay.btnRun, 'EXECUTAR', C.verde, () => this.run())
+        }
+        if (this.lay.btnReset) {
+            this.makeButton(this.lay.btnReset, 'LIMPAR', C.normal, () => this.resetProgram())
+        }
     }
 
     private makeButton(rect: L.Rect, label: string, color: number, onClick: () => void) {
-        const container = this.add.container(L.cx(rect), L.cy(rect)).setDepth(23)
+        const container = this.add.container(L.cx(rect), L.cy(rect))
         const g = this.add.graphics()
         const text = this.add.text(0, 0, label, {
             fontFamily: 'Arial Black, Arial', fontSize: '19px', color: CSS.creme,
@@ -612,13 +593,14 @@ export class GameScene extends Phaser.Scene {
         this.paintButton(container, true)
 
         const zone = this.add.zone(L.cx(rect), L.cy(rect), rect.w, rect.h)
-            .setDepth(24).setInteractive({ useHandCursor: true })
+            .setInteractive({ useHandCursor: true })
         zone.on('pointerdown', () => {
             if (container.getData('disabled')) return
             this.tweens.add({ targets: container, scale: 0.96, duration: 70, yoyo: true })
             onClick()
         })
-        container.setData('zone', zone)
+
+        this.panelLayer.add([container, zone])
         return container
     }
 
@@ -639,28 +621,16 @@ export class GameScene extends Phaser.Scene {
 
     private refreshRunButton() {
         if (!this.runBtn) return
-        const ch = this.challenge
-
-        // No nível 1 quem comanda são os botões V/F — o Executar sai de cena
-        const hidden = ch.mode === 'prever-condicao'
-        this.runBtn.setVisible(!hidden)
-        const zone = this.runBtn.getData('zone') as Phaser.GameObjects.Zone | undefined
-        if (zone) zone.setActive(!hidden).setVisible(!hidden)
-
-        const needsPrediction = !!ch.predictStop && this.predictedCell === null
         const ready = this.condition !== null
             && this.body.filter(Boolean).length > 0
-            && !needsPrediction
             && this.phase !== 'rodando'
-
         this.paintButton(this.runBtn, ready)
     }
 
     private resetProgram() {
         if (this.phase === 'rodando') return
-        const ch = this.challenge
 
-        if (ch.mode === 'montar-programa') {
+        if (this.challenge.mode === 'montar-programa') {
             this.setup = []
             this.body = []
             this.condition = null
@@ -670,16 +640,7 @@ export class GameScene extends Phaser.Scene {
         this.trace = []
         this.traceIndex = 0
         this.playTick()
-
-        const keepGuess = this.predictedCell
         this.drawBoard()
-        this.predictedCell = keepGuess
-
-        if (keepGuess) {
-            const p = L.cellCenter(ch, keepGuess.c, keepGuess.r)
-            this.predictFlag = this.add.image(p.x, p.y - 14, 'marca-palpite')
-                .setDisplaySize(50, 50).setDepth(12)
-        }
         this.refreshProgram()
     }
 
@@ -711,19 +672,6 @@ export class GameScene extends Phaser.Scene {
     /** Nível 1: a criança responde antes de cada verificação. */
     private answerCondition(answer: boolean) {
         if (this.phase === 'rodando') return
-
-        if (!this.result) {
-            const program = this.buildProgram()
-            if (!program) return
-            this.result = simulate(this.challenge, program)
-            this.trace = this.result.trace
-            this.traceIndex = 0
-
-            // O setup roda antes da primeira pergunta
-            while (this.trace[this.traceIndex] && this.trace[this.traceIndex].kind !== 'verificar') {
-                this.traceIndex++
-            }
-        }
 
         const step = this.trace[this.traceIndex]
         if (!step || step.kind !== 'verificar') return
@@ -805,7 +753,6 @@ export class GameScene extends Phaser.Scene {
             const to = L.cellCenter(ch, step.after.c, step.after.r)
 
             this.dropTrail(from.x, from.y)
-            this.revealFogAround(step.after)
             this.playNote(600)
 
             const followers = [this.robot, this.robotGlow].filter(Boolean)
@@ -857,9 +804,10 @@ export class GameScene extends Phaser.Scene {
     }
 
     private flashChip(isTrue: boolean) {
+        const chip = this.lay.chip
         const flash = this.add.graphics().setDepth(22)
         flash.fillStyle(isTrue ? C.verde : C.vermelho, 0.82)
-        flash.fillRoundedRect(L.CHIP.x, L.CHIP.y, L.CHIP.w, L.CHIP.h, 14)
+        flash.fillRoundedRect(chip.x, chip.y, chip.w, chip.h, 14)
         this.tweens.add({
             targets: flash, alpha: 0, duration: 580, ease: 'Sine.easeIn',
             onComplete: () => flash.destroy(),
@@ -888,28 +836,20 @@ export class GameScene extends Phaser.Scene {
     private finish() {
         const res = this.result
         if (!res) return
-        const ch = this.challenge
 
         if (res.outcome === 'objetivo') {
-            const guessed = !!ch.predictStop && !!this.predictedCell
-                && this.predictedCell.c === res.final.c
-                && this.predictedCell.r === res.final.r
-
             this.hits++
             this.consecutiveErrors = 0
-            this.points += guessed ? 15 : 10
+            this.points += 10
             this.playWin()
 
             runtimeGameBridge.emit({
                 type: 'CORRECT_ANSWER', gameId: GAME_ID,
-                pointsEarned: guessed ? 15 : 10, stage: this.levelConfig.level,
+                pointsEarned: 10, stage: this.levelConfig.level,
             })
             this.emitCheckpoint()
 
-            this.showToast(
-                guessed ? `${ch.explanation}   +5 por acertar o palpite!` : ch.explanation,
-                true,
-            )
+            this.showToast(this.challenge.explanation, true)
             this.time.delayedCall(2400, () => this.advance())
             return
         }
@@ -933,11 +873,10 @@ export class GameScene extends Phaser.Scene {
     private registerError() {
         this.errors++
         this.consecutiveErrors++
-        this.points = Math.max(0, this.points - 3)
         this.playError()
         runtimeGameBridge.emit({
             type: 'WRONG_ANSWER', gameId: GAME_ID,
-            pointsEarned: -3, stage: this.levelConfig.level,
+            pointsEarned: 0, stage: this.levelConfig.level,
         })
         this.emitCheckpoint()
     }
@@ -958,6 +897,117 @@ export class GameScene extends Phaser.Scene {
 
         const next = this.levelConfig.level < 3 ? (this.levelConfig.level + 1) as 2 | 3 : null
         this.showLevelComplete(next)
+    }
+
+    // ══════════════════════════════════════════════════════════════════════
+    //  TUTORIAL
+    // ══════════════════════════════════════════════════════════════════════
+
+    private tutorialSteps(): TutorialStep[] {
+        const lay = this.lay
+        const chip = lay.chip
+        const bodySlot = lay.bodySlots[0]
+        const pad = 16
+
+        const around = (r: L.Rect): Partial<TutorialStep> => ({
+            shape: 'rect',
+            x: L.cx(r), y: L.cy(r),
+            w: r.w + pad, h: r.h + pad,
+        })
+
+        if (this.levelConfig.level === 1) {
+            const vf = lay.vfButtons
+            const vfArea: L.Rect = {
+                x: vf[0].x, y: vf[0].y,
+                w: vf[0].w, h: vf[1].y + vf[1].h - vf[0].y,
+            }
+            return [
+                {
+                    text: 'Esta é a condição do laço. O robô testa ela antes de cada volta.',
+                    ...around(chip),
+                } as TutorialStep,
+                {
+                    text: 'E isto é o que ele repete enquanto a condição for verdadeira.',
+                    ...around(bodySlot),
+                } as TutorialStep,
+                {
+                    text: 'Sua vez: olhe o robô no tabuleiro e diga se a condição é verdadeira ou falsa agora.',
+                    ...around(vfArea),
+                } as TutorialStep,
+                {
+                    text: 'Verdadeira, ele dá mais um passo. Falsa, o laço para na hora — não importa onde ele esteja.',
+                    shape: 'none',
+                    balloonY: 380,
+                    buttonLabel: 'Vamos testar!',
+                } as TutorialStep,
+            ]
+        }
+
+        if (this.levelConfig.level === 2) {
+            const tray = lay.traySlots
+            const trayArea: L.Rect = {
+                x: tray[0].x, y: tray[0].y,
+                w: tray[0].w, h: tray[2].y + tray[2].h - tray[0].y,
+            }
+            return [
+                {
+                    text: 'Agora o laço está sem condição, e é você quem escolhe.',
+                    ...around(chip),
+                } as TutorialStep,
+                {
+                    text: 'Toque em uma destas três. Cada uma vira falsa num lugar diferente do caminho.',
+                    ...around(trayArea),
+                    pointer: {
+                        fromX: L.cx(tray[0]), fromY: L.cy(tray[0]),
+                        toX: L.cx(chip), toY: L.cy(chip),
+                    },
+                } as TutorialStep,
+                {
+                    text: 'Escolheu? Toque em EXECUTAR e veja se o robô para em cima da estrela.',
+                    ...around(lay.btnRun!),
+                } as TutorialStep,
+            ]
+        }
+
+        const tray = lay.traySlots
+        const setupSlot = lay.setupSlots[0]
+        return [
+            {
+                text: 'Aqui você monta o programa inteiro. Estas são as peças disponíveis.',
+                ...around({ x: tray[0].x, y: tray[0].y, w: tray[0].w, h: tray[2].y + tray[2].h - tray[0].y }),
+            } as TutorialStep,
+            {
+                text: 'A curva entra aqui: ela roda uma vez só, antes do laço, para apontar o robô.',
+                ...around(setupSlot),
+                pointer: {
+                    fromX: L.cx(tray[1]), fromY: L.cy(tray[1]),
+                    toX: L.cx(setupSlot), toY: L.cy(setupSlot),
+                },
+            } as TutorialStep,
+            {
+                text: 'Dentro do laço vai o passo que se repete.',
+                ...around(bodySlot),
+                pointer: {
+                    fromX: L.cx(tray[0]), fromY: L.cy(tray[0]),
+                    toX: L.cx(bodySlot), toY: L.cy(bodySlot),
+                },
+            } as TutorialStep,
+            {
+                text: 'Toque na faixa amarela para escolher a condição. Depois é só EXECUTAR.',
+                ...around(chip),
+            } as TutorialStep,
+        ]
+    }
+
+    private runTutorial(force: boolean, onDone: () => void) {
+        createTutorial(this, {
+            key: `enquanto-l${this.levelConfig.level}`,
+            accent: C.verde,
+            safeTop: L.UI_BAR_H,
+            once: !force,
+            steps: this.tutorialSteps(),
+            onFinish: onDone,
+        })
     }
 
     // ══════════════════════════════════════════════════════════════════════
@@ -1061,56 +1111,6 @@ export class GameScene extends Phaser.Scene {
         this.tweens.add({ targets: panel, alpha: 1, scale: 1, duration: 220, ease: 'Back.easeOut' })
     }
 
-    private showTutorial() {
-        this.clearOverlay()
-        this.keep(
-            this.add.rectangle(L.W / 2, L.H / 2, L.W, L.H, C.borda, 0.8)
-                .setDepth(200).setInteractive(),
-        )
-        const panel = this.keep(this.add.container(L.W / 2, L.H / 2).setDepth(201))
-
-        const pw = 700, ph = 440
-
-        const bg = this.add.graphics()
-        bg.fillStyle(C.escuro, 0.99)
-        bg.fillRoundedRect(-pw / 2, -ph / 2, pw, ph, 26)
-        bg.lineStyle(5, C.amarelo, 0.92)
-        bg.strokeRoundedRect(-pw / 2, -ph / 2, pw, ph, 26)
-        bg.fillStyle(C.amarelo, 1)
-        bg.fillRoundedRect(-pw / 2, -ph / 2, pw, 14, { tl: 26, tr: 26, bl: 0, br: 0 })
-
-        const title = this.add.text(0, -ph / 2 + 58, 'O laço ENQUANTO', {
-            fontFamily: 'Arial Black, Arial', fontSize: '30px', color: CSS.amarelo,
-            stroke: CSS.borda, strokeThickness: 4,
-        }).setOrigin(0.5).setResolution(2)
-
-        panel.add([bg, title])
-
-        const lines = [
-            'Antes de cada volta, o robô testa a condição.',
-            'Se ela é verdadeira, ele faz o que está dentro do laço.',
-            'Se é falsa, o laço para na hora — não importa onde ele esteja.',
-            'Ninguém sabe de antemão quantas voltas vão acontecer.',
-        ]
-
-        lines.forEach((line, i) => {
-            const y = -ph / 2 + 122 + i * 58
-            const dot = this.add.graphics()
-            dot.fillStyle(C.amarelo, 1)
-            dot.fillCircle(-pw / 2 + 60, y, 9)
-            const text = this.add.text(-pw / 2 + 88, y, line, {
-                fontFamily: 'Arial', fontStyle: 'bold', fontSize: '19px', color: CSS.creme,
-                wordWrap: { width: pw - 150 },
-            }).setOrigin(0, 0.5).setResolution(2)
-            panel.add([dot, text])
-        })
-
-        panel.add(this.modalButton(0, ph / 2 - 56, 'Vamos testar!', C.verde, () => this.clearOverlay()))
-
-        panel.setAlpha(0).setScale(0.92)
-        this.tweens.add({ targets: panel, alpha: 1, scale: 1, duration: 260, ease: 'Back.easeOut' })
-    }
-
     private showLevelStart(onStart: () => void) {
         this.clearOverlay()
         this.keep(
@@ -1198,7 +1198,7 @@ export class GameScene extends Phaser.Scene {
             }).setOrigin(0.5).setResolution(2))
 
             this.time.delayedCall(2500, () => {
-                this.scene.restart({ level: next, points: this.points, showIntro: true })
+                this.scene.restart({ level: next, points: this.points })
             })
         } else {
             panel.add(this.modalButton(-140, ph / 2 - 60, 'Jogar de novo', C.verde,
@@ -1283,7 +1283,6 @@ export class GameScene extends Phaser.Scene {
     // ══════════════════════════════════════════════════════════════════════
 
     private audioCtx(): AudioContext | null {
-        if (this.isMuted) return null
         try {
             return (this.sound as Phaser.Sound.WebAudioSoundManager).context
         } catch {
@@ -1335,7 +1334,7 @@ export class GameScene extends Phaser.Scene {
             if (cmd.gameId !== GAME_ID) return
             if (cmd.stage === this.levelConfig.level) return
             this.time.delayedCall(100, () => {
-                this.scene.restart({ level: cmd.stage as 1 | 2 | 3, points: this.points, showIntro: true })
+                this.scene.restart({ level: cmd.stage as 1 | 2 | 3, points: this.points })
             })
         })
     }

@@ -33,6 +33,7 @@ import cardListThumbnail from "../assets/games/EF05CO01/cover-baralho-das-listas
 import correioThumbnail from "../assets/games/EF01CO04/cover-correio-multimidia.png";
 import networkMapsThumbnail from "../assets/games/EF05CO02/cover-mapas-em-rede.png";
 import coverLogicArena from "../assets/games/EF05CO03/cover-arena-da-logica.png";
+import coverCidadeDasDecisoes from "../assets/games/EF05CO04/cover-cidade-das-decisoes.png";
 
 const placeholderGame = (code: string, index: number): Game => ({
   id: index,
@@ -342,6 +343,15 @@ const gameByCode: Partial<Record<string, Omit<Game, "id">>> = {
     icon: "🧠",
     slug: "arena-da-lógica",
     thumbnail: coverLogicArena,
+  },
+  EF05CO04: {
+    title: "Cidade das Decisões",
+    "description": "Navegue pela cidade tomando decisões estratégicas e resolvendo desafios lógicos",
+    category: "Pensamento Computacional",
+    points: 65,
+    icon: "🏙️",
+    slug: "cidade-das-decisoes",
+    thumbnail: coverCidadeDasDecisoes,
   }
 };
 

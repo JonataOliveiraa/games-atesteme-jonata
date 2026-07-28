@@ -121,11 +121,6 @@ export class GameScene extends Phaser.Scene {
             yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
         });
 
-        const title = this.add.text(width / 2, height * 0.18, LEVELS[this.currentLevelIdx].name, {
-            fontSize: '46px', fontFamily: 'Arial Black, Arial', color: '#ffffff',
-            stroke: '#1f2937', strokeThickness: 7,
-        }).setOrigin(0.5);
-
         const sub = this.add.text(width / 2, height * 0.27, 'Monte o robô na ordem certa!', {
             fontSize: '24px', fontFamily: 'Arial Black, Arial', color: '#fff7c2',
             stroke: '#1f2937', strokeThickness: 4,

@@ -28,8 +28,8 @@ export interface RobotState {
 
 /**
  * O programa tem duas partes: `setup` roda uma vez, antes do laço, e é onde
- * entram as curvas que apontam o robô para o corredor certo. `body` é o corpo
- * do ENQUANTO, repetido enquanto a condição for verdadeira.
+ * entra a curva que aponta o robô para o corredor certo. `body` é o corpo do
+ * ENQUANTO, repetido enquanto a condição for verdadeira.
  */
 export interface Program {
     condition: ConditionId
@@ -37,7 +37,7 @@ export interface Program {
     body: ActionId[]
 }
 
-export type CellKind = 'piso' | 'parede' | 'objetivo' | 'partida' | 'oculto'
+export type CellKind = 'piso' | 'parede' | 'objetivo' | 'partida'
 
 /** Como o desafio é jogado. */
 export type ChallengeMode =
@@ -45,7 +45,7 @@ export type ChallengeMode =
     | 'prever-condicao'
     /** N2: corpo pronto; a criança escolhe a condição entre três. */
     | 'escolher-condicao'
-    /** N3: a criança monta setup, condição e corpo. */
+    /** N3: a criança monta a curva, a condição e o corpo. */
     | 'montar-programa'
 
 export interface MazeChallenge {
@@ -58,8 +58,6 @@ export interface MazeChallenge {
     goal: Coord
     /** Células intransponíveis. */
     walls: Coord[]
-    /** Desenhadas com névoa até o robô chegar ao lado. Podem ou não ser parede. */
-    hidden?: Coord[]
 
     /** Programa já montado (modos 'prever-condicao' e 'escolher-condicao'). */
     given?: Program
@@ -68,10 +66,8 @@ export interface MazeChallenge {
     /** Peças liberadas no modo 'montar-programa'. */
     allowedActions?: ActionId[]
     allowedConditions?: ConditionId[]
-    /** Pede a bandeirinha de palpite antes de executar. */
-    predictStop?: boolean
 
-    /** Solução de referência — usada na validação e na dica após 3 erros. */
+    /** Solução de referência — usada na dica após os erros. */
     solution: Program
     /** Frase curta mostrada no acerto. */
     explanation: string

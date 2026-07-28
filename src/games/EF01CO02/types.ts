@@ -20,7 +20,6 @@ export interface LevelConfig {
   title: string;
   objective: string;
   phases: PhaseConfig[];
-  name: string;
 }
 
 export interface RuntimeGameBridge {

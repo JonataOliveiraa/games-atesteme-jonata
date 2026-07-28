@@ -1,4 +1,4 @@
-import type { MazeChallenge } from '../types'
+import type { ChallengeMode, MazeChallenge } from '../types'
 
 export const W = 1280
 export const H = 720
@@ -22,46 +22,97 @@ export const PANEL: Rect & { r: number } = {
     x: 20, y: UI_BAR_H + 16, w: 380, h: 604, r: 20,
 }
 
-const INNER_X = PANEL.x + 12   // 32
-const INNER_W = PANEL.w - 24   // 356
+export const PANEL_TITLE_Y = PANEL.y + 26
 
-export const PANEL_TITLE_Y = PANEL.y + 24
+const IX = PANEL.x + 12   // 32
+const IW = PANEL.w - 24   // 356
 
-/** "Antes do laço": até duas ações que rodam uma vez só. */
-export const SETUP_LABEL_Y = 142
-export const MAX_SETUP = 2
-export const SETUP_SLOTS: Rect[] = [
-    { x: INNER_X, y: 156, w: 172, h: 52 },
-    { x: INNER_X + 184, y: 156, w: 172, h: 52 },
-]
+/** Um encaixe antes do laço e um dentro dele. Menos peças, menos dúvida. */
+export const MAX_SETUP = 1
+export const MAX_BODY = 1
 
-/** Bloco ENQUANTO: pastilha da condição no topo, corpo embaixo. */
-export const WHILE_BLOCK: Rect = { x: INNER_X, y: 222, w: INNER_W, h: 196 }
-export const CHIP: Rect = { x: INNER_X + 10, y: 232, w: INNER_W - 20, h: 58 }
+/**
+ * O painel muda conforme o modo do desafio: cada nível vê só as peças que
+ * precisa usar. Nível 1 não tem botões, nível 2 não tem "antes do laço".
+ */
+export interface ProgramLayout {
+    setupLabelY: number
+    setupSlots: Rect[]
+    whileBlock: Rect
+    chip: Rect
+    bodyLabelY: number
+    bodySlots: Rect[]
+    trayLabelY: number
+    trayLabel: string
+    traySlots: Rect[]
+    vfButtons: Rect[]
+    btnRun: Rect | null
+    btnReset: Rect | null
+}
 
-export const BODY_LABEL_Y = 302
-export const MAX_BODY = 2
-export const BODY_SLOTS: Rect[] = [
-    { x: INNER_X + 22, y: 314, w: INNER_W - 44, h: 46 },
-    { x: INNER_X + 22, y: 366, w: INNER_W - 44, h: 46 },
-]
+/** Bloco ENQUANTO: pastilha da condição no topo, corpo logo abaixo. */
+function whileGroup(top: number) {
+    return {
+        whileBlock: { x: IX, y: top, w: IW, h: 196 } as Rect,
+        chip: { x: IX + 10, y: top + 12, w: IW - 20, h: 62 } as Rect,
+        bodyLabelY: top + 96,
+        bodySlots: [{ x: IX + 22, y: top + 110, w: IW - 44, h: 58 }] as Rect[],
+    }
+}
 
-/** Bandeja de peças. Conteúdo muda por modo: botões V/F, condições ou ações. */
-export const TRAY_LABEL_Y = 434
-export const TRAY_SLOTS: Rect[] = [
-    { x: INNER_X, y: 450, w: INNER_W, h: 56 },
-    { x: INNER_X, y: 512, w: INNER_W, h: 56 },
-    { x: INNER_X, y: 574, w: INNER_W, h: 56 },
-]
+export function programLayout(mode: ChallengeMode): ProgramLayout {
+    if (mode === 'montar-programa') {
+        return {
+            setupLabelY: 142,
+            setupSlots: [{ x: IX, y: 152, w: IW, h: 50 }],
+            ...whileGroup(216),
+            trayLabelY: 428,
+            trayLabel: 'PEÇAS',
+            traySlots: [
+                { x: IX, y: 442, w: IW, h: 52 },
+                { x: IX, y: 500, w: IW, h: 52 },
+                { x: IX, y: 558, w: IW, h: 52 },
+            ],
+            vfButtons: [],
+            btnRun: { x: IX, y: 626, w: 224, h: 50 },
+            btnReset: { x: IX + 236, y: 626, w: 120, h: 50 },
+        }
+    }
 
-/** Os dois botões grandes do nível 1 ocupam a bandeja inteira. */
-export const VF_BUTTONS: Rect[] = [
-    { x: INNER_X, y: 456, w: INNER_W, h: 78 },
-    { x: INNER_X, y: 546, w: INNER_W, h: 78 },
-]
+    if (mode === 'escolher-condicao') {
+        return {
+            setupLabelY: 0,
+            setupSlots: [],
+            ...whileGroup(150),
+            trayLabelY: 384,
+            trayLabel: 'ESCOLHA A CONDIÇÃO',
+            traySlots: [
+                { x: IX, y: 400, w: IW, h: 62 },
+                { x: IX, y: 468, w: IW, h: 62 },
+                { x: IX, y: 536, w: IW, h: 62 },
+            ],
+            vfButtons: [],
+            btnRun: { x: IX, y: 620, w: IW, h: 54 },
+            btnReset: null,
+        }
+    }
 
-export const BTN_RUN: Rect = { x: INNER_X, y: 640, w: 224, h: 50 }
-export const BTN_RESET: Rect = { x: INNER_X + 236, y: 640, w: 120, h: 50 }
+    // prever-condicao — os dois botões grandes ocupam a bandeja inteira
+    return {
+        setupLabelY: 0,
+        setupSlots: [],
+        ...whileGroup(150),
+        trayLabelY: 384,
+        trayLabel: 'A CONDIÇÃO AGORA É...',
+        traySlots: [],
+        vfButtons: [
+            { x: IX, y: 400, w: IW, h: 100 },
+            { x: IX, y: 516, w: IW, h: 100 },
+        ],
+        btnRun: null,
+        btnReset: null,
+    }
+}
 
 // ── Tabuleiro (coluna direita) ────────────────────────────────────────────
 export const BOARD_AREA = {
@@ -71,7 +122,7 @@ export const BOARD_AREA = {
     bottom: H - 24,                 // 696
 }
 
-/** Maior tabuleiro do jogo é 9x6; 92px cabe com folga nos dois eixos. */
+/** Maior tabuleiro do jogo agora é 7x5; 92px cabe com folga nos dois eixos. */
 export const TILE = 92
 
 export function boardOrigin(ch: MazeChallenge) {

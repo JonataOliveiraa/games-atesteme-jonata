@@ -23,12 +23,12 @@ export class UIScene extends Phaser.Scene {
     create() {
         this.buildBar()
         this.registerListeners()
-    }
 
-    shutdown() {
-        EventBus.off('mission-update', undefined, this)
-        this.dots.forEach(d => d.destroy())
-        this.dots = []
+        this.events.once('shutdown', () => {
+            EventBus.off('mission-update', undefined, this)
+            this.dots.forEach(d => d.destroy())
+            this.dots = []
+        })
     }
 
     private buildBar() {
@@ -66,8 +66,8 @@ export class UIScene extends Phaser.Scene {
             wordWrap: { width: 560 },
         }).setOrigin(0.5).setDepth(1).setResolution(2)
 
-        // ── Nível, à direita ──
-        this.levelText = this.add.text(1046, mid, 'Nível 1 de 3', {
+        // ── Nível e ajuda, à direita ──
+        this.levelText = this.add.text(1120, mid, 'Nível 1 de 3', {
             fontFamily: 'Arial Black, Arial',
             fontSize: '18px',
             color: CSS.claro,
@@ -75,8 +75,7 @@ export class UIScene extends Phaser.Scene {
             strokeThickness: 3,
         }).setOrigin(0.5).setDepth(1).setResolution(2)
 
-        this.buildIconButton(1176, mid, '?', () => EventBus.emit('show-tutorial'))
-        this.buildMuteButton(1240, mid)
+        this.buildIconButton(1240, mid, '?', () => EventBus.emit('show-tutorial'))
     }
 
     private buildIconButton(x: number, y: number, label: string, onClick: () => void) {
@@ -110,46 +109,10 @@ export class UIScene extends Phaser.Scene {
         return { g, text, zone }
     }
 
-    private buildMuteButton(x: number, y: number) {
-        let muted = false
-        const btn = this.buildIconButton(x, y, '♪', () => {
-            muted = !muted
-            btn.text.setText(muted ? '✕' : '♪')
-            btn.text.setColor(muted ? CSS.vermelho : CSS.creme)
-            EventBus.emit('mute-audio', muted)
-        })
-        return btn
-    }
-
     private registerListeners() {
         EventBus.on('mission-update', (data: MissionUpdatePayload) => {
             this.instructionText.setText(data.instruction)
             this.levelText.setText(`Nível ${data.level} de 3`)
-            this.drawDots(data.challengeIndex, data.totalChallenges)
         }, this)
     }
-
-    /** Bolinhas de progresso, embaixo da instrução. */
-    private drawDots(current: number, total: number) {
-        this.dots.forEach(d => d.destroy())
-        this.dots = []
-
-        const r = 7
-        const gap = 24
-        const startX = W / 2 - ((total - 1) * gap) / 2
-
-        for (let i = 0; i < total; i++) {
-            const dot = this.add.graphics().setDepth(1)
-            const done = i < current
-            const now = i === current
-
-            dot.fillStyle(done ? C.amarelo : now ? C.claro : C.escuro, 1)
-            dot.fillCircle(0, 0, now ? r + 1 : r)
-            dot.lineStyle(2, now ? C.amarelo : C.borda, 0.9)
-            dot.strokeCircle(0, 0, now ? r + 1 : r)
-            dot.setPosition(startX + i * gap, UI_BAR_H - 22)
-
-            this.dots.push(dot)
-        }
-    }
-}
+}   
