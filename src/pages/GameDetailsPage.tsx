@@ -48,6 +48,7 @@ const SLUG_TO_CODE: Record<string, GameCode> = {
   "mapas-em-rede": "EF05CO02",
   "arena-da-lógica": "EF05CO03",
   "cidade-das-decisoes": "EF05CO04",
+  "monte-seu-computador": "EF05CO05",
 };
 
 const GAME_CONFIG_LOADERS: Partial<
@@ -87,6 +88,7 @@ const GAME_CONFIG_LOADERS: Partial<
   EF05CO02: () => import("../games/EF05CO02/index"),
   EF05CO03: () => import("../games/EF05CO03/index"),
   EF05CO04: () => import("../games/EF05CO04/index"),
+  EF05CO05: () => import("../games/EF05CO05/index"),
 };
 
 const GAMES_WITH_IN_GAME_COMPLETION_SCREEN = new Set([

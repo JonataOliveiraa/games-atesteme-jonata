@@ -34,6 +34,7 @@ import correioThumbnail from "../assets/games/EF01CO04/cover-correio-multimidia.
 import networkMapsThumbnail from "../assets/games/EF05CO02/cover-mapas-em-rede.png";
 import coverLogicArena from "../assets/games/EF05CO03/cover-arena-da-logica.png";
 import coverCidadeDasDecisoes from "../assets/games/EF05CO04/cover-cidade-das-decisoes.png";
+import coverMonteSeuComputador from "../assets/games/EF05CO05/cover-monte-seu-computador.png";
 
 const placeholderGame = (code: string, index: number): Game => ({
   id: index,
@@ -352,6 +353,15 @@ const gameByCode: Partial<Record<string, Omit<Game, "id">>> = {
     icon: "🏙️",
     slug: "cidade-das-decisoes",
     thumbnail: coverCidadeDasDecisoes,
+  },
+  EF05CO05: {
+    title: "Monte seu Computador",
+    "description": "Aprenda sobre as peças de um computador, suas funções e como montá-lo corretamente.",
+    category: "Pensamento Computacional",
+    points: 65,
+    icon: "💻",
+    slug: "monte-seu-computador",
+    thumbnail: coverMonteSeuComputador,
   }
 };
 
