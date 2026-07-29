@@ -15,11 +15,10 @@ const PANEL_W = 1136;
 const PANEL_H = 486;
 const MODAL_SCALE = 1.12;
 
-// Zone x-boundaries within the panel
-const ZONE_DICT_X1 = PANEL_X + 16;          // Dictionary zone left edge
-const ZONE_DICT_X2 = PANEL_X + 620;         // Dictionary zone right edge (~604px wide)
-const ZONE_VIS_X1  = PANEL_X + 640;         // Visor/MCQ zone left edge
-const ZONE_VIS_X2  = PANEL_X + PANEL_W - 16; // Visor/MCQ zone right edge
+const ZONE_DICT_X1 = PANEL_X + 16;
+const ZONE_DICT_X2 = PANEL_X + 620;
+const ZONE_VIS_X1  = PANEL_X + 640;
+const ZONE_VIS_X2  = PANEL_X + PANEL_W - 16;
 
 const COLORS = {
   purple:  0x4c1d95,
@@ -64,12 +63,18 @@ export class GameScene extends Phaser.Scene {
   private n3GroupIndex = 0;
   private n3DecodedLetters: string[] = [];
 
-  // Keyboard key graphics for highlight updates
-  private keyGraphics: Map<TranslatorLetter, Phaser.GameObjects.Graphics> = new Map();
-  // Reference table row graphics for highlight updates
-  private refRowGraphics: Map<TranslatorLetter, Phaser.GameObjects.Graphics> = new Map();
-  // Visor display text
-  private visorText?: Phaser.GameObjects.Text;
+  // Selection / confirm state (reset per round)
+  private roundInProgress = false;
+  private selectedOption: string | null = null;
+  private selectedChipRedraw: (() => void) | null = null;
+  private confirmBtnBg: Phaser.GameObjects.Graphics | null = null;
+  private confirmBtnText: Phaser.GameObjects.Text | null = null;
+  private confirmBtnEnabled = false;
+  private confirmBtnDrawEnabled: (() => void) | null = null;
+  private confirmBtnDrawDisabled: (() => void) | null = null;
+  private visorCodeText: Phaser.GameObjects.Text | null = null;
+  // N2 per-slot code texts (one per letter)
+  private n2SlotTexts: Phaser.GameObjects.Text[] = [];
 
   constructor() {
     super({ key: "GameScene" });
@@ -91,9 +96,16 @@ export class GameScene extends Phaser.Scene {
     this.startScreenObjects = [];
     this.overlayObjects = [];
     this.contentObjects = [];
-    this.keyGraphics = new Map();
-    this.refRowGraphics = new Map();
-    this.visorText = undefined;
+    this.roundInProgress = false;
+    this.selectedOption = null;
+    this.selectedChipRedraw = null;
+    this.confirmBtnBg = null;
+    this.confirmBtnText = null;
+    this.confirmBtnEnabled = false;
+    this.confirmBtnDrawEnabled = null;
+    this.confirmBtnDrawDisabled = null;
+    this.visorCodeText = null;
+    this.n2SlotTexts = [];
   }
 
   create() {
@@ -312,11 +324,9 @@ export class GameScene extends Phaser.Scene {
     panel.lineStyle(4, COLORS.cyan, 0.5);
     panel.strokeRoundedRect(PANEL_X, PANEL_Y, PANEL_W, PANEL_H, 30);
 
-    // Zone divider
     panel.lineStyle(2, COLORS.cyan, 0.2);
     panel.lineBetween(ZONE_DICT_X2 + 10, PANEL_Y + 20, ZONE_DICT_X2 + 10, PANEL_Y + PANEL_H - 20);
 
-    // Zone labels
     this.addSharpText((ZONE_DICT_X1 + ZONE_DICT_X2) / 2, PANEL_Y + 22, "DICIONÁRIO", {
       fontSize: "13px", fontFamily: "Arial Black, Arial", color: "#06b6d4",
     }).setOrigin(0.5).setDepth(4);
@@ -325,7 +335,7 @@ export class GameScene extends Phaser.Scene {
     }).setOrigin(0.5).setDepth(4);
   }
 
-  // ─── Dictionary Zone (merged keyboard + reference table) ────────────────────
+  // ─── Dictionary Zone (static reference table — no dynamic highlight) ──────────
 
   private createDictionary() {
     const letters: TranslatorLetter[] = ["A", "B", "C", "D", "E", "F", "G", "H"];
@@ -349,10 +359,7 @@ export class GameScene extends Phaser.Scene {
       rowBg.fillRoundedRect(dictX, ry, dictW, rowH - 4, 8);
       rowBg.lineStyle(1, COLORS.cyan, 0.18);
       rowBg.strokeRoundedRect(dictX, ry, dictW, rowH - 4, 8);
-      this.keyGraphics.set(letter, rowBg);
-      this.refRowGraphics.set(letter, rowBg);
 
-      // Key chip (letter)
       const chipBg = this.add.graphics().setDepth(11);
       chipBg.fillStyle(COLORS.purple, 0.82);
       chipBg.fillRoundedRect(dictX + 8, ry + 4, 52, rowH - 12, 8);
@@ -375,68 +382,6 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
-  private highlightKey(letter: TranslatorLetter | null) {
-    const letters: TranslatorLetter[] = ["A", "B", "C", "D", "E", "F", "G", "H"];
-    const dictX = ZONE_DICT_X1;
-    const dictW = ZONE_DICT_X2 - ZONE_DICT_X1;
-    const rowH = 48;
-    const startY = PANEL_Y + 46;
-
-    letters.forEach((l, idx) => {
-      const ry = startY + 38 + idx * rowH;
-      const g = this.keyGraphics.get(l);
-      if (!g) return;
-      g.clear();
-      const isActive = l === letter;
-      if (isActive) {
-        g.fillStyle(COLORS.cyan, 0.22);
-        g.fillRoundedRect(dictX, ry, dictW, rowH - 4, 8);
-        g.lineStyle(2, COLORS.cyan, 0.9);
-        g.strokeRoundedRect(dictX, ry, dictW, rowH - 4, 8);
-        g.lineStyle(1, COLORS.cyan, 0.35);
-        g.strokeRoundedRect(dictX - 3, ry - 3, dictW + 6, rowH + 2, 11);
-      } else {
-        g.fillStyle(COLORS.dark, 0.5);
-        g.fillRoundedRect(dictX, ry, dictW, rowH - 4, 8);
-        g.lineStyle(1, COLORS.cyan, 0.18);
-        g.strokeRoundedRect(dictX, ry, dictW, rowH - 4, 8);
-      }
-    });
-  }
-
-  private highlightRefRow(letter: TranslatorLetter | null) {
-    this.highlightKey(letter);
-  }
-
-  // ─── Visor Zone ──────────────────────────────────────────────────────────────
-
-  private createVisorDisplay(text: string): Phaser.GameObjects.Text {
-    const vx = ZONE_VIS_X1;
-    const vw = ZONE_VIS_X2 - ZONE_VIS_X1;
-    const visorTop = PANEL_Y + 46;
-    const visorH = 100;
-
-    const visorBg = this.addContent(this.add.graphics().setDepth(10));
-    visorBg.fillStyle(COLORS.darker, 1);
-    visorBg.fillRoundedRect(vx, visorTop, vw, visorH, 12);
-    visorBg.lineStyle(3, COLORS.lime, 0.8);
-    visorBg.strokeRoundedRect(vx, visorTop, vw, visorH, 12);
-    // LED corner accents
-    visorBg.fillStyle(COLORS.lime, 0.7);
-    visorBg.fillCircle(vx + 14, visorTop + 14, 5);
-    visorBg.fillCircle(vx + vw - 14, visorTop + 14, 5);
-    visorBg.fillCircle(vx + 14, visorTop + visorH - 14, 5);
-    visorBg.fillCircle(vx + vw - 14, visorTop + visorH - 14, 5);
-
-    const visorTxt = this.addContent(this.addSharpText(vx + vw / 2, visorTop + visorH / 2, text, {
-      fontSize: "36px", fontFamily: "Courier New, monospace", color: "#84cc16",
-      stroke: "#060316", strokeThickness: 2,
-    }).setOrigin(0.5).setDepth(12));
-
-    this.visorText = visorTxt;
-    return visorTxt;
-  }
-
   // ─── N1 — Letra → Binário ────────────────────────────────────────────────────
 
   private showN1Round() {
@@ -448,61 +393,100 @@ export class GameScene extends Phaser.Scene {
     }
     const round = rounds[this.n1RoundIndex];
 
-    // Progress dots
     this.drawProgressDots(rounds.length, this.n1RoundIndex);
 
-    // Highlight active key & ref row
-    this.highlightKey(round.letter);
-    this.highlightRefRow(round.letter);
-
-    // Visor shows empty placeholder
-    this.createVisorDisplay("_ _ _");
-
-    // Question label
     const vx = ZONE_VIS_X1;
     const vw = ZONE_VIS_X2 - ZONE_VIS_X1;
+    const visorTop = PANEL_Y + 46;
+    const visorH = 96;
+
+    // Visor background
+    const visorBg = this.addContent(this.add.graphics().setDepth(10));
+    visorBg.fillStyle(COLORS.darker, 1);
+    visorBg.fillRoundedRect(vx, visorTop, vw, visorH, 12);
+    visorBg.lineStyle(3, COLORS.lime, 0.8);
+    visorBg.strokeRoundedRect(vx, visorTop, vw, visorH, 12);
+    visorBg.fillStyle(COLORS.lime, 0.7);
+    [[vx + 14, visorTop + 14], [vx + vw - 14, visorTop + 14],
+     [vx + 14, visorTop + visorH - 14], [vx + vw - 14, visorTop + visorH - 14]].forEach(
+      ([cx, cy]) => visorBg.fillCircle(cx, cy, 5)
+    );
+
+    const visorCY = visorTop + visorH / 2;
+    // Large letter display
+    this.addContent(this.addSharpText(vx + 56, visorCY, round.letter, {
+      fontSize: "54px", fontFamily: "Arial Black, Arial", color: "#06b6d4",
+      stroke: "#0d0528", strokeThickness: 6,
+    }).setOrigin(0.5).setDepth(12));
+    this.addContent(this.addSharpText(vx + 116, visorCY, "=", {
+      fontSize: "28px", fontFamily: "Arial Black, Arial", color: "#64748b",
+    }).setOrigin(0.5).setDepth(12));
+    // Code placeholder (updates on chip selection)
+    const codeText = this.addContent(this.addSharpText(vx + 230, visorCY, "_ _ _", {
+      fontSize: "32px", fontFamily: "Courier New, monospace", color: "#475569",
+      stroke: "#060316", strokeThickness: 2,
+    }).setOrigin(0.5).setDepth(12));
+    this.visorCodeText = codeText;
+
+    // Question banner
     const qBg = this.addContent(this.add.graphics().setDepth(10));
     qBg.fillStyle(COLORS.purple, 0.7);
-    qBg.fillRoundedRect(vx, PANEL_Y + 162, vw, 46, 12);
-    this.addContent(this.addSharpText(vx + vw / 2, PANEL_Y + 186, `Qual é o código de "${round.letter}"?`, {
+    qBg.fillRoundedRect(vx, PANEL_Y + 156, vw, 44, 12);
+    this.addContent(this.addSharpText(vx + vw / 2, PANEL_Y + 179, `Qual é o código de "${round.letter}"?`, {
       fontSize: "20px", fontFamily: "Arial Black, Arial", color: "#e2e8f0",
       stroke: "#0d0528", strokeThickness: 3, align: "center",
     }).setOrigin(0.5).setDepth(12));
 
-    // MCQ chips (3 options)
-    const chipH = 68;
-    const chipGap = 14;
-    const chipsStartY = PANEL_Y + 224;
+    // Selectable chips
+    const chipH = 54;
+    const chipGap = 10;
+    const chipsStartY = PANEL_Y + 216;
     round.options.forEach((opt, i) => {
       const cy = chipsStartY + i * (chipH + chipGap);
-      this.buildMCQChip(vx, cy, vw, chipH, opt, () => {
-        if (this.gameEnded) return;
-        this.onN1OptionSelected(opt, round.correct, round.letter);
+      this.buildSelectableChip(vx, cy, vw, chipH, opt, () => {
+        if (this.gameEnded || this.roundInProgress) return;
+        this.selectedOption = opt;
+        if (this.visorCodeText) this.visorCodeText.setText(opt).setColor("#06b6d4");
+        this.enableConfirmButton();
       });
     });
+
+    // Confirm button
+    const confirmY = chipsStartY + round.options.length * (chipH + chipGap) + 4;
+    this.buildConfirmButton(vx, confirmY, vw, 46, () => this.onN1Confirm(round.correct, round.letter));
   }
 
-  private onN1OptionSelected(selected: string, correct: string, letter: TranslatorLetter) {
-    if (this.gameEnded) return;
+  private onN1Confirm(correct: string, letter: TranslatorLetter) {
+    if (this.gameEnded || this.roundInProgress || !this.selectedOption) return;
+    this.roundInProgress = true;
+    const selected = this.selectedOption;
     this.playClick();
+
     if (selected === correct) {
       this.hits += 1;
       this.playSuccess();
       runtimeGameBridge.emit({ type: "CORRECT_ANSWER", gameId: GAME_ID, stage: 1, pointsEarned: 20 });
-      // Update visor with correct code
-      if (this.visorText) this.visorText.setText(correct);
+      if (this.visorCodeText) this.visorCodeText.setText(correct).setColor("#84cc16");
       this.showCircuitAnimation(letter);
       this.showToast(`✅ Correto! ${letter} = ${correct}`, COLORS.lime, 1600);
       this.time.delayedCall(1700, () => {
         if (this.gameEnded) return;
         this.n1RoundIndex += 1;
+        this.roundInProgress = false;
         this.showN1Round();
       });
     } else {
       this.errors += 1;
       this.playWrong();
       runtimeGameBridge.emit({ type: "WRONG_ANSWER", gameId: GAME_ID, stage: 1, pointsEarned: -5 });
-      this.showToast("❌ Código errado! Consulte a tabela.", COLORS.red, 2000);
+      this.showToast("❌ Código errado! Consulte a tabela e tente novamente.", COLORS.red, 2200);
+      // Allow retry: reset selection
+      this.roundInProgress = false;
+      this.selectedOption = null;
+      this.selectedChipRedraw?.();
+      this.selectedChipRedraw = null;
+      if (this.visorCodeText) this.visorCodeText.setText("_ _ _").setColor("#475569");
+      this.disableConfirmButton();
     }
   }
 
@@ -517,13 +501,10 @@ export class GameScene extends Phaser.Scene {
     const ry = startY + 38 + idx * rowH;
     const fromX = ZONE_DICT_X2;
     const fromY = ry + (rowH - 4) / 2;
-
     const toX = ZONE_VIS_X1 + 8;
-    const toY = PANEL_Y + 46 + 50;
+    const toY = PANEL_Y + 46 + 48;
 
-    // Draw a wire line
     const wire = this.add.graphics().setDepth(50);
-    wire.lineStyle(4, COLORS.lime, 0);
     this.tweens.addCounter({
       from: 0, to: 1, duration: 600, ease: "Sine.easeIn",
       onUpdate: (tween) => {
@@ -564,60 +545,94 @@ export class GameScene extends Phaser.Scene {
     const wordDef = words[this.n2WordIndex];
     const currentLetter = wordDef.letters[this.n2LetterIndex];
 
-    // Progress dots (words)
     this.drawProgressDots(words.length, this.n2WordIndex);
-
-    // Highlight active key & ref row
-    this.highlightKey(currentLetter);
-    this.highlightRefRow(currentLetter);
 
     const vx = ZONE_VIS_X1;
     const vw = ZONE_VIS_X2 - ZONE_VIS_X1;
 
-    // Word display at top of visor zone
-    const wordBg = this.addContent(this.add.graphics().setDepth(10));
-    wordBg.fillStyle(COLORS.purple, 0.6);
-    wordBg.fillRoundedRect(vx, PANEL_Y + 46, vw, 56, 12);
+    // ── Word + all slots visor ──────────────────────────────────────────────
+    const visorTop = PANEL_Y + 46;
+    const visorH = 110;
+    const visorBg = this.addContent(this.add.graphics().setDepth(10));
+    visorBg.fillStyle(COLORS.darker, 1);
+    visorBg.fillRoundedRect(vx, visorTop, vw, visorH, 12);
+    visorBg.lineStyle(3, COLORS.lime, 0.8);
+    visorBg.strokeRoundedRect(vx, visorTop, vw, visorH, 12);
+    visorBg.fillStyle(COLORS.lime, 0.7);
+    [[vx + 14, visorTop + 14], [vx + vw - 14, visorTop + 14],
+     [vx + 14, visorTop + visorH - 14], [vx + vw - 14, visorTop + visorH - 14]].forEach(
+      ([cx, cy]) => visorBg.fillCircle(cx, cy, 5)
+    );
 
-    wordDef.word.split("").forEach((ch, i) => {
-      const isActive = i === this.n2LetterIndex;
+    // Show each letter of the word as a column: letter on top, code slot below
+    const nLetters = wordDef.letters.length;
+    const colW = Math.min(120, (vw - 20) / nLetters);
+    const colStartX = vx + (vw - colW * nLetters) / 2;
+    this.n2SlotTexts = [];
+
+    wordDef.letters.forEach((ch, i) => {
+      const colCX = colStartX + i * colW + colW / 2;
       const isDone = i < this.n2LetterIndex;
-      this.addContent(this.addSharpText(vx + 60 + i * 80, PANEL_Y + 75, ch, {
-        fontSize: "30px", fontFamily: "Arial Black, Arial",
-        color: isDone ? "#84cc16" : isActive ? "#06b6d4" : "#94a3b8",
+      const isActive = i === this.n2LetterIndex;
+      const letterColor = isDone ? "#84cc16" : isActive ? "#06b6d4" : "#94a3b8";
+
+      // Letter
+      this.addContent(this.addSharpText(colCX, visorTop + 32, ch, {
+        fontSize: "26px", fontFamily: "Arial Black, Arial", color: letterColor,
         stroke: "#0d0528", strokeThickness: 4,
       }).setOrigin(0.5).setDepth(12));
+
+      // Divider line between letter and code
+      const divider = this.addContent(this.add.graphics().setDepth(11));
+      divider.lineStyle(1, isActive ? COLORS.cyan : COLORS.slate, 0.5);
+      divider.lineBetween(colStartX + i * colW + 6, visorTop + 54, colStartX + (i + 1) * colW - 6, visorTop + 54);
+
+      // Code slot
+      const codeStr = isDone ? this.n2AccumulatedCode[i] : (isActive ? "___" : "___");
+      const codeColor = isDone ? "#84cc16" : isActive ? "#475569" : "#1e293b";
+      const slotText = this.addContent(this.addSharpText(colCX, visorTop + 80, codeStr, {
+        fontSize: "20px", fontFamily: "Courier New, monospace", color: codeColor,
+        stroke: "#060316", strokeThickness: 2,
+      }).setOrigin(0.5).setDepth(12));
+
+      if (isActive) {
+        this.visorCodeText = slotText;
+        this.n2SlotTexts.push(slotText);
+      } else {
+        this.n2SlotTexts.push(slotText);
+      }
     });
 
-    // Accumulated binary in visor
-    const accumulated = this.n2AccumulatedCode.join(" ");
-    const visorLabel = accumulated + (accumulated.length ? " " : "") + "___";
-    this.createVisorDisplay(visorLabel.trim());
-
-    // Question label
+    // ── Question banner ──────────────────────────────────────────────────────
     const qBg = this.addContent(this.add.graphics().setDepth(10));
     qBg.fillStyle(COLORS.purple, 0.7);
-    qBg.fillRoundedRect(vx, PANEL_Y + 162, vw, 46, 12);
-    this.addContent(this.addSharpText(vx + vw / 2, PANEL_Y + 186, `Código de "${currentLetter}"?`, {
+    qBg.fillRoundedRect(vx, PANEL_Y + 172, vw, 42, 12);
+    this.addContent(this.addSharpText(vx + vw / 2, PANEL_Y + 194, `Código de "${currentLetter}"?`, {
       fontSize: "20px", fontFamily: "Arial Black, Arial", color: "#e2e8f0",
       stroke: "#0d0528", strokeThickness: 3,
     }).setOrigin(0.5).setDepth(12));
 
-    // Build MCQ options for this letter
+    // ── Selectable chips ─────────────────────────────────────────────────────
     const correctCode = wordDef.codes[this.n2LetterIndex];
     const wrongOptions = this.getN2WrongOptions(correctCode);
     const options = Phaser.Utils.Array.Shuffle([correctCode, ...wrongOptions]) as string[];
 
-    const chipH = 68;
-    const chipGap = 14;
-    const chipsStartY = PANEL_Y + 224;
+    const chipH = 52;
+    const chipGap = 10;
+    const chipsStartY = PANEL_Y + 226;
     options.forEach((opt, i) => {
       const cy = chipsStartY + i * (chipH + chipGap);
-      this.buildMCQChip(vx, cy, vw, chipH, opt, () => {
-        if (this.gameEnded) return;
-        this.onN2OptionSelected(opt, correctCode, currentLetter);
+      this.buildSelectableChip(vx, cy, vw, chipH, opt, () => {
+        if (this.gameEnded || this.roundInProgress) return;
+        this.selectedOption = opt;
+        // Update active slot preview
+        if (this.visorCodeText) this.visorCodeText.setText(opt).setColor("#06b6d4");
+        this.enableConfirmButton();
       });
     });
+
+    const confirmY = chipsStartY + options.length * (chipH + chipGap) + 4;
+    this.buildConfirmButton(vx, confirmY, vw, 44, () => this.onN2Confirm(correctCode, currentLetter));
   }
 
   private getN2WrongOptions(correct: string): string[] {
@@ -627,9 +642,12 @@ export class GameScene extends Phaser.Scene {
     return wrong.slice(0, 2);
   }
 
-  private onN2OptionSelected(selected: string, correct: string, letter: TranslatorLetter) {
-    if (this.gameEnded) return;
+  private onN2Confirm(correct: string, letter: TranslatorLetter) {
+    if (this.gameEnded || this.roundInProgress || !this.selectedOption) return;
+    this.roundInProgress = true;
+    const selected = this.selectedOption;
     this.playClick();
+
     const words = this.levelConfig.n2Words!;
     const wordDef = words[this.n2WordIndex];
 
@@ -637,26 +655,24 @@ export class GameScene extends Phaser.Scene {
       this.hits += 1;
       this.playSuccess();
       runtimeGameBridge.emit({ type: "CORRECT_ANSWER", gameId: GAME_ID, stage: 2, pointsEarned: 20 });
+      // Confirm slot with green
+      if (this.visorCodeText) this.visorCodeText.setText(correct).setColor("#84cc16");
       this.n2AccumulatedCode.push(correct);
       this.showToast(`✅ ${letter} = ${correct}`, COLORS.lime, 1200);
 
       if (this.n2LetterIndex >= wordDef.letters.length - 1) {
-        // Word complete — show full code in visor then advance
-        const fullCode = wordDef.codes.join(" ");
-        this.time.delayedCall(400, () => {
+        // Word complete
+        this.time.delayedCall(1400, () => {
           if (this.gameEnded) return;
-          if (this.visorText) this.visorText.setText(fullCode);
-          this.showWordCompleteAnimation(fullCode);
-          this.time.delayedCall(1400, () => {
-            if (this.gameEnded) return;
-            this.n2WordIndex += 1;
-            this.showN2Word();
-          });
+          this.n2WordIndex += 1;
+          this.roundInProgress = false;
+          this.showN2Word();
         });
       } else {
         this.time.delayedCall(1300, () => {
           if (this.gameEnded) return;
           this.n2LetterIndex += 1;
+          this.roundInProgress = false;
           this.renderN2State();
         });
       }
@@ -664,19 +680,14 @@ export class GameScene extends Phaser.Scene {
       this.errors += 1;
       this.playWrong();
       runtimeGameBridge.emit({ type: "WRONG_ANSWER", gameId: GAME_ID, stage: 2, pointsEarned: -5 });
-      this.showToast("❌ Código errado! Consulte a tabela.", COLORS.red, 2000);
+      this.showToast("❌ Código errado! Consulte a tabela e tente novamente.", COLORS.red, 2200);
+      this.roundInProgress = false;
+      this.selectedOption = null;
+      this.selectedChipRedraw?.();
+      this.selectedChipRedraw = null;
+      if (this.visorCodeText) this.visorCodeText.setText("___").setColor("#475569");
+      this.disableConfirmButton();
     }
-  }
-
-  private showWordCompleteAnimation(fullCode: string) {
-    const vx = ZONE_VIS_X1;
-    const vw = ZONE_VIS_X2 - ZONE_VIS_X1;
-    const animText = this.addContent(this.addSharpText(vx + vw / 2, PANEL_Y + 96, "✓ " + fullCode, {
-      fontSize: "30px", fontFamily: "Courier New, monospace", color: "#84cc16",
-      stroke: "#060316", strokeThickness: 3,
-    }).setOrigin(0.5).setDepth(60));
-    animText.setAlpha(0);
-    this.tweens.add({ targets: animText, alpha: 1, scale: { from: 0.8, to: 1.1 }, duration: 400, yoyo: true, hold: 600 });
   }
 
   // ─── N3 — Binário → Letra ────────────────────────────────────────────────────
@@ -699,62 +710,93 @@ export class GameScene extends Phaser.Scene {
     const wordDef = words[this.n3WordIndex];
     const currentGroup = wordDef.groups[this.n3GroupIndex];
 
-    // Highlight the letter that this group decodes to (for learning, keep ref highlighted)
-    const targetLetter = wordDef.letters[this.n3GroupIndex];
-    this.highlightKey(targetLetter);
-    this.highlightRefRow(targetLetter);
-
-    // Progress dots (words)
     this.drawProgressDots(words.length, this.n3WordIndex);
 
     const vx = ZONE_VIS_X1;
     const vw = ZONE_VIS_X2 - ZONE_VIS_X1;
 
-    // Full code in visor with current group highlighted
+    // ── Visor: code groups with current highlighted ──────────────────────────
+    const visorTop = PANEL_Y + 46;
+    const visorH = 96;
+    const visorBg = this.addContent(this.add.graphics().setDepth(10));
+    visorBg.fillStyle(COLORS.darker, 1);
+    visorBg.fillRoundedRect(vx, visorTop, vw, visorH, 12);
+    visorBg.lineStyle(3, COLORS.lime, 0.8);
+    visorBg.strokeRoundedRect(vx, visorTop, vw, visorH, 12);
+    visorBg.fillStyle(COLORS.lime, 0.7);
+    [[vx + 14, visorTop + 14], [vx + vw - 14, visorTop + 14],
+     [vx + 14, visorTop + visorH - 14], [vx + vw - 14, visorTop + visorH - 14]].forEach(
+      ([cx, cy]) => visorBg.fillCircle(cx, cy, 5)
+    );
+
     const groups = wordDef.groups;
-    const displayParts = groups.map((g, i) => {
-      if (i < this.n3GroupIndex) return g;
-      if (i === this.n3GroupIndex) return `[${g}]`;
-      return g;
+    const nGroups = groups.length;
+    const gColW = Math.min(110, (vw - 20) / nGroups);
+    const gStartX = vx + (vw - gColW * nGroups) / 2;
+
+    groups.forEach((g, i) => {
+      const colCX = gStartX + i * gColW + gColW / 2;
+      const isDone = i < this.n3GroupIndex;
+      const isActive = i === this.n3GroupIndex;
+
+      // Highlight active group with bracket box
+      if (isActive) {
+        const gBg = this.addContent(this.add.graphics().setDepth(11));
+        gBg.fillStyle(COLORS.cyan, 0.15);
+        gBg.fillRoundedRect(gStartX + i * gColW + 2, visorTop + 8, gColW - 4, 42, 6);
+        gBg.lineStyle(2, COLORS.cyan, 0.7);
+        gBg.strokeRoundedRect(gStartX + i * gColW + 2, visorTop + 8, gColW - 4, 42, 6);
+      }
+
+      const codeColor = isDone ? "#84cc16" : isActive ? "#06b6d4" : "#94a3b8";
+      this.addContent(this.addSharpText(colCX, visorTop + 30, g, {
+        fontSize: "20px", fontFamily: "Courier New, monospace", color: codeColor,
+        stroke: "#060316", strokeThickness: 2,
+      }).setOrigin(0.5).setDepth(12));
+
+      // Decoded letter slot below
+      const letterStr = isDone ? this.n3DecodedLetters[i] : (isActive ? "_" : "_");
+      const letterColor = isDone ? "#84cc16" : "#1e293b";
+      this.addContent(this.addSharpText(colCX, visorTop + 72, letterStr, {
+        fontSize: "22px", fontFamily: "Arial Black, Arial", color: letterColor,
+        stroke: "#0d0528", strokeThickness: 3,
+      }).setOrigin(0.5).setDepth(12));
     });
-    this.createVisorDisplay(displayParts.join(" "));
 
-    // Decoded so far
-    const decodedSoFar = this.n3DecodedLetters.join("_") + (this.n3DecodedLetters.length < wordDef.letters.length ? "_" : "");
-    const decodedBg = this.addContent(this.add.graphics().setDepth(10));
-    decodedBg.fillStyle(COLORS.purple, 0.5);
-    decodedBg.fillRoundedRect(vx, PANEL_Y + 162, vw, 40, 10);
-    this.addContent(this.addSharpText(vx + vw / 2, PANEL_Y + 183, `Palavra: ${decodedSoFar}`, {
-      fontSize: "22px", fontFamily: "Arial Black, Arial", color: "#84cc16",
-      stroke: "#0d0528", strokeThickness: 3,
-    }).setOrigin(0.5).setDepth(12));
-
-    // Question
+    // ── Question ──────────────────────────────────────────────────────────────
     const qBg = this.addContent(this.add.graphics().setDepth(10));
     qBg.fillStyle(COLORS.cyan, 0.15);
-    qBg.fillRoundedRect(vx, PANEL_Y + 210, vw, 44, 10);
-    this.addContent(this.addSharpText(vx + vw / 2, PANEL_Y + 233, `"${currentGroup}" → qual letra?`, {
+    qBg.fillRoundedRect(vx, PANEL_Y + 158, vw, 40, 10);
+    this.addContent(this.addSharpText(vx + vw / 2, PANEL_Y + 179, `"${currentGroup}" → qual letra?`, {
       fontSize: "20px", fontFamily: "Arial Black, Arial", color: "#e2e8f0",
       stroke: "#0d0528", strokeThickness: 3,
     }).setOrigin(0.5).setDepth(12));
 
-    // MCQ letter options
+    // ── Selectable chips ─────────────────────────────────────────────────────
     const options = wordDef.options[this.n3GroupIndex];
-    const chipH = 68;
-    const chipGap = 14;
-    const chipsStartY = PANEL_Y + 266;
+    const chipH = 52;
+    const chipGap = 10;
+    const chipsStartY = PANEL_Y + 210;
     options.forEach((opt, i) => {
       const cy = chipsStartY + i * (chipH + chipGap);
-      this.buildMCQChip(vx, cy, vw, chipH, opt, () => {
-        if (this.gameEnded) return;
-        this.onN3OptionSelected(opt, targetLetter, currentGroup);
+      this.buildSelectableChip(vx, cy, vw, chipH, opt, () => {
+        if (this.gameEnded || this.roundInProgress) return;
+        this.selectedOption = opt;
+        this.enableConfirmButton();
       });
     });
+
+    const targetLetter = wordDef.letters[this.n3GroupIndex];
+    const confirmY = chipsStartY + options.length * (chipH + chipGap) + 4;
+    this.buildConfirmButton(vx, confirmY, vw, 44, () => this.onN3Confirm(targetLetter, currentGroup));
   }
 
-  private onN3OptionSelected(selected: string, correct: TranslatorLetter, group: string) {
-    if (this.gameEnded) return;
+  private onN3Confirm(correct: TranslatorLetter, group: string) {
+    if (this.gameEnded || this.roundInProgress || !this.selectedOption) return;
+    this.roundInProgress = true;
+    const selected = this.selectedOption;
     this.playClick();
+
     const words = this.levelConfig.n3Words!;
     const wordDef = words[this.n3WordIndex];
 
@@ -766,7 +808,6 @@ export class GameScene extends Phaser.Scene {
       this.showToast(`✅ ${group} = ${correct}`, COLORS.lime, 1200);
 
       if (this.n3GroupIndex >= wordDef.groups.length - 1) {
-        // Word decoded!
         const decodedWord = wordDef.letters.join("");
         this.time.delayedCall(400, () => {
           if (this.gameEnded) return;
@@ -774,6 +815,7 @@ export class GameScene extends Phaser.Scene {
           this.time.delayedCall(1800, () => {
             if (this.gameEnded) return;
             this.n3WordIndex += 1;
+            this.roundInProgress = false;
             this.showN3Word();
           });
         });
@@ -781,6 +823,7 @@ export class GameScene extends Phaser.Scene {
         this.time.delayedCall(1300, () => {
           if (this.gameEnded) return;
           this.n3GroupIndex += 1;
+          this.roundInProgress = false;
           this.renderN3State();
         });
       }
@@ -788,7 +831,12 @@ export class GameScene extends Phaser.Scene {
       this.errors += 1;
       this.playWrong();
       runtimeGameBridge.emit({ type: "WRONG_ANSWER", gameId: GAME_ID, stage: 3, pointsEarned: -5 });
-      this.showToast("❌ Letra errada! Consulte a tabela.", COLORS.red, 2000);
+      this.showToast("❌ Letra errada! Consulte a tabela e tente novamente.", COLORS.red, 2200);
+      this.roundInProgress = false;
+      this.selectedOption = null;
+      this.selectedChipRedraw?.();
+      this.selectedChipRedraw = null;
+      this.disableConfirmButton();
     }
   }
 
@@ -870,7 +918,6 @@ export class GameScene extends Phaser.Scene {
     panel.add([shadow, panelBg, topBar, stars, title, sub, next, ...dots]);
     this.animateModal(panel);
 
-    // Confetti
     for (let i = 0; i < 14; i++) {
       const cx = Phaser.Math.Between(300, 980);
       const cy = Phaser.Math.Between(120, 600);
@@ -1042,12 +1089,29 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
-  private buildMCQChip(x: number, y: number, w: number, h: number, label: string, onClick: () => void) {
+  // Selectable chip: neutral by default, turns highlighted on click; deselects previous
+  private buildSelectableChip(
+    x: number, y: number, w: number, h: number,
+    label: string,
+    onSelect: () => void,
+  ) {
     const chipBg = this.addContent(this.add.graphics().setDepth(12));
-    chipBg.fillStyle(COLORS.dark, 0.9);
-    chipBg.fillRoundedRect(x, y, w, h, h / 2);
-    chipBg.lineStyle(3, COLORS.violet, 0.7);
-    chipBg.strokeRoundedRect(x, y, w, h, h / 2);
+
+    const drawNeutral = () => {
+      chipBg.clear();
+      chipBg.fillStyle(COLORS.dark, 0.9);
+      chipBg.fillRoundedRect(x, y, w, h, h / 2);
+      chipBg.lineStyle(3, COLORS.violet, 0.7);
+      chipBg.strokeRoundedRect(x, y, w, h, h / 2);
+    };
+    const drawSelected = () => {
+      chipBg.clear();
+      chipBg.fillStyle(COLORS.cyan, 0.22);
+      chipBg.fillRoundedRect(x, y, w, h, h / 2);
+      chipBg.lineStyle(3, COLORS.cyan, 1);
+      chipBg.strokeRoundedRect(x, y, w, h, h / 2);
+    };
+    drawNeutral();
 
     this.addContent(this.addSharpText(x + w / 2, y + h / 2, label, {
       fontSize: "26px", fontFamily: "Courier New, monospace", color: "#84cc16",
@@ -1056,23 +1120,72 @@ export class GameScene extends Phaser.Scene {
 
     const zone = this.addContent(this.add.zone(x + w / 2, y + h / 2, w, h).setDepth(55));
     zone.setInteractive({ useHandCursor: true });
+    zone.on("pointerover", () => this.input.setDefaultCursor("pointer"));
+    zone.on("pointerout", () => this.input.setDefaultCursor("default"));
+    zone.on("pointerdown", () => {
+      // Restore previous chip to neutral
+      this.selectedChipRedraw?.();
+      // Select this chip
+      drawSelected();
+      this.selectedChipRedraw = drawNeutral;
+      onSelect();
+    });
+  }
+
+  // Confirm button: starts disabled, enabled by enableConfirmButton()
+  private buildConfirmButton(x: number, y: number, w: number, h: number, onConfirm: () => void) {
+    const btnBg = this.addContent(this.add.graphics().setDepth(12));
+    this.confirmBtnBg = btnBg;
+
+    const drawDisabled = () => {
+      btnBg.clear();
+      btnBg.fillStyle(COLORS.gray, 0.25);
+      btnBg.fillRoundedRect(x, y, w, h, h / 2);
+      btnBg.lineStyle(2, COLORS.slate, 0.35);
+      btnBg.strokeRoundedRect(x, y, w, h, h / 2);
+    };
+    const drawEnabled = () => {
+      btnBg.clear();
+      btnBg.fillStyle(COLORS.teal, 1);
+      btnBg.fillRoundedRect(x, y, w, h, h / 2);
+      btnBg.lineStyle(3, COLORS.white, 1);
+      btnBg.strokeRoundedRect(x, y, w, h, h / 2);
+    };
+    drawDisabled();
+    this.confirmBtnDrawEnabled = drawEnabled;
+    this.confirmBtnDrawDisabled = drawDisabled;
+    this.confirmBtnEnabled = false;
+
+    const btnText = this.addContent(this.addSharpText(x + w / 2, y + h / 2, "✓ Confirmar", {
+      fontSize: "19px", fontFamily: "Arial Black, Arial", color: "#334155",
+      stroke: "#0d0528", strokeThickness: 2,
+    }).setOrigin(0.5).setDepth(14));
+    this.confirmBtnText = btnText;
+
+    const zone = this.addContent(this.add.zone(x + w / 2, y + h / 2, w, h).setDepth(56));
+    zone.setInteractive({ useHandCursor: false });
     zone.on("pointerover", () => {
-      this.input.setDefaultCursor("pointer");
-      chipBg.clear();
-      chipBg.fillStyle(COLORS.cyan, 0.18);
-      chipBg.fillRoundedRect(x, y, w, h, h / 2);
-      chipBg.lineStyle(3, COLORS.cyan, 0.9);
-      chipBg.strokeRoundedRect(x, y, w, h, h / 2);
+      if (this.confirmBtnEnabled) this.input.setDefaultCursor("pointer");
     });
-    zone.on("pointerout", () => {
-      this.input.setDefaultCursor("default");
-      chipBg.clear();
-      chipBg.fillStyle(COLORS.dark, 0.9);
-      chipBg.fillRoundedRect(x, y, w, h, h / 2);
-      chipBg.lineStyle(3, COLORS.violet, 0.7);
-      chipBg.strokeRoundedRect(x, y, w, h, h / 2);
+    zone.on("pointerout", () => this.input.setDefaultCursor("default"));
+    zone.on("pointerdown", () => {
+      if (!this.confirmBtnEnabled) return;
+      onConfirm();
     });
-    zone.on("pointerdown", onClick);
+  }
+
+  private enableConfirmButton() {
+    if (!this.confirmBtnBg || !this.confirmBtnText) return;
+    this.confirmBtnEnabled = true;
+    this.confirmBtnDrawEnabled?.();
+    this.confirmBtnText.setColor("#0d0528");
+  }
+
+  private disableConfirmButton() {
+    if (!this.confirmBtnBg || !this.confirmBtnText) return;
+    this.confirmBtnEnabled = false;
+    this.confirmBtnDrawDisabled?.();
+    this.confirmBtnText.setColor("#334155");
   }
 
   private addContent<T extends Phaser.GameObjects.GameObject>(o: T): T {
@@ -1083,7 +1196,16 @@ export class GameScene extends Phaser.Scene {
   private clearContent() {
     this.contentObjects.forEach((o) => o.destroy());
     this.contentObjects = [];
-    this.visorText = undefined;
+    // Reset per-round selection state
+    this.selectedOption = null;
+    this.selectedChipRedraw = null;
+    this.confirmBtnBg = null;
+    this.confirmBtnText = null;
+    this.confirmBtnEnabled = false;
+    this.confirmBtnDrawEnabled = null;
+    this.confirmBtnDrawDisabled = null;
+    this.visorCodeText = null;
+    this.n2SlotTexts = [];
   }
 
   private addOverlay<T extends Phaser.GameObjects.GameObject>(o: T) { this.overlayObjects.push(o); return o; }

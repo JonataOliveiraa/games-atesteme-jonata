@@ -326,30 +326,17 @@ export class GameScene extends Phaser.Scene {
       stroke: "#0d9488", strokeThickness: 4, align: "center",
     }).setOrigin(0.5).setDepth(12));
 
-    // 4 record cards stacked horizontally
-    const cardH = 96;
-    const cardGap = 10;
-    const totalCardsH = records.length * cardH + (records.length - 1) * cardGap;
-    const startCardY = PANEL_Y + 122;
+    // 4 record cards — cardH=88 so all 4 fit within PANEL_H (startCardY+4*(88+8)=250+384=634>628 → use 108 offset)
+    // startCardY=250, cardH=88, cardGap=8: card[3] bottom = 250+3*96+88 = 250+376 = 626 < 628 ✓
+    const cardH = 88;
+    const cardGap = 8;
+    const startCardY = PANEL_Y + 108;
 
     records.forEach((rec, idx) => {
       const cy = startCardY + idx * (cardH + cardGap);
       this.buildN1RecordCard(rec, q.field, cy, cardH, () => {
         if (this.gameEnded) return;
         this.onN1CardTapped(rec.id, q.correctId);
-      });
-    });
-
-    // Reveal fade-in
-    const allCards = this.contentObjects.slice(-records.length * 4);
-    allCards.forEach((o) => {
-      if ("setAlpha" in o) (o as Phaser.GameObjects.GameObject & { setAlpha: (a: number) => void }).setAlpha(0);
-    });
-    this.time.delayedCall(80, () => {
-      records.forEach((_, i) => {
-        this.time.delayedCall(i * 70, () => {
-          // Re-enable items — just tween the containers by name reference
-        });
       });
     });
   }
@@ -361,40 +348,85 @@ export class GameScene extends Phaser.Scene {
     cardH: number,
     onClick: () => void,
   ) {
+    const HOBBY_ICON: Record<string, string> = { Futebol: "⚽", Dança: "💃", Xadrez: "♟️", Leitura: "📚", Desenho: "🎨" };
+    const ANIMAL_ICON: Record<string, string> = { Cachorro: "🐕", Gato: "🐱", Peixe: "🐠", Pássaro: "🦜" };
+
     const cardX = PANEL_X + 16;
     const cardW = PANEL_W - 32;
     const cx = cardX + cardW / 2;
     const cy = topY + cardH / 2;
+    const headerH = 34;
+    const colW = cardW / 4; // 276px per column
 
     // Card background
     const cardBg = this.addContent(this.add.graphics().setDepth(12));
     cardBg.fillStyle(COLORS.white, 0.92);
-    cardBg.fillRoundedRect(cardX, topY, cardW, cardH, 18);
+    cardBg.fillRoundedRect(cardX, topY, cardW, cardH, 16);
     cardBg.lineStyle(4, COLORS.brown, 0.5);
-    cardBg.strokeRoundedRect(cardX, topY, cardW, cardH, 18);
+    cardBg.strokeRoundedRect(cardX, topY, cardW, cardH, 16);
 
-    // Emoji + Name on left
-    this.addContent(this.addSharpText(cardX + 40, cy, rec.emoji, { fontSize: "42px", fontFamily: "Arial Black, Arial" }).setOrigin(0.5).setDepth(14));
-    this.addContent(this.addSharpText(cardX + 110, cy, rec.Nome, {
-      fontSize: "24px", fontFamily: "Arial Black, Arial", color: "#1c1008", stroke: "#fef3c7", strokeThickness: 4,
+    // Header strip (emoji + name)
+    const headerBg = this.addContent(this.add.graphics().setDepth(12));
+    headerBg.fillStyle(COLORS.brown, 0.1);
+    headerBg.fillRoundedRect(cardX + 4, topY + 4, cardW - 8, headerH - 4, 10);
+
+    this.addContent(this.addSharpText(cardX + 24, topY + headerH / 2, rec.emoji, {
+      fontSize: "20px", fontFamily: "Arial Black, Arial",
+    }).setOrigin(0.5).setDepth(14));
+    this.addContent(this.addSharpText(cardX + 48, topY + headerH / 2, rec.Nome, {
+      fontSize: "17px", fontFamily: "Arial Black, Arial", color: "#92400e", stroke: "#fef3c7", strokeThickness: 3,
     }).setOrigin(0, 0.5).setDepth(14));
 
-    // Highlighted field on right
-    const fieldValue = rec[highlightField];
-    const fieldChipX = cardX + cardW - 300;
-    const fieldChipBg = this.addContent(this.add.graphics().setDepth(13));
-    fieldChipBg.fillStyle(COLORS.teal, 0.15);
-    fieldChipBg.fillRoundedRect(fieldChipX, topY + 20, 280, 56, 14);
-    fieldChipBg.lineStyle(2, COLORS.teal, 0.7);
-    fieldChipBg.strokeRoundedRect(fieldChipX, topY + 20, 280, 56, 14);
+    // Thin divider between header and fields
+    const divGfx = this.addContent(this.add.graphics().setDepth(12));
+    divGfx.lineStyle(1, COLORS.brown, 0.2);
+    divGfx.lineBetween(cardX + 8, topY + headerH, cardX + cardW - 8, topY + headerH);
 
-    this.addContent(this.addSharpText(fieldChipX + 10, topY + 32, highlightField + ":", {
-      fontSize: "14px", fontFamily: "Arial Black, Arial", color: "#0d9488",
-    }).setOrigin(0, 0).setDepth(14));
+    // 4 field columns: Cidade | Hobby | Idade | Animal
+    const FIELDS: Array<keyof Omit<PersonRecord, "id" | "emoji">> = ["Cidade", "Hobby", "Idade", "Animal"];
+    FIELDS.forEach((field, i) => {
+      const colStart = cardX + i * colW;
+      const colCenter = colStart + colW / 2;
+      const isHighlight = field === highlightField;
+      const value = rec[field];
 
-    this.addContent(this.addSharpText(fieldChipX + 140, topY + 48, fieldValue, {
-      fontSize: "22px", fontFamily: "Arial Black, Arial", color: "#1c1008", stroke: "#fef3c7", strokeThickness: 3,
-    }).setOrigin(0.5, 0.5).setDepth(14));
+      const icon =
+        field === "Hobby"   ? (HOBBY_ICON[value] ?? "🎯")
+        : field === "Animal" ? (ANIMAL_ICON[value] ?? "🐾")
+        : field === "Cidade" ? "🏙"
+        : "🎂"; // Idade
+
+      // Highlighted field gets colored background
+      if (isHighlight) {
+        const hlBg = this.addContent(this.add.graphics().setDepth(13));
+        hlBg.fillStyle(COLORS.teal, 0.16);
+        hlBg.fillRoundedRect(colStart + 4, topY + headerH, colW - 8, cardH - headerH, 8);
+        hlBg.lineStyle(2, COLORS.teal, 0.5);
+        hlBg.strokeRoundedRect(colStart + 4, topY + headerH, colW - 8, cardH - headerH, 8);
+      }
+
+      // Field label (small)
+      this.addContent(this.addSharpText(colCenter, topY + headerH + 6, field, {
+        fontSize: "11px", fontFamily: "Arial Black, Arial",
+        color: isHighlight ? "#0d9488" : "#92400e",
+      }).setOrigin(0.5, 0).setDepth(14));
+
+      // Field icon + value
+      this.addContent(this.addSharpText(colCenter, topY + headerH + 24, `${icon} ${value}`, {
+        fontSize: "14px", fontFamily: "Arial Black, Arial",
+        color: isHighlight ? "#0d9488" : "#1c1008",
+        stroke: "#fef3c7", strokeThickness: 2,
+        align: "center",
+        wordWrap: { width: colW - 16 },
+      }).setOrigin(0.5, 0).setDepth(14));
+
+      // Column divider (not after last column)
+      if (i < 3) {
+        const colDiv = this.addContent(this.add.graphics().setDepth(12));
+        colDiv.lineStyle(1, COLORS.brown, 0.15);
+        colDiv.lineBetween(colStart + colW, topY + headerH + 4, colStart + colW, topY + cardH - 4);
+      }
+    });
 
     // Interactive zone
     const zone = this.addContent(this.add.zone(cx, cy, cardW, cardH).setDepth(55));
@@ -403,17 +435,17 @@ export class GameScene extends Phaser.Scene {
       this.input.setDefaultCursor("pointer");
       cardBg.clear();
       cardBg.fillStyle(COLORS.cream, 0.98);
-      cardBg.fillRoundedRect(cardX, topY, cardW, cardH, 18);
+      cardBg.fillRoundedRect(cardX, topY, cardW, cardH, 16);
       cardBg.lineStyle(4, COLORS.teal, 0.9);
-      cardBg.strokeRoundedRect(cardX, topY, cardW, cardH, 18);
+      cardBg.strokeRoundedRect(cardX, topY, cardW, cardH, 16);
     });
     zone.on("pointerout", () => {
       this.input.setDefaultCursor("default");
       cardBg.clear();
       cardBg.fillStyle(COLORS.white, 0.92);
-      cardBg.fillRoundedRect(cardX, topY, cardW, cardH, 18);
+      cardBg.fillRoundedRect(cardX, topY, cardW, cardH, 16);
       cardBg.lineStyle(4, COLORS.brown, 0.5);
-      cardBg.strokeRoundedRect(cardX, topY, cardW, cardH, 18);
+      cardBg.strokeRoundedRect(cardX, topY, cardW, cardH, 16);
     });
     zone.on("pointerdown", onClick);
   }
@@ -540,8 +572,14 @@ export class GameScene extends Phaser.Scene {
         rowBg.strokeRoundedRect(cardX + 12, fy, cardW - 24, 70, 12);
       }
 
-      const ICONS: Record<string, string> = { Cidade: "🏙", Hobby: "⚽", Idade: "🎂", Animal: "🐾" };
-      this.addContent(this.addSharpText(cardX + 36, fy + 35, ICONS[field] ?? "📋", {
+      const HOBBY_ICON_N2: Record<string, string> = { Futebol: "⚽", Dança: "💃", Xadrez: "♟️", Leitura: "📚", Desenho: "🎨" };
+      const ANIMAL_ICON_N2: Record<string, string> = { Cachorro: "🐕", Gato: "🐱", Peixe: "🐠", Pássaro: "🦜" };
+      const fieldIcon =
+        field === "Hobby"   ? (HOBBY_ICON_N2[rec.Hobby] ?? "⚽")
+        : field === "Animal" ? (ANIMAL_ICON_N2[rec.Animal] ?? "🐾")
+        : field === "Cidade" ? "🏙"
+        : "🎂"; // Idade
+      this.addContent(this.addSharpText(cardX + 36, fy + 35, fieldIcon, {
         fontSize: "28px", fontFamily: "Arial Black, Arial",
       }).setOrigin(0.5).setDepth(13));
 
@@ -691,10 +729,12 @@ export class GameScene extends Phaser.Scene {
       fontSize: "16px", fontFamily: "Arial Black, Arial", color: "#92400e", stroke: "#fef3c7", strokeThickness: 3,
     }).setOrigin(0, 0).setDepth(12));
 
-    // Two compact field rows
+    // Two compact field rows with thematic emojis
+    const HOBBY_ICON_M: Record<string, string> = { Futebol: "⚽", Dança: "💃", Xadrez: "♟️", Leitura: "📚", Desenho: "🎨" };
+    const ANIMAL_ICON_M: Record<string, string> = { Cachorro: "🐕", Gato: "🐱", Peixe: "🐠", Pássaro: "🦜" };
     const fieldPairs: Array<[string, string]> = [
-      [`${rec.Cidade}`, "🏙"],
-      [`${rec.Hobby}`, "⚽"],
+      [rec.Cidade, "🏙"],
+      [rec.Hobby, HOBBY_ICON_M[rec.Hobby] ?? "⚽"],
     ];
     fieldPairs.forEach(([val, icon], i) => {
       this.addContent(this.addSharpText(x + 52, y + 32 + i * 24, `${icon} ${val}`, {
@@ -702,8 +742,9 @@ export class GameScene extends Phaser.Scene {
       }).setOrigin(0, 0).setDepth(12));
     });
 
-    // Age + Animal
-    this.addContent(this.addSharpText(x + w - 10, y + 14, `${rec.Idade}a · ${rec.Animal}`, {
+    // Age + Animal (thematic emoji)
+    const animalEmoji = ANIMAL_ICON_M[rec.Animal] ?? "🐾";
+    this.addContent(this.addSharpText(x + w - 10, y + 14, `${rec.Idade}a · ${animalEmoji}`, {
       fontSize: "12px", fontFamily: "Arial Black, Arial", color: "#0d9488",
     }).setOrigin(1, 0).setDepth(12));
   }

@@ -330,7 +330,7 @@ export class GameScene extends Phaser.Scene {
   // ─── Header ────────────────────────────────────────────────────────────────
 
   private createHeader() {
-    this.addSharpText(640, 68, this.levelConfig.title, {
+    this.addSharpText(640, 62, this.levelConfig.title, {
       fontSize: "38px",
       fontFamily: "Arial Black, Arial",
       color: "#f59e0b",
@@ -340,20 +340,20 @@ export class GameScene extends Phaser.Scene {
 
     const card = this.add.graphics().setDepth(5);
     card.fillStyle(0x1c0a0a, 0.82);
-    card.fillRoundedRect(230, 96, 820, 44, 22);
+    card.fillRoundedRect(230, 90, 820, 56, 22);
     card.fillStyle(COLORS.amber, 0.14);
-    card.fillRoundedRect(242, 104, 796, 20, 10);
+    card.fillRoundedRect(242, 98, 796, 20, 10);
     card.lineStyle(4, COLORS.amber, 0.8);
-    card.strokeRoundedRect(230, 96, 820, 44, 22);
+    card.strokeRoundedRect(230, 90, 820, 56, 22);
 
-    this.addSharpText(640, 119, this.levelConfig.objective, {
-      fontSize: "19px",
+    this.addSharpText(640, 118, this.levelConfig.objective, {
+      fontSize: "16px",
       fontFamily: "Arial Black, Arial",
       color: "#fef3c7",
       stroke: "#1a0505",
       strokeThickness: 3,
       align: "center",
-      wordWrap: { width: 760 },
+      wordWrap: { width: 840 },
     })
       .setOrigin(0.5)
       .setDepth(6);
@@ -449,7 +449,7 @@ export class GameScene extends Phaser.Scene {
 
     // Evidence card (main info display)
     const cardContainer = this.addCard(
-      this.add.container(panelCX, panelCY - 30).setDepth(15),
+      this.add.container(panelCX, panelCY - 50).setDepth(15),
     );
     const cardBg = this.add.graphics();
     cardBg.fillStyle(0x111827, 0.95);
@@ -654,7 +654,7 @@ export class GameScene extends Phaser.Scene {
     const OPT_GAP = 18;
     const totalW = options.length * OPT_W + (options.length - 1) * OPT_GAP;
     const startX = panelCX - totalW / 2 + OPT_W / 2;
-    const OPT_Y = PANEL_Y + PANEL_H - 108;
+    const OPT_Y = PANEL_Y + PANEL_H - 138;
 
     options.forEach((opt, i) => {
       const ox = startX + i * (OPT_W + OPT_GAP);
@@ -811,7 +811,7 @@ export class GameScene extends Phaser.Scene {
     const stepLabel = this.n3Step === 0 ? "🔎 Passo 1:" : "💡 Passo 2:";
 
     this.addCard(
-      this.addSharpText(panelCX, PANEL_Y + 210, `${stepLabel} ${step.q}`, {
+      this.addSharpText(panelCX, PANEL_Y + 220, `${stepLabel} ${step.q}`, {
         fontSize: "22px",
         fontFamily: "Arial Black, Arial",
         color: "#fbbf24",
@@ -836,7 +836,7 @@ export class GameScene extends Phaser.Scene {
     const OPT_GAP = 18;
     const totalW = options.length * OPT_W + (options.length - 1) * OPT_GAP;
     const startX = panelCX - totalW / 2 + OPT_W / 2;
-    const OPT_Y = PANEL_Y + PANEL_H - 110;
+    const OPT_Y = PANEL_Y + PANEL_H - 140;
 
     options.forEach((opt, i) => {
       const ox = startX + i * (OPT_W + OPT_GAP);
@@ -1252,7 +1252,7 @@ export class GameScene extends Phaser.Scene {
     this.input.enabled = true;
     this.clearOverlay();
     const bg = this.addOverlay(
-      this.add.rectangle(640, 360, 1280, 720, 0x1a0505, 0.78).setDepth(60),
+      this.add.rectangle(640, 360, 1280, 720, 0x1a0505, 1).setDepth(60),
     );
     bg.setInteractive();
 

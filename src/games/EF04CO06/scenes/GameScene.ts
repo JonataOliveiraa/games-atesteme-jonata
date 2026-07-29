@@ -66,10 +66,10 @@ const FORMAT_ORDER: FormatType[] = ["text", "slides", "video"];
 
 // ── Stage metadata ───────────────────────────────────────────────────────────
 const STAGE_META = [
-  { label: "📋 Planejamento" },
-  { label: "✏️  Produção" },
-  { label: "🔍 Revisão" },
-  { label: "🚀 Publicação" },
+  { emoji: "📋", word: "Planejamento" },
+  { emoji: "✏️", word: "Produção" },
+  { emoji: "🔍", word: "Revisão" },
+  { emoji: "🚀", word: "Publicação" },
 ];
 
 export class GameScene extends Phaser.Scene {
@@ -449,9 +449,17 @@ export class GameScene extends Phaser.Scene {
         : status === "active"  ? "#f0e6ff"
         : "#64748b";
 
-      const stageTxt = this.addSharpText(stageX + STAGE_W / 2, STAGE_BAR_Y + STAGE_BAR_H / 2, STAGE_META[i].label, {
-        fontSize: "14px", fontFamily: "Arial Black, Arial", color: textColor,
-      }).setOrigin(0.5).setDepth(11);
+      // Render emoji and word as SEPARATE objects so bounding-box differences between
+      // emoji characters don't shift the vertical center of each pill independently.
+      const textY = STAGE_BAR_Y + STAGE_BAR_H / 2;
+      const stageEmoji = this.addSharpText(stageX + 14, textY, STAGE_META[i].emoji, {
+        fontSize: "14px", fontFamily: "Arial Black, Arial",
+      }).setOrigin(0, 0.5).setDepth(11);
+      this.stageBarObjects.push(stageEmoji);
+
+      const stageTxt = this.addSharpText(stageX + 38, textY, STAGE_META[i].word, {
+        fontSize: "13px", fontFamily: "Arial Black, Arial", color: textColor,
+      }).setOrigin(0, 0.5).setDepth(11);
       this.stageBarObjects.push(stageTxt);
 
       // Arrow connector (except last)

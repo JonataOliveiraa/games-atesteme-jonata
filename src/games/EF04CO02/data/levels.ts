@@ -20,10 +20,14 @@ export const LEVELS: ArchiveLevel[] = [
     tip: "Procure o campo pedido em cada cartão para encontrar a resposta certa.",
     timeLimit: 35,
     n1Questions: [
-      { field: "Hobby",  value: "Futebol",        recordIds: ["1","2","3","4"], correctId: "1" },
-      { field: "Cidade", value: "São Paulo",       recordIds: ["1","2","3","4"], correctId: "1" },
-      { field: "Animal", value: "Gato",            recordIds: ["5","6","7","8"], correctId: "5" },
-      { field: "Idade",  value: "11",              recordIds: ["5","6","7","8"], correctId: "7" },
+      // Q1: records 1,2,3,5 — only Lucas (1) has Hobby=Futebol (Sofia was removed to avoid ambiguity)
+      { field: "Hobby",  value: "Futebol",  recordIds: ["1","2","3","5"], correctId: "1" },
+      // Q2: records 2,3,4,5 — only Sofia (4) has Cidade=Curitiba
+      { field: "Cidade", value: "Curitiba", recordIds: ["2","3","4","5"], correctId: "4" },
+      // Q3: records 4,5,6,7 — only Pedro (5) has Animal=Gato
+      { field: "Animal", value: "Gato",     recordIds: ["4","5","6","7"], correctId: "5" },
+      // Q4: records 5,6,7,8 — only Rafael (7) has Idade=11
+      { field: "Idade",  value: "11",       recordIds: ["5","6","7","8"], correctId: "7" },
     ],
   },
   {

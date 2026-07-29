@@ -66,6 +66,7 @@ export class GameScene extends Phaser.Scene {
   // Grid rendering
   private cellContainers: Phaser.GameObjects.Container[][] = [];
   private cellZones: Phaser.GameObjects.Zone[][] = [];
+  private storedGridLayout = { cellSize: 0, startX: 0, startY: 0 };
 
   constructor() {
     super({ key: "GameScene" });
@@ -87,6 +88,7 @@ export class GameScene extends Phaser.Scene {
     this.overlayObjects = [];
     this.gameplayObjects = [];
     this.n2ChipObjects = [];
+    this.storedGridLayout = { cellSize: 0, startX: 0, startY: 0 };
   }
 
   create() {
@@ -324,16 +326,26 @@ export class GameScene extends Phaser.Scene {
    * Returns grid layout metrics centered inside the main panel.
    * cellSize is chosen to fill the panel well.
    */
-  private getGridLayout(gridSize: number) {
+  private getGridLayout(gridSize: number, topReserve = 0, bottomReserve = 0) {
     const labelW = 42;
     const labelH = 36;
     const maxW = PANEL_W - 80;
-    const maxH = PANEL_H - 100;
-    const cellSize = Math.floor(Math.min((maxW - labelW) / gridSize, (maxH - labelH) / gridSize));
+    let cellSize: number;
+    let startY: number;
+    if (topReserve > 0 || bottomReserve > 0) {
+      // Fit grid in the space between reserved areas, top-aligned
+      const availH = PANEL_H - topReserve - bottomReserve;
+      cellSize = Math.floor(Math.min((maxW - labelW) / gridSize, (availH - labelH) / gridSize));
+      startY = PANEL_Y + topReserve + labelH;
+    } else {
+      // Default: center vertically in full panel
+      const maxH = PANEL_H - 100;
+      cellSize = Math.floor(Math.min((maxW - labelW) / gridSize, (maxH - labelH) / gridSize));
+      startY = PANEL_Y + (PANEL_H - labelH - cellSize * gridSize) / 2 + labelH + 10;
+    }
     const gridW = cellSize * gridSize;
     const gridH = cellSize * gridSize;
     const startX = PANEL_X + (PANEL_W - labelW - gridW) / 2 + labelW;
-    const startY = PANEL_Y + (PANEL_H - labelH - gridH) / 2 + labelH + 10;
     return { cellSize, gridW, gridH, startX, startY, labelW, labelH };
   }
 
@@ -345,8 +357,11 @@ export class GameScene extends Phaser.Scene {
     gridSize: number,
     onCellClick: (row: number, col: number) => void,
     getCellVisual?: (row: number, col: number) => { fillColor: number; alpha: number; label?: string },
+    topReserve = 0,
+    bottomReserve = 0,
   ) {
-    const { cellSize, startX, startY, labelW, labelH } = this.getGridLayout(gridSize);
+    const { cellSize, startX, startY, labelW, labelH } = this.getGridLayout(gridSize, topReserve, bottomReserve);
+    this.storedGridLayout = { cellSize, startX, startY };
 
     this.cellContainers = [];
     this.cellZones = [];
@@ -440,7 +455,9 @@ export class GameScene extends Phaser.Scene {
     const container = this.cellContainers[row]?.[col];
     if (!container) return;
 
-    const { cellSize } = this.getGridLayout(this.levelConfig.gridSize);
+    const { cellSize } = this.storedGridLayout.cellSize > 0
+      ? this.storedGridLayout
+      : this.getGridLayout(this.levelConfig.gridSize);
     container.removeAll(true);
 
     const gfx = this.add.graphics().setDepth(15);
@@ -465,7 +482,7 @@ export class GameScene extends Phaser.Scene {
     const currentTarget = targets[this.n1Index];
 
     // Progress dots
-    const dotsY = PANEL_Y + 30;
+    const dotsY = PANEL_Y + 12;
     for (let i = 0; i < targets.length; i++) {
       const dotGfx = this.add.graphics().setDepth(12);
       const color = i < this.n1Index ? COLORS.green : i === this.n1Index ? COLORS.gold : 0xd1d5db;
@@ -476,17 +493,17 @@ export class GameScene extends Phaser.Scene {
       this.gameplayObjects.push(dotGfx);
     }
 
-    // Target coordinate display
-    const promptY = PANEL_Y + 70;
+    // Target coordinate display — kept above grid column labels (labels at startY-18 ≈ 221)
+    const promptY = PANEL_Y + 44;
     const promptBg = this.add.graphics().setDepth(11);
     promptBg.fillStyle(COLORS.navy, 0.9);
-    promptBg.fillRoundedRect(640 - 260, promptY - 30, 520, 64, 32);
+    promptBg.fillRoundedRect(640 - 260, promptY - 22, 520, 44, 22);
     promptBg.lineStyle(4, COLORS.gold, 1);
-    promptBg.strokeRoundedRect(640 - 260, promptY - 30, 520, 64, 32);
+    promptBg.strokeRoundedRect(640 - 260, promptY - 22, 520, 44, 22);
     this.gameplayObjects.push(promptBg);
 
     this.n1CoordText = this.addSharpText(640, promptY + 2, `→ Toque em ${currentTarget} ←`, {
-      fontSize: "30px", fontFamily: "Arial Black, Arial", color: "#f59e0b",
+      fontSize: "26px", fontFamily: "Arial Black, Arial", color: "#f59e0b",
       stroke: "#0c1445", strokeThickness: 5, align: "center",
     }).setOrigin(0.5).setDepth(12);
     this.gameplayObjects.push(this.n1CoordText);
@@ -543,27 +560,16 @@ export class GameScene extends Phaser.Scene {
     } else {
       this.errors += 1;
       this.playWrong();
-      // Flash red on wrong cell, then show correct briefly
+      // Flash red on wrong cell; player must keep trying to find the correct one
       this.updateCellVisual(row, col, COLORS.red, 0.9, "❌");
       runtimeGameBridge.emit({ type: "WRONG_ANSWER", gameId: GAME_ID, stage: this.levelConfig.level, pointsEarned: -5 });
-      this.showToast(`❌ Era ${this.levelConfig.n1Targets![this.n1Index]}`, COLORS.red, 1600);
-
-      this.time.delayedCall(800, () => {
+      this.showToast(`❌ Não é essa! Continue tentando.`, COLORS.red, 1200);
+      this.cellZones.flat().forEach((z) => z.disableInteractive());
+      this.time.delayedCall(650, () => {
         if (this.gameEnded) return;
-        // Show the correct cell
-        this.updateCellVisual(target.row, target.col, COLORS.green, 1, "⭐");
-        this.cellZones.flat().forEach((z) => z.disableInteractive());
-
-        this.time.delayedCall(1200, () => {
-          if (this.gameEnded) return;
-          this.n1Index += 1;
-          if (this.n1Index >= this.levelConfig.n1Targets!.length) {
-            this.completeLevel(2 as BattleLevelNumber);
-          } else {
-            this.clearGameplay();
-            this.buildN1UI();
-          }
-        });
+        // Reset wrong cell back to normal and re-enable all zones
+        this.updateCellVisual(row, col, 0xffffff, 0.88, "");
+        this.cellZones.flat().forEach((z) => z.setInteractive({ useHandCursor: true }));
       });
     }
   }
@@ -575,7 +581,7 @@ export class GameScene extends Phaser.Scene {
     const current = n2Objects[this.n2Index];
 
     // Progress dots
-    const dotsY = PANEL_Y + 30;
+    const dotsY = PANEL_Y + 12;
     for (let i = 0; i < n2Objects.length; i++) {
       const dotGfx = this.add.graphics().setDepth(12);
       const color = i < this.n2Index ? COLORS.green : i === this.n2Index ? COLORS.gold : 0xd1d5db;
@@ -586,22 +592,23 @@ export class GameScene extends Phaser.Scene {
       this.gameplayObjects.push(dotGfx);
     }
 
-    // Question prompt
-    const promptY = PANEL_Y + 70;
+    // Question prompt — kept above grid column labels
+    const promptY = PANEL_Y + 44;
     const promptBg = this.add.graphics().setDepth(11);
     promptBg.fillStyle(COLORS.navy, 0.9);
-    promptBg.fillRoundedRect(640 - 300, promptY - 30, 600, 64, 32);
+    promptBg.fillRoundedRect(640 - 300, promptY - 22, 600, 44, 22);
     promptBg.lineStyle(4, COLORS.gold, 1);
-    promptBg.strokeRoundedRect(640 - 300, promptY - 30, 600, 64, 32);
+    promptBg.strokeRoundedRect(640 - 300, promptY - 22, 600, 44, 22);
     this.gameplayObjects.push(promptBg);
 
     const promptTxt = this.addSharpText(640, promptY + 2, `Onde está o ${current.emoji}?`, {
-      fontSize: "28px", fontFamily: "Arial Black, Arial", color: "#f59e0b",
+      fontSize: "24px", fontFamily: "Arial Black, Arial", color: "#f59e0b",
       stroke: "#0c1445", strokeThickness: 5, align: "center",
     }).setOrigin(0.5).setDepth(12);
     this.gameplayObjects.push(promptTxt);
 
-    // Draw grid with the object placed
+    // Draw grid with reserved space: 72px top (prompt area) + 102px bottom (chips area)
+    // This keeps grid col-labels below the prompt and grid bottom above the chips
     this.drawGrid(
       this.levelConfig.gridSize,
       () => { /* no direct cell click in N2 */ },
@@ -611,6 +618,8 @@ export class GameScene extends Phaser.Scene {
         }
         return { fillColor: 0xffffff, alpha: 0.88 };
       },
+      72,
+      102,
     );
 
     // MCQ option chips below the grid
@@ -622,9 +631,9 @@ export class GameScene extends Phaser.Scene {
     correct: string,
     objPos: { row: number; col: number },
   ) {
-    const chipY = PANEL_Y + PANEL_H - 56;
+    const chipY = PANEL_Y + PANEL_H - 52;
     const chipW = 210;
-    const chipH = 60;
+    const chipH = 50;
     const gap = 20;
     const totalW = options.length * chipW + (options.length - 1) * gap;
     const startX = 640 - totalW / 2 + chipW / 2;
@@ -691,9 +700,9 @@ export class GameScene extends Phaser.Scene {
       // Highlight the chip green
       bg.clear();
       bg.fillStyle(COLORS.green, 1);
-      bg.fillRoundedRect(-105, -30, 210, 60, 30);
+      bg.fillRoundedRect(-105, -25, 210, 50, 25);
       bg.lineStyle(3, 0xffffff, 1);
-      bg.strokeRoundedRect(-105, -30, 210, 60, 30);
+      bg.strokeRoundedRect(-105, -25, 210, 50, 25);
 
       // Highlight row and column of the object
       this.highlightRowCol(objPos.row, objPos.col);
@@ -737,7 +746,9 @@ export class GameScene extends Phaser.Scene {
    * Briefly highlights the row and column of the correctly-identified object.
    */
   private highlightRowCol(row: number, col: number) {
-    const { cellSize, startX, startY } = this.getGridLayout(this.levelConfig.gridSize);
+    const { cellSize, startX, startY } = this.storedGridLayout.cellSize > 0
+      ? this.storedGridLayout
+      : this.getGridLayout(this.levelConfig.gridSize);
     const gfx = this.add.graphics().setDepth(14);
     // Row highlight
     gfx.fillStyle(COLORS.gold, 0.2);

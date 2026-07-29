@@ -69,6 +69,8 @@ export class GameScene extends Phaser.Scene {
   private cycleIndex = 0;
   private cycleObjects: Phaser.GameObjects.GameObject[] = [];
 
+  private selectedFormatId: FormatId | null = null;
+
   // Mural (lives inside the panel, right section)
   private muralContainer?: Phaser.GameObjects.Container;
   private muralItems: Array<{ color: number; emoji: string }> = [];
@@ -90,6 +92,7 @@ export class GameScene extends Phaser.Scene {
     this.selectedWords = [];
     this.muralItems = [];
     this.cycleIndex = 0;
+    this.selectedFormatId = null;
     this.startScreenObjects = [];
     this.overlayObjects = [];
     this.taskObjects = [];
@@ -386,25 +389,54 @@ export class GameScene extends Phaser.Scene {
     taskCard.setAlpha(0);
     this.tweens.add({ targets: taskCard, alpha: 1, duration: 200, ease: "Sine.easeOut" });
 
-    // Format buttons — 4 in a row
-    const btnY = PANEL_Y + 336;
-    const btnW = 256;
-    const btnH = 144;
+    // Format buttons — 4 in a row (shifted up to leave room for confirm button)
+    const btnY = PANEL_Y + 320;
+    const btnW = 268;
+    const btnH = 168;
     const gap = 8;
     const totalW = 4 * btnW + 3 * gap;
     const startX = 640 - totalW / 2 + btnW / 2;
+    this.selectedFormatId = null;
+    const n1Rings: Phaser.GameObjects.Graphics[] = [];
     FORMAT_OPTIONS.forEach((fmt, i) => {
       const bx = startX + i * (btnW + gap);
-      this.createFormatBtn(bx, btnY, btnW, btnH, fmt.id, fmt.icon, fmt.label, fmt.color, () => {
-        if (this.gameEnded) return;
-        this.onN1FormatSelected(fmt.id, task.correctFormat, task.hint);
+      const { ring } = this.createFormatBtn(bx, btnY, btnW, btnH, fmt.id, fmt.icon, fmt.label, fmt.color, (id) => {
+        this.selectedFormatId = id;
+        n1Rings.forEach((r) => r.setVisible(false));
+        ring.setVisible(true);
+        const cb = this.children.getByName("confirmBtn") as Phaser.GameObjects.Container | null;
+        if (cb) this.tweens.add({ targets: cb, alpha: 1, duration: 150 });
       });
+      n1Rings.push(ring);
+    });
+    // Confirm button — activates after a format card is selected
+    const confirmY = PANEL_Y + PANEL_H - 40;
+    const confirmBtn = this.addTask(this.add.container(640, confirmY).setDepth(30));
+    const cBg = this.add.graphics();
+    cBg.fillStyle(COLORS.purple, 1);
+    cBg.fillRoundedRect(-120, -26, 240, 52, 26);
+    cBg.lineStyle(4, 0xffffff, 1);
+    cBg.strokeRoundedRect(-120, -26, 240, 52, 26);
+    const cTxt = this.addSharpText(0, 0, "✅ Confirmar", {
+      fontSize: "20px", fontFamily: "Arial Black, Arial", color: "#ffffff", stroke: "#3b0764", strokeThickness: 3,
+    }).setOrigin(0.5);
+    confirmBtn.add([cBg, cTxt]);
+    confirmBtn.setAlpha(0.35);
+    confirmBtn.setName("confirmBtn");
+    const confirmZone = this.addTask(this.add.zone(640, confirmY, 254, 64).setDepth(56));
+    confirmZone.setInteractive({ useHandCursor: true });
+    confirmZone.on("pointerover", () => this.input.setDefaultCursor("pointer"));
+    confirmZone.on("pointerout", () => this.input.setDefaultCursor("default"));
+    confirmZone.on("pointerdown", () => {
+      const id = this.selectedFormatId;
+      if (!id || this.gameEnded) return;
+      this.playClick();
+      this.onN1FormatSelected(id, task.correctFormat, task.hint);
     });
   }
 
   private onN1FormatSelected(selected: FormatId, correct: FormatId, hint: string) {
     if (this.gameEnded) return;
-    this.playClick();
     if (selected === correct) {
       this.hits += 1;
       this.playSuccess();
@@ -423,7 +455,11 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
-  private createFormatBtn(x: number, y: number, w: number, h: number, formatId: FormatId, icon: string, label: string, color: number, onClick: () => void) {
+  private createFormatBtn(
+    x: number, y: number, w: number, h: number,
+    formatId: FormatId, icon: string, label: string, color: number,
+    onSelect: (id: FormatId) => void,
+  ): { btn: Phaser.GameObjects.Container; ring: Phaser.GameObjects.Graphics } {
     const btn = this.addTask(this.add.container(x, y).setDepth(20));
     const textureKey = `format-card-${formatId}`;
     if (this.textures.exists(textureKey) && this.textures.get(textureKey).getSourceImage().width > 4) {
@@ -445,13 +481,17 @@ export class GameScene extends Phaser.Scene {
     const lblTxt = this.addSharpText(0, h / 2 - 20, label, {
       fontSize: "18px", fontFamily: "Arial Black, Arial", color: "#ffffff", stroke: "#1e1b4b", strokeThickness: 4,
     }).setOrigin(0.5);
-    btn.add(lblTxt);
+    const ring = this.add.graphics();
+    ring.lineStyle(6, 0xfacc15, 1);
+    ring.strokeRoundedRect(-w / 2 - 5, -h / 2 - 5, w + 10, h + 10, 26);
+    ring.setVisible(false);
+    btn.add([lblTxt, ring]);
     const zone = this.addTask(this.add.zone(x, y, w + 14, h + 14).setDepth(55));
     zone.setInteractive({ useHandCursor: true });
     zone.on("pointerover", () => { this.input.setDefaultCursor("pointer"); this.tweens.add({ targets: btn, scale: 1.06, duration: 80 }); });
     zone.on("pointerout", () => { this.input.setDefaultCursor("default"); this.tweens.add({ targets: btn, scale: 1, duration: 80 }); });
-    zone.on("pointerdown", onClick);
-    return btn;
+    zone.on("pointerdown", () => { if (this.gameEnded) return; this.playClick(); onSelect(formatId); });
+    return { btn, ring };
   }
 
   private addTask<T extends Phaser.GameObjects.GameObject>(o: T) { this.taskObjects.push(o); return o; }
@@ -467,8 +507,9 @@ export class GameScene extends Phaser.Scene {
     const ch = this.levelConfig.drawChallenge!;
 
     this.showEditorLabel(`🎨 Fase 1 de 2 — Desenho: ${ch.theme}`, COLORS.pink);
-    this.addSharpText(LEFT_CX, PANEL_Y + 56, ch.instruction, {
+    this.addSharpText(LEFT_CX, PANEL_Y + 78, ch.instruction, {
       fontSize: "18px", fontFamily: "Arial Black, Arial", color: "#7c3aed", stroke: "#ffffff", strokeThickness: 3, align: "center",
+      wordWrap: { width: 700 },
     }).setOrigin(0.5).setDepth(15);
 
     // Canvas background
@@ -567,8 +608,9 @@ export class GameScene extends Phaser.Scene {
 
     const ch = this.levelConfig.textChallenge!;
     this.showEditorLabel(`📝 Fase 2 de 2 — Texto: ${ch.theme}`, COLORS.blue);
-    this.addPhase(this.addSharpText(LEFT_CX, PANEL_Y + 56, ch.instruction, {
+    this.addPhase(this.addSharpText(LEFT_CX, PANEL_Y + 78, ch.instruction, {
       fontSize: "18px", fontFamily: "Arial Black, Arial", color: "#1e3a8a", stroke: "#ffffff", strokeThickness: 3, align: "center",
+      wordWrap: { width: 700 },
     }).setOrigin(0.5).setDepth(15));
 
     this.buildWordBank(ch.wordBank, ch.minWords, LEFT_CX, PANEL_Y + 140, () => this.onPublishText());
@@ -642,13 +684,15 @@ export class GameScene extends Phaser.Scene {
     goalCard.setAlpha(0);
     this.tweens.add({ targets: goalCard, alpha: 1, duration: 220 });
 
-    // Format buttons (3 in left zone) — PNG cards
-    const btnW = 210;
-    const btnH = 116;
+    // Format buttons (3 in left zone) — PNG cards (shifted up to leave room for confirm button)
+    const btnW = 244;
+    const btnH = 140;
     const gap = 14;
     const totalW = cycle.formatOptions.length * btnW + (cycle.formatOptions.length - 1) * gap;
     const startX = LEFT_CX - totalW / 2 + btnW / 2;
-    const btnY = PANEL_Y + 340;
+    const btnY = PANEL_Y + 308;
+    this.selectedFormatId = null;
+    const n3Rings: Phaser.GameObjects.Graphics[] = [];
     cycle.formatOptions.forEach((fmtId, i) => {
       const fmt = FORMAT_OPTIONS.find((f) => f.id === fmtId)!;
       const bx = startX + i * (btnW + gap);
@@ -673,18 +717,54 @@ export class GameScene extends Phaser.Scene {
       const lblTxt = this.addSharpText(0, btnH / 2 - 20, fmt.label, {
         fontSize: "18px", fontFamily: "Arial Black, Arial", color: "#ffffff", stroke: "#1e1b4b", strokeThickness: 4,
       }).setOrigin(0.5);
-      btn.add(lblTxt);
+      const ring = this.add.graphics();
+      ring.lineStyle(6, 0xfacc15, 1);
+      ring.strokeRoundedRect(-btnW / 2 - 5, -btnH / 2 - 5, btnW + 10, btnH + 10, 26);
+      ring.setVisible(false);
+      btn.add([lblTxt, ring]);
+      n3Rings.push(ring);
       const zone = this.addCycle(this.add.zone(bx, btnY, btnW + 14, btnH + 14).setDepth(55));
       zone.setInteractive({ useHandCursor: true });
       zone.on("pointerover", () => { this.input.setDefaultCursor("pointer"); this.tweens.add({ targets: btn, scale: 1.06, duration: 80 }); });
       zone.on("pointerout", () => { this.input.setDefaultCursor("default"); this.tweens.add({ targets: btn, scale: 1, duration: 80 }); });
-      zone.on("pointerdown", () => { if (this.gameEnded) return; this.onN3FormatSelected(fmtId, cycle.correctFormat); });
+      zone.on("pointerdown", () => {
+        if (this.gameEnded) return;
+        this.playClick();
+        this.selectedFormatId = fmtId;
+        n3Rings.forEach((r) => r.setVisible(false));
+        ring.setVisible(true);
+        const cb = this.children.getByName("n3ConfirmBtn") as Phaser.GameObjects.Container | null;
+        if (cb) this.tweens.add({ targets: cb, alpha: 1, duration: 150 });
+      });
+    });
+    // Confirm button for N3 — activates after a format card is selected
+    const confirmY = PANEL_Y + PANEL_H - 40;
+    const n3ConfirmBtn = this.addCycle(this.add.container(LEFT_CX, confirmY).setDepth(30));
+    const n3Bg = this.add.graphics();
+    n3Bg.fillStyle(COLORS.purple, 1);
+    n3Bg.fillRoundedRect(-120, -26, 240, 52, 26);
+    n3Bg.lineStyle(4, 0xffffff, 1);
+    n3Bg.strokeRoundedRect(-120, -26, 240, 52, 26);
+    const n3Txt = this.addSharpText(0, 0, "✅ Confirmar", {
+      fontSize: "20px", fontFamily: "Arial Black, Arial", color: "#ffffff", stroke: "#3b0764", strokeThickness: 3,
+    }).setOrigin(0.5);
+    n3ConfirmBtn.add([n3Bg, n3Txt]);
+    n3ConfirmBtn.setAlpha(0.35);
+    n3ConfirmBtn.setName("n3ConfirmBtn");
+    const n3ConfirmZone = this.addCycle(this.add.zone(LEFT_CX, confirmY, 254, 64).setDepth(56));
+    n3ConfirmZone.setInteractive({ useHandCursor: true });
+    n3ConfirmZone.on("pointerover", () => this.input.setDefaultCursor("pointer"));
+    n3ConfirmZone.on("pointerout", () => this.input.setDefaultCursor("default"));
+    n3ConfirmZone.on("pointerdown", () => {
+      const id = this.selectedFormatId;
+      if (!id || this.gameEnded) return;
+      this.playClick();
+      this.onN3FormatSelected(id, cycle.correctFormat);
     });
   }
 
   private onN3FormatSelected(selected: FormatId, correct: FormatId) {
     if (this.gameEnded) return;
-    this.playClick();
     if (selected !== correct) {
       this.errors += 1;
       this.playWrong();
@@ -717,8 +797,9 @@ export class GameScene extends Phaser.Scene {
     this.drawCount = 0;
 
     this.showEditorLabel(`🎨 Crie: ${ch.theme}`, COLORS.pink);
-    this.addPhase(this.addSharpText(LEFT_CX, PANEL_Y + 56, ch.instruction, {
+    this.addPhase(this.addSharpText(LEFT_CX, PANEL_Y + 78, ch.instruction, {
       fontSize: "18px", fontFamily: "Arial Black, Arial", color: "#7c3aed", stroke: "#ffffff", strokeThickness: 3, align: "center",
+      wordWrap: { width: 700 },
     }).setOrigin(0.5).setDepth(15));
 
     const CANVAS_LEFT = PANEL_X + 16;
@@ -799,8 +880,9 @@ export class GameScene extends Phaser.Scene {
     this.selectedWords = [];
 
     this.showEditorLabel(`📝 Crie: ${ch.theme}`, COLORS.blue);
-    this.addPhase(this.addSharpText(LEFT_CX, PANEL_Y + 56, ch.instruction, {
+    this.addPhase(this.addSharpText(LEFT_CX, PANEL_Y + 78, ch.instruction, {
       fontSize: "18px", fontFamily: "Arial Black, Arial", color: "#1e3a8a", stroke: "#ffffff", strokeThickness: 3, align: "center",
+      wordWrap: { width: 700 },
     }).setOrigin(0.5).setDepth(15));
 
     this.buildWordBank(ch.wordBank, ch.minWords, LEFT_CX, PANEL_Y + 140, () => this.onPublishText());

@@ -9,6 +9,10 @@ const EF03CO08Config: Phaser.Types.Core.GameConfig = {
   height: 720,
   backgroundColor: "#fef3c7",
   scene: [BootScene, GameScene, UIScene],
+  render: {
+    antialias: true,
+    antialiasGL: true,
+  },
   scale: {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,

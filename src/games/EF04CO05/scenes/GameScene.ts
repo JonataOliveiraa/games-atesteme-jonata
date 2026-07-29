@@ -394,15 +394,18 @@ export class GameScene extends Phaser.Scene {
     divG.lineBetween(divX, PANEL_Y + 50, divX, PANEL_Y + PANEL_H - 50);
 
     // ── RIGHT SIDE: Interactive grid ──────────────────────────────────────
-    const gridX = PANEL_X + 516;
-    const gridY = PANEL_Y + 60;
     const cellSize = 86;
     const cellGap = 6;
+    // Center the 4×4 grid (362px) within the right section [divX=552, panel-right=1208] = 656px → margin=147px
+    const gridWidth = COLS * cellSize + (COLS - 1) * cellGap; // 362px
+    const rightSectionCX = divX + (PANEL_X + PANEL_W - divX) / 2; // 880
+    const gridX = Math.round(rightSectionCX - gridWidth / 2); // 699
+    const gridY = PANEL_Y + 60;
 
     const gridLabelBg = this.addContent(this.add.graphics().setDepth(10));
     gridLabelBg.fillStyle(COLORS.orange, 0.85);
-    gridLabelBg.fillRoundedRect(gridX - 10, gridY - 36, 620, 30, 10);
-    this.addContent(this.addSharpText(gridX + 300, gridY - 22, "✏️ Sua grade — clique para alternar", {
+    gridLabelBg.fillRoundedRect(gridX - 10, gridY - 36, gridWidth + 20, 30, 10);
+    this.addContent(this.addSharpText(gridX + gridWidth / 2, gridY - 22, "✏️ Sua grade — clique para alternar", {
       fontSize: "17px", fontFamily: "Arial Black, Arial", color: "#ffffff",
     }).setOrigin(0.5).setDepth(12));
 
@@ -433,22 +436,22 @@ export class GameScene extends Phaser.Scene {
       }
     }
 
-    // ── Confirm Button ────────────────────────────────────────────────────
-    const confirmX = PANEL_X + 516;
+    // ── Confirm Button — same x/width as the grid ────────────────────────
+    const confirmX = gridX;
     const confirmY = PANEL_Y + PANEL_H - 64;
 
     const confirmBg = this.addContent(this.add.graphics().setDepth(14));
     confirmBg.fillStyle(COLORS.green, 1);
-    confirmBg.fillRoundedRect(confirmX, confirmY, 616, 52, 26);
+    confirmBg.fillRoundedRect(confirmX, confirmY, gridWidth, 52, 26);
     confirmBg.lineStyle(4, COLORS.white, 1);
-    confirmBg.strokeRoundedRect(confirmX, confirmY, 616, 52, 26);
+    confirmBg.strokeRoundedRect(confirmX, confirmY, gridWidth, 52, 26);
 
-    this.addContent(this.addSharpText(confirmX + 308, confirmY + 26, "✓ Confirmar Padrão", {
+    this.addContent(this.addSharpText(confirmX + gridWidth / 2, confirmY + 26, "✓ Confirmar Padrão", {
       fontSize: "22px", fontFamily: "Arial Black, Arial", color: "#ffffff",
       stroke: "#14532d", strokeThickness: 3,
     }).setOrigin(0.5).setDepth(15));
 
-    const confirmZone = this.addContent(this.add.zone(confirmX + 308, confirmY + 26, 616, 52).setDepth(55));
+    const confirmZone = this.addContent(this.add.zone(confirmX + gridWidth / 2, confirmY + 26, gridWidth, 52).setDepth(55));
     confirmZone.setInteractive({ useHandCursor: true });
     this.n1ConfirmZone = confirmZone;
     confirmZone.on("pointerover", () => this.input.setDefaultCursor("pointer"));
