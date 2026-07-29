@@ -107,7 +107,7 @@ export class BootScene extends Phaser.Scene {
         this.buildShadowTexture()
 
         this.scene.launch('UIScene')
-        this.time.delayedCall(0, () => this.scene.start('GameScene', { level: 3  }))
+        this.time.delayedCall(0, () => this.scene.start('GameScene', { level: 1 }))
     }
 
     private readCanvasSize() {
