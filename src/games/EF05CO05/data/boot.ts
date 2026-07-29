@@ -110,12 +110,10 @@ export function simulateBoot(
     }
 }
 
-/** Quanto do boot já é possível — usada para liberar o botão LIGAR. */
 export function bootReady(ch: BuildChallenge, installed: Set<PartId>): boolean {
     return ch.required.every(id => installed.has(id))
 }
 
-/** Agrupamento usado no Mapa do Fluxo ao fim da fase. */
 export const FLOW_ORDER: Category[] = [
     'entrada',
     'processamento',

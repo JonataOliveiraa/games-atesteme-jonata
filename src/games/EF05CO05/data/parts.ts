@@ -32,6 +32,16 @@ export const PARTS: Record<PartId, PartDef> = {
         funcao: 'A caixa que abriga e protege todas as peças de dentro do computador.',
         dica: 'aqui vai a caixa que guarda e protege todas as outras peças',
         requires: [],
+        quiz: {
+            question: 'Para que serve o gabinete?',
+            options: [
+                'Guarda e protege as peças de dentro',
+                'Faz as contas do computador',
+                'Mostra as imagens na tela',
+            ],
+            correctIndex: 0,
+            explain: 'Ele é a caixa: abriga, protege e organiza tudo que fica dentro.',
+        },
     },
     'placa-mae': {
         id: 'placa-mae',
@@ -43,6 +53,16 @@ export const PARTS: Record<PartId, PartDef> = {
         funcao: 'A base onde todas as peças se conectam e conversam entre si.',
         dica: 'aqui vai a peça onde todas as outras se encaixam e se conectam',
         requires: ['gabinete'],
+        quiz: {
+            question: 'O que a placa-mãe faz?',
+            options: [
+                'Guarda os arquivos permanentemente',
+                'Conecta todas as peças umas às outras',
+                'Transforma a energia da tomada',
+            ],
+            correctIndex: 1,
+            explain: 'É por ela que as peças conversam. Sem placa-mãe, cada peça ficaria isolada.',
+        },
     },
     'fonte': {
         id: 'fonte',
@@ -54,6 +74,16 @@ export const PARTS: Record<PartId, PartDef> = {
         funcao: 'Leva a energia da tomada para todas as peças. Sem ela, nada liga.',
         dica: 'aqui vai a peça que leva energia para todas as outras',
         requires: ['gabinete'],
+        quiz: {
+            question: 'Se a fonte for retirada, o que acontece?',
+            options: [
+                'O computador fica mais lento',
+                'Os arquivos somem do HD',
+                'Nada liga, nem uma luz acende',
+            ],
+            correctIndex: 2,
+            explain: 'A fonte leva energia para todas as peças. Sem ela, nada funciona.',
+        },
     },
     'processador': {
         id: 'processador',
@@ -65,6 +95,16 @@ export const PARTS: Record<PartId, PartDef> = {
         funcao: 'O cérebro. Faz as contas e executa as instruções dos programas.',
         dica: 'aqui vai a peça que faz as contas e executa os programas',
         requires: ['placa-mae'],
+        quiz: {
+            question: 'Qual é o trabalho do processador?',
+            options: [
+                'Executar as instruções e fazer as contas',
+                'Guardar as fotos e os documentos',
+                'Ligar o computador na tomada',
+            ],
+            correctIndex: 0,
+            explain: 'Ele é o cérebro: recebe as instruções dos programas e as executa.',
+        },
     },
     'ram': {
         id: 'ram',
@@ -76,6 +116,16 @@ export const PARTS: Record<PartId, PartDef> = {
         funcao: 'Guarda o que o computador está usando agora. Ao desligar, esquece tudo.',
         dica: 'aqui vai a peça que guarda o que está em uso agora e esquece ao desligar',
         requires: ['placa-mae'],
+        quiz: {
+            question: 'O que acontece com os dados ao desligar?',
+            options: [
+                'Continua guardado para sempre',
+                'Some completamente',
+                'Vai automaticamente para o monitor',
+            ],
+            correctIndex: 1,
+            explain: 'A RAM só segura o que está em uso agora. Ao desligar, ela esquece tudo.',
+        },
     },
     'hd': {
         id: 'hd',
@@ -87,6 +137,16 @@ export const PARTS: Record<PartId, PartDef> = {
         funcao: 'Guarda seus arquivos para sempre — eles continuam lá depois de desligar.',
         dica: 'aqui vai a peça que guarda os arquivos mesmo com o computador desligado',
         requires: ['placa-mae'],
+        quiz: {
+            question: 'Onde ficam as fotos depois de desligar o computador?',
+            options: [
+                'Na memória RAM',
+                'No processador',
+                'No HD',
+            ],
+            correctIndex: 2,
+            explain: 'O HD é armazenamento permanente: o arquivo continua lá amanhã.',
+        },
     },
     'monitor': {
         id: 'monitor',
@@ -98,6 +158,16 @@ export const PARTS: Record<PartId, PartDef> = {
         funcao: 'Mostra para você o resultado do que o computador fez.',
         dica: 'aqui vai a peça que mostra o resultado para você',
         requires: [],
+        quiz: {
+            question: 'O monitor é um dispositivo de quê?',
+            options: [
+                'Entrada, porque recebe informação',
+                'Saída, porque mostra informação para você',
+                'Armazenamento, porque guarda as imagens',
+            ],
+            correctIndex: 1,
+            explain: 'Saída: a informação sai do computador em direção a você.',
+        },
     },
     'teclado': {
         id: 'teclado',
@@ -109,6 +179,16 @@ export const PARTS: Record<PartId, PartDef> = {
         funcao: 'Manda letras e números para dentro do computador.',
         dica: 'aqui vai a peça que envia letras e números para o computador',
         requires: [],
+        quiz: {
+            question: 'O teclado é um dispositivo de quê?',
+            options: [
+                'Entrada, porque envia informação ao computador',
+                'Saída, porque mostra as letras',
+                'Processamento, porque monta as palavras',
+            ],
+            correctIndex: 0,
+            explain: 'Entrada: você digita e a informação entra no computador.',
+        },
     },
     'mouse': {
         id: 'mouse',
@@ -120,6 +200,16 @@ export const PARTS: Record<PartId, PartDef> = {
         funcao: 'Manda para o computador onde você quer clicar.',
         dica: 'aqui vai a peça que aponta e clica na tela',
         requires: [],
+        quiz: {
+            question: 'O que o mouse envia para o computador?',
+            options: [
+                'Sons e músicas',
+                'A posição do ponteiro e os cliques',
+                'Os arquivos salvos',
+            ],
+            correctIndex: 1,
+            explain: 'Ele é entrada: manda para dentro onde você apontou e clicou.',
+        },
     },
     'som': {
         id: 'som',
@@ -131,6 +221,16 @@ export const PARTS: Record<PartId, PartDef> = {
         funcao: 'Deixa o computador falar com você por som.',
         dica: 'aqui vai a peça que deixa o computador se comunicar por som',
         requires: [],
+        quiz: {
+            question: 'As caixas de som são entrada ou saída?',
+            options: [
+                'Entrada, porque captam o som',
+                'Saída, porque o som sai do computador',
+                'As duas coisas ao mesmo tempo',
+            ],
+            correctIndex: 1,
+            explain: 'Saída: quem capta som é o microfone; a caixa devolve som para você.',
+        },
     },
 }
 
@@ -161,3 +261,14 @@ export function canInstall(id: PartId, installed: Set<PartId>): boolean {
 export function dependentsOf(id: PartId, installed: Set<PartId>): PartId[] {
     return ALL_PARTS.filter(o => installed.has(o) && PARTS[o].requires.includes(id))
 }
+
+export const LAYER_OFFSET: Record<string, { x: number; y: number }> = {
+    'layer-gabinete': { "x": 220, "y": -100 },
+    'layer-placa-mae': { "x": 220, "y": -100 },
+    'layer-fonte': { "x": 220, "y": -100 },
+    'layer-processador': { "x": 220, "y": -100 },
+    'layer-ram': { "x": 220, "y": -100 },
+    'layer-hd': { "x": 220, "y": -100 },
+}
+
+export const offsetOf = (key: string) => LAYER_OFFSET[key] ?? { x: 0, y: 0 }

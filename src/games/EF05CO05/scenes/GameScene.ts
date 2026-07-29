@@ -10,6 +10,7 @@ import { CANVAS, unionBBox } from './BootScene'
 import {
     CATEGORY_COLOR,
     CATEGORY_LABEL,
+    LAYER_OFFSET,
     MONITOR_ON,
     PARTS,
     VIEW_BASE,
@@ -26,6 +27,7 @@ import type {
     PartId,
     View,
 } from '../types'
+import { offsetOf } from '../data/parts'
 
 const GAME_ID = 'monte-seu-computador'
 const MAX_CONSECUTIVE_ERRORS = 3
@@ -148,7 +150,23 @@ export class GameScene extends Phaser.Scene {
         this.startChallenge(false)
         this.showLevelStart(() => this.runTutorial(() => this.beginPlay()))
 
-        this.buildCalibrator();
+        this.input.keyboard?.on('keydown', (e: KeyboardEvent) => {
+            const s = e.shiftKey ? 4 : 20
+            let dx = 0, dy = 0
+            if (e.key === 'ArrowLeft') dx = -s
+            else if (e.key === 'ArrowRight') dx = s
+            else if (e.key === 'ArrowUp') dy = -s
+            else if (e.key === 'ArrowDown') dy = s
+            else return
+
+            Object.keys(LAYER_OFFSET).forEach(k => {
+                LAYER_OFFSET[k].x += dx
+                LAYER_OFFSET[k].y += dy
+            })
+            console.log(JSON.stringify(LAYER_OFFSET['layer-gabinete']))
+            this.buildView()
+            this.refreshAll()
+        })
     }
 
     private startChallenge(autoStart = true) {
@@ -176,6 +194,18 @@ export class GameScene extends Phaser.Scene {
         this.phase = 'montando'
         this.broadcastMission()
         this.refreshAll()
+
+        if (this.challenge.mode === 'quiz-multipla') {
+            this.phase = 'rodando'
+            this.runQuizSequence()
+            return
+        }
+
+        if (this.challenge.mode === 'quiz-classificar') {
+            this.phase = 'rodando'
+            this.time.delayedCall(400, () => this.runClassifyQuiz())
+            return
+        }
 
         if (this.challenge.timeLimit) {
             this.timerEvent = this.time.addEvent({
@@ -206,9 +236,10 @@ export class GameScene extends Phaser.Scene {
     private broadcastMission() {
         const ch = this.challenge
         const instruction =
-            ch.mode === 'identificar' ? 'Arraste cada peça para a sombra que combina com ela'
-                : ch.mode === 'funcao' ? 'Leia o que cada lugar pede e escolha a peça certa'
-                    : ch.title
+            ch.mode === 'montar' ? 'Arraste cada peça para a sombra que combina com ela'
+                : ch.mode === 'montar-quiz' ? 'Encaixe a peça e responda o que ela faz'
+                    : ch.mode === 'montar-livre' ? 'Sem sombras e sem dicas: monte tudo de memória'
+                        : ch.title
 
         EventBus.emit('mission-update', {
             level: this.levelConfig.level,
@@ -268,12 +299,13 @@ export class GameScene extends Phaser.Scene {
         const keys = id === 'monitor' && this.bootDone ? [MONITOR_ON] : def.layers
 
         const imgs = keys.map(key => {
-            const img = this.add.image(p.x, p.y, key).setOrigin(0, 0).setScale(p.scale)
+            const q = this.layerXY(key)
+            const img = this.add.image(q.x, q.y, key).setOrigin(0, 0).setScale(p.scale)
             this.viewLayer.add(img)
             return img
         })
 
-        const box = L.toScreen(unionBBox(def.layers), p)
+        const box = L.toScreen(this.partVisualBBox(id), p)
         const zone = this.add.zone(L.cx(box), L.cy(box), box.w, box.h)
             .setInteractive({ useHandCursor: true })
         zone.on('pointerup', () => this.onInstalledTap(id))
@@ -285,7 +317,7 @@ export class GameScene extends Phaser.Scene {
     private bootDone = false
 
     private partScreenRect(id: PartId): L.Rect {
-        return L.toScreen(unionBBox(PARTS[id].layers), this.place)
+        return L.toScreen(this.partBBox(id), this.place)
     }
 
     private refreshAll() {
@@ -302,22 +334,40 @@ export class GameScene extends Phaser.Scene {
         if (this.phase !== 'montando') return
 
         const ch = this.challenge
-        const mode = ch.mode
+        const hint = ch.hint ?? 'silhueta'
+        if (ch.mode === 'quiz-classificar' || ch.mode === 'quiz-multipla') return
 
-        ch.available.forEach(id => {
+        const placed: L.Rect[] = []
+        const active = hint === 'dica' ? this.activePart() : null
+
+        const list = hint === 'dica'
+            ? (active ? [active] : [])
+            : ch.available
+
+        list.forEach(id => {
             const def = PARTS[id]
             if (def.view !== this.view) return
             if (this.installed.has(id)) return
             if (!canInstall(id, this.installed)) return
 
-            const rect = this.partScreenRect(id)
+            const rect = this.partVisualScreenRect(id)
+
+            if(id === 'gabinete') {
+                rect.w /= 2
+                rect.h /= 2
+                
+                rect.x += rect.w / 2
+                rect.y += rect.h / 2
+            }
+            
             this.moulds.push({ part: id, rect })
 
             const color = CATEGORY_COLOR[def.category]
 
-            if (mode === 'identificar') {
+            if (hint === 'silhueta') {
                 def.layers.forEach(key => {
-                    const ghost = this.add.image(this.place.x, this.place.y, key)
+                    const q = this.layerXY(key)
+                    const ghost = this.add.image(q.x, q.y, key)
                         .setOrigin(0, 0)
                         .setScale(this.place.scale)
                         .setAlpha(0.22)
@@ -326,43 +376,333 @@ export class GameScene extends Phaser.Scene {
                 })
             }
 
-            this.dashedRect(this.mouldG, rect, color)
+            if (hint === 'silhueta') {
+                this.dashedRect(this.mouldG, rect, color)
+            } else if (hint === 'dica') {
+                const s = Math.min(rect.w, rect.h) * 0.5
+                const g = this.mouldG
+                g.lineStyle(5, color, 1)
+                g.strokeCircle(L.cx(rect), L.cy(rect), Math.max(26, s * 0.5))
+                g.fillStyle(color, 0.18)
+                g.fillCircle(L.cx(rect), L.cy(rect), Math.max(26, s * 0.5))
+            } else {
+                this.dashedRect(this.mouldG, rect, color)
+            }
 
-            if (mode !== 'identificar') {
-                const label = this.add.text(L.cx(rect), L.cy(rect), def.dica, {
+            if (hint === 'dica') {
+                const bw = 250
+                const label = this.add.text(0, 0, def.dica, {
                     fontFamily: 'Arial Black, Arial',
                     fontSize: '14px',
                     color: CSS.creme,
                     stroke: CSS.preto,
                     strokeThickness: 4,
                     align: 'center',
-                    wordWrap: { width: Math.max(120, rect.w - 16) },
+                    wordWrap: { width: bw - 24 },
                 }).setOrigin(0.5).setResolution(2)
 
-                const pad = 10
-                const bg = this.add.graphics()
-                bg.fillStyle(C.preto, 0.72)
-                bg.fillRoundedRect(
-                    label.x - label.width / 2 - pad,
-                    label.y - label.height / 2 - pad * 0.6,
-                    label.width + pad * 2,
-                    label.height + pad * 1.2,
-                    10,
+                const bh = label.height + 20
+                let bx = Phaser.Math.Clamp(
+                    L.cx(rect), L.VIEW_AREA.x + bw / 2 + 8, L.VIEW_AREA.x + L.VIEW_AREA.w - bw / 2 - 8,
+                )
+                let by = rect.y + rect.h + bh / 2 + 14
+
+                const hits = (y: number) => placed.some(p =>
+                    Math.abs(p.x - bx) < (p.w + bw) / 2 - 4 &&
+                    Math.abs(p.y - y) < (p.h + bh) / 2 - 4,
                 )
 
-                this.mouldLayer.add([bg, label])
-                this.mouldLayer.bringToTop(label)
+                let guard = 0
+                while (hits(by) && guard++ < 12) by += bh + 10
+
+                if (by + bh / 2 > L.VIEW_AREA.y + L.VIEW_AREA.h - 8) {
+                    by = rect.y - bh / 2 - 14
+                    guard = 0
+                    while (hits(by) && guard++ < 12) by -= bh + 10
+                }
+
+                placed.push({ x: bx, y: by, w: bw, h: bh })
+                label.setPosition(bx, by)
+
+                const bg = this.add.graphics()
+                bg.fillStyle(C.preto, 0.86)
+                bg.fillRoundedRect(bx - bw / 2, by - bh / 2, bw, bh, 12)
+                bg.lineStyle(3, color, 0.9)
+                bg.strokeRoundedRect(bx - bw / 2, by - bh / 2, bw, bh, 12)
+
+                const line = this.add.graphics()
+                line.lineStyle(3, color, 0.75)
+                line.lineBetween(L.cx(rect), L.cy(rect), bx, by)
+
+                this.mouldLayer.add([line, bg, label])
             }
         })
 
+        if (hint === 'dica' && active) {
+            const total = ch.available.length
+            const done = total - this.pendingParts().length
+
+            const t = this.add.text(
+                L.W / 2, L.VIEW_AREA.y + 26, `Peça ${done + 1} de ${total}`, {
+                fontFamily: 'Arial Black, Arial', fontSize: '17px', color: CSS.ouro,
+                stroke: CSS.preto, strokeThickness: 5,
+            }).setOrigin(0.5).setResolution(2)
+
+            this.mouldLayer.add(t)
+        }
+
         const pulse = this.mouldG
         this.tweens.killTweensOf(pulse)
+
         pulse.setAlpha(1)
         if (this.moulds.length) {
             this.tweens.add({
                 targets: pulse, alpha: 0.42, duration: 720, yoyo: true, repeat: -1,
             })
         }
+    }
+
+    private askPartQuiz(id: PartId, onDone: () => void) {
+        const def = PARTS[id]
+        const q = def.quiz
+        if (!q) { onDone(); return }
+        const color = CATEGORY_COLOR[def.category]
+
+        this.clearOverlay()
+
+        this.keep(
+            this.add.rectangle(L.W / 2, L.H / 2, L.W, L.H, C.preto, 0.9)
+                .setDepth(300).setInteractive(),
+        )
+        const panel = this.keep(this.add.container(0, 0).setDepth(301))
+
+        const box = L.QUIZ_PANEL
+        const g = this.add.graphics()
+        this.drawCard(g, box, C.escuro, color, box.r, false)
+        panel.add(g)
+
+        panel.add([
+            this.add.image(L.W / 2, box.y + 65, def.icon).setDisplaySize(90, 90),
+            this.add.text(L.W / 2, box.y + 134, def.label.toUpperCase(), {
+                fontFamily: 'Arial Black, Arial', fontSize: '18px', color: CSS.ouro,
+                stroke: CSS.preto, strokeThickness: 4,
+            }).setOrigin(0.5).setResolution(2),
+            this.add.text(L.W / 2, box.y + 160, q.question, {
+                fontFamily: 'Arial Black, Arial', fontSize: '25px', color: CSS.creme,
+                stroke: CSS.preto, strokeThickness: 6,
+                align: 'center', wordWrap: { width: box.w - 90 },
+            }).setOrigin(0.5).setResolution(2),
+        ])
+
+        let locked = false
+
+        q.options.forEach((text, i) => {
+            const rect = L.quizOption(i)
+            const card = this.add.graphics()
+            this.drawCard(card, rect, C.medio, C.claro, 18)
+
+            const label = this.add.text(rect.x + 26, L.cy(rect), text, {
+                fontFamily: 'Arial Black, Arial', fontSize: '18px', color: CSS.creme,
+                stroke: CSS.preto, strokeThickness: 4,
+                wordWrap: { width: rect.w - 52 },
+            }).setOrigin(0, 0.5).setResolution(2)
+
+            const zone = this.add.zone(L.cx(rect), L.cy(rect), rect.w, rect.h)
+                .setInteractive({ useHandCursor: true })
+
+            zone.on('pointerup', () => {
+                if (locked) return
+
+                if (i !== q.correctIndex) {
+                    card.clear()
+                    this.drawCard(card, rect, C.vermelho, C.creme, 18)
+                    this.playError()
+                    this.registerError()
+                    this.cameras.main.shake(140, 0.004)
+
+                    if (this.consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
+                        locked = true
+                        this.time.delayedCall(1200, () => {
+                            this.clearOverlay()
+                            this.showGameOver()
+                        })
+                    }
+                    return
+                }
+
+                locked = true
+                card.clear()
+                this.drawCard(card, rect, C.verde, C.creme, 18)
+                this.stamp('selo-ok', rect.x + rect.w - 40, L.cy(rect))
+                this.playNote(760)
+                this.consecutiveErrors = 0
+                this.points += 5
+
+                const ex = this.add.text(L.W / 2, box.y + box.h - 52, q.explain, {
+                    fontFamily: 'Arial', fontStyle: 'bold', fontSize: '17px', color: CSS.ouro,
+                    align: 'center', wordWrap: { width: box.w - 100 },
+                }).setOrigin(0.5).setResolution(2)
+                panel.add(ex)
+
+                this.time.delayedCall(2400, () => {
+                    this.clearOverlay()
+                    onDone()
+                })
+            })
+
+            panel.add([card, label, zone])
+        })
+
+        panel.setAlpha(0).setScale(0.95)
+        this.tweens.add({ targets: panel, alpha: 1, scale: 1, duration: 220, ease: 'Back.easeOut' })
+    }
+
+    private runQuizSequence() {
+        const parts = [...(this.challenge.quizParts ?? [])]
+
+        const next = (i: number) => {
+            if (i >= parts.length) {
+                this.finishChallenge()
+                return
+            }
+            this.askPartQuiz(parts[i], () => next(i + 1))
+        }
+
+        this.time.delayedCall(400, () => next(0))
+    }
+
+    private runClassifyQuiz() {
+        const parts = [...(this.challenge.classifyParts ?? [])]
+        const groups = this.challenge.classifyGroups ?? []
+        const placed = new Map<PartId, number>()
+
+        this.clearOverlay()
+
+        this.keep(
+            this.add.rectangle(L.W / 2, L.H / 2, L.W, L.H, C.preto, 0.9)
+                .setDepth(300).setInteractive(),
+        )
+        const panel = this.keep(this.add.container(0, 0).setDepth(301))
+
+        const box = L.QUIZ_PANEL
+        const g = this.add.graphics()
+        this.drawCard(g, box, C.escuro, C.ouro, box.r, false)
+        panel.add(g)
+
+        panel.add(
+            this.add.text(L.W / 2, box.y + 42, 'Toque na peça e depois no grupo certo', {
+                fontFamily: 'Arial Black, Arial', fontSize: '22px', color: CSS.creme,
+                stroke: CSS.preto, strokeThickness: 5,
+                align: 'center', wordWrap: { width: box.w - 80 },
+            }).setOrigin(0.5).setResolution(2),
+        )
+
+        let selected: PartId | null = null
+        const cards = new Map<PartId, Phaser.GameObjects.Graphics>()
+
+        const paintCard = (id: PartId, i: number) => {
+            const rect = L.classifyCard(i)
+            const done = placed.has(id)
+            const on = selected === id
+            const cg = cards.get(id)!
+            cg.clear()
+            this.drawCard(
+                cg, rect,
+                done ? C.verde : on ? C.ouro : C.medio,
+                done ? C.creme : on ? C.creme : C.claro,
+                18,
+            )
+        }
+
+        parts.forEach((id, i) => {
+            const rect = L.classifyCard(i)
+            const cg = this.add.graphics()
+            cards.set(id, cg)
+
+            const icon = this.add.image(L.cx(rect), rect.y + 34, PARTS[id].icon)
+                .setDisplaySize(56, 56)
+            const name = this.add.text(L.cx(rect), rect.y + 72, PARTS[id].label, {
+                fontFamily: 'Arial Black, Arial', fontSize: '14px', color: CSS.creme,
+                stroke: CSS.preto, strokeThickness: 3,
+                align: 'center', wordWrap: { width: rect.w - 12 },
+            }).setOrigin(0.5).setResolution(2)
+
+            const zone = this.add.zone(L.cx(rect), L.cy(rect), rect.w, rect.h)
+                .setInteractive({ useHandCursor: true })
+            zone.on('pointerup', () => {
+                if (placed.has(id)) return
+                selected = selected === id ? null : id
+                this.playTick()
+                parts.forEach((p, k) => paintCard(p, k))
+            })
+
+            panel.add([cg, icon, name, zone])
+            paintCard(id, i)
+        })
+
+        groups.forEach((grp, gi) => {
+            const rect = L.classifyGroupRect(gi, groups.length)
+            const gg = this.add.graphics()
+            gg.lineStyle(4, C.claro, 0.8)
+            gg.strokeRoundedRect(rect.x, rect.y, rect.w, rect.h, 22)
+            gg.fillStyle(C.preto, 0.4)
+            gg.fillRoundedRect(rect.x, rect.y, rect.w, rect.h, 22)
+
+            const title = this.add.text(L.cx(rect), rect.y + 30, grp.label, {
+                fontFamily: 'Arial Black, Arial', fontSize: '22px', color: CSS.ouro,
+                stroke: CSS.preto, strokeThickness: 5,
+            }).setOrigin(0.5).setResolution(2)
+
+            const slotIcons: Phaser.GameObjects.Image[] = []
+
+            const zone = this.add.zone(L.cx(rect), L.cy(rect), rect.w, rect.h)
+                .setInteractive({ useHandCursor: true })
+
+            zone.on('pointerup', () => {
+                if (!selected) return
+                const id = selected
+                const ok = grp.accepts.includes(PARTS[id].category)
+
+                if (!ok) {
+                    this.playError()
+                    this.registerError()
+                    this.stamp('selo-x', L.cx(rect), rect.y + 70)
+                    if (this.consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
+                        this.time.delayedCall(1200, () => {
+                            this.clearOverlay()
+                            this.showGameOver()
+                        })
+                    }
+                    return
+                }
+
+                placed.set(id, gi)
+                selected = null
+                this.playNote(740)
+                this.consecutiveErrors = 0
+                this.points += 5
+
+                const icon = this.add.image(
+                    rect.x + 40 + slotIcons.length * 52, rect.y + 130, PARTS[id].icon,
+                ).setDisplaySize(56, 56)
+                slotIcons.push(icon)
+                panel.add(icon)
+
+                parts.forEach((p, k) => paintCard(p, k))
+
+                if (placed.size === parts.length) {
+                    this.time.delayedCall(900, () => {
+                        this.clearOverlay()
+                        this.finishChallenge()
+                    })
+                }
+            })
+
+            panel.add([gg, title, zone])
+        })
+
+        panel.setAlpha(0).setScale(0.95)
+        this.tweens.add({ targets: panel, alpha: 1, scale: 1, duration: 240, ease: 'Back.easeOut' })
     }
 
     private dashedRect(g: Phaser.GameObjects.Graphics, r: L.Rect, color: number) {
@@ -406,7 +746,9 @@ export class GameScene extends Phaser.Scene {
         this.makeButton(L.BTN_DRAWER, 'PEÇAS', C.medio, () => this.openDrawer())
         this.viewBtn = this.makeButton(L.BTN_VIEW, '', C.medio, () => this.toggleView())
         this.makeButton(L.BTN_CLEAR, 'LIMPAR', C.medio, () => this.clearBuild())
-        this.powerBtn = this.makeButton(L.BTN_POWER, 'LIGAR', C.verde, () => this.runBoot())
+        if (this.challenge.bootAnimation) {
+            this.powerBtn = this.makeButton(L.BTN_POWER, 'LIGAR', C.verde, () => this.runBoot())
+        }
 
         const slot = this.add.graphics()
         slot.fillStyle(C.preto, 0.55)
@@ -453,7 +795,7 @@ export class GameScene extends Phaser.Scene {
             } else {
                 this.handIcon.setVisible(false)
                 this.handLabel
-                    .setText('nenhuma peça na mão')
+                    .setText('Nenhuma peça na mão')
                     .setColor(CSS.claro)
                     .setX(L.HAND_SLOT.x + 20)
             }
@@ -549,9 +891,15 @@ export class GameScene extends Phaser.Scene {
             const def = PARTS[id]
             const color = CATEGORY_COLOR[def.category]
             const locked = !canInstall(id, this.installed)
+            const isNext = (ch.hint ?? 'silhueta') === 'dica' && id === this.activePart()
 
             const card = this.add.graphics()
-            this.drawCard(card, rect, locked ? C.medio : C.escuro, locked ? C.apagado : color, 20)
+            this.drawCard(
+                card, rect,
+                locked ? C.medio : C.escuro,
+                locked ? C.apagado : isNext ? C.ouro : color,
+                20,
+            )
 
             const icon = this.add.image(L.cx(rect), rect.y + 62, def.icon)
                 .setDisplaySize(76, 76)
@@ -603,47 +951,6 @@ export class GameScene extends Phaser.Scene {
         else finish()
     }
 
-    private buildCalibrator() {
-        this.calibG = this.add.graphics().setDepth(900)
-        this.calibT = this.add.text(12, L.UI_BAR_H + 10, '', {
-            fontFamily: 'monospace', fontSize: '15px', color: '#00ff88',
-            backgroundColor: '#000000cc', padding: { x: 8, y: 6 },
-        }).setDepth(901)
-
-        const f = L.VIEW_FOCUS[this.view]
-        this.calib = { ...f }
-        if (!this.calib.w) this.calib = { x: 0, y: 0, w: CANVAS.w, h: CANVAS.h }
-
-        this.input.keyboard?.on('keydown-C', () => {
-            this.calibOn = !this.calibOn
-            this.paintCalib()
-        })
-
-        this.input.keyboard?.on('keydown', (e: KeyboardEvent) => {
-            if (!this.calibOn) return
-            const s = e.shiftKey ? 4 : 20
-
-            if (e.key === 'ArrowLeft') this.calib.x -= s
-            else if (e.key === 'ArrowRight') this.calib.x += s
-            else if (e.key === 'ArrowUp') this.calib.y -= s
-            else if (e.key === 'ArrowDown') this.calib.y += s
-            else if (e.key === 'a') this.calib.w -= s
-            else if (e.key === 'd') this.calib.w += s
-            else if (e.key === 'w') this.calib.h -= s
-            else if (e.key === 's') this.calib.h += s
-            else return
-
-            L.VIEW_FOCUS[this.view].x = this.calib.x
-            L.VIEW_FOCUS[this.view].y = this.calib.y
-            L.VIEW_FOCUS[this.view].w = this.calib.w
-            L.VIEW_FOCUS[this.view].h = this.calib.h
-
-            this.buildView()
-            this.refreshAll()
-            this.paintCalib()
-        })
-    }
-
     private paintCalib() {
         const g = this.calibG
         const t = this.calibT
@@ -683,6 +990,42 @@ export class GameScene extends Phaser.Scene {
         this.dragging = false
     }
 
+    private restDelta(id: PartId): { dx: number; dy: number } {
+        const box = this.partScreenRect(id)
+        const a = L.VIEW_AREA
+        const pad = 16
+
+        const maxW = a.w - pad * 2
+        const maxH = a.h - pad * 2
+
+        let cxp = L.cx(L.HAND_SLOT) + 90
+        let cyp = a.y + a.h - box.h / 2 - pad
+
+        if (box.w >= maxW) cxp = a.x + a.w / 2
+        else cxp = Phaser.Math.Clamp(cxp, a.x + box.w / 2 + pad, a.x + a.w - box.w / 2 - pad)
+
+        if (box.h >= maxH) cyp = a.y + a.h / 2
+        else cyp = Phaser.Math.Clamp(cyp, a.y + box.h / 2 + pad, a.y + a.h - box.h / 2 - pad)
+
+        return { dx: cxp - L.cx(box), dy: cyp - L.cy(box) }
+    }
+
+    private clampDelta(id: PartId, dx: number, dy: number): { dx: number; dy: number } {
+        const box = this.partScreenRect(id)
+        const a = L.VIEW_AREA
+        const slack = 60
+
+        const minDX = a.x - box.x - slack
+        const maxDX = a.x + a.w - (box.x + box.w) + slack
+        const minDY = a.y - box.y - slack
+        const maxDY = a.y + a.h - (box.y + box.h) + slack
+
+        return {
+            dx: minDX > maxDX ? (minDX + maxDX) / 2 : Phaser.Math.Clamp(dx, minDX, maxDX),
+            dy: minDY > maxDY ? (minDY + maxDY) / 2 : Phaser.Math.Clamp(dy, minDY, maxDY),
+        }
+    }
+
     private buildHandPiece() {
         this.clearHandPiece()
         if (!this.hand) return
@@ -691,11 +1034,9 @@ export class GameScene extends Phaser.Scene {
         const p = this.place
         const box = this.partScreenRect(this.hand)
 
-        const restX = L.cx(L.HAND_SLOT) + 90
-        const restY = L.VIEW_AREA.y + L.VIEW_AREA.h - 90
-
-        this.dragDX = restX - L.cx(box)
-        this.dragDY = restY - L.cy(box)
+        const rest = this.restDelta(this.hand)
+        this.dragDX = rest.dx
+        this.dragDY = rest.dy
 
         const px = p.x + this.dragDX
         const py = p.y + this.dragDY
@@ -731,9 +1072,11 @@ export class GameScene extends Phaser.Scene {
             this.handMain.push(img)
         })
 
-        this.handZone = this.add.zone(restX, restY, box.w, box.h)
-            .setDepth(30)
-            .setInteractive({ useHandCursor: true })
+        this.handZone = this.add.zone(
+            box.x + this.dragDX + box.w / 2,
+            box.y + this.dragDY + box.h / 2,
+            box.w, box.h,
+        ).setDepth(30).setInteractive({ useHandCursor: true })
 
         const all = [...this.handDrop, ...this.handOutline, ...this.handMain]
         all.forEach(i => i.setAlpha(i.alpha * 0))
@@ -755,6 +1098,12 @@ export class GameScene extends Phaser.Scene {
             repeat: -1,
             ease: 'Sine.easeInOut',
         })
+
+        const big = box.w > L.VIEW_AREA.w * 0.5 || box.h > L.VIEW_AREA.h * 0.5
+        if (big) {
+            this.handMain.forEach(i => i.setAlpha(0.72))
+            this.handDrop.forEach(i => i.setAlpha(0.24))
+        }
     }
 
     private setHandDelta(dx: number, dy: number) {
@@ -783,7 +1132,8 @@ export class GameScene extends Phaser.Scene {
     }
 
     private moveHandBy(dx: number, dy: number) {
-        this.setHandDelta(this.dragDX + dx, this.dragDY + dy)
+        const c = this.clampDelta(this.hand!, this.dragDX + dx, this.dragDY + dy)
+        this.setHandDelta(c.dx, c.dy)
     }
 
     private repositionHandPiece() {
@@ -818,6 +1168,30 @@ export class GameScene extends Phaser.Scene {
             this.dragging = false
             this.dropHand()
         })
+    }
+
+    private layerXY(key: string) {
+        const o = offsetOf(key)
+        return {
+            x: this.place.x + o.x * this.place.scale,
+            y: this.place.y + o.y * this.place.scale,
+        }
+    }
+
+    private partBBox(id: PartId) {
+        return unionBBox(PARTS[id].layers)
+    }
+
+    private partVisualBBox(id: PartId) {
+        const b = this.partBBox(id)
+        const o = offsetOf(PARTS[id].layers[0])
+
+        return {
+            x: b.x + o.x,
+            y: b.y + o.y,
+            w: b.w,
+            h: b.h,
+        }
     }
 
     private handBoxNow(): L.Rect | null {
@@ -870,13 +1244,9 @@ export class GameScene extends Phaser.Scene {
     }
 
     private returnHand() {
-        const p = this.place
-        const box = this.partScreenRect(this.hand!)
-        const restX = L.cx(L.HAND_SLOT) + 90
-        const restY = L.VIEW_AREA.y + L.VIEW_AREA.h - 100
-
-        const toDX = restX - L.cx(box)
-        const toDY = restY - L.cy(box)
+        const rest = this.restDelta(this.hand!)
+        const toDX = rest.dx
+        const toDY = rest.dy
 
         const fromDX = this.dragDX
         const fromDY = this.dragDY
@@ -902,14 +1272,21 @@ export class GameScene extends Phaser.Scene {
         this.handZone = undefined
         this.hand = null
 
+        const off = offsetOf(PARTS[id].layers[0])
+
         const fromDX = this.dragDX
         const fromDY = this.dragDY
+
+        // considere a escala da view
+        const targetDX = off.x * this.place.scale
+        const targetDY = off.y * this.place.scale
 
         this.playNote(720)
 
         this.tweens.add({
             targets: [...this.handOutline, ...this.handDrop],
-            alpha: 0, duration: 200,
+            alpha: 0,
+            duration: 200,
         })
 
         this.tweens.add({
@@ -917,27 +1294,65 @@ export class GameScene extends Phaser.Scene {
             v: 1,
             duration: 260,
             ease: 'Back.easeOut',
+
             onUpdate: (_t, o: { v: number }) => {
-                const dx = Phaser.Math.Linear(fromDX, 0, o.v)
-                const dy = Phaser.Math.Linear(fromDY, 0, o.v)
+                const dx = Phaser.Math.Linear(fromDX, targetDX, o.v)
+                const dy = Phaser.Math.Linear(fromDY, targetDY, o.v)
+
                 const px = this.place.x + dx
                 const py = this.place.y + dy
+
                 this.handMain.forEach(i => i.setPosition(px, py))
                 this.handOutline.forEach(i => i.setPosition(px, py))
                 this.handDrop.forEach(i => i.setPosition(px + 16, py + 18))
             },
+
             onComplete: () => {
                 this.clearHandPiece()
                 this.installed.add(id)
                 this.buildView()
                 this.refreshAll()
 
-                const rect = this.partScreenRect(id)
+                const rect = L.toScreen(this.partVisualBBox(id), this.place)
                 this.stamp('selo-ok', L.cx(rect), L.cy(rect))
                 this.spark(L.cx(rect), L.cy(rect))
+
+                if (this.challenge.mode === 'montar-quiz'
+                    && (this.challenge.quizParts ?? []).includes(id)) {
+                    this.time.delayedCall(400, () => this.askPartQuiz(id, () => this.afterInstall()))
+                    return
+                }
+
                 this.showFunctionCard(id)
+                this.time.delayedCall(900, () => this.afterInstall())
             },
         })
+    }
+
+    private afterInstall() {
+        if (this.phase !== 'montando') return
+
+        if (!bootReady(this.challenge, this.installed)) {
+            const next = this.activePart()
+            if (next && PARTS[next].view !== this.view) {
+                this.switchViewTo(PARTS[next].view, () => this.refreshAll())
+            }
+            return
+        }
+
+        this.phase = 'rodando'
+        this.refreshAll()
+
+        if (this.challenge.bootAnimation) {
+            this.time.delayedCall(500, () => this.runBoot())
+            return
+        }
+
+        this.time.delayedCall(400, () => this.celebrateAssembly())
+    }
+
+    private partVisualScreenRect(id: PartId): L.Rect {
+        return L.toScreen(this.partVisualBBox(id), this.place)
     }
 
     private onInstalledTap(id: PartId) {
@@ -1095,7 +1510,6 @@ export class GameScene extends Phaser.Scene {
     }
 
     private runBoot() {
-        if (this.phase !== 'montando') return
         if (!bootReady(this.challenge, this.installed)) return
 
         this.phase = 'rodando'
@@ -1158,6 +1572,24 @@ export class GameScene extends Phaser.Scene {
         this.time.delayedCall(400, () => runStep(0))
     }
 
+    private celebrateAssembly() {
+        this.flashParts(
+            [...this.installed].filter(id => PARTS[id].view === 'oficina'),
+            C.amarelo
+        )
+
+        this.time.delayedCall(500, () => {
+            this.flashParts(
+                [...this.installed].filter(id => PARTS[id].view === 'mesa'),
+                C.ciano
+            )
+        })
+
+        this.time.delayedCall(1200, () => {
+            this.finishChallenge()
+        })
+    }
+
     private flashParts(parts: PartId[], color: number) {
         parts.forEach(id => {
             const imgs = this.partImgs.get(id)
@@ -1170,7 +1602,7 @@ export class GameScene extends Phaser.Scene {
                 })
             })
 
-            const rect = this.partScreenRect(id)
+            const rect = this.partVisualScreenRect(id)
             const glow = this.add.image(L.cx(rect), L.cy(rect), 'fx-brilho')
                 .setDisplaySize(rect.w * 2, rect.h * 2)
                 .setTint(color)
@@ -1185,13 +1617,19 @@ export class GameScene extends Phaser.Scene {
     }
 
     private bootSuccess(cleanup: () => void) {
+        if (!this.installed.has('monitor')) {
+            this.playFanfare()
+            this.time.delayedCall(900, () => { cleanup(); this.finishChallenge() })
+            return
+        }
+
         this.bootDone = true
 
         this.switchViewTo('mesa', () => {
             this.buildView()
             this.playFanfare()
 
-            const rect = this.partScreenRect('monitor')
+            const rect = this.partVisualScreenRect('monitor')
             const glow = this.add.image(L.cx(rect), L.cy(rect), 'fx-brilho')
                 .setDisplaySize(rect.w * 2.2, rect.h * 2.2)
                 .setTint(C.ciano)
@@ -1226,7 +1664,7 @@ export class GameScene extends Phaser.Scene {
 
         const focus = result.extra ?? result.missing
         if (focus && this.installed.has(focus)) {
-            const rect = this.partScreenRect(focus)
+            const rect = this.partVisualScreenRect(focus)
             this.stamp('selo-x', L.cx(rect), L.cy(rect))
         }
 
@@ -1257,6 +1695,13 @@ export class GameScene extends Phaser.Scene {
         })
         this.emitCheckpoint()
 
+        const cats = new Set([...this.installed].map(id => PARTS[id].category))
+        const completo = FLOW_ORDER.every(c => cats.has(c))
+
+        if (!completo) {
+            this.advance()
+            return
+        }
         this.showFlowMap(() => this.advance())
     }
 
@@ -1321,7 +1766,25 @@ export class GameScene extends Phaser.Scene {
             this.add.rectangle(L.W / 2, L.H / 2, L.W, L.H, C.preto, 0.88)
                 .setDepth(300).setInteractive(),
         )
-        const panel = this.keep(this.add.container(0, 0).setDepth(301))
+
+        const box = L.FLOW_PANEL
+        const chrome = this.keep(this.add.container(0, 0).setDepth(301))
+
+        const g = this.add.graphics()
+        this.drawCard(g, box, C.escuro, C.ouro, box.r, false)
+        chrome.add(g)
+
+        chrome.add(
+            this.add.text(L.W / 2, box.y + 46, 'CAMINHO DA INFORMAÇÃO', {
+                fontFamily: 'Arial Black, Arial', fontSize: '25px', color: CSS.ouro,
+                stroke: CSS.preto, strokeThickness: 6,
+            }).setOrigin(0.5).setResolution(2),
+        )
+
+        const well = this.add.graphics()
+        well.fillStyle(C.preto, 0.45)
+        well.fillRoundedRect(L.FLOW_LIST.x, L.FLOW_LIST.y, L.FLOW_LIST.w, L.FLOW_LIST.h, 18)
+        chrome.add(well)
 
         const groups: Array<{ cat: Category; parts: PartId[] }> = FLOW_ORDER
             .map(cat => ({
@@ -1330,67 +1793,141 @@ export class GameScene extends Phaser.Scene {
             }))
             .filter(row => row.parts.length > 0)
 
-        const box = L.flowPanel(groups.length)
+        const list = this.keep(this.add.container(0, 0).setDepth(302))
 
-        const g = this.add.graphics()
-        this.drawCard(g, box, C.escuro, C.ouro, box.r, false)
-        panel.add(g)
-
-        panel.add(
-            this.add.text(L.W / 2, box.y + 48, 'CAMINHO DA INFORMAÇÃO', {
-                fontFamily: 'Arial Black, Arial', fontSize: '26px', color: CSS.ouro,
-                stroke: CSS.preto, strokeThickness: 6,
-            }).setOrigin(0.5).setResolution(2),
-        )
+        const shape = this.make.graphics({ x: 0, y: 0 }, false)
+        shape.fillStyle(0xffffff)
+        shape.fillRoundedRect(L.FLOW_LIST.x, L.FLOW_LIST.y, L.FLOW_LIST.w, L.FLOW_LIST.h, 18)
+        const mask = shape.createGeometryMask()
+        list.setMask(mask)
 
         groups.forEach((row, i) => {
-            const rect = L.flowRow(i, box)
+            const rect = L.flowRow(i)
             const color = CATEGORY_COLOR[row.cat]
 
             const card = this.add.graphics()
             this.drawCard(card, rect, C.medio, color, 16)
 
-            const tag = this.add.text(rect.x + 22, L.cy(rect), CATEGORY_LABEL[row.cat].toUpperCase(), {
-                fontFamily: 'Arial Black, Arial', fontSize: '15px',
+            const tag = this.add.text(rect.x + 20, L.cy(rect), CATEGORY_LABEL[row.cat].toUpperCase(), {
+                fontFamily: 'Arial Black, Arial', fontSize: '14px',
                 color: CSS.creme, stroke: CSS.preto, strokeThickness: 4,
             }).setOrigin(0, 0.5).setResolution(2)
 
-            panel.add([card, tag])
+            list.add([card, tag])
 
             row.parts.forEach((id, k) => {
-                const x = rect.x + 250 + k * 132
-                const icon = this.add.image(x, L.cy(rect) - 6, PARTS[id].icon)
-                    .setDisplaySize(36, 36)
-                const name = this.add.text(x, L.cy(rect) + 22, PARTS[id].label, {
-                    fontFamily: 'Arial', fontStyle: 'bold', fontSize: '13px',
-                    color: CSS.creme, stroke: CSS.preto, strokeThickness: 3,
-                }).setOrigin(0.5).setResolution(2)
-                panel.add([icon, name])
+                const x = rect.x + 230 + k * 120
+                list.add([
+                    this.add.image(x, L.cy(rect) - 8, PARTS[id].icon).setDisplaySize(34, 34),
+                    this.add.text(x, L.cy(rect) + 20, PARTS[id].label, {
+                        fontFamily: 'Arial', fontStyle: 'bold', fontSize: '12px',
+                        color: CSS.creme, stroke: CSS.preto, strokeThickness: 3,
+                    }).setOrigin(0.5).setResolution(2),
+                ])
             })
 
             if (i < groups.length - 1) {
-                const arrow = this.add.text(
-                    rect.x + 96, rect.y + rect.h + L.FLOW_ROW_GAP / 2, '▼', {
-                    fontFamily: 'Arial', fontSize: '20px', color: CSS.ouro,
-                }).setOrigin(0.5).setResolution(2)
-                panel.add(arrow)
+                list.add(
+                    this.add.text(rect.x + 84, rect.y + rect.h + L.FLOW_ROW_GAP / 2, '▼', {
+                        fontFamily: 'Arial', fontSize: '18px', color: CSS.ouro,
+                    }).setOrigin(0.5).setResolution(2),
+                )
             }
         })
 
-        panel.add(
-            this.add.text(L.W / 2, box.y + box.h - 86, this.challenge.explanation, {
-                fontFamily: 'Arial', fontStyle: 'bold', fontSize: '16px', color: CSS.claro,
+        const maxScroll = Math.max(0, L.flowContentHeight(groups.length) - L.FLOW_LIST.h)
+        let scroll = 0
+
+        const barG = this.add.graphics().setDepth(303)
+        chrome.add(barG)
+
+        const paintBar = () => {
+            barG.clear()
+            if (maxScroll <= 0) return
+            const b = L.FLOW_SCROLLBAR
+            barG.fillStyle(C.preto, 0.7)
+            barG.fillRoundedRect(b.x, b.y, b.w, b.h, b.w / 2)
+            const visible = L.FLOW_LIST.h / (L.FLOW_LIST.h + maxScroll)
+            const th = Math.max(40, b.h * visible)
+            const ty = b.y + (b.h - th) * (scroll / maxScroll)
+            barG.fillStyle(C.ouro, 1)
+            barG.fillRoundedRect(b.x, ty, b.w, th, b.w / 2)
+        }
+
+        const setScroll = (v: number) => {
+            scroll = Phaser.Math.Clamp(v, 0, maxScroll)
+            list.setY(-scroll)
+            paintBar()
+        }
+
+        paintBar()
+
+        const inList = (p: Phaser.Input.Pointer) =>
+            p.x >= L.FLOW_LIST.x && p.x <= L.FLOW_LIST.x + L.FLOW_LIST.w &&
+            p.y >= L.FLOW_LIST.y && p.y <= L.FLOW_LIST.y + L.FLOW_LIST.h
+
+        let dragging = false
+        let startY = 0
+        let startScroll = 0
+
+        const onDown = (p: Phaser.Input.Pointer) => {
+            if (!inList(p) || maxScroll <= 0) return
+            dragging = true
+            startY = p.y
+            startScroll = scroll
+        }
+        const onMove = (p: Phaser.Input.Pointer) => {
+            if (!dragging) return
+            setScroll(startScroll - (p.y - startY))
+        }
+        const onUp = () => { dragging = false }
+        const onWheel = (p: Phaser.Input.Pointer, _o: unknown, _dx: number, dy: number) => {
+            if (!inList(p)) return
+            setScroll(scroll + dy * 0.5)
+        }
+
+        this.input.on('pointerdown', onDown)
+        this.input.on('pointermove', onMove)
+        this.input.on('pointerup', onUp)
+        this.input.on('wheel', onWheel)
+
+        chrome.add(
+            this.add.text(L.W / 2, box.y + box.h - 96, this.challenge.explanation, {
+                fontFamily: 'Arial', fontStyle: 'bold', fontSize: '15px', color: CSS.claro,
                 align: 'center', wordWrap: { width: box.w - 90 },
             }).setOrigin(0.5).setResolution(2),
         )
 
-        panel.add(this.modalButton(
-            L.W / 2, box.y + box.h - 40, 'Continuar', C.verde,
-            () => { this.clearOverlay(); onDone() },
-        ))
+        const close = () => {
+            this.input.off('pointerdown', onDown)
+            this.input.off('pointermove', onMove)
+            this.input.off('pointerup', onUp)
+            this.input.off('wheel', onWheel)
+            list.clearMask()
+            mask.destroy()
+            shape.destroy()
+            this.clearOverlay()
+            onDone()
+        }
 
-        panel.setAlpha(0).setScale(0.94)
-        this.tweens.add({ targets: panel, alpha: 1, scale: 1, duration: 260, ease: 'Back.easeOut' })
+        chrome.add(this.modalButton(L.W / 2, box.y + box.h - 42, 'Continuar', C.verde, close))
+
+        chrome.setAlpha(0)
+        list.setAlpha(0)
+        this.tweens.add({ targets: [chrome, list], alpha: 1, duration: 240 })
+    }
+
+    private pendingParts(): PartId[] {
+        return this.challenge.available.filter(id => !this.installed.has(id))
+    }
+
+    private activePart(): PartId | null {
+        const pending = this.pendingParts()
+        const ready = pending.filter(id => canInstall(id, this.installed))
+        if (!ready.length) return null
+
+        const inView = ready.filter(id => PARTS[id].view === this.view)
+        return (inView.length ? inView : ready)[0]
     }
 
     private tutorialSteps(): TutorialStep[] {
@@ -1451,8 +1988,12 @@ export class GameScene extends Phaser.Scene {
                 ...around(L.BTN_POWER),
             } as TutorialStep,
             {
-                text: 'Toque numa peça instalada para removê-la, se achar que ela não deveria estar ali.',
+                text: 'No fim, você monta um computador inteiro sozinho. Nenhuma sombra, nenhuma dica.',
                 shape: 'none', balloonY: 360, buttonLabel: 'Vamos lá!',
+            } as TutorialStep,
+            {
+                text: 'Agora é prova. Primeiro perguntas sobre o que cada peça faz.',
+                ...around(L.VIEW_AREA),
             } as TutorialStep,
         ]
     }
@@ -1536,11 +2077,11 @@ export class GameScene extends Phaser.Scene {
                 align: 'center', wordWrap: { width: pw - 80 },
             }).setOrigin(0.5).setResolution(2),
             this.add.text(0, -ph / 2 + 218, this.levelConfig.objective, {
-                fontFamily: 'Arial', fontStyle: 'bold', fontSize: '18px', color: CSS.claro,
+                fontFamily: 'Arial', fontStyle: 'bold', fontSize: '22px', color: CSS.claro,
                 align: 'center', wordWrap: { width: pw - 100 },
             }).setOrigin(0.5).setResolution(2),
             this.add.text(0, -ph / 2 + 328, this.levelConfig.tip, {
-                fontFamily: 'Arial', fontSize: '16px', color: CSS.ouro,
+                fontFamily: 'Arial', fontSize: '20px', color: CSS.ouro,
                 align: 'center', wordWrap: { width: pw - 110 },
             }).setOrigin(0.5).setResolution(2),
         ])

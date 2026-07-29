@@ -95,7 +95,7 @@ export class BootScene extends Phaser.Scene {
 
     preload() {
         this.createLoadingScreen()
-        ;[...BASES, ...LAYERS, ...EXTRAS].forEach(([key, url]) => this.load.image(key, url))
+            ;[...BASES, ...LAYERS, ...EXTRAS].forEach(([key, url]) => this.load.image(key, url))
     }
 
     create() {
@@ -107,7 +107,7 @@ export class BootScene extends Phaser.Scene {
         this.buildShadowTexture()
 
         this.scene.launch('UIScene')
-        this.scene.start('GameScene', { level: 1 })
+        this.time.delayedCall(0, () => this.scene.start('GameScene', { level: 3  }))
     }
 
     private readCanvasSize() {

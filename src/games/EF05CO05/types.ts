@@ -26,15 +26,12 @@ export interface PartDef {
     label: string
     category: Category
     view: View
-    /** Camadas desenhadas ao instalar. Quase sempre uma; o som usa duas. */
     layers: string[]
     icon: string
-    /** Frase mostrada no cartão após o encaixe. */
     funcao: string
-    /** Pista exibida no molde nos desafios por função. */
     dica: string
-    /** Precisa estar instalado antes desta. */
     requires: PartId[]
+    quiz: PartQuiz
 }
 
 /** Caixa da peça dentro do canvas, calculada por alpha no BootScene. */
@@ -45,31 +42,42 @@ export interface BBox {
     h: number
 }
 
-// ── Desafio ───────────────────────────────────────────────────────────────
-
 export type ChallengeMode =
-    /** N1: o molde mostra a silhueta da peça certa. */
-    | 'identificar'
-    /** N2: o molde mostra só a descrição da função. */
-    | 'funcao'
-    /** N3: parte já montada; achar o que falta ou o que sobra. */
-    | 'diagnostico'
+    | 'montar'
+    | 'montar-quiz'
+    | 'quiz-classificar'
+    | 'quiz-multipla'
+    | 'montar-livre'
+
+export type MouldHint = 'silhueta' | 'dica' | 'nenhuma'
+
+export interface PartQuiz {
+    question: string
+    options: string[]
+    correctIndex: number
+    explain: string
+}
+
+export interface ClassifyGroup {
+    label: string
+    accepts: Category[]
+}
 
 export interface BuildChallenge {
     id: string
     mode: ChallengeMode
     title: string
-    /** Peças obrigatórias para o boot passar. */
     required: PartId[]
-    /** O que aparece na gaveta. */
     available: PartId[]
-    /** Já instaladas ao abrir a fase. */
     preInstalled?: PartId[]
-    /** Vista aberta ao iniciar. */
     startView: View
-    /** Instalar peça fora de `required` conta como erro. */
+    hint?: MouldHint
     exactSet?: boolean
     timeLimit?: number
+    bootAnimation?: boolean
+    quizParts?: PartId[]
+    classifyGroups?: ClassifyGroup[]
+    classifyParts?: PartId[]
     explanation: string
 }
 

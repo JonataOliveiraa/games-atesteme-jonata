@@ -22,12 +22,14 @@ export class UIScene extends Phaser.Scene {
     }
 
     create() {
+        EventBus.off('mission-update')
+
         this.buildBar()
         this.registerListeners()
 
-        this.events.once('shutdown', () => {
-            EventBus.off('mission-update', undefined, this)
-        })
+        const cleanup = () => EventBus.off('mission-update', undefined, this)
+        this.events.once('shutdown', cleanup)
+        this.events.once('destroy', cleanup)
     }
 
     private buildBar() {
@@ -141,6 +143,9 @@ export class UIScene extends Phaser.Scene {
 
     private registerListeners() {
         EventBus.on('mission-update', (data: MissionUpdatePayload) => {
+            if (!this.scene.isActive()) return
+            if (!this.instructionText?.active || !this.levelText?.active) return
+
             this.instructionText.setText(data.instruction)
             this.levelText.setText(`Nível ${data.level} de 3`)
             this.total = data.totalChallenges
