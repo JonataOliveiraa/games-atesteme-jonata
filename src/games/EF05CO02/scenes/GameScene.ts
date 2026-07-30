@@ -69,6 +69,9 @@ export class GameScene extends Phaser.Scene {
     private dragFrom: NodeView | null = null
     private draggingNode: NodeView | null = null
 
+    private tutorialOpen = false
+    private tutorialSeen = false
+
     private routePath: string[] = []
     private costText?: Phaser.GameObjects.Text
 
@@ -117,13 +120,18 @@ export class GameScene extends Phaser.Scene {
         this.publishHud()
 
         EventBus.on('timer-end', () => this.onTimeUp(), this)
+        EventBus.on('show-tutorial', () => this.runTutorials(() => { }, true), this)
+
         this.events.once('shutdown', () => {
             EventBus.off('timer-end', undefined, this)
+            EventBus.off('show-tutorial', undefined, this)
             EventBus.emit('timer-stop')
         })
 
         runtimeGameBridge.emit({ type: 'GAME_READY', gameId: GAME_ID, stage: this.level.level })
         this.emitCheckpoint()
+
+        if (this.phaseIdx > 0) EventBus.emit('tutorial-ready')
 
         if (this.phaseIdx === 0) {
             this.showLevelIntro(() => this.runTutorials(() => this.startPhase()))
@@ -154,7 +162,7 @@ export class GameScene extends Phaser.Scene {
         this.edgeLayer = this.add.graphics().setDepth(8)
         this.elasticLayer = this.add.graphics().setDepth(9)
         this.markerLayer = this.add.container(0, 0).setDepth(16)
-        this.taskLayer = this.add.container(0, 0).setDepth(18)  
+        this.taskLayer = this.add.container(0, 0).setDepth(18)
     }
 
     private buildChecklist() {
@@ -254,7 +262,7 @@ export class GameScene extends Phaser.Scene {
             }
         })
     }
-        
+
     private buildPhase() {
         const p = this.phase
 
@@ -306,14 +314,12 @@ export class GameScene extends Phaser.Scene {
     }
 
     private hintErase() {
-        const t = this.add.text(W / 2, 664, 'Toque na bolinha do meio de uma linha para apagá-la', {
+        this.add.text(500, 670, 'Toque na bolinha do meio de uma linha para apagá-la', {
             fontFamily: 'Arial',
             fontStyle: 'bold',
-            fontSize: '23px',
+            fontSize: '18px',
             color: '#cbd5e1',
         }).setOrigin(0.5).setDepth(12).setResolution(2)
-        t.setY(670)
-        t.setX(500)
     }
 
     private buildNodes(defs: GraphNode[], side: 'main' | 'alt') {
@@ -1020,7 +1026,9 @@ export class GameScene extends Phaser.Scene {
         this.tweens.add({ targets: panel, alpha: 1, scale: 1, duration: 280, ease: 'Back.easeOut' })
     }
 
-    private runTutorials(onDone: () => void) {
+    private runTutorials(onDone: () => void, forced = false) {
+        if (this.tutorialOpen) { onDone(); return }
+
         const queue: Array<{ key: string; steps: TutorialStep[] }> = []
         const p = this.phase
         const first = this.nodeViews[0]
@@ -1154,8 +1162,36 @@ export class GameScene extends Phaser.Scene {
             })
         }
 
+        if (!queue.length && forced) {
+            const resumo =
+                p.kind === 'representar'
+                    ? 'Arraste de uma bolinha até a outra para criar cada ligação da lista do topo. Toque na bolinha do meio de uma linha para apagá-la.'
+                    : p.kind === 'rota'
+                        ? 'Toque nas bolinhas em ordem, sempre em uma vizinha da anterior. O total de quadras aparece embaixo.'
+                        : p.kind === 'consulta'
+                            ? 'Siga as linhas para descobrir quem liga com quem, escolha a resposta e confirme.'
+                            : 'Arraste as bolinhas para comparar os dois desenhos. O que importa é com quem cada uma se liga.'
+
+            queue.push({
+                key: `mapas-ajuda-l${this.level.level}-f${this.phaseIdx}`,
+                steps: [{ text: resumo, shape: 'none', balloonY: 400, buttonLabel: 'Entendi!' }],
+            })
+        }
+
+        if (!queue.length) { onDone(); return }
+
+        this.tutorialOpen = true
+        const wasLocked = this.locked
+        this.locked = true
+
         const next = (i: number) => {
             if (i >= queue.length) {
+                this.tutorialOpen = false
+                this.locked = wasLocked
+                if (!this.tutorialSeen) {
+                    this.tutorialSeen = true
+                    EventBus.emit('tutorial-ready')
+                }
                 onDone()
                 return
             }
@@ -1163,6 +1199,7 @@ export class GameScene extends Phaser.Scene {
                 key: queue[i].key,
                 accent: C.blue,
                 safeTop: 130,
+                once: false,
                 onFinish: () => next(i + 1),
                 steps: queue[i].steps,
             })
