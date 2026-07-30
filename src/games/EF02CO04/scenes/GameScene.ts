@@ -8,14 +8,13 @@ import { ALL_ITEMS } from '../data/items'
 
 const GAME_ID = 'museu-vivo-do-computador'
 
-// ── Layout ───────────────────────────────────────────────────────────────
-const TIMER_X = 200, TIMER_Y = 116, TIMER_W = 880, TIMER_H = 18
-const QUESTION_Y = 156
-const TRAY_Y = 242
-const CARD_W = 108, CARD_H = 108
-const ZONE_TOP = 306, ZONE_H = 332
-const FACT_Y = 672
-const SLOT = 86
+const TIMER_X = 200, TIMER_Y = 88, TIMER_W = 880, TIMER_H = 20
+const TRAY_Y = 190
+const CARD_W = 132, CARD_H = 132
+const ZONE_TOP = 278, ZONE_H = 356
+const ZONE_HEAD = 54
+const FACT_Y = 676
+const SLOT = 104
 
 const C = {
   blue: 0x3B82F6,
@@ -107,12 +106,13 @@ export class GameScene extends Phaser.Scene {
     this.createTimerBar()
     this.createHeaderTexts()
     this.registerPlatformCommands()
-    EventBus.on('mute-audio', (m: boolean) => { this.isMuted = m }, this)
 
+    EventBus.on('mute-audio', (m: boolean) => { this.isMuted = m }, this)
+    EventBus.on('show-tutorial', () => this.replayTutorial(), this)
     runtimeGameBridge.emit({ type: 'GAME_READY', gameId: GAME_ID })
+
     this.broadcastMissionState()
     this.emitCheckpoint()
-
     this.buildMission()
     this.showLevelIntroScreen()
   }
@@ -122,9 +122,13 @@ export class GameScene extends Phaser.Scene {
     this.timerTween?.stop()
     this.warningBeepTimer?.destroy()
     this.warningBeepTimer = null
+
     this.clearOverlay()
     this.clearTutorial()
+
     EventBus.off('mute-audio', undefined, this)
+    EventBus.off('show-tutorial', undefined, this)
+
     this.unsubPlatform?.()
     this.unsubPlatform = undefined
   }
@@ -139,27 +143,17 @@ export class GameScene extends Phaser.Scene {
     this.overlayObjects = []
   }
 
-  // ── Fundo e cabeçalho ──────────────────────────────────────────────────
-
   private drawBackground() {
     this.add.image(640, 360, 'bg-museum').setDisplaySize(1280, 720).setDepth(-2)
   }
 
   private createHeaderTexts() {
-    this.questionText = this.add.text(640, QUESTION_Y, '', {
-      fontFamily: 'Arial Black, Arial', fontSize: '27px', color: '#FFFFFF',
-      stroke: '#1E3A8A', strokeThickness: 6,
-      align: 'center', wordWrap: { width: 1120 },
-    }).setOrigin(0.5).setDepth(12).setResolution(2)
-
     this.factText = this.add.text(640, FACT_Y, '', {
-      fontFamily: 'Arial', fontStyle: 'bold', fontSize: '19px', color: '#A7F3D0',
+      fontFamily: 'Arial', fontStyle: 'bold', fontSize: '20px', color: '#A7F3D0',
       stroke: '#0F172A', strokeThickness: 4,
       align: 'center', wordWrap: { width: 1100 },
     }).setOrigin(0.5).setDepth(12).setResolution(2)
   }
-
-  // ── Timer ──────────────────────────────────────────────────────────────
 
   private createTimerBar() {
     const bg = this.add.graphics().setDepth(6)
@@ -170,6 +164,20 @@ export class GameScene extends Phaser.Scene {
 
     this.timeBarFill = this.add.graphics().setDepth(7)
     this.drawTimeBar(1)
+  }
+
+  private replayTutorial() {
+    if (this.phase !== 'playing') return
+    if (!this.itemCards.length || !this.zones.length) return
+
+    this.timerActive = false
+    this.timerTween?.pause()
+
+    this.showTutorial(() => {
+      this.phase = 'playing'
+      this.timerActive = true
+      this.timerTween?.resume()
+    })
   }
 
   private drawTimeBar(progress: number) {
@@ -230,13 +238,10 @@ export class GameScene extends Phaser.Scene {
     this.showGameOverScreen()
   }
 
-  // ── Montagem da missão ─────────────────────────────────────────────────
-
   private buildMission() {
     this.clearMission()
 
     const mission = this.levelConfig.missions[this.currentMissionIndex]
-    this.questionText?.setText(mission.question)
     this.factText?.setText('')
 
     this.buildZones(mission.zones)
@@ -267,21 +272,21 @@ export class GameScene extends Phaser.Scene {
 
   private buildZones(defs: DropZoneDef[]) {
     const n = defs.length
-    const totalW = n === 1 ? 760 : 1160
-    const gap = 40
+    const totalW = n === 1 ? 780 : 1180
+    const gap = 36
     const zoneW = n === 1 ? totalW : (totalW - gap * (n - 1)) / n
     const startX = 640 - totalW / 2
 
     defs.forEach((def, i) => {
       const x = startX + i * (zoneW + gap)
-      const color = this.zoneColor(def.kind)
 
       const frame = this.add.graphics().setDepth(3)
       frame.setData('missionScoped', true)
-      this.drawZoneFrame(frame, x, ZONE_TOP, zoneW, ZONE_H, color, false)
+      frame.setData('label', def.label)
+      this.drawZoneFrame(frame, x, ZONE_TOP, zoneW, ZONE_H, this.zoneColor(def.kind), false)
 
-      const label = this.add.text(x + zoneW / 2, ZONE_TOP + 28, def.label, {
-        fontFamily: 'Arial Black, Arial', fontSize: '21px', color: '#FFFFFF',
+      const label = this.add.text(x + zoneW / 2, ZONE_TOP + ZONE_HEAD / 2, def.label.toUpperCase(), {
+        fontFamily: 'Arial Black, Arial', fontSize: '22px', color: '#FFFFFF',
         stroke: '#0F172A', strokeThickness: 5,
         align: 'center', wordWrap: { width: zoneW - 40 },
       }).setOrigin(0.5).setDepth(5).setResolution(2)
@@ -297,10 +302,48 @@ export class GameScene extends Phaser.Scene {
     color: number, highlight: boolean,
   ) {
     g.clear()
-    g.fillStyle(C.white, highlight ? 0.24 : 0.12)
-    g.fillRoundedRect(x, y, w, h, 22)
-    g.lineStyle(highlight ? 7 : 4, color, highlight ? 1 : 0.9)
-    g.strokeRoundedRect(x, y, w, h, 22)
+
+    g.fillStyle(0x0B1220, 0.45)
+    g.fillRoundedRect(x + 4, y + 8, w, h, 24)
+
+    g.fillStyle(C.blueDark, highlight ? 0.55 : 0.38)
+    g.fillRoundedRect(x, y, w, h, 24)
+
+    g.fillStyle(color, highlight ? 1 : 0.9)
+    g.fillRoundedRect(x, y, w, ZONE_HEAD, { tl: 24, tr: 24, bl: 0, br: 0 })
+    g.fillStyle(C.white, 0.18)
+    g.fillRoundedRect(x + 8, y + 6, w - 16, ZONE_HEAD * 0.42, 12)
+
+    const iy = y + ZONE_HEAD + 12
+    const ih = h - ZONE_HEAD - 24
+    this.dashedRoundRect(g, x + 14, iy, w - 28, ih, highlight ? color : C.slate, highlight ? 1 : 0.45)
+
+    g.lineStyle(highlight ? 8 : 5, color, highlight ? 1 : 0.85)
+    g.strokeRoundedRect(x, y, w, h, 24)
+  }
+
+  private dashedRoundRect(
+    g: Phaser.GameObjects.Graphics,
+    x: number, y: number, w: number, h: number,
+    color: number, alpha: number,
+  ) {
+    const dash = 16, gap = 12
+    g.lineStyle(4, color, alpha)
+
+    const line = (x1: number, y1: number, x2: number, y2: number) => {
+      const len = Math.hypot(x2 - x1, y2 - y1)
+      const steps = Math.max(1, Math.floor(len / (dash + gap)))
+      const ux = (x2 - x1) / len, uy = (y2 - y1) / len
+      for (let i = 0; i < steps; i++) {
+        const s = i * (dash + gap)
+        g.lineBetween(x1 + ux * s, y1 + uy * s, x1 + ux * (s + dash), y1 + uy * (s + dash))
+      }
+    }
+
+    line(x, y, x + w, y)
+    line(x + w, y, x + w, y + h)
+    line(x + w, y + h, x, y + h)
+    line(x, y + h, x, y)
   }
 
   private buildTray(itemIds: string[]) {
@@ -319,7 +362,6 @@ export class GameScene extends Phaser.Scene {
     })
   }
 
-  /** Cards são visualmente NEUTROS — nada aqui pode indicar a categoria do item. */
   private makeDraggableCard(item: MuseumItem, cx: number, cy: number, idx: number): ItemCard {
     const bg = this.add.graphics()
     bg.fillStyle(C.white, 0.97)
@@ -327,11 +369,11 @@ export class GameScene extends Phaser.Scene {
     bg.lineStyle(4, C.slate, 1)
     bg.strokeRoundedRect(-CARD_W / 2, -CARD_H / 2, CARD_W, CARD_H, 16)
 
-    const img = this.add.image(0, -12, item.textureKey).setDisplaySize(62, 62)
+    const img = this.add.image(0, -14, item.textureKey).setDisplaySize(80, 80)
 
-    const name = this.add.text(0, CARD_H / 2 - 20, item.name, {
-      fontFamily: 'Arial Black, Arial', fontSize: '12px', color: '#1E293B',
-      align: 'center', wordWrap: { width: CARD_W - 12 },
+    const name = this.add.text(0, CARD_H / 2 - 22, item.name, {
+      fontFamily: 'Arial Black, Arial', fontSize: '14px', color: '#1E293B',
+      align: 'center', wordWrap: { width: CARD_W - 14 },
     }).setOrigin(0.5).setResolution(2)
 
     const container = this.add.container(cx, cy, [bg, img, name]).setDepth(10)
@@ -370,8 +412,6 @@ export class GameScene extends Phaser.Scene {
 
     return card
   }
-
-  // ── Drop ───────────────────────────────────────────────────────────────
 
   private zoneAt(x: number, y: number): ZoneView | null {
     return this.zones.find(z =>
@@ -451,18 +491,17 @@ export class GameScene extends Phaser.Scene {
   }
 
   private slotPosition(zone: ZoneView) {
-    const perRow = Math.max(1, Math.floor((zone.w - 30) / (SLOT + 14)))
+    const perRow = Math.max(1, Math.floor((zone.w - 40) / (SLOT + 16)))
     const col = zone.filled % perRow
     const row = Math.floor(zone.filled / perRow)
-    const rowW = perRow * SLOT + (perRow - 1) * 14
+    const rowW = perRow * SLOT + (perRow - 1) * 16
     const startX = zone.x + zone.w / 2 - rowW / 2 + SLOT / 2
     return {
-      x: startX + col * (SLOT + 14),
-      y: zone.y + 92 + row * (SLOT + 16),
+      x: startX + col * (SLOT + 16),
+      y: zone.y + ZONE_HEAD + 30 + SLOT / 2 + row * (SLOT + 18),
     }
   }
 
-  /** "A máquina ganha vida": pulso nas zonas completas antes de avançar. */
   private celebrateZones() {
     this.playFanfare()
     this.zones.forEach(z => {
@@ -503,7 +542,6 @@ export class GameScene extends Phaser.Scene {
     g.fillRect(0, y, x, h)
     g.fillRect(x + w, y, 1280 - (x + w), h)
 
-    g.lineStyle(4, C.amber, 1)
     g.strokeRoundedRect(x, y, w, h, 18)
   }
 
@@ -541,14 +579,13 @@ export class GameScene extends Phaser.Scene {
       balloonBg.clear()
       balloonBg.fillStyle(C.white, 0.98)
       balloonBg.fillRoundedRect(-w / 2, -h / 2, w, h, 18)
-      balloonBg.lineStyle(4, C.amber, 1)
       balloonBg.strokeRoundedRect(-w / 2, -h / 2, w, h, 18)
       balloon.setY(y)
       balloon.setAlpha(0)
       this.tweens.add({ targets: balloon, alpha: 1, duration: 200 })
     }
 
-    const nextBtn = this.tut(this.createModalButton(640, 0, 'Próximo', C.blue, () => {}))
+    const nextBtn = this.tut(this.createModalButton(640, 0, 'Próximo', C.blue, () => { }))
     nextBtn.setDepth(321)
 
     const setNext = (y: number, label: string, action: () => void) => {
@@ -593,9 +630,8 @@ export class GameScene extends Phaser.Scene {
       const gBg = this.add.graphics()
       gBg.fillStyle(C.white, 0.98)
       gBg.fillRoundedRect(-CARD_W / 2, -CARD_H / 2, CARD_W, CARD_H, 16)
-      gBg.lineStyle(4, C.amber, 1)
       gBg.strokeRoundedRect(-CARD_W / 2, -CARD_H / 2, CARD_W, CARD_H, 16)
-      const gImg = this.add.image(0, -12, from.item.textureKey).setDisplaySize(62, 62)
+      const gImg = this.add.image(0, -14, from.item.textureKey).setDisplaySize(80, 80)
       ghost.add([gBg, gImg])
 
       const hand = this.tut(this.add.graphics().setDepth(311))
@@ -913,8 +949,8 @@ export class GameScene extends Phaser.Scene {
     const total = this.levelConfig.missions.length
     const stats = this.add.text(0, -36,
       `${this.currentMissionIndex} de ${total} desafios concluídos`, {
-        fontFamily: 'Arial', fontStyle: 'bold', fontSize: '20px', color: '#1E293B',
-      }).setOrigin(0.5).setResolution(2)
+      fontFamily: 'Arial', fontStyle: 'bold', fontSize: '20px', color: '#1E293B',
+    }).setOrigin(0.5).setResolution(2)
 
     const retry = this.createModalButton(-140, 110, 'Tentar novamente', C.green, () => {
       this.scene.restart({ level: this.levelConfig.level, points: this.currentPoints, lives: this.currentLives })

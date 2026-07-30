@@ -1,36 +1,36 @@
 import Phaser from 'phaser'
 
-import bgMuseumUrl   from '../../../assets/games/EF02CO04/bg-museum.png'
-import bgLoadingUrl  from '../../../assets/games/EF02CO04/bg-loading.png'
+import bgMuseumUrl from '../../../assets/games/EF02CO04/bg-museum.png'
+import bgLoadingUrl from '../../../assets/games/EF02CO04/bg-loading.png'
 
 import hwKeyboardUrl from '../../../assets/games/EF02CO04/hw-keyboard.png'
-import hwMouseUrl    from '../../../assets/games/EF02CO04/hw-mouse.png'
-import hwMonitorUrl  from '../../../assets/games/EF02CO04/hw-monitor.png'
-import hwHdUrl       from '../../../assets/games/EF02CO04/hw-hd.png'
-import hwSpeakerUrl  from '../../../assets/games/EF02CO04/hw-speaker.png'
-import hwPrinterUrl  from '../../../assets/games/EF02CO04/hw-printer.png'
-
-import swGameUrl          from '../../../assets/games/EF02CO04/sw-game.png'
-import swBrowserUrl       from '../../../assets/games/EF02CO04/sw-browser.png'
-import swMusicUrl         from '../../../assets/games/EF02CO04/sw-music.png'
-import swPhotoUrl         from '../../../assets/games/EF02CO04/sw-photo.png'
-import swTextUrl          from '../../../assets/games/EF02CO04/sw-text.png'
+import hwMouseUrl from '../../../assets/games/EF02CO04/hw-mouse.png'
+import hwMonitorUrl from '../../../assets/games/EF02CO04/hw-monitor.png'
+import hwHdUrl from '../../../assets/games/EF02CO04/hw-hd.png'
+import hwSpeakerUrl from '../../../assets/games/EF02CO04/hw-speaker.png'
+import hwPrinterUrl from '../../../assets/games/EF02CO04/hw-printer.png'
+import { createLoadingScreen } from '../../../shared/loading/createLoadingScreen'
+import swGameUrl from '../../../assets/games/EF02CO04/sw-game.png'
+import swBrowserUrl from '../../../assets/games/EF02CO04/sw-browser.png'
+import swMusicUrl from '../../../assets/games/EF02CO04/sw-music.png'
+import swPhotoUrl from '../../../assets/games/EF02CO04/sw-photo.png'
+import swTextUrl from '../../../assets/games/EF02CO04/sw-text.png'
 import swPrinterDriverUrl from '../../../assets/games/EF02CO04/sw-printer-driver.png'
 
 const ASSETS: Array<[string, string]> = [
-  ['bg-museum',    bgMuseumUrl],
-  ['hw-keyboard',  hwKeyboardUrl],
-  ['hw-mouse',     hwMouseUrl],
-  ['hw-monitor',   hwMonitorUrl],
-  ['hw-hd',        hwHdUrl],
-  ['hw-speaker',   hwSpeakerUrl],
-  ['hw-printer',   hwPrinterUrl],
-  ['sw-game',           swGameUrl],
-  ['sw-browser',         swBrowserUrl],
-  ['sw-music',           swMusicUrl],
-  ['sw-photo',           swPhotoUrl],
-  ['sw-text',            swTextUrl],
-  ['sw-printer-driver',  swPrinterDriverUrl],
+  ['bg-museum', bgMuseumUrl],
+  ['hw-keyboard', hwKeyboardUrl],
+  ['hw-mouse', hwMouseUrl],
+  ['hw-monitor', hwMonitorUrl],
+  ['hw-hd', hwHdUrl],
+  ['hw-speaker', hwSpeakerUrl],
+  ['hw-printer', hwPrinterUrl],
+  ['sw-game', swGameUrl],
+  ['sw-browser', swBrowserUrl],
+  ['sw-music', swMusicUrl],
+  ['sw-photo', swPhotoUrl],
+  ['sw-text', swTextUrl],
+  ['sw-printer-driver', swPrinterDriverUrl],
 ]
 
 export class BootScene extends Phaser.Scene {
@@ -39,47 +39,30 @@ export class BootScene extends Phaser.Scene {
   }
 
   preload() {
-    this.load.image('bg-loading', bgLoadingUrl)
-    this.createLoadingScreen()
+    createLoadingScreen(this, {
+      title: 'Museu Vivo do',
+      subtitle: 'COMPUTADOR',
+      description: 'Organizando as peças do museu...',
+      theme: {
+        background: { kind: 'grid', base: 0x0D1B2A, color: 0x4FC3F7, size: 64, alpha: 0.14 },
+        card: 0x122436,
+        cardShadow: 0x000000,
+        cardBorder: 0x4FC3F7,
+        title: 0xE3F2FD,
+        subtitle: 0x4FC3F7,
+        description: 0x90CAF9,
+        titleStroke: 0x0D1B2A,
+        progressTrack: 0x0D1B2A,
+        progressBorder: 0x4FC3F7,
+        progressFill: 0x4FC3F7,
+      },
+    })
+
     ASSETS.forEach(([key, url]) => this.load.image(key, url))
   }
 
   create() {
+    this.scene.launch('UIScene')
     this.scene.start('GameScene')
-  }
-
-  private createLoadingScreen() {
-    const fallback = this.add.rectangle(640, 360, 1280, 720, 0x0D1B2A).setDepth(0)
-
-    this.load.once('filecomplete-image-bg-loading', () => {
-      fallback.destroy()
-      this.add.image(640, 360, 'bg-loading').setDisplaySize(1280, 720).setDepth(0)
-    })
-
-    this.add.text(640, 310, '🏛️  Museu Vivo do Computador', {
-      fontSize: '40px',
-      fontFamily: 'Arial Black, Arial',
-      color: '#E3F2FD',
-      stroke: '#000000',
-      strokeThickness: 6,
-      align: 'center',
-      wordWrap: { width: 900 },
-    }).setOrigin(0.5).setDepth(1)
-
-    this.add.text(640, 390, 'Organizando as peças do museu...', {
-      fontSize: '24px',
-      fontFamily: 'Arial',
-      color: '#90CAF9',
-    }).setOrigin(0.5).setDepth(1)
-
-    const barW = 500
-    const barBg = this.add.rectangle(640, 450, barW + 8, 20, 0x0D1B2A)
-      .setStrokeStyle(2, 0x4FC3F7).setDepth(1)
-    const bar = this.add.rectangle(640 - barW / 2, 450, 4, 16, 0x4FC3F7).setOrigin(0, 0.5).setDepth(1)
-    void barBg
-
-    this.load.on('progress', (v: number) => {
-      bar.setSize(Math.max(4, barW * v), 16)
-    })
   }
 }

@@ -9,14 +9,11 @@ interface MissionUpdatePayload {
   level: number
 }
 
-/**
- * UIScene — HUD paralelo do Museu Vivo do Computador.
- * Layout idêntico ao padrão EF02CO01 (canvas 1280×720, y=0–112).
- */
+const BAR_H = 74
+
 export class UIScene extends Phaser.Scene {
   private instructionText!: Phaser.GameObjects.Text
-  private hintText!:        Phaser.GameObjects.Text
-  private levelStars!:      Phaser.GameObjects.Text
+  private levelText!: Phaser.GameObjects.Text
   private missionDots: Phaser.GameObjects.Graphics[] = []
 
   constructor() {
@@ -30,70 +27,73 @@ export class UIScene extends Phaser.Scene {
 
   shutdown() {
     EventBus.off('mission-update', undefined, this)
-    EventBus.off('mute-audio',     undefined, this)
   }
 
   private createTopBar() {
-    this.add.rectangle(640, 56, 1280, 112, 0x0D1B2A, 0.95)
-    this.add.rectangle(640, 112, 1280, 2, 0x4FC3F7, 0.6)
+    const bar = this.add.graphics().setDepth(0)
 
-    this.add.text(18, 34, '🏛️', { fontSize: '26px' }).setOrigin(0, 0.5)
+    bar.fillStyle(0x0D1B2A, 0.96)
+    bar.fillRect(0, 0, 1280, BAR_H)
+    bar.fillStyle(0x4FC3F7, 0.85)
+    bar.fillRect(0, BAR_H - 3, 1280, 3)
 
-    this.instructionText = this.add.text(640, 34, 'Carregando...', {
-      fontSize: '24px',
+    this.add.text(26, 26, 'MUSEU VIVO', {
+      fontSize: '18px', fontFamily: 'Arial Black, Arial',
+      color: '#FFFFFF', stroke: '#0D1B2A', strokeThickness: 4,
+    }).setOrigin(0, 0.5).setDepth(1).setResolution(2)
+
+    this.levelText = this.add.text(26, 50, 'Nível 1', {
+      fontSize: '14px', fontFamily: 'Arial', fontStyle: 'bold',
+      color: '#4FC3F7',
+    }).setOrigin(0, 0.5).setDepth(1).setResolution(2)
+
+    this.instructionText = this.add.text(640, BAR_H / 2 - 2, 'Carregando...', {
+      fontSize: '22px',
       fontFamily: 'Arial Black, Arial',
       color: '#FFFFFF',
       stroke: '#0D1B2A',
-      strokeThickness: 4,
-      wordWrap: { width: 840 },
+      strokeThickness: 5,
+      wordWrap: { width: 720 },
       align: 'center',
-    }).setOrigin(0.5)
+    }).setOrigin(0.5).setDepth(1).setResolution(2)
 
-    this.add.rectangle(640, 58, 800, 1, 0x4FC3F7, 0.22)
-
-    this.hintText = this.add.text(640, 80, '', {
-      fontSize: '17px',
-      fontFamily: 'Arial, sans-serif',
-      color: '#F9E79F',
-      stroke: '#0D1B2A',
-      strokeThickness: 3,
-      wordWrap: { width: 700 },
-      align: 'center',
-    }).setOrigin(0.5)
-
-    this.add.text(1095, 22, 'Nível', {
-      fontSize: '11px', color: '#607D8B', fontFamily: 'Arial',
-    }).setOrigin(0.5)
-    this.levelStars = this.add.text(1095, 46, '★☆☆', {
-      fontSize: '22px', color: '#FFD700',
-    }).setOrigin(0.5)
-
-    this.createMuteButton()
+    this.createIconButton(1240, BAR_H / 2, '?', () => EventBus.emit('show-tutorial'))
   }
 
-  private createMuteButton() {
-    let muted = false
+  private createIconButton(x: number, y: number, label: string, onClick: () => void) {
+    const s = 46
+    const g = this.add.graphics().setDepth(1)
 
-    const btn = this.add.rectangle(1248, 56, 52, 60, 0x1A2A3A, 0.9)
-      .setStrokeStyle(1.5, 0x4FC3F7)
-      .setInteractive({ useHandCursor: true })
+    const paint = (hover: boolean) => {
+      g.clear()
+      g.fillStyle(hover ? 0x243447 : 0x1A2A3A, 1)
+      g.fillRoundedRect(x - s / 2, y - s / 2, s, s, 13)
+      g.lineStyle(2, 0x4FC3F7, 0.85)
+      g.strokeRoundedRect(x - s / 2, y - s / 2, s, s, 13)
+    }
+    paint(false)
 
-    const icon = this.add.text(1248, 56, '🔊', { fontSize: '22px' }).setOrigin(0.5)
+    const icon = this.add.text(x, y, label, {
+      fontSize: '22px', fontFamily: 'Arial Black, Arial', color: '#4FC3F7',
+    }).setOrigin(0.5).setDepth(2).setResolution(2)
 
-    btn.on('pointerdown', () => {
-      muted = !muted
-      icon.setText(muted ? '🔇' : '🔊')
-      EventBus.emit('mute-audio', muted)
+    const zone = this.add.zone(x, y, s + 8, s + 8)
+      .setDepth(3).setInteractive({ useHandCursor: true })
+
+    zone.on('pointerover', () => paint(true))
+    zone.on('pointerout', () => paint(false))
+    zone.on('pointerdown', () => {
+      paint(true)
+      this.tweens.add({ targets: icon, scale: 0.86, duration: 70, yoyo: true })
+      onClick()
     })
-    btn.on('pointerover',  () => btn.setFillStyle(0x243447))
-    btn.on('pointerout',   () => btn.setFillStyle(0x1A2A3A, 0.9))
+    zone.on('pointerup', () => paint(false))
   }
 
   private registerListeners() {
     EventBus.on('mission-update', (data: MissionUpdatePayload) => {
       this.instructionText.setText(data.instruction)
-      this.hintText.setText(data.hint)
-      this.levelStars.setText('★'.repeat(data.level) + '☆'.repeat(3 - data.level))
+      this.levelText.setText(`Nível ${data.level}`)
       this.updateDots(data.missionIndex, data.totalMissions)
     }, this)
   }
@@ -102,21 +102,20 @@ export class UIScene extends Phaser.Scene {
     this.missionDots.forEach(d => d.destroy())
     this.missionDots = []
 
-    const dotR   = 7
-    const gap    = 20
-    const totalW = total * (dotR * 2) + (total - 1) * (gap - dotR * 2)
-    const startX = 1148 - totalW / 2 + dotR
+    const gap = 22
+    const startX = 1180 - ((total - 1) * gap) / 2
 
     for (let i = 0; i < total; i++) {
-      const dot    = this.add.graphics()
+      const dot = this.add.graphics().setDepth(1)
       const filled = i < completedCount
-      dot.fillStyle(filled ? 0x4FC3F7 : 0x37474F, 1)
-      dot.fillCircle(0, 0, dotR)
-      if (filled) {
-        dot.lineStyle(1.5, 0x29B6F6)
-        dot.strokeCircle(0, 0, dotR)
-      }
-      dot.setPosition(startX + i * gap, 82)
+      const now = i === completedCount
+
+      dot.fillStyle(filled ? 0x4FC3F7 : now ? 0xF9E79F : 0x37474F, 1)
+      dot.fillCircle(0, 0, now ? 8 : 6)
+      dot.fillStyle(0xFFFFFF, 0.3)
+      dot.fillCircle(-2, -2, 2)
+
+      dot.setPosition(startX + i * gap, BAR_H / 2)
       this.missionDots.push(dot)
     }
   }
