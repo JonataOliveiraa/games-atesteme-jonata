@@ -37,6 +37,7 @@ import eventoDiscoUrl from '../../../assets/games/EF05CO06/evento-disco-quebrado
 import eventoInternetUrl from '../../../assets/games/EF05CO06/evento-sem-internet.png'
 
 import contextoUrl from '../../../assets/games/EF05CO06/contexto.png'
+import { createLoadingScreen } from '../../../shared/loading/createLoadingScreen'
 
 
 const ASSETS: Array<[string, string]> = [
@@ -76,7 +77,24 @@ export class BootScene extends Phaser.Scene {
     }
 
     preload() {
-        this.createLoadingScreen()
+        createLoadingScreen(this, {
+            title: 'Missão',
+            subtitle: 'ARQUIVO SEGURO',
+            description: 'Preparando os arquivos...',
+            theme: {
+                background: { kind: 'stripes', base: C.fundo, color: C.creme, angle: 'diagonal', alpha: 0.08 },
+                card: C.fundo,
+                cardShadow: C.preto,
+                cardBorder: C.ouro,
+                title: C.creme,
+                subtitle: C.ouro,
+                description: C.creme,
+                titleStroke: C.preto,
+                progressTrack: C.preto,
+                progressBorder: C.creme,
+                progressFill: C.ouro,
+            },
+        })
         ASSETS.forEach(([key, url]) => this.load.image(key, url))
     }
 
@@ -139,69 +157,5 @@ export class BootScene extends Phaser.Scene {
         g.fillCircle(16, 16, 15)
         g.generateTexture('fx-faisca', 32, 32)
         g.destroy()
-    }
-
-    private createLoadingScreen() {
-        this.add.rectangle(W / 2, H / 2, W, H, C.fundo).setDepth(0)
-
-        const grid = this.add.graphics().setDepth(1).setAlpha(0.12)
-        grid.lineStyle(2, C.creme)
-        for (let x = 0; x <= W; x += 72) grid.lineBetween(x, 0, x, H)
-        for (let y = 0; y <= H; y += 72) grid.lineBetween(0, y, W, y)
-
-        const midY = H / 2
-
-        const card = this.add.graphics().setDepth(2)
-        card.fillStyle(C.preto, A.sombra)
-        card.fillRoundedRect(W / 2 - 340, midY - 130, 680, 280, 30)
-        card.fillStyle(C.fundo, 1)
-        card.fillRoundedRect(W / 2 - 340, midY - 142, 680, 280, 30)
-        card.fillStyle(0xffffff, A.brilho)
-        card.fillRoundedRect(W / 2 - 328, midY - 132, 656, 86, 22)
-        card.lineStyle(5, C.ouro, 0.95)
-        card.strokeRoundedRect(W / 2 - 340, midY - 142, 680, 280, 30)
-
-        this.add.text(W / 2, midY - 86, 'Missão', {
-            fontFamily: 'Arial Black, Arial',
-            fontSize: '34px',
-            color: CSS.creme,
-            stroke: CSS.preto,
-            strokeThickness: 8,
-        }).setOrigin(0.5).setDepth(3).setResolution(2)
-
-        this.add.text(W / 2, midY - 28, 'ARQUIVO SEGURO', {
-            fontFamily: 'Arial Black, Arial',
-            fontSize: '48px',
-            color: CSS.ouro,
-            stroke: CSS.preto,
-            strokeThickness: 9,
-        }).setOrigin(0.5).setDepth(3).setResolution(2)
-
-        this.add.text(W / 2, midY + 28, 'Preparando os arquivos...', {
-            fontFamily: 'Arial',
-            fontStyle: 'bold',
-            fontSize: '21px',
-            color: CSS.creme,
-        }).setOrigin(0.5).setDepth(3).setResolution(2)
-
-        const barW = 540
-        const barX = W / 2 - barW / 2
-        const barY = midY + 68
-
-        const track = this.add.graphics().setDepth(3)
-        track.fillStyle(C.preto, A.trilho)
-        track.fillRoundedRect(barX, barY, barW, 32, 16)
-        track.lineStyle(4, C.creme, 0.7)
-        track.strokeRoundedRect(barX, barY, barW, 32, 16)
-
-        const fill = this.add.graphics().setDepth(4)
-        this.load.on('progress', (v: number) => {
-            const w = Math.max(14, (barW - 10) * v)
-            fill.clear()
-            fill.fillStyle(C.ouro, 1)
-            fill.fillRoundedRect(barX + 5, barY + 5, w, 22, 11)
-            fill.fillStyle(0xffffff, 0.35)
-            fill.fillRoundedRect(barX + 9, barY + 8, Math.max(6, w - 8), 7, 4)
-        })
     }
 }

@@ -1,6 +1,4 @@
 import Phaser from 'phaser'
-import { createLoadingScreen } from '../../../shared/loading/createLoadingScreen'
-
 import bgArenaUrl from '../../../assets/games/EF05CO03/bg-arena.png'
 import bgArenaMestreUrl from '../../../assets/games/EF05CO03/bg-arena-mestre.png'
 
@@ -24,7 +22,7 @@ import iconeInterrogacaoUrl from '../../../assets/games/EF05CO03/icone-interroga
 import canoNoUrl from '../../../assets/games/EF05CO03/cano-no.png'
 import faiscaUrl from '../../../assets/games/EF05CO03/faisca.png'
 import brilhoRadialUrl from '../../../assets/games/EF05CO03/brilho-radial.png'
-
+import { createLoadingScreen } from '../../../shared/loading/createLoadingScreen'
 import iconeAjudaUrl from '../../../assets/games/EF05CO03/icone-ajuda.png'
 
 const ASSETS: Array<[string, string]> = [
@@ -71,10 +69,22 @@ export class BootScene extends Phaser.Scene {
 
   preload() {
     createLoadingScreen(this, {
-      title: 'Arena da Lógica',
-      subtitle: 'Energizando os mecanismos...',
-      accent: 0x8b5cf6,
-      background: 0x0f2547,
+      title: 'Arena da',
+      subtitle: 'LÓGICA',
+      description: 'Energizando os mecanismos...',
+      theme: {
+        background: { kind: 'rays', base: 0x0f2547, color: 0x8b5cf6, count: 20, alpha: 0.1 },
+        card: 0x14213d,
+        cardShadow: 0x000000,
+        cardBorder: 0x8b5cf6,
+        title: 0xf8fafc,
+        subtitle: 0xc4b5fd,
+        description: 0x93c5fd,
+        titleStroke: 0x0f2547,
+        progressTrack: 0x0f2547,
+        progressBorder: 0x93c5fd,
+        progressFill: 0x8b5cf6,
+      },
     })
 
     ASSETS.forEach(([key, url]) => this.load.image(key, url))
@@ -87,11 +97,6 @@ export class BootScene extends Phaser.Scene {
     this.scene.start('GameScene', { level: 1, phase: 0 })
   }
 
-  /**
-   * Gera as três variações da placa de sentença (neutra, certa, errada).
-   * Não existe arquivo PNG para isso: a placa precisa esticar conforme o
-   * tamanho da frase, então é desenhada aqui e consumida via nineslice.
-   */
   private buildPlacaTextures() {
     const { w, h, radius } = PLACA
 

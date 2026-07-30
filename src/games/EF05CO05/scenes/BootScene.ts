@@ -13,6 +13,8 @@ import layerProcessadorUrl from '../../../assets/games/EF05CO05/layer-processado
 import layerRamUrl from '../../../assets/games/EF05CO05/layer-ram.png'
 import layerHdUrl from '../../../assets/games/EF05CO05/layer-hd.png'
 
+import { createLoadingScreen } from '../../../shared/loading/createLoadingScreen'
+
 import layerMonitorUrl from '../../../assets/games/EF05CO05/layer-monitor.png'
 import layerMonitorLigadoUrl from '../../../assets/games/EF05CO05/layer-monitor-ligado.png'
 import layerTecladoUrl from '../../../assets/games/EF05CO05/layer-teclado.png'
@@ -94,8 +96,26 @@ export class BootScene extends Phaser.Scene {
     }
 
     preload() {
-        this.createLoadingScreen()
-            ;[...BASES, ...LAYERS, ...EXTRAS].forEach(([key, url]) => this.load.image(key, url))
+        createLoadingScreen(this, {
+            title: 'Monte seu',
+            subtitle: 'COMPUTADOR',
+            description: 'Preparando a bancada...',
+            theme: {
+                background: { kind: 'grid', base: C.preto, color: C.medio, size: 64, alpha: 0.2 },
+                card: C.escuro,
+                cardShadow: C.preto,
+                cardBorder: C.medio,
+                title: C.creme,
+                subtitle: C.ouro,
+                description: C.claro,
+                titleStroke: C.preto,
+                progressTrack: C.preto,
+                progressBorder: C.medio,
+                progressFill: C.ouro,
+            },
+        })
+
+        ;[...BASES, ...LAYERS, ...EXTRAS].forEach(([key, url]) => this.load.image(key, url))
     }
 
     create() {

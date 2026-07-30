@@ -17,6 +17,7 @@ import semaforoVermelhoUrl from '../../../assets/games/EF05CO04/semaforo-vermelh
 import tilesetUrl from '../../../assets/games/EF05CO04/tileset-cidade.png'
 import personagemUrl from '../../../assets/games/EF05CO04/personagem.png'
 import itensUrl from '../../../assets/games/EF05CO04/itens.png'
+import { createLoadingScreen } from '../../../shared/loading/createLoadingScreen'
 
 const IMAGES: Array<[string, string]> = [
     ['bg-cidade', bgCidadeUrl],
@@ -52,7 +53,24 @@ export class BootScene extends Phaser.Scene {
     }
 
     preload() {
-        this.createLoadingScreen()
+        createLoadingScreen(this, {
+            title: 'Cidade das',
+            subtitle: 'DECISÕES',
+            description: 'Acendendo os semáforos...',
+            theme: {
+                background: { kind: 'stripes', base: C.borda, color: C.claro, angle: 'diagonal', alpha: 0.1 },
+                card: C.escuro,
+                cardShadow: 0x000000,
+                cardBorder: C.claro,
+                title: C.creme,
+                subtitle: C.amarelo,
+                description: C.claro,
+                titleStroke: C.borda,
+                progressTrack: C.borda,
+                progressBorder: C.claro,
+                progressFill: C.amarelo,
+            },
+        })
 
         IMAGES.forEach(([key, url]) => this.load.image(key, url))
 

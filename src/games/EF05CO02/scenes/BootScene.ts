@@ -51,11 +51,24 @@ export class BootScene extends Phaser.Scene {
 
   preload() {
     createLoadingScreen(this, {
-      title: 'Mapas em Rede',
-      subtitle: 'Desenhando as ligações...',
-      accent: 0x3b82f6,
-      background: 0x0f2547,
-    })
+      title: "Baralho das",
+      subtitle: "LISTAS",
+      description: "Preparando a mesa de cartas...",
+      theme: {
+        background: { kind: "checker", base: 0xfef3c7, color: 0xfbbf24, size: 90, alpha: 0.22 },
+        card: 0x25327a,
+        cardShadow: 0x1e293b,
+        cardBorder: 0xfbbf24,
+        title: 0xffffff,
+        subtitle: 0xfde68a,
+        description: 0xe2e8f0,
+        titleStroke: 0x1e293b,
+        progressTrack: 0x1e293b,
+        progressBorder: 0xffffff,
+        progressFill: 0xfbbf24,
+      },
+    });
+
 
     ASSETS.forEach(([key, url]) => this.load.image(key, url))
   }

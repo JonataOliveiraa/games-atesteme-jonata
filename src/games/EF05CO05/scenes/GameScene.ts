@@ -352,14 +352,14 @@ export class GameScene extends Phaser.Scene {
 
             const rect = this.partVisualScreenRect(id)
 
-            if(id === 'gabinete') {
+            if (id === 'gabinete') {
                 rect.w /= 2
                 rect.h /= 2
-                
+
                 rect.x += rect.w / 2
                 rect.y += rect.h / 2
             }
-            
+
             this.moulds.push({ part: id, rect })
 
             const color = CATEGORY_COLOR[def.category]
@@ -393,7 +393,7 @@ export class GameScene extends Phaser.Scene {
                 const bw = 250
                 const label = this.add.text(0, 0, def.dica, {
                     fontFamily: 'Arial Black, Arial',
-                    fontSize: '14px',
+                    fontSize: '16px',
                     color: CSS.creme,
                     stroke: CSS.preto,
                     strokeThickness: 4,
@@ -502,7 +502,7 @@ export class GameScene extends Phaser.Scene {
             this.drawCard(card, rect, C.medio, C.claro, 18)
 
             const label = this.add.text(rect.x + 26, L.cy(rect), text, {
-                fontFamily: 'Arial Black, Arial', fontSize: '18px', color: CSS.creme,
+                fontFamily: 'Arial Black, Arial', fontSize: '20px', color: CSS.creme,
                 stroke: CSS.preto, strokeThickness: 4,
                 wordWrap: { width: rect.w - 52 },
             }).setOrigin(0, 0.5).setResolution(2)
@@ -746,9 +746,7 @@ export class GameScene extends Phaser.Scene {
         this.makeButton(L.BTN_DRAWER, 'PEÇAS', C.medio, () => this.openDrawer())
         this.viewBtn = this.makeButton(L.BTN_VIEW, '', C.medio, () => this.toggleView())
         this.makeButton(L.BTN_CLEAR, 'LIMPAR', C.medio, () => this.clearBuild())
-        if (this.challenge.bootAnimation) {
-            this.powerBtn = this.makeButton(L.BTN_POWER, 'LIGAR', C.verde, () => this.runBoot())
-        }
+        this.powerBtn = this.makeButton(L.BTN_POWER, 'LIGAR', C.verde, () => this.runBoot())
 
         const slot = this.add.graphics()
         slot.fillStyle(C.preto, 0.55)
@@ -783,7 +781,9 @@ export class GameScene extends Phaser.Scene {
         }
 
         if (this.powerBtn) {
-            const ready = this.phase === 'montando' && bootReady(this.challenge, this.installed)
+            const ready = this.phase === 'montando'
+                && !!this.challenge.bootAnimation
+                && bootReady(this.challenge, this.installed)
             this.paintButton(this.powerBtn, ready)
         }
 
@@ -1340,14 +1340,14 @@ export class GameScene extends Phaser.Scene {
             return
         }
 
-        this.phase = 'rodando'
-        this.refreshAll()
-
         if (this.challenge.bootAnimation) {
-            this.time.delayedCall(500, () => this.runBoot())
+            this.refreshAll()
+            this.showToast('Tudo no lugar! Aperte LIGAR para ver o computador funcionar.', true)
             return
         }
 
+        this.phase = 'rodando'
+        this.refreshAll()
         this.time.delayedCall(400, () => this.celebrateAssembly())
     }
 
@@ -2077,11 +2077,11 @@ export class GameScene extends Phaser.Scene {
                 align: 'center', wordWrap: { width: pw - 80 },
             }).setOrigin(0.5).setResolution(2),
             this.add.text(0, -ph / 2 + 218, this.levelConfig.objective, {
-                fontFamily: 'Arial', fontStyle: 'bold', fontSize: '22px', color: CSS.claro,
+                fontFamily: 'Arial', fontStyle: 'bold', fontSize: '25px', color: CSS.claro,
                 align: 'center', wordWrap: { width: pw - 100 },
             }).setOrigin(0.5).setResolution(2),
             this.add.text(0, -ph / 2 + 328, this.levelConfig.tip, {
-                fontFamily: 'Arial', fontSize: '20px', color: CSS.ouro,
+                fontFamily: 'Arial', fontSize: '23px', color: CSS.ouro,
                 align: 'center', wordWrap: { width: pw - 110 },
             }).setOrigin(0.5).setResolution(2),
         ])

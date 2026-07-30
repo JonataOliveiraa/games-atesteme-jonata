@@ -30,7 +30,7 @@ export const PARTS: Record<PartId, PartDef> = {
         layers: ['layer-gabinete'],
         icon: 'icone-gabinete',
         funcao: 'A caixa que abriga e protege todas as peças de dentro do computador.',
-        dica: 'aqui vai a caixa que guarda e protege todas as outras peças',
+        dica: 'Aqui vai a caixa que guarda e protege todas as outras peças',
         requires: [],
         quiz: {
             question: 'Para que serve o gabinete?',
@@ -51,7 +51,7 @@ export const PARTS: Record<PartId, PartDef> = {
         layers: ['layer-placa-mae'],
         icon: 'icone-placa-mae',
         funcao: 'A base onde todas as peças se conectam e conversam entre si.',
-        dica: 'aqui vai a peça onde todas as outras se encaixam e se conectam',
+        dica: 'Aqui vai a peça onde todas as outras se encaixam e se conectam',
         requires: ['gabinete'],
         quiz: {
             question: 'O que a placa-mãe faz?',
@@ -72,7 +72,7 @@ export const PARTS: Record<PartId, PartDef> = {
         layers: ['layer-fonte'],
         icon: 'icone-fonte',
         funcao: 'Leva a energia da tomada para todas as peças. Sem ela, nada liga.',
-        dica: 'aqui vai a peça que leva energia para todas as outras',
+        dica: 'Aqui vai a peça que leva energia para todas as outras',
         requires: ['gabinete'],
         quiz: {
             question: 'Se a fonte for retirada, o que acontece?',
@@ -93,7 +93,7 @@ export const PARTS: Record<PartId, PartDef> = {
         layers: ['layer-processador'],
         icon: 'icone-processador',
         funcao: 'O cérebro. Faz as contas e executa as instruções dos programas.',
-        dica: 'aqui vai a peça que faz as contas e executa os programas',
+        dica: 'Aqui vai a peça que faz as contas e executa os programas',
         requires: ['placa-mae'],
         quiz: {
             question: 'Qual é o trabalho do processador?',
@@ -114,7 +114,7 @@ export const PARTS: Record<PartId, PartDef> = {
         layers: ['layer-ram'],
         icon: 'icone-ram',
         funcao: 'Guarda o que o computador está usando agora. Ao desligar, esquece tudo.',
-        dica: 'aqui vai a peça que guarda o que está em uso agora e esquece ao desligar',
+        dica: 'Aqui vai a peça que guarda o que está em uso agora e esquece ao desligar',
         requires: ['placa-mae'],
         quiz: {
             question: 'O que acontece com os dados ao desligar?',
@@ -135,7 +135,7 @@ export const PARTS: Record<PartId, PartDef> = {
         layers: ['layer-hd'],
         icon: 'icone-hd',
         funcao: 'Guarda seus arquivos para sempre — eles continuam lá depois de desligar.',
-        dica: 'aqui vai a peça que guarda os arquivos mesmo com o computador desligado',
+        dica: 'Aqui vai a peça que guarda os arquivos mesmo com o computador desligado',
         requires: ['placa-mae'],
         quiz: {
             question: 'Onde ficam as fotos depois de desligar o computador?',
@@ -177,7 +177,7 @@ export const PARTS: Record<PartId, PartDef> = {
         layers: ['layer-teclado'],
         icon: 'icone-teclado',
         funcao: 'Manda letras e números para dentro do computador.',
-        dica: 'aqui vai a peça que envia letras e números para o computador',
+        dica: 'Aqui vai a peça que envia letras e números para o computador',
         requires: [],
         quiz: {
             question: 'O teclado é um dispositivo de quê?',
@@ -198,7 +198,7 @@ export const PARTS: Record<PartId, PartDef> = {
         layers: ['layer-mouse'],
         icon: 'icone-mouse',
         funcao: 'Manda para o computador onde você quer clicar.',
-        dica: 'aqui vai a peça que aponta e clica na tela',
+        dica: 'Aqui vai a peça que aponta e clica na tela',
         requires: [],
         quiz: {
             question: 'O que o mouse envia para o computador?',
@@ -219,7 +219,7 @@ export const PARTS: Record<PartId, PartDef> = {
         layers: ['layer-som-esq', 'layer-som-dir'],
         icon: 'icone-som',
         funcao: 'Deixa o computador falar com você por som.',
-        dica: 'aqui vai a peça que deixa o computador se comunicar por som',
+        dica: 'Aqui vai a peça que deixa o computador se comunicar por som',
         requires: [],
         quiz: {
             question: 'As caixas de som são entrada ou saída?',
