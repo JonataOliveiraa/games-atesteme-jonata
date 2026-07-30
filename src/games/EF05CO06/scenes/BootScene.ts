@@ -86,7 +86,7 @@ export class BootScene extends Phaser.Scene {
         this.buildShadowTexture()
 
         this.scene.launch('UIScene')
-        this.time.delayedCall(0, () => this.scene.start('GameScene', { level: 1, phase: 0 }))
+        this.time.delayedCall(0, () => this.scene.start('GameScene', { level: 3, phase: 0 }))
     }
 
     private buildGlowTexture() {

@@ -52,14 +52,17 @@ export const CTX_SLOT: Rect = {
 }
 
 export const TOAST_Y = 468
-    
+
 export const PANEL: Rect & { r: number } = {
     x: W / 2 - 300, y: 130, w: 600, h: 420, r: 28,
 }
 
 export const ACCIDENT_PANEL: Rect & { r: number } = {
-    x: W / 2 - 320, y: 120, w: 640, h: 360, r: 28,
+    x: W / 2 - 320, y: 165, w: 640, h: 400, r: 28,
 }
+
+export const RESCUE_ASK: Rect = { x: W / 2 - 340, y: 462, w: 680, h: 96 }
+export const BTN_CONFIRM: Rect = { x: W / 2 - 170, y: 588, w: 340, h: 62 }
 
 export const INFO_PANEL: Rect & { r: number } = {
     x: W / 2 - 280, y: 170, w: 560, h: 380, r: 26,

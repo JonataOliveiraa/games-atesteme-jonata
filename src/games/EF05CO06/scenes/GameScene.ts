@@ -31,6 +31,8 @@ interface DestView {
     overlay?: Phaser.GameObjects.Image
     selected: boolean
     dead: boolean
+    pickG: Phaser.GameObjects.Graphics
+    tagText?: Phaser.GameObjects.Text
 }
 
 export class GameScene extends Phaser.Scene {
@@ -59,6 +61,9 @@ export class GameScene extends Phaser.Scene {
     private card?: Phaser.GameObjects.Container
     private cardHome = { x: 0, y: 0 }
 
+    private deadId?: StorageId
+    private askBox?: Phaser.GameObjects.Container
+
     private rescuePicked = new Set<StorageId>()
     private confirmBtn?: Phaser.GameObjects.Container
 
@@ -86,6 +91,7 @@ export class GameScene extends Phaser.Scene {
         this.rescuePicked = new Set()
         this.overlayObjs = []
         this.visible = []
+        this.deadId = undefined
     }
 
     private get level(): LevelConfig {
@@ -151,13 +157,12 @@ export class GameScene extends Phaser.Scene {
     }
 
     private startPhase() {
-        this.locked = false
-
         if (this.phase.kind === 'recuperar') {
             this.buildRescue()
             return
         }
 
+        this.locked = false
         if (this.level.timeLimit) EventBus.emit('timer-start', this.level.timeLimit)
     }
 
@@ -216,9 +221,10 @@ export class GameScene extends Phaser.Scene {
 
             const slotsG = this.add.graphics().setDepth(6)
             const stackLayer = this.add.container(0, 0).setDepth(7)
+            const pickG = this.add.graphics().setDepth(11)
 
             const view: DestView = {
-                id, card, icon, slotsG, stackLayer, selected: false, dead: false,
+                id, card, icon, slotsG, stackLayer, pickG, selected: false, dead: false,
             }
 
             if (def.needsInternet) {
@@ -315,19 +321,34 @@ export class GameScene extends Phaser.Scene {
         view.icon.setAlpha(blocked ? A.apagado : 1)
         view.badge?.setAlpha(blocked ? A.apagado : 1)
 
+        const rescue = this.phase.kind === 'recuperar'
         const cap = this.capacityOf(id)
         const usedN = this.used[id]
 
         view.slotsG.clear()
-        const gap = 22
-        const startX = L.cx(rect) - ((cap - 1) * gap) / 2
-        const y = rect.y + L.DEST_SLOT.dotsY
-        for (let i = 0; i < cap; i++) {
-            const x = startX + i * gap
-            view.slotsG.fillStyle(C.preto, A.sombra)
-            view.slotsG.fillCircle(x, y + 2, 8)
-            view.slotsG.fillStyle(C.creme, i < usedN ? 1 : A.apagado)
-            view.slotsG.fillCircle(x, y, 7)
+        if (!rescue) {
+            const gap = 22
+            const startX = L.cx(rect) - ((cap - 1) * gap) / 2
+            const y = rect.y + L.DEST_SLOT.dotsY
+            for (let i = 0; i < cap; i++) {
+                const x = startX + i * gap
+                view.slotsG.fillStyle(C.preto, A.sombra)
+                view.slotsG.fillCircle(x, y + 2, 8)
+                view.slotsG.fillStyle(C.creme, i < usedN ? 1 : A.apagado)
+                view.slotsG.fillCircle(x, y, 7)
+            }
+        }
+
+        view.pickG.clear()
+        if (rescue && view.selected) {
+            const cxp = rect.x + rect.w - 34
+            const cyp = rect.y + rect.h - 34
+            view.pickG.fillStyle(C.preto, A.sombra)
+            view.pickG.fillCircle(cxp, cyp + 3, 22)
+            view.pickG.fillStyle(C.ouro, 1)
+            view.pickG.fillCircle(cxp, cyp, 20)
+            view.pickG.lineStyle(4, C.creme, 1)
+            view.pickG.strokeCircle(cxp, cyp, 20)
         }
 
         view.overlay?.destroy()
@@ -336,7 +357,7 @@ export class GameScene extends Phaser.Scene {
         if (blocked) {
             view.overlay = this.add.image(L.cx(rect), rect.y + L.DEST_SLOT.iconY, 'selo-x')
                 .setDisplaySize(L.ICON.seloGrande, L.ICON.seloGrande).setDepth(9)
-        } else if (usedN >= cap) {
+        } else if (!rescue && usedN >= cap) {
             view.overlay = this.add.image(L.cx(rect), rect.y + L.DEST_SLOT.iconY, 'dest-cheio')
                 .setDisplaySize(L.ICON.destino, L.ICON.destino).setDepth(9)
         }
@@ -689,32 +710,148 @@ export class GameScene extends Phaser.Scene {
         const p = this.phase as RescuePhase
         const file = FILES[p.file]
 
-        p.savedIn.forEach(id => {
-            this.used[id] += file.size
-            this.pushToStack(id, file.icon)
-            this.paintDest(id)
+        this.locked = true
+        this.tagDests(p.savedIn, 'GUARDADO AQUI', C.ouro)
+        this.buildAsk(`Você guardou o ${file.label} nestes dois lugares.`, file.icon)
+
+        this.time.delayedCall(1600, () => {
+            this.showAccident(p, () => {
+                const hit: StorageId = p.accident === 'pendrive-perdido' ? 'pendrive'
+                    : p.accident === 'disco-quebrado' ? 'disco' : 'nuvem'
+
+                this.deadId = hit
+                const view = this.dests.get(hit)
+                if (view) {
+                    view.dead = true
+                    view.stackLayer.setAlpha(A.apagado)
+                    this.paintDest(hit)
+                    this.cameras.main.shake(240, 0.006)
+                    this.playError()
+                }
+
+                this.clearTags()
+                this.tagDests([hit], 'PERDIDO', C.creme)
+                this.tagDests(p.savedIn.filter(id => id !== hit), 'AINDA TEM?', C.ouro)
+
+                this.time.delayedCall(1000, () => {
+                    this.buildAsk(
+                        `Onde o ${file.label} ainda existe? Toque no lugar e confirme.`,
+                        file.icon,
+                    )
+                    this.buildConfirm()
+
+                    this.rescueTutorial(hit, () => {
+                        this.locked = false
+                        if (this.level.timeLimit) EventBus.emit('timer-start', this.level.timeLimit)
+                    })
+                })
+            })
         })
+    }
 
-        this.showAccident(p, () => {
-            const hit = p.accident === 'pendrive-perdido' ? 'pendrive'
-                : p.accident === 'disco-quebrado' ? 'disco' : 'nuvem'
+    private rescueTutorial(hit: StorageId, onDone: () => void) {
+        if (this.phaseIdx > 1) { onDone(); return }
 
-            const view = this.dests.get(hit as StorageId)
-            if (view) {
-                view.dead = true
-                view.stackLayer.setAlpha(A.apagado)
-                this.paintDest(hit as StorageId)
-                this.cameras.main.shake(240, 0.006)
-                this.playError()
-            }
+        this.tutorialOpen = true
+        const rect = L.DEST_RECT[hit]
 
-            this.confirmBtn = this.makeButton(
-                L.W / 2, 640, 300, 60, 'Confirmar', () => this.confirmRescue(),
-            )
-            this.confirmBtn.setAlpha(0.4)
-            this.locked = false
-            if (this.level.timeLimit) EventBus.emit('timer-start', this.level.timeLimit)
+        createTutorial(this, {
+            key: `arquivo-resgate-f${this.phaseIdx}`,
+            accent: C.ouro,
+            safeTop: L.UI_BAR_H,
+            once: false,
+            steps: [
+                {
+                    text: 'Este lugar se perdeu. Tudo que estava só aqui acabou.',
+                    shape: 'rect', x: L.cx(rect), y: L.cy(rect),
+                    w: rect.w + 28, h: rect.h + 28,
+                } as TutorialStep,
+                {
+                    text: 'A etiqueta de cada destino diz o que sobrou depois do acidente.',
+                    shape: 'rect', x: L.W / 2,
+                    y: L.DEST_RECT.disco.y + L.DEST_SLOT.dotsY,
+                    w: L.DEST_RECT.nuvem.x + L.DEST_W - L.DEST_RECT.disco.x + 40, h: 60,
+                    balloonY: 560,
+                } as TutorialStep,
+                {
+                    text: 'Toque no destino que ainda tem o arquivo e depois em Confirmar.',
+                    shape: 'rect', x: L.cx(L.BTN_CONFIRM), y: L.cy(L.BTN_CONFIRM),
+                    w: L.BTN_CONFIRM.w + 28, h: L.BTN_CONFIRM.h + 28,
+                    buttonLabel: 'Entendi!',
+                } as TutorialStep,
+            ],
+            onFinish: () => {
+                this.tutorialOpen = false
+                if (!this.tutorialSeen) {
+                    this.tutorialSeen = true
+                    EventBus.emit('tutorial-ready')
+                }
+                onDone()
+            },
         })
+    }
+
+    private tagDests(ids: StorageId[], label: string, color: number) {
+        ids.forEach(id => {
+            const view = this.dests.get(id)
+            if (!view) return
+            view.tagText?.destroy()
+
+            const rect = L.DEST_RECT[id]
+            view.tagText = this.add.text(L.cx(rect), rect.y + L.DEST_SLOT.dotsY, label, {
+                fontFamily: 'Arial Black, Arial', fontSize: '18px',
+                color: color === C.ouro ? CSS.ouro : CSS.creme,
+                stroke: CSS.preto, strokeThickness: 5,
+            }).setOrigin(0.5).setDepth(11).setResolution(2)
+
+            this.tweens.add({
+                targets: view.tagText, alpha: 0.45,
+                duration: 700, yoyo: true, repeat: -1,
+            })
+        })
+    }
+
+    private clearTags() {
+        this.dests.forEach(v => {
+            if (!v.tagText) return
+            this.tweens.killTweensOf(v.tagText)
+            v.tagText.destroy()
+            v.tagText = undefined
+        })
+    }
+
+    private buildAsk(message: string, iconKey: string) {
+        this.askBox?.destroy()
+
+        const r = L.RESCUE_ASK
+        const box = this.add.container(0, 0).setDepth(14)
+
+        const g = this.add.graphics()
+        this.drawCard(g, r, C.fundo, C.ouro, 22, 5, false)
+
+        const icon = this.add.image(r.x + 58, L.cy(r), iconKey)
+            .setDisplaySize(64, 64)
+
+        const text = this.add.text(r.x + 108, L.cy(r), message, {
+            fontFamily: 'Arial Black, Arial', fontSize: '21px',
+            color: CSS.creme, stroke: CSS.preto, strokeThickness: 5,
+            wordWrap: { width: r.w - 140 },
+        }).setOrigin(0, 0.5).setResolution(2)
+
+        box.add([g, icon, text])
+        box.setAlpha(0)
+        this.tweens.add({ targets: box, alpha: 1, duration: 240 })
+
+        this.askBox = box
+    }
+
+    private buildConfirm() {
+        this.confirmBtn?.destroy()
+        const r = L.BTN_CONFIRM
+        this.confirmBtn = this.makeButton(
+            L.cx(r), L.cy(r), r.w, r.h, 'Confirmar', () => this.confirmRescue(),
+        )
+        this.confirmBtn.setDepth(14).setAlpha(0.4)
     }
 
     private onDestTap(id: StorageId) {
@@ -722,6 +859,12 @@ export class GameScene extends Phaser.Scene {
         if (this.phase.kind !== 'recuperar') return
 
         const view = this.dests.get(id)!
+        if (view.dead) {
+            this.playError()
+            this.showToast('Este lugar se perdeu. O arquivo que estava só aqui acabou.')
+            return
+        }
+
         view.selected = !view.selected
         if (view.selected) this.rescuePicked.add(id)
         else this.rescuePicked.delete(id)
@@ -752,6 +895,10 @@ export class GameScene extends Phaser.Scene {
         }
 
         this.emitCheckpoint()
+        this.clearTags()
+        this.askBox?.destroy()
+        this.askBox = undefined
+
         this.resolve(ok, ok
             ? p.explain
             : `O arquivo sobreviveu em ${p.answer.map(id => STORAGES[id].label).join(' e ')}. ${p.explain}`)
@@ -772,8 +919,8 @@ export class GameScene extends Phaser.Scene {
 
         panel.add([
             g,
-            this.add.image(L.cx(box), box.y + 130, `evento-${p.accident}`)
-                .setDisplaySize(L.ICON.evento, L.ICON.evento),
+            this.add.image(L.cx(box), box.y + 120, `evento-${p.accident}`)
+                .setDisplaySize(L.ICON.evento - 30, L.ICON.evento - 30),
             this.add.text(L.cx(box), box.y + 268, p.accidentText, {
                 fontFamily: 'Arial Black, Arial', fontSize: '21px',
                 color: CSS.creme, stroke: CSS.preto, strokeThickness: 5,
@@ -781,7 +928,7 @@ export class GameScene extends Phaser.Scene {
             }).setOrigin(0.5).setResolution(2),
         ])
 
-        panel.add(this.makeButton(L.cx(box), box.y + box.h - 40, 280, 60, 'Ver o estrago', () => {
+        panel.add(this.makeButton(L.cx(box), box.y + box.h - 45, 280, 60, 'Ver o estrago', () => {
             this.clearOverlay()
             onDone()
         }))
@@ -930,7 +1077,7 @@ export class GameScene extends Phaser.Scene {
             accent: C.ouro,
             overlayColor: C.preto,
             titleColor: CSS.ouro,
-            subtitleColor: CSS.creme,
+            subtitleColor: CSS.ouro,
             progress: { total: LEVELS.length, current: LEVELS.length },
             buttons: [
                 {
@@ -938,7 +1085,7 @@ export class GameScene extends Phaser.Scene {
                     onClick: () => this.scene.restart({ level: 1, phase: 0, points: 0 }),
                 },
                 {
-                    label: 'Sair', color: C.creme,
+                    label: 'Sair', color: C.preto,
                     onClick: () => EventBus.emit('exit-game'),
                 },
             ],
@@ -1216,25 +1363,33 @@ export class GameScene extends Phaser.Scene {
             )
         }
 
-        if (lv === 3 && ph === 0) {
+        if (!steps.length && forced) {
+            steps.push({
+                text: this.phase.kind === 'recuperar'
+                    ? 'Toque no destino que ainda tem o arquivo depois do acidente e confirme.'
+                    : 'Leia a missão no topo, confira o espaço de cada destino e arraste o documento para onde ele deve ficar.',
+                shape: 'none', balloonY: 400, buttonLabel: 'Entendi!',
+            } as TutorialStep)
+        }
+
+        if (lv === 3 && ph === 0 && this.phase.kind !== 'recuperar') {
             steps.push(
                 {
                     text: 'Aqui o mesmo arquivo precisa ir para dois destinos diferentes.',
-                    ...around(L.CARD_SLOT),
                 } as TutorialStep,
                 {
-                    text: 'Uma das cópias tem que sair deste computador. Isso é backup.',
+                    text: 'Uma das cópias tem que sair deste computador. Isso se chama backup.',
                     shape: 'none', balloonY: 400,
                 } as TutorialStep,
                 {
-                    text: 'Cada cópia gasta espaço de novo. Confira os círculos antes de decidir.',
+                    text: 'Cada cópia ocupa mais memória.',
                     shape: 'rect', x: L.W / 2,
                     y: L.DEST_RECT.disco.y + L.DEST_SLOT.dotsY,
                     w: L.DEST_RECT.nuvem.x + L.DEST_W - L.DEST_RECT.disco.x + 40, h: 56,
                     balloonY: 560,
                 } as TutorialStep,
                 {
-                    text: 'E agora tem tempo: fique de olho na faixa embaixo do título.',
+                    text: 'E agora tem tempo: fique de olho na faixa..',
                     shape: 'rect', x: L.W / 2, y: L.UI_BAR_H - 6, w: L.W, h: 44,
                     buttonLabel: 'Vamos lá!',
                 } as TutorialStep,

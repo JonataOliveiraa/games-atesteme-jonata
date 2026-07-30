@@ -4,7 +4,7 @@ export const C = {
     ouro: 0xfed04c,
     preto: 0x130f0d,
 }
-
+    
 export const CSS = {
     fundo: '#38405d',
     creme: '#fbf6f1',
