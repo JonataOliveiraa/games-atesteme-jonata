@@ -1398,7 +1398,7 @@ export class GameScene extends Phaser.Scene {
                 stroke: CSS.preto, strokeThickness: 6,
             }).setOrigin(0.5).setResolution(2),
             this.add.text(0, -ph / 2 + 262, def.funcao, {
-                fontFamily: 'Arial', fontStyle: 'bold', fontSize: '18px', color: CSS.claro,
+                fontFamily: 'Arial', fontStyle: 'bold', fontSize: '21px', color: CSS.claro,
                 align: 'center', wordWrap: { width: pw - 110 },
             }).setOrigin(0.5).setResolution(2),
         ])
@@ -1893,9 +1893,9 @@ export class GameScene extends Phaser.Scene {
 
         chrome.add(
             this.add.text(L.W / 2, box.y + box.h - 96, this.challenge.explanation, {
-                fontFamily: 'Arial', fontStyle: 'bold', fontSize: '15px', color: CSS.claro,
+                fontFamily: 'Arial', fontStyle: 'bold', fontSize: '20px', color: CSS.claro,
                 align: 'center', wordWrap: { width: box.w - 90 },
-            }).setOrigin(0.5).setResolution(2),
+            }).setOrigin(0.5).setResolution(2).setY(510)
         )
 
         const close = () => {

@@ -1,8 +1,8 @@
 import type { LevelConfig } from '../types'
 
 const LOT = {
-  a1: { x: 215, y: 198 }, a2: { x: 495, y: 198 }, a3: { x: 775, y: 198 }, a4: { x: 1055, y: 198 },
-  b1: { x: 215, y: 479 }, b2: { x: 495, y: 479 }, b3: { x: 775, y: 479 }, b4: { x: 1055, y: 479 },
+  a1: { x: 230, y: 268 }, a2: { x: 500, y: 268 }, a3: { x: 780, y: 268 }, a4: { x: 1050, y: 268 },
+  b1: { x: 230, y: 500 }, b2: { x: 500, y: 500 }, b3: { x: 780, y: 500 }, b4: { x: 1050, y: 500 },
 }
 
 const on = (base: { id: string; label: string; textureKey: string }, lot: { x: number; y: number }) =>
@@ -35,15 +35,15 @@ export const LEVELS: LevelConfig[] = [
   {
     level: 1,
     title: 'Ligando o bairro',
-    objective: 'Arraste de um lugar até o outro para desenhar os caminhos.',
+    objective: 'A lista no topo mostra quais lugares têm rua direta. Arraste de um até o outro para desenhar cada rua.',
     phases: [
       {
         id: 'l1f1',
         kind: 'representar',
         context: 'mapa',
-        name: 'Três lugares',
-        instruction: 'Ligue os lugares que têm rua direta entre eles.',
-        rule: 'A Casa e a Escola não têm rua direta: só dá para ir passando pela Praça.',
+        name: 'Duas ruas',
+        instruction: 'Toque nos lugares em sequência para montar uma rota da Casa até a Escola',
+        rule: 'Casa e Escola não aparecem na lista: para ir de uma à outra é preciso passar pela Praça.',
         nodes: [
           on(L.escola, LOT.a1),
           on(L.praca, LOT.b2),
@@ -53,15 +53,14 @@ export const LEVELS: LevelConfig[] = [
           { a: 'escola', b: 'praca' },
           { a: 'praca', b: 'casa' },
         ],
-
       },
       {
         id: 'l1f2',
         kind: 'representar',
         context: 'mapa',
         name: 'Um quarteirão',
-        instruction: 'Desenhe as quatro ruas que fecham o quarteirão.',
-        rule: 'Cada lugar liga só com os dois vizinhos mais próximos, formando um anel.',
+        instruction: 'Quatro ruas fecham este quarteirão.',
+        rule: 'As quatro ruas formam um anel: dá para dar a volta inteira e voltar ao começo.',
         nodes: [
           on(L.casa, LOT.a1),
           on(L.escola, LOT.a3),
@@ -80,8 +79,8 @@ export const LEVELS: LevelConfig[] = [
         kind: 'representar',
         context: 'mapa',
         name: 'Cinco pontos',
-        instruction: 'Ligue os lugares seguindo o caminho das ruas.',
-        rule: 'Um anel de cinco lugares: cada um liga com o anterior e o seguinte.',
+        instruction: 'Agora são cinco lugares no anel.',
+        rule: 'Cada lugar liga só com o anterior e o seguinte da lista. Nenhuma rua corta o meio.',
         nodes: [
           on(L.casa, LOT.a1),
           on(L.padaria, LOT.a3),
@@ -102,8 +101,8 @@ export const LEVELS: LevelConfig[] = [
         kind: 'representar',
         context: 'mapa',
         name: 'Atalho no meio',
-        instruction: 'Cuidado: nem todo lugar perto tem rua direta!',
-        rule: 'A Biblioteca tem um atalho até a Praça. Já Casa e Escola, apesar de próximas, não se ligam.',
+        instruction: 'Uma das ruas corta o meio do bairro. Confira a lista.',
+        rule: 'Estar perto no desenho não quer dizer ter rua direta: só vale o que está na lista.',
         nodes: [
           on(L.casa, LOT.a1),
           on(L.biblioteca, LOT.a2),
@@ -133,7 +132,7 @@ export const LEVELS: LevelConfig[] = [
         kind: 'rota',
         context: 'mapa',
         name: 'Da Casa até a Escola',
-        instruction: 'Monte uma rota da Casa até a Escola.',
+        instruction: 'Existem vários caminhos. Ache o que soma menos quadras.',
         startId: 'casa',
         endId: 'escola',
         explanation: 'Qualquer caminho vale aqui — o importante é sair da Casa e chegar na Escola.',
@@ -246,7 +245,7 @@ export const LEVELS: LevelConfig[] = [
         kind: 'rota',
         context: 'mapa',
         name: 'Rota esperta',
-        instruction: 'Ache o menor caminho da Casa até a Sorveteria.',
+        instruction: 'Os dois desenhos estão diferentes. Arraste as bolinhas e compare quem liga com quem.',
         startId: 'casa',
         endId: 'sorveteria',
         requireOptimal: true,

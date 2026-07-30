@@ -23,6 +23,10 @@ const NODE_R = 42
 const LABEL_DY = 64
 const HIT_R = 54
 
+const TASK_Y = 132
+const BAR_Y = 664
+const BAR_TOP = 618
+
 const C = {
     blue: 0x3b82f6,
     blueDark: 0x1e3a8a,
@@ -71,6 +75,9 @@ export class GameScene extends Phaser.Scene {
     private selectedOption = -1
     private optionButtons: Phaser.GameObjects.Container[] = []
 
+    private taskLayer!: Phaser.GameObjects.Container
+    private taskChips: Array<{ key: string; g: Phaser.GameObjects.Graphics; check: Phaser.GameObjects.Graphics }> = []
+
     private confirmBtn?: Phaser.GameObjects.Container
     private hudSub: string | any = ''
     constructor() {
@@ -92,6 +99,7 @@ export class GameScene extends Phaser.Scene {
         this.reviewMode = false
         this.dragFrom = null
         this.draggingNode = null
+        this.taskChips = []
     }
 
     private get level(): LevelConfig {
@@ -106,9 +114,14 @@ export class GameScene extends Phaser.Scene {
         this.drawBackground()
         this.buildPhase()
         this.registerPointerHandlers()
+        this.publishHud()
 
         EventBus.on('timer-end', () => this.onTimeUp(), this)
-        this.events.once('shutdown', () => EventBus.off('timer-end', undefined, this))
+        this.events.once('shutdown', () => {
+            EventBus.off('timer-end', undefined, this)
+            EventBus.emit('timer-stop')
+        })
+
         runtimeGameBridge.emit({ type: 'GAME_READY', gameId: GAME_ID, stage: this.level.level })
         this.emitCheckpoint()
 
@@ -121,6 +134,7 @@ export class GameScene extends Phaser.Scene {
 
     private startPhase() {
         this.locked = false
+        if (this.level.timeLimit) this.startTimer()
     }
 
     private drawBackground() {
@@ -130,13 +144,118 @@ export class GameScene extends Phaser.Scene {
         const veil = this.add.graphics().setDepth(-1)
         veil.fillStyle(0x0f2547, this.phase.context === 'mapa' ? 0.05 : 0.28)
         veil.fillRect(0, 0, W, H)
-    }
-    //setting
-    private buildPhase() {
+
+        const bar = this.add.graphics().setDepth(1)
+        bar.fillStyle(C.ink, 0.82)
+        bar.fillRect(0, BAR_TOP, W, H - BAR_TOP)
+        bar.fillStyle(C.blue, 0.9)
+        bar.fillRect(0, BAR_TOP, W, 4)
+
         this.edgeLayer = this.add.graphics().setDepth(8)
         this.elasticLayer = this.add.graphics().setDepth(9)
         this.markerLayer = this.add.container(0, 0).setDepth(16)
+        this.taskLayer = this.add.container(0, 0).setDepth(18)  
+    }
 
+    private buildChecklist() {
+        const p = this.phase
+        if (p.kind !== 'representar') return
+
+        const pairs = p.edges
+        const chipH = 40
+        const gap = 10
+        const pad = 18
+
+        const widths = pairs.map(e => {
+            const t = `${this.labelOf(e.a)} — ${this.labelOf(e.b)}`
+            return Math.max(150, t.length * 9.5 + 62)
+        })
+
+        const rows: number[][] = [[]]
+        let acc = 0
+        widths.forEach((w, i) => {
+            if (acc + w + gap > W - 80 && rows[rows.length - 1].length) {
+                rows.push([])
+                acc = 0
+            }
+            rows[rows.length - 1].push(i)
+            acc += w + gap
+        })
+
+        this.taskLayer.add(
+            this.add.text(W / 2, TASK_Y - 20, 'LIGUE ESTES PARES', {
+                fontFamily: 'Arial Black, Arial', fontSize: '20px',
+                color: '#93c5fd', stroke: '#0f2547', strokeThickness: 4,
+            }).setOrigin(0.5).setResolution(2),
+        )
+
+        rows.forEach((row, ri) => {
+            const total = row.reduce((s, i) => s + widths[i], 0) + (row.length - 1) * gap
+            let x = W / 2 - total / 2
+            const y = TASK_Y + ri * (chipH + gap)
+
+            row.forEach(i => {
+                const e = pairs[i]
+                const w = widths[i]
+
+                const g = this.add.graphics()
+                const check = this.add.graphics()
+
+                const label = this.add.text(
+                    x + pad + 26, y + chipH / 2,
+                    `${this.labelOf(e.a)} — ${this.labelOf(e.b)}`, {
+                    fontFamily: 'Arial Black, Arial', fontSize: '16px',
+                    color: '#ffffff', stroke: '#0f2547', strokeThickness: 4,
+                }).setOrigin(0, 0.5).setResolution(2)
+
+                g.setData('rect', { x, y, w, h: chipH })
+                check.setData('cx', x + pad + 6)
+                check.setData('cy', y + chipH / 2)
+
+                this.taskLayer.add([g, check, label])
+                this.taskChips.push({ key: edgeKey(e.a, e.b), g, check })
+
+                x += w + gap
+            })
+        })
+
+        this.refreshChecklist()
+    }
+
+    private refreshChecklist() {
+        if (!this.taskChips.length) return
+        const current = new Set(this.edges.map(e => edgeKey(e.a, e.b)))
+
+        this.taskChips.forEach(chip => {
+            const r = chip.g.getData('rect') as { x: number; y: number; w: number; h: number } | undefined
+            if (!r || !chip.g.active) return
+
+            const done = current.has(chip.key)
+
+            chip.g.clear()
+            chip.g.fillStyle(C.ink, 0.7)
+            chip.g.fillRoundedRect(r.x, r.y, r.w, r.h, r.h / 2)
+            chip.g.lineStyle(3, done ? C.green : C.slate, done ? 1 : 0.7)
+            chip.g.strokeRoundedRect(r.x, r.y, r.w, r.h, r.h / 2)
+
+            const cx = chip.check.getData('cx') as number
+            const cy = chip.check.getData('cy') as number
+
+            chip.check.clear()
+            chip.check.fillStyle(done ? C.green : C.slate, done ? 1 : 0.35)
+            chip.check.fillCircle(cx, cy, 11)
+            if (done) {
+                chip.check.lineStyle(4, C.white, 1)
+                chip.check.beginPath()
+                chip.check.moveTo(cx - 5, cy)
+                chip.check.lineTo(cx - 1, cy + 4)
+                chip.check.lineTo(cx + 6, cy - 5)
+                chip.check.strokePath()
+            }
+        })
+    }
+        
+    private buildPhase() {
         const p = this.phase
 
         if (p.kind === 'representar') {
@@ -144,6 +263,7 @@ export class GameScene extends Phaser.Scene {
             this.buildNodes(p.nodes, 'main')
             this.edges = []
             this.buildConfirm('Confirmar ligações', () => this.confirmRepresent())
+            this.buildChecklist()
             this.hintErase()
         }
 
@@ -189,10 +309,11 @@ export class GameScene extends Phaser.Scene {
         const t = this.add.text(W / 2, 664, 'Toque na bolinha do meio de uma linha para apagá-la', {
             fontFamily: 'Arial',
             fontStyle: 'bold',
-            fontSize: '15px',
+            fontSize: '23px',
             color: '#cbd5e1',
         }).setOrigin(0.5).setDepth(12).setResolution(2)
-        t.setY(700)
+        t.setY(670)
+        t.setX(500)
     }
 
     private buildNodes(defs: GraphNode[], side: 'main' | 'alt') {
@@ -283,6 +404,8 @@ export class GameScene extends Phaser.Scene {
         if (p.kind === 'isomorfismo') {
             p.altEdges.forEach(e => this.strokeEdge(e, 'alt', C.blue, 8, 1))
         }
+
+        this.refreshChecklist()
     }
 
     private strokeEdge(
@@ -513,16 +636,50 @@ export class GameScene extends Phaser.Scene {
     }
 
     private markEndpoints(p: RoutePhase) {
-        const start = this.viewOf(p.startId)
-        const end = this.viewOf(p.endId)
-        if (start) {
-            this.add.image(start.x + 38, start.y - 40, 'marcador-partida')
-                .setDisplaySize(38, 38).setDepth(16)
-        }
-        if (end) {
-            this.add.image(end.x + 38, end.y - 40, 'marcador-chegada')
-                .setDisplaySize(38, 38).setDepth(16)
-        }
+        this.placeMarker(this.viewOf(p.startId), 'marcador-partida', 'PARTIDA')
+        this.placeMarker(this.viewOf(p.endId), 'marcador-chegada', 'CHEGADA')
+    }
+
+    private placeMarker(view: NodeView | undefined, key: string, label: string) {
+        if (!view) return
+
+        const size = 72
+        const y = view.y - 88
+
+        const glow = this.add.image(view.x, y, key)
+            .setDisplaySize(size * 1.32, size * 1.32)
+            .setTint(C.white)
+            .setAlpha(0.55)
+            .setDepth(15)
+
+        const icon = this.add.image(view.x, y, key)
+            .setDisplaySize(size, size)
+            .setDepth(16)
+
+        const tag = this.add.text(view.x, y - size / 2 - 12, label, {
+            fontFamily: 'Arial Black, Arial', fontSize: '14px',
+            color: '#ffffff', stroke: '#0f2547', strokeThickness: 5,
+        }).setOrigin(0.5).setDepth(16).setResolution(2)
+
+        this.tweens.add({
+            targets: [glow, icon, tag],
+            y: '-=10',
+            duration: 1100,
+            yoyo: true,
+            repeat: -1,
+            ease: 'Sine.easeInOut',
+        })
+
+        this.tweens.add({
+            targets: glow,
+            alpha: 0.15,
+            scaleX: glow.scaleX * 1.12,
+            scaleY: glow.scaleY * 1.12,
+            duration: 900,
+            yoyo: true,
+            repeat: -1,
+            ease: 'Sine.easeInOut',
+        })
     }
 
     private buildRouteHud() {
@@ -787,7 +944,6 @@ export class GameScene extends Phaser.Scene {
         if (this.ended || this.locked) return
         this.ended = true
         this.locked = true
-        this.drawTimer(0)
 
         runtimeGameBridge.emit({
             type: 'WRONG_ANSWER', gameId: GAME_ID,
@@ -875,29 +1031,36 @@ export class GameScene extends Phaser.Scene {
                 key: 'mapas-l1',
                 steps: [
                     {
-                        text: 'Cada bolinha é um lugar do bairro.',
-                        shape: 'circle', x: first?.x ?? 400, y: first?.y ?? 300, w: 190, h: 190,
+                        text: 'Cada bolinha é um lugar do bairro. Esta aqui é a primeira delas.',
+                        shape: 'circle', x: first?.x ?? 400, y: first?.y ?? 300, w: 200, h: 200,
                     },
                     {
-                        text: 'Arraste de uma bolinha até a outra para desenhar o caminho entre elas.',
+                        text: 'Esta lista diz quais lugares têm rua direta entre eles. É o seu roteiro.',
+                        shape: 'rect', x: W / 2, y: TASK_Y + 20, w: 1120, h: 130, balloonY: 430,
+                    },
+                    {
+                        text: 'Encoste o dedo numa bolinha e arraste até a outra sem soltar. A linha aparece quando você chega.',
                         shape: 'rect',
                         x: ((first?.x ?? 400) + (second?.x ?? 700)) / 2,
                         y: ((first?.y ?? 300) + (second?.y ?? 480)) / 2,
-                        w: Math.abs((second?.x ?? 700) - (first?.x ?? 400)) + 210,
-                        h: Math.abs((second?.y ?? 480) - (first?.y ?? 300)) + 210,
-                        balloonY: 620,
+                        w: Math.abs((second?.x ?? 700) - (first?.x ?? 400)) + 230,
+                        h: Math.abs((second?.y ?? 480) - (first?.y ?? 300)) + 230,
+                        balloonY: 600,
                         pointer: first && second
                             ? { fromX: first.x, fromY: first.y, toX: second.x, toY: second.y }
                             : undefined,
                     },
                     {
-                        text: 'Errou? Toque na bolinha do meio da linha para apagá-la.',
-                        shape: 'none',
-                        balloonY: 400,
+                        text: 'Cada rua desenhada marca um item da lista com um sinal verde.',
+                        shape: 'rect', x: W / 2, y: TASK_Y + 20, w: 1120, h: 130, balloonY: 430,
                     },
                     {
-                        text: 'Quando terminar, toque em Confirmar ligações.',
-                        shape: 'rect', x: 1060, y: 668, w: 300, h: 90,
+                        text: 'Desenhou errado? Toque na bolinha branca no meio da linha para apagá-la.',
+                        shape: 'none', balloonY: 400,
+                    },
+                    {
+                        text: 'Com a lista toda marcada, toque em Confirmar ligações.',
+                        shape: 'rect', x: 1060, y: BAR_Y, w: 320, h: 100,
                     },
                 ],
             })
@@ -908,16 +1071,24 @@ export class GameScene extends Phaser.Scene {
                 key: 'mapas-l2',
                 steps: [
                     {
-                        text: 'Agora os caminhos já estão desenhados, e o número em cada linha é a quantidade de quadras.',
-                        shape: 'rect', x: W / 2, y: 400, w: 940, h: 430,
+                        text: 'Agora as ruas já vêm desenhadas. Seu trabalho é escolher por onde andar.',
+                        shape: 'rect', x: W / 2, y: 390, w: 1000, h: 420,
                     },
                     {
-                        text: 'Toque nas bolinhas em sequência para montar sua rota. Tocar na anterior desfaz o último passo.',
-                        shape: 'rect', x: W / 2, y: 400, w: 940, h: 430,
+                        text: 'O número dentro de cada bolinha branca é quantas quadras aquela rua tem.',
+                        shape: 'rect', x: W / 2, y: 390, w: 1000, h: 420, balloonY: 620,
                     },
                     {
-                        text: 'Aqui aparece o total de quadras da sua rota.',
-                        shape: 'rect', x: 300, y: 668, w: 420, h: 90,
+                        text: 'Estes dois marcadores mostram onde a rota começa e onde ela precisa terminar.',
+                        shape: 'rect', x: W / 2, y: 300, w: 1000, h: 300, balloonY: 620,
+                    },
+                    {
+                        text: 'Toque nas bolinhas em ordem, uma vizinha da outra. Tocar na anterior desfaz o último passo.',
+                        shape: 'rect', x: W / 2, y: 390, w: 1000, h: 420,
+                    },
+                    {
+                        text: 'Aqui embaixo aparece o total de quadras da sua rota, somando enquanto você anda.',
+                        shape: 'rect', x: 300, y: BAR_Y, w: 460, h: 100,
                     },
                 ],
             })
@@ -928,12 +1099,16 @@ export class GameScene extends Phaser.Scene {
                 key: 'mapas-l3',
                 steps: [
                     {
-                        text: 'Neste nível o desafio muda a cada fase: às vezes rota, às vezes pergunta.',
-                        shape: 'rect', x: W / 2, y: 62, w: 1160, h: 110,
+                        text: 'Neste nível cada fase pede uma coisa diferente. Leia a frase do topo antes de começar.',
+                        shape: 'rect', x: W / 2, y: 62, w: 1160, h: 110, balloonY: 400,
                     },
                     {
-                        text: 'E agora tem tempo! Fique de olho na barra.',
-                        shape: 'rect', x: W - 186, y: 44, w: 340, h: 60,
+                        text: 'Às vezes o desenho é um bairro, às vezes são amizades. O jeito de ler é o mesmo: quem liga com quem.',
+                        shape: 'none', balloonY: 400,
+                    },
+                    {
+                        text: 'E agora tem tempo. A barra esvazia de verde para vermelho: quando acabar, a fase reinicia.',
+                        shape: 'rect', x: W - 186, y: 44, w: 360, h: 70, balloonY: 400,
                     },
                 ],
             })
@@ -944,12 +1119,16 @@ export class GameScene extends Phaser.Scene {
                 key: 'mapas-consulta',
                 steps: [
                     {
-                        text: 'Aqui as bolinhas são pessoas e as linhas são amizades. Leia as ligações para responder.',
-                        shape: 'rect', x: W / 2, y: 400, w: 940, h: 430,
+                        text: 'Aqui cada bolinha é uma pessoa e cada linha é uma amizade entre duas delas.',
+                        shape: 'rect', x: W / 2, y: 390, w: 1000, h: 420,
                     },
                     {
-                        text: 'Escolha uma resposta e depois toque em Confirmar.',
-                        shape: 'rect', x: W / 2, y: 660, w: 900, h: 90,
+                        text: 'Siga as linhas com o dedo para descobrir quem é amigo de quem. Nada aqui se arrasta.',
+                        shape: 'rect', x: W / 2, y: 390, w: 1000, h: 420, balloonY: 620,
+                    },
+                    {
+                        text: 'Toque na resposta que você acha certa e depois em Confirmar.',
+                        shape: 'rect', x: W / 2, y: BAR_Y, w: 1180, h: 100,
                     },
                 ],
             })
@@ -960,12 +1139,16 @@ export class GameScene extends Phaser.Scene {
                 key: 'mapas-isomorfismo',
                 steps: [
                     {
-                        text: 'Dois desenhos diferentes. Arraste as bolinhas para comparar com calma.',
-                        shape: 'rect', x: W / 2, y: 390, w: 1120, h: 460,
+                        text: 'São dois desenhos: o A à esquerda e o B à direita.',
+                        shape: 'rect', x: W / 2, y: 380, w: 1160, h: 480,
                     },
                     {
-                        text: 'Lembre: o que importa não é onde a bolinha está, e sim com quem ela se liga.',
-                        shape: 'rect', x: W / 2, y: 390, w: 1120, h: 460,
+                        text: 'Arraste as bolinhas para onde quiser. Mexer uma de lugar não muda com quem ela se liga.',
+                        shape: 'rect', x: W / 2, y: 380, w: 1160, h: 480, balloonY: 640,
+                    },
+                    {
+                        text: 'Compare pessoa por pessoa: se cada uma tem os mesmos amigos nos dois lados, é o mesmo grafo.',
+                        shape: 'none', balloonY: 400,
                     },
                 ],
             })
