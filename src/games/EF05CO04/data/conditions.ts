@@ -111,10 +111,6 @@ export function evalCondition(id: ConditionId, env: WorldState, p: PlayerState):
     return false
 }
 
-// ── Simulação ─────────────────────────────────────────────────────────────
-
-const BUILDINGS = ['escola', 'mercado', 'padaria', 'biblioteca']
-
 export function simulate(
     ch: CityChallenge,
     program: Program,
@@ -190,7 +186,7 @@ export function simulate(
         const bloqueado =
             tile === null ||
             tile === 'grama' ||
-            (obst && (obst.kind === 'pedra' || BUILDINGS.includes(obst.kind))) ||
+            obst?.kind === 'pedra' ||
             (obst?.kind === 'porta' && !env.portaAberta)
 
         if (bloqueado) {

@@ -1,27 +1,21 @@
 export const C = {
-    preto: 0x0b1220,
-    escuro: 0x14213d,
-    medio: 0x1e3a8a,
-    claro: 0x93c5fd,
-    creme: 0xf8fafc,
-    local: 0x3b82f6,
-    remoto: 0x8b5cf6,
-    verde: 0x22c55e,
-    vermelho: 0xef4444,
-    ambar: 0xf59e0b,
-    apagado: 0x64748b,
+    fundo: 0x38405d,
+    creme: 0xfbf6f1,
+    ouro: 0xfed04c,
+    preto: 0x130f0d,
 }
 
 export const CSS = {
-    preto: '#0b1220',
-    escuro: '#14213d',
-    medio: '#1e3a8a',
-    claro: '#93c5fd',
-    creme: '#f8fafc',
-    local: '#3b82f6',
-    remoto: '#8b5cf6',
-    verde: '#22c55e',
-    vermelho: '#ef4444',
-    ambar: '#f59e0b',
-    apagado: '#64748b',
+    fundo: '#38405d',
+    creme: '#fbf6f1',
+    ouro: '#fed04c',
+    preto: '#130f0d',
+}
+
+export const A = {
+    sombra: 0.55,
+    veu: 0.86,
+    brilho: 0.16,
+    apagado: 0.35,
+    trilho: 0.45,
 }

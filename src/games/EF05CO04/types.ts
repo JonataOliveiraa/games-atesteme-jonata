@@ -20,10 +20,6 @@ export type ItemId = 'guarda-chuva' | 'livro' | 'pao' | 'carta' | 'moeda'
 export type TileKind = 'asfalto' | 'calcada' | 'grama'
 
 export type PropKind =
-    | 'escola'
-    | 'mercado'
-    | 'padaria'
-    | 'biblioteca'
     | 'porta'
     | 'semaforo'
     | 'pedra'
@@ -92,9 +88,7 @@ export interface CityChallenge {
     start: Coord
     startDir: Direction
     goal: Coord
-    goalLabel: string
-
-    /** Todos precisam dar certo com o mesmo programa. */
+    
     scenarios: WorldState[]
 
     given?: Program

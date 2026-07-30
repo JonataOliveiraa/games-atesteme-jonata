@@ -40,9 +40,6 @@ const QUADRA = mapa(
 )
 
 export const LEVELS: LevelConfig[] = [
-    // ═════════════════════════════════════════════════════════════════════
-    //  NÍVEL 1 — a criança lê a condição e prevê o ramo
-    // ═════════════════════════════════════════════════════════════════════
     {
         level: 1,
         title: 'Qual caminho o SE escolhe?',
@@ -54,12 +51,10 @@ export const LEVELS: LevelConfig[] = [
                 mode: 'prever-decisao',
                 ...RUA,
                 props: [
-                    { kind: 'escola', at: at(2, 0) },
                     { kind: 'semaforo', at: at(3, 1) },
                 ],
                 start: at(2, 3), startDir: 0, goal: at(2, 1),
-                goalLabel: 'Chegar na escola',
-                scenarios: [S({ semaforoVerde: true }), S({ semaforoVerde: false })],
+                    scenarios: [S({ semaforoVerde: true }), S({ semaforoVerde: false })],
                 given: [
                     {
                         kind: 'se', condition: 'semaforo_verde',
@@ -81,11 +76,9 @@ export const LEVELS: LevelConfig[] = [
                 mode: 'prever-decisao',
                 ...RUA,
                 props: [
-                    { kind: 'padaria', at: at(2, 0) },
                     { kind: 'porta', at: at(2, 1) },
                 ],
                 start: at(2, 3), startDir: 0, goal: at(2, 1),
-                goalLabel: 'Entrar na padaria',
                 scenarios: [S({ portaAberta: false }), S({ portaAberta: true })],
                 given: [
                     { kind: 'acao', action: 'andar' },
@@ -102,11 +95,9 @@ export const LEVELS: LevelConfig[] = [
                 mode: 'prever-decisao',
                 ...RUA,
                 props: [
-                    { kind: 'mercado', at: at(2, 0) },
                     { kind: 'item', at: at(2, 3), item: 'guarda-chuva' },
                 ],
                 start: at(2, 3), startDir: 0, goal: at(2, 1),
-                goalLabel: 'Ir ao mercado sem se molhar',
                 scenarios: [S({ chovendo: true }), S({ chovendo: false })],
                 given: [
                     { kind: 'se', condition: 'chovendo', entao: ['pegar'], senao: ['esperar'] },
@@ -125,11 +116,9 @@ export const LEVELS: LevelConfig[] = [
                 mode: 'prever-decisao',
                 ...RUA,
                 props: [
-                    { kind: 'biblioteca', at: at(2, 0) },
                     { kind: 'porta', at: at(2, 1) },
                 ],
                 start: at(2, 3), startDir: 0, goal: at(2, 1),
-                goalLabel: 'Entrar na biblioteca',
                 scenarios: [S({ temChave: true, portaAberta: false }), S({ temChave: false, portaAberta: true })],
                 given: [
                     { kind: 'acao', action: 'andar' },
@@ -158,11 +147,9 @@ export const LEVELS: LevelConfig[] = [
                 mode: 'escolher-condicao',
                 ...RUA,
                 props: [
-                    { kind: 'escola', at: at(2, 0) },
                     { kind: 'semaforo', at: at(3, 1) },
                 ],
                 start: at(2, 3), startDir: 0, goal: at(2, 1),
-                goalLabel: 'Atravessar em segurança',
                 scenarios: [S({ semaforoVerde: true }), S({ semaforoVerde: false })],
                 given: [
                     { kind: 'se', condition: null, entao: ['andar', 'andar'], senao: ['esperar', 'andar', 'andar'] },
@@ -178,11 +165,9 @@ export const LEVELS: LevelConfig[] = [
                 mode: 'escolher-condicao',
                 ...RUA,
                 props: [
-                    { kind: 'padaria', at: at(2, 0) },
                     { kind: 'porta', at: at(2, 1) },
                 ],
                 start: at(2, 3), startDir: 0, goal: at(2, 1),
-                goalLabel: 'Comprar o pão',
                 scenarios: [S({ portaAberta: true }), S({ portaAberta: false })],
                 given: [
                     { kind: 'acao', action: 'andar' },
@@ -200,11 +185,9 @@ export const LEVELS: LevelConfig[] = [
                 mode: 'escolher-condicao',
                 ...QUADRA,
                 props: [
-                    { kind: 'mercado', at: at(2, 0) },
                     { kind: 'pedra', at: at(2, 2) },
                 ],
                 start: at(2, 3), startDir: 0, goal: at(2, 1),
-                goalLabel: 'Chegar ao mercado desviando',
                 scenarios: [S({ caminhoLivre: true }), S({ caminhoLivre: false })],
                 given: [
                     {
@@ -228,12 +211,10 @@ export const LEVELS: LevelConfig[] = [
                 mode: 'escolher-condicao',
                 ...RUA,
                 props: [
-                    { kind: 'escola', at: at(2, 0) },
                     { kind: 'item', at: at(2, 3), item: 'guarda-chuva' },
                     { kind: 'semaforo', at: at(3, 1) },
                 ],
                 start: at(2, 3), startDir: 0, goal: at(2, 1),
-                goalLabel: 'Chegar seca na escola',
                 scenarios: [S({ chovendo: true }), S({ chovendo: false })],
                 given: [
                     { kind: 'se', condition: null, entao: ['pegar', 'andar', 'andar'], senao: ['andar', 'andar'] },
@@ -261,11 +242,9 @@ export const LEVELS: LevelConfig[] = [
                 mode: 'montar-programa',
                 ...RUA,
                 props: [
-                    { kind: 'escola', at: at(2, 0) },
                     { kind: 'semaforo', at: at(3, 1) },
                 ],
                 start: at(2, 3), startDir: 0, goal: at(2, 1),
-                goalLabel: 'Atravessar e chegar na escola',
                 scenarios: [S({ semaforoVerde: true }), S({ semaforoVerde: false })],
                 allowedActions: ['andar', 'esperar', 'virar-esq', 'virar-dir'],
                 allowedConditions: ['semaforo_verde', 'chovendo', 'tem_chave'],
@@ -281,11 +260,9 @@ export const LEVELS: LevelConfig[] = [
                 mode: 'montar-programa',
                 ...RUA,
                 props: [
-                    { kind: 'biblioteca', at: at(2, 0) },
                     { kind: 'porta', at: at(2, 1) },
                 ],
                 start: at(2, 3), startDir: 0, goal: at(2, 1),
-                goalLabel: 'Devolver o livro na biblioteca',
                 scenarios: [S({ portaAberta: false, temChave: true }), S({ portaAberta: true, temChave: true })],
                 allowedActions: ['andar', 'abrir', 'esperar', 'pegar'],
                 allowedConditions: ['porta_aberta', 'tem_chave', 'chovendo'],
@@ -308,11 +285,9 @@ export const LEVELS: LevelConfig[] = [
                     'ccccc',
                 ),
                 props: [
-                    { kind: 'mercado', at: at(2, 0) },
                     { kind: 'semaforo', at: at(3, 1) },
                 ],
                 start: at(2, 4), startDir: 0, goal: at(2, 1),
-                goalLabel: 'Atravessar a avenida larga',
                 scenarios: [S({ semaforoVerde: true }), S({ semaforoVerde: false })],
                 allowedActions: ['andar', 'esperar'],
                 allowedConditions: ['semaforo_verde', 'caminho_livre'],
@@ -329,12 +304,10 @@ export const LEVELS: LevelConfig[] = [
                 mode: 'montar-programa',
                 ...RUA,
                 props: [
-                    { kind: 'escola', at: at(2, 0) },
                     { kind: 'semaforo', at: at(3, 1) },
                     { kind: 'item', at: at(2, 3), item: 'guarda-chuva' },
                 ],
                 start: at(2, 3), startDir: 0, goal: at(2, 1),
-                goalLabel: 'Chegar seca e em segurança',
                 scenarios: [
                     S({ chovendo: true, semaforoVerde: false }),
                     S({ chovendo: false, semaforoVerde: true }),

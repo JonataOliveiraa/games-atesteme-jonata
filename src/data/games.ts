@@ -35,6 +35,7 @@ import networkMapsThumbnail from "../assets/games/EF05CO02/cover-mapas-em-rede.p
 import coverLogicArena from "../assets/games/EF05CO03/cover-arena-da-logica.png";
 import coverCidadeDasDecisoes from "../assets/games/EF05CO04/cover-cidade-das-decisoes.png";
 import coverMonteSeuComputador from "../assets/games/EF05CO05/cover-monte-seu-computador.png";
+import coverMissaoArquivoSeguro from "../assets/games/EF05CO06/cover-missao-arquivo-seguro.png";
 
 const placeholderGame = (code: string, index: number): Game => ({
   id: index,
@@ -362,6 +363,15 @@ const gameByCode: Partial<Record<string, Omit<Game, "id">>> = {
     icon: "💻",
     slug: "monte-seu-computador",
     thumbnail: coverMonteSeuComputador,
+  },
+  EF05CO06: {
+    title: "Missão Arquivo Seguro",
+    "description": "Proteja seus arquivos digitais contra ameaças e mantenha sua privacidade online.",
+    category: "Cultura Digital",
+    points: 65,
+    icon: "🔒",
+    slug: "missao-arquivo-seguro",
+    thumbnail: coverMissaoArquivoSeguro,
   }
 };
 

@@ -1,5 +1,29 @@
 import type { CityChallenge, ChallengeMode } from '../types'
 
+export const DEPTH = {
+    fundo: 0,
+    veu: 1,
+    tabuleiro: 5,
+    rastro: 6,
+    props: 10,
+    sombra: 12,
+    jogador: 13,
+    chuva: 20,
+    veuChuva: 21,
+    mochila: 40,
+    balao: 50,
+    faisca: 55,
+    painel: 100,
+    script: 101,
+    scrollbar: 103,
+    flash: 104,
+    banner: 150,
+    toast: 160,
+    overlay: 300,
+    modal: 301,
+    botaoModal: 310,
+}
+
 export const W = 1280
 export const H = 720
 

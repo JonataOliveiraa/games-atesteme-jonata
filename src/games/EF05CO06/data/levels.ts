@@ -1,0 +1,286 @@
+import type { LevelConfig } from '../types'
+
+export const LEVELS: LevelConfig[] = [
+    {
+        level: 1,
+        title: 'Local ou remoto?',
+        objective: 'Arraste cada arquivo para o destino que a carta pede.',
+        tip: 'Local fica preso no computador. Remoto sai dele: no bolso ou na internet.',
+        phases: [
+            {
+                id: 'l1f1',
+                kind: 'classificar',
+                name: 'Só neste computador',
+                instruction: 'Arraste o arquivo para o Disco Local.',
+                sub: 'O disco fica dentro do computador e não sai de lá.',
+                visible: ['disco'],
+                tasks: [
+                    {
+                        file: 'jogo',
+                        accepts: ['disco'],
+                        explain: 'O jogo precisa estar instalado neste computador: destino local.',
+                    },
+                    {
+                        file: 'dever-casa',
+                        accepts: ['disco'],
+                        explain: 'Você faz o dever sempre aqui, então o disco local resolve.',
+                    },
+                ],
+            },
+            {
+                id: 'l1f2',
+                kind: 'classificar',
+                name: 'Levar no bolso',
+                instruction: 'Arraste os arquivos que precisam sair do computador.',
+                sub: 'O pen drive você desconecta e leva. Ele é um destino remoto.',
+                visible: ['disco', 'pendrive'],
+                tasks: [
+                    {
+                        file: 'apresentacao',
+                        accepts: ['pendrive'],
+                        explain: 'Você vai apresentar em outro computador: leve no pen drive.',
+                    },
+                    {
+                        file: 'desenho',
+                        accepts: ['pendrive'],
+                        explain: 'Para mostrar em casa, o desenho precisa sair daqui.',
+                    },
+                ],
+            },
+            {
+                id: 'l1f3',
+                kind: 'classificar',
+                name: 'Guardado na internet',
+                instruction: 'Arraste os arquivos para a Nuvem.',
+                sub: 'A nuvem é um computador da internet: também é destino remoto.',
+                visible: ['disco', 'pendrive', 'nuvem'],
+                tasks: [
+                    {
+                        file: 'foto-turma',
+                        accepts: ['nuvem'],
+                        explain: 'Na nuvem, a turma toda consegue ver a foto de onde estiver.',
+                    },
+                    {
+                        file: 'musica',
+                        accepts: ['nuvem'],
+                        explain: 'Na nuvem você ouve a música do celular, sem fio nenhum.',
+                    },
+                ],
+            },
+            {
+                id: 'l1f4',
+                kind: 'classificar',
+                name: 'Os três juntos',
+                instruction: 'Agora os três destinos estão na mesa. Leve cada documento até a moldura piscando.',
+                sub: 'Um deles fica no computador, os outros dois saem daqui.',
+                visible: ['disco', 'pendrive', 'nuvem'],
+                tasks: [
+                    {
+                        file: 'diario',
+                        accepts: ['disco'],
+                        explain: 'Se ninguém pode ler, o mais seguro é ficar só neste computador.',
+                    },
+                    {
+                        file: 'trabalho-ciencias',
+                        accepts: ['nuvem'],
+                        explain: 'Trabalho em grupo: na nuvem os quatro conseguem abrir.',
+                    },
+                    {
+                        file: 'boletim',
+                        accepts: ['pendrive', 'nuvem'],
+                        explain: 'Documento importante: melhor num destino remoto, fora deste computador.',
+                    },
+                ],
+            },
+        ],
+    },
+
+    {
+        level: 2,
+        title: 'Depende da situação',
+        objective: 'Agora cada arquivo vem com uma situação. Escolha o destino que resolve.',
+        tip: 'Pergunte: vai sair daqui? tem internet? cabe no espaço?',
+        phases: [
+            {
+                id: 'l2f1',
+                kind: 'contexto',
+                name: 'Sem internet lá',
+                instruction: 'Leia a situação e escolha o destino.',
+                sub: 'A nuvem está desligada nesta fase.',
+                offline: true,
+                tasks: [
+                    {
+                        file: 'apresentacao',
+                        situacao: 'Vou dormir na casa da vovó',
+                        contexto: 'Amanhã eu durmo na casa da vovó e quero mostrar meus slides para ela. A casa dela não tem internet nenhuma, e o computador é outro, não este aqui. O arquivo precisa viajar comigo.',
+                        accepts: ['pendrive'],
+                        explain: 'Sem internet a nuvem não abre, e o computador é outro. Só o pen drive leva o arquivo até lá.',
+                    },
+                    {
+                        file: 'jogo',
+                        situacao: 'Jogo todo dia depois da aula',
+                        contexto: 'Este jogo eu abro todo dia depois da aula, sempre neste mesmo computador. Nunca preciso dele em outro lugar, e quanto mais rápido abrir, melhor.',
+                        accepts: ['disco'],
+                        explain: 'Uso diário no mesmo computador: o disco local abre mais rápido e não depende de nada.',
+                    },
+                ],
+            },
+            {
+                id: 'l2f2',
+                kind: 'contexto',
+                name: 'Quero em todo lugar',
+                instruction: 'Leia a situação e escolha o destino.',
+                sub: 'Quando o arquivo tem que acompanhar você, pense em remoto.',
+                tasks: [
+                    {
+                        file: 'musica',
+                        situacao: 'Ouvir no ônibus, pelo celular',
+                        contexto: 'Quero ouvir esta música no celular durante a viagem de ônibus. Não vou levar pen drive nenhum, e o celular não tem entrada para plugar um. Só levo o celular no bolso.',
+                        accepts: ['nuvem'],
+                        explain: 'O celular alcança a nuvem pela internet, sem precisar plugar nada.',
+                    },
+                    {
+                        file: 'trabalho-ciencias',
+                        situacao: 'O grupo edita hoje à noite',
+                        contexto: 'Somos quatro no grupo e cada um vai mexer no trabalho de casa, hoje à noite, ao mesmo tempo. Ninguém vai passar na casa do outro para pegar arquivo.',
+                        accepts: ['nuvem'],
+                        explain: 'Na nuvem os quatro abrem o mesmo arquivo ao mesmo tempo, cada um da sua casa.',
+                    },
+                    {
+                        file: 'diario',
+                        situacao: 'Ninguém mais pode ler',
+                        contexto: 'Neste diário eu escrevo coisas que ninguém pode ler. Ele nunca vai sair deste computador, que fica no meu quarto e só eu uso. Não quero cópia em lugar nenhum.',
+                        accepts: ['disco'],
+                        explain: 'Ficando só no disco local, o arquivo não passa por pen drive nem pela internet.',
+                    },
+                ],
+            },
+            {
+                id: 'l2f3',
+                kind: 'contexto',
+                name: 'Não cabe',
+                instruction: 'Cuidado com o espaço de cada destino.',
+                sub: 'O pen drive desta fase tem pouco espaço.',
+                capacity: { pendrive: 2 },
+                tasks: [
+                    {
+                        file: 'video-festa',
+                        situacao: 'Vídeo grande, pen drive pequeno',
+                        contexto: 'Este vídeo da festa ocupa 3 espaços. O pen drive de hoje só tem 2 espaços livres, então ele não vai caber ali de jeito nenhum. Escolha outro destino que aguente o tamanho.',
+                        accepts: ['disco', 'nuvem'],
+                        explain: 'Arquivo grande demais para o pen drive: sobra o disco local ou a nuvem.',
+                    },
+                    {
+                        file: 'desenho',
+                        situacao: 'Entregar na escola amanhã',
+                        contexto: 'Preciso entregar este desenho amanhã no computador da sala de informática. A escola não deixa entrar em site nenhum, e o desenho é pequeno, ocupa 1 espaço só.',
+                        accepts: ['pendrive'],
+                        explain: 'Arquivo pequeno e computador sem internet liberada: o pen drive resolve.',
+                    },
+                ],
+            },
+            {
+                id: 'l2f4',
+                kind: 'contexto',
+                name: 'Você decide',
+                instruction: 'Leia a situação com atenção e escolha sozinho.',
+                sub: 'Cada uma tem um detalhe que aponta o destino certo.',
+                tasks: [
+                    {
+                        file: 'foto-turma',
+                        situacao: 'Mandar para os 30 colegas',
+                        contexto: 'Quero que os 30 colegas da turma vejam esta foto hoje. Não dá para passar um pen drive de mão em mão, e cada um tem um aparelho diferente em casa.',
+                        accepts: ['nuvem'],
+                        explain: 'Compartilhar com muita gente ao mesmo tempo é trabalho da nuvem.',
+                    },
+                    {
+                        file: 'boletim',
+                        situacao: 'Imprimir na papelaria',
+                        contexto: 'Preciso imprimir o boletim na papelaria da esquina. O computador de lá é da loja, e eles não deixam ninguém entrar na própria conta da internet. Eu levo o arquivo, eles imprimem.',
+                        accepts: ['pendrive'],
+                        explain: 'No computador da loja você não entra na sua nuvem: o pen drive leva o arquivo até lá.',
+                    },
+                    {
+                        file: 'dever-casa',
+                        situacao: 'Faço e apago no mesmo dia',
+                        contexto: 'Escrevo este dever à tarde, imprimo à noite e apago no dia seguinte. Sempre neste computador. Ele nunca vai para lugar nenhum e não faz falta se sumir.',
+                        accepts: ['disco'],
+                        explain: 'Uso rápido, num computador só: não precisa sair daqui.',
+                    },
+                ],
+            },
+        ],
+    },
+
+    {
+        level: 3,
+        title: 'Cópia de segurança',
+        objective: 'Guarde o mesmo arquivo em dois lugares e descubra o que sobra depois do acidente.',
+        tip: 'Uma cópia só não é backup. Se o único lugar falhar, o arquivo acaba.',
+        timeLimit: 90,
+        phases: [
+            {
+                id: 'l3f1',
+                kind: 'backup',
+                name: 'Duas cópias',
+                instruction: 'Guarde este arquivo em DOIS destinos diferentes.',
+                sub: 'Ao menos uma cópia precisa ficar fora deste computador.',
+                tasks: [
+                    {
+                        file: 'boletim',
+                        situacao: 'Documento que não pode sumir',
+                        contexto: 'Este boletim é o único que existe. Se o lugar onde ele estiver falhar, acabou: não tem como fazer outro. Por isso ele precisa de duas cópias, em dois destinos diferentes, e pelo menos uma delas fora deste computador.',
+                        accepts: ['disco', 'pendrive', 'nuvem'],
+                        copies: 2,
+                        requireRemote: true,
+                        explain: 'Duas cópias, sendo uma remota: se o computador falhar, o boletim continua existindo.',
+                    },
+                ],
+            },
+            {
+                id: 'l3f2',
+                kind: 'recuperar',
+                name: 'O pen drive sumiu',
+                instruction: 'Onde o arquivo ainda existe?',
+                sub: 'Toque no destino que ainda tem o arquivo.',
+                accident: 'pendrive-perdido',
+                accidentText: 'O pen drive caiu no caminho da escola e nunca foi achado.',
+                file: 'boletim',
+                savedIn: ['pendrive', 'nuvem'],
+                answer: ['nuvem'],
+                explain: 'A cópia na nuvem salvou o arquivo. Com só o pen drive, ele teria sumido.',
+            },
+            {
+                id: 'l3f3',
+                kind: 'backup',
+                name: 'Backup do trabalho',
+                instruction: 'Guarde o trabalho em dois destinos.',
+                sub: 'Pense em qual dupla resiste melhor a um acidente.',
+                tasks: [
+                    {
+                        file: 'trabalho-ciencias',
+                        situacao: 'Um mês de trabalho do grupo',
+                        contexto: 'O grupo passou um mês montando este trabalho. Guarde em dois destinos diferentes: um que abra rápido no dia a dia e outro que continue existindo mesmo se este computador parar de funcionar.',
+                        accepts: ['disco', 'pendrive', 'nuvem'],
+                        copies: 2,
+                        requireRemote: true,
+                        explain: 'Uma cópia local para trabalhar rápido e uma remota para não perder nunca.',
+                    },
+                ],
+            },
+            {
+                id: 'l3f4',
+                kind: 'recuperar',
+                name: 'O disco queimou',
+                instruction: 'Onde o trabalho ainda existe?',
+                sub: 'Toque em todos os destinos que ainda têm o arquivo.',
+                accident: 'disco-quebrado',
+                accidentText: 'O disco do computador queimou e tudo que estava só nele foi embora.',
+                file: 'trabalho-ciencias',
+                savedIn: ['disco', 'nuvem'],
+                answer: ['nuvem'],
+                explain: 'Guardar em dois lugares diferentes é o que faz o backup funcionar.',
+            },
+        ]
+    },
+]

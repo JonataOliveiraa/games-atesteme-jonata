@@ -69,13 +69,21 @@ export class GameScene extends Phaser.Scene {
     private selected: Path = null
     private editingStmt = -1
 
+    private rainDrops: Phaser.GameObjects.Image[] = []
+
     private envNow!: WorldState
     private scenarioIdx = 0
+
+    private awaitingAnswer = false
+    private vfLayer?: Phaser.GameObjects.Container
+
+    private rainLayer!: Phaser.GameObjects.Container
 
     private trace: TraceStep[] = []
     private traceIndex = 0
     private result?: SimulationResult
     private allResults: SimulationResult[] = []
+    private rowZones: Array<{ zone: Phaser.GameObjects.Zone; rect: L.Rect }> = []
 
     private boardLayer!: Phaser.GameObjects.Container
     private trailLayer!: Phaser.GameObjects.Container
@@ -134,6 +142,8 @@ export class GameScene extends Phaser.Scene {
         this.bagIcons = []
         this.scrollY = 0
         this.tutorialOpen = false
+        this.awaitingAnswer = false
+        this.rowZones = []
     }
 
     private get challenge(): CityChallenge {
@@ -143,12 +153,13 @@ export class GameScene extends Phaser.Scene {
     create() {
         this.drawBackground()
 
-        this.boardLayer = this.add.container(0, 0).setDepth(5)
-        this.trailLayer = this.add.container(0, 0).setDepth(6)
-        this.propLayer = this.add.container(0, 0).setDepth(10)
-        this.panelLayer = this.add.container(0, 0).setDepth(30)
+        this.boardLayer = this.add.container(0, 0).setDepth(L.DEPTH.tabuleiro)
+        this.trailLayer = this.add.container(0, 0).setDepth(L.DEPTH.rastro)
+        this.propLayer = this.add.container(0, 0).setDepth(L.DEPTH.props)
+        this.panelLayer = this.add.container(0, 0).setDepth(L.DEPTH.painel)
+        this.rainLayer = this.add.container(0, 0).setDepth(20)
 
-        this.scriptLayer = this.add.container(0, 0).setDepth(31)
+        this.scriptLayer = this.add.container(0, 0).setDepth(L.DEPTH.script)
         this.maskShape = this.make.graphics({ x: 0, y: 0 }, false)
         this.maskShape.fillStyle(0xffffff)
         this.maskShape.fillRoundedRect(L.SCRIPT.x, L.SCRIPT.y, L.SCRIPT.w, L.SCRIPT.h, 20)
@@ -166,6 +177,8 @@ export class GameScene extends Phaser.Scene {
             this.scriptLayer?.clearMask()
             this.scriptMask?.destroy()
             this.maskShape?.destroy()
+            this.vfLayer?.destroy()
+            this.vfLayer = undefined
             this.scriptMask = undefined
             this.maskShape = undefined
             EventBus.off('show-tutorial', undefined, this)
@@ -179,6 +192,7 @@ export class GameScene extends Phaser.Scene {
         this.startChallenge(false)
         this.showLevelStart(() => this.runTutorial(false, () => this.beginPlay()))
     }
+
     private startChallenge(autoStart = true) {
         const ch = this.challenge
 
@@ -190,6 +204,7 @@ export class GameScene extends Phaser.Scene {
         this.result = undefined
         this.allResults = []
         this.scrollY = 0
+        this.awaitingAnswer = false
 
         this.program = ch.given ? this.cloneProgram(ch.given) : []
         this.scenarioIdx = ch.mode === 'prever-decisao'
@@ -257,14 +272,10 @@ export class GameScene extends Phaser.Scene {
         })
     }
 
-    // ══════════════════════════════════════════════════════════════════════
-    //  DESENHO BASE
-    // ══════════════════════════════════════════════════════════════════════
-
     private drawBackground() {
-        const bg = this.add.image(L.W / 2, L.H / 2, 'bg-cidade').setDepth(0)
+        const bg = this.add.image(L.W / 2, L.H / 2, 'bg-cidade').setDepth(L.DEPTH.fundo)
         bg.setScale(Math.max(L.W / bg.width, L.H / bg.height))
-        this.add.rectangle(L.W / 2, L.H / 2, L.W, L.H, C.borda, 0.42).setDepth(1)
+        this.add.rectangle(L.W / 2, L.H / 2, L.W, L.H, C.borda, 0.42).setDepth(L.DEPTH.veu)
     }
 
     /** Moldura chibi: sombra deslocada, base, brilho no topo e contorno grosso. */
@@ -342,7 +353,6 @@ export class GameScene extends Phaser.Scene {
 
         this.buildProps()
         this.buildPlayer()
-        this.buildGoalLabel()
     }
 
     private buildProps() {
@@ -365,8 +375,8 @@ export class GameScene extends Phaser.Scene {
 
             if (def.kind === 'item' && def.item) obj.setFrame(ITEM_FRAME[def.item])
 
-            obj.setDepth(def.at.r * 2 + 1)
-            shadow.setDepth(def.at.r * 2)
+            obj.setDepth(L.DEPTH.jogador)
+            shadow.setDepth(L.DEPTH.sombra)
 
             this.propLayer.add([shadow, obj])
             this.propViews.push({ def, obj, shadow })
@@ -398,34 +408,66 @@ export class GameScene extends Phaser.Scene {
         this.paintRain()
     }
 
-    private paintRain() {
-        const key = 'rain-emitter'
-        const old = this.children.getByName(key)
-        if (old) old.destroy()
+    private updateRain(delta: number) {
         if (!this.envNow.chovendo) return
 
-        const ch = this.challenge
-        const o = L.boardOrigin(ch)
-        const zone = new Phaser.Geom.Rectangle(
-            o.x - o.tile / 2, o.y - o.tile / 2 - 40, o.boardW, 40,
-        )
+        const o = L.boardOrigin(this.challenge)
 
-        const em = this.add.particles(0, 0, 'gota', {
-            x: { min: zone.x, max: zone.x + zone.width },
-            y: zone.y,
-            lifespan: 900,
-            speedY: { min: 340, max: 460 },
-            scale: { start: 0.16, end: 0.1 },
-            alpha: { start: 0.75, end: 0.2 },
-            quantity: 2,
-            frequency: 60,
-        })
-        em.setName(key).setDepth(28)
+        const x0 = o.x - o.tile / 2
+        const y0 = o.y - o.tile / 2
 
-        const veil = this.add.graphics().setDepth(27)
+        const x1 = x0 + o.boardW
+        const y1 = y0 + o.boardH
+
+        const speed = 420 * delta / 1000
+
+        for (const drop of this.rainDrops) {
+            drop.y += speed
+            drop.x -= speed * 0.18
+
+            if (drop.y > y1) {
+                drop.y = y0 - Phaser.Math.Between(10, 60)
+                drop.x = Phaser.Math.Between(x0, x1)
+            }
+        }
+    }
+
+    private paintRain() {
+        this.rainLayer.removeAll(true)
+        this.rainDrops = []
+
+        if (!this.envNow.chovendo) return
+
+        const o = L.boardOrigin(this.challenge)
+
+        const x0 = o.x - o.tile / 2
+        const y0 = o.y - o.tile / 2
+
+        const veil = this.add.graphics()
+
         veil.fillStyle(0x2f6fbf, 0.12)
-        veil.fillRect(o.x - o.tile / 2, o.y - o.tile / 2, o.boardW, o.boardH)
-        this.boardLayer.add(veil)
+        veil.fillRect(x0, y0, o.boardW, o.boardH)
+
+        this.rainLayer.add(veil)
+
+        for (let i = 0; i < 140; i++) {
+            const drop = this.add.image(
+                Phaser.Math.Between(x0, x0 + o.boardW),
+                Phaser.Math.Between(y0, y0 + o.boardH),
+                'gota'
+            )
+
+            drop.setScale(0.14)
+            drop.setAlpha(Phaser.Math.FloatBetween(0.35, 0.8))
+            drop.setRotation(Phaser.Math.DegToRad(-18))
+
+            this.rainLayer.add(drop)
+            this.rainDrops.push(drop)
+        }
+    }
+
+    update(time: number, delta: number): void {
+        this.updateRain(delta)
     }
 
     private buildPlayer() {
@@ -436,33 +478,14 @@ export class GameScene extends Phaser.Scene {
         this.playerShadow = this.add.image(p.x, p.y + t * 0.3, 'fx-sombra')
             .setDisplaySize(t * 0.6, t * 0.22)
             .setAlpha(0.5)
-            .setDepth(200)
+            .setDepth(L.DEPTH.sombra)
 
         this.player = this.add.sprite(p.x, p.y, 'personagem', POSE.parado)
             .setOrigin(0.5, 0.88)
             .setDisplaySize(t * 0.86, t * 0.86)
-            .setDepth(201)
+            .setDepth(L.DEPTH.jogador)
         this.player.y = p.y + t * 0.28
         this.player.setFlipX(ch.startDir === 3)
-    }
-
-    private buildGoalLabel() {
-        const g = this.add.graphics()
-        const label = this.add.text(0, 0, this.challenge.goalLabel, {
-            fontFamily: 'Arial Black, Arial', fontSize: '20px', color: CSS.creme,
-            stroke: CSS.borda, strokeThickness: 5,
-        }).setOrigin(0.5).setResolution(2)
-
-        const w = label.width + 56
-        const rect: L.Rect = {
-            x: L.BOARD_CX - w / 2,
-            y: L.boardBottom(this.challenge) + 18,
-            w, h: 44,
-        }
-        this.drawCard(g, rect, C.escuro, C.amarelo, 22)
-        label.setPosition(L.cx(rect), L.cy(rect))
-
-        this.boardLayer.add([g, label])
     }
 
     private trayCount(): number {
@@ -476,6 +499,8 @@ export class GameScene extends Phaser.Scene {
 
     private buildPanel() {
         this.panelLayer.removeAll(true)
+        this.vfLayer?.destroy()
+        this.vfLayer = undefined
         this.scriptLayer.removeAll(true)
         this.rowGraphics = []
         this.runBtn = undefined
@@ -490,7 +515,7 @@ export class GameScene extends Phaser.Scene {
 
         this.panelLayer.add(
             this.add.text(L.PANEL.x + L.PANEL.w / 2, L.PANEL_TITLE_Y, 'PROGRAMA', {
-                fontFamily: 'Arial Black, Arial', fontSize: '20px', color: CSS.amarelo,
+                fontFamily: 'Arial Black, Arial', fontSize: '24px', color: CSS.amarelo,
                 stroke: CSS.borda, strokeThickness: 5,
             }).setOrigin(0.5).setResolution(2),
         )
@@ -502,7 +527,7 @@ export class GameScene extends Phaser.Scene {
         well.strokeRoundedRect(L.SCRIPT.x, L.SCRIPT.y, L.SCRIPT.w, L.SCRIPT.h, 20)
         this.panelLayer.add(well)
 
-        this.scrollBar = this.add.graphics().setDepth(33)
+        this.scrollBar = this.add.graphics().setDepth(L.DEPTH.scrollbar)
         this.panelLayer.add(this.scrollBar)
 
         this.panelLabel(L.TRAY_LABEL_Y, this.lay.trayLabel)
@@ -515,7 +540,7 @@ export class GameScene extends Phaser.Scene {
 
     private panelLabel(y: number, label: string) {
         const t = this.add.text(L.PANEL.x + 30, y, label, {
-            fontFamily: 'Arial Black, Arial', fontSize: '16px', color: CSS.claro,
+            fontFamily: 'Arial Black, Arial', fontSize: '19px', color: CSS.claro,
             stroke: CSS.borda, strokeThickness: 3,
         }).setOrigin(0, 0.5).setResolution(2)
         this.panelLayer.add(t)
@@ -551,6 +576,7 @@ export class GameScene extends Phaser.Scene {
     private refreshScript() {
         this.scriptLayer.removeAll(true)
         this.rowGraphics = []
+        this.rowZones = []
         this.rows = this.buildRows()
 
         const editable = this.challenge.mode === 'montar-programa'
@@ -563,8 +589,21 @@ export class GameScene extends Phaser.Scene {
         if (editable) this.paintAddRow(this.rows.length)
 
         this.scriptLayer.setY(-this.scrollY)
+        this.updateRowZones()
         this.paintScrollBar()
         this.refreshRunButton()
+    }
+
+    private updateRowZones() {
+        const top = L.SCRIPT.y
+        const bottom = L.SCRIPT.y + L.SCRIPT.h
+
+        this.rowZones.forEach(({ zone, rect }) => {
+            const y1 = rect.y - this.scrollY
+            const y2 = y1 + rect.h
+            const dentro = y2 > top + 4 && y1 < bottom - 4
+            zone.input && (zone.input.enabled = dentro)
+        })
     }
 
     private paintScrollBar() {
@@ -636,8 +675,10 @@ export class GameScene extends Phaser.Scene {
             .setInteractive({ useHandCursor: true })
         zone.on('pointerup', () => this.onRowTap(row))
         parts.push(zone)
+        this.rowZones.push({ zone, rect })
 
         this.scriptLayer.add(parts)
+
     }
 
     private paintAddRow(i: number) {
@@ -658,7 +699,7 @@ export class GameScene extends Phaser.Scene {
             : 'toque numa peça para começar'
 
         const text = this.add.text(L.cx(rect), L.cy(rect), label, {
-            fontFamily: 'Arial', fontStyle: 'bold', fontSize: '14px', color: CSS.claro,
+            fontFamily: 'Arial', fontStyle: 'bold', fontSize: '17px', color: CSS.claro,
         }).setOrigin(0.5).setResolution(2)
 
         const zone = this.add.zone(L.cx(rect), L.cy(rect), rect.w, rect.h)
@@ -669,6 +710,8 @@ export class GameScene extends Phaser.Scene {
             this.playTick()
             this.refreshScript()
         })
+
+        this.rowZones.push({ zone, rect })
 
         this.scriptLayer.add([g, text, zone])
     }
@@ -690,7 +733,7 @@ export class GameScene extends Phaser.Scene {
 
     private rowText(rect: L.Rect, label: string, color: string, left = 52) {
         return this.add.text(rect.x + left, L.cy(rect), label, {
-            fontFamily: 'Arial Black, Arial', fontSize: '17px', color,
+            fontFamily: 'Arial Black, Arial', fontSize: '20px', color,
             stroke: CSS.borda, strokeThickness: 3,
             wordWrap: { width: rect.w - left - 16 },
         }).setOrigin(0, 0.5).setResolution(2)
@@ -796,6 +839,7 @@ export class GameScene extends Phaser.Scene {
             if (!this.dragMoved) return
             this.scrollY = Phaser.Math.Clamp(this.dragStartScroll - dy, 0, this.scrollMax)
             this.scriptLayer?.setY(-this.scrollY)
+            this.updateRowZones()
             this.paintScrollBar()
         })
 
@@ -808,11 +852,10 @@ export class GameScene extends Phaser.Scene {
             if (!inScript(p) || this.scrollMax <= 0) return
             this.scrollY = Phaser.Math.Clamp(this.scrollY + dy * 0.5, 0, this.scrollMax)
             this.scriptLayer?.setY(-this.scrollY)
+            this.updateRowZones()
             this.paintScrollBar()
         })
     }
-
-    // ── Bandeja ───────────────────────────────────────────────────────────
 
     private buildTray() {
         const ch = this.challenge
@@ -884,7 +927,7 @@ export class GameScene extends Phaser.Scene {
         }
 
         const label = this.add.text(rect.x + left, L.cy(rect), text, {
-            fontFamily: 'Arial Black, Arial', fontSize: '16px', color: CSS.creme,
+            fontFamily: 'Arial Black, Arial', fontSize: '19px', color: CSS.creme,
             stroke: CSS.borda, strokeThickness: 4,
             wordWrap: { width: rect.w - left - 12 },
         }).setOrigin(0, 0.5).setResolution(2)
@@ -903,6 +946,9 @@ export class GameScene extends Phaser.Scene {
     }
 
     private buildBranchButtons() {
+        this.vfLayer?.destroy()
+        this.vfLayer = this.add.container(0, 0).setDepth(L.DEPTH.painel + 5)
+
         const make = (rect: L.Rect, title: string, sub: string, color: number, branch: 'entao' | 'senao') => {
             const g = this.add.graphics()
             this.drawCard(g, rect, color, C.creme, 24)
@@ -920,13 +966,20 @@ export class GameScene extends Phaser.Scene {
 
             const zone = this.add.zone(L.cx(rect), L.cy(rect), rect.w, rect.h)
                 .setInteractive({ useHandCursor: true })
+
+            let armed = false
             zone.on('pointerdown', () => {
-                if (this.phase === 'rodando') return
+                if (!this.awaitingAnswer) return
+                armed = true
                 this.tweens.add({ targets: [t1, t2], scale: 0.94, duration: 70, yoyo: true })
+            })
+            zone.on('pointerup', () => {
+                if (!armed) return
+                armed = false
                 this.answerBranch(branch)
             })
 
-            this.panelLayer.add([g, t1, t2, zone])
+            this.vfLayer!.add([g, t1, t2, zone])
         }
 
         const [a, b] = this.lay.vfButtons
@@ -994,7 +1047,7 @@ export class GameScene extends Phaser.Scene {
         const container = this.add.container(L.cx(rect), L.cy(rect))
         const g = this.add.graphics()
         const text = this.add.text(0, 0, label, {
-            fontFamily: 'Arial Black, Arial', fontSize: '22px', color: CSS.creme,
+            fontFamily: 'Arial Black, Arial', fontSize: '24px', color: CSS.creme,
             stroke: CSS.borda, strokeThickness: 5,
         }).setOrigin(0.5).setResolution(2)
 
@@ -1094,13 +1147,13 @@ export class GameScene extends Phaser.Scene {
         }
 
         const y = L.boardTop(this.challenge) + 24
-        const g = this.add.graphics().setDepth(80)
+        const g = this.add.graphics().setDepth(L.DEPTH.banner)
         const rect: L.Rect = { x: L.BOARD_CX - 160, y, w: 320, h: 60 }
 
         const t = this.add.text(L.cx(rect), L.cy(rect), `Cenário ${i + 1} de ${total}`, {
             fontFamily: 'Arial Black, Arial', fontSize: '22px', color: CSS.creme,
             stroke: CSS.borda, strokeThickness: 5,
-        }).setOrigin(0.5).setDepth(81).setResolution(2)
+        }).setOrigin(0.5).setDepth(L.DEPTH.banner + 1).setResolution(2)
 
         const kill = () => { g.destroy(); t.destroy() }
         this.tweens.add({ targets: [g, t], alpha: 0, duration: 300, delay: 1200, onComplete: kill })
@@ -1108,10 +1161,12 @@ export class GameScene extends Phaser.Scene {
     }
 
     private answerBranch(branch: 'entao' | 'senao') {
-        if (this.phase === 'rodando') return
+        if (!this.awaitingAnswer) return
 
         const step = this.trace[this.traceIndex]
         if (!step || step.kind !== 'verificar') return
+
+        this.awaitingAnswer = false
 
         if (branch === step.branch) {
             this.phase = 'rodando'
@@ -1121,6 +1176,7 @@ export class GameScene extends Phaser.Scene {
             return
         }
 
+        this.phase = 'rodando'
         this.registerError()
         this.showThought(step, true)
         this.setPose(POSE.confuso)
@@ -1151,6 +1207,7 @@ export class GameScene extends Phaser.Scene {
 
             if (stepwise && step.kind === 'verificar' && i !== answered) {
                 this.phase = 'montando'
+                this.awaitingAnswer = true
                 this.setPose(POSE.pensativo)
                 this.showQuestionBubble(step)
                 this.broadcastMission()
@@ -1272,7 +1329,7 @@ export class GameScene extends Phaser.Scene {
         const arrow = this.add.image(this.player.x, this.player.y - 58, 'icon-seta')
             .setDisplaySize(32, 32)
             .setAngle(dir * 90)
-            .setDepth(210)
+            .setDepth(L.DEPTH.balao)
         this.tweens.add({
             targets: arrow, y: arrow.y - 18, alpha: 0, duration: 480,
             onComplete: () => arrow.destroy(),
@@ -1292,7 +1349,7 @@ export class GameScene extends Phaser.Scene {
         const o = L.boardOrigin(this.challenge)
         const x = o.x - o.tile / 2 + o.boardW - 32 - this.bagIcons.length * 46
         const icon = this.add.image(x, L.boardTop(this.challenge) + 32, 'itens', ITEM_FRAME[item])
-            .setDisplaySize(42, 42).setDepth(220).setScale(0)
+            .setDisplaySize(42, 42).setDepth(L.DEPTH.mochila).setScale(0)
         this.bagIcons.push(icon)
         this.tweens.add({ targets: icon, scale: 1, duration: 260, ease: 'Back.easeOut' })
     }
@@ -1316,7 +1373,7 @@ export class GameScene extends Phaser.Scene {
     private liveIcon(cond: ConditionId): { key: string; frame?: number } {
         if (cond === 'semaforo_verde') {
             return { key: this.envNow.semaforoVerde ? 'semaforo-verde' : 'semaforo-vermelho' }
-            }
+        }
         if (cond === 'porta_aberta') {
             return { key: this.envNow.portaAberta ? 'porta-aberta' : 'porta-fechada' }
         }
@@ -1324,9 +1381,9 @@ export class GameScene extends Phaser.Scene {
     }
 
     private speechBubble(text: string, color: number, cond: ConditionId, big = false) {
-        const box = this.add.container(0, 0).setDepth(230)
+        const box = this.add.container(0, 0).setDepth(L.DEPTH.balao)
         const label = this.add.text(0, 0, text, {
-            fontFamily: 'Arial Black, Arial', fontSize: big ? '24x' : '20px', color: CSS.creme,
+            fontFamily: 'Arial Black, Arial', fontSize: big ? '24px' : '20px', color: CSS.creme,
             stroke: CSS.borda, strokeThickness: 4, align: 'center',
             wordWrap: { width: 300 },
         }).setOrigin(0.5).setResolution(2)
@@ -1378,7 +1435,7 @@ export class GameScene extends Phaser.Scene {
             this.paintScrollBar()
         }
 
-        const flash = this.add.graphics().setDepth(32)
+        const flash = this.add.graphics().setDepth(L.DEPTH.flash)
 
         flash.fillStyle(step.conditionValue ? C.verde : C.vermelho, 0.75)
         flash.fillRoundedRect(rect.x, rect.y - this.scrollY, rect.w, rect.h, 14)
@@ -1392,7 +1449,7 @@ export class GameScene extends Phaser.Scene {
     private spark(x: number, y: number) {
         for (let i = 0; i < 8; i++) {
             const s = this.add.image(x, y, 'fx-faisca')
-                .setDisplaySize(16, 16).setDepth(240)
+                .setDisplaySize(16, 16).setDepth(L.DEPTH.faisca)
                 .setTint(C.amarelo)
                 .setBlendMode(Phaser.BlendModes.ADD)
             const a = (Math.PI * 2 * i) / 8
@@ -1404,7 +1461,7 @@ export class GameScene extends Phaser.Scene {
         }
     }
 
-private finishScenario() {
+    private finishScenario() {
         const res = this.result
         if (!res) return
 
@@ -1537,59 +1594,59 @@ private finishScenario() {
         this.clearOverlay()
         this.keep(
             this.add.rectangle(L.W / 2, L.H / 2, L.W, L.H, C.borda, 0.86)
-                .setDepth(300).setInteractive(),
+                .setDepth(L.DEPTH.overlay).setInteractive(),
         )
-        const panel = this.keep(this.add.container(L.W / 2, L.H / 2).setDepth(301))
 
-        const pw = 640
-        const ph = 230 + decisions.length * 92
+        const panel = this.keep(this.add.container(L.W / 2, L.H / 2).setDepth(L.DEPTH.modal))
+        const pw = 780
+        const ph = 280 + decisions.length * 116
 
         const g = this.add.graphics()
-        this.drawCard(g, { x: -pw / 2, y: -ph / 2, w: pw, h: ph }, C.escuro, C.amarelo, 30, false)
+        this.drawCard(g, { x: -pw / 2, y: -ph / 2, w: pw, h: ph }, C.escuro, C.amarelo, 32, false)
 
-        const title = this.add.text(0, -ph / 2 + 52, 'MAPA DE DECISÕES', {
-            fontFamily: 'Arial Black, Arial', fontSize: '28px', color: CSS.amarelo,
-            stroke: CSS.borda, strokeThickness: 6,
+        const title = this.add.text(0, -ph / 2 + 62, 'MAPA DE DECISÕES', {
+            fontFamily: 'Arial Black, Arial', fontSize: '34px', color: CSS.amarelo,
+            stroke: CSS.borda, strokeThickness: 7,
         }).setOrigin(0.5).setResolution(2)
 
         panel.add([g, title])
 
         decisions.forEach((d, i) => {
-            const y = -ph / 2 + 112 + i * 92
-            const rect: L.Rect = { x: -pw / 2 + 32, y, w: pw - 64, h: 78 }
+            const y = -ph / 2 + 132 + i * 116
+            const rect: L.Rect = { x: -pw / 2 + 36, y, w: pw - 72, h: 100 }
             const tone = d.value ? C.verde : C.vermelho
 
             const row = this.add.graphics()
-            this.drawCard(row, rect, C.normal, tone, 18)
+            this.drawCard(row, rect, C.normal, tone, 20)
 
-            const icon = this.add.image(rect.x + 42, y + 39, CONDITION_ICON[d.condition].key)
-                .setDisplaySize(38, 38)
+            const icon = this.add.image(rect.x + 54, y + 50, CONDITION_ICON[d.condition].key)
+                .setDisplaySize(52, 52)
             if (CONDITION_ICON[d.condition].frame !== undefined) {
                 icon.setFrame(CONDITION_ICON[d.condition].frame!)
             }
 
-            const q = this.add.text(rect.x + 78, y + 24, conditionQuestion(d.condition), {
-                fontFamily: 'Arial Black, Arial', fontSize: '16px', color: CSS.creme,
-                stroke: CSS.borda, strokeThickness: 3,
-                wordWrap: { width: rect.w - 100 },
+            const q = this.add.text(rect.x + 100, y + 32, conditionQuestion(d.condition), {
+                fontFamily: 'Arial Black, Arial', fontSize: '21px', color: CSS.creme,
+                stroke: CSS.borda, strokeThickness: 4,
+                wordWrap: { width: rect.w - 130 },
             }).setOrigin(0, 0.5).setResolution(2)
 
-            const a = this.add.text(rect.x + 78, y + 54,
+            const a = this.add.text(rect.x + 100, y + 70,
                 `${d.value ? 'SIM' : 'NÃO'}  →  ${d.branch === 'entao' ? 'ENTÃO' : 'SENÃO'}`, {
-                fontFamily: 'Arial Black, Arial', fontSize: '17px',
+                fontFamily: 'Arial Black, Arial', fontSize: '22px',
                 color: d.value ? CSS.verde : CSS.vermelho,
-                stroke: CSS.borda, strokeThickness: 4,
+                stroke: CSS.borda, strokeThickness: 5,
             }).setOrigin(0, 0.5).setResolution(2)
 
             panel.add([row, icon, q, a])
         })
 
-        panel.add(this.add.text(0, ph / 2 - 108, this.challenge.explanation, {
-            fontFamily: 'Arial', fontStyle: 'bold', fontSize: '16px', color: CSS.claro,
-            align: 'center', wordWrap: { width: pw - 90 },
+        panel.add(this.add.text(0, ph / 2 - 122, this.challenge.explanation, {
+            fontFamily: 'Arial', fontStyle: 'bold', fontSize: '20px', color: CSS.claro,
+            align: 'center', wordWrap: { width: pw - 100 },
         }).setOrigin(0.5).setResolution(2))
 
-        panel.add(this.modalButton(0, ph / 2 - 52, 'Continuar', C.verde, () => {
+        panel.add(this.modalButton(0, ph / 2 - 56, 'Continuar', C.verde, () => {
             this.clearOverlay()
             onDone()
         }))
@@ -1597,10 +1654,6 @@ private finishScenario() {
         panel.setAlpha(0).setScale(0.92)
         this.tweens.add({ targets: panel, alpha: 1, scale: 1, duration: 260, ease: 'Back.easeOut' })
     }
-
-    // ══════════════════════════════════════════════════════════════════════
-    //  TUTORIAL
-    // ══════════════════════════════════════════════════════════════════════
 
     private tutorialSteps(): TutorialStep[] {
         const pad = 16
@@ -1699,10 +1752,10 @@ private finishScenario() {
     private showToast(message: string, good: boolean) {
         const panel = this.add
             .container(L.BOARD_CX, L.boardBottom(this.challenge) - 58)
-            .setDepth(90)
+            .setDepth(L.DEPTH.toast)
 
         const text = this.add.text(0, 0, message, {
-            fontFamily: 'Arial Black, Arial', fontSize: '18px', color: CSS.creme,
+            fontFamily: 'Arial Black, Arial', fontSize: '21px', color: CSS.creme,
             stroke: CSS.borda, strokeThickness: 4,
             align: 'center', wordWrap: { width: 600 },
         }).setOrigin(0.5).setResolution(2)
@@ -1728,9 +1781,9 @@ private finishScenario() {
 
         const shade = this.keep(
             this.add.rectangle(L.W / 2, L.H / 2, L.W, L.H, C.borda, 0.78)
-                .setDepth(300).setInteractive(),
+                .setDepth(L.DEPTH.overlay).setInteractive(),
         )
-        const panel = this.keep(this.add.container(L.W / 2, L.H / 2).setDepth(301))
+        const panel = this.keep(this.add.container(L.W / 2, L.H / 2).setDepth(L.DEPTH.modal))
 
         const pw = 620
         const ph = 160 + options.length * 88
@@ -1739,7 +1792,7 @@ private finishScenario() {
         this.drawCard(g, { x: -pw / 2, y: -ph / 2, w: pw, h: ph }, C.escuro, C.amarelo, 28, false)
 
         const title = this.add.text(0, -ph / 2 + 48, 'Escolha a condição', {
-            fontFamily: 'Arial Black, Arial', fontSize: '26px', color: CSS.amarelo,
+            fontFamily: 'Arial Black, Arial', fontSize: '30px', color: CSS.amarelo,
             stroke: CSS.borda, strokeThickness: 5,
         }).setOrigin(0.5).setResolution(2)
 
@@ -1786,9 +1839,9 @@ private finishScenario() {
         this.clearOverlay()
         this.keep(
             this.add.rectangle(L.W / 2, L.H / 2, L.W, L.H, C.borda, 0.88)
-                .setDepth(300).setInteractive(),
+                .setDepth(L.DEPTH.overlay).setInteractive(),
         )
-        const panel = this.keep(this.add.container(L.W / 2, L.H / 2).setDepth(301))
+        const panel = this.keep(this.add.container(L.W / 2, L.H / 2).setDepth(L.DEPTH.modal))
 
         const pw = 620, ph = 470
 
@@ -1807,11 +1860,11 @@ private finishScenario() {
                 align: 'center', wordWrap: { width: pw - 80 },
             }).setOrigin(0.5).setResolution(2),
             this.add.text(0, -ph / 2 + 226, this.levelConfig.objective, {
-                fontFamily: 'Arial', fontStyle: 'bold', fontSize: '18px', color: CSS.claro,
+                fontFamily: 'Arial', fontStyle: 'bold', fontSize: '22px', color: CSS.claro,
                 align: 'center', wordWrap: { width: pw - 100 },
             }).setOrigin(0.5).setResolution(2),
-            this.add.text(0, -ph / 2 + 336, this.levelConfig.tip, {
-                fontFamily: 'Arial', fontSize: '16px', color: CSS.amarelo,
+            this.add.text(0, -ph / 2 + 305, this.levelConfig.tip, {
+                fontFamily: 'Arial', fontSize: '20px', color: CSS.amarelo,
                 align: 'center', wordWrap: { width: pw - 110 },
             }).setOrigin(0.5).setResolution(2),
         ])
@@ -1866,12 +1919,13 @@ private finishScenario() {
         g.strokeRoundedRect(-w / 2, -h / 2, w, h, h / 2)
 
         const text = this.add.text(0, 0, label, {
-            fontFamily: 'Arial Black, Arial', fontSize: '19px', color: CSS.creme,
+            fontFamily: 'Arial Black, Arial', fontSize: '22px', color: CSS.creme,
             stroke: CSS.borda, strokeThickness: 5,
         }).setOrigin(0.5).setResolution(2)
 
         container.add([g, text])
         container.setSize(w, h)
+        container.setDepth(L.DEPTH.botaoModal)
         container.setInteractive({ useHandCursor: true })
 
         let armed = false

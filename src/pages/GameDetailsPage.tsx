@@ -49,6 +49,7 @@ const SLUG_TO_CODE: Record<string, GameCode> = {
   "arena-da-lógica": "EF05CO03",
   "cidade-das-decisoes": "EF05CO04",
   "monte-seu-computador": "EF05CO05",
+  "missao-arquivo-seguro": "EF05CO06",
 };
 
 const GAME_CONFIG_LOADERS: Partial<
@@ -89,6 +90,7 @@ const GAME_CONFIG_LOADERS: Partial<
   EF05CO03: () => import("../games/EF05CO03/index"),
   EF05CO04: () => import("../games/EF05CO04/index"),
   EF05CO05: () => import("../games/EF05CO05/index"),
+  EF05CO06: () => import("../games/EF05CO06/index"),
 };
 
 const GAMES_WITH_IN_GAME_COMPLETION_SCREEN = new Set([
@@ -113,6 +115,10 @@ const GAMES_WITH_IN_GAME_COMPLETION_SCREEN = new Set([
   "caca-fonte-confiavel",
   "baralho-das-listas",
   "mapas-em-rede",
+  "arena-da-lógica",
+  "cidade-das-decisoes",
+  "monte-seu-computador",
+  "missao-arquivo-seguro",
 ]);
 
 export default function GameDetailsPage() {

@@ -8,11 +8,6 @@ import chaveUrl from '../../../assets/games/EF05CO04/chave.png'
 import gotaUrl from '../../../assets/games/EF05CO04/gota.png'
 import pedraUrl from '../../../assets/games/EF05CO04/pedra.png'
 
-import escolaUrl from '../../../assets/games/EF05CO04/escola.png'
-import mercadoUrl from '../../../assets/games/EF05CO04/mercado.png'
-import padariaUrl from '../../../assets/games/EF05CO04/padaria.png'
-import bibliotecaUrl from '../../../assets/games/EF05CO04/biblioteca.png'
-
 import portaAbertaUrl from '../../../assets/games/EF05CO04/porta-aberta.png'
 import portaFechadaUrl from '../../../assets/games/EF05CO04/porta-fechada.png'
 
@@ -28,10 +23,6 @@ const IMAGES: Array<[string, string]> = [
     ['chave', chaveUrl],
     ['gota', gotaUrl],
     ['pedra', pedraUrl],
-    ['escola', escolaUrl],
-    ['mercado', mercadoUrl],
-    ['padaria', padariaUrl],
-    ['biblioteca', bibliotecaUrl],
     ['porta-aberta', portaAbertaUrl],
     ['porta-fechada', portaFechadaUrl],
     ['semaforo-verde', semaforoVerdeUrl],
