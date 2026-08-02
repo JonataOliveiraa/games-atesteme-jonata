@@ -1,185 +1,243 @@
-import type { EthicLevel, EthicSituation, EthicScenario, EthicDilemma } from "../types";
+import type { DataCard, TriageLevel } from "../types";
 
-export const N1_SITUATIONS: EthicSituation[] = [
+// ── N1: 2 zonas (coletar | bloquear), casos óbvios ───────────────────────────
+
+const N1_CARDS: DataCard[] = [
   {
-    file: "foto 📸",
-    owner: "sua amiga",
-    emoji: "👧",
-    situation: "Você encontrou uma foto da sua amiga no computador da escola.",
-    actions: [
-      { label: "Pedir permissão para usar", isEthical: true },
-      { label: "Compartilhar com todos", isEthical: false },
-      { label: "Guardar no meu dispositivo", isEthical: false },
-    ],
+    id: "n1-foto-propria",
+    assetKey: "card-photo",
+    label: "Sua Foto",
+    context: "Você quer usar sua foto no perfil do projeto escolar.",
+    correctZone: "coletar",
+    explanation: "Sua própria foto pode ser coletada com sua permissão!",
   },
   {
-    file: "redação 📝",
-    owner: "seu colega",
-    emoji: "👦",
-    situation: "Você encontrou a redação do seu colega salva no computador da escola.",
-    actions: [
-      { label: "Copiar como se fosse minha", isEthical: false },
-      { label: "Ignorar e não mexer", isEthical: true },
-      { label: "Publicar no mural da escola", isEthical: false },
-    ],
+    id: "n1-foto-colega",
+    assetKey: "card-photo",
+    label: "Foto de Colega",
+    context: "Você encontrou uma foto de um colega no computador da escola.",
+    correctZone: "bloquear",
+    explanation: "Nunca colete fotos de outras pessoas sem permissão!",
   },
   {
-    file: "mensagem 💬",
-    owner: "sua irmã",
-    emoji: "👩",
-    situation: "Você viu acidentalmente uma mensagem privada no celular da sua irmã.",
-    actions: [
-      { label: "Ler todas as mensagens", isEthical: false },
-      { label: "Fechar e não ler mais", isEthical: true },
-      { label: "Mostrar para os amigos", isEthical: false },
-    ],
+    id: "n1-senha",
+    assetKey: "card-senha",
+    label: "Senha Encontrada",
+    context: "Você viu acidentalmente a senha de acesso de um colega.",
+    correctZone: "bloquear",
+    explanation: "Senhas são dados privativos — nunca anote ou guarde senhas alheias!",
   },
   {
-    file: "vídeo 🎬",
-    owner: "seu professor",
-    emoji: "👨‍🏫",
-    situation: "Você encontrou um vídeo pessoal do professor na pasta compartilhada.",
-    actions: [
-      { label: "Avisar o professor e não assistir", isEthical: true },
-      { label: "Assistir com a turma", isEthical: false },
-      { label: "Deletar sem avisar ninguém", isEthical: false },
-    ],
+    id: "n1-endereco-proprio",
+    assetKey: "card-endereco",
+    label: "Seu Endereço",
+    context: "Um site da escola pede seu endereço para enviar seu certificado.",
+    correctZone: "coletar",
+    explanation: "Seu endereço pode ser coletado com sua permissão e finalidade clara.",
+  },
+  {
+    id: "n1-medico-colega",
+    assetKey: "ard-medico",
+    label: "Dado Médico",
+    context: "Você encontrou um arquivo com informações médicas de um colega.",
+    correctZone: "bloquear",
+    explanation: "Dados médicos são sigilosos — nunca colete dados de saúde alheios!",
+  },
+  {
+    id: "n1-endereco-colega",
+    assetKey: "card-endereco",
+    label: "Endereço de Colega",
+    context: "Você quer anotar o endereço de um colega sem ele saber.",
+    correctZone: "bloquear",
+    explanation: "Coletar dados de alguém sem permissão é antiético!",
   },
 ];
 
-export const N2_SCENARIOS: EthicScenario[] = [
+// ── N2: 3 zonas (coletar | descartar | bloquear), com contexto ───────────────
+
+const N2_CARDS: DataCard[] = [
   {
-    decisions: [
-      {
-        situation: "Você tem fotos do projeto da turma e quer usar no trabalho.",
-        actions: [
-          { label: "Usar com créditos 'Foto: Turma 4A'", isEthical: true },
-          { label: "Usar sem citar", isEthical: false },
-          { label: "Não usar nenhuma foto", isEthical: false },
-        ],
-      },
-      {
-        situation: "Um colega quer copiar seu trabalho. Você:",
-        actions: [
-          { label: "Explica e ajuda ele a fazer o próprio", isEthical: true },
-          { label: "Deixa copiar tudo", isEthical: false },
-          { label: "Ignora e não ajuda", isEthical: false },
-        ],
-      },
-      {
-        situation: "Você encontrou um erro nos dados do amigo. Você:",
-        actions: [
-          { label: "Avisa o amigo discretamente", isEthical: true },
-          { label: "Corrige sem avisar", isEthical: false },
-          { label: "Conta para o professor sem avisar", isEthical: false },
-        ],
-      },
-    ],
+    id: "n2-foto-antiga",
+    assetKey: "card-photo",
+    label: "Fotos de Projeto",
+    context: "Fotos de um projeto concluído há 2 anos, sem mais uso previsto.",
+    correctZone: "descartar",
+    explanation: "Dados sem finalidade ativa devem ser descartados com segurança!",
   },
   {
-    decisions: [
-      {
-        situation: "Você tirou fotos no aniversário de um amigo. Ele pede para não postar.",
-        actions: [
-          { label: "Respeito e não posto nada", isEthical: true },
-          { label: "Posto só as melhores", isEthical: false },
-          { label: "Mando no grupo da turma", isEthical: false },
-        ],
-      },
-      {
-        situation: "Uma foto sua foi postada sem permissão. Você:",
-        actions: [
-          { label: "Peço para a pessoa remover", isEthical: true },
-          { label: "Faço o mesmo com foto dela", isEthical: false },
-          { label: "Ignoro", isEthical: false },
-        ],
-      },
-      {
-        situation: "Você quer usar a música favorita no vídeo da festa. Você:",
-        actions: [
-          { label: "Uso música de uso livre (Creative Commons)", isEthical: true },
-          { label: "Baixo e uso qualquer música", isEthical: false },
-          { label: "Grave sem música", isEthical: false },
-        ],
-      },
-    ],
+    id: "n2-foto-permissao",
+    assetKey: "card-photo",
+    label: "Foto com Permissão",
+    context: "Um amigo pediu sua foto para colocar no convite de festa.",
+    correctZone: "coletar",
+    explanation: "Com sua permissão explícita e finalidade clara, a coleta é ética.",
+  },
+  {
+    id: "n2-senha-vista",
+    assetKey: "card-senha",
+    label: "Senha Compartilhada",
+    context: "Um colega digitou a senha dele na sua frente por engano.",
+    correctZone: "bloquear",
+    explanation: "Você não tem o direito de guardar essa senha — deve ignorá-la.",
+  },
+  {
+    id: "n2-endereco-entrega",
+    assetKey: "card-endereco",
+    label: "Endereço para Entrega",
+    context: "Você precisa do seu endereço para receber um kit escolar.",
+    correctZone: "coletar",
+    explanation: "Com consentimento próprio e finalidade clara, o dado pode ser coletado.",
+  },
+  {
+    id: "n2-medico-corredor",
+    assetKey: "ard-medico",
+    label: "Ficha Médica",
+    context: "Você achou uma ficha médica de um aluno caída no corredor.",
+    correctZone: "bloquear",
+    explanation: "Entregue ao responsável — nunca fotografe ou anote esses dados!",
+  },
+  {
+    id: "n2-endereco-antigo",
+    assetKey: "card-endereco",
+    label: "Endereço Antigo",
+    context: "Você tem o endereço de um ex-colega que mudou de escola.",
+    correctZone: "descartar",
+    explanation: "Dados de quem saiu do seu contexto devem ser excluídos.",
+  },
+  {
+    id: "n2-senha-inativa",
+    assetKey: "card-senha",
+    label: "Senha de Sistema Antigo",
+    context: "O professor deu uma senha de acesso a um sistema já desativado.",
+    correctZone: "descartar",
+    explanation: "Senhas de sistemas inativos são desnecessárias — descarte com segurança.",
+  },
+  {
+    id: "n2-foto-grupo",
+    assetKey: "card-photo",
+    label: "Foto de Grupo",
+    context: "A turma aprovou publicar a foto da viagem escolar no site da escola.",
+    correctZone: "coletar",
+    explanation: "Com permissão de todos e finalidade clara, a coleta é ética.",
   },
 ];
 
-export const N3_DILEMMAS: EthicDilemma[] = [
+// ── N3: 3 zonas, 10 cartões, contextos nuançados ─────────────────────────────
+
+const N3_CARDS: DataCard[] = [
   {
-    context:
-      "Você encontrou dados pessoais de colegas (nome, endereço, telefone) num arquivo abandonado no computador da escola.",
-    q1: {
-      q: "O que você faz com esses dados?",
-      correct: "Aviso a escola e não anoto nem repasso nada",
-      options: [
-        "Aviso a escola e não anoto nem repasso nada",
-        "Guardo pra caso precisar um dia",
-        "Mando no grupo para alertar a todos",
-      ],
-    },
-    q2: {
-      q: "Por que não deve repassar esses dados?",
-      correct:
-        "Porque dados pessoais pertencem às pessoas e divulgá-los sem permissão pode causar danos",
-      options: [
-        "Porque dados pessoais pertencem às pessoas e divulgá-los sem permissão pode causar danos",
-        "Porque a escola pode me punir",
-        "Porque os dados podem estar errados",
-      ],
-    },
+    id: "n3-foto-combinada",
+    assetKey: "card-photo",
+    label: "Foto + Local + Data",
+    context: "Foto de colega com localização e data — você quer guardar como referência.",
+    correctZone: "bloquear",
+    explanation: "Dados combinados revelam rotinas e localização — muito mais sensíveis juntos!",
   },
   {
-    context:
-      "Você criou um desenho muito bonito usando um aplicativo da escola. Um site quer comprar e usar seu trabalho.",
-    q1: {
-      q: "Antes de responder, o que você deve verificar?",
-      correct: "Se o aplicativo permite uso comercial dos trabalhos criados nele",
-      options: [
-        "Se o aplicativo permite uso comercial dos trabalhos criados nele",
-        "Se o preço é bom",
-        "Se meus amigos aprovam",
-      ],
-    },
-    q2: {
-      q: "Se você usar trabalho de outra pessoa na sua criação, deve:",
-      correct: "Pedir permissão e dar os créditos ao criador original",
-      options: [
-        "Pedir permissão e dar os créditos ao criador original",
-        "Modificar um pouco para ficar diferente",
-        "Só usar se for da internet",
-      ],
-    },
+    id: "n3-endereco-lista-antiga",
+    assetKey: "card-endereco",
+    label: "Lista de Endereços Antiga",
+    context: "Lista de endereços de alunos de 3 anos atrás que já mudaram de turma.",
+    correctZone: "descartar",
+    explanation: "Dados desatualizados e sem uso atual devem ser descartados com segurança.",
+  },
+  {
+    id: "n3-selfie-concurso",
+    assetKey: "card-photo",
+    label: "Selfie para Concurso",
+    context: "Um concurso cultural pede sua foto com consentimento dos responsáveis.",
+    correctZone: "coletar",
+    explanation: "Com propósito claro e consentimento, a coleta da sua imagem é ética.",
+  },
+  {
+    id: "n3-senha-quadro",
+    assetKey: "card-senha",
+    label: "Senha Vista no Quadro",
+    context: "O professor escreveu uma senha no quadro por engano — você memorizou.",
+    correctZone: "bloquear",
+    explanation: "Mesmo sem querer, guardar essa informação é uma violação ética.",
+  },
+  {
+    id: "n3-endereco-entrega-feita",
+    assetKey: "card-endereco",
+    label: "Endereço Já Usado",
+    context: "Você tinha o endereço de um colega para uma entrega feita há meses.",
+    correctZone: "descartar",
+    explanation: "Finalidade cumprida? O dado deve ser excluído! Guardar sem motivo é antiético.",
+  },
+  {
+    id: "n3-foto-engano",
+    assetKey: "card-photo",
+    label: "Foto Enviada por Engano",
+    context: "Um colega enviou uma foto pessoal para você por engano e pediu para apagar.",
+    correctZone: "bloquear",
+    explanation: "Respeite o pedido: apague imediatamente. Guardar seria uma violação grave.",
+  },
+  {
+    id: "n3-medico-autorizado",
+    assetKey: "ard-medico",
+    label: "Alergia Alimentar",
+    context: "Um familiar autorizou a escola a registrar a alergia alimentar por segurança.",
+    correctZone: "coletar",
+    explanation: "Com autorização explícita e finalidade de segurança, dados médicos podem ser coletados.",
+  },
+  {
+    id: "n3-endereco-cadastro",
+    assetKey: "card-endereco",
+    label: "Endereço para Cadastro",
+    context: "Você cria uma conta educacional com autorização dos seus responsáveis.",
+    correctZone: "coletar",
+    explanation: "Com consentimento e propósito claro, seus dados podem ser fornecidos.",
+  },
+  {
+    id: "n3-senha-sistema-antigo",
+    assetKey: "card-senha",
+    label: "Senha Anotada",
+    context: "Você encontrou anotada a senha de um sistema que a escola parou de usar.",
+    correctZone: "descartar",
+    explanation: "Senhas de sistemas inativos são desnecessárias e devem ser descartadas.",
+  },
+  {
+    id: "n3-medico-escaneado",
+    assetKey: "ard-medico",
+    label: "Relatório Escaneado",
+    context: "Você escaneou por engano um documento médico de outro aluno com os seus.",
+    correctZone: "bloquear",
+    explanation: "Dados médicos alheios devem ser eliminados imediatamente — sem guardar!",
   },
 ];
 
-export const LEVELS: EthicLevel[] = [
+// ── Níveis ────────────────────────────────────────────────────────────────────
+
+export const LEVELS: TriageLevel[] = [
   {
     level: 1,
-    title: "Ação Correta",
-    objective: "Escolha a ação ética diante de cada situação com arquivos digitais!",
-    detail: "Você encontrará arquivos de outras pessoas. Decida o que é correto fazer.",
-    tip: "Respeitar a privacidade dos outros é sempre a escolha ética.",
-    timeLimit: 35,
-    n1Situations: N1_SITUATIONS,
+    title: "Triagem Digital",
+    objective: "Arraste cada dado para a zona correta: Coletar ou Bloquear!",
+    detail: "Alguns dados podem ser coletados com permissão. Outros NUNCA devem ser coletados.",
+    tip: "Só colete dados com permissão e quando há uma razão clara!",
+    timeLimit: 50,
+    cards: N1_CARDS,
+    activeZones: ["coletar", "bloquear"],
   },
   {
     level: 2,
-    title: "Sequência de Decisões",
-    objective: "Complete os cenários tomando decisões éticas a cada passo!",
-    detail: "Cada cenário tem 3 momentos de decisão. A barra de reputação registra suas escolhas.",
-    tip: "Pense nas consequências antes de agir com dados de outras pessoas.",
-    timeLimit: 45,
-    n2Scenarios: N2_SCENARIOS,
+    title: "Triagem Digital",
+    objective: "Agora há 3 zonas: Coletar, Descartar ou Bloquear!",
+    detail: "Dados antigos sem uso devem ser descartados. Dados de outros sem permissão devem ser bloqueados.",
+    tip: "Guarde só o que for necessário! Dado desnecessário deve ser descartado com segurança.",
+    timeLimit: 65,
+    cards: N2_CARDS,
+    activeZones: ["coletar", "descartar", "bloquear"],
   },
   {
     level: 3,
-    title: "Dilema Ético",
-    objective: "Resolva dilemas complexos sobre privacidade e autoria digital!",
-    detail: "Cada dilema tem 2 perguntas encadeadas. Analise o contexto com atenção.",
-    tip: "Dados pessoais pertencem às pessoas — protegê-los é um dever ético.",
-    timeLimit: 55,
-    n3Dilemmas: N3_DILEMMAS,
+    title: "Triagem Digital",
+    objective: "Dados combinados podem ser mais sensíveis — leia o contexto com atenção!",
+    detail: "No nível 3, o contexto muda tudo. Um mesmo tipo de dado pode exigir ações diferentes.",
+    tip: "Leia o contexto com atenção — o tipo do dado sozinho não basta para decidir!",
+    timeLimit: 80,
+    cards: N3_CARDS,
+    activeZones: ["coletar", "descartar", "bloquear"],
   },
 ];
