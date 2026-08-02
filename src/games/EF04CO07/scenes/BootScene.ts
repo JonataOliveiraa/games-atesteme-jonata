@@ -3,7 +3,7 @@ import bgUrl from "../../../assets/games/EF04CO07/bg-data-center.png";
 import cardPhotoUrl from "../../../assets/games/EF04CO07/card-photo.png";
 import cardSenhaUrl from "../../../assets/games/EF04CO07/card-senha.png";
 import cardEnderecoUrl from "../../../assets/games/EF04CO07/card-endereco.png";
-import cardMedicoUrl from "../../../assets/games/EF04CO07/ard-medico.png";
+import cardMedicoUrl from "../../../assets/games/EF04CO07/card-medico.png";
 import zoneColetarUrl from "../../../assets/games/EF04CO07/zone-coletar.png";
 import zoneDescartarUrl from "../../../assets/games/EF04CO07/zone-descartar.png";
 import zoneBloqueadoUrl from "../../../assets/games/EF04CO07/zone-bloqueado.png";

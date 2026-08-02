@@ -27,7 +27,7 @@ import buildingLoopsThumbnail from "../assets/games/EF04CO03/cover-predio-dos-la
 import machineTranslatorThumbnail from "../assets/games/EF04CO04/cover-tradutor-da-maquina.png";
 import digitalAtelierThumbnail from "../assets/games/EF04CO05/cover-atelier-codigos-digitais.png";
 import digitalStudioThumbnail from "../assets/games/EF04CO06/cover-estudio-producao-digital.png";
-import ethicMissionThumbnail from "../assets/games/EF04CO07/cover-missao-etica-digital.png";
+import ethicMissionThumbnail from "../assets/games/EF04CO07/bg-data-center.png";
 import sourceHuntThumbnail from "../assets/games/EF04CO08/cover-caca-fonte-confiavel.png";
 import cardListThumbnail from "../assets/games/EF05CO01/cover-baralho-das-listas.png";
 import correioThumbnail from "../assets/games/EF01CO04/cover-correio-multimidia.png";
