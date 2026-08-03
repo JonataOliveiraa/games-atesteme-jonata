@@ -1,43 +1,43 @@
 import type { ProgramId, ResourceState } from '../types'
 
-/** Cores numéricas para objetos Phaser. */
+/** Numeric colors for Phaser objects. */
 export const C = {
-    background: 0x04070d,
-    panelDeep: 0x070d16,
-    surface: 0x0b1420,
-    elevated: 0x112338,
-    border: 0x29425e,
-    borderSoft: 0x172a3d,
-    cyan: 0x39f2ff,
-    cyanDeep: 0x087e99,
-    violet: 0xa78bfa,
-    green: 0x4ade80,
-    yellow: 0xfacc15,
-    red: 0xff5c7a,
-    text: 0xf4fbff,
-    textMuted: 0x9fb2c8,
-    disabled: 0x526175,
-    shadow: 0x010308,
+    background: 0x17120d,
+    panelDeep: 0x231a12,
+    surface: 0x34261a,
+    elevated: 0x4a3727,
+    border: 0x7b5b3f,
+    borderSoft: 0x4f3a2a,
+    cyan: 0xf6e7cc,
+    cyanDeep: 0xb99163,
+    violet: 0xc99b65,
+    green: 0x85d68b,
+    yellow: 0xf4c86a,
+    red: 0xe56b5f,
+    text: 0xfffbf3,
+    textMuted: 0xd6c4aa,
+    disabled: 0x746554,
+    shadow: 0x080604,
 } as const
 
-/** As mesmas cores em CSS, para textos e componentes DOM. */
+/** Matching CSS colors for Phaser text and DOM-adjacent helpers. */
 export const CSS = {
-    background: '#04070D',
-    panelDeep: '#070D16',
-    surface: '#0B1420',
-    elevated: '#112338',
-    border: '#29425E',
-    borderSoft: '#172A3D',
-    cyan: '#39F2FF',
-    cyanDeep: '#087E99',
-    violet: '#A78BFA',
-    green: '#4ADE80',
-    yellow: '#FACC15',
-    red: '#FF5C7A',
-    text: '#F4FBFF',
-    textMuted: '#9FB2C8',
-    disabled: '#526175',
-    shadow: '#010308',
+    background: '#17120D',
+    panelDeep: '#231A12',
+    surface: '#34261A',
+    elevated: '#4A3727',
+    border: '#7B5B3F',
+    borderSoft: '#4F3A2A',
+    cyan: '#F6E7CC',
+    cyanDeep: '#B99163',
+    violet: '#C99B65',
+    green: '#85D68B',
+    yellow: '#F4C86A',
+    red: '#E56B5F',
+    text: '#FFFBF3',
+    textMuted: '#D6C4AA',
+    disabled: '#746554',
+    shadow: '#080604',
 } as const
 
 export const FONT = {
@@ -62,9 +62,9 @@ export const FONT_WEIGHT = {
 } as const
 
 export const RADIUS = {
-    panel: 18,
-    card: 14,
-    button: 16,
+    panel: 22,
+    card: 18,
+    button: 18,
     pill: 999,
 } as const
 
@@ -75,12 +75,12 @@ export const STROKE = {
 } as const
 
 export const ALPHA = {
-    shadow: 0.58,
+    shadow: 0.52,
     overlay: 0.78,
     muted: 0.64,
     disabled: 0.42,
-    backgroundVeil: 0.62,
-    glow: 0.16,
+    backgroundVeil: 0.68,
+    glow: 0.18,
 } as const
 
 export const MOTION = {
@@ -123,12 +123,12 @@ export const RESOURCE_STATE_VISUAL: Record<ResourceState, ResourceStateVisual> =
     },
 }
 
-/** Diferencia os blocos de memória sem depender apenas do ícone. */
+/** Differentiates memory blocks without relying only on icons. */
 export const PROGRAM_COLOR: Record<ProgramId, number> = {
-    navegador: C.cyan,
+    navegador: 0xf6e7cc,
     editor: C.violet,
     jogo: C.green,
     player: C.yellow,
     fotos: C.red,
-    impressao: 0x60a5fa,
+    impressao: 0xd7b17a,
 }

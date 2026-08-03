@@ -80,7 +80,9 @@ export class GameScene extends Phaser.Scene {
 
     private locked = true
     private ended = false
+    private gameOverEmitted = false
     private tutorialSeen = false
+    private tutorialOpen = false
     private resetTimer = false
     private skipIntro = false
     private skipTutorial = false
@@ -129,7 +131,9 @@ export class GameScene extends Phaser.Scene {
 
         this.locked = true
         this.ended = false
+        this.gameOverEmitted = false
         this.tutorialSeen = false
+        this.tutorialOpen = false
         this.selectedOrder = []
         this.runningPrograms = []
         this.memoryBarGraphics = undefined
@@ -167,7 +171,6 @@ export class GameScene extends Phaser.Scene {
         runtimeGameBridge.emit({
             type: 'GAME_READY',
             gameId: GAME_ID,
-            stage: this.level.level,
         })
         this.emitCheckpoint()
         this.broadcastMission()
@@ -204,7 +207,7 @@ export class GameScene extends Phaser.Scene {
         veil.fillStyle(C.background, ALPHA.backgroundVeil)
         veil.fillRect(0, 0, L.W, L.H)
 
-        veil.lineStyle(1, C.cyan, 0.035)
+        veil.lineStyle(1, C.cyanDeep, 0.026)
         for (let x = 0; x <= L.W; x += 64) veil.lineBetween(x, 0, x, L.H)
         for (let y = 0; y <= L.H; y += 64) veil.lineBetween(0, y, L.W, y)
     }
@@ -220,7 +223,7 @@ export class GameScene extends Phaser.Scene {
             L.MAIN_PANEL.h,
             RADIUS.panel,
         )
-        graphics.lineStyle(10, C.cyan, 0.08)
+        graphics.lineStyle(12, C.cyan, 0.10)
         graphics.strokeRoundedRect(
             L.MAIN_PANEL.x,
             L.MAIN_PANEL.y,
@@ -228,7 +231,7 @@ export class GameScene extends Phaser.Scene {
             L.MAIN_PANEL.h,
             RADIUS.panel,
         )
-        graphics.fillStyle(C.panelDeep, 0.985)
+        graphics.fillStyle(C.panelDeep, 0.94)
         graphics.fillRoundedRect(
             L.MAIN_PANEL.x,
             L.MAIN_PANEL.y,
@@ -236,7 +239,7 @@ export class GameScene extends Phaser.Scene {
             L.MAIN_PANEL.h,
             RADIUS.panel,
         )
-        graphics.lineStyle(2, C.cyanDeep, 0.92)
+        graphics.lineStyle(2, C.cyanDeep, 0.82)
         graphics.strokeRoundedRect(
             L.MAIN_PANEL.x,
             L.MAIN_PANEL.y,
@@ -253,12 +256,12 @@ export class GameScene extends Phaser.Scene {
             L.MAIN_PANEL.h - 12,
             RADIUS.panel - 3,
         )
-        this.drawTechnicalCorners(graphics, L.MAIN_PANEL, C.cyan)
+        this.drawTechnicalCorners(graphics, L.MAIN_PANEL, C.cyanDeep)
 
-        graphics.fillStyle(C.borderSoft, 1)
-        graphics.fillRect(L.DIVIDER.x, L.DIVIDER.y, L.DIVIDER.w, L.DIVIDER.h)
-        graphics.fillStyle(C.cyan, 0.7)
-        graphics.fillRect(L.DIVIDER.x, L.DIVIDER.y, L.DIVIDER.w, 54)
+        graphics.fillStyle(C.text, 0.055)
+        graphics.fillRoundedRect(L.QUEUE.x + L.QUEUE.w + 14, L.DIVIDER.y + 24, 3, L.DIVIDER.h - 48, 2)
+        graphics.fillStyle(C.cyan, 0.16)
+        graphics.fillRoundedRect(L.QUEUE.x + L.QUEUE.w + 12, L.DIVIDER.y + 74, 7, 148, 4)
     }
 
     private drawQueue(): void {
@@ -266,7 +269,7 @@ export class GameScene extends Phaser.Scene {
             fontFamily: FONT.title,
             fontSize: `${FONT_SIZE.panelTitle}px`,
             fontStyle: FONT_WEIGHT.bold,
-            color: CSS.cyan,
+            color: CSS.text,
         }).setOrigin(0.5, 0).setDepth(CONTENT_DEPTH).setResolution(2)
 
         const content = this.add.container(0, 0).setDepth(CONTENT_DEPTH)
@@ -301,8 +304,8 @@ export class GameScene extends Phaser.Scene {
             if (!current) icon.setTintFill(C.disabled)
 
             if (current) {
-                graphics.fillStyle(C.cyan, 1)
-                graphics.fillRoundedRect(rect.x, rect.y + 18, 5, rect.h - 36, 3)
+                graphics.fillStyle(C.cyan, 0.9)
+                graphics.fillRoundedRect(rect.x, rect.y + 18, 6, rect.h - 36, 4)
 
                 const badge = this.add.text(rect.x + 108, rect.y + 22, 'AGORA', {
                     fontFamily: FONT.body,
@@ -416,9 +419,9 @@ export class GameScene extends Phaser.Scene {
         const progress = this.queueScrollY / this.queueMinY
         const thumbY = L.QUEUE_VIEWPORT.y + (trackHeight - thumbHeight) * progress
 
-        graphics.fillStyle(C.borderSoft, 0.9)
+        graphics.fillStyle(C.borderSoft, 0.55)
         graphics.fillRoundedRect(trackX, L.QUEUE_VIEWPORT.y, 4, trackHeight, 2)
-        graphics.fillStyle(C.cyan, 0.92)
+        graphics.fillStyle(C.cyan, 0.9)
         graphics.fillRoundedRect(trackX, thumbY, 4, thumbHeight, 2)
     }
 
@@ -1621,40 +1624,50 @@ export class GameScene extends Phaser.Scene {
         hovered = false,
         fill: number = C.panelDeep,
     ): void {
+        const radius = RADIUS.card
+        const face = hovered ? C.elevated : fill
+
         graphics.fillStyle(C.shadow, ALPHA.shadow)
-        graphics.fillRoundedRect(rect.x, rect.y + 5, rect.w, rect.h, RADIUS.card)
+        graphics.fillRoundedRect(rect.x + 5, rect.y + 9, rect.w, rect.h, radius)
 
         if (active || hovered) {
-            graphics.lineStyle(STROKE.glow, accent, active ? ALPHA.glow + 0.05 : ALPHA.glow)
-            graphics.strokeRoundedRect(rect.x, rect.y, rect.w, rect.h, RADIUS.card)
+            graphics.lineStyle(STROKE.glow, accent, active ? ALPHA.glow + 0.08 : ALPHA.glow)
+            graphics.strokeRoundedRect(rect.x - 1, rect.y - 1, rect.w + 2, rect.h + 2, radius + 1)
         }
 
-        graphics.fillStyle(hovered ? C.elevated : fill, 0.99)
-        graphics.fillRoundedRect(rect.x, rect.y, rect.w, rect.h, RADIUS.card)
-        graphics.lineStyle(1, C.borderSoft, 1)
-        graphics.strokeRoundedRect(rect.x + 5, rect.y + 5, rect.w - 10, rect.h - 10, Math.max(3, RADIUS.card - 3))
-        graphics.lineStyle(active ? STROKE.focus : STROKE.default, accent, active ? 1 : 0.92)
-        graphics.strokeRoundedRect(rect.x, rect.y, rect.w, rect.h, RADIUS.card)
+        graphics.fillStyle(face, 0.98)
+        graphics.fillRoundedRect(rect.x, rect.y, rect.w, rect.h, radius)
 
-        graphics.lineStyle(3, accent, active ? 1 : 0.72)
-        graphics.lineBetween(rect.x + 13, rect.y + 1, rect.x + Math.min(52, rect.w * 0.22), rect.y + 1)
-        graphics.lineBetween(rect.x + rect.w - 13, rect.y + rect.h - 1, rect.x + rect.w - Math.min(40, rect.w * 0.18), rect.y + rect.h - 1)
+        graphics.fillStyle(C.text, hovered ? 0.12 : 0.075)
+        graphics.fillRoundedRect(rect.x + 8, rect.y + 7, rect.w - 16, Math.max(20, rect.h * 0.28), radius - 4)
+
+        graphics.fillStyle(C.background, 0.2)
+        graphics.fillRoundedRect(rect.x + 8, rect.y + rect.h - Math.max(22, rect.h * 0.24) - 7, rect.w - 16, Math.max(22, rect.h * 0.24), radius - 6)
+
+        graphics.lineStyle(1, C.text, hovered ? 0.16 : 0.09)
+        graphics.strokeRoundedRect(rect.x + 6, rect.y + 6, rect.w - 12, rect.h - 12, Math.max(4, radius - 5))
+
+        graphics.lineStyle(active ? STROKE.focus : STROKE.default, accent, active ? 0.95 : 0.72)
+        graphics.strokeRoundedRect(rect.x, rect.y, rect.w, rect.h, radius)
+
+        graphics.fillStyle(accent, active ? 0.84 : 0.46)
+        graphics.fillRoundedRect(rect.x + 16, rect.y + 1, Math.min(76, rect.w * 0.28), 4, 2)
+        graphics.fillStyle(C.text, active ? 0.26 : 0.14)
+        graphics.fillRoundedRect(rect.x + rect.w - Math.min(86, rect.w * 0.3) - 16, rect.y + rect.h - 5, Math.min(86, rect.w * 0.3), 3, 2)
     }
-
     private drawTechnicalCorners(
         graphics: Phaser.GameObjects.Graphics,
         rect: L.Rect,
         color: number,
     ): void {
-        const inset = 14
-        const length = 28
-        graphics.lineStyle(3, color, 0.72)
-        graphics.lineBetween(rect.x + inset, rect.y, rect.x + inset + length, rect.y)
-        graphics.lineBetween(rect.x, rect.y + inset, rect.x, rect.y + inset + length)
-        graphics.lineBetween(rect.x + rect.w - inset - length, rect.y + rect.h, rect.x + rect.w - inset, rect.y + rect.h)
-        graphics.lineBetween(rect.x + rect.w, rect.y + rect.h - inset - length, rect.x + rect.w, rect.y + rect.h - inset)
+        const inset = 18
+        const length = 36
+        graphics.lineStyle(3, color, 0.34)
+        graphics.lineBetween(rect.x + inset, rect.y + 1, rect.x + inset + length, rect.y + 1)
+        graphics.lineBetween(rect.x + rect.w - inset - length, rect.y + rect.h - 1, rect.x + rect.w - inset, rect.y + rect.h - 1)
+        graphics.fillStyle(C.text, 0.075)
+        graphics.fillRoundedRect(rect.x + 18, rect.y + 16, rect.w - 36, 44, 16)
     }
-
     private animateSceneEntrance(): void {
         const targets = this.children.list.filter((object) => {
             if (object instanceof Phaser.GameObjects.Zone) return false
@@ -1698,29 +1711,32 @@ export class GameScene extends Phaser.Scene {
     ): void {
         const halfW = width / 2
         const halfH = height / 2
+        const radius = RADIUS.button
+        const isPrimary = fill === C.cyan || fill === C.text
 
         graphics.fillStyle(C.shadow, ALPHA.shadow)
-        graphics.fillRoundedRect(-halfW, -halfH + 6, width, height, RADIUS.button)
+        graphics.fillRoundedRect(-halfW + 4, -halfH + 7, width, height, radius)
 
         if (active) {
-            graphics.lineStyle(STROKE.glow, accent, ALPHA.glow + 0.04)
-            graphics.strokeRoundedRect(-halfW, -halfH, width, height, RADIUS.button)
+            graphics.lineStyle(STROKE.glow, accent, ALPHA.glow + 0.08)
+            graphics.strokeRoundedRect(-halfW - 1, -halfH - 1, width + 2, height + 2, radius + 1)
         }
 
         graphics.fillStyle(fill, 1)
-        graphics.fillRoundedRect(-halfW, -halfH, width, height, RADIUS.button)
-        graphics.lineStyle(active ? 4 : 3, accent, 1)
-        graphics.strokeRoundedRect(-halfW, -halfH, width, height, RADIUS.button)
+        graphics.fillRoundedRect(-halfW, -halfH, width, height, radius)
 
-        graphics.lineStyle(2, C.text, fill === C.cyan || fill === C.text ? 0.3 : 0.1)
-        graphics.lineBetween(
-            -halfW + RADIUS.button,
-            -halfH + 8,
-            halfW - RADIUS.button,
-            -halfH + 8,
-        )
+        graphics.fillStyle(0xffffff, isPrimary ? 0.42 : 0.18)
+        graphics.fillRoundedRect(-halfW + 8, -halfH + 6, width - 16, height * 0.36, radius * 0.72)
+
+        graphics.fillStyle(C.background, isPrimary ? 0.08 : 0.18)
+        graphics.fillRoundedRect(-halfW + 10, halfH - height * 0.3 - 5, width - 20, height * 0.24, radius * 0.55)
+
+        graphics.lineStyle(active ? 4 : 3, accent, active ? 1 : 0.86)
+        graphics.strokeRoundedRect(-halfW, -halfH, width, height, radius)
+
+        graphics.lineStyle(1, C.text, isPrimary ? 0.28 : 0.16)
+        graphics.lineBetween(-halfW + radius, -halfH + 8, halfW - radius, -halfH + 8)
     }
-
     private addFocusTarget(activate: () => void, paintFocus: (focused: boolean) => void): void {
         this.focusTargets.push({ activate, paintFocus })
     }

@@ -67,17 +67,17 @@ export class UIScene extends Phaser.Scene {
         const panel = this.add.graphics().setDepth(HUD_DEPTH)
         panel.fillStyle(C.shadow, ALPHA.shadow)
         panel.fillRoundedRect(HUD.x, HUD.y + 7, HUD.w, HUD.h, RADIUS.card)
-        panel.lineStyle(STROKE.glow, C.cyan, ALPHA.glow)
+        panel.lineStyle(STROKE.glow, C.cyan, ALPHA.glow + 0.04)
         panel.strokeRoundedRect(HUD.x, HUD.y, HUD.w, HUD.h, RADIUS.card)
-        panel.fillStyle(C.panelDeep, 0.99)
+        panel.fillStyle(C.panelDeep, 0.96)
         panel.fillRoundedRect(HUD.x, HUD.y, HUD.w, HUD.h, RADIUS.card)
-        panel.lineStyle(2, C.cyanDeep, 1)
+        panel.lineStyle(2, C.cyanDeep, 0.86)
         panel.strokeRoundedRect(HUD.x, HUD.y, HUD.w, HUD.h, RADIUS.card)
         panel.lineStyle(1, C.borderSoft, 1)
         panel.strokeRoundedRect(HUD.x + 5, HUD.y + 5, HUD.w - 10, HUD.h - 10, RADIUS.card - 3)
-        panel.fillStyle(C.cyan, 0.9)
+        panel.fillStyle(C.cyan, 0.62)
         panel.fillRect(HUD.x + 70, HUD.y, 82, 3)
-        panel.fillStyle(C.violet, 0.72)
+        panel.fillStyle(C.violet, 0.68)
         panel.fillRect(HUD.x + HUD.w - 286, HUD.y + HUD.h - 3, 92, 3)
 
         this.add.image(HUD.x + 34, cy(HUD), 'icone-app')
@@ -95,7 +95,7 @@ export class UIScene extends Phaser.Scene {
             fontFamily: FONT.body,
             fontSize: '16px',
             fontStyle: FONT_WEIGHT.semibold,
-            color: CSS.violet,
+            color: CSS.cyanDeep,
         }).setOrigin(0, 0.5).setDepth(HUD_DEPTH + 1).setResolution(2)
 
         this.instructionText = this.add.text(585, cy(HUD), 'Aguardando a missão...', {
@@ -154,14 +154,16 @@ export class UIScene extends Phaser.Scene {
         const paint = (hovered = false): void => {
             graphics.clear()
             if (hovered) {
-                graphics.lineStyle(STROKE.glow, C.cyan, ALPHA.glow + 0.05)
+                graphics.lineStyle(STROKE.glow, C.cyan, ALPHA.glow + 0.06)
                 graphics.strokeRoundedRect(x - size / 2, y - size / 2, size, size, 7)
             }
-            graphics.fillStyle(hovered ? C.elevated : C.panelDeep, 1)
-            graphics.fillRoundedRect(x - size / 2, y - size / 2, size, size, 7)
-            graphics.lineStyle(hovered ? 3 : 2, hovered ? C.cyan : C.border, 1)
-            graphics.strokeRoundedRect(x - size / 2, y - size / 2, size, size, 7)
-            graphics.fillStyle(C.cyan, hovered ? 1 : 0.64)
+            graphics.fillStyle(hovered ? C.elevated : C.surface, 1)
+            graphics.fillRoundedRect(x - size / 2, y - size / 2, size, size, 10)
+            graphics.fillStyle(C.text, hovered ? 0.16 : 0.09)
+            graphics.fillRoundedRect(x - size / 2 + 6, y - size / 2 + 5, size - 12, 15, 7)
+            graphics.lineStyle(hovered ? 3 : 2, hovered ? C.cyan : C.border, hovered ? 1 : 0.82)
+            graphics.strokeRoundedRect(x - size / 2, y - size / 2, size, size, 10)
+            graphics.fillStyle(C.cyan, hovered ? 0.9 : 0.52)
             graphics.fillRect(x - size / 2 + 6, y - size / 2 + 7, 3, size - 14)
         }
 
@@ -292,7 +294,7 @@ export class UIScene extends Phaser.Scene {
             ? C.red
             : seconds <= TIMER_WARNING_SECONDS
                 ? C.yellow
-                : C.cyan
+                : C.cyanDeep
         const x = 1080
         const y = HUD.y + 17
         const width = 112
@@ -301,11 +303,11 @@ export class UIScene extends Phaser.Scene {
         this.timerGraphics.clear()
         this.timerGraphics.lineStyle(STROKE.glow, color, ALPHA.glow)
         this.timerGraphics.strokeRoundedRect(x, y, width, height, 7)
-        this.timerGraphics.fillStyle(C.panelDeep, 1)
+        this.timerGraphics.fillStyle(C.surface, 1)
         this.timerGraphics.fillRoundedRect(x, y, width, height, 12)
         this.timerGraphics.lineStyle(2, color, 1)
         this.timerGraphics.strokeRoundedRect(x, y, width, height, 12)
-        this.timerGraphics.fillStyle(color, 1)
+        this.timerGraphics.fillStyle(color, 0.95)
         this.timerGraphics.fillRoundedRect(x + 5, y + height - 7, (width - 10) * progress, 3, 2)
 
         this.timerText
