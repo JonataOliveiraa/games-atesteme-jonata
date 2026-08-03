@@ -12,7 +12,7 @@ export interface GameBridge {
   send: (command: PlatformCommand) => void;
   onGameEvent: (handler: (event: PlatformEvent) => void) => () => void;
   onPlatformCommand: (
-    handler: (command: PlatformCommand) => void
+    handler: (command: PlatformCommand) => void 
   ) => () => void;
 }
 

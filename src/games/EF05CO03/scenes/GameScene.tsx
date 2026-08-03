@@ -879,11 +879,11 @@ export class GameScene extends Phaser.Scene {
                         shape: 'rect', x: (BTN_V_X + BTN_F_X) / 2, y: first?.pos.y ?? 360, w: 230, h: 130,
                     },
                     {
-                        text: 'O cano acende quando a resposta é verdadeira. O portão só abre com energia chegando.',
+                        text: 'Essa linha acende quando a resposta é verdadeira',
                         shape: 'rect', x: this.gateX, y: GATE_Y, w: this.gateSize + 90, h: this.gateSize + 90,
                     },
                     {
-                        text: 'Escolha o valor final e toque em Ativar mecanismo.',
+                        text: 'Escolha o valor final (VERDADEIRO ou FALSO) e toque em Ativar mecanismo.',
                         shape: 'rect', x: W / 2, y: BAR_Y, w: 1180, h: 120,
                     },
                 ],

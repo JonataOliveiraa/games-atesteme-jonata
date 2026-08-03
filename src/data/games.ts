@@ -372,6 +372,15 @@ const gameByCode: Partial<Record<string, Omit<Game, "id">>> = {
     icon: "🔒",
     slug: "missao-arquivo-seguro",
     thumbnail: coverMissaoArquivoSeguro,
+  },
+  EF05CO07: {
+    title: "Sistema Operacional",
+    "description": "Aprenda sobre o funcionamento de um sistema operacional e suas principais funções.",
+    category: "Pensamento Computacional",
+    points: 65,
+    icon: "🖥️",
+    slug: "sistema-operacional",
+    thumbnail: sourceHuntThumbnail,
   }
 };
 
