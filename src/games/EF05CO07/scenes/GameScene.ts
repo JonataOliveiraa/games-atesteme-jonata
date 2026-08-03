@@ -43,7 +43,7 @@ import type {
     SystemsPhase,
 } from '../types'
 
-const GAME_ID = 'controlador-do-sistema'
+const GAME_ID = 'sistema-operacional'
 const POINTS_PER_PHASE = 10
 const FEEDBACK_DURATION = 2200
 const CONTENT_DEPTH = 10
@@ -80,9 +80,6 @@ export class GameScene extends Phaser.Scene {
 
     private locked = true
     private ended = false
-    private gameOverEmitted = false
-    private gameOverModalShown = false
-    private tutorialOpen = false
     private tutorialSeen = false
     private resetTimer = false
     private skipIntro = false
@@ -132,9 +129,6 @@ export class GameScene extends Phaser.Scene {
 
         this.locked = true
         this.ended = false
-        this.gameOverEmitted = false
-        this.gameOverModalShown = false
-        this.tutorialOpen = false
         this.tutorialSeen = false
         this.selectedOrder = []
         this.runningPrograms = []
@@ -1227,17 +1221,19 @@ export class GameScene extends Phaser.Scene {
         }
 
         this.ended = true
+        this.locked = true
+
         runtimeGameBridge.emit({
             type: 'GAME_COMPLETED',
             gameId: GAME_ID,
             stage: this.level.level,
         })
-        runtimeGameBridge.emit({
-            type: 'FINISH_GAME',
-            gameId: GAME_ID,
-            stage: this.level.level,
-        })
 
+        this.time.delayedCall(0, () => this.showFinalScreen())
+        return
+    }
+
+    private showFinalScreen(): void {
         showLevelComplete(this, {
             title: 'Central estabilizada!',
             subtitle: 'Você controlou o sistema operacional',
@@ -1274,60 +1270,6 @@ export class GameScene extends Phaser.Scene {
             skipIntro: true,
             skipTutorial: true,
         } satisfies GameSceneData)
-    }
-
-    private loseGame(reason: string): void {
-        if (this.ended || this.gameOverModalShown) return
-
-        this.ended = true
-        this.locked = true
-        this.gameOverModalShown = true
-
-        EventBus.emit('timer-stop')
-        this.clearFeedback()
-        this.broadcastMission()
-
-        showLevelComplete(this, {
-            title: 'O computador travou',
-            subtitle: 'A estabilidade chegou a zero.',
-            message: `${reason} A partida terminou com ${this.score} pontos.`,
-            accent: C.red,
-            overlayColor: C.background,
-            titleColor: CSS.red,
-            subtitleColor: CSS.text,
-            buttons: [
-                {
-                    label: 'Jogar novamente',
-                    color: C.cyan,
-                    onClick: () => {
-                        this.scene.restart({
-                            level: 1,
-                            phase: 0,
-                            score: 0,
-                            stability: LEVELS[0].stability,
-                            hits: 0,
-                            errors: 0,
-                        } satisfies GameSceneData)
-                    },
-                },
-                {
-                    label: 'Sair',
-                    color: C.surface,
-                    onClick: () => EventBus.emit('exit-game'),
-                },
-            ],
-        })
-
-        // Só comunica a derrota após o jogo já estar encerrado localmente.
-        if (!this.gameOverEmitted) {
-            this.gameOverEmitted = true
-
-            runtimeGameBridge.emit({
-                type: 'GAME_OVER',
-                gameId: GAME_ID,
-                stage: this.level.level,
-            })
-        }
     }
 
     private onTimeUp(): void {
@@ -1373,8 +1315,6 @@ export class GameScene extends Phaser.Scene {
             stage: this.level.level,
             progress: Math.round((completed / totalPhases) * 100),
             score: this.score,
-            hits: this.hits,
-            errors: this.errors,
         })
     }
 
@@ -1823,8 +1763,16 @@ export class GameScene extends Phaser.Scene {
         this.locked = true
         this.stability = 0
 
-        EventBus.emit('timer-stop')
+        if (!this.gameOverEmitted) {
+            this.gameOverEmitted = true
+            runtimeGameBridge.emit({
+                type: 'GAME_OVER',
+                gameId: GAME_ID,
+                stage: this.level.level,
+            })
+        }
 
+        EventBus.emit('timer-stop')
         this.clearFeedback()
         this.broadcastMission()
         this.cameras.main.shake(250, 0.005)
@@ -1859,16 +1807,6 @@ export class GameScene extends Phaser.Scene {
                 },
             ],
         })
-
-        if (!this.gameOverEmitted) {
-            this.gameOverEmitted = true
-
-            runtimeGameBridge.emit({
-                type: 'GAME_OVER',
-                gameId: GAME_ID,
-                stage: this.level.level,
-            })
-        }
     }
 
     private registerEvents(): void {
@@ -2017,6 +1955,7 @@ export class GameScene extends Phaser.Scene {
     private cleanup(): void {
         EventBus.off('timer-end', this.onTimeUp, this)
         EventBus.off('show-tutorial', this.onShowTutorial, this)
+        EventBus.off('lose-game', this.onLoseGame, this)
         this.input.off('wheel', this.onQueueWheel, this)
         this.input.keyboard?.off('keydown-TAB', this.onTabKey, this)
         this.input.keyboard?.off('keydown-ENTER', this.onActivateKey, this)
