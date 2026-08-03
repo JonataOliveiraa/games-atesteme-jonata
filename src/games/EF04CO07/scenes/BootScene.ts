@@ -1,23 +1,22 @@
 import Phaser from "phaser";
+import bgUrl from "../../../assets/games/EF04CO07/bg-data-center.png";
+import cardPhotoUrl from "../../../assets/games/EF04CO07/card-photo.png";
+import cardSenhaUrl from "../../../assets/games/EF04CO07/card-senha.png";
+import cardEnderecoUrl from "../../../assets/games/EF04CO07/card-endereco.png";
+import cardMedicoUrl from "../../../assets/games/EF04CO07/card-medico.png";
+import zoneColetarUrl from "../../../assets/games/EF04CO07/zone-coletar.png";
+import zoneDescartarUrl from "../../../assets/games/EF04CO07/zone-descartar.png";
+import zoneBloqueadoUrl from "../../../assets/games/EF04CO07/zone-bloqueado.png";
 
-import coverUrl from "../../../assets/games/EF04CO07/cover-missao-etica-digital.png";
-import bgOfficeUrl from "../../../assets/games/EF04CO07/bg-ethics-office.png";
-import bgClassroomUrl from "../../../assets/games/EF04CO07/bg-ethics-classroom.png";
-import bgDilemmaUrl from "../../../assets/games/EF04CO07/bg-ethics-dilemma.png";
-import filePhotoUrl from "../../../assets/games/EF04CO07/file-photo.png";
-import fileDocumentUrl from "../../../assets/games/EF04CO07/file-document.png";
-import ethicsBarBgUrl from "../../../assets/games/EF04CO07/ethics-bar-bg.png";
-import dataSpreadUrl from "../../../assets/games/EF04CO07/data-spread-effect.png";
-
-const ASSETS: Array<[string, string]> = [
-  ["cover-missao-etica", coverUrl],
-  ["bg-ethics-office", bgOfficeUrl],
-  ["bg-ethics-classroom", bgClassroomUrl],
-  ["bg-ethics-dilemma", bgDilemmaUrl],
-  ["file-photo", filePhotoUrl],
-  ["file-document", fileDocumentUrl],
-  ["ethics-bar-bg", ethicsBarBgUrl],
-  ["data-spread-effect", dataSpreadUrl],
+const ASSETS: [string, string][] = [
+  ["bg-data-center", bgUrl],
+  ["card-photo", cardPhotoUrl],
+  ["card-senha", cardSenhaUrl],
+  ["card-endereco", cardEnderecoUrl],
+  ["ard-medico", cardMedicoUrl],
+  ["zone-coletar", zoneColetarUrl],
+  ["zone-descartar", zoneDescartarUrl],
+  ["zone-bloqueado", zoneBloqueadoUrl],
 ];
 
 export class BootScene extends Phaser.Scene {
@@ -26,31 +25,23 @@ export class BootScene extends Phaser.Scene {
   }
 
   preload() {
-    this.createLoadingScreen();
+    this.add.graphics().fillStyle(0x0d1b2a, 1).fillRoundedRect(338, 344, 604, 32, 16);
+    const bar = this.add.graphics();
+    this.add.text(640, 300, "Carregando...", {
+      fontSize: "22px", fontFamily: "Arial Black, Arial", color: "#06b6d4",
+    }).setOrigin(0.5);
+
+    this.load.on("progress", (v: number) => {
+      bar.clear();
+      bar.fillStyle(0x06b6d4, 1);
+      bar.fillRoundedRect(340, 346, 600 * v, 28, 14);
+    });
+
     ASSETS.forEach(([key, url]) => this.load.image(key, url));
   }
 
   create() {
     this.scene.start("GameScene");
-  }
-
-  private createLoadingScreen() {
-    this.add.rectangle(640, 360, 1280, 720, 0x011810);
-    this.add
-      .text(640, 296, "Missão Ética Digital", {
-        fontSize: "44px",
-        fontFamily: "Arial Black, Arial",
-        color: "#10b981",
-        stroke: "#065f46",
-        strokeThickness: 8,
-      })
-      .setOrigin(0.5);
-    this.add
-      .text(640, 374, "Preparando a missão...", {
-        fontSize: "26px",
-        fontFamily: "Arial Black, Arial",
-        color: "#6ee7b7",
-      })
-      .setOrigin(0.5);
+    this.scene.launch("UIScene");
   }
 }

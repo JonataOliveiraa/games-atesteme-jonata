@@ -286,6 +286,8 @@ export class GameScene extends Phaser.Scene {
             this.buildRouteHud()
             this.buildConfirm('Confirmar rota', () => this.confirmRoute())
             this.markEndpoints(p)
+            this.buildRouteMissionStrip(p)
+            this.markMustPassNodes(p)
         }
 
         if (p.kind === 'consulta') {
@@ -685,6 +687,98 @@ export class GameScene extends Phaser.Scene {
             yoyo: true,
             repeat: -1,
             ease: 'Sine.easeInOut',
+        })
+    }
+
+    // ─── Route Mission Strip ──────────────────────────────────────────────────
+    // Faixa no topo do canvas mostrando os pontos do percurso em ordem:
+    // [🚩 Casa] → [📍 Praça] → [🏁 Escola]
+
+    private buildRouteMissionStrip(p: RoutePhase) {
+        const stops: Array<{ id: string; role: 'start' | 'pass' | 'end' }> = [
+            { id: p.startId, role: 'start' },
+            ...(p.mustPass ?? []).map(id => ({ id, role: 'pass' as const })),
+            { id: p.endId, role: 'end' },
+        ]
+
+        const CHIP_W = 176
+        const CHIP_H = 38
+        const ARROW_W = 40
+        const LABEL_W = 106
+        const STRIP_PAD = 12
+        const STRIP_Y = TASK_Y - 12
+        const STRIP_H = CHIP_H + 8
+
+        const roleColor: Record<string, number> = { start: 0x16a34a, pass: 0xd97706, end: 0xdc2626 }
+        const roleIcon:  Record<string, string>  = { start: '🚩', pass: '📍', end: '🏁' }
+
+        const innerW = LABEL_W + stops.length * CHIP_W + (stops.length - 1) * ARROW_W
+        const stripX = W / 2 - (innerW + STRIP_PAD * 2) / 2
+
+        // Background strip
+        const bg = this.add.graphics().setDepth(12)
+        bg.fillStyle(C.ink, 0.88)
+        bg.fillRoundedRect(stripX, STRIP_Y, innerW + STRIP_PAD * 2, STRIP_H, STRIP_H / 2)
+        bg.lineStyle(3, C.blue, 0.72)
+        bg.strokeRoundedRect(stripX, STRIP_Y, innerW + STRIP_PAD * 2, STRIP_H, STRIP_H / 2)
+
+        // "PERCURSO:" label on the left
+        this.add.text(stripX + STRIP_PAD, STRIP_Y + STRIP_H / 2, 'PERCURSO:', {
+            fontFamily: 'Arial Black, Arial', fontSize: '14px',
+            color: '#93c5fd', stroke: '#0f2547', strokeThickness: 3,
+        }).setOrigin(0, 0.5).setDepth(13).setResolution(2)
+
+        // Chips and arrows
+        let cx = stripX + STRIP_PAD + LABEL_W
+
+        stops.forEach((stop, i) => {
+            const color = roleColor[stop.role]
+
+            const chipBg = this.add.graphics().setDepth(13)
+            chipBg.fillStyle(color, 0.86)
+            chipBg.fillRoundedRect(cx, STRIP_Y + 4, CHIP_W, CHIP_H, CHIP_H / 2)
+            chipBg.lineStyle(2, 0xffffff, 0.82)
+            chipBg.strokeRoundedRect(cx, STRIP_Y + 4, CHIP_W, CHIP_H, CHIP_H / 2)
+
+            this.add.text(cx + CHIP_W / 2, STRIP_Y + STRIP_H / 2,
+                `${roleIcon[stop.role]} ${this.labelOf(stop.id)}`, {
+                fontFamily: 'Arial Black, Arial', fontSize: '15px',
+                color: '#ffffff', stroke: '#0f2547', strokeThickness: 4,
+            }).setOrigin(0.5).setDepth(14).setResolution(2)
+
+            cx += CHIP_W
+
+            if (i < stops.length - 1) {
+                this.add.text(cx + ARROW_W / 2, STRIP_Y + STRIP_H / 2, '→', {
+                    fontFamily: 'Arial Black, Arial', fontSize: '20px',
+                    color: '#94a3b8', stroke: '#0f2547', strokeThickness: 4,
+                }).setOrigin(0.5).setDepth(13).setResolution(2)
+                cx += ARROW_W
+            }
+        })
+    }
+
+    // ─── Must-Pass Node Markers ───────────────────────────────────────────────
+
+    private markMustPassNodes(p: RoutePhase) {
+        (p.mustPass ?? []).forEach(id => {
+            const view = this.viewOf(id)
+            if (!view) return
+
+            // Pulsing amber ring (separate from view.ring used by paintNode)
+            const ring = this.add.graphics().setPosition(view.x, view.y).setDepth(13)
+            ring.lineStyle(6, C.amber, 1)
+            ring.strokeCircle(0, 0, NODE_R + 12)
+            this.tweens.add({
+                targets: ring, alpha: { from: 0.4, to: 1 },
+                duration: 700, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+            })
+
+            // Badge above the node
+            this.add.text(view.x, view.y - 92, '📍 PARADA', {
+                fontFamily: 'Arial Black, Arial', fontSize: '13px',
+                color: '#fbbf24', stroke: '#0f2547', strokeThickness: 4,
+            }).setOrigin(0.5).setDepth(16).setResolution(2)
         })
     }
 
