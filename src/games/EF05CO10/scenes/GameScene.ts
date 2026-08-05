@@ -678,10 +678,15 @@ export class GameScene extends Phaser.Scene {
                 this.renderPanel()
             }, undefined, MESSAGE_LIST)
         })
+        const back = this.button(PANEL.backX, PANEL.backY, 218, 54, 'Voltar', C.violet, () => {
+            this.backFromReady()
+        }, '18px')
+        this.panelLayer.add(back)
         this.renderFooter('Procure uma mensagem equilibrada: ganho, limite e opiniao.')
     }
 
     private renderReadyPanel() {
+
         this.stepPill('TUDO PRONTO', C.green)
         this.panelHeader('Confira a sua historia', this.hasStrip
             ? 'Toque em um quadro do storyboard para refazer, ou publique.'
