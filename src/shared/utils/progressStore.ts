@@ -36,10 +36,6 @@ export const progressStore = {
     })
   },
 
-  /**
-   * Retorna critérios dominados (≥80% acerto em ≥3 rodadas) e fracos.
-   * Critério dominado: das últimas 3 rodadas com aquele criterion, ≥80% de acertos.
-   */
   report(code: GameCode): { dominated: string[]; weak: string[] } {
     const p = progressStore.load(code)
     if (!p) return { dominated: [], weak: [] }

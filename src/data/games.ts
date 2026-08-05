@@ -36,6 +36,8 @@ import coverLogicArena from "../assets/games/EF05CO03/cover-arena-da-logica.png"
 import coverCidadeDasDecisoes from "../assets/games/EF05CO04/cover-cidade-das-decisoes.png";
 import coverMonteSeuComputador from "../assets/games/EF05CO05/cover-monte-seu-computador.png";
 import coverMissaoArquivoSeguro from "../assets/games/EF05CO06/cover-missao-arquivo-seguro.png";
+import sistemaOperacionalThumbnail from "../assets/games/EF05CO07/cover-sistema-operacional.png";
+import coverRadarDeConfiabilidade from "../assets/games/EF05CO08/cover-radar-de-confiabilidade.png";
 
 const placeholderGame = (code: string, index: number): Game => ({
   id: index,
@@ -380,8 +382,18 @@ const gameByCode: Partial<Record<string, Omit<Game, "id">>> = {
     points: 65,
     icon: "🖥️",
     slug: "sistema-operacional",
-    thumbnail: sourceHuntThumbnail,
+    thumbnail: sistemaOperacionalThumbnail,
+  },
+  EF05CO08: {
+    title: "Radar de Confiabilidade",
+    "description": "Avalie critérios de confiabilidade, compare fontes e classifique as mais confiáveis.",
+    category: "Cultura Digital",
+    points: 65,
+    icon: "🔍",
+    slug: "radar-de-confiabilidade",
+    thumbnail: coverRadarDeConfiabilidade,
   }
+
 };
 
 const gameOrder = [

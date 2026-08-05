@@ -51,6 +51,7 @@ const SLUG_TO_CODE: Record<string, GameCode> = {
   "monte-seu-computador": "EF05CO05",
   "missao-arquivo-seguro": "EF05CO06",
   "sistema-operacional": "EF05CO07",
+  "radar-de-confiabilidade": "EF05CO08",
 };
 
 const GAME_CONFIG_LOADERS: Partial<
@@ -93,6 +94,7 @@ const GAME_CONFIG_LOADERS: Partial<
   EF05CO05: () => import("../games/EF05CO05/index"),
   EF05CO06: () => import("../games/EF05CO06/index"),
   EF05CO07: () => import("../games/EF05CO07/index"),
+  EF05CO08: () => import("../games/EF05CO08/index")
 };
 
 const GAMES_WITH_IN_GAME_COMPLETION_SCREEN = new Set([
