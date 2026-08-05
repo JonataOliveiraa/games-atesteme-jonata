@@ -37,7 +37,7 @@ export class BootScene extends Phaser.Scene {
   preload() {
     createLoadingScreen(this, {
       title: 'Futuro em Cena',
-      subtitle: 'Acendendo os refletores...',
+      subtitle: 'Carregando...',
       description: 'Preparando o estúdio, os personagens e o storyboard',
       theme: {
         background: { kind: 'stripes', base: 0xf0edfa, color: 0x6b4fd8, alpha: 0.1, size: 24, gap: 58, angle: 'diagonal' },

@@ -239,29 +239,29 @@ export class GameScene extends Phaser.Scene {
     }
 
     const stars = this.addOverlayObject(
-  this.add.container(640, 105).setDepth(301)
-);
+      this.add.container(640, 105).setDepth(301)
+    );
 
-const totalStars = this.levelConfig.level;
-const spacing = 90;
-const startX = -((totalStars - 1) * spacing) / 2;
+    const totalStars = this.levelConfig.level;
+    const spacing = 90;
+    const startX = -((totalStars - 1) * spacing) / 2;
 
-for (let i = 0; i < totalStars; i++) {
-  const star = this.add
-    .star(startX + i * spacing, 0, 5, 16, 34, 0xffd700)
-    .setStrokeStyle(4, 0x111827);
+    for (let i = 0; i < totalStars; i++) {
+      const star = this.add
+        .star(startX + i * spacing, 0, 5, 16, 34, 0xffd700)
+        .setStrokeStyle(4, 0x111827);
 
-  stars.add(star);
+      stars.add(star);
 
-  this.tweens.add({
-    targets: star,
-    scale: { from: 0.95, to: 1.08 },
-    duration: 800,
-    yoyo: true,
-    repeat: -1,
-    ease: "Sine.easeInOut",
-  });
-}           
+      this.tweens.add({
+        targets: star,
+        scale: { from: 0.95, to: 1.08 },
+        duration: 800,
+        yoyo: true,
+        repeat: -1,
+        ease: "Sine.easeInOut",
+      });
+    }
 
     const title = this.addOverlayObject(
       this.add
@@ -414,9 +414,9 @@ for (let i = 0; i < totalStars; i++) {
     const step = steps[this.tutorialStep];
 
     const blocker = this.add
-  .rectangle(640, 360, 1280, 720, 0x111827, 0.82)
-  .setDepth(190)
-  .setInteractive();
+      .rectangle(640, 360, 1280, 720, 0x111827, 0.82)
+      .setDepth(190)
+      .setInteractive();
 
     const panel = this.add
       .rectangle(640, 210, 760, 150, 0xffffff, 0.97)
@@ -463,13 +463,13 @@ for (let i = 0; i < totalStars; i++) {
       .setDepth(203);
 
     this.tutorialContainer = this.add.container(0, 0, [
-     blocker,
-  panel,
-  numberBadge,
-  numberText,
-  text,
-  square,
-  label,
+      blocker,
+      panel,
+      numberBadge,
+      numberText,
+      text,
+      square,
+      label,
     ]);
 
     this.createNextTutorialButton();
@@ -672,8 +672,9 @@ for (let i = 0; i < totalStars; i++) {
 
       card.add([cardShadow, cardBg, swatch, code, label]);
       card.setSize(264, 62);
+
       card.setInteractive({
-        hitArea: new Phaser.Geom.Rectangle(-132, -31, 264, 62),
+        hitArea: new Phaser.Geom.Rectangle(0, 0, 264, 62),
         hitAreaCallback: Phaser.Geom.Rectangle.Contains,
         useHandCursor: true,
       });
@@ -1090,147 +1091,147 @@ for (let i = 0; i < totalStars; i++) {
   }
 
   private showGameOverScreen(blockedUntil?: string, unlockCost = 30) {
-  this.clearOverlay();
-  this.levelStarted = false;
-  this.input.enabled = true;
-  this.timerEvent?.remove(false);
+    this.clearOverlay();
+    this.levelStarted = false;
+    this.input.enabled = true;
+    this.timerEvent?.remove(false);
 
-  const formattedDate = blockedUntil
-    ? new Date(blockedUntil).toLocaleString("pt-BR")
-    : "em 2 dias";
+    const formattedDate = blockedUntil
+      ? new Date(blockedUntil).toLocaleString("pt-BR")
+      : "em 2 dias";
 
-  const bg = this.addOverlayObject(
-    this.add.rectangle(640, 360, 1280, 720, 0x111827, 0.96).setDepth(300)
-  );
+    const bg = this.addOverlayObject(
+      this.add.rectangle(640, 360, 1280, 720, 0x111827, 0.96).setDepth(300)
+    );
 
-  const title = this.addOverlayObject(
-    this.add
-      .text(640, 120, "GAME OVER", {
-        fontSize: "64px",
-        fontFamily: "Arial Black, Arial",
-        color: "#ffffff",
-        stroke: "#ef4444",
-        strokeThickness: 8,
-      })
-      .setOrigin(0.5)
-      .setDepth(301)
-  );
-
-  const text = this.addOverlayObject(
-    this.add
-      .text(
-        640,
-        270,
-        `Você ficou sem vidas.\n\nO jogo foi bloqueado até:\n${formattedDate}`,
-        {
-          fontSize: "30px",
-          fontFamily: "Arial",
+    const title = this.addOverlayObject(
+      this.add
+        .text(640, 120, "GAME OVER", {
+          fontSize: "64px",
+          fontFamily: "Arial Black, Arial",
           color: "#ffffff",
+          stroke: "#ef4444",
+          strokeThickness: 8,
+        })
+        .setOrigin(0.5)
+        .setDepth(301)
+    );
+
+    const text = this.addOverlayObject(
+      this.add
+        .text(
+          640,
+          270,
+          `Você ficou sem vidas.\n\nO jogo foi bloqueado até:\n${formattedDate}`,
+          {
+            fontSize: "30px",
+            fontFamily: "Arial",
+            color: "#ffffff",
+            align: "center",
+            wordWrap: { width: 900 },
+          }
+        )
+        .setOrigin(0.5)
+        .setDepth(301)
+    );
+
+    const unlockInfo = this.addOverlayObject(
+      this.add
+        .text(640, 430, `Você pode desbloquear agora usando ${unlockCost} pontos.`, {
+          fontSize: "26px",
+          fontFamily: "Arial Black, Arial",
+          color: "#facc15",
           align: "center",
           wordWrap: { width: 900 },
-        }
-      )
-      .setOrigin(0.5)
-      .setDepth(301)
-  );
-
-  const unlockInfo = this.addOverlayObject(
-    this.add
-      .text(640, 430, `Você pode desbloquear agora usando ${unlockCost} pontos.`, {
-        fontSize: "26px",
-        fontFamily: "Arial Black, Arial",
-        color: "#facc15",
-        align: "center",
-        wordWrap: { width: 900 },
-      })
-      .setOrigin(0.5)
-      .setDepth(301)
-  );
-
-  // botão desbloquear
-  const unlockButton = this.addOverlayObject(
-    this.add
-      .rectangle(470, 560, 340, 74, 0x9333ea, 1)
-      .setStrokeStyle(4, 0xffffff)
-      .setInteractive({ useHandCursor: true })
-      .setDepth(302)
-  );
-
-  const unlockText = this.addOverlayObject(
-    this.add
-      .text(470, 560, "Desbloquear jogo", {
-        fontSize: "24px",
-        fontFamily: "Arial Black, Arial",
-        color: "#ffffff",
-      })
-      .setOrigin(0.5)
-      .setDepth(303)
-  );
-
-  // botão sair
-  const exitButton = this.addOverlayObject(
-    this.add
-      .rectangle(820, 560, 320, 74, 0xef4444, 1)
-      .setStrokeStyle(4, 0xffffff)
-      .setInteractive({ useHandCursor: true })
-      .setDepth(302)
-  );
-
-  const exitText = this.addOverlayObject(
-    this.add
-      .text(820, 560, "Voltar aos jogos", {
-        fontSize: "24px",
-        fontFamily: "Arial Black, Arial",
-        color: "#ffffff",
-      })
-      .setOrigin(0.5)
-      .setDepth(303)
-  );
-
-  const unlock = () => {
-    this.playClick();
-
-    window.dispatchEvent(
-      new CustomEvent("pixel-secret-open-unlock-modal")
+        })
+        .setOrigin(0.5)
+        .setDepth(301)
     );
-  };
 
-  const exit = () => {
-    this.playClick();
-
-    window.dispatchEvent(
-      new CustomEvent("pixel-secret-exit-game")
+    // botão desbloquear
+    const unlockButton = this.addOverlayObject(
+      this.add
+        .rectangle(470, 560, 340, 74, 0x9333ea, 1)
+        .setStrokeStyle(4, 0xffffff)
+        .setInteractive({ useHandCursor: true })
+        .setDepth(302)
     );
-  };
 
-  unlockButton.on("pointerdown", unlock);
+    const unlockText = this.addOverlayObject(
+      this.add
+        .text(470, 560, "Desbloquear jogo", {
+          fontSize: "24px",
+          fontFamily: "Arial Black, Arial",
+          color: "#ffffff",
+        })
+        .setOrigin(0.5)
+        .setDepth(303)
+    );
 
-  unlockText.setInteractive({ useHandCursor: true });
-  unlockText.on("pointerdown", unlock);
+    // botão sair
+    const exitButton = this.addOverlayObject(
+      this.add
+        .rectangle(820, 560, 320, 74, 0xef4444, 1)
+        .setStrokeStyle(4, 0xffffff)
+        .setInteractive({ useHandCursor: true })
+        .setDepth(302)
+    );
 
-  exitButton.on("pointerdown", exit);
+    const exitText = this.addOverlayObject(
+      this.add
+        .text(820, 560, "Voltar aos jogos", {
+          fontSize: "24px",
+          fontFamily: "Arial Black, Arial",
+          color: "#ffffff",
+        })
+        .setOrigin(0.5)
+        .setDepth(303)
+    );
 
-  exitText.setInteractive({ useHandCursor: true });
-  exitText.on("pointerdown", exit);
+    const unlock = () => {
+      this.playClick();
 
-  this.tweens.add({
-    targets: [
-      title,
-      text,
-      unlockInfo,
-      unlockButton,
-      unlockText,
-      exitButton,
-      exitText,
-    ],
-    alpha: { from: 0, to: 1 },
-    y: "+=10",
-    duration: 450,
-    ease: "Back.Out",
-  });
+      window.dispatchEvent(
+        new CustomEvent("pixel-secret-open-unlock-modal")
+      );
+    };
 
-  void bg;
-}
+    const exit = () => {
+      this.playClick();
+
+      window.dispatchEvent(
+        new CustomEvent("pixel-secret-exit-game")
+      );
+    };
+
+    unlockButton.on("pointerdown", unlock);
+
+    unlockText.setInteractive({ useHandCursor: true });
+    unlockText.on("pointerdown", unlock);
+
+    exitButton.on("pointerdown", exit);
+
+    exitText.setInteractive({ useHandCursor: true });
+    exitText.on("pointerdown", exit);
+
+    this.tweens.add({
+      targets: [
+        title,
+        text,
+        unlockInfo,
+        unlockButton,
+        unlockText,
+        exitButton,
+        exitText,
+      ],
+      alpha: { from: 0, to: 1 },
+      y: "+=10",
+      duration: 450,
+      ease: "Back.Out",
+    });
+
+    void bg;
+  }
 
 
   private hideCellLabel(row: number, col: number) {

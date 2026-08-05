@@ -3,10 +3,10 @@ import { runtimeGameBridge } from '../../../shared/bridge/runtimeGameBridge'
 import { EventBus } from '../../../shared/EventBus'
 import { createTutorial, type TutorialStep } from '../../../shared/tutorial/createTutorial'
 import { showLevelComplete } from '../../../shared/level/showLevelComplete'
-import { LEVELS, MAX_SCORE, SCORE_LABEL } from '../data/levels'
+import { LEVELS, SCORE_LABEL } from '../data/levels'
 import { CHARACTERS, CRITERIA, MOMENT_LABEL, SCENERIES, THEMES } from '../data/story'
 import { C, A, CRITERION_COLOR, hex } from '../data/theme'
-import { W, H, STAGE, STRIP, CHOICE, MASCOTE } from '../data/layout'
+import { W, H, HEADER, STRIP, PANEL, MESSAGE_LIST, BALLOON, CHAR, MASCOTE, stageBox } from '../data/layout'
 import type {
     CharId,
     CriterionId,
@@ -15,7 +15,6 @@ import type {
     LineOption,
     MessageOption,
     PhaseConfig,
-    SceneryId,
     Score,
     SlotConfig,
     TechId,
@@ -34,6 +33,8 @@ interface Draft {
     line?: LineOption
 }
 
+type SceneryId = keyof typeof SCENERIES
+
 export class GameScene extends Phaser.Scene {
     private levelIdx = 0
     private phaseIdx = 0
@@ -49,10 +50,11 @@ export class GameScene extends Phaser.Scene {
     private mode: PanelMode = 'edit'
     private message?: MessageOption
 
+    private headerLayer!: Phaser.GameObjects.Container
     private stageLayer!: Phaser.GameObjects.Container
-    private stageMask!: Phaser.Display.Masks.GeometryMask
     private stripLayer!: Phaser.GameObjects.Container
-    private choiceLayer!: Phaser.GameObjects.Container
+    private panelLayer!: Phaser.GameObjects.Container
+    private stageMask!: Phaser.Display.Masks.GeometryMask
 
     private tutorialKey = ''
     private tutorialSteps: TutorialStep[] = []
@@ -91,32 +93,38 @@ export class GameScene extends Phaser.Scene {
         return p.slots
     }
 
+    private get hasStrip() {
+        return this.slots.length > 1
+    }
+
+    private get stage() {
+        return stageBox(this.hasStrip)
+    }
+
     private get themeId(): ThemeId {
         const p = this.phase
         if (p.kind !== 'cena') return p.theme
-        return this.draft.themeId ?? p.themeOptions[0]
+        return this.draft.themeId ?? this.frames[0]?.line?.id.split('-')[0] as ThemeId ?? p.themeOptions[0]
     }
 
     create() {
         this.drawBackground()
         this.buildStageFrame()
 
-        this.stageLayer = this.add.container(0, 0)
-        this.stripLayer = this.add.container(0, 0)
-        this.choiceLayer = this.add.container(0, 0)
+        this.headerLayer = this.add.container(0, 0).setDepth(60)
+        this.stageLayer = this.add.container(0, 0).setDepth(10)
+        this.stripLayer = this.add.container(0, 0).setDepth(20)
+        this.panelLayer = this.add.container(0, 0).setDepth(30)
 
         this.frames = this.slots.map(() => undefined)
         this.resetDraft()
 
+        this.renderHeader()
         this.renderStage()
         this.renderStrip()
         this.renderPanel()
 
-        this.publishHud()
-        this.time.delayedCall(0, () => this.publishHud())
-        EventBus.once('ui-ready', () => this.publishHud())
-        EventBus.emit('seals-hide')
-        runtimeGameBridge.emit({ type: 'GAME_READY', gameId: GAME_ID, stage: this.level.level })
+        runtimeGameBridge.emit({ type: 'GAME_READY', gameId: GAME_ID })
 
         EventBus.on('show-tutorial', this.replayTutorial, this)
         this.events.once('shutdown', () => {
@@ -130,6 +138,15 @@ export class GameScene extends Phaser.Scene {
     private drawBackground() {
         const bg = this.add.image(W / 2, H / 2, 'bg-studio').setDepth(-3)
         bg.setScale(Math.max(W / bg.width, H / bg.height))
+        this.tweens.add({
+            targets: bg,
+            x: W / 2 + 14,
+            y: H / 2 + 8,
+            duration: 5200,
+            yoyo: true,
+            repeat: -1,
+            ease: 'Sine.easeInOut',
+        })
 
         const veil = this.add.graphics().setDepth(-2)
         veil.fillStyle(C.sky, A.veil)
@@ -137,28 +154,31 @@ export class GameScene extends Phaser.Scene {
     }
 
     private buildStageFrame() {
+        const box = this.stage
         const g = this.add.graphics().setDepth(-1)
         g.fillStyle(C.shadow, A.shadow)
-        g.fillRoundedRect(STAGE.x + 4, STAGE.y + 10, STAGE.w, STAGE.h, 26)
+        g.fillRoundedRect(box.x + 5, box.y + 12, box.w, box.h, 26)
         g.fillStyle(C.stage, 1)
-        g.fillRoundedRect(STAGE.x - 10, STAGE.y - 10, STAGE.w + 20, STAGE.h + 20, 30)
+        g.fillRoundedRect(box.x - 12, box.y - 12, box.w + 24, box.h + 24, 32)
         g.fillStyle(C.stageEdge, 1)
-        g.fillRoundedRect(STAGE.x - 4, STAGE.y - 4, STAGE.w + 8, STAGE.h + 8, 26)
+        g.fillRoundedRect(box.x - 5, box.y - 5, box.w + 10, box.h + 10, 27)
         g.fillStyle(C.greySoft, 1)
-        g.fillRoundedRect(STAGE.x, STAGE.y, STAGE.w, STAGE.h, 22)
+        g.fillRoundedRect(box.x, box.y, box.w, box.h, 22)
 
         const shape = this.make.graphics({}, false)
         shape.fillStyle(0xffffff)
-        shape.fillRoundedRect(STAGE.x, STAGE.y, STAGE.w, STAGE.h, 22)
+        shape.fillRoundedRect(box.x, box.y, box.w, box.h, 22)
         this.stageMask = shape.createGeometryMask()
 
-        const filmG = this.add.graphics().setDepth(-1)
-        filmG.fillStyle(C.film, 1)
-        filmG.fillRoundedRect(STAGE.x - 10, STRIP.y - 12, STAGE.w + 20, STRIP.h + 24, 18)
-        filmG.fillStyle(C.filmHole, 0.5)
-        for (let x = STAGE.x + 4; x < STAGE.x + STAGE.w; x += 34) {
-            filmG.fillRoundedRect(x, STRIP.y - 6, 18, 10, 4)
-            filmG.fillRoundedRect(x, STRIP.y + STRIP.h + 2, 18, 10, 4)
+        if (!this.hasStrip) return
+
+        const film = this.add.graphics().setDepth(-1)
+        film.fillStyle(C.film, 1)
+        film.fillRoundedRect(box.x - 12, STRIP.cy - STRIP.h / 2 - 18, box.w + 24, STRIP.h + 36, 20)
+        film.fillStyle(C.filmHole, 0.45)
+        for (let x = box.x + 6; x < box.x + box.w - 10; x += 36) {
+            film.fillRoundedRect(x, STRIP.cy - STRIP.h / 2 - 12, 20, 10, 4)
+            film.fillRoundedRect(x, STRIP.cy + STRIP.h / 2 + 2, 20, 10, 4)
         }
     }
 
@@ -173,114 +193,230 @@ export class GameScene extends Phaser.Scene {
     }
 
     private slotX(i: number) {
+        const box = this.stage
         const n = this.slots.length
-        return STAGE.cx + (i - (n - 1) / 2) * STRIP.gapX
+        return box.x + box.w / 2 + (i - (n - 1) / 2) * STRIP.gapX
+    }
+
+    private renderHeader() {
+        this.headerLayer.removeAll(true)
+
+        const g = this.add.graphics()
+        g.fillStyle(C.shadow, 0.2)
+        g.fillRoundedRect(HEADER.chipX + 3, 26, HEADER.chipW, HEADER.chipH, 20)
+        g.fillStyle(C.stage, 1)
+        g.fillRoundedRect(HEADER.chipX, 20, HEADER.chipW, HEADER.chipH, 20)
+        g.fillStyle(C.white, 0.12)
+        g.fillRoundedRect(HEADER.chipX + 10, 28, HEADER.chipW - 20, 16, 8)
+        g.fillStyle(C.amber, 1)
+        g.fillCircle(HEADER.chipX + 30, 51, 8)
+
+        const level = this.add.text(HEADER.chipX + 50, 40, `NIVEL ${this.level.level}`, {
+            fontFamily: 'Arial Black, Arial',
+            fontSize: '19px',
+            color: hex(C.white),
+        }).setOrigin(0, 0.5).setResolution(2)
+
+        const phase = this.add.text(HEADER.chipX + 50, 64, `Cena ${this.phaseIdx + 1} de ${this.level.phases.length}`, {
+            fontFamily: 'Arial',
+            fontStyle: 'bold',
+            fontSize: '15px',
+            color: hex(C.grey),
+        }).setOrigin(0, 0.5).setResolution(2)
+
+        const title = this.add.text(HEADER.textX, HEADER.titleY, this.phase.instruction, {
+            fontFamily: 'Arial Black, Arial',
+            fontSize: '27px',
+            color: hex(C.violetDark),
+            stroke: '#ffffff',
+            strokeThickness: 7,
+            wordWrap: { width: 860 },
+        }).setOrigin(0, 0.5).setResolution(2)
+
+        const sub = this.add.text(HEADER.textX, HEADER.subY, this.phase.sub, {
+            fontFamily: 'Arial',
+            fontStyle: 'bold',
+            fontSize: '22px',
+            color: hex(C.inkSoft),
+            stroke: '#ffffff',
+            strokeThickness: 5,
+            wordWrap: { width: 860 },
+        }).setOrigin(0, 0.5).setResolution(2)
+
+        this.headerLayer.add([g, level, phase, title, sub])
     }
 
     private renderStage() {
         this.stageLayer.removeAll(true)
 
+        const box = this.stage
         const frame = this.frames[this.slotIdx]
         const sceneryId = this.draft.sceneryId ?? frame?.sceneryId
         const charId = this.draft.charId ?? frame?.charId
         const line = this.draft.line ?? frame?.line
         const slot = this.slots[this.slotIdx]
+        const themeChosen = this.phase.kind !== 'cena' || this.draft.themeId !== undefined || frame !== undefined
 
         if (sceneryId) {
-            const img = this.add.image(STAGE.cx, STAGE.cy, SCENERIES[sceneryId].texture)
-            img.setScale(Math.max(STAGE.w / img.width, STAGE.h / img.height))
+            const img = this.add.image(box.x + box.w / 2, box.y + box.h / 2, SCENERIES[sceneryId].texture)
+            img.setScale(Math.max(box.w / img.width, box.h / img.height) * 1.02)
             img.setMask(this.stageMask)
-            this.stageLayer.add(img)
-
+            this.tweens.add({ targets: img, x: img.x + 10, duration: 2600, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
             const veil = this.add.graphics()
-            veil.fillStyle(C.stage, A.stageVeil * 0.4)
-            veil.fillRoundedRect(STAGE.x, STAGE.y, STAGE.w, STAGE.h, 22)
-            this.stageLayer.add(veil)
+            veil.fillStyle(C.stage, A.stageVeil * 0.35)
+            veil.fillRoundedRect(box.x, box.y, box.w, box.h, 22)
+            this.stageLayer.add([img, veil])
         } else {
             const empty = this.add.graphics()
-            empty.lineStyle(4, C.border, 1)
-            empty.strokeRoundedRect(STAGE.x + 26, STAGE.y + 26, STAGE.w - 52, STAGE.h - 52, 18)
-            const hint = this.add.text(STAGE.cx, STAGE.cy, 'Sua cena aparece aqui', {
+            empty.lineStyle(5, C.border, 1)
+            empty.strokeRoundedRect(box.x + 28, box.y + 28, box.w - 56, box.h - 56, 20)
+            const hint = this.add.text(box.x + box.w / 2, box.y + box.h / 2, 'A sua cena aparece aqui\na cada escolha', {
                 fontFamily: 'Arial Black, Arial',
-                fontSize: '22px',
+                fontSize: '24px',
                 color: hex(C.grey),
+                align: 'center',
+                lineSpacing: 8,
             }).setOrigin(0.5).setResolution(2)
             this.stageLayer.add([empty, hint])
         }
 
+        const badgeW = 190
         const badge = this.add.graphics()
-        const bw = 168
-        badge.fillStyle(C.stage, 0.9)
-        badge.fillRoundedRect(STAGE.x + 16, STAGE.y + 16, bw, 38, 19)
-        this.stageLayer.add(badge)
-        this.stageLayer.add(this.add.text(STAGE.x + 16 + bw / 2, STAGE.y + 35, MOMENT_LABEL[slot.moment], {
+        badge.fillStyle(C.stage, 0.92)
+        badge.fillRoundedRect(box.x + 18, box.y + 18, badgeW, 44, 22)
+        const badgeText = this.add.text(box.x + 18 + badgeW / 2, box.y + 40, MOMENT_LABEL[slot.moment], {
             fontFamily: 'Arial Black, Arial',
-            fontSize: '17px',
+            fontSize: '19px',
             color: hex(C.spotlight),
-        }).setOrigin(0.5).setResolution(2))
+        }).setOrigin(0.5).setResolution(2)
+        this.stageLayer.add([badge, badgeText])
+
+        const beam = this.add.graphics()
+        beam.fillStyle(C.spotlight, 0.13)
+        beam.fillTriangle(box.x + box.w * 0.2, box.y, box.x + box.w * 0.56, box.y, box.x + box.w * 0.38, box.y + box.h)
+        beam.fillTriangle(box.x + box.w * 0.72, box.y, box.x + box.w * 0.96, box.y, box.x + box.w * 0.84, box.y + box.h)
+        beam.setMask(this.stageMask)
+        this.tweens.add({ targets: beam, alpha: 0.35, duration: 1400, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
+        this.stageLayer.add(beam)
+
+        const headX = box.x + box.w / 2 + CHAR.dx
+        let headY = box.y + box.h * 0.4
 
         if (charId) {
-            const char = this.add.image(STAGE.cx + STAGE.charDx, STAGE.cy + STAGE.charDy, CHARACTERS[charId].texture)
-            const tall = char.height / char.width > 1.6
-            char.setOrigin(0.5, 1)
-            char.setScale((tall ? STAGE.charTallH : STAGE.charH) / char.height)
+            const baseY = box.y + box.h - CHAR.footPad
+            const char = this.add.image(headX, baseY, CHARACTERS[charId].texture)
+            const maxH = box.h * (this.hasStrip ? CHAR.ratioWithStrip : CHAR.ratioFull)
+            const s = Math.min(maxH / char.height, CHAR.maxW / char.width)
+            const shadow = this.add.graphics()
+            shadow.fillStyle(C.shadow, 0.2)
+            shadow.fillEllipse(headX, baseY - 4, Math.min(132, char.width * s * 0.62), 24)
+            shadow.setMask(this.stageMask)
+            char.setOrigin(0.5, 1).setScale(s)
             char.setMask(this.stageMask)
-            this.stageLayer.add(char)
+            char.setAlpha(0)
+            char.x = headX - 46
+            headY = box.y + box.h - CHAR.footPad - char.height * s + 22
+            this.stageLayer.add([shadow, char])
+            this.tweens.add({ targets: char, x: headX, alpha: 1, duration: 360, ease: 'Back.easeOut' })
+            this.tweens.add({ targets: char, y: baseY - 7, duration: 760, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
         }
 
-        if (this.draft.themeId || this.phase.kind !== 'cena' || frame) {
-            const tech = THEMES[this.themeId].tech
-            const tx = STAGE.cx + STAGE.techDx
-            const ty = STAGE.cy + STAGE.techDy
-            const halo = this.add.graphics()
-            halo.fillStyle(C.spotlight, 0.28)
-            halo.fillCircle(tx, ty, 46)
-            halo.fillStyle(C.white, 1)
-            halo.fillCircle(tx, ty, 34)
-            halo.lineStyle(4, C.violet, 1)
-            halo.strokeCircle(tx, ty, 34)
+        if (themeChosen) {
+            const th = THEMES[this.themeId]
+            const label = this.add.text(0, 0, th.techLabel, {
+                fontFamily: 'Arial Black, Arial',
+                fontSize: '17px',
+                color: hex(C.violetDark),
+            }).setOrigin(0, 0.5).setResolution(2)
+
+            const pw = label.width + 84
+            const px = box.x + 18
+            const py = box.y + box.h - 40
+            const pill = this.add.graphics()
+            pill.fillStyle(C.white, 0.94)
+            pill.fillRoundedRect(px, py - 24, pw, 48, 24)
+            pill.lineStyle(3, C.violet, 1)
+            pill.strokeRoundedRect(px, py - 24, pw, 48, 24)
+
             const icon = this.add.graphics()
-            this.drawTechIcon(icon, tech, tx, ty, 24, C.violet)
-            this.stageLayer.add([halo, icon])
+            this.drawTechIcon(icon, th.tech, px + 32, py, 17, C.violet)
+            label.setPosition(px + 58, py)
+
+            this.stageLayer.add([pill, icon, label])
         }
 
-        if (line) {
-            this.stageLayer.add(this.buildBalloon(line.text, STAGE.cx + 40, STAGE.y + STAGE.balloonY - STAGE.y))
-        }
+        if (line) this.stageLayer.add(this.buildBalloon(line.text, headX, headY, box))
     }
 
-    private buildBalloon(text: string, cx: number, cy: number) {
+    private buildBalloon(text: string, headX: number, headY: number, box: { x: number; y: number; w: number; h: number }) {
         const layer = this.add.container(0, 0)
-        const t = this.add.text(cx, cy, text, {
+        const bw = BALLOON.w
+        const cx = box.x + box.w - bw / 2 - BALLOON.pad
+
+        const t = this.add.text(cx, 0, text, {
             fontFamily: 'Arial',
             fontStyle: 'bold',
-            fontSize: '19px',
+            fontSize: '20px',
             color: hex(C.ink),
             align: 'center',
-            wordWrap: { width: STAGE.balloonW - 56 },
+            lineSpacing: 4,
+            wordWrap: { width: bw - 58 },
         }).setOrigin(0.5).setResolution(2)
 
-        const bw = STAGE.balloonW
-        const bh = t.height + 44
+        const fullText = text
+        t.setText('')
+        const bh = Math.max(102, t.height + 92)
+        t.setText(fullText)
+        const measuredH = t.height + 54
+        const finalH = Math.max(bh, measuredH)
+        const cy = Phaser.Math.Clamp(headY - 10, box.y + BALLOON.minTop + finalH / 2, box.y + box.h - finalH / 2 - 58)
+        t.setY(cy)
+        t.setText('')
+
+        const left = cx - bw / 2
+        const top = cy - finalH / 2
+        const anchorY = Phaser.Math.Clamp(headY, top + 28, top + finalH - 28)
+
         const g = this.add.graphics()
-        g.fillStyle(C.shadow, 0.2)
-        g.fillRoundedRect(cx - bw / 2 + 3, cy - bh / 2 + 8, bw, bh, 22)
+        g.fillStyle(C.shadow, 0.24)
+        g.fillRoundedRect(left + 5, top + 10, bw, finalH, 28)
         g.fillStyle(C.balloon, 1)
-        g.fillRoundedRect(cx - bw / 2, cy - bh / 2, bw, bh, 22)
+        g.fillTriangle(left + 10, anchorY - 20, left + 10, anchorY + 20, headX + 34, headY)
+        g.fillRoundedRect(left, top, bw, finalH, 28)
+        g.fillStyle(C.violetSoft, 1)
+        g.fillRoundedRect(left + 14, top + 12, bw - 28, 18, 9)
+        g.fillStyle(C.white, A.gloss)
+        g.fillRoundedRect(left + 24, top + 15, bw - 48, 7, 4)
         g.lineStyle(4, C.balloonEdge, 1)
-        g.strokeRoundedRect(cx - bw / 2, cy - bh / 2, bw, bh, 22)
+        g.strokeRoundedRect(left, top, bw, finalH, 28)
+        g.lineBetween(left + 8, anchorY - 19, headX + 34, headY)
+        g.lineBetween(left + 8, anchorY + 19, headX + 34, headY)
         g.fillStyle(C.balloon, 1)
-        g.fillTriangle(cx - bw / 2 + 46, cy + bh / 2 - 4, cx - bw / 2 + 106, cy + bh / 2 - 4, cx - bw / 2 + 34, cy + bh / 2 + 34)
-        g.lineStyle(4, C.balloonEdge, 1)
-        g.lineBetween(cx - bw / 2 + 46, cy + bh / 2 - 2, cx - bw / 2 + 34, cy + bh / 2 + 34)
-        g.lineBetween(cx - bw / 2 + 34, cy + bh / 2 + 34, cx - bw / 2 + 104, cy + bh / 2 - 2)
+        g.fillRect(left + 1, anchorY - 18, 12, 36)
+        g.fillStyle(C.violet, 1)
+        for (let i = 0; i < 3; i++) g.fillCircle(left + 28 + i * 18, top + finalH - 20, 4)
 
         layer.add([g, t])
+        layer.setScale(0.86).setAlpha(0)
+        this.tweens.add({ targets: layer, alpha: 1, scale: 1, duration: 240, ease: 'Back.easeOut' })
+
+        let n = 0
+        this.time.addEvent({
+            delay: 16,
+            repeat: fullText.length - 1,
+            callback: () => {
+                if (!t.active) return
+                n++
+                t.setText(fullText.slice(0, n))
+            },
+        })
+
         return layer
     }
 
     private renderStrip() {
         this.stripLayer.removeAll(true)
+        if (!this.hasStrip) return
 
         this.slots.forEach((slot, i) => {
             const x = this.slotX(i)
@@ -291,50 +427,56 @@ export class GameScene extends Phaser.Scene {
 
             const g = this.add.graphics()
             g.fillStyle(filled ? C.white : C.stageEdge, 1)
-            g.fillRoundedRect(x - w / 2, STRIP.cy - h / 2, w, h, 14)
-            g.lineStyle(active ? 5 : 3, active ? C.amber : filled ? C.violet : C.grey, 1)
-            g.strokeRoundedRect(x - w / 2, STRIP.cy - h / 2, w, h, 14)
+            g.fillRoundedRect(x - w / 2, STRIP.cy - h / 2, w, h, 16)
+            g.lineStyle(active ? 6 : 3, active ? C.amber : filled ? C.violet : C.grey, 1)
+            g.strokeRoundedRect(x - w / 2, STRIP.cy - h / 2, w, h, 16)
 
-            const label = this.add.text(x, STRIP.cy - h / 2 + 20, slot.label, {
+            const num = this.add.graphics()
+            num.fillStyle(filled ? C.violet : C.grey, 1)
+            num.fillCircle(x - w / 2 + 24, STRIP.cy - h / 2 + 24, 15)
+            const numText = this.add.text(x - w / 2 + 24, STRIP.cy - h / 2 + 24, String(i + 1), {
+                fontFamily: 'Arial Black, Arial',
+                fontSize: '16px',
+                color: '#ffffff',
+            }).setOrigin(0.5).setResolution(2)
+
+            const label = this.add.text(x + 12, STRIP.cy - h / 2 + 24, slot.label, {
                 fontFamily: 'Arial Black, Arial',
                 fontSize: '14px',
                 color: hex(filled ? C.violetDark : C.grey),
                 align: 'center',
-                wordWrap: { width: w - 20 },
-            }).setOrigin(0.5, 0).setResolution(2)
+                wordWrap: { width: w - 62 },
+            }).setOrigin(0.5).setResolution(2)
 
-            this.stripLayer.add([g, label])
+            this.stripLayer.add([g, num, numText, label])
 
             if (filled) {
-                const chip = this.add.text(x, STRIP.cy + 22, filled.line.chip, {
+                const chip = this.add.text(x, STRIP.cy + 26, filled.line.chip, {
                     fontFamily: 'Arial',
                     fontStyle: 'bold',
-                    fontSize: '15px',
+                    fontSize: '16px',
                     color: hex(C.ink),
                     align: 'center',
-                    wordWrap: { width: w - 22 },
+                    wordWrap: { width: w - 26 },
                 }).setOrigin(0.5).setResolution(2)
-                const mark = this.add.graphics()
-                mark.fillStyle(C.violet, 1)
-                mark.fillCircle(x + w / 2 - 18, STRIP.cy - h / 2 + 16, 11)
-                mark.lineStyle(3, C.white, 1)
-                mark.beginPath()
-                mark.moveTo(x + w / 2 - 23, STRIP.cy - h / 2 + 16)
-                mark.lineTo(x + w / 2 - 19, STRIP.cy - h / 2 + 21)
-                mark.lineTo(x + w / 2 - 12, STRIP.cy - h / 2 + 11)
-                mark.strokePath()
-                this.stripLayer.add([chip, mark])
+                this.stripLayer.add(chip)
             } else {
                 const plus = this.add.graphics()
-                plus.lineStyle(5, C.grey, 1)
-                plus.lineBetween(x - 14, STRIP.cy + 16, x + 14, STRIP.cy + 16)
-                plus.lineBetween(x, STRIP.cy + 2, x, STRIP.cy + 30)
-                this.stripLayer.add(plus)
+                plus.lineStyle(6, C.grey, 1)
+                plus.lineBetween(x - 16, STRIP.cy + 24, x + 16, STRIP.cy + 24)
+                plus.lineBetween(x, STRIP.cy + 8, x, STRIP.cy + 40)
+                const tap = this.add.text(x, STRIP.cy + 54, 'toque', {
+                    fontFamily: 'Arial',
+                    fontStyle: 'bold',
+                    fontSize: '13px',
+                    color: hex(C.grey),
+                }).setOrigin(0.5).setResolution(2)
+                this.stripLayer.add([plus, tap])
             }
 
             const zone = this.add.zone(x, STRIP.cy, w, h).setInteractive({ useHandCursor: true })
             zone.on('pointerdown', () => {
-                if (this.locked || this.slots.length === 1) return
+                if (this.locked || i === this.slotIdx) return
                 this.slotIdx = i
                 this.resetDraft()
                 this.renderStage()
@@ -346,75 +488,145 @@ export class GameScene extends Phaser.Scene {
     }
 
     private renderPanel() {
-        this.choiceLayer.removeAll(true)
+        this.panelLayer.removeAll(true)
 
         const g = this.add.graphics()
         g.fillStyle(C.shadow, A.shadow)
-        g.fillRoundedRect(CHOICE.x + 4, CHOICE.y + 10, CHOICE.w, CHOICE.h, 26)
+        g.fillRoundedRect(PANEL.x + 5, PANEL.y + 12, PANEL.w, PANEL.h, 28)
         g.fillStyle(C.panel, 1)
-        g.fillRoundedRect(CHOICE.x, CHOICE.y, CHOICE.w, CHOICE.h, 26)
-        g.lineStyle(3, C.border, 1)
-        g.strokeRoundedRect(CHOICE.x, CHOICE.y, CHOICE.w, CHOICE.h, 26)
-        this.choiceLayer.add(g)
+        g.fillRoundedRect(PANEL.x, PANEL.y, PANEL.w, PANEL.h, 28)
+        g.lineStyle(4, C.border, 1)
+        g.strokeRoundedRect(PANEL.x, PANEL.y, PANEL.w, PANEL.h, 28)
+        this.panelLayer.add(g)
 
         if (this.mode === 'ready') return this.renderReadyPanel()
         if (this.mode === 'message') return this.renderMessagePanel()
         this.renderStepPanel()
     }
 
-    private panelHeader(title: string, hint: string) {
-        const t = this.add.text(CHOICE.cx, CHOICE.headerY, title, {
+    private stepPill(text: string, tone = C.violet) {
+        const t = this.add.text(PANEL.cx, PANEL.stepPillY, text, {
             fontFamily: 'Arial Black, Arial',
-            fontSize: '26px',
-            color: hex(C.violetDark),
-            align: 'center',
-            wordWrap: { width: CHOICE.w - 70 },
+            fontSize: '16px',
+            color: hex(C.white),
         }).setOrigin(0.5).setResolution(2)
 
-        const h = this.add.text(CHOICE.cx, CHOICE.hintY, hint, {
-            fontFamily: 'Arial',
-            fontStyle: 'bold',
-            fontSize: '18px',
-            color: hex(C.inkSoft),
-            align: 'center',
-            wordWrap: { width: CHOICE.w - 80 },
-        }).setOrigin(0.5).setResolution(2)
+        const pw = t.width + 52
+        const g = this.add.graphics()
+        g.fillStyle(tone, 1)
+        g.fillRoundedRect(PANEL.cx - pw / 2, PANEL.stepPillY - 19, pw, 38, 19)
+        g.fillStyle(C.white, A.gloss)
+        g.fillRoundedRect(PANEL.cx - pw / 2 + 8, PANEL.stepPillY - 14, pw - 16, 12, 6)
 
-        this.choiceLayer.add([t, h])
+        this.panelLayer.add([g, t])
     }
 
-    private stepDots() {
-        const total = this.steps.length
+    private panelHeader(title: string, hint: string) {
+        const t = this.add.text(PANEL.cx, PANEL.titleY, title, {
+            fontFamily: 'Arial Black, Arial',
+            fontSize: '27px',
+            color: hex(C.violetDark),
+            align: 'center',
+            wordWrap: { width: PANEL.w - 70 },
+        }).setOrigin(0.5).setResolution(2)
+
+        const hintW = PANEL.w - 72
+        const hintH = 58
+        const hb = this.add.graphics()
+        hb.fillStyle(C.amberSoft, 1)
+        hb.fillRoundedRect(PANEL.cx - hintW / 2, PANEL.hintY - hintH / 2, hintW, hintH, 18)
+        hb.lineStyle(3, C.amber, 0.85)
+        hb.strokeRoundedRect(PANEL.cx - hintW / 2, PANEL.hintY - hintH / 2, hintW, hintH, 18)
+        hb.fillStyle(C.amber, 1)
+        hb.fillCircle(PANEL.cx - hintW / 2 + 31, PANEL.hintY, 15)
+        hb.fillStyle(C.white, A.gloss)
+        hb.fillCircle(PANEL.cx - hintW / 2 + 26, PANEL.hintY - 5, 5)
+
+        const mark = this.add.text(PANEL.cx - hintW / 2 + 31, PANEL.hintY - 1, '!', {
+            fontFamily: 'Arial Black, Arial',
+            fontSize: '21px',
+            color: '#ffffff',
+        }).setOrigin(0.5).setResolution(2)
+
+        const h = this.add.text(PANEL.cx - hintW / 2 + 58, PANEL.hintY, hint, {
+            fontFamily: 'Arial',
+            fontStyle: 'bold',
+            fontSize: '17px',
+            color: hex(C.ink),
+            wordWrap: { width: hintW - 82 },
+        }).setOrigin(0, 0.5).setResolution(2)
+
+        this.panelLayer.add([t, hb, mark, h])
+    }
+
+    private backButton() {
+        const canGoBack = this.stepIdx > 0
+        const btn = this.button(PANEL.backX, PANEL.backY, 218, 54, 'Voltar', canGoBack ? C.violet : C.grey, () => {
+            if (!canGoBack) return
+            this.stepIdx--
+            const step = this.steps[this.stepIdx]
+            if (step === 'tema') this.draft.themeId = undefined
+            if (step === 'personagem') this.draft.charId = undefined
+            if (step === 'cenario') this.draft.sceneryId = undefined
+            this.draft.line = undefined
+            this.renderStage()
+            this.renderPanel()
+        }, '18px')
+        btn.setAlpha(canGoBack ? 1 : 0.55)
+        this.panelLayer.add(btn)
+    }
+
+    private renderFooter(text: string) {
+        const fx = 1094
+        const fy = PANEL.footerY
+        const fw = 286
+        const fh = 54
         const g = this.add.graphics()
-        const firstX = CHOICE.cx - ((total - 1) * 26) / 2
-        for (let i = 0; i < total; i++) {
-            const done = i < this.stepIdx
-            const active = i === this.stepIdx
-            g.fillStyle(active ? C.amber : done ? C.violet : C.greySoft, 1)
-            g.fillCircle(firstX + i * 26, CHOICE.y + 34, active ? 9 : 7)
-        }
-        this.choiceLayer.add(g)
+        g.fillStyle(C.violetSoft, 1)
+        g.fillRoundedRect(fx - fw / 2, fy - fh / 2, fw, fh, 18)
+        g.lineStyle(3, C.border, 1)
+        g.strokeRoundedRect(fx - fw / 2, fy - fh / 2, fw, fh, 18)
+
+        const icon = this.add.graphics()
+        icon.fillStyle(C.violet, 1)
+        icon.fillCircle(fx - fw / 2 + 28, fy, 14)
+        icon.lineStyle(3, C.white, 1)
+        icon.lineBetween(fx - fw / 2 + 22, fy, fx - fw / 2 + 34, fy)
+        icon.lineBetween(fx - fw / 2 + 28, fy - 6, fx - fw / 2 + 28, fy + 6)
+
+        const label = this.add.text(fx - fw / 2 + 50, fy, text, {
+            fontFamily: 'Arial',
+            fontStyle: 'bold',
+            fontSize: '14px',
+            color: hex(C.violetDark),
+            wordWrap: { width: fw - 66 },
+        }).setOrigin(0, 0.5).setResolution(2)
+
+        this.panelLayer.add([g, icon, label])
     }
 
     private renderStepPanel() {
-        this.stepDots()
         const step = this.steps[this.stepIdx]
         const p = this.phase
+        this.stepPill(`PASSO ${this.stepIdx + 1} DE ${this.steps.length}`)
 
         if (step === 'tema' && p.kind === 'cena') {
-            this.panelHeader('Qual é o tema?', 'Escolha a mudança que a sua cena vai mostrar.')
-            p.themeOptions.forEach((id, i) => {
+            this.panelHeader('Qual e o tema?', 'Escolha a mudanca que a sua cena vai mostrar.')
+            p.themeOptions.slice(0, 3).forEach((id, i) => {
                 const th = THEMES[id]
                 this.addOption(i, th.label, th.headline, () => {
                     this.draft.themeId = id
+                    this.renderStage()
                     this.advanceStep()
                 }, icon => this.drawTechIcon(icon, th.tech, 0, 0, 20, C.violet))
             })
+            this.backButton()
+            this.renderFooter('Tema escolhido: agora defina quem vive essa mudanca.')
             return
         }
 
         if (step === 'personagem') {
-            this.panelHeader('Quem aparece na cena?', 'Pense em quem vive essa mudança de perto.')
+            this.panelHeader('Quem aparece na cena?', 'Pense em quem vive essa mudanca de perto.')
             this.availableCharacters().forEach((id, i) => {
                 const ch = CHARACTERS[id]
                 this.addOption(i, ch.voice, ch.label, () => {
@@ -423,18 +635,22 @@ export class GameScene extends Phaser.Scene {
                     this.advanceStep()
                 })
             })
+            this.backButton()
+            this.renderFooter('Escolha alguem que combine com o impacto da tecnologia.')
             return
         }
 
         if (step === 'cenario') {
-            this.panelHeader('Onde a cena acontece?', 'O lugar ajuda a contar a história.')
-            this.phase.sceneryOptions.slice(0, 4).forEach((id, i) => {
+            this.panelHeader('Onde a cena acontece?', 'O lugar tambem conta a historia.')
+            this.phase.sceneryOptions.slice(0, 3).forEach((id, i) => {
                 this.addOption(i, SCENERIES[id].label, '', () => {
                     this.draft.sceneryId = id
                     this.renderStage()
                     this.advanceStep()
                 })
             })
+            this.backButton()
+            this.renderFooter('O cenario ajuda a mostrar se a mudanca e em casa, na rua ou no trabalho.')
             return
         }
 
@@ -446,132 +662,189 @@ export class GameScene extends Phaser.Scene {
                 this.saveFrame()
             })
         })
+        this.backButton()
+        this.renderFooter('A fala vale mais quando mostra mudanca e tambem algum cuidado.')
     }
 
     private renderMessagePanel() {
-        this.panelHeader('Qual é a sua mensagem final?', 'Junte os dois pontos de vista em uma opinião sua.')
+        this.stepPill('ULTIMO PASSO', C.amber)
+        this.panelHeader('Qual e a sua mensagem final?', 'Junte os dois pontos de vista em uma opiniao sua.')
+
         const options = THEMES[this.themeId].messages ?? []
         options.forEach((option, i) => {
             this.addOption(i, option.chip, option.text, () => {
                 this.message = option
                 this.mode = 'ready'
                 this.renderPanel()
-            })
+            }, undefined, MESSAGE_LIST)
         })
+        this.renderFooter('Procure uma mensagem equilibrada: ganho, limite e opiniao.')
     }
 
     private renderReadyPanel() {
-        const p = this.phase
-        this.panelHeader('História pronta', p.kind === 'cena'
-            ? 'Confira a cena ao lado e publique quando gostar dela.'
-            : 'Toque em um quadro do storyboard para refazer, ou publique.')
+        this.stepPill('TUDO PRONTO', C.green)
+        this.panelHeader('Confira a sua historia', this.hasStrip
+            ? 'Toque em um quadro do storyboard para refazer, ou publique.'
+            : 'Veja a cena ao lado e publique quando gostar dela.')
+
+        const y = PANEL.optionFirstY - 16
 
         if (this.message) {
-            const box = this.add.graphics()
-            const msg = this.add.text(CHOICE.cx, CHOICE.optionFirstY + 20, this.message.text, {
+            const msg = this.add.text(PANEL.cx, y + 40, this.message.text, {
                 fontFamily: 'Arial',
                 fontStyle: 'bold',
-                fontSize: '20px',
+                fontSize: '21px',
                 color: hex(C.ink),
                 align: 'center',
-                wordWrap: { width: CHOICE.optionW - 60 },
+                wordWrap: { width: PANEL.optionW - 64 },
             }).setOrigin(0.5).setResolution(2)
-            const bh = msg.height + 56
-            box.fillStyle(C.amberSoft, 1)
-            box.fillRoundedRect(CHOICE.cx - CHOICE.optionW / 2, msg.y - bh / 2, CHOICE.optionW, bh, 20)
-            box.lineStyle(3, C.amber, 1)
-            box.strokeRoundedRect(CHOICE.cx - CHOICE.optionW / 2, msg.y - bh / 2, CHOICE.optionW, bh, 20)
-            this.choiceLayer.add([box, msg])
 
-            const redo = this.button(CHOICE.cx, msg.y + bh / 2 + 52, 300, 58, 'Trocar mensagem', C.grey, () => {
+            const bh = msg.height + 60
+            msg.setY(y + bh / 2)
+            const box = this.add.graphics()
+            box.fillStyle(C.amberSoft, 1)
+            box.fillRoundedRect(PANEL.cx - PANEL.optionW / 2, y, PANEL.optionW, bh, 22)
+            box.lineStyle(4, C.amber, 1)
+            box.strokeRoundedRect(PANEL.cx - PANEL.optionW / 2, y, PANEL.optionW, bh, 22)
+            this.panelLayer.add([box, msg])
+
+            const redo = this.button(PANEL.cx, y + bh + 52, 280, 58, 'Trocar mensagem', C.grey, () => {
                 this.message = undefined
                 this.mode = 'message'
                 this.renderPanel()
-            }, '19px')
-            this.choiceLayer.add(redo)
+            }, '18px')
+            this.panelLayer.add(redo)
         } else {
-            const preview = this.add.text(CHOICE.cx, CHOICE.optionFirstY + 60, this.frames
-                .map((f, i) => `${this.slots[i].label}: ${f ? f.line.chip : '—'}`)
-                .join('\n'), {
-                fontFamily: 'Arial',
-                fontStyle: 'bold',
-                fontSize: '20px',
-                color: hex(C.inkSoft),
-                align: 'center',
-                lineSpacing: 14,
-            }).setOrigin(0.5).setResolution(2)
-            this.choiceLayer.add(preview)
+            this.frames.forEach((f, i) => {
+                const rowY = y + 24 + i * 62
+                const dot = this.add.graphics()
+                dot.fillStyle(C.violet, 1)
+                dot.fillCircle(PANEL.cx - PANEL.optionW / 2 + 26, rowY, 14)
+                const num = this.add.text(PANEL.cx - PANEL.optionW / 2 + 26, rowY, String(i + 1), {
+                    fontFamily: 'Arial Black, Arial',
+                    fontSize: '15px',
+                    color: '#ffffff',
+                }).setOrigin(0.5).setResolution(2)
+                const label = this.add.text(PANEL.cx - PANEL.optionW / 2 + 54, rowY - 11, this.slots[i].label, {
+                    fontFamily: 'Arial Black, Arial',
+                    fontSize: '16px',
+                    color: hex(C.violetDark),
+                }).setOrigin(0, 0.5).setResolution(2)
+                const chip = this.add.text(PANEL.cx - PANEL.optionW / 2 + 54, rowY + 12, f ? f.line.chip : '-', {
+                    fontFamily: 'Arial',
+                    fontStyle: 'bold',
+                    fontSize: '17px',
+                    color: hex(C.inkSoft),
+                    wordWrap: { width: PANEL.optionW - 90 },
+                }).setOrigin(0, 0.5).setResolution(2)
+                this.panelLayer.add([dot, num, label, chip])
+            })
         }
 
-        const publish = this.button(CHOICE.cx, CHOICE.actionY, CHOICE.actionW, CHOICE.actionH, 'PUBLICAR HISTÓRIA', C.green, () => {
+        const back = this.button(820, PANEL.actionY, 218, 58, 'Voltar', C.violet, () => {
+            this.backFromReady()
+        }, '18px')
+        const publish = this.button(1086, PANEL.actionY, 306, 58, 'PUBLICAR', C.green, () => {
             this.locked = true
             this.playStory(() => this.showReport())
-        }, '23px')
-        this.choiceLayer.add(publish)
+        }, '21px')
+        this.panelLayer.add([back, publish])
     }
 
+    private backFromReady() {
+        if (this.locked) return
+
+        if (this.message) {
+            this.message = undefined
+            this.mode = 'message'
+            this.renderPanel()
+            return
+        }
+
+        const last = Math.max(0, this.frames.map(f => f !== undefined).lastIndexOf(true))
+        this.slotIdx = last
+        this.frames[this.slotIdx] = undefined
+        this.resetDraft()
+        this.renderStage()
+        this.renderStrip()
+        this.renderPanel()
+    }
     private addOption(
         index: number,
         title: string,
         subtitle: string,
         onClick: () => void,
         drawIcon?: (g: Phaser.GameObjects.Graphics) => void,
+        geo: { optionH: number; optionGap: number; optionFirstY: number } = PANEL,
     ) {
-        const y = CHOICE.optionFirstY + index * CHOICE.optionGap
-        const w = CHOICE.optionW
-        const h = CHOICE.optionH
-        const row = this.add.container(CHOICE.cx, y)
+        const y = geo.optionFirstY + index * geo.optionGap
+        const w = PANEL.optionW
+        const h = geo.optionH
+        const row = this.add.container(PANEL.cx, y)
 
         const g = this.add.graphics()
         g.fillStyle(C.panelSoft, 1)
-        g.fillRoundedRect(-w / 2, -h / 2, w, h, 20)
+        g.fillRoundedRect(-w / 2, -h / 2, w, h, 22)
         g.lineStyle(3, C.border, 1)
-        g.strokeRoundedRect(-w / 2, -h / 2, w, h, 20)
+        g.strokeRoundedRect(-w / 2, -h / 2, w, h, 22)
         g.fillStyle(C.violet, 1)
-        g.fillRoundedRect(-w / 2 + 14, -h / 2 + 14, 10, h - 28, 5)
+        g.fillRoundedRect(-w / 2 + 16, -h / 2 + 16, 10, h - 32, 5)
 
-        const textX = drawIcon ? -w / 2 + 82 : -w / 2 + 44
         const objects: Phaser.GameObjects.GameObject[] = [g]
+        const textX = drawIcon ? -w / 2 + 92 : -w / 2 + 48
 
         if (drawIcon) {
             const badge = this.add.graphics()
             badge.fillStyle(C.violetSoft, 1)
-            badge.fillCircle(-w / 2 + 54, 0, 22)
+            badge.fillCircle(-w / 2 + 60, 0, 25)
             const icon = this.add.graphics()
-            icon.setPosition(-w / 2 + 54, 0)
+            icon.setPosition(-w / 2 + 60, 0)
             drawIcon(icon)
             objects.push(badge, icon)
         }
 
-        const t = this.add.text(textX, subtitle ? -12 : 0, title, {
+        const wrap = w / 2 - textX - 28
+        const t = this.add.text(textX, subtitle ? -h / 2 + 26 : 0, title, {
             fontFamily: 'Arial Black, Arial',
-            fontSize: '20px',
+            fontSize: '21px',
             color: hex(C.ink),
-            wordWrap: { width: w - (textX + w / 2) - 26 },
-        }).setOrigin(0, 0.5).setResolution(2)
+            wordWrap: { width: wrap },
+        }).setOrigin(0, subtitle ? 0.5 : 0.5).setResolution(2)
         objects.push(t)
 
         if (subtitle) {
-            const s = this.add.text(textX, 15, subtitle, {
+            const compactSubtitle = subtitle.length > 76 ? `${subtitle.slice(0, 73)}...` : subtitle
+            const s = this.add.text(textX, -h / 2 + 26 + t.height / 2 + 12, compactSubtitle, {
                 fontFamily: 'Arial',
                 fontStyle: 'bold',
-                fontSize: '16px',
+                fontSize: '14px',
                 color: hex(C.inkSoft),
-                wordWrap: { width: w - (textX + w / 2) - 26 },
-            }).setOrigin(0, 0.5).setResolution(2)
+                lineSpacing: -2,
+                wordWrap: { width: wrap },
+            }).setOrigin(0, 0).setResolution(2)
             objects.push(s)
         }
 
         row.add(objects)
         row.setSize(w, h)
+        row.setAlpha(0)
+        row.x = PANEL.cx + 22
         row.setInteractive({ useHandCursor: true })
+        row.on('pointerover', () => {
+            if (this.locked) return
+            this.tweens.add({ targets: row, scale: 1.025, duration: 120, ease: 'Sine.easeOut' })
+        })
+        row.on('pointerout', () => {
+            this.tweens.add({ targets: row, scale: 1, duration: 120, ease: 'Sine.easeOut' })
+        })
         row.on('pointerdown', () => {
             if (this.locked) return
             this.tweens.add({ targets: row, scale: 0.97, duration: 70, yoyo: true })
             onClick()
         })
 
-        this.choiceLayer.add(row)
+        this.panelLayer.add(row)
+        this.tweens.add({ targets: row, x: PANEL.cx, alpha: 1, duration: 220, delay: index * 45, ease: 'Back.easeOut' })
     }
 
     private availableCharacters(): CharId[] {
@@ -580,7 +853,7 @@ export class GameScene extends Phaser.Scene {
             .filter((f, i) => f && this.slots[i].speaker && this.slots[i].speaker !== slot.speaker)
             .map(f => f!.charId)
         const list = this.phase.characterOptions.filter(id => !used.includes(id))
-        return list.slice(0, 4)
+        return (list.length >= 2 ? list : this.phase.characterOptions).slice(0, 3)
     }
 
     private availableLines(): LineOption[] {
@@ -588,7 +861,7 @@ export class GameScene extends Phaser.Scene {
         const pool = THEMES[this.themeId].lines[slot.moment] ?? []
         const used = this.frames.filter((f, i) => f && i !== this.slotIdx).map(f => f!.line.id)
         const list = pool.filter(l => !used.includes(l.id))
-        return list.length >= 3 ? list.slice(0, 4) : pool.slice(0, 4)
+        return (list.length >= 3 ? list : pool).slice(0, 3)
     }
 
     private advanceStep() {
@@ -610,7 +883,7 @@ export class GameScene extends Phaser.Scene {
         this.flashSlot(this.slotIdx)
 
         const next = this.frames.findIndex(f => f === undefined)
-        this.time.delayedCall(340, () => {
+        this.time.delayedCall(420, () => {
             if (next >= 0) {
                 this.slotIdx = next
                 this.resetDraft()
@@ -626,16 +899,12 @@ export class GameScene extends Phaser.Scene {
     }
 
     private flashSlot(i: number) {
+        if (!this.hasStrip) return
         const flash = this.add.graphics().setDepth(120)
         const x = this.slotX(i)
-        flash.fillStyle(C.spotlight, 0.8)
-        flash.fillRoundedRect(x - STRIP.slotW / 2, STRIP.cy - STRIP.slotH / 2, STRIP.slotW, STRIP.slotH, 14)
-        this.tweens.add({
-            targets: flash,
-            alpha: 0,
-            duration: 420,
-            onComplete: () => flash.destroy(),
-        })
+        flash.fillStyle(C.spotlight, 0.75)
+        flash.fillRoundedRect(x - STRIP.slotW / 2, STRIP.cy - STRIP.slotH / 2, STRIP.slotW, STRIP.slotH, 16)
+        this.tweens.add({ targets: flash, alpha: 0, duration: 460, onComplete: () => flash.destroy() })
     }
 
     private computeScore(): Score {
@@ -650,7 +919,7 @@ export class GameScene extends Phaser.Scene {
             })
         })
 
-        if (this.slots.length > 1) {
+        if (this.hasStrip) {
             const moments = new Set(this.frames.filter(Boolean).map(f => f!.moment))
             const weak = this.frames.some(f => f && f.line.score.mudanca === 0)
             if (moments.size < 2 || weak) score.mudanca = Math.min(score.mudanca, 1)
@@ -660,42 +929,46 @@ export class GameScene extends Phaser.Scene {
     }
 
     private playStory(onDone: () => void) {
-        const veil = this.add.rectangle(W / 2, H / 2, W, H, C.stage, 0.55).setDepth(300).setInteractive()
-        const board = this.add.container(0, 0).setDepth(301)
-
         const original = this.slotIdx
-        let i = 0
+        const veil = this.add.rectangle(W / 2, H / 2, W, H, C.stage, 0.5).setDepth(200).setInteractive()
+        const rec = this.add.container(this.stage.x + this.stage.w - 96, this.stage.y - 34).setDepth(201)
+        const recG = this.add.graphics()
+        recG.fillStyle(C.red, 1)
+        recG.fillCircle(-40, 0, 11)
+        rec.add([recG, this.add.text(-20, 0, 'GRAVANDO', {
+            fontFamily: 'Arial Black, Arial',
+            fontSize: '17px',
+            color: hex(C.spotlight),
+        }).setOrigin(0, 0.5).setResolution(2)])
+        this.tweens.add({ targets: recG, alpha: 0.2, duration: 420, yoyo: true, repeat: -1 })
 
+        this.stageLayer.setDepth(210)
+        this.stripLayer.setDepth(210)
+
+        let i = 0
         const step = () => {
             if (i >= this.frames.length) {
                 this.slotIdx = original
-                this.time.delayedCall(500, () => {
+                this.time.delayedCall(520, () => {
                     veil.destroy()
-                    board.destroy()
+                    rec.destroy()
+                    this.stageLayer.setDepth(10)
+                    this.stripLayer.setDepth(20)
                     this.renderStage()
+                    this.renderStrip()
                     onDone()
                 })
                 return
             }
             this.slotIdx = i
             this.renderStage()
+            this.renderStrip()
             this.stageLayer.setAlpha(0)
-            this.tweens.add({ targets: this.stageLayer, alpha: 1, duration: 260 })
+            this.tweens.add({ targets: this.stageLayer, alpha: 1, duration: 280 })
             this.flashSlot(i)
             i++
-            this.time.delayedCall(1150, step)
+            this.time.delayedCall(1250, step)
         }
-
-        const light = this.add.graphics().setDepth(302)
-        light.fillStyle(C.spotlight, 0.22)
-        light.fillTriangle(STAGE.cx, STAGE.y - 40, STAGE.x - 20, STAGE.y + STAGE.h, STAGE.x + STAGE.w + 20, STAGE.y + STAGE.h)
-        this.tweens.add({ targets: light, alpha: 0, duration: 1600, delay: 400, onComplete: () => light.destroy() })
-
-        board.add(this.add.text(STAGE.cx, STRIP.cy, 'GRAVANDO...', {
-            fontFamily: 'Arial Black, Arial',
-            fontSize: '26px',
-            color: hex(C.spotlight),
-        }).setOrigin(0.5).setResolution(2))
 
         step()
     }
@@ -707,7 +980,6 @@ export class GameScene extends Phaser.Scene {
         this.points += earned
         const strong = total >= 5
 
-        EventBus.emit('seals-update', score)
         runtimeGameBridge.emit({
             type: strong ? 'CORRECT_ANSWER' : 'WRONG_ANSWER',
             gameId: GAME_ID,
@@ -719,92 +991,82 @@ export class GameScene extends Phaser.Scene {
             .setDepth(700).setInteractive()
         const modal = this.add.container(W / 2, H / 2).setDepth(701)
 
-        const rows: Phaser.GameObjects.GameObject[] = []
-        let cursor = 128
-
-        CRITERIA.forEach(def => {
-            const value = score[def.id]
-            const tone = value >= 2 ? CRITERION_COLOR[def.id] : value === 1 ? C.amber : C.grey
-
-            const bar = this.add.graphics()
-            bar.fillStyle(C.greySoft, 1)
-            bar.fillRoundedRect(-296, cursor + 6, 592, 60, 18)
-            bar.fillStyle(tone, value === 0 ? 0.18 : 0.22)
-            bar.fillRoundedRect(-296, cursor + 6, 592 * ((value + 1) / 3), 60, 18)
-            bar.fillStyle(tone, 1)
-            bar.fillCircle(-262, cursor + 36, 20)
-
-            const icon = this.add.graphics()
-            this.drawSealIcon(icon, def.id, -262, cursor + 36, 13, C.white)
-
-            const name = this.add.text(-226, cursor + 22, def.name, {
-                fontFamily: 'Arial Black, Arial',
-                fontSize: '20px',
-                color: hex(tone),
-            }).setOrigin(0, 0.5).setResolution(2)
-
-            const hint = this.add.text(-226, cursor + 48, def.question, {
-                fontFamily: 'Arial',
-                fontStyle: 'bold',
-                fontSize: '15px',
-                color: hex(C.inkSoft),
-                wordWrap: { width: 380 },
-            }).setOrigin(0, 0.5).setResolution(2)
-
-            const tag = this.add.text(268, cursor + 36, SCORE_LABEL(value * 2), {
-                fontFamily: 'Arial Black, Arial',
-                fontSize: '13px',
-                color: hex(tone),
-            }).setOrigin(1, 0.5).setResolution(2)
-
-            rows.push(bar, icon, name, hint, tag)
-            cursor += 76
-        })
-
-        const weakest = CRITERIA.reduce((a, b) => (score[a.id] <= score[b.id] ? a : b))
-        const feedbackSource = this.pickFeedback(score, weakest.id)
-
-        const note = this.add.text(0, 0, feedbackSource, {
+        const note = this.add.text(0, 0, this.pickFeedback(score), {
             fontFamily: 'Arial',
             fontStyle: 'bold',
-            fontSize: '19px',
+            fontSize: '20px',
             color: hex(C.ink),
             align: 'center',
-            wordWrap: { width: 580 },
+            wordWrap: { width: 560 },
         }).setOrigin(0.5).setResolution(2)
 
-        cursor += 20
-        note.setY(cursor + note.height / 2)
-        cursor += note.height + 40
-
-        const PH = cursor + 100
+        const PH = note.height + 396
         const top = -PH / 2
         const tone = strong ? C.green : C.amber
 
         const bg = this.add.graphics()
         bg.fillStyle(C.shadow, 0.22)
-        bg.fillRoundedRect(-340, top + 12, 680, PH, 28)
+        bg.fillRoundedRect(-330, top + 12, 660, PH, 30)
         bg.fillStyle(C.panel, 1)
-        bg.fillRoundedRect(-340, top, 680, PH, 28)
+        bg.fillRoundedRect(-330, top, 660, PH, 30)
         bg.lineStyle(5, tone, 1)
-        bg.strokeRoundedRect(-340, top, 680, PH, 28)
+        bg.strokeRoundedRect(-330, top, 660, PH, 30)
         bg.fillStyle(tone, 1)
         bg.fillRoundedRect(-170, top - 15, 340, 28, 14)
 
-        const title = this.add.text(0, top + 58, strong ? 'História publicada!' : 'Publicada, mas dá para ir além', {
+        const title = this.add.text(0, top + 62, strong ? 'Historia publicada!' : 'Publicada, mas da para ir alem', {
             fontFamily: 'Arial Black, Arial',
-            fontSize: strong ? '32px' : '26px',
+            fontSize: strong ? '34px' : '28px',
             color: hex(C.violetDark),
             align: 'center',
-            wordWrap: { width: 580 },
-        }).setOrigin(0.5).setResolution(2);
+            wordWrap: { width: 560 },
+        }).setOrigin(0.5).setResolution(2)
 
-        [...rows, note].forEach(o => {
-            const obj = o as Phaser.GameObjects.Text
-            obj.setY(obj.y + top)
+        const seals: Phaser.GameObjects.GameObject[] = []
+        const sealY = top + 172
+        CRITERIA.forEach((def, i) => {
+            const x = -190 + i * 190
+            const value = score[def.id]
+            const on = value >= 2
+            const half = value === 1
+            const sealTone = on ? CRITERION_COLOR[def.id] : half ? C.amber : C.grey
+            const r = 38
+
+            const g = this.add.graphics()
+            g.fillStyle(C.shadow, 0.16)
+            g.fillCircle(x + 2, sealY + 6, r)
+            g.fillStyle(on ? sealTone : half ? C.amberSoft : C.greySoft, 1)
+            g.fillCircle(x, sealY, r)
+            g.lineStyle(4, sealTone, 1)
+            g.strokeCircle(x, sealY, r - 8)
+            for (let k = 0; k < 12; k++) {
+                const a = (Math.PI * 2 * k) / 12
+                g.fillStyle(on ? sealTone : half ? C.amberSoft : C.greySoft, 1)
+                g.fillCircle(x + Math.cos(a) * r, sealY + Math.sin(a) * r, 5)
+            }
+
+            const icon = this.add.graphics()
+            this.drawSealIcon(icon, def.id, x, sealY, 19, on ? C.white : sealTone)
+
+            const name = this.add.text(x, sealY + 60, def.name, {
+                fontFamily: 'Arial Black, Arial',
+                fontSize: '19px',
+                color: hex(sealTone),
+            }).setOrigin(0.5).setResolution(2)
+
+            const tag = this.add.text(x, sealY + 84, SCORE_LABEL(value * 2), {
+                fontFamily: 'Arial',
+                fontStyle: 'bold',
+                fontSize: '14px',
+                color: hex(C.inkSoft),
+            }).setOrigin(0.5).setResolution(2)
+
+            seals.push(g, icon, name, tag)
         })
 
-        const canRedo = !strong && this.slots.length > 1
+        note.setY(sealY + 128 + note.height / 2)
+
+        const canRedo = !strong
         const buttons: Phaser.GameObjects.Container[] = []
 
         const finish = (redo: boolean) => {
@@ -813,7 +1075,6 @@ export class GameScene extends Phaser.Scene {
             mascote.destroy()
             if (redo) {
                 this.points -= earned
-                EventBus.emit('seals-hide')
                 this.slotIdx = 0
                 this.frames = this.slots.map(() => undefined)
                 this.message = undefined
@@ -828,31 +1089,30 @@ export class GameScene extends Phaser.Scene {
         }
 
         if (canRedo) {
-            buttons.push(this.button(-158, PH / 2 - 54, 292, 64, 'Refazer a história', C.violet, () => finish(true), '20px', true))
-            buttons.push(this.button(158, PH / 2 - 54, 292, 64, 'Continuar assim', C.grey, () => finish(false), '20px', true))
+            buttons.push(this.button(-152, PH / 2 - 58, 288, 68, 'Refazer a historia', C.violet, () => finish(true), '20px', true))
+            buttons.push(this.button(152, PH / 2 - 58, 288, 68, 'Continuar assim', C.grey, () => finish(false), '20px', true))
         } else {
-            buttons.push(this.button(0, PH / 2 - 54, 300, 64, 'Continuar', C.green, () => finish(false), '21px', true))
+            buttons.push(this.button(0, PH / 2 - 58, 320, 68, 'Continuar', C.green, () => finish(false), '22px', true))
         }
 
         const mascote = this.add.image(W / 2 - 330, H / 2 + top + MASCOTE.h / 2 - 26, strong ? 'mascote-reacao' : 'mascote-normal')
             .setDisplaySize(MASCOTE.w, MASCOTE.h).setDepth(702)
 
-        modal.add([bg, title, ...rows, note, ...buttons])
+        modal.add([bg, title, ...seals, note, ...buttons])
         modal.setScale(0.92).setAlpha(0)
         mascote.setAlpha(0)
         this.tweens.add({ targets: modal, alpha: 1, scale: 1, duration: 240, ease: 'Back.easeOut' })
         this.tweens.add({ targets: mascote, alpha: 1, duration: 240 })
     }
 
-    private pickFeedback(score: Score, weakest: CriterionId) {
-        if (score.clareza + score.mudanca + score.reflexao >= MAX_SCORE - 1) {
-            return this.message
-                ? this.message.why
-                : this.frames.filter(Boolean).map(f => f!.line.why)[0] ?? ''
+    private pickFeedback(score: Score) {
+        const weakest = CRITERIA.reduce((a, b) => (score[a.id] <= score[b.id] ? a : b))
+        if (score.clareza + score.mudanca + score.reflexao >= 5) {
+            return this.message?.why ?? this.frames.filter(Boolean).map(f => f!.line.why)[0] ?? ''
         }
-        if (weakest === 'clareza') return 'Falta dizer qual tecnologia está em cena. Uma fala que cita o aparelho deixa isso claro.'
-        if (weakest === 'mudanca') return 'A história ainda não mostra o que ficou diferente. Compare como era antes e como é agora.'
-        return 'Toda mudança tem um ganho e um cuidado. Uma fala que mostra os dois lados vira opinião crítica.'
+        if (weakest.id === 'clareza') return 'Falta dizer qual tecnologia esta em cena. Uma fala que cita o aparelho deixa isso claro.'
+        if (weakest.id === 'mudanca') return 'A historia ainda nao mostra o que ficou diferente. Compare como era antes e como e agora.'
+        return 'Toda mudanca tem um ganho e um cuidado. Uma fala que mostra os dois lados vira opiniao critica.'
     }
 
     private completePhase() {
@@ -866,7 +1126,7 @@ export class GameScene extends Phaser.Scene {
 
         if (!isLastLevel) {
             showLevelComplete(this, {
-                subtitle: `Nível ${this.level.level} concluído`,
+                subtitle: `Nivel ${this.level.level} concluido`,
                 message: LEVELS[this.levelIdx + 1].objective,
                 accent: C.violet,
                 overlayColor: C.shadow,
@@ -887,12 +1147,11 @@ export class GameScene extends Phaser.Scene {
 
         this.ended = true
         runtimeGameBridge.emit({ type: 'GAME_COMPLETED', gameId: GAME_ID, stage: this.level.level })
-        runtimeGameBridge.emit({ type: 'FINISH_GAME', gameId: GAME_ID, stage: this.level.level })
 
         showLevelComplete(this, {
-            title: 'Estreia no estúdio!',
+            title: 'Estreia no estudio!',
             subtitle: `${this.points} pontos`,
-            message: 'Toda tecnologia muda o jeito de viver e de trabalhar. Agora você sabe contar isso com opinião própria.',
+            message: 'Toda tecnologia muda o jeito de viver e de trabalhar. Agora voce sabe contar isso com opiniao propria.',
             accent: C.green,
             overlayColor: C.shadow,
             titleColor: hex(C.violetDark),
@@ -917,26 +1176,26 @@ export class GameScene extends Phaser.Scene {
             wordWrap: { width: 550 },
         }).setOrigin(0.5).setResolution(2)
 
-        const PH = objective.height + 296
+        const PH = objective.height + 300
         const top = -PH / 2
 
         const bg = this.add.graphics()
         bg.fillStyle(C.shadow, 0.22)
-        bg.fillRoundedRect(-320, top + 12, 640, PH, 28)
+        bg.fillRoundedRect(-320, top + 12, 640, PH, 30)
         bg.fillStyle(C.panel, 1)
-        bg.fillRoundedRect(-320, top, 640, PH, 28)
+        bg.fillRoundedRect(-320, top, 640, PH, 30)
         bg.lineStyle(5, C.violet, 1)
-        bg.strokeRoundedRect(-320, top, 640, PH, 28)
+        bg.strokeRoundedRect(-320, top, 640, PH, 30)
         bg.fillStyle(C.violet, 1)
         bg.fillRoundedRect(-150, top - 15, 300, 28, 14)
 
-        const badge = this.add.text(0, top + 54, `NÍVEL ${this.level.level}`, {
+        const badge = this.add.text(0, top + 56, `NIVEL ${this.level.level}`, {
             fontFamily: 'Arial Black, Arial',
             fontSize: '20px',
             color: hex(C.violet),
         }).setOrigin(0.5).setResolution(2)
 
-        const title = this.add.text(0, top + 102, this.level.title, {
+        const title = this.add.text(0, top + 106, this.level.title, {
             fontFamily: 'Arial Black, Arial',
             fontSize: '36px',
             color: hex(C.violetDark),
@@ -944,14 +1203,14 @@ export class GameScene extends Phaser.Scene {
             wordWrap: { width: 550 },
         }).setOrigin(0.5).setResolution(2)
 
-        objective.setY(top + 156 + objective.height / 2)
+        objective.setY(top + 160 + objective.height / 2)
 
-        const btn = this.button(0, PH / 2 - 56, 300, 68, 'Ação!', C.green, () => {
+        const btn = this.button(0, PH / 2 - 58, 300, 70, 'Acao!', C.green, () => {
             overlay.destroy()
             panel.destroy()
             mascote.destroy()
             onStart()
-        }, '22px', true)
+        }, '23px', true)
 
         const mascote = this.add.image(W / 2 - 326, H / 2 + top + MASCOTE.h / 2 - 26, 'mascote-normal')
             .setDisplaySize(MASCOTE.w, MASCOTE.h).setDepth(802)
@@ -980,7 +1239,7 @@ export class GameScene extends Phaser.Scene {
         createTutorial(this, {
             key: this.tutorialKey,
             accent: C.violet,
-            safeTop: 130,
+            safeTop: 118,
             steps: this.tutorialSteps,
             onFinish: () => this.startPhase(),
         })
@@ -994,26 +1253,40 @@ export class GameScene extends Phaser.Scene {
             key: this.tutorialKey,
             once: false,
             accent: C.violet,
-            safeTop: 130,
+            safeTop: 118,
             steps: this.tutorialSteps,
             onFinish: () => { this.locked = wasLocked },
         })
     }
 
     private buildTutorialSteps(): TutorialStep[] {
+        const box = this.stage
+
         if (this.level.level === 1) {
             return [
                 {
-                    text: 'Este é o palco. A sua cena vai aparecendo aqui a cada escolha.',
-                    shape: 'rect', x: STAGE.cx, y: STAGE.cy, w: STAGE.w + 30, h: STAGE.h + 30,
+                    text: 'Voce e o diretor deste estudio. A sua missao e montar uma cena que mostre a tecnologia mudando alguma coisa.',
+                    shape: 'none', balloonY: 380,
                 },
                 {
-                    text: 'À direita você escolhe uma coisa por vez: quem aparece, onde acontece e o que a pessoa diz.',
-                    shape: 'rect', x: CHOICE.cx, y: CHOICE.y + CHOICE.h / 2, w: CHOICE.w + 24, h: CHOICE.h + 24,
+                    text: 'No alto fica sempre o que voce precisa fazer agora. Leia sempre que ficar em duvida.',
+                    shape: 'rect', x: W / 2 - 20, y: 54, w: 1180, h: 90, balloonY: 400,
                 },
                 {
-                    text: 'A fala é o mais importante: ela precisa mostrar o que a tecnologia mudou.',
-                    shape: 'rect', x: CHOICE.cx, y: CHOICE.optionFirstY + CHOICE.optionGap, w: CHOICE.optionW + 40, h: 260,
+                    text: 'Este e o palco. A cena vai se montando aqui a cada escolha que voce faz.',
+                    shape: 'rect', x: box.x + box.w / 2, y: box.y + box.h / 2, w: box.w + 34, h: box.h + 34,
+                },
+                {
+                    text: 'Aqui a direita aparece um passo por vez. Toque em uma das opcoes para escolher.',
+                    shape: 'rect', x: PANEL.cx, y: PANEL.y + PANEL.h / 2, w: PANEL.w + 26, h: PANEL.h + 26,
+                },
+                {
+                    text: 'Se escolher errado, o botao Voltar um passo desfaz a ultima escolha.',
+                    shape: 'rect', x: PANEL.cx, y: PANEL.backY, w: 260, h: 84,
+                },
+                {
+                    text: 'O passo mais importante e a fala. Ela precisa dizer o que mudou, e nao so que a tecnologia existe.',
+                    shape: 'none', balloonY: 380,
                 },
             ]
         }
@@ -1021,45 +1294,34 @@ export class GameScene extends Phaser.Scene {
         if (this.level.level === 2) {
             return [
                 {
-                    text: 'Agora a história tem três quadros: como era antes, como ficou depois e o que isso mudou.',
-                    shape: 'rect', x: STAGE.cx, y: STRIP.cy, w: STAGE.w + 30, h: STRIP.h + 40,
+                    text: 'Agora a historia tem tres quadros: como era antes, como ficou depois e o que isso mudou na vida das pessoas.',
+                    shape: 'rect', x: box.x + box.w / 2, y: STRIP.cy, w: box.w + 34, h: STRIP.h + 44,
                 },
                 {
-                    text: 'Toque em um quadro para montá-lo. Dá para voltar e refazer qualquer um.',
-                    shape: 'rect', x: this.slotX(0), y: STRIP.cy, w: STRIP.slotW + 24, h: STRIP.slotH + 24,
+                    text: 'O quadro com a borda amarela mostra o que voce esta montando agora. Toque em outro para trocar.',
+                    shape: 'rect', x: this.slotX(0), y: STRIP.cy, w: STRIP.slotW + 26, h: STRIP.slotH + 26,
                 },
                 {
-                    text: 'Se os quadros contarem a mesma coisa, o selo de mudança não acende.',
-                    shape: 'none', balloonY: 400,
+                    text: 'Se os tres quadros contarem a mesma coisa, o selo de Mudanca nao acende na hora de publicar.',
+                    shape: 'none', balloonY: 380,
                 },
             ]
         }
 
         return [
             {
-                text: 'Nesta história duas pessoas pensam diferente sobre a mesma tecnologia.',
-                shape: 'rect', x: STAGE.cx, y: STRIP.cy, w: STAGE.w + 30, h: STRIP.h + 40,
+                text: 'Nesta historia duas pessoas pensam diferente sobre a mesma tecnologia no trabalho.',
+                shape: 'rect', x: box.x + box.w / 2, y: STRIP.cy, w: box.w + 34, h: STRIP.h + 44,
             },
             {
-                text: 'Depois dos três quadros você escolhe a mensagem final: a sua opinião sobre a mudança.',
-                shape: 'rect', x: CHOICE.cx, y: CHOICE.y + CHOICE.h / 2, w: CHOICE.w + 24, h: CHOICE.h + 24,
+                text: 'Depois dos tres quadros vem o ultimo passo: a mensagem final, que e a sua opiniao sobre essa mudanca.',
+                shape: 'rect', x: PANEL.cx, y: PANEL.y + PANEL.h / 2, w: PANEL.w + 26, h: PANEL.h + 26,
             },
             {
-                text: 'Os três selos avaliam clareza, mudança e reflexão. Publique quando a história disser o que você pensa.',
-                shape: 'none', balloonY: 400,
+                text: 'No fim, tres selos avaliam a sua historia: Clareza, Mudanca e Reflexao.',
+                shape: 'none', balloonY: 380,
             },
         ]
-    }
-
-    private publishHud() {
-        this.registry.remove('hud')
-        this.registry.set('hud', {
-            instruction: this.phase.instruction,
-            sub: this.phase.sub,
-            level: this.level.level,
-            phase: this.phaseIdx + 1,
-            totalPhases: this.level.phases.length,
-        })
     }
 
     private drawTechIcon(g: Phaser.GameObjects.Graphics, id: TechId, cx: number, cy: number, s: number, color: number) {

@@ -39,6 +39,8 @@ import coverMissaoArquivoSeguro from "../assets/games/EF05CO06/cover-missao-arqu
 import sistemaOperacionalThumbnail from "../assets/games/EF05CO07/cover-sistema-operacional.png";
 import coverRadarDeConfiabilidade from "../assets/games/EF05CO08/cover-radar-de-confiabilidade.png";
 import coverCuradoriaComCreditos from "../assets/games/EF05CO09/cover-curadoria-com-creditos.png";
+import coverFuturoEmCena from "../assets/games/EF05CO10/cover-futuro-em-cena.png";
+
 const placeholderGame = (code: string, index: number): Game => ({
   id: index,
   title: code,
@@ -409,7 +411,7 @@ const gameByCode: Partial<Record<string, Omit<Game, "id">>> = {
     points: 65,
     icon: "🎭",
     slug: "futuro-em-cena",
-    thumbnail: coverCuradoriaComCreditos,
+    thumbnail: coverFuturoEmCena,
   }
 };
 
