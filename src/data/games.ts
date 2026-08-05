@@ -38,7 +38,7 @@ import coverMonteSeuComputador from "../assets/games/EF05CO05/cover-monte-seu-co
 import coverMissaoArquivoSeguro from "../assets/games/EF05CO06/cover-missao-arquivo-seguro.png";
 import sistemaOperacionalThumbnail from "../assets/games/EF05CO07/cover-sistema-operacional.png";
 import coverRadarDeConfiabilidade from "../assets/games/EF05CO08/cover-radar-de-confiabilidade.png";
-
+import coverCuradoriaComCreditos from "../assets/games/EF05CO09/cover-curadoria-com-creditos.png";
 const placeholderGame = (code: string, index: number): Game => ({
   id: index,
   title: code,
@@ -392,8 +392,25 @@ const gameByCode: Partial<Record<string, Omit<Game, "id">>> = {
     icon: "🔍",
     slug: "radar-de-confiabilidade",
     thumbnail: coverRadarDeConfiabilidade,
+  },
+  EF05CO09: {
+    title: "Curadoria com Créditos",
+    "description": "Avalie critérios de confiabilidade, compare fontes e classifique as mais confiáveis.",
+    category: "Cultura Digital",
+    points: 65,
+    icon: "🩺",
+    slug: "curadoria-com-creditos",
+    thumbnail: coverCuradoriaComCreditos,
+  },
+  EF05CO10: {
+    title: "Futuro em Cena",
+    "description": "Crie uma história interativa, escolha personagens, cenários e desfechos para compartilhar com os amigos.",
+    category: "Cultura Digital",
+    points: 65,
+    icon: "🎭",
+    slug: "futuro-em-cena",
+    thumbnail: coverCuradoriaComCreditos,
   }
-
 };
 
 const gameOrder = [

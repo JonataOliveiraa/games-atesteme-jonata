@@ -3,11 +3,11 @@ import { BootScene } from './scenes/BootScene'
 import { GameScene } from './scenes/GameScene'
 import { UIScene } from './scenes/UIScene'
 
-const EF05CO09Config: Phaser.Types.Core.GameConfig = {
+const EF05CO10Config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
   width: 1280,
   height: 720,
-  backgroundColor: '#eaf2fb',
+  backgroundColor: '#f0edfa',
   scene: [BootScene, GameScene, UIScene],
   scale: {
     mode: Phaser.Scale.FIT,
@@ -18,4 +18,4 @@ const EF05CO09Config: Phaser.Types.Core.GameConfig = {
   dom: { createContainer: false },
 }
 
-export default EF05CO09Config
+export default EF05CO10Config

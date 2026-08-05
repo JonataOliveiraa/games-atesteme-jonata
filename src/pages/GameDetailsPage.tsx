@@ -52,6 +52,8 @@ const SLUG_TO_CODE: Record<string, GameCode> = {
   "missao-arquivo-seguro": "EF05CO06",
   "sistema-operacional": "EF05CO07",
   "radar-de-confiabilidade": "EF05CO08",
+  "curadoria-com-creditos": "EF05CO09",
+  "futuro-em-cena": "EF05CO10",
 };
 
 const GAME_CONFIG_LOADERS: Partial<
@@ -94,7 +96,9 @@ const GAME_CONFIG_LOADERS: Partial<
   EF05CO05: () => import("../games/EF05CO05/index"),
   EF05CO06: () => import("../games/EF05CO06/index"),
   EF05CO07: () => import("../games/EF05CO07/index"),
-  EF05CO08: () => import("../games/EF05CO08/index")
+  EF05CO08: () => import("../games/EF05CO08/index"),
+  EF05CO09: () => import("../games/EF05CO09/index"),
+  EF05CO10: () => import("../games/EF05CO10/index")
 };
 
 const GAMES_WITH_IN_GAME_COMPLETION_SCREEN = new Set([
@@ -123,6 +127,7 @@ const GAMES_WITH_IN_GAME_COMPLETION_SCREEN = new Set([
   "cidade-das-decisoes",
   "monte-seu-computador",
   "missao-arquivo-seguro",
+  "futuro-em-cena"
 ]);
 
 export default function GameDetailsPage() {
