@@ -67,6 +67,7 @@ export interface SlotConfig {
 
 export interface Frame {
   moment: Moment
+  themeId: ThemeId
   charId: CharId
   sceneryId: SceneryId
   line: LineOption

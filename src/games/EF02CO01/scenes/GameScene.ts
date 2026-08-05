@@ -1,1150 +1,618 @@
 import Phaser from 'phaser'
 import { EventBus } from '../../../shared/EventBus'
 import { runtimeGameBridge } from '../../../shared/bridge/runtimeGameBridge'
-import type { PlatformCommand } from '../../../shared/contracts/platformCommands'
-import type {
-  LevelConfig,
-  Vehicle,
-  VehicleCard,
-} from '../types'
+import { createTutorial, type TutorialStep } from '../../../shared/tutorial/createTutorial'
+import { showLevelComplete } from '../../../shared/level/showLevelComplete'
 import { LEVELS } from '../data/levels'
-import { ALL_VEHICLES } from '../data/vehicles'
+import { vehicleById } from '../data/vehicles'
+import type { LevelConfig, SelectionMission, Vehicle } from '../types'
 
-const GAME_ID = 'hangar-dos-modelos'
-const TOP_Y = 95       // base da UIScene superior
-const BOTTOM_Y = 638      // topo da UIScene inferior
+const GAME_ID = 'hangar-dos-transportes'
+const W = 1280
+const H = 720
 
-// Painel de filtros (direita)
-const PANEL_LEFT_X = 860
-const PANEL_W = 400
+const C = {
+  sky: 0x071426,
+  panel: 0x0f2238,
+  panelSoft: 0x142b45,
+  border: 0x2e5275,
+  ink: 0xf4f8ff,
+  inkSoft: 0xb8c8d9,
+  blue: 0x4ea1ff,
+  blueDark: 0x0a1d33,
+  blueSoft: 0x193a5c,
+  green: 0x47c978,
+  greenSoft: 0x173b2d,
+  amber: 0xf2b044,
+  amberSoft: 0x3d3019,
+  red: 0xf06a5f,
+  redSoft: 0x3f2024,
+  grey: 0x7f94aa,
+  greySoft: 0x20364d,
+  white: 0xffffff,
+  shadow: 0x02070d,
+}
 
-// NOVA constante, perto de CARD_W/CARD_H
-const CARD_TINT_PALETTE = [0xffffff, 0xffe9c7, 0xd7f2ff, 0xe3ffd9, 0xffe0f0, 0xfff6c2]
-const CARD_W = 155
-const CARD_H = 132
+const A = {
+  veil: 0.42,
+  shadow: 0.16,
+  gloss: 0.2,
+  overlay: 0.55,
+}
 
-// ── Tipos internos ────────────────────────────────────────────────────────────
+const HEADER = { chipX: 36, chipW: 230, chipH: 66, textX: 292, titleY: 38, subY: 76 }
+const MISSION = { x: 46, y: 106, w: 1188, h: 124, cx: 640 }
+const GRID = { x: 54, y: 246, w: 1172, h: 386, cardW: 356, cardH: 88 }
+const FOOTER = { y: 672, hintX: 64, hintW: 710, btnX: 1042, btnW: 332, btnH: 70 }
 
-type MissionPhase =
-  | 'intro'
-  | 'waiting-answer'
-  | 'animating'
-  | 'feedback-ok'
-  | 'feedback-err'
-  | 'level-complete'
+const hex = (n: number) => '#' + n.toString(16).padStart(6, '0')
 
-// ── GameScene ─────────────────────────────────────────────────────────────────
+type CardView = {
+  container: Phaser.GameObjects.Container
+  vehicle: Vehicle
+  bg: Phaser.GameObjects.Graphics
+  check: Phaser.GameObjects.Text
+  selected: boolean
+}
 
 export class GameScene extends Phaser.Scene {
+  private levelIdx = 0
+  private missionIdx = 0
+  private points = 0
+  private locked = true
+  private ended = false
 
-  // Dados
-  private levelConfig!: LevelConfig
-  private currentMissionIndex = 0
-  private hits = 0
-  private errors = 0
-  private currentPoints = 0
-  private currentLives = 1
-  private isMuted = false
-  private phase: MissionPhase = 'intro'
-  private gameEnded = false
-  private shouldShowLevelStart = false
-  private missionEffectActive = false
+  private headerLayer!: Phaser.GameObjects.Container
+  private missionLayer!: Phaser.GameObjects.Container
+  private cardLayer!: Phaser.GameObjects.Container
+  private footerLayer!: Phaser.GameObjects.Container
 
-  // Objetos de jogo
-  private vehicleCards: VehicleCard[] = []
-
-  // Nova mecânica de seleção
-  private selectedVehicleIds = new Set<string>()
-  private questionPanel?: Phaser.GameObjects.Container
-  private confirmBtn?: Phaser.GameObjects.Container
-  private selectionCountText?: Phaser.GameObjects.Text
-
-  // Overlay (modais de fluxo)
-  private overlayObjects: Phaser.GameObjects.GameObject[] = []
-
-  // Timer (padrão EF01CO03)
-  private timeBarFill?: Phaser.GameObjects.Graphics
-  private timerTween?: Phaser.Tweens.Tween
-  private timerState = { progress: 1 }
-  private timerActive = false
-  private timerWarned = false
-  private warningBeepTimer: Phaser.Time.TimerEvent | null = null
-
-  private unsubPlatform?: () => void
+  private cards: CardView[] = []
+  private selected = new Set<string>()
+  private tutorialSteps: TutorialStep[] = []
+  private tutorialKey = ''
 
   constructor() {
     super({ key: 'GameScene' })
   }
 
-  // ── Lifecycle ─────────────────────────────────────────────────────────────
+  init(data: { level?: number; mission?: number; points?: number }) {
+    this.levelIdx = (data.level ?? 1) - 1
+    this.missionIdx = data.mission ?? 0
+    this.points = data.points ?? 0
+    this.locked = true
+    this.ended = false
+    this.cards = []
+    this.selected.clear()
+  }
 
-  init(data: { level?: number; points?: number; lives?: number; showLevelStart?: boolean }) {
-    const lvl = (data?.level ?? 1) as 1 | 2 | 3
-    this.levelConfig = LEVELS.find((l) => l.level === lvl) ?? LEVELS[0]
-    this.currentMissionIndex = 0
-    this.hits = 0
-    this.errors = 0
-    this.currentPoints = data?.points ?? 0
-    this.currentLives = data?.lives ?? 1
-    this.isMuted = false
-    this.phase = 'intro'
-    this.gameEnded = false
-    this.shouldShowLevelStart = data?.showLevelStart ?? false
-    this.missionEffectActive = false
-    this.vehicleCards = []
-    this.overlayObjects = []
-    this.selectedVehicleIds = new Set()
-    this.timerActive = false
-    this.timerWarned = false
-    this.timerState.progress = 1
-    this.warningBeepTimer = null
+  private get level(): LevelConfig {
+    return LEVELS[this.levelIdx]
+  }
+
+  private get mission(): SelectionMission {
+    return this.level.missions[this.missionIdx]
   }
 
   create() {
     this.drawBackground()
-    this.createTimerBar()
-    this.registerPlatformCommands()
-    EventBus.on('mute-audio', (m: boolean) => { this.isMuted = m }, this)
 
+    this.headerLayer = this.add.container(0, 0).setDepth(40)
+    this.missionLayer = this.add.container(0, 0).setDepth(30)
+    this.cardLayer = this.add.container(0, 0).setDepth(20)
+    this.footerLayer = this.add.container(0, 0).setDepth(30)
+
+    this.renderAll()
     runtimeGameBridge.emit({ type: 'GAME_READY', gameId: GAME_ID })
-    this.broadcastMissionState()
-    this.emitCheckpoint()
 
-    this.startLevel()
-    this.showNextLevelStartScreen()
-  }
-
-  update() {
-    // timer is tween-driven — no per-frame update needed
-  }
-
-  shutdown() {
-    this.timerActive = false
-    this.timerTween?.stop()
-    this.warningBeepTimer?.destroy()
-    this.warningBeepTimer = null
-    this.clearOverlay()
-    EventBus.off('mute-audio', undefined, this)
-    this.unsubPlatform?.()
-    this.unsubPlatform = undefined
-  }
-
-  private dedupeRepeatedLabel(text: string): string {
-    const words = text.trim().split(/\s+/)
-    const result: string[] = []
-    for (const w of words) {
-      const last = result[result.length - 1]
-      if (!last || last.toLowerCase() !== w.toLowerCase()) result.push(w)
-    }
-    return result.join(' ')
-  }
-
-  private addOverlayObject<T extends Phaser.GameObjects.GameObject>(obj: T): T {
-    this.overlayObjects.push(obj)
-    return obj
-  }
-
-  private clearOverlay() {
-    this.overlayObjects.forEach(o => o.destroy())
-    this.overlayObjects = []
-  }
-
-
-  // ══════════════════════════════════════════════════════════════════════════
-  //  TIMER (padrão EF01CO06)
-  // ══════════════════════════════════════════════════════════════════════════
-
-  private createTimerBar() {
-    const barX = 200, barY = 106, barW = 880, barH = 24
-
-    const bg = this.add.graphics()
-    bg.fillStyle(0xdff2bc, 1)
-    bg.fillRoundedRect(barX, barY, barW, barH, 12)
-    bg.setDepth(6)
-
-    this.timeBarFill = this.add.graphics()
-    this.timeBarFill.setDepth(7)
-    this.drawTimeBar(1)
-  }
-
-  private drawTimeBar(progress: number) {
-    if (!this.timeBarFill) return
-    const barX = 200, barY = 106, barW = 880, barH = 24
-    this.timeBarFill.clear()
-    this.timeBarFill.fillStyle(0x7ed321, 1)
-    const w = barW * Phaser.Math.Clamp(progress, 0, 1)
-    if (w > 0) this.timeBarFill.fillRoundedRect(barX, barY, w, barH, 12)
-  }
-
-  private startTimer() {
-    this.timerState.progress = 1
-    this.timerActive = true
-    this.timerWarned = false
-    this.drawTimeBar(1)
-
-    this.timerTween = this.tweens.add({
-      targets: this.timerState,
-      progress: 0,
-      duration: this.levelConfig.timeLimit * 1000,
-      ease: 'Linear',
-      onUpdate: () => {
-        this.drawTimeBar(this.timerState.progress)
-        if (!this.timerWarned && this.timerState.progress <= 0.25) {
-          this.timerWarned = true
-          this.startWarningBeeps()
-        }
-      },
-      onComplete: () => {
-        this.drawTimeBar(0)
-        this.onTimeUp()
-      },
-    })
-  }
-
-  private startWarningBeeps() {
-    this.warningBeepTimer = this.time.addEvent({
-      delay: 1000, loop: true, callback: () => {
-        if (!this.timerActive) { this.warningBeepTimer?.destroy(); this.warningBeepTimer = null; return }
-        this.playTone(880, 0.06, 'sine', 0.12)
-      },
-    })
-  }
-
-  private onTimeUp() {
-    if (this.gameEnded) return
-    this.gameEnded = true
-    this.timerActive = false
-    this.drawTimeBar(0)
-    this.warningBeepTimer?.destroy()
-    this.warningBeepTimer = null
-    this.input.enabled = false
-
-    runtimeGameBridge.emit({
-      type: 'WRONG_ANSWER',
-      gameId: GAME_ID,
-      pointsEarned: 0,
-      stage: this.levelConfig.level,
-    })
-    this.showGameOverScreen('timeout')
-  }
-
-  // ══════════════════════════════════════════════════════════════════════════
-  //  BROADCAST PARA UISCENE
-  // ══════════════════════════════════════════════════════════════════════════
-
-  private broadcastMissionState() {
-    const missions = this.levelConfig.missions
-    const mission = missions[this.currentMissionIndex] ?? missions[0]
-    EventBus.emit('mission-update', {
-      instruction: mission.question,
-      hint: mission.hint,
-      missionIndex: this.currentMissionIndex,
-      totalMissions: missions.length,
-      level: this.levelConfig.level,
-    })
-  }
-
-  private emitCheckpoint() {
-    const progress = Math.round((this.currentMissionIndex / this.levelConfig.missions.length) * 100)
-    runtimeGameBridge.emit({
-      type: 'CHECKPOINT',
-      gameId: GAME_ID,
-      progress,
-      score: this.currentPoints,
-      stage: this.levelConfig.level,
-      hits: this.hits,
-      errors: this.errors,
-    })
-  }
-
-  // ══════════════════════════════════════════════════════════════════════════
-  //  TELAS DE FEEDBACK DE NÍVEL (padrão EF01CO06)
-  // ══════════════════════════════════════════════════════════════════════════
-
-  private showMissionCompleteEffect(nextInstruction: string | null, onDone: () => void) {
-    if (this.missionEffectActive) return
-    this.missionEffectActive = true
-
-    const wasTimerActive = this.timerActive
-    this.timerActive = false
-    this.timerTween?.pause()
-
-    const resume = () => {
-      this.missionEffectActive = false
-      if (wasTimerActive) {
-        this.timerActive = true
-        this.timerTween?.resume()
-      }
-      onDone()
-    }
-
-    const overlay = this.add.rectangle(640, 360, 1280, 720, 0x12324a, 0.56)
-      .setDepth(200).setInteractive()
-
-    const modal = this.add.container(640, 360).setDepth(201)
-
-    const shadow = this.add.graphics()
-    shadow.fillStyle(0x000000, 0.18)
-    shadow.fillRoundedRect(-270, -126, 540, nextInstruction ? 270 : 210, 28)
-
-    const cardH = nextInstruction ? 258 : 198
-    const bg = this.add.graphics()
-    bg.fillStyle(0xfff6e8, 0.98)
-    bg.fillRoundedRect(-278, -138, 556, cardH, 28)
-    bg.lineStyle(5, 0xffffff, 0.95)
-    bg.strokeRoundedRect(-278, -138, 556, cardH, 28)
-
-    const topBar = this.add.graphics()
-    topBar.fillStyle(0xff8a2a, 1)
-    topBar.fillRoundedRect(-196, -154, 392, 28, 14)
-    topBar.lineStyle(3, 0xffffff, 0.82)
-    topBar.strokeRoundedRect(-196, -154, 392, 28, 14)
-
-    const title = this.add.text(0, -76, 'Missão concluída!', {
-      fontFamily: 'Arial', fontStyle: 'bold',
-      fontSize: '36px', color: '#25327a',
-      stroke: '#ffffff', strokeThickness: 5,
-    }).setOrigin(0.5).setResolution(2)
-
-    const objs: Phaser.GameObjects.GameObject[] = [shadow, bg, topBar, title]
-
-    if (nextInstruction) {
-      const nextLabel = this.add.text(0, -14, 'Próximo desafio:', {
-        fontFamily: 'Arial', fontStyle: 'bold',
-        fontSize: '17px', color: '#f57c00',
-      }).setOrigin(0.5).setResolution(2)
-
-      const nextTxt = this.add.text(0, 42, nextInstruction, {
-        fontFamily: 'Arial', fontStyle: 'bold',
-        fontSize: '20px', color: '#3b3b3b',
-        align: 'center', wordWrap: { width: 460 },
-      }).setOrigin(0.5).setResolution(2)
-
-      objs.push(nextLabel, nextTxt)
-    }
-
-    modal.add(objs)
-    modal.setScale(0.9).setAlpha(0)
-    this.tweens.add({ targets: modal, alpha: 1, scale: 1, duration: 260, ease: 'Back.easeOut' })
-
-    this.time.delayedCall(nextInstruction ? 2400 : 1800, () => {
-      this.tweens.add({
-        targets: [overlay, modal], alpha: 0, duration: 280,
-        onComplete: () => { overlay.destroy(); modal.destroy(); resume() },
-      })
-    })
-  }
-
-  private showLevelCompleteTransition(nextLevel: 1 | 2 | 3 | null) {
-    this.timerActive = false
-    this.timerTween?.stop()
-    this.warningBeepTimer?.destroy()
-    this.warningBeepTimer = null
-    this.clearOverlay()
-
-    const overlay = this.addOverlayObject(
-      this.add.rectangle(640, 360, 1280, 720, 0x12324a, 0.56).setDepth(450)
-    )
-    overlay.setInteractive()
-
-    const modal = this.addOverlayObject(this.add.container(640, 360).setDepth(451))
-    const lvl = this.levelConfig.level
-
-    const shadow = this.add.graphics()
-    shadow.fillStyle(0x000000, 0.18)
-    shadow.fillRoundedRect(-270, -166, 540, 330, 28)
-
-    const bg = this.add.graphics()
-    bg.fillStyle(0xfff6e8, 0.98)
-    bg.fillRoundedRect(-278, -178, 556, 330, 28)
-    bg.lineStyle(5, 0xffffff, 0.95)
-    bg.strokeRoundedRect(-278, -178, 556, 330, 28)
-
-    const topBar = this.add.graphics()
-    topBar.fillStyle(0xff8a2a, 1)
-    topBar.fillRoundedRect(-196, -194, 392, 28, 14)
-    topBar.lineStyle(3, 0xffffff, 0.82)
-    topBar.strokeRoundedRect(-196, -194, 392, 28, 14)
-
-    const title = this.add.text(0, -110, 'Parabéns!', {
-      fontFamily: 'Arial', fontStyle: 'bold',
-      fontSize: '40px', color: '#25327a',
-      stroke: '#ffffff', strokeThickness: 5,
-    }).setOrigin(0.5).setResolution(2)
-
-    const completed = this.add.text(0, -50, 'Nível concluído', {
-      fontFamily: 'Arial', fontStyle: 'bold',
-      fontSize: '26px', color: '#f57c00',
-      align: 'center', wordWrap: { width: 420 },
-    }).setOrigin(0.5).setResolution(2)
-
-    const successTexts: Record<number, string> = {
-      1: 'Você aprendeu a separar veículos que voam e que têm rodas!',
-      2: 'Você identificou os veículos pelo meio e pelo funcionamento!',
-      3: 'Você classificou todos os veículos pelo meio de transporte!',
-    }
-    const next = this.add.text(0, 8, successTexts[lvl] ?? '', {
-      fontFamily: 'Arial', fontStyle: 'bold',
-      fontSize: '17px', color: '#3b3b3b',
-      align: 'center', wordWrap: { width: 430 },
-    }).setOrigin(0.5).setResolution(2)
-
-    // Dots de progresso de nível (igual EF01CO03)
-    const nextLvl = nextLevel ?? (lvl + 1)
-    const dots = [1, 2, 3].map((level, index) => {
-      const dot = this.add.graphics()
-      dot.fillStyle(
-        level <= lvl ? 0x42d640
-          : level === nextLvl ? 0xff8a2a
-            : 0xd8dde8,
-        1
-      )
-      dot.fillCircle(-28 + index * 28, 72, 8)
-      dot.lineStyle(2, 0xffffff, 0.9)
-      dot.strokeCircle(-28 + index * 28, 72, 8)
-      return dot
+    EventBus.on('show-tutorial', this.replayTutorial, this)
+    this.events.once('shutdown', () => {
+      EventBus.off('show-tutorial', this.replayTutorial, this)
     })
 
-    const waitText = this.add.text(0, 116, nextLevel ? 'Preparando o próximo nível...' : '', {
-      fontFamily: 'Arial', fontStyle: 'bold',
-      fontSize: '15px', color: '#25327a',
-    }).setOrigin(0.5).setResolution(2)
-
-    modal.add([shadow, bg, topBar, title, completed, next, ...dots, waitText])
-    modal.setScale(0.9).setAlpha(0)
-    this.tweens.add({ targets: modal, alpha: 1, scale: 1, duration: 260, ease: 'Back.easeOut' })
-
-    this.time.delayedCall(2300, () => {
-      if (nextLevel) {
-        this.scene.restart({ level: nextLevel, points: this.currentPoints, lives: this.currentLives, showLevelStart: true })
-      } else {
-        this.showGameCompleteScreen()
-      }
-    })
+    if (this.missionIdx === 0) this.showLevelIntro(() => this.runTutorial())
+    else this.runTutorial()
   }
-
-  private showNextLevelStartScreen() {
-    const overlay = this.add.rectangle(640, 360, 1280, 720, 0x12324a, 0.58)
-      .setDepth(450).setInteractive()
-
-    const modal = this.add.container(640, 360).setDepth(451)
-
-    const shadow = this.add.graphics()
-    shadow.fillStyle(0x000000, 0.18)
-    shadow.fillRoundedRect(-270, -154, 540, 312, 28)
-
-    const bg = this.add.graphics()
-    bg.fillStyle(0xfff6e8, 0.98)
-    bg.fillRoundedRect(-278, -166, 556, 312, 28)
-    bg.lineStyle(5, 0xffffff, 0.95)
-    bg.strokeRoundedRect(-278, -166, 556, 312, 28)
-
-    const topBar = this.add.graphics()
-    topBar.fillStyle(0x42d640, 1)
-    topBar.fillRoundedRect(-196, -182, 392, 28, 14)
-    topBar.lineStyle(3, 0xffffff, 0.82)
-    topBar.strokeRoundedRect(-196, -182, 392, 28, 14)
-
-    const lvl = this.levelConfig.level
-    const title = this.add.text(0, -102, `Nível ${lvl}`, {
-      fontFamily: 'Arial', fontStyle: 'bold',
-      fontSize: '38px', color: '#25327a',
-      stroke: '#ffffff', strokeThickness: 5,
-    }).setOrigin(0.5).setResolution(2)
-
-    const info = this.getLevelInfo(lvl)
-    const objective = this.add.text(0, -42, info.objective, {
-      fontFamily: 'Arial', fontStyle: 'bold',
-      fontSize: '24px', color: '#f57c00',
-      align: 'center', wordWrap: { width: 430 },
-    }).setOrigin(0.5).setResolution(2)
-
-    const detail = this.add.text(0, 12, info.tip, {
-      fontFamily: 'Arial', fontStyle: 'bold',
-      fontSize: '16px', color: '#3b3b3b',
-      align: 'center', wordWrap: { width: 420 },
-    }).setOrigin(0.5).setResolution(2)
-
-    const button = this.add.container(0, 104)
-    const buttonShadow = this.add.graphics()
-    buttonShadow.fillStyle(0x000000, 0.16)
-    buttonShadow.fillRoundedRect(-136, -20, 272, 48, 24)
-    const buttonBg = this.add.graphics()
-    buttonBg.fillStyle(0xf57c00, 1)
-    buttonBg.fillRoundedRect(-140, -26, 280, 52, 26)
-    buttonBg.lineStyle(4, 0xffffff, 1)
-    buttonBg.strokeRoundedRect(-140, -26, 280, 52, 26)
-    const buttonText = this.add.text(0, 0, 'Iniciar nível', {
-      fontFamily: 'Arial', fontStyle: 'bold',
-      fontSize: '22px', color: '#ffffff',
-      stroke: '#9a3f00', strokeThickness: 3,
-    }).setOrigin(0.5).setResolution(2)
-    button.add([buttonShadow, buttonBg, buttonText])
-
-    const buttonHitbox = this.add.zone(640, 360 + 104, 280, 58)
-    buttonHitbox.setDepth(452).setInteractive({ useHandCursor: true })
-    buttonHitbox.on('pointerover', () => {
-      this.tweens.add({ targets: button, scale: 1.04, duration: 90, ease: 'Sine.easeOut' })
-    })
-    buttonHitbox.on('pointerout', () => {
-      this.tweens.add({ targets: button, scale: 1, duration: 90, ease: 'Sine.easeOut' })
-    })
-    buttonHitbox.on('pointerdown', () => {
-      this.playTick()
-      overlay.destroy()
-      buttonHitbox.destroy()
-      modal.destroy()
-      this.startTimer()
-    })
-
-    modal.add([shadow, bg, topBar, title, objective, detail, button])
-    modal.setScale(0.9).setAlpha(0)
-    this.tweens.add({ targets: modal, alpha: 1, scale: 1, duration: 260, ease: 'Back.easeOut' })
-  }
-
-  private showGameCompleteScreen() {
-    this.clearOverlay()
-    const overlay = this.addOverlayObject(
-      this.add.rectangle(640, 360, 1280, 720, 0x12324a, 0.62).setDepth(450)
-    )
-    overlay.setInteractive()
-
-    const panel = this.addOverlayObject(this.add.container(640, 360).setDepth(451))
-
-    const shadow = this.add.graphics()
-    shadow.fillStyle(0x000000, 0.18)
-    shadow.fillRoundedRect(-292, -178, 584, 366, 34)
-
-    const bg = this.add.graphics()
-    bg.fillStyle(0xfff6e8, 0.98)
-    bg.fillRoundedRect(-304, -190, 608, 370, 34)
-    bg.lineStyle(6, 0xffffff, 0.96)
-    bg.strokeRoundedRect(-304, -190, 608, 370, 34)
-
-    const ribbon = this.add.graphics()
-    ribbon.fillStyle(0x42d640, 1)
-    ribbon.fillRoundedRect(-214, -208, 428, 34, 17)
-    ribbon.lineStyle(4, 0xffffff, 0.9)
-    ribbon.strokeRoundedRect(-214, -208, 428, 34, 17)
-
-    const title = this.add.text(0, -128, 'Jogo concluído!', {
-      fontFamily: 'Arial', fontStyle: 'bold',
-      fontSize: '38px', color: '#25327a',
-      stroke: '#ffffff', strokeThickness: 6,
-    }).setOrigin(0.5).setResolution(2)
-
-    const subtitle = this.add.text(0, -74, 'Você explorou todos os veículos do hangar!', {
-      fontFamily: 'Arial', fontStyle: 'bold',
-      fontSize: '20px', color: '#3b3b3b',
-      align: 'center', wordWrap: { width: 500 },
-    }).setOrigin(0.5).setResolution(2)
-
-    const levelLabels = [1, 2, 3].map((level, index) => {
-      const item = this.add.container(-190 + index * 190, 54)
-      const badge = this.add.graphics()
-      badge.fillStyle(index === 0 ? 0xff8a2a : index === 1 ? 0x45c6f0 : 0x42d640, 1)
-      badge.fillRoundedRect(-54, -42, 108, 84, 18)
-      badge.lineStyle(4, 0xffffff, 0.95)
-      badge.strokeRoundedRect(-54, -42, 108, 84, 18)
-      const number = this.add.text(0, -13, String(level), {
-        fontFamily: 'Arial', fontStyle: 'bold',
-        fontSize: '30px', color: '#ffffff',
-        stroke: '#25327a', strokeThickness: 4,
-      }).setOrigin(0.5).setResolution(2)
-      const label = this.add.text(0, 23, 'concluído', {
-        fontFamily: 'Arial', fontStyle: 'bold',
-        fontSize: '12px', color: '#ffffff',
-      }).setOrigin(0.5).setResolution(2)
-      item.add([badge, number, label])
-      return item
-    })
-
-    const createFinalButton = (x: number, label: string, color: number, stroke: string, onClick: () => void) => {
-      const button = this.add.container(x, 138)
-      const buttonShadow = this.add.graphics()
-      buttonShadow.fillStyle(0x000000, 0.16)
-      buttonShadow.fillRoundedRect(-128, -20, 256, 48, 24)
-      const buttonBg = this.add.graphics()
-      buttonBg.fillStyle(color, 1)
-      buttonBg.fillRoundedRect(-132, -26, 264, 52, 26)
-      buttonBg.lineStyle(4, 0xffffff, 1)
-      buttonBg.strokeRoundedRect(-132, -26, 264, 52, 26)
-      const buttonText = this.add.text(0, 0, label, {
-        fontFamily: 'Arial', fontStyle: 'bold',
-        fontSize: '20px', color: '#ffffff',
-        stroke, strokeThickness: 3,
-      }).setOrigin(0.5).setResolution(2)
-      button.add([buttonShadow, buttonBg, buttonText])
-
-      const buttonHitbox = this.add.zone(640 + x, 360 + 138, 264, 58)
-      buttonHitbox.setDepth(452).setInteractive({ useHandCursor: true })
-      buttonHitbox.on('pointerover', () => {
-        this.tweens.add({ targets: button, scale: 1.04, duration: 90, ease: 'Sine.easeOut' })
-      })
-      buttonHitbox.on('pointerout', () => {
-        this.tweens.add({ targets: button, scale: 1, duration: 90, ease: 'Sine.easeOut' })
-      })
-      buttonHitbox.on('pointerdown', () => {
-        this.playTick()
-        onClick()
-      })
-      return { button, buttonHitbox }
-    }
-
-    const playAgain = createFinalButton(-142, 'Jogar novamente', 0x42d640, '#1b7d1c', () => {
-      this.scene.restart({ level: 1, points: 0, lives: 1 })
-    })
-    const exitBtn = createFinalButton(142, 'Voltar aos jogos', 0xf57c00, '#9a3f00', () => {
-      EventBus.emit('exit-game')
-    })
-
-    const sparkles = Array.from({ length: 14 }, (_, i) => {
-      const sp = this.add.graphics()
-      const x = Phaser.Math.Between(-278, 278)
-      const y = Phaser.Math.Between(-168, 158)
-      sp.fillStyle([0x38bdf8, 0xff8a2a, 0x42d640][i % 3], 0.9)
-      sp.fillCircle(x, y, Phaser.Math.Between(4, 8))
-      this.tweens.add({
-        targets: sp, alpha: { from: 0.35, to: 1 }, scale: { from: 0.8, to: 1.35 },
-        duration: 520 + i * 30, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
-      })
-      return sp
-    })
-
-    panel.add([shadow, bg, ribbon, ...sparkles, title, subtitle, ...levelLabels, playAgain.button, exitBtn.button])
-    panel.setScale(0.88).setAlpha(0)
-    this.tweens.add({ targets: panel, alpha: 1, scale: 1, duration: 300, ease: 'Back.easeOut' })
-  }
-
-  private showGameOverScreen(reason: 'timeout' | 'wrong-answer' = 'timeout') {
-    this.input.enabled = true
-    this.clearOverlay()
-
-    const overlay = this.addOverlayObject(
-      this.add.rectangle(640, 360, 1280, 720, 0x12324a, 0.60).setDepth(450)
-    )
-    overlay.setInteractive()
-
-    const panel = this.addOverlayObject(this.add.container(640, 360).setDepth(451))
-
-    const shadow = this.add.graphics()
-    shadow.fillStyle(0x000000, 0.18)
-    shadow.fillRoundedRect(-270, -166, 540, 330, 28)
-
-    const bg = this.add.graphics()
-    bg.fillStyle(0xfff6e8, 0.98)
-    bg.fillRoundedRect(-278, -178, 556, 332, 28)
-    bg.lineStyle(5, 0xffffff, 0.95)
-    bg.strokeRoundedRect(-278, -178, 556, 332, 28)
-
-    const topBar = this.add.graphics()
-    topBar.fillStyle(0xef4444, 1)
-    topBar.fillRoundedRect(-196, -194, 392, 28, 14)
-    topBar.lineStyle(3, 0xffffff, 0.82)
-    topBar.strokeRoundedRect(-196, -194, 392, 28, 14)
-
-    const icon = this.add.text(0, -112, reason === 'timeout' ? '⏱' : '❌', {
-      fontSize: '54px',
-    }).setOrigin(0.5)
-
-    const title = this.add.text(0, -50, 'Que pena!', {
-      fontFamily: 'Arial', fontStyle: 'bold',
-      fontSize: '38px', color: '#25327a',
-      stroke: '#ffffff', strokeThickness: 5,
-    }).setOrigin(0.5).setResolution(2)
-
-    const reasonMsg = reason === 'timeout' ? 'O tempo acabou!' : 'Resposta incorreta!'
-    const reasonTxt = this.add.text(0, 6, reasonMsg, {
-      fontFamily: 'Arial', fontStyle: 'bold',
-      fontSize: '22px', color: '#ef4444',
-    }).setOrigin(0.5).setResolution(2)
-
-    const total = this.levelConfig.missions.length
-
-    const statsTxt = this.add.text(0, 52, `${this.currentMissionIndex} de ${total} missões concluídas`, {
-      fontFamily: 'Arial', fontStyle: 'bold',
-      fontSize: '17px', color: '#3b3b3b',
-      align: 'center', wordWrap: { width: 440 },
-    }).setOrigin(0.5).setResolution(2)
-
-    const retryBtn = this.createModalButton(-140, 118, '🔄 Tentar novamente', 0x42d640, () => {
-      this.scene.restart({ level: this.levelConfig.level, points: this.currentPoints, lives: this.currentLives })
-    })
-    const exitBtn = this.createModalButton(140, 118, 'Sair', 0xf57c00, () => {
-      EventBus.emit('exit-game')
-    })
-
-    panel.add([shadow, bg, topBar, icon, title, reasonTxt, statsTxt, retryBtn, exitBtn])
-    panel.setScale(0.9).setAlpha(0)
-    this.tweens.add({ targets: panel, alpha: 1, scale: 1, duration: 260, ease: 'Back.easeOut' })
-
-    this.playTone(330, 0.30, 'square', 0.18)
-    this.time.delayedCall(100, () => this.playTone(220, 0.40, 'square', 0.16))
-  }
-
-  // ══════════════════════════════════════════════════════════════════════════
-  //  FUNDO
-  // ══════════════════════════════════════════════════════════════════════════
 
   private drawBackground() {
-    this.add.image(640, 360, 'hangar-bg').setDisplaySize(1280, 720).setDepth(-1)
+    const bg = this.add.image(W / 2, H / 2, 'hangar-bg').setDepth(-3)
+    bg.setScale(Math.max(W / bg.width, H / bg.height))
+    this.tweens.add({ targets: bg, x: W / 2 + 12, duration: 5200, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
+
+    const veil = this.add.graphics().setDepth(-2)
+    veil.fillStyle(C.sky, 0.78)
+    veil.fillRect(0, 0, W, H)
+  }
+
+  private renderAll() {
+    this.renderHeader()
+    this.renderMissionPanel()
+    this.renderCards()
+    this.renderFooter('Toque nos veículos que combinam com a pista. Depois confira a resposta.')
+  }
+
+  private renderHeader() {
+    this.headerLayer.removeAll(true)
+
     const g = this.add.graphics()
-    g.lineStyle(1, 0x4FC3F7, 0.2)
-    g.lineBetween(PANEL_LEFT_X - 10, TOP_Y, PANEL_LEFT_X - 10, BOTTOM_Y)
+    g.fillStyle(C.shadow, 0.2)
+    g.fillRoundedRect(HEADER.chipX + 3, 26, HEADER.chipW, HEADER.chipH, 18)
+    g.fillStyle(C.blueDark, 1)
+    g.fillRoundedRect(HEADER.chipX, 20, HEADER.chipW, HEADER.chipH, 18)
+    g.fillStyle(C.white, 0.13)
+    g.fillRoundedRect(HEADER.chipX + 10, 28, HEADER.chipW - 20, 15, 8)
+    g.fillStyle(C.amber, 1)
+    g.fillCircle(HEADER.chipX + 30, 51, 8)
+
+    const level = this.add.text(HEADER.chipX + 50, 40, `NÍVEL ${this.level.level}`, {
+      fontFamily: 'Arial Black, Arial',
+      fontSize: '22px',
+      color: '#ffffff',
+    }).setOrigin(0, 0.5).setResolution(2)
+
+    const mission = this.add.text(HEADER.chipX + 50, 64, `Missão ${this.missionIdx + 1} de ${this.level.missions.length}`, {
+      fontFamily: 'Arial',
+      fontStyle: 'bold',
+      fontSize: '15px',
+      color: hex(C.greySoft),
+    }).setOrigin(0, 0.5).setResolution(2)
+
+    const title = this.add.text(HEADER.textX, HEADER.titleY, this.level.title, {
+      fontFamily: 'Arial Black, Arial',
+      fontSize: '29px',
+      color: hex(C.ink),
+      stroke: '#071426',
+      strokeThickness: 7,
+      wordWrap: { width: 690 },
+    }).setOrigin(0, 0.5).setResolution(2)
+
+    const score = this.add.text(1190, 50, `${this.points} pts`, {
+      fontFamily: 'Arial Black, Arial',
+      fontSize: '22px',
+      color: hex(C.ink),
+      stroke: '#071426',
+      strokeThickness: 6,
+    }).setOrigin(1, 0.5).setResolution(2)
+
+    const sub = this.add.text(HEADER.textX, HEADER.subY, this.level.objective, {
+      fontFamily: 'Arial',
+      fontStyle: 'bold',
+      fontSize: '22px',
+      color: hex(C.inkSoft),
+      stroke: '#071426',
+      strokeThickness: 5,
+      wordWrap: { width: 830 },
+    }).setOrigin(0, 0.5).setResolution(2)
+
+    this.headerLayer.add([g, level, mission, title, sub, score])
   }
 
-  // ══════════════════════════════════════════════════════════════════════════
-  //  GRID UNIFICADA DE VEÍCULOS
-  // ══════════════════════════════════════════════════════════════════════════
+  private renderMissionPanel() {
+    this.missionLayer.removeAll(true)
 
-  private startLevel() {
-    this.buildVehicleGrid()
-    this.buildQuestionPanel()
-    this.showCurrentMission()
+    const g = this.add.graphics()
+    g.fillStyle(C.shadow, A.shadow)
+    g.fillRoundedRect(MISSION.x + 5, MISSION.y + 10, MISSION.w, MISSION.h, 26)
+    g.fillStyle(C.panel, 1)
+    g.fillRoundedRect(MISSION.x, MISSION.y, MISSION.w, MISSION.h, 26)
+    g.lineStyle(4, C.border, 1)
+    g.strokeRoundedRect(MISSION.x, MISSION.y, MISSION.w, MISSION.h, 26)
+
+    const question = this.add.text(MISSION.x + 95, MISSION.y + 42, this.mission.question, {
+      fontFamily: 'Arial Black, Arial',
+      fontSize: '34px',
+      color: hex(C.white),
+      wordWrap: { width: 790 },
+    }).setOrigin(0, 0.5).setResolution(2)
+
+    const hint = this.add.text(MISSION.x + 95, MISSION.y + 78, this.mission.hint, {
+      fontFamily: 'Arial',
+      fontStyle: 'bold',
+      fontSize: '22px',
+      color: hex(C.inkSoft),
+      wordWrap: { width: 790 },
+    }).setOrigin(0, 0.5).setResolution(2)
+
+    const selected = this.add.text(MISSION.x + MISSION.w - 34, MISSION.y + 58, `${this.selected.size} selecionado${this.selected.size === 1 ? '' : 's'}`, {
+      fontFamily: 'Arial Black, Arial',
+      fontSize: '18px',
+      color: hex(C.blue),
+    }).setOrigin(1, 0.5).setResolution(2)
+
+    this.missionLayer.add([g, question, hint, selected])
   }
 
-  private buildVehicleGrid() {
-    const vehicles = this.levelConfig.vehicleIds
-      .map(id => ALL_VEHICLES.find(v => v.id === id)!)
-      .filter(Boolean)
+  private renderCards() {
+    this.cardLayer.removeAll(true)
+    this.cards = []
 
-    // Embaralhar para não dar pistas visuais sobre a missão atual
-    Phaser.Utils.Array.Shuffle(vehicles)
-
-    const count = vehicles.length
-    const cols = count <= 6 ? 3 : 4
-    const rows = Math.ceil(count / cols)
-
-    // Área de cards: x 20–840, y 140–630
-    const areaX = 20, areaW = 820
-    const areaY = 140, areaH = 490
-
-    const colSpacing = areaW / cols
-    const rowSpacing = areaH / rows
+    const vehicles = this.level.vehicleIds.map(vehicleById)
+    const cols = 3
+    const rows = Math.ceil(vehicles.length / cols)
+    const gapX = (GRID.w - cols * GRID.cardW) / Math.max(1, cols - 1)
+    const gapY = rows <= 2 ? 30 : 12
+    const blockH = rows * GRID.cardH + (rows - 1) * gapY
+    const startY = GRID.y + (GRID.h - blockH) / 2
 
     vehicles.forEach((vehicle, i) => {
       const col = i % cols
       const row = Math.floor(i / cols)
-      const cx = areaX + colSpacing * col + colSpacing / 2
-      const cy = areaY + rowSpacing * row + rowSpacing / 2
-      const card = this.makeVehicleCard(vehicle, cx, cy)
-      this.vehicleCards.push(card)
+      const x = GRID.x + GRID.cardW / 2 + col * (GRID.cardW + gapX)
+      const y = startY + GRID.cardH / 2 + row * (GRID.cardH + gapY)
+      const card = this.buildVehicleCard(vehicle, x, y)
+      this.cards.push(card)
+      this.cardLayer.add(card.container)
     })
   }
 
-  private makeVehicleCard(vehicle: Vehicle, cx: number, cy: number): VehicleCard {
-    const bg = this.add.image(0, 0, `card-${vehicle.attributes.meio}`)
-    .setDisplaySize(CARD_W, CARD_H).setOrigin(0.5)
-    .setTint(Phaser.Utils.Array.GetRandom(CARD_TINT_PALETTE))
-    
-    const img = this.add.image(0, -12, `veh-${vehicle.id}`)
-      .setDisplaySize(96, 96).setOrigin(0.5)
+  private buildVehicleCard(vehicle: Vehicle, x: number, y: number): CardView {
+    const container = this.add.container(x, y)
+    const bg = this.add.graphics()
+    const img = this.add.image(-112, 0, vehicle.texture)
+    const label = this.add.text(-18, -18, vehicle.name, {
+      fontFamily: 'Arial Black, Arial',
+      fontSize: '24px',
+      color: hex(C.ink),
+      wordWrap: { width: 190 },
+    }).setOrigin(0, 0.5).setResolution(2)
 
-    const nameBg = this.add.graphics()
-    nameBg.fillStyle(0x000000, 0.45)
-    nameBg.fillRoundedRect(-CARD_W / 2 + 4, CARD_H / 2 - 26, CARD_W - 8, 22, { tl: 0, tr: 0, bl: 12, br: 12 })
+    const tags = this.add.text(-18, 22, this.vehicleTags(vehicle), {
+      fontFamily: 'Arial',
+      fontStyle: 'bold',
+      fontSize: '17px',
+      color: hex(C.inkSoft),
+    }).setOrigin(0, 0.5).setResolution(2)
 
-    const name = this.add.text(0, CARD_H / 2 - 15, this.dedupeRepeatedLabel(vehicle.name), {
-      fontSize: '13px', fontFamily: 'Arial Black, Arial',
-      color: '#FFFFFF', stroke: '#000000', strokeThickness: 2,
-    }).setOrigin(0.5)
-
-    // Seleção visual: glow border + checkmark (inicialmente ocultos)
-    const selGlow = this.add.graphics()
-    selGlow.lineStyle(5, 0x42d640, 1)
-    selGlow.strokeRoundedRect(-CARD_W / 2 - 4, -CARD_H / 2 - 4, CARD_W + 8, CARD_H + 8, 18)
-    selGlow.setAlpha(0)
-
-    const checkmark = this.add.text(CARD_W / 2 - 10, -CARD_H / 2 + 8, '✔', {
-      fontSize: '22px', color: '#42d640',
-      stroke: '#000000', strokeThickness: 3,
-    }).setOrigin(1, 0).setAlpha(0)
-
-    const container = this.add.container(cx, cy, [bg, nameBg, img, name, selGlow, checkmark])
-    container.setSize(CARD_W, CARD_H)
-    container.setAlpha(0).setScale(0.72)
-    container.setInteractive({ useHandCursor: true })
-
-    // Guardar referências de seleção no container via data
-    container.setData('vehicleId', vehicle.id)
-    container.setData('selGlow', selGlow)
-    container.setData('checkmark', checkmark)
-    container.setData('selected', false)
-
-    container.on('pointerdown', () => this.toggleVehicleSelection(vehicle.id, container))
-
-    this.tweens.add({
-      targets: container, alpha: 1, scaleX: 1, scaleY: 1,
-      duration: 380, ease: 'Back.Out',
-      delay: this.vehicleCards.length * 70,
-    })
-
-    return { container, vehicle, homeX: cx, homeY: cy }
-  }
-
-  private buildQuestionPanel() {
-    const panelY = TOP_Y + 50
-
-    this.questionPanel = this.add.container(PANEL_LEFT_X, panelY).setDepth(10)
-
-    const bg = this.add.image(PANEL_W / 2, 155, 'panel-filter')
-      .setDisplaySize(PANEL_W, 310).setOrigin(0.5)
-
-    const qCardBg = this.add.graphics()
-    qCardBg.fillStyle(0xfff6e8, 0.97)
-    qCardBg.fillRoundedRect(20, 2, PANEL_W - 40, 86, 16)
-    qCardBg.lineStyle(3, 0x42d640, 0.9)
-    qCardBg.strokeRoundedRect(20, 2, PANEL_W - 40, 86, 16)
-
-    const qLabel = this.add.text(PANEL_W / 2, 12, '🎯  O QUE FAZER', {
-      fontFamily: 'Arial', fontStyle: 'bold',
-      fontSize: '13px', color: '#f57c00',
-    }).setOrigin(0.5, 0).setResolution(2)
-
-    const qText = this.add.text(PANEL_W / 2, 32, '', {
-      fontFamily: 'Arial', fontStyle: 'bold',
-      fontSize: '21px', color: '#1a2b6b',
-      align: 'center', wordWrap: { width: 340 },
-    }).setOrigin(0.5, 0).setResolution(2)
-
-    this.selectionCountText = this.add.text(PANEL_W / 2, 100, '0 selecionados', {
-      fontFamily: 'Arial', fontStyle: 'bold',
-      fontSize: '17px', color: '#607d8b',
-    }).setOrigin(0.5, 0).setResolution(2)
-
-    this.confirmBtn = this.add.container(PANEL_W / 2, 185)
-    const btnBg = this.add.graphics()
-    btnBg.fillStyle(0xb8c0cc, 1)
-    btnBg.fillRoundedRect(-120, -24, 240, 48, 24)
-    btnBg.lineStyle(3, 0xffffff, 0.8)
-    btnBg.strokeRoundedRect(-120, -24, 240, 48, 24)
-    const btnTxt = this.add.text(0, 0, '✔  Confirmar', {
-      fontFamily: 'Arial', fontStyle: 'bold',
-      fontSize: '20px', color: '#ffffff',
-      stroke: '#00000040', strokeThickness: 2,
+    const check = this.add.text(GRID.cardW / 2 - 30, -GRID.cardH / 2 + 24, '', {
+      fontFamily: 'Arial Black, Arial',
+      fontSize: '24px',
+      color: '#ffffff',
     }).setOrigin(0.5).setResolution(2)
-    this.confirmBtn.add([btnBg, btnTxt])
-    this.confirmBtn.setSize(240, 72)
-    this.confirmBtn.setInteractive({ useHandCursor: false })
-    this.confirmBtn.setData('btnBg', btnBg)
-    this.confirmBtn.setData('enabled', false)
-    this.confirmBtn.on('pointerdown', () => this.confirmAnswer())
 
-    const hintText = this.add.text(PANEL_W / 2, 226, '', {
-      fontFamily: 'Arial', fontStyle: 'bold',
-      fontSize: '17px', color: '#607d8b',
-      align: 'center', wordWrap: { width: 340 },
-    }).setOrigin(0.5, 0).setResolution(2)
+    img.setDisplaySize(82, 82)
+    container.add([bg, img, label, tags, check])
+    container.setSize(GRID.cardW, GRID.cardH)
+    container.setInteractive({ useHandCursor: true })
+    container.on('pointerdown', () => this.toggleCard(vehicle.id))
+    container.on('pointerover', () => {
+      if (!this.locked) this.tweens.add({ targets: container, scale: 1.025, duration: 110 })
+    })
+    container.on('pointerout', () => this.tweens.add({ targets: container, scale: 1, duration: 110 }))
 
-    this.questionPanel.setData('qText', qText)
-    this.questionPanel.setData('hintText', hintText)
-    this.questionPanel.add([bg, qCardBg, qLabel, qText, this.selectionCountText!, this.confirmBtn, hintText])
+    const card: CardView = { container, vehicle, bg, check, selected: false }
+    this.paintCard(card)
+    container.setAlpha(0)
+    container.y += 18
+    this.tweens.add({ targets: container, y, alpha: 1, duration: 240, delay: this.cards.length * 35, ease: 'Back.easeOut' })
+    return card
   }
 
-  private showCurrentMission() {
-    if (!this.questionPanel) return
-    const mission = this.levelConfig.missions[this.currentMissionIndex]
+  private paintCard(card: CardView, state: 'idle' | 'selected' | 'correct' | 'wrong' | 'missed' = card.selected ? 'selected' : 'idle') {
+    const { bg, check } = card
+    const w = GRID.cardW
+    const h = GRID.cardH
+    const color = state === 'correct' ? C.green : state === 'wrong' ? C.red : state === 'missed' ? C.amber : state === 'selected' ? C.blue : C.border
+    const fill = state === 'correct' ? C.greenSoft : state === 'wrong' ? C.redSoft : state === 'missed' ? C.amberSoft : state === 'selected' ? C.blueSoft : C.panel
 
-    const qText = this.questionPanel.getData('qText') as Phaser.GameObjects.Text
-    const hintText = this.questionPanel.getData('hintText') as Phaser.GameObjects.Text
-    qText.setText(mission.question)
-    hintText.setText(mission.hint)
+    bg.clear()
+    bg.fillStyle(C.shadow, 0.34)
+    bg.fillRoundedRect(-w / 2 + 5, -h / 2 + 8, w, h, 18)
+    bg.fillStyle(fill, 1)
+    bg.fillRoundedRect(-w / 2, -h / 2, w, h, 18)
+    bg.lineStyle(4, C.shadow, 0.65)
+    bg.strokeRoundedRect(-w / 2 + 2, -h / 2 + 2, w - 4, h - 4, 16)
+    bg.lineStyle(state === 'idle' ? 3 : 6, color, 1)
+    bg.strokeRoundedRect(-w / 2, -h / 2, w, h, 18)
+    bg.fillStyle(color, state === 'idle' ? 0.65 : 1)
+    bg.fillRoundedRect(-w / 2, -h / 2, 14, h, 7)
 
-    this.selectedVehicleIds.clear()
-    this.vehicleCards.forEach(vc => this.setCardSelected(vc.container, false))
-    this.updateConfirmButton()
-    this.phase = 'waiting-answer'
-
-    // Retoma o timer pausado por confirmAnswer() (só se a cena não encerrou)
-    if (!this.gameEnded && this.timerTween) {
-      this.timerActive = true
-      this.timerTween.resume()
-    }
-
-    this.broadcastMissionState()
+    check.setText(state === 'wrong' ? '!' : state === 'missed' ? '?' : '')
+    check.setColor(state === 'wrong' ? hex(C.red) : state === 'missed' ? hex(C.amber) : '#ffffff')
   }
 
-  private toggleVehicleSelection(vehicleId: string, container: Phaser.GameObjects.Container) {
-    if (this.gameEnded || this.phase !== 'waiting-answer') return
+  private toggleCard(id: string) {
+    if (this.locked) return
+    const card = this.cards.find(c => c.vehicle.id === id)
+    if (!card) return
 
-    const isSelected = container.getData('selected') as boolean
-    this.setCardSelected(container, !isSelected)
+    card.selected = !card.selected
+    if (card.selected) this.selected.add(id)
+    else this.selected.delete(id)
 
-    if (!isSelected) {
-      this.selectedVehicleIds.add(vehicleId)
-    } else {
-      this.selectedVehicleIds.delete(vehicleId)
-    }
-
-    this.updateConfirmButton()
-    this.playTick()
+    this.paintCard(card)
+    this.renderMissionPanel()
+    this.tweens.add({ targets: card.container, scale: card.selected ? 1.04 : 1, duration: 110, yoyo: card.selected })
   }
 
-  private setCardSelected(container: Phaser.GameObjects.Container, selected: boolean) {
-    const selGlow = container.getData('selGlow') as Phaser.GameObjects.Graphics
-    const checkmark = container.getData('checkmark') as Phaser.GameObjects.Text
-    container.setData('selected', selected)
-
-    this.tweens.killTweensOf(selGlow)
-    this.tweens.killTweensOf(checkmark)
-
-    selGlow.setAlpha(selected ? 1 : 0)
-    checkmark.setAlpha(selected ? 1 : 0)
-
-    if (selected) {
-      this.tweens.add({
-        targets: container, scaleX: 1.05, scaleY: 1.05,
-        duration: 80, ease: 'Power2', yoyo: true,
-      })
-    }
-  }
-
-  private updateConfirmButton() {
-    if (!this.confirmBtn) return
-    const enabled = this.selectedVehicleIds.size > 0
-    const btnBg = this.confirmBtn.getData('btnBg') as Phaser.GameObjects.Graphics
-    const wasEnabled = this.confirmBtn.getData('enabled') as boolean
-
-    if (enabled === wasEnabled) {
-      // só atualiza o contador
-      if (this.selectionCountText) {
-        const n = this.selectedVehicleIds.size
-        this.selectionCountText.setText(`${n} selecionado${n !== 1 ? 's' : ''}`)
-      }
+  private confirmSelection() {
+    if (this.locked) return
+    if (!this.selected.size) {
+      this.renderFooter('Selecione pelo menos um veículo antes de conferir.', C.amber)
+      this.tweens.add({ targets: this.footerLayer, x: 10, duration: 70, yoyo: true, repeat: 2 })
       return
     }
 
-    this.confirmBtn.setData('enabled', enabled)
-    btnBg.clear()
-    btnBg.fillStyle(enabled ? 0x42d640 : 0xb8c0cc, 1)
-    btnBg.fillRoundedRect(-120, -24, 240, 48, 24)
-    btnBg.lineStyle(3, 0xffffff, enabled ? 1 : 0.8)
-    btnBg.strokeRoundedRect(-120, -24, 240, 48, 24)
+    this.locked = true
+    const correctIds = new Set(this.level.vehicleIds.filter(id => this.matches(vehicleById(id), this.mission)).map(String))
+    const selectedIds = [...this.selected]
+    const perfect = selectedIds.length === correctIds.size && selectedIds.every(id => correctIds.has(id))
+    let selectedCorrect = 0
 
-    if (enabled) {
-      this.confirmBtn.setInteractive({ useHandCursor: true })
-    } else {
-      this.confirmBtn.disableInteractive()
-    }
-
-    if (this.selectionCountText) {
-      const n = this.selectedVehicleIds.size
-      this.selectionCountText.setText(`${n} selecionado${n !== 1 ? 's' : ''}`)
-    }
-  }
-
-  private confirmAnswer() {
-    if (this.phase !== 'waiting-answer' || !this.confirmBtn?.getData('enabled')) return
-
-    this.phase = 'feedback-ok'
-    this.confirmBtn?.disableInteractive()
-
-    // Pausa o timer imediatamente para evitar que onTimeUp() dispare
-    // durante o delayedCall de feedback (race condition)
-    this.timerActive = false
-    this.timerTween?.pause()
-    this.warningBeepTimer?.destroy()
-    this.warningBeepTimer = null
-
-    const mission = this.levelConfig.missions[this.currentMissionIndex]
-    const vehicles = this.levelConfig.vehicleIds
-      .map(id => ALL_VEHICLES.find(v => v.id === id)!)
-      .filter(Boolean)
-
-    const matchesAttr = (v: Vehicle): boolean => {
-      switch (mission.attribute) {
-        case 'voa': return v.attributes.voa === mission.value
-        case 'temRodas': return v.attributes.temRodas === mission.value
-        case 'temMotor': return v.attributes.temMotor === mission.value
-        case 'meio': return v.attributes.meio === mission.value
-        default: return false
-      }
-    }
-    const correctIds = new Set(vehicles.filter(matchesAttr).map(v => v.id))
-
-    const selected = this.selectedVehicleIds
-    const isCorrect =
-      correctIds.size === selected.size &&
-      [...correctIds].every(id => selected.has(id))
-
-    // Feedback visual em cada card
-    this.vehicleCards.forEach(vc => {
-      const id = vc.vehicle.id
-      const wasSelected = selected.has(id)
-      const shouldBeSelected = correctIds.has(id)
-
-      if (wasSelected && shouldBeSelected) {
-        // correto — pulso verde
-        this.tweens.add({
-          targets: vc.container, scaleX: 1.1, scaleY: 1.1,
-          duration: 180, ease: 'Sine.Out', yoyo: true,
-        })
-      } else if (wasSelected && !shouldBeSelected) {
-        // errado — destaca em vermelho
-        const wrongGlow = this.add.graphics()
-        wrongGlow.lineStyle(5, 0xef4444, 1)
-        wrongGlow.strokeRoundedRect(-CARD_W / 2 - 4, -CARD_H / 2 - 4, CARD_W + 8, CARD_H + 8, 18)
-        vc.container.add(wrongGlow)
-        this.tweens.add({
-          targets: vc.container, x: vc.homeX - 6, duration: 60, yoyo: true, repeat: 3, ease: 'Power2',
-          onComplete: () => wrongGlow.destroy(),
-        })
-      } else if (!wasSelected && shouldBeSelected) {
-        // esquecido — borda amarela pulsante
-        const missedGlow = this.add.graphics()
-        missedGlow.lineStyle(5, 0xf59e0b, 1)
-        missedGlow.strokeRoundedRect(-CARD_W / 2 - 4, -CARD_H / 2 - 4, CARD_W + 8, CARD_H + 8, 18)
-        vc.container.add(missedGlow)
-        // mostra o checkmark amarelo para indicar que deveria ter sido selecionado
-        const checkmark = vc.container.getData('checkmark') as Phaser.GameObjects.Text
-        checkmark.setStyle({ color: '#f59e0b' }).setAlpha(1)
-        this.time.delayedCall(1500, () => { missedGlow.destroy(); checkmark.setAlpha(0).setStyle({ color: '#42d640' }) })
-      }
+    this.cards.forEach(card => {
+      const should = correctIds.has(card.vehicle.id)
+      const was = this.selected.has(card.vehicle.id)
+      if (should && was) selectedCorrect++
+      this.paintCard(card, should && was ? 'correct' : !should && was ? 'wrong' : should ? 'missed' : 'idle')
+      if (!should && was) this.tweens.add({ targets: card.container, x: card.container.x + 8, duration: 70, yoyo: true, repeat: 2 })
+      if (should && was) this.tweens.add({ targets: card.container, y: card.container.y - 12, duration: 170, yoyo: true, ease: 'Sine.easeOut' })
     })
 
-    if (isCorrect) {
-      this.hits++
-      this.playCorrect()
-      this.time.delayedCall(1200, () => this.advanceMission())
-    } else {
-      this.errors++
-      this.playError()
-      runtimeGameBridge.emit({
-        type: 'WRONG_ANSWER',
-        gameId: GAME_ID,
-        pointsEarned: -2,
-        stage: this.levelConfig.level,
-      })
-      this.emitCheckpoint()
-      this.time.delayedCall(1800, () => this.advanceMission())
-    }
-  }
-
-  private advanceMission() {
-    const missions = this.levelConfig.missions
-    const isLast = this.currentMissionIndex >= missions.length - 1
-    const nextInstruction = !isLast
-      ? missions[this.currentMissionIndex + 1].question
-      : null
-
-    this.showMissionCompleteEffect(isLast ? null : nextInstruction, () => {
-      this.currentMissionIndex++
-      if (this.currentMissionIndex >= missions.length) {
-        this.endLevel()
-        return
-      }
-      this.time.delayedCall(300, () => this.showCurrentMission())
-    })
-  }
-
-  private endLevel() {
-    this.phase = 'level-complete'
-    this.gameEnded = true
-    this.timerActive = false
-    this.timerTween?.stop()
-    this.warningBeepTimer?.destroy()
-    this.warningBeepTimer = null
-
-    this.playFanfare()
-
+    const earned = perfect ? 30 : Math.max(5, selectedCorrect * 8)
+    this.points += earned
     runtimeGameBridge.emit({
-      type: 'GAME_COMPLETED',
+      type: perfect ? 'CORRECT_ANSWER' : 'WRONG_ANSWER',
       gameId: GAME_ID,
-      stage: this.levelConfig.level,
+      pointsEarned: earned,
+      stage: this.level.level,
     })
-    this.emitCheckpoint()
 
-    const nextLevel = this.levelConfig.level < 3
-      ? (this.levelConfig.level + 1) as 2 | 3
-      : null
-
-    this.time.delayedCall(400, () => this.showLevelCompleteTransition(nextLevel))
+    this.renderHeader()
+    this.renderFooter(perfect ? `Perfeito! +${earned} pontos.` : `Veja os cartões marcados. +${earned} pontos.`, perfect ? C.green : C.amber)
+    this.time.delayedCall(perfect ? 1100 : 1800, () => this.nextMission())
   }
 
-  // ══════════════════════════════════════════════════════════════════════════
-  //  UTILITÁRIOS DE UI
-  // ══════════════════════════════════════════════════════════════════════════
+  private nextMission() {
+    if (this.missionIdx + 1 < this.level.missions.length) {
+      this.missionIdx++
+      this.selected.clear()
+      this.locked = false
+      this.renderAll()
+      return
+    }
 
-  // ══════════════════════════════════════════════════════════════════════════
-  //  HELPERS DE MODAL
-  // ══════════════════════════════════════════════════════════════════════════
+    this.completeLevel()
+  }
 
-  private createModalButton(x: number, y: number, label: string, color: number, onClick: () => void) {
-    const button = this.add.container(x, y)
+  private completeLevel() {
+    const isLastLevel = this.levelIdx + 1 >= LEVELS.length
+    if (isLastLevel) {
+      this.ended = true
+      runtimeGameBridge.emit({ type: 'GAME_COMPLETED', gameId: GAME_ID, stage: this.level.level })
+      showLevelComplete(this, {
+        title: 'Hangar organizado!',
+        subtitle: `${this.points} pontos`,
+        message: 'Você classificou veículos por características e pelo meio em que se deslocam.',
+        accent: C.green,
+        overlayColor: C.shadow,
+        titleColor: hex(C.blueDark),
+        subtitleColor: hex(C.green),
+        progress: { total: LEVELS.length, current: LEVELS.length },
+      })
+      return
+    }
+
+    showLevelComplete(this, {
+      subtitle: `Nível ${this.level.level} concluído`,
+      message: LEVELS[this.levelIdx + 1].objective,
+      accent: C.blue,
+      overlayColor: C.shadow,
+      titleColor: hex(C.blueDark),
+      subtitleColor: hex(C.blue),
+      progress: { total: LEVELS.length, current: this.level.level },
+      autoAdvance: {
+        delay: 2200,
+        onComplete: () => this.scene.restart({ level: this.level.level + 1, mission: 0, points: this.points }),
+      },
+    })
+  }
+
+  private renderFooter(text: string, tone = C.blue) {
+    this.footerLayer.removeAll(true)
+    this.footerLayer.setX(0)
+
+    const hint = this.add.graphics()
+    hint.fillStyle(C.panel, 0.98)
+    hint.fillRoundedRect(FOOTER.hintX, FOOTER.y - 30, FOOTER.hintW, 60, 18)
+    hint.lineStyle(3, tone, 1)
+    hint.strokeRoundedRect(FOOTER.hintX, FOOTER.y - 30, FOOTER.hintW, 60, 18)
+    hint.fillStyle(tone, 1)
+    hint.fillCircle(FOOTER.hintX + 30, FOOTER.y, 14)
+
+    const mark = this.add.text(FOOTER.hintX + 30, FOOTER.y - 1, 'i', {
+      fontFamily: 'Arial Black, Arial',
+      fontSize: '18px',
+      color: '#ffffff',
+    }).setOrigin(0.5).setResolution(2)
+
+    const label = this.add.text(FOOTER.hintX + 56, FOOTER.y, text, {
+      fontFamily: 'Arial',
+      fontStyle: 'bold',
+      fontSize: '20px',
+      color: hex(C.ink),
+      wordWrap: { width: FOOTER.hintW - 78 },
+    }).setOrigin(0, 0.5).setResolution(2)
+
+    const btn = this.button(FOOTER.btnX, FOOTER.y, FOOTER.btnW, FOOTER.btnH, 'Conferir', C.blue, () => this.confirmSelection())
+    this.footerLayer.add([hint, mark, label, btn])
+  }
+
+  private showLevelIntro(onStart: () => void) {
+    this.locked = true
+    const overlay = this.add.rectangle(W / 2, H / 2, W, H, C.shadow, 0.72).setDepth(180).setInteractive()
+    const panel = this.add.container(W / 2, H / 2).setDepth(181)
+
+    const objective = this.add.text(0, 0, this.level.objective, {
+      fontFamily: 'Arial',
+      fontStyle: 'bold',
+      fontSize: '24px',
+      color: hex(C.ink),
+      align: 'center',
+      wordWrap: { width: 560 },
+    }).setOrigin(0.5).setResolution(2)
+
+    const tip = this.add.text(0, 0, this.level.tip, {
+      fontFamily: 'Arial',
+      fontStyle: 'bold',
+      fontSize: '20px',
+      color: hex(C.inkSoft),
+      align: 'center',
+      wordWrap: { width: 540 },
+    }).setOrigin(0.5).setResolution(2)
+
+    const ph = Math.max(390, objective.height + tip.height + 290)
+    const top = -ph / 2
     const bg = this.add.graphics()
-    bg.fillStyle(color, 1)
-    bg.fillRoundedRect(-124, -24, 248, 48, 24)
-    bg.lineStyle(4, 0xffffff, 1)
-    bg.strokeRoundedRect(-124, -24, 248, 48, 24)
-    const text = this.add.text(0, 0, label, {
-      fontSize: '17px', fontFamily: 'Arial Black, Arial',
-      color: '#ffffff', stroke: '#0f172a', strokeThickness: 3,
-    }).setOrigin(0.5)
-    button.add([bg, text])
-    button.setSize(256, 68)
-    button.setInteractive({ useHandCursor: true })
-    button.on('pointerover', () => this.tweens.add({ targets: button, scale: 1.05, duration: 90 }))
-    button.on('pointerout', () => this.tweens.add({ targets: button, scale: 1, duration: 90 }))
-    button.on('pointerdown', () => { this.playTick(); onClick() })
-    return button
+    bg.fillStyle(C.shadow, 0.34)
+    bg.fillRoundedRect(-350, top + 12, 700, ph, 30)
+    bg.fillStyle(C.panel, 1)
+    bg.fillRoundedRect(-350, top, 700, ph, 30)
+    bg.lineStyle(5, C.blue, 1)
+    bg.strokeRoundedRect(-350, top, 700, ph, 30)
+    bg.fillStyle(C.blue, 1)
+    bg.fillRoundedRect(-160, top - 15, 320, 30, 15)
+
+    const badgeBg = this.add.graphics()
+    badgeBg.fillStyle(C.blueSoft, 1)
+    badgeBg.fillRoundedRect(-88, top + 36, 176, 42, 21)
+    badgeBg.lineStyle(3, C.blue, 1)
+    badgeBg.strokeRoundedRect(-88, top + 36, 176, 42, 21)
+
+    const badge = this.add.text(0, top + 57, `NÍVEL ${this.level.level}`, {
+      fontFamily: 'Arial Black, Arial',
+      fontSize: '21px',
+      color: hex(C.ink),
+    }).setOrigin(0.5).setResolution(2)
+
+    const title = this.add.text(0, top + 118, this.level.title, {
+      fontFamily: 'Arial Black, Arial',
+      fontSize: '38px',
+      color: hex(C.ink),
+      align: 'center',
+      wordWrap: { width: 600 },
+    }).setOrigin(0.5).setResolution(2)
+
+    objective.setY(top + 190 + objective.height / 2)
+    tip.setY(objective.y + objective.height / 2 + 40 + tip.height / 2)
+
+    const btn = this.button(0, ph / 2 - 54, 320, 70, 'Começar', C.green, () => {
+      overlay.destroy()
+      panel.destroy()
+      onStart()
+    }, '24px', true)
+
+    panel.add([bg, badgeBg, badge, title, objective, tip, btn])
+    panel.setScale(0.94).setAlpha(0)
+    this.tweens.add({ targets: panel, alpha: 1, scale: 1, duration: 260, ease: 'Back.easeOut' })
   }
 
-  private getLevelInfo(lvl: number): { objective: string; tip: string } {
-    const config = LEVELS.find(l => l.level === lvl)
-    return {
-      objective: config?.objective ?? '',
-      tip: config?.tip ?? '',
+  private startMission() {
+    this.locked = false
+  }
+
+  private runTutorial() {
+    this.tutorialSteps = this.buildTutorialSteps()
+    this.tutorialKey = `ef02co01-l${this.level.level}`
+    EventBus.emit('tutorial-ready')
+
+    if (this.missionIdx !== 0 || !this.tutorialSteps.length) {
+      this.startMission()
+      return
     }
-  }
 
-  // ══════════════════════════════════════════════════════════════════════════
-  //  ÁUDIO SINTÉTICO
-  // ══════════════════════════════════════════════════════════════════════════
-
-  private getAudioCtx(): AudioContext | null {
-    if (this.isMuted) return null
-    try {
-      return (this.sound as Phaser.Sound.WebAudioSoundManager).context
-    } catch {
-      return null
-    }
-  }
-
-  private playTone(freq: number, dur: number, type: OscillatorType = 'sine', gain = 0.25) {
-    const ctx = this.getAudioCtx()
-    if (!ctx) return
-    const osc = ctx.createOscillator()
-    const g = ctx.createGain()
-    osc.connect(g); g.connect(ctx.destination)
-    osc.type = type
-    osc.frequency.setValueAtTime(freq, ctx.currentTime)
-    g.gain.setValueAtTime(gain, ctx.currentTime)
-    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur)
-    osc.start(); osc.stop(ctx.currentTime + dur)
-  }
-
-  private playTick() { this.playTone(520, 0.04, 'sine', 0.08) }
-  private playCorrect() {
-    this.playTone(660, 0.08, 'sine', 0.15)
-    this.time.delayedCall(100, () => this.playTone(880, 0.08, 'sine', 0.12))
-  }
-  private playError() { this.playTone(330, 0.20, 'square', 0.15) }
-  private playFanfare() {
-    [523, 659, 784, 1047].forEach((f, i) =>
-      this.time.delayedCall(i * 125, () => this.playTone(f, 0.22, 'sine', 0.32)),
-    )
-  }
-
-  // ══════════════════════════════════════════════════════════════════════════
-  //  PLATFORM BRIDGE
-  // ══════════════════════════════════════════════════════════════════════════
-
-  private registerPlatformCommands() {
-    this.unsubPlatform = runtimeGameBridge.onCommand((cmd: PlatformCommand) => {
-      if (cmd.type === 'START_GAME') {
-        this.currentPoints = cmd.points ?? 0
-        this.currentLives = cmd.lives ?? 1
-      }
+    EventBus.emit('tutorial-start')
+    createTutorial(this, {
+      key: this.tutorialKey,
+      accent: C.blue,
+      safeTop: 112,
+      steps: this.tutorialSteps,
+      onFinish: () => {
+        EventBus.emit('tutorial-end')
+        this.startMission()
+      },
     })
+  }
+
+  private replayTutorial = () => {
+    if (this.ended || !this.tutorialSteps.length) return
+    const wasLocked = this.locked
+    this.locked = true
+    EventBus.emit('tutorial-start')
+    createTutorial(this, {
+      key: this.tutorialKey,
+      once: false,
+      accent: C.blue,
+      safeTop: 112,
+      steps: this.tutorialSteps,
+      onFinish: () => {
+        this.locked = wasLocked
+        EventBus.emit('tutorial-end')
+      },
+    })
+  }
+
+  private buildTutorialSteps(): TutorialStep[] {
+    return [
+      {
+        text: 'Leia a missão. Ela diz qual característica você precisa procurar nos veículos.',
+        shape: 'rect', x: MISSION.cx, y: MISSION.y + MISSION.h / 2, w: MISSION.w + 26, h: MISSION.h + 24,
+      },
+      {
+        text: 'Toque nos cartões dos veículos que combinam com a pista. O cartão azul está selecionado.',
+        shape: 'rect', x: W / 2, y: GRID.y + GRID.h / 2, w: GRID.w + 34, h: GRID.h + 36,
+      },
+      {
+        text: 'Quando terminar, toque em Conferir. O jogo mostra acertos, erros e veículos esquecidos.',
+        shape: 'rect', x: FOOTER.btnX, y: FOOTER.y, w: FOOTER.btnW + 34, h: FOOTER.btnH + 28,
+      },
+    ]
+  }
+
+  private matches(vehicle: Vehicle, mission: SelectionMission) {
+    return vehicle.attributes[mission.attribute] === mission.value
+  }
+
+  private vehicleTags(vehicle: Vehicle) {
+    const meio = vehicle.attributes.meio === 'agua' ? 'Água' : vehicle.attributes.meio === 'ar' ? 'Ar' : 'Terra'
+    const motor = vehicle.attributes.temMotor ? 'Com Motor' : 'Sem Motor'
+    return `${meio} - ${motor}`
+  }
+
+  private button(
+    x: number,
+    y: number,
+    w: number,
+    h: number,
+    label: string,
+    color: number,
+    onClick: () => void,
+    fontSize = '20px',
+    ignoreLock = false,
+  ) {
+    const btn = this.add.container(x, y)
+    const g = this.add.graphics()
+    g.fillStyle(C.shadow, 0.22)
+    g.fillRoundedRect(-w / 2, -h / 2 + 7, w, h, 18)
+    g.fillStyle(color, 1)
+    g.fillRoundedRect(-w / 2, -h / 2, w, h, 18)
+    g.fillStyle(C.white, A.gloss)
+    g.fillRoundedRect(-w / 2 + 10, -h / 2 + 9, w - 20, h * 0.3, 9)
+
+    const t = this.add.text(0, 0, label, {
+      fontFamily: 'Arial Black, Arial',
+      fontSize,
+      color: '#ffffff',
+      align: 'center',
+      wordWrap: { width: w - 30 },
+    }).setOrigin(0.5).setResolution(2)
+
+    btn.add([g, t])
+    btn.setSize(w, h)
+    btn.setInteractive({ useHandCursor: true })
+    btn.on('pointerdown', () => {
+      if (!ignoreLock && this.locked) return
+      this.tweens.add({ targets: btn, scale: 0.95, duration: 70, yoyo: true })
+      onClick()
+    })
+    return btn
   }
 }

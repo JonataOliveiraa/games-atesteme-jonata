@@ -7,7 +7,7 @@ const EF02CO01Config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
   width: 1280,
   height: 720,
-  backgroundColor: '#0D1B2A',
+  backgroundColor: '#071426',
   scene: [BootScene, GameScene, UIScene],
   physics: {
     default: 'arcade',

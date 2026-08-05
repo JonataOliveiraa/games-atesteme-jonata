@@ -278,6 +278,36 @@ export const THEMES: Record<ThemeId, ThemeDef> = {
         },
       ],
     },
+    messages: [
+      {
+        id: 'robo-m1',
+        chip: 'Só produtividade',
+        text: 'Com robôs, o trabalho fica perfeito para todo mundo.',
+        score: { clareza: 1, mudanca: 1, reflexao: 0 },
+        why: 'Mostra só vantagem e esquece os aprendizados e mudanças para as pessoas.',
+      },
+      {
+        id: 'robo-m2',
+        chip: 'Só ameaça',
+        text: 'Toda máquina no trabalho só prejudica as pessoas.',
+        score: { clareza: 1, mudanca: 1, reflexao: 0 },
+        why: 'É um lado só. A história também mostrou segurança e novas funções.',
+      },
+      {
+        id: 'robo-m3',
+        chip: 'Aprender junto',
+        text: 'A automação pode ajudar, mas as pessoas precisam aprender e participar da mudança.',
+        score: { clareza: 2, mudanca: 2, reflexao: 2 },
+        why: 'Fecha a história com ganho, limite e responsabilidade social.',
+      },
+      {
+        id: 'robo-m4',
+        chip: 'Robô bonito',
+        text: 'O robô é moderno e fica legal na fábrica.',
+        score: { clareza: 1, mudanca: 0, reflexao: 0 },
+        why: 'Fala da aparência da tecnologia, mas não explica o impacto no trabalho.',
+      },
+    ],
   },
   trabalhoRemoto: {
     id: 'trabalhoRemoto',

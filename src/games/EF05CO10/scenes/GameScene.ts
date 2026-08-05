@@ -4,7 +4,7 @@ import { EventBus } from '../../../shared/EventBus'
 import { createTutorial, type TutorialStep } from '../../../shared/tutorial/createTutorial'
 import { showLevelComplete } from '../../../shared/level/showLevelComplete'
 import { LEVELS, SCORE_LABEL } from '../data/levels'
-import { CHARACTERS, CRITERIA, MOMENT_LABEL, SCENERIES, THEMES } from '../data/story'
+import { CHARACTERS, CRITERIA, SCENERIES, THEMES } from '../data/story'
 import { C, A, CRITERION_COLOR, hex } from '../data/theme'
 import { W, H, HEADER, STRIP, PANEL, MESSAGE_LIST, BALLOON, CHAR, MASCOTE, stageBox } from '../data/layout'
 import type {
@@ -104,7 +104,7 @@ export class GameScene extends Phaser.Scene {
     private get themeId(): ThemeId {
         const p = this.phase
         if (p.kind !== 'cena') return p.theme
-        return this.draft.themeId ?? this.frames[0]?.line?.id.split('-')[0] as ThemeId ?? p.themeOptions[0]
+        return this.draft.themeId ?? this.frames[this.slotIdx]?.themeId ?? p.themeOptions[0]
     }
 
     create() {
@@ -157,28 +157,28 @@ export class GameScene extends Phaser.Scene {
         const box = this.stage
         const g = this.add.graphics().setDepth(-1)
         g.fillStyle(C.shadow, A.shadow)
-        g.fillRoundedRect(box.x + 5, box.y + 12, box.w, box.h, 26)
+        g.fillRoundedRect(box.x + 5, box.y + 12, box.w, box.h, 0)
         g.fillStyle(C.stage, 1)
-        g.fillRoundedRect(box.x - 12, box.y - 12, box.w + 24, box.h + 24, 32)
+        g.fillRoundedRect(box.x - 12, box.y - 12, box.w + 24, box.h + 24, 0)
         g.fillStyle(C.stageEdge, 1)
-        g.fillRoundedRect(box.x - 5, box.y - 5, box.w + 10, box.h + 10, 27)
+        g.fillRoundedRect(box.x - 5, box.y - 5, box.w + 10, box.h + 10, 0)
         g.fillStyle(C.greySoft, 1)
-        g.fillRoundedRect(box.x, box.y, box.w, box.h, 22)
+        g.fillRoundedRect(box.x, box.y, box.w, box.h, 0)
 
         const shape = this.make.graphics({}, false)
         shape.fillStyle(0xffffff)
-        shape.fillRoundedRect(box.x, box.y, box.w, box.h, 22)
+        shape.fillRoundedRect(box.x, box.y, box.w, box.h, 0)
         this.stageMask = shape.createGeometryMask()
 
         if (!this.hasStrip) return
 
         const film = this.add.graphics().setDepth(-1)
         film.fillStyle(C.film, 1)
-        film.fillRoundedRect(box.x - 12, STRIP.cy - STRIP.h / 2 - 18, box.w + 24, STRIP.h + 36, 20)
+        film.fillRoundedRect(box.x - 12, STRIP.cy - STRIP.h / 2 - 18, box.w + 24, STRIP.h + 36, 0)
         film.fillStyle(C.filmHole, 0.45)
         for (let x = box.x + 6; x < box.x + box.w - 10; x += 36) {
-            film.fillRoundedRect(x, STRIP.cy - STRIP.h / 2 - 12, 20, 10, 4)
-            film.fillRoundedRect(x, STRIP.cy + STRIP.h / 2 + 2, 20, 10, 4)
+            film.fillRoundedRect(x, STRIP.cy - STRIP.h / 2 - 12, 20, 10, 0)
+            film.fillRoundedRect(x, STRIP.cy + STRIP.h / 2 + 2, 20, 10, 0)
         }
     }
 
@@ -203,15 +203,15 @@ export class GameScene extends Phaser.Scene {
 
         const g = this.add.graphics()
         g.fillStyle(C.shadow, 0.2)
-        g.fillRoundedRect(HEADER.chipX + 3, 26, HEADER.chipW, HEADER.chipH, 20)
+        g.fillRoundedRect(HEADER.chipX + 3, 26, HEADER.chipW, HEADER.chipH, 0)
         g.fillStyle(C.stage, 1)
-        g.fillRoundedRect(HEADER.chipX, 20, HEADER.chipW, HEADER.chipH, 20)
+        g.fillRoundedRect(HEADER.chipX, 20, HEADER.chipW, HEADER.chipH, 0)
         g.fillStyle(C.white, 0.12)
-        g.fillRoundedRect(HEADER.chipX + 10, 28, HEADER.chipW - 20, 16, 8)
+        g.fillRoundedRect(HEADER.chipX + 10, 28, HEADER.chipW - 20, 16, 0)
         g.fillStyle(C.amber, 1)
         g.fillCircle(HEADER.chipX + 30, 51, 8)
 
-        const level = this.add.text(HEADER.chipX + 50, 40, `NIVEL ${this.level.level}`, {
+        const level = this.add.text(HEADER.chipX + 50, 40, `NÍVEL ${this.level.level}`, {
             fontFamily: 'Arial Black, Arial',
             fontSize: '19px',
             color: hex(C.white),
@@ -254,7 +254,6 @@ export class GameScene extends Phaser.Scene {
         const sceneryId = this.draft.sceneryId ?? frame?.sceneryId
         const charId = this.draft.charId ?? frame?.charId
         const line = this.draft.line ?? frame?.line
-        const slot = this.slots[this.slotIdx]
         const themeChosen = this.phase.kind !== 'cena' || this.draft.themeId !== undefined || frame !== undefined
 
         if (sceneryId) {
@@ -264,12 +263,12 @@ export class GameScene extends Phaser.Scene {
             this.tweens.add({ targets: img, x: img.x + 10, duration: 2600, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
             const veil = this.add.graphics()
             veil.fillStyle(C.stage, A.stageVeil * 0.35)
-            veil.fillRoundedRect(box.x, box.y, box.w, box.h, 22)
+            veil.fillRoundedRect(box.x, box.y, box.w, box.h, 0)
             this.stageLayer.add([img, veil])
         } else {
             const empty = this.add.graphics()
             empty.lineStyle(5, C.border, 1)
-            empty.strokeRoundedRect(box.x + 28, box.y + 28, box.w - 56, box.h - 56, 20)
+            empty.strokeRoundedRect(box.x + 28, box.y + 28, box.w - 56, box.h - 56, 0)
             const hint = this.add.text(box.x + box.w / 2, box.y + box.h / 2, 'A sua cena aparece aqui\na cada escolha', {
                 fontFamily: 'Arial Black, Arial',
                 fontSize: '24px',
@@ -280,16 +279,6 @@ export class GameScene extends Phaser.Scene {
             this.stageLayer.add([empty, hint])
         }
 
-        const badgeW = 190
-        const badge = this.add.graphics()
-        badge.fillStyle(C.stage, 0.92)
-        badge.fillRoundedRect(box.x + 18, box.y + 18, badgeW, 44, 22)
-        const badgeText = this.add.text(box.x + 18 + badgeW / 2, box.y + 40, MOMENT_LABEL[slot.moment], {
-            fontFamily: 'Arial Black, Arial',
-            fontSize: '19px',
-            color: hex(C.spotlight),
-        }).setOrigin(0.5).setResolution(2)
-        this.stageLayer.add([badge, badgeText])
 
         const beam = this.add.graphics()
         beam.fillStyle(C.spotlight, 0.13)
@@ -334,9 +323,9 @@ export class GameScene extends Phaser.Scene {
             const py = box.y + box.h - 40
             const pill = this.add.graphics()
             pill.fillStyle(C.white, 0.94)
-            pill.fillRoundedRect(px, py - 24, pw, 48, 24)
+            pill.fillRoundedRect(px, py - 24, pw, 48, 0)
             pill.lineStyle(3, C.violet, 1)
-            pill.strokeRoundedRect(px, py - 24, pw, 48, 24)
+            pill.strokeRoundedRect(px, py - 24, pw, 48, 0)
 
             const icon = this.add.graphics()
             this.drawTechIcon(icon, th.tech, px + 32, py, 17, C.violet)
@@ -379,16 +368,16 @@ export class GameScene extends Phaser.Scene {
 
         const g = this.add.graphics()
         g.fillStyle(C.shadow, 0.24)
-        g.fillRoundedRect(left + 5, top + 10, bw, finalH, 28)
+        g.fillRoundedRect(left + 5, top + 10, bw, finalH, 0)
         g.fillStyle(C.balloon, 1)
         g.fillTriangle(left + 10, anchorY - 20, left + 10, anchorY + 20, headX + 34, headY)
-        g.fillRoundedRect(left, top, bw, finalH, 28)
+        g.fillRoundedRect(left, top, bw, finalH, 0)
         g.fillStyle(C.violetSoft, 1)
-        g.fillRoundedRect(left + 14, top + 12, bw - 28, 18, 9)
+        g.fillRoundedRect(left + 14, top + 12, bw - 28, 18, 0)
         g.fillStyle(C.white, A.gloss)
-        g.fillRoundedRect(left + 24, top + 15, bw - 48, 7, 4)
+        g.fillRoundedRect(left + 24, top + 15, bw - 48, 7, 0)
         g.lineStyle(4, C.balloonEdge, 1)
-        g.strokeRoundedRect(left, top, bw, finalH, 28)
+        g.strokeRoundedRect(left, top, bw, finalH, 0)
         g.lineBetween(left + 8, anchorY - 19, headX + 34, headY)
         g.lineBetween(left + 8, anchorY + 19, headX + 34, headY)
         g.fillStyle(C.balloon, 1)
@@ -427,9 +416,9 @@ export class GameScene extends Phaser.Scene {
 
             const g = this.add.graphics()
             g.fillStyle(filled ? C.white : C.stageEdge, 1)
-            g.fillRoundedRect(x - w / 2, STRIP.cy - h / 2, w, h, 16)
+            g.fillRoundedRect(x - w / 2, STRIP.cy - h / 2, w, h, 0)
             g.lineStyle(active ? 6 : 3, active ? C.amber : filled ? C.violet : C.grey, 1)
-            g.strokeRoundedRect(x - w / 2, STRIP.cy - h / 2, w, h, 16)
+            g.strokeRoundedRect(x - w / 2, STRIP.cy - h / 2, w, h, 0)
 
             const num = this.add.graphics()
             num.fillStyle(filled ? C.violet : C.grey, 1)
@@ -442,7 +431,7 @@ export class GameScene extends Phaser.Scene {
 
             const label = this.add.text(x + 12, STRIP.cy - h / 2 + 24, slot.label, {
                 fontFamily: 'Arial Black, Arial',
-                fontSize: '14px',
+                fontSize: '16px',
                 color: hex(filled ? C.violetDark : C.grey),
                 align: 'center',
                 wordWrap: { width: w - 62 },
@@ -492,11 +481,11 @@ export class GameScene extends Phaser.Scene {
 
         const g = this.add.graphics()
         g.fillStyle(C.shadow, A.shadow)
-        g.fillRoundedRect(PANEL.x + 5, PANEL.y + 12, PANEL.w, PANEL.h, 28)
+        g.fillRoundedRect(PANEL.x + 5, PANEL.y + 12, PANEL.w, PANEL.h, 0)
         g.fillStyle(C.panel, 1)
-        g.fillRoundedRect(PANEL.x, PANEL.y, PANEL.w, PANEL.h, 28)
+        g.fillRoundedRect(PANEL.x, PANEL.y, PANEL.w, PANEL.h, 0)
         g.lineStyle(4, C.border, 1)
-        g.strokeRoundedRect(PANEL.x, PANEL.y, PANEL.w, PANEL.h, 28)
+        g.strokeRoundedRect(PANEL.x, PANEL.y, PANEL.w, PANEL.h, 0)
         this.panelLayer.add(g)
 
         if (this.mode === 'ready') return this.renderReadyPanel()
@@ -514,9 +503,9 @@ export class GameScene extends Phaser.Scene {
         const pw = t.width + 52
         const g = this.add.graphics()
         g.fillStyle(tone, 1)
-        g.fillRoundedRect(PANEL.cx - pw / 2, PANEL.stepPillY - 19, pw, 38, 19)
+        g.fillRoundedRect(PANEL.cx - pw / 2, PANEL.stepPillY - 19, pw, 38, 0)
         g.fillStyle(C.white, A.gloss)
-        g.fillRoundedRect(PANEL.cx - pw / 2 + 8, PANEL.stepPillY - 14, pw - 16, 12, 6)
+        g.fillRoundedRect(PANEL.cx - pw / 2 + 8, PANEL.stepPillY - 14, pw - 16, 12, 0)
 
         this.panelLayer.add([g, t])
     }
@@ -534,9 +523,9 @@ export class GameScene extends Phaser.Scene {
         const hintH = 58
         const hb = this.add.graphics()
         hb.fillStyle(C.amberSoft, 1)
-        hb.fillRoundedRect(PANEL.cx - hintW / 2, PANEL.hintY - hintH / 2, hintW, hintH, 18)
+        hb.fillRoundedRect(PANEL.cx - hintW / 2, PANEL.hintY - hintH / 2, hintW, hintH, 0)
         hb.lineStyle(3, C.amber, 0.85)
-        hb.strokeRoundedRect(PANEL.cx - hintW / 2, PANEL.hintY - hintH / 2, hintW, hintH, 18)
+        hb.strokeRoundedRect(PANEL.cx - hintW / 2, PANEL.hintY - hintH / 2, hintW, hintH, 0)
         hb.fillStyle(C.amber, 1)
         hb.fillCircle(PANEL.cx - hintW / 2 + 31, PANEL.hintY, 15)
         hb.fillStyle(C.white, A.gloss)
@@ -583,9 +572,9 @@ export class GameScene extends Phaser.Scene {
         const fh = 54
         const g = this.add.graphics()
         g.fillStyle(C.violetSoft, 1)
-        g.fillRoundedRect(fx - fw / 2, fy - fh / 2, fw, fh, 18)
+        g.fillRoundedRect(fx - fw / 2, fy - fh / 2, fw, fh, 0)
         g.lineStyle(3, C.border, 1)
-        g.strokeRoundedRect(fx - fw / 2, fy - fh / 2, fw, fh, 18)
+        g.strokeRoundedRect(fx - fw / 2, fy - fh / 2, fw, fh, 0)
 
         const icon = this.add.graphics()
         icon.fillStyle(C.violet, 1)
@@ -611,7 +600,7 @@ export class GameScene extends Phaser.Scene {
         this.stepPill(`PASSO ${this.stepIdx + 1} DE ${this.steps.length}`)
 
         if (step === 'tema' && p.kind === 'cena') {
-            this.panelHeader('Qual e o tema?', 'Escolha a mudanca que a sua cena vai mostrar.')
+            this.panelHeader('Qual é o tema?', 'Escolha a mudança que a sua cena vai mostrar.')
             p.themeOptions.slice(0, 3).forEach((id, i) => {
                 const th = THEMES[id]
                 this.addOption(i, th.label, th.headline, () => {
@@ -621,12 +610,12 @@ export class GameScene extends Phaser.Scene {
                 }, icon => this.drawTechIcon(icon, th.tech, 0, 0, 20, C.violet))
             })
             this.backButton()
-            this.renderFooter('Tema escolhido: agora defina quem vive essa mudanca.')
+            this.renderFooter('Tema escolhido: agora defina quem vive essa mudança.')
             return
         }
 
         if (step === 'personagem') {
-            this.panelHeader('Quem aparece na cena?', 'Pense em quem vive essa mudanca de perto.')
+            this.panelHeader('Quem aparece na cena?', 'Pense em quem vive essa mudança de perto.')
             this.availableCharacters().forEach((id, i) => {
                 const ch = CHARACTERS[id]
                 this.addOption(i, ch.voice, ch.label, () => {
@@ -636,12 +625,11 @@ export class GameScene extends Phaser.Scene {
                 })
             })
             this.backButton()
-            this.renderFooter('Escolha alguem que combine com o impacto da tecnologia.')
             return
         }
 
         if (step === 'cenario') {
-            this.panelHeader('Onde a cena acontece?', 'O lugar tambem conta a historia.')
+            this.panelHeader('Onde a cena acontece?', 'O lugar também conta a história.')
             this.phase.sceneryOptions.slice(0, 3).forEach((id, i) => {
                 this.addOption(i, SCENERIES[id].label, '', () => {
                     this.draft.sceneryId = id
@@ -650,7 +638,7 @@ export class GameScene extends Phaser.Scene {
                 })
             })
             this.backButton()
-            this.renderFooter('O cenario ajuda a mostrar se a mudanca e em casa, na rua ou no trabalho.')
+            this.renderFooter('O cenário ajuda a mostrar se a mudança é em casa, na rua ou no trabalho.')
             return
         }
 
@@ -663,12 +651,12 @@ export class GameScene extends Phaser.Scene {
             })
         })
         this.backButton()
-        this.renderFooter('A fala vale mais quando mostra mudanca e tambem algum cuidado.')
+        this.renderFooter('A fala vale mais quando mostra mudança e também algum cuidado.')
     }
 
     private renderMessagePanel() {
-        this.stepPill('ULTIMO PASSO', C.amber)
-        this.panelHeader('Qual e a sua mensagem final?', 'Junte os dois pontos de vista em uma opiniao sua.')
+        this.stepPill('ÚLTIMO PASSO', C.amber)
+        this.panelHeader('Qual é a sua mensagem final?', 'Junte os dois pontos de vista em uma opinião sua.')
 
         const options = THEMES[this.themeId].messages ?? []
         options.forEach((option, i) => {
@@ -682,13 +670,13 @@ export class GameScene extends Phaser.Scene {
             this.backFromReady()
         }, '18px')
         this.panelLayer.add(back)
-        this.renderFooter('Procure uma mensagem equilibrada: ganho, limite e opiniao.')
+        this.renderFooter('Procure uma mensagem equilibrada: ganho, limite e opinião.')
     }
 
     private renderReadyPanel() {
 
         this.stepPill('TUDO PRONTO', C.green)
-        this.panelHeader('Confira a sua historia', this.hasStrip
+        this.panelHeader('Confira a sua história', this.hasStrip
             ? 'Toque em um quadro do storyboard para refazer, ou publique.'
             : 'Veja a cena ao lado e publique quando gostar dela.')
 
@@ -708,9 +696,9 @@ export class GameScene extends Phaser.Scene {
             msg.setY(y + bh / 2)
             const box = this.add.graphics()
             box.fillStyle(C.amberSoft, 1)
-            box.fillRoundedRect(PANEL.cx - PANEL.optionW / 2, y, PANEL.optionW, bh, 22)
+            box.fillRoundedRect(PANEL.cx - PANEL.optionW / 2, y, PANEL.optionW, bh, 0)
             box.lineStyle(4, C.amber, 1)
-            box.strokeRoundedRect(PANEL.cx - PANEL.optionW / 2, y, PANEL.optionW, bh, 22)
+            box.strokeRoundedRect(PANEL.cx - PANEL.optionW / 2, y, PANEL.optionW, bh, 0)
             this.panelLayer.add([box, msg])
 
             const redo = this.button(PANEL.cx, y + bh + 52, 280, 58, 'Trocar mensagem', C.grey, () => {
@@ -789,11 +777,11 @@ export class GameScene extends Phaser.Scene {
 
         const g = this.add.graphics()
         g.fillStyle(C.panelSoft, 1)
-        g.fillRoundedRect(-w / 2, -h / 2, w, h, 22)
+        g.fillRoundedRect(-w / 2, -h / 2, w, h, 14)
         g.lineStyle(3, C.border, 1)
-        g.strokeRoundedRect(-w / 2, -h / 2, w, h, 22)
+        g.strokeRoundedRect(-w / 2, -h / 2, w, h, 0)
         g.fillStyle(C.violet, 1)
-        g.fillRoundedRect(-w / 2 + 16, -h / 2 + 16, 10, h - 32, 5)
+        g.fillRoundedRect(-w / 2 + 16, -h / 2 + 16, 10, h - 32, 0)
 
         const objects: Phaser.GameObjects.GameObject[] = [g]
         const textX = drawIcon ? -w / 2 + 92 : -w / 2 + 48
@@ -822,9 +810,9 @@ export class GameScene extends Phaser.Scene {
             const s = this.add.text(textX, -h / 2 + 26 + t.height / 2 + 12, compactSubtitle, {
                 fontFamily: 'Arial',
                 fontStyle: 'bold',
-                fontSize: '14px',
+                fontSize: '16px',
                 color: hex(C.inkSoft),
-                lineSpacing: -2,
+                lineSpacing: 0,
                 wordWrap: { width: wrap },
             }).setOrigin(0, 0).setResolution(2)
             objects.push(s)
@@ -878,6 +866,7 @@ export class GameScene extends Phaser.Scene {
         const slot = this.slots[this.slotIdx]
         this.frames[this.slotIdx] = {
             moment: slot.moment,
+            themeId: this.themeId,
             charId: this.draft.charId!,
             sceneryId: this.draft.sceneryId!,
             line: this.draft.line!,
@@ -908,7 +897,7 @@ export class GameScene extends Phaser.Scene {
         const flash = this.add.graphics().setDepth(120)
         const x = this.slotX(i)
         flash.fillStyle(C.spotlight, 0.75)
-        flash.fillRoundedRect(x - STRIP.slotW / 2, STRIP.cy - STRIP.slotH / 2, STRIP.slotW, STRIP.slotH, 16)
+        flash.fillRoundedRect(x - STRIP.slotW / 2, STRIP.cy - STRIP.slotH / 2, STRIP.slotW, STRIP.slotH, 0)
         this.tweens.add({ targets: flash, alpha: 0, duration: 460, onComplete: () => flash.destroy() })
     }
 
@@ -935,47 +924,107 @@ export class GameScene extends Phaser.Scene {
 
     private playStory(onDone: () => void) {
         const original = this.slotIdx
-        const veil = this.add.rectangle(W / 2, H / 2, W, H, C.stage, 0.5).setDepth(200).setInteractive()
-        const rec = this.add.container(this.stage.x + this.stage.w - 96, this.stage.y - 34).setDepth(201)
+        const box = this.stage
+        const cam = this.cameras.main
+        const hiddenLayers = [this.headerLayer, this.panelLayer, this.stripLayer]
+        const wide = W * 4
+        const tall = H * 4
+
+        const veil = this.add.rectangle(W / 2, H / 2, wide, tall, C.night, 0.84).setDepth(200).setInteractive()
+        const bars = this.add.graphics().setDepth(201)
+        bars.fillStyle(0x000000, 0.82)
+        bars.fillRect(-W * 2, -H * 2, W * 5, H * 2 + 92)
+        bars.fillRect(-W * 2, H - 92, W * 5, H * 3)
+        bars.fillRect(-W * 2, -H * 2, W * 2 + box.x - 16, H * 5)
+        bars.fillRect(box.x + box.w + 16, -H * 2, W * 3, H * 5)
+        bars.lineStyle(4, C.green, 0.9)
+        bars.strokeRect(box.x - 14, box.y - 14, box.w + 28, box.h + 28)
+        bars.lineStyle(5, C.spotlight, 0.92)
+        const corner = 58
+        bars.lineBetween(box.x + 10, box.y + 10, box.x + 10 + corner, box.y + 10)
+        bars.lineBetween(box.x + 10, box.y + 10, box.x + 10, box.y + 10 + corner)
+        bars.lineBetween(box.x + box.w - 10, box.y + 10, box.x + box.w - 10 - corner, box.y + 10)
+        bars.lineBetween(box.x + box.w - 10, box.y + 10, box.x + box.w - 10, box.y + 10 + corner)
+        bars.lineBetween(box.x + 10, box.y + box.h - 10, box.x + 10 + corner, box.y + box.h - 10)
+        bars.lineBetween(box.x + 10, box.y + box.h - 10, box.x + 10, box.y + box.h - 10 - corner)
+        bars.lineBetween(box.x + box.w - 10, box.y + box.h - 10, box.x + box.w - 10 - corner, box.y + box.h - 10)
+        bars.lineBetween(box.x + box.w - 10, box.y + box.h - 10, box.x + box.w - 10, box.y + box.h - 10 - corner)
+
+        const rec = this.add.container(box.x + box.w - 142, box.y + 30).setDepth(240)
         const recG = this.add.graphics()
         recG.fillStyle(C.red, 1)
-        recG.fillCircle(-40, 0, 11)
-        rec.add([recG, this.add.text(-20, 0, 'GRAVANDO', {
+        recG.fillCircle(-34, 0, 11)
+        const recText = this.add.text(-14, 0, 'REC  HISTÓRIA', {
             fontFamily: 'Arial Black, Arial',
             fontSize: '17px',
             color: hex(C.spotlight),
-        }).setOrigin(0, 0.5).setResolution(2)])
-        this.tweens.add({ targets: recG, alpha: 0.2, duration: 420, yoyo: true, repeat: -1 })
+        }).setOrigin(0, 0.5).setResolution(2)
+        rec.add([recG, recText])
+        this.tweens.add({ targets: recG, alpha: 0.18, duration: 420, yoyo: true, repeat: -1 })
 
-        this.stageLayer.setDepth(210)
-        this.stripLayer.setDepth(210)
+        const mascot = this.add.image(box.x + box.w + 74, box.y + box.h - 8, 'mascote-reacao')
+            .setDisplaySize(118, 166)
+            .setOrigin(0.5, 1)
+            .setDepth(238)
+            .setAlpha(0)
+        const mascotShadow = this.add.graphics().setDepth(237)
+        mascotShadow.fillStyle(C.shadow, 0.22)
+        mascotShadow.fillEllipse(box.x + box.w + 74, box.y + box.h - 4, 92, 20)
+        mascotShadow.setAlpha(0)
+        this.tweens.add({ targets: [mascot, mascotShadow], alpha: 1, duration: 420, ease: 'Sine.easeOut' })
+        this.tweens.add({ targets: mascot, y: mascot.y - 10, angle: 3, duration: 820, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
+
+        const take = this.add.text(box.x + 24, box.y + box.h - 38, '', {
+            fontFamily: 'Arial Black, Arial',
+            fontSize: '18px',
+            color: hex(C.spotlight),
+            backgroundColor: '#162116',
+            padding: { left: 10, right: 10, top: 5, bottom: 5 },
+        }).setDepth(240).setResolution(2)
+
+        this.stageLayer.setDepth(230)
+        this.tweens.add({ targets: hiddenLayers, alpha: 0, duration: 320, ease: 'Sine.easeOut' })
+        cam.pan(box.x + box.w / 2 + 34, box.y + box.h / 2, 700, 'Sine.easeInOut')
+        cam.zoomTo(1.26, 700, 'Sine.easeInOut')
 
         let i = 0
         const step = () => {
             if (i >= this.frames.length) {
                 this.slotIdx = original
-                this.time.delayedCall(520, () => {
-                    veil.destroy()
-                    rec.destroy()
-                    this.stageLayer.setDepth(10)
-                    this.stripLayer.setDepth(20)
-                    this.renderStage()
-                    this.renderStrip()
-                    onDone()
+                this.time.delayedCall(820, () => {
+                    cam.pan(W / 2, H / 2, 560, 'Sine.easeInOut')
+                    cam.zoomTo(1, 560, 'Sine.easeInOut')
+                    this.tweens.add({ targets: [veil, bars, rec, take, mascot, mascotShadow], alpha: 0, duration: 460 })
+                    this.tweens.add({ targets: hiddenLayers, alpha: 1, duration: 460, ease: 'Sine.easeOut' })
+                    this.time.delayedCall(520, () => {
+                        veil.destroy()
+                        bars.destroy()
+                        rec.destroy()
+                        take.destroy()
+                        mascot.destroy()
+                        mascotShadow.destroy()
+                        this.stageLayer.setDepth(10)
+                        this.stripLayer.setDepth(20)
+                        this.renderStage()
+                        this.renderStrip()
+                        onDone()
+                    })
                 })
                 return
             }
+
             this.slotIdx = i
+            take.setText(`TAKE ${i + 1}/${this.frames.length}`)
             this.renderStage()
-            this.renderStrip()
+            this.stageLayer.setDepth(230)
             this.stageLayer.setAlpha(0)
-            this.tweens.add({ targets: this.stageLayer, alpha: 1, duration: 280 })
-            this.flashSlot(i)
+            this.tweens.add({ targets: this.stageLayer, alpha: 1, duration: 520, ease: 'Sine.easeOut' })
+            this.tweens.add({ targets: cam, scrollX: cam.scrollX + 10, duration: 800, yoyo: true, ease: 'Sine.easeInOut' })
             i++
-            this.time.delayedCall(1250, step)
+            this.time.delayedCall(2900, step)
         }
 
-        step()
+        this.time.delayedCall(780, step)
     }
 
     private showReport() {
@@ -992,92 +1041,82 @@ export class GameScene extends Phaser.Scene {
             stage: this.level.level,
         })
 
-        const overlay = this.add.rectangle(W / 2, H / 2, W, H, C.shadow, A.overlay)
+        const overlay = this.add.rectangle(W / 2, H / 2, W, H, C.shadow, 0.58)
             .setDepth(700).setInteractive()
         const modal = this.add.container(W / 2, H / 2).setDepth(701)
 
-        const note = this.add.text(0, 0, this.pickFeedback(score), {
-            fontFamily: 'Arial',
-            fontStyle: 'bold',
-            fontSize: '20px',
-            color: hex(C.ink),
-            align: 'center',
-            wordWrap: { width: 560 },
-        }).setOrigin(0.5).setResolution(2)
-
-        const PH = note.height + 396
-        const top = -PH / 2
         const tone = strong ? C.green : C.amber
+        const titleText = strong ? 'História publicada' : 'História registrada'
+        const subText = strong ? `${earned} pontos nesta cena` : `${earned} pontos - dá para melhorar`
+        const PH = 438
+        const top = -PH / 2
 
         const bg = this.add.graphics()
-        bg.fillStyle(C.shadow, 0.22)
-        bg.fillRoundedRect(-330, top + 12, 660, PH, 30)
         bg.fillStyle(C.panel, 1)
-        bg.fillRoundedRect(-330, top, 660, PH, 30)
+        bg.fillRoundedRect(-320, top, 640, PH, 0)
         bg.lineStyle(5, tone, 1)
-        bg.strokeRoundedRect(-330, top, 660, PH, 30)
+        bg.strokeRoundedRect(-320, top, 640, PH, 0)
         bg.fillStyle(tone, 1)
-        bg.fillRoundedRect(-170, top - 15, 340, 28, 14)
+        bg.fillRect(-320, top, 640, 14)
 
-        const title = this.add.text(0, top + 62, strong ? 'Historia publicada!' : 'Publicada, mas da para ir alem', {
+        const title = this.add.text(0, top + 58, titleText, {
             fontFamily: 'Arial Black, Arial',
-            fontSize: strong ? '34px' : '28px',
+            fontSize: '31px',
             color: hex(C.violetDark),
             align: 'center',
-            wordWrap: { width: 560 },
         }).setOrigin(0.5).setResolution(2)
 
-        const seals: Phaser.GameObjects.GameObject[] = []
-        const sealY = top + 172
-        CRITERIA.forEach((def, i) => {
-            const x = -190 + i * 190
-            const value = score[def.id]
-            const on = value >= 2
-            const half = value === 1
-            const sealTone = on ? CRITERION_COLOR[def.id] : half ? C.amber : C.grey
-            const r = 38
+        const sub = this.add.text(0, top + 94, subText, {
+            fontFamily: 'Arial',
+            fontStyle: 'bold',
+            fontSize: '18px',
+            color: hex(C.inkSoft),
+            align: 'center',
+        }).setOrigin(0.5).setResolution(2)
 
+        const rows: Phaser.GameObjects.GameObject[] = []
+        CRITERIA.forEach((def, i) => {
+            const y = top + 148 + i * 54
+            const value = score[def.id]
+            const rowTone = value >= 2 ? CRITERION_COLOR[def.id] : value === 1 ? C.amber : C.grey
             const g = this.add.graphics()
-            g.fillStyle(C.shadow, 0.16)
-            g.fillCircle(x + 2, sealY + 6, r)
-            g.fillStyle(on ? sealTone : half ? C.amberSoft : C.greySoft, 1)
-            g.fillCircle(x, sealY, r)
-            g.lineStyle(4, sealTone, 1)
-            g.strokeCircle(x, sealY, r - 8)
-            for (let k = 0; k < 12; k++) {
-                const a = (Math.PI * 2 * k) / 12
-                g.fillStyle(on ? sealTone : half ? C.amberSoft : C.greySoft, 1)
-                g.fillCircle(x + Math.cos(a) * r, sealY + Math.sin(a) * r, 5)
-            }
+            g.fillStyle(C.panelSoft, 1)
+            g.fillRoundedRect(-268, y - 22, 536, 44, 0)
+            g.fillStyle(rowTone, 1)
+            g.fillRect(-268, y - 22, 8, 44)
+            g.fillCircle(-234, y, 14)
 
             const icon = this.add.graphics()
-            this.drawSealIcon(icon, def.id, x, sealY, 19, on ? C.white : sealTone)
+            this.drawSealIcon(icon, def.id, -234, y, 12, C.white)
 
-            const name = this.add.text(x, sealY + 60, def.name, {
+            const name = this.add.text(-206, y, def.name, {
                 fontFamily: 'Arial Black, Arial',
-                fontSize: '19px',
-                color: hex(sealTone),
-            }).setOrigin(0.5).setResolution(2)
+                fontSize: '18px',
+                color: hex(C.ink),
+            }).setOrigin(0, 0.5).setResolution(2)
 
-            const tag = this.add.text(x, sealY + 84, SCORE_LABEL(value * 2), {
+            const tag = this.add.text(242, y, SCORE_LABEL(value * 2), {
                 fontFamily: 'Arial',
                 fontStyle: 'bold',
                 fontSize: '14px',
-                color: hex(C.inkSoft),
-            }).setOrigin(0.5).setResolution(2)
+                color: hex(rowTone),
+            }).setOrigin(1, 0.5).setResolution(2)
 
-            seals.push(g, icon, name, tag)
+            rows.push(g, icon, name, tag)
         })
 
-        note.setY(sealY + 128 + note.height / 2)
-
-        const canRedo = !strong
-        const buttons: Phaser.GameObjects.Container[] = []
+        const note = this.add.text(0, top + 328, this.pickFeedback(score), {
+            fontFamily: 'Arial',
+            fontStyle: 'bold',
+            fontSize: '18px',
+            color: hex(C.ink),
+            align: 'center',
+            wordWrap: { width: 540 },
+        }).setOrigin(0.5).setResolution(2)
 
         const finish = (redo: boolean) => {
             overlay.destroy()
             modal.destroy()
-            mascote.destroy()
             if (redo) {
                 this.points -= earned
                 this.slotIdx = 0
@@ -1093,21 +1132,16 @@ export class GameScene extends Phaser.Scene {
             this.completePhase()
         }
 
-        if (canRedo) {
-            buttons.push(this.button(-152, PH / 2 - 58, 288, 68, 'Refazer a historia', C.violet, () => finish(true), '20px', true))
-            buttons.push(this.button(152, PH / 2 - 58, 288, 68, 'Continuar assim', C.grey, () => finish(false), '20px', true))
-        } else {
-            buttons.push(this.button(0, PH / 2 - 58, 320, 68, 'Continuar', C.green, () => finish(false), '22px', true))
-        }
+        const buttons = strong
+            ? [this.button(0, PH / 2 - 46, 320, 62, 'Continuar', C.green, () => finish(false), '21px', true)]
+            : [
+                this.button(-152, PH / 2 - 46, 288, 62, 'Refazer', C.violet, () => finish(true), '20px', true),
+                this.button(152, PH / 2 - 46, 288, 62, 'Continuar', C.grey, () => finish(false), '20px', true),
+            ]
 
-        const mascote = this.add.image(W / 2 - 330, H / 2 + top + MASCOTE.h / 2 - 26, strong ? 'mascote-reacao' : 'mascote-normal')
-            .setDisplaySize(MASCOTE.w, MASCOTE.h).setDepth(702)
-
-        modal.add([bg, title, ...seals, note, ...buttons])
-        modal.setScale(0.92).setAlpha(0)
-        mascote.setAlpha(0)
-        this.tweens.add({ targets: modal, alpha: 1, scale: 1, duration: 240, ease: 'Back.easeOut' })
-        this.tweens.add({ targets: mascote, alpha: 1, duration: 240 })
+        modal.add([bg, title, sub, ...rows, note, ...buttons])
+        modal.setScale(0.96).setAlpha(0)
+        this.tweens.add({ targets: modal, alpha: 1, scale: 1, duration: 220, ease: 'Sine.easeOut' })
     }
 
     private pickFeedback(score: Score) {
@@ -1115,9 +1149,9 @@ export class GameScene extends Phaser.Scene {
         if (score.clareza + score.mudanca + score.reflexao >= 5) {
             return this.message?.why ?? this.frames.filter(Boolean).map(f => f!.line.why)[0] ?? ''
         }
-        if (weakest.id === 'clareza') return 'Falta dizer qual tecnologia esta em cena. Uma fala que cita o aparelho deixa isso claro.'
-        if (weakest.id === 'mudanca') return 'A historia ainda nao mostra o que ficou diferente. Compare como era antes e como e agora.'
-        return 'Toda mudanca tem um ganho e um cuidado. Uma fala que mostra os dois lados vira opiniao critica.'
+        if (weakest.id === 'clareza') return 'Falta dizer qual tecnologia está em cena. Uma fala que cita o aparelho deixa isso claro.'
+        if (weakest.id === 'mudanca') return 'A história ainda não mostra o que ficou diferente. Compare como era antes e como é agora.'
+        return 'Toda mudança tem um ganho e um cuidado. Uma fala que mostra os dois lados vira opinião crítica.'
     }
 
     private completePhase() {
@@ -1131,7 +1165,7 @@ export class GameScene extends Phaser.Scene {
 
         if (!isLastLevel) {
             showLevelComplete(this, {
-                subtitle: `Nivel ${this.level.level} concluido`,
+                subtitle: `Nível ${this.level.level} concluído`,
                 message: LEVELS[this.levelIdx + 1].objective,
                 accent: C.violet,
                 overlayColor: C.shadow,
@@ -1154,9 +1188,9 @@ export class GameScene extends Phaser.Scene {
         runtimeGameBridge.emit({ type: 'GAME_COMPLETED', gameId: GAME_ID, stage: this.level.level })
 
         showLevelComplete(this, {
-            title: 'Estreia no estudio!',
+            title: 'Estreia no estúdio!',
             subtitle: `${this.points} pontos`,
-            message: 'Toda tecnologia muda o jeito de viver e de trabalhar. Agora voce sabe contar isso com opiniao propria.',
+            message: 'Toda tecnologia muda o jeito de viver e de trabalhar. Agora você sabe contar isso com opinião própria.',
             accent: C.green,
             overlayColor: C.shadow,
             titleColor: hex(C.violetDark),
@@ -1186,15 +1220,15 @@ export class GameScene extends Phaser.Scene {
 
         const bg = this.add.graphics()
         bg.fillStyle(C.shadow, 0.22)
-        bg.fillRoundedRect(-320, top + 12, 640, PH, 30)
+        bg.fillRoundedRect(-320, top + 12, 640, PH, 0)
         bg.fillStyle(C.panel, 1)
-        bg.fillRoundedRect(-320, top, 640, PH, 30)
+        bg.fillRoundedRect(-320, top, 640, PH, 0)
         bg.lineStyle(5, C.violet, 1)
-        bg.strokeRoundedRect(-320, top, 640, PH, 30)
+        bg.strokeRoundedRect(-320, top, 640, PH, 0)
         bg.fillStyle(C.violet, 1)
-        bg.fillRoundedRect(-150, top - 15, 300, 28, 14)
+        bg.fillRoundedRect(-150, top - 15, 300, 28, 0)
 
-        const badge = this.add.text(0, top + 56, `NIVEL ${this.level.level}`, {
+        const badge = this.add.text(0, top + 56, `NÍVEL ${this.level.level}`, {
             fontFamily: 'Arial Black, Arial',
             fontSize: '20px',
             color: hex(C.violet),
@@ -1210,7 +1244,7 @@ export class GameScene extends Phaser.Scene {
 
         objective.setY(top + 160 + objective.height / 2)
 
-        const btn = this.button(0, PH / 2 - 58, 300, 70, 'Acao!', C.green, () => {
+        const btn = this.button(0, PH / 2 - 58, 300, 70, 'Ação!', C.green, () => {
             overlay.destroy()
             panel.destroy()
             mascote.destroy()
@@ -1241,12 +1275,16 @@ export class GameScene extends Phaser.Scene {
             return
         }
 
+        EventBus.emit('tutorial-start')
         createTutorial(this, {
             key: this.tutorialKey,
             accent: C.violet,
             safeTop: 118,
             steps: this.tutorialSteps,
-            onFinish: () => this.startPhase(),
+            onFinish: () => {
+                EventBus.emit('tutorial-end')
+                this.startPhase()
+            },
         })
     }
 
@@ -1254,13 +1292,17 @@ export class GameScene extends Phaser.Scene {
         if (this.ended || !this.tutorialSteps.length) return
         const wasLocked = this.locked
         this.locked = true
+        EventBus.emit('tutorial-start')
         createTutorial(this, {
             key: this.tutorialKey,
             once: false,
             accent: C.violet,
             safeTop: 118,
             steps: this.tutorialSteps,
-            onFinish: () => { this.locked = wasLocked },
+            onFinish: () => {
+                this.locked = wasLocked
+                EventBus.emit('tutorial-end')
+            },
         })
     }
 
@@ -1270,27 +1312,27 @@ export class GameScene extends Phaser.Scene {
         if (this.level.level === 1) {
             return [
                 {
-                    text: 'Voce e o diretor deste estudio. A sua missao e montar uma cena que mostre a tecnologia mudando alguma coisa.',
+                    text: 'Você é o diretor deste estúdio. A sua missão é montar uma cena que mostre a tecnologia mudando alguma coisa.',
                     shape: 'none', balloonY: 380,
                 },
                 {
-                    text: 'No alto fica sempre o que voce precisa fazer agora. Leia sempre que ficar em duvida.',
+                    text: 'No alto fica sempre o que você precisa fazer agora. Leia sempre que ficar em dúvida.',
                     shape: 'rect', x: W / 2 - 20, y: 54, w: 1180, h: 90, balloonY: 400,
                 },
                 {
-                    text: 'Este e o palco. A cena vai se montando aqui a cada escolha que voce faz.',
+                    text: 'Este é o palco. A cena vai se montando aqui a cada escolha que você faz.',
                     shape: 'rect', x: box.x + box.w / 2, y: box.y + box.h / 2, w: box.w + 34, h: box.h + 34,
                 },
                 {
-                    text: 'Aqui a direita aparece um passo por vez. Toque em uma das opcoes para escolher.',
+                    text: 'Aqui à direita aparece um passo por vez. Toque em uma das opções para escolher.',
                     shape: 'rect', x: PANEL.cx, y: PANEL.y + PANEL.h / 2, w: PANEL.w + 26, h: PANEL.h + 26,
                 },
                 {
-                    text: 'Se escolher errado, o botao Voltar um passo desfaz a ultima escolha.',
+                    text: 'Se escolher errado, o botão Voltar um passo desfaz a última escolha.',
                     shape: 'rect', x: PANEL.cx, y: PANEL.backY, w: 260, h: 84,
                 },
                 {
-                    text: 'O passo mais importante e a fala. Ela precisa dizer o que mudou, e nao so que a tecnologia existe.',
+                    text: 'O passo mais importante é a fala. Ela precisa dizer o que mudou, e não só que a tecnologia existe.',
                     shape: 'none', balloonY: 380,
                 },
             ]
@@ -1299,15 +1341,15 @@ export class GameScene extends Phaser.Scene {
         if (this.level.level === 2) {
             return [
                 {
-                    text: 'Agora a historia tem tres quadros: como era antes, como ficou depois e o que isso mudou na vida das pessoas.',
+                    text: 'Agora a história tem três quadros: como era antes, como ficou depois e o que isso mudou na vida das pessoas.',
                     shape: 'rect', x: box.x + box.w / 2, y: STRIP.cy, w: box.w + 34, h: STRIP.h + 44,
                 },
                 {
-                    text: 'O quadro com a borda amarela mostra o que voce esta montando agora. Toque em outro para trocar.',
+                    text: 'O quadro com a borda amarela mostra o que você está montando agora. Toque em outro para trocar.',
                     shape: 'rect', x: this.slotX(0), y: STRIP.cy, w: STRIP.slotW + 26, h: STRIP.slotH + 26,
                 },
                 {
-                    text: 'Se os tres quadros contarem a mesma coisa, o selo de Mudanca nao acende na hora de publicar.',
+                    text: 'Se os três quadros contarem a mesma coisa, o selo de Mudança não acende na hora de publicar.',
                     shape: 'none', balloonY: 380,
                 },
             ]
@@ -1315,15 +1357,15 @@ export class GameScene extends Phaser.Scene {
 
         return [
             {
-                text: 'Nesta historia duas pessoas pensam diferente sobre a mesma tecnologia no trabalho.',
+                text: 'Nesta história duas pessoas pensam diferente sobre a mesma tecnologia no trabalho.',
                 shape: 'rect', x: box.x + box.w / 2, y: STRIP.cy, w: box.w + 34, h: STRIP.h + 44,
             },
             {
-                text: 'Depois dos tres quadros vem o ultimo passo: a mensagem final, que e a sua opiniao sobre essa mudanca.',
+                text: 'Depois dos três quadros vem o último passo: a mensagem final, que é a sua opinião sobre essa mudança.',
                 shape: 'rect', x: PANEL.cx, y: PANEL.y + PANEL.h / 2, w: PANEL.w + 26, h: PANEL.h + 26,
             },
             {
-                text: 'No fim, tres selos avaliam a sua historia: Clareza, Mudanca e Reflexao.',
+                text: 'No fim, três selos avaliam a sua história: Clareza, Mudança e Reflexão.',
                 shape: 'none', balloonY: 380,
             },
         ]
@@ -1334,16 +1376,16 @@ export class GameScene extends Phaser.Scene {
         g.lineStyle(3, color, 1)
 
         if (id === 'celular') {
-            g.strokeRoundedRect(cx - s * 0.42, cy - s * 0.78, s * 0.84, s * 1.56, 5)
-            g.fillRoundedRect(cx - s * 0.3, cy - s * 0.6, s * 0.6, s * 1.02, 3)
+            g.strokeRoundedRect(cx - s * 0.42, cy - s * 0.78, s * 0.84, s * 1.56, 0)
+            g.fillRoundedRect(cx - s * 0.3, cy - s * 0.6, s * 0.6, s * 1.02, 0)
             g.fillCircle(cx, cy + s * 0.6, s * 0.1)
             return
         }
 
         if (id === 'computador') {
-            g.strokeRoundedRect(cx - s * 0.82, cy - s * 0.72, s * 1.64, s * 1.1, 5)
-            g.fillRoundedRect(cx - s * 0.66, cy - s * 0.56, s * 1.32, s * 0.78, 3)
-            g.fillRoundedRect(cx - s * 0.9, cy + s * 0.5, s * 1.8, s * 0.2, 4)
+            g.strokeRoundedRect(cx - s * 0.82, cy - s * 0.72, s * 1.64, s * 1.1, 0)
+            g.fillRoundedRect(cx - s * 0.66, cy - s * 0.56, s * 1.32, s * 0.78, 0)
+            g.fillRoundedRect(cx - s * 0.9, cy + s * 0.5, s * 1.8, s * 0.2, 0)
             return
         }
 
@@ -1358,13 +1400,13 @@ export class GameScene extends Phaser.Scene {
         }
 
         if (id === 'videochamada') {
-            g.fillRoundedRect(cx - s * 0.82, cy - s * 0.46, s * 1.2, s * 0.92, 5)
+            g.fillRoundedRect(cx - s * 0.82, cy - s * 0.46, s * 1.2, s * 0.92, 0)
             g.fillTriangle(cx + s * 0.44, cy - s * 0.02, cx + s * 0.9, cy - s * 0.44, cx + s * 0.9, cy + s * 0.4)
             return
         }
 
-        g.strokeRoundedRect(cx - s * 0.46, cy - s * 0.46, s * 0.92, s * 0.92, 5)
-        g.fillRoundedRect(cx - s * 0.18, cy - s * 0.18, s * 0.36, s * 0.36, 3)
+        g.strokeRoundedRect(cx - s * 0.46, cy - s * 0.46, s * 0.92, s * 0.92, 0)
+        g.fillRoundedRect(cx - s * 0.18, cy - s * 0.18, s * 0.36, s * 0.36, 0)
         for (let k = 0; k < 4; k++) {
             const o = -s * 0.24 + k * s * 0.16
             g.lineBetween(cx + o, cy - s * 0.76, cx + o, cy - s * 0.46)
@@ -1399,7 +1441,7 @@ export class GameScene extends Phaser.Scene {
         g.arc(cx, cy - s * 0.18, s * 0.5, Math.PI * 0.9, Math.PI * 0.1)
         g.strokePath()
         g.fillCircle(cx, cy - s * 0.18, s * 0.34)
-        g.fillRoundedRect(cx - s * 0.24, cy + s * 0.3, s * 0.48, s * 0.34, 3)
+        g.fillRoundedRect(cx - s * 0.24, cy + s * 0.3, s * 0.48, s * 0.34, 0)
     }
 
     private button(
@@ -1419,11 +1461,11 @@ export class GameScene extends Phaser.Scene {
         const paint = (c: number) => {
             g.clear()
             g.fillStyle(C.shadow, 0.24)
-            g.fillRoundedRect(-w / 2, -h / 2 + 7, w, h, h / 2)
+            g.fillRoundedRect(-w / 2, -h / 2 + 7, w, h, 14)
             g.fillStyle(c, 1)
-            g.fillRoundedRect(-w / 2, -h / 2, w, h, h / 2)
+            g.fillRoundedRect(-w / 2, -h / 2, w, h, 14)
             g.fillStyle(C.white, A.gloss)
-            g.fillRoundedRect(-w / 2 + 9, -h / 2 + 8, w - 18, h * 0.32, h / 4)
+            g.fillRoundedRect(-w / 2 + 9, -h / 2 + 8, w - 18, h * 0.32, 8)
         }
 
         paint(color)

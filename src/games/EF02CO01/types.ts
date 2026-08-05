@@ -12,23 +12,14 @@ export interface VehicleAttributes {
 export interface Vehicle {
   id: string
   name: string
-  emoji: string
-  bodyColor: number
+  texture: string
   attributes: VehicleAttributes
 }
 
-export interface VehicleCard {
-  container: Phaser.GameObjects.Container
-  vehicle: Vehicle
-  homeX: number
-  homeY: number
-}
-
-/** Missão: jogador toca nos veículos que correspondem ao atributo/valor */
 export interface SelectionMission {
   id: string
-  question: string      // "Quais veículos VOAM? ✈️"
-  hint: string          // "Toque nos veículos que voam"
+  question: string
+  hint: string
   attribute: FilterAttribute
   value: FilterValue
 }
@@ -36,9 +27,8 @@ export interface SelectionMission {
 export interface LevelConfig {
   level: 1 | 2 | 3
   vehicleIds: string[]
-  timeLimit: number
   missions: SelectionMission[]
-  title: string         // "Voar ou não voar?"
-  objective: string     // exibido no modal de instrução
-  tip: string           // exibido no modal de instrução
+  title: string
+  objective: string
+  tip: string
 }
