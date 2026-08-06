@@ -55,6 +55,9 @@ export class GameScene extends Phaser.Scene {
     private locked = true
     private ended = false
 
+    private unblockTimer?: Phaser.Time.TimerEvent
+    private markRight: Partial<Record<CriterionId, boolean>> = {}
+
     private marks: Partial<Record<CriterionId, boolean>> = {}
     private criterionScore = 0
     private counterText?: Phaser.GameObjects.Text
@@ -100,6 +103,11 @@ export class GameScene extends Phaser.Scene {
         this.dragActive = false
         this.dragMoved = false
         this.cardGeom = undefined
+        this.unblockTimer?.remove()
+        this.unblockTimer = undefined
+
+        this.markRight = {}
+
         this.inputBlocker?.destroy()
         this.inputBlocker = undefined
         this.inputBlockedUntil = 0
@@ -111,6 +119,10 @@ export class GameScene extends Phaser.Scene {
 
     private get phase(): PhaseConfig {
         return this.level.phases[this.phaseIdx]
+    }
+
+    private get marksScore() {
+        return Object.values(this.markRight).filter(Boolean).length * 5
     }
 
     create() {
@@ -822,7 +834,7 @@ export class GameScene extends Phaser.Scene {
         row.setSize(w, h)
         row.setInteractive({ useHandCursor: true })
         row.on('pointerdown', () => {
-            if (this.isInputBlocked() || this.locked || this.marks[id] !== undefined) return
+            if (this.isInputBlocked() || this.locked) return
             this.tweens.add({ targets: row, scale: 0.98, duration: 70, yoyo: true })
             this.openCriterion(item, id, () => {
                 paint()
@@ -835,6 +847,7 @@ export class GameScene extends Phaser.Scene {
     private openCriterion(item: NewsItem, id: CriterionId, onDone: () => void) {
         const def = CRITERIA.find(c => c.id === id)!
         const sig = item.signals[id]
+        const current = this.marks[id]
 
         const overlay = this.add.rectangle(W / 2, H / 2, W, H, C.shadow, A.overlay)
             .setDepth(300).setInteractive()
@@ -874,7 +887,7 @@ export class GameScene extends Phaser.Scene {
             color: hex(C.blueDark),
         }).setOrigin(0.5).setResolution(2)
 
-        const question = this.add.text(0, top + 198, def.question, {
+        const question = this.add.text(0, top + 198, current === undefined ? def.question : 'Pode trocar sua resposta se quiser.', {
             fontFamily: 'Arial',
             fontStyle: 'bold',
             fontSize: '23px',
@@ -891,16 +904,23 @@ export class GameScene extends Phaser.Scene {
         detail.setY(top + 232 + (detail.height + 56) / 2)
 
         const answer = (good: boolean) => {
-            this.marks[id] = good;
-            if (good === sig.good) this.criterionScore += 5;
-            this.closeModalSafely(overlay, modal, onDone);
-        };
+            this.marks[id] = good
+            this.markRight[id] = good === sig.good
+            this.closeModalSafely(overlay, modal, onDone)
+        }
 
         const btnY = PH / 2 - 66
-        const okBtn = this.button(-172, btnY, 330, 80, 'Parece bom', C.green, () => answer(true), '26px', true)
-        const noBtn = this.button(172, btnY, 330, 80, 'Não parece bom', C.red, () => answer(false), '26px', true)
+        const okBtn = this.button(-172, btnY, 330, 80, 'Parece bom', current === false ? C.grey : C.green, () => answer(true), '26px', true)
+        const noBtn = this.button(172, btnY, 330, 80, 'Não parece bom', current === true ? C.grey : C.red, () => answer(false), '26px', true)
 
-        modal.add([bg, iconBg, icon, name, question, box, detail, okBtn, noBtn])
+        const marker = this.add.graphics()
+        if (current !== undefined) {
+            const mx = current ? -172 : 172
+            marker.lineStyle(5, C.blueDark, 1)
+            marker.strokeRoundedRect(mx - 173, btnY - 45, 346, 90, 45)
+        }
+
+        modal.add([bg, iconBg, icon, name, question, box, detail, marker, okBtn, noBtn])
         modal.setScale(0.92).setAlpha(0)
         this.tweens.add({ targets: modal, alpha: 1, scale: 1, duration: 220, ease: 'Back.easeOut' })
     }
@@ -964,7 +984,7 @@ export class GameScene extends Phaser.Scene {
         this.locked = true
         EventBus.emit('timer-stop')
 
-        const earned = (correct ? 10 : 0) + this.criterionScore
+        const earned = (correct ? 10 : 0) + this.criterionScore + this.marksScore
         this.points += earned
 
         runtimeGameBridge.emit({
@@ -1036,26 +1056,30 @@ export class GameScene extends Phaser.Scene {
     }
 
     private isInputBlocked() {
-        return this.inputBlocker?.active || this.time.now < this.inputBlockedUntil
+        return this.time.now < this.inputBlockedUntil
     }
 
     private blockInput(ms = 320) {
-        this.inputBlockedUntil = Math.max(this.inputBlockedUntil, this.time.now + ms)
+        const until = this.time.now + ms
+        this.inputBlockedUntil = Math.max(this.inputBlockedUntil, until)
 
         if (!this.inputBlocker?.active) {
             this.inputBlocker = this.add.rectangle(W / 2, H / 2, W, H, C.shadow, 0.001)
                 .setDepth(9999)
                 .setInteractive()
-            this.inputBlocker.on('pointerdown', (_pointer: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => event.stopPropagation())
-            this.inputBlocker.on('pointerup', (_pointer: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => event.stopPropagation())
+            this.inputBlocker.on('pointerdown', (_p: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => event.stopPropagation())
+            this.inputBlocker.on('pointerup', (_p: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => event.stopPropagation())
         }
 
-        this.time.delayedCall(ms, () => {
-            if (this.time.now < this.inputBlockedUntil) return
+        this.unblockTimer?.remove()
+        this.unblockTimer = this.time.delayedCall(ms + 40, () => {
+            this.unblockTimer = undefined
+            this.inputBlockedUntil = 0
             this.inputBlocker?.destroy()
             this.inputBlocker = undefined
         })
     }
+
     private closeModalSafely(
         overlay: Phaser.GameObjects.Rectangle,
         modal: Phaser.GameObjects.Container,

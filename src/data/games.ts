@@ -412,6 +412,15 @@ const gameByCode: Partial<Record<string, Omit<Game, "id">>> = {
     icon: "🎭",
     slug: "futuro-em-cena",
     thumbnail: coverFuturoEmCena,
+  },
+  EF05CO11: {
+    title: "Escolha a Ferramenta Certa",
+    "description": "Escolha o formato certo para cada missão, produza conteúdo em texto, slides ou vídeo e publique após revisão.",
+    category: "Cultura Digital",
+    points: 65,
+    icon: "🔧",
+    slug: "escolha-a-ferramenta-certa",
+    thumbnail: coverFuturoEmCena,
   }
 };
 
@@ -456,7 +465,7 @@ const gameOrder = [
   "EF05CO08",
   "EF05CO09",
   "EF05CO10",
-  "EF05CO011",
+  "EF05CO11",
   "EF15CO01",
   "EF15CO02",
   "EF15CO03",
