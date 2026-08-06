@@ -492,7 +492,7 @@ export class GameScene extends Phaser.Scene {
     }).setOrigin(0.5).setResolution(2)
 
     objective.setY(top + 190 + objective.height / 2)
-    tip.setY(objective.y + objective.height / 2 + 40 + tip.height / 2)
+    tip.setY(objective.y + objective.height / 2 + 5 + tip.height / 2)
 
     const btn = this.button(0, ph / 2 - 54, 320, 70, 'Começar', C.green, () => {
       overlay.destroy()

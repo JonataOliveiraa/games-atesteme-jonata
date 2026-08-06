@@ -6,7 +6,7 @@ import { showLevelComplete } from '../../../shared/level/showLevelComplete'
 import { LEVELS } from '../data/levels'
 import { CRITERIA, TRUST_LABEL, TRUST_COLOR_KEY } from '../data/news'
 import { C, A, hex } from '../data/theme'
-import { W, H, PANEL, COMPARE, NEWSCARD, RADAR, CASEBOARD, MASCOTE } from '../data/layout'
+import { W, H, CARD, SWIPE, SOLO, RADAR, CASEBOARD, MASCOTE } from '../data/layout'
 import type {
     CasePhase,
     ComparePhase,
@@ -26,6 +26,28 @@ const TRUST_FILL: Record<'green' | 'amber' | 'red', number> = {
     red: C.red,
 }
 
+type SignalState = 'neutral' | 'good' | 'bad'
+
+interface PostGeom {
+    headerCy: number
+    imgCy: number
+    imgH: number
+    imgW: number
+    pillCy: number
+}
+
+interface PostView {
+    container: Phaser.GameObjects.Container
+    reveal: () => void
+    geom: PostGeom
+}
+
+interface TutorialSegment {
+    key: string
+    steps: TutorialStep[]
+    before?: () => void
+}
+
 export class GameScene extends Phaser.Scene {
     private levelIdx = 0
     private phaseIdx = 0
@@ -33,13 +55,25 @@ export class GameScene extends Phaser.Scene {
     private locked = true
     private ended = false
 
-
     private marks: Partial<Record<CriterionId, boolean>> = {}
     private criterionScore = 0
     private counterText?: Phaser.GameObjects.Text
     private seloPaints: Array<() => void> = []
-    private tutorialKey = ''
-    private tutorialSteps: TutorialStep[] = []
+    private tutorialQueue: TutorialSegment[] = []
+
+    private track?: Phaser.GameObjects.Container
+    private cards: PostView[] = []
+    private items: NewsItem[] = []
+    private index = 0
+    private sliding = false
+    private dragActive = false
+    private dragMoved = false
+    private dragStartX = 0
+    private dragStartY = 0
+    private dragBaseX = 0
+    private paintDots: (i: number) => void = () => { }
+    private setChooseLabel: (s: string) => void = () => { }
+    private cardGeom?: PostGeom
 
     constructor() {
         super({ key: 'GameScene' })
@@ -55,7 +89,15 @@ export class GameScene extends Phaser.Scene {
         this.criterionScore = 0
         this.counterText = undefined
         this.seloPaints = []
-        this.tutorialSteps = []
+        this.tutorialQueue = []
+        this.track = undefined
+        this.cards = []
+        this.items = []
+        this.index = 0
+        this.sliding = false
+        this.dragActive = false
+        this.dragMoved = false
+        this.cardGeom = undefined
     }
 
     private get level(): LevelConfig {
@@ -84,6 +126,34 @@ export class GameScene extends Phaser.Scene {
         else this.runTutorial()
     }
 
+    update() {
+        if (!this.dragActive || !this.track) return
+        const pointer = this.input.activePointer
+
+        if (pointer.isDown) {
+            const dx = pointer.x - this.dragStartX
+            if (Math.abs(dx) > 12) this.dragMoved = true
+            const min = SWIPE.cx - (this.cards.length - 1) * SWIPE.stride - 130
+            const max = SWIPE.cx + 130
+            this.track.x = Phaser.Math.Clamp(this.dragBaseX + dx, min, max)
+            this.paintCarousel()
+            return
+        }
+
+        this.dragActive = false
+
+        if (!this.dragMoved) {
+            this.handleCardTap(this.dragStartX, this.dragStartY)
+            this.goTo(this.index)
+            return
+        }
+
+        const d = this.track.x - this.trackTarget()
+        if (d < -80) this.goTo(this.index + 1)
+        else if (d > 80) this.goTo(this.index - 1)
+        else this.goTo(this.index)
+    }
+
     private drawBackground() {
         const bg = this.add.image(W / 2, H / 2, 'bg-feed').setDepth(-3)
         bg.setScale(Math.max(W / bg.width, H / bg.height))
@@ -94,8 +164,6 @@ export class GameScene extends Phaser.Scene {
     }
 
     private buildPhase() {
-        this.card(PANEL.x, PANEL.y, PANEL.w, PANEL.h, 28, C.panelSoft)
-
         const p = this.phase
         if (p.kind === 'comparar') this.buildCompare(p)
         if (p.kind === 'inspecionar') this.buildInspect(p)
@@ -108,102 +176,267 @@ export class GameScene extends Phaser.Scene {
     }
 
     private buildCompare(p: ComparePhase) {
-        const views = p.options.map(item => this.buildCompareView(item))
-        const tabPaints: Array<(c: number) => void> = []
-        let current = 0
+        this.items = p.options
+        const track = this.add.container(0, SWIPE.cy)
+        this.track = track
 
-        const show = (i: number) => {
-            current = i
-            views.forEach((v, j) => v.container.setVisible(j === i))
-            tabPaints.forEach((paint, j) => paint(j === i ? C.blue : C.grey))
-        }
-
-        p.options.forEach((item, i) => {
-            const x = i === 0 ? COMPARE.tabLeftX : COMPARE.tabRightX
-            const btn = this.button(x, COMPARE.tabY, COMPARE.tabW, COMPARE.tabH, item.source, C.grey, () => show(i), '21px')
-            tabPaints.push(btn.getData('paint') as (c: number) => void)
+        this.cards = p.options.map((item, i) => {
+            const card = this.buildPost(item, SWIPE.w, SWIPE.h, false)
+            card.container.x = i * SWIPE.stride
+            track.add(card.container)
+            return card
         })
 
-        this.button(W / 2, COMPARE.confirmY + 5, 480, 55, 'Escolher esta notícia', C.green, () => {
-            this.locked = true
-            views[current].reveal()
-            this.time.delayedCall(1100, () =>
-                this.resolvePhase(p.options[current].id === p.correctId, p.explanation))
-        }, '23px')
+        this.cardGeom = this.cards[0].geom
 
-        show(0)
+        const layer = this.add.rectangle(SWIPE.cx, SWIPE.cy, SWIPE.layerW, SWIPE.h, C.white, 0.001)
+            .setDepth(5)
+        layer.setInteractive({ useHandCursor: true })
+        layer.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+            if (this.locked || this.sliding || !this.track) return
+            this.dragActive = true
+            this.dragMoved = false
+            this.dragStartX = pointer.x
+            this.dragStartY = pointer.y
+            this.dragBaseX = this.track.x
+        })
+
+        this.paintDots = this.buildDots(p.options.length)
+
+        this.swapButton(() => this.goTo((this.index + 1) % this.cards.length))
+
+        this.setChooseLabel = this.buildChooseBar(() => {
+            this.locked = true
+            this.dragActive = false
+            this.cards.forEach(card => card.reveal())
+            this.time.delayedCall(1500, () =>
+                this.resolvePhase(p.options[this.index].id === p.correctId, p.explanation))
+        })
+
+        track.x = this.trackTarget()
+        this.paintCarousel()
+        this.paintDots(0)
+        this.setChooseLabel(p.options[0].source)
     }
 
-    private buildCompareView(item: NewsItem) {
-        const container = this.add.container(0, 0)
-        const box = COMPARE.thumbBox
+    private handleCardTap(x: number, y: number) {
+        const geom = this.cards[this.index]?.geom
+        if (!geom) return
+        const cy = SWIPE.cy + geom.imgCy
+        const inside = Math.abs(x - SWIPE.cx) <= geom.imgW / 2 && Math.abs(y - cy) <= geom.imgH / 2
+        if (inside) this.openFullImage(this.items[this.index])
+    }
 
-        const frame = this.add.graphics()
-        frame.fillStyle(C.panel, 1)
-        frame.fillRoundedRect(COMPARE.thumbX - box / 2, COMPARE.thumbY - box / 2, box, box, 18)
-        frame.lineStyle(3, C.border, 1)
-        frame.strokeRoundedRect(COMPARE.thumbX - box / 2, COMPARE.thumbY - box / 2, box, box, 18)
+    private trackTarget() {
+        return SWIPE.cx - this.index * SWIPE.stride
+    }
 
-        const thumb = this.fitImage(item.thumb, COMPARE.thumbX, COMPARE.thumbY, box - 20, box - 20)
+    private goTo(next: number) {
+        if (!this.track) return
+        this.index = Phaser.Math.Clamp(next, 0, this.cards.length - 1)
+        this.sliding = true
+        this.paintDots(this.index)
+        if (this.items[this.index]) this.setChooseLabel(this.items[this.index].source)
 
-        const title = this.add.text(COMPARE.titleX, COMPARE.titleY, item.title, {
-            fontFamily: 'Arial',
-            fontStyle: 'bold',
-            fontSize: '31px',
-            color: hex(C.ink),
+        this.tweens.add({
+            targets: this.track,
+            x: this.trackTarget(),
+            duration: 360,
+            ease: 'Back.easeOut',
+            onUpdate: () => this.paintCarousel(),
+            onComplete: () => {
+                this.sliding = false
+                this.paintCarousel()
+            },
+        })
+    }
+
+    private paintCarousel() {
+        if (!this.track) return
+        this.cards.forEach(card => {
+            const worldX = this.track!.x + card.container.x
+            const d = Phaser.Math.Clamp(Math.abs(worldX - SWIPE.cx) / SWIPE.stride, 0, 1)
+            card.container.setScale(1 - 0.14 * d)
+            card.container.setAlpha(1 - 0.55 * d)
+            card.container.setRotation(((worldX - SWIPE.cx) / SWIPE.stride) * 0.05)
+        })
+    }
+
+    private buildDots(count: number) {
+        const g = this.add.graphics()
+        const gap = 32
+        const startX = SWIPE.cx - ((count - 1) * gap) / 2
+
+        const paint = (active: number) => {
+            g.clear()
+            for (let i = 0; i < count; i++) {
+                const x = startX + i * gap
+                if (i === active) {
+                    g.fillStyle(C.blue, 1)
+                    g.fillRoundedRect(x - 16, SWIPE.dotsY - 8, 32, 16, 8)
+                } else {
+                    g.fillStyle(C.grey, 0.6)
+                    g.fillCircle(x, SWIPE.dotsY, 8)
+                }
+            }
+        }
+
+        for (let i = 0; i < count; i++) {
+            const x = startX + i * gap
+            const zone = this.add.rectangle(x, SWIPE.dotsY, 36, 44, C.white, 0.001)
+            zone.setInteractive({ useHandCursor: true })
+            zone.on('pointerup', () => {
+                if (this.locked || this.sliding) return
+                this.goTo(i)
+            })
+        }
+
+        paint(0)
+        return paint
+    }
+
+    private arrowButton(x: number, y: number, dir: number) {
+        const btn = this.add.container(x, y)
+        const g = this.add.graphics()
+        const r = SWIPE.arrowR
+
+        g.fillStyle(C.shadow, 0.18)
+        g.fillCircle(0, 6, r)
+        g.fillStyle(C.white, 1)
+        g.fillCircle(0, 0, r)
+        g.lineStyle(3, C.border, 1)
+        g.strokeCircle(0, 0, r)
+        g.lineStyle(6, C.blue, 1)
+        g.lineBetween(dir * 6, -13, dir * -6, 0)
+        g.lineBetween(dir * -6, 0, dir * 6, 13)
+
+        btn.add(g)
+        btn.setSize(r * 2, r * 2)
+        btn.setInteractive({ useHandCursor: true })
+        btn.on('pointerup', () => {
+            if (this.locked || this.sliding) return
+            this.tweens.add({ targets: btn, scale: 0.88, duration: 90, yoyo: true })
+            this.goTo(this.index + dir)
+        })
+
+        return btn
+    }
+
+    private swapButton(onClick: () => void) {
+        const w = SWIPE.swapW
+        const h = SWIPE.swapH
+        const btn = this.add.container(SWIPE.swapX, SWIPE.rowY)
+        const g = this.add.graphics()
+
+        g.fillStyle(C.shadow, 0.2)
+        g.fillRoundedRect(-w / 2, -h / 2 + 6, w, h, h / 2)
+        g.fillStyle(C.blue, 1)
+        g.fillRoundedRect(-w / 2, -h / 2, w, h, h / 2)
+        g.fillStyle(C.white, A.gloss)
+        g.fillRoundedRect(-w / 2 + 8, -h / 2 + 7, w - 16, h * 0.32, h / 4)
+
+        g.lineStyle(5, C.white, 1)
+        g.beginPath()
+        g.arc(-w / 2 + 42, 0, 13, Phaser.Math.DegToRad(40), Phaser.Math.DegToRad(300))
+        g.strokePath()
+        g.fillStyle(C.white, 1)
+        g.fillTriangle(-w / 2 + 52, -16, -w / 2 + 62, -4, -w / 2 + 48, -2)
+
+        const t = this.add.text(16, 0, 'Ver a outra postagem', {
+            fontFamily: 'Arial Black, Arial',
+            fontSize: '20px',
+            color: '#ffffff',
             align: 'center',
-            wordWrap: { width: COMPARE.titleWrap },
+            wordWrap: { width: w - 90 },
         }).setOrigin(0.5).setResolution(2)
 
-        const chips = CRITERIA.map((def, i) => {
-            const x = i % 2 === 0 ? COMPARE.chipLeftX : COMPARE.chipRightX
-            const y = i < 2 ? COMPARE.chipRow1 : COMPARE.chipRow2
-            return this.signalChip(x, y, COMPARE.chipW, COMPARE.chipH, def.id, item.signals[def.id].chip)
+        btn.add([g, t])
+        btn.setSize(w, h)
+        btn.setInteractive({ useHandCursor: true })
+        btn.on('pointerup', () => {
+            if (this.locked || this.sliding) return
+            this.tweens.add({ targets: btn, scale: 0.95, duration: 80, yoyo: true })
+            onClick()
         })
 
-        container.add([frame, thumb, title, ...chips.map(c => c.container)])
-
-        const reveal = () => {
-            chips.forEach((chip, i) => chip.setState(item.signals[CRITERIA[i].id].good ? 'good' : 'bad'))
-        }
-
-        return { container, reveal }
+        return btn
     }
 
-    private buildInspect(p: InspectPhase) {
-        this.buildNewsCard(p.item)
-        this.card(RADAR.x, RADAR.y, RADAR.w, RADAR.h, 24, C.panel)
+    private buildChooseBar(onClick: () => void) {
+        const w = SWIPE.chooseW
+        const h = SWIPE.chooseH
+        const bar = this.add.container(SWIPE.chooseX, SWIPE.rowY)
+        const g = this.add.graphics()
+
+        g.fillStyle(C.shadow, 0.2)
+        g.fillRoundedRect(-w / 2, -h / 2 + 6, w, h, h / 2)
+        g.fillStyle(C.green, 1)
+        g.fillRoundedRect(-w / 2, -h / 2, w, h, h / 2)
+        g.fillStyle(C.white, A.gloss)
+        g.fillRoundedRect(-w / 2 + 8, -h / 2 + 7, w - 16, h * 0.32, h / 4)
+        g.fillStyle(C.white, 1)
+        g.fillCircle(-w / 2 + 42, 0, 18)
+        g.lineStyle(5, C.green, 1)
+        g.lineBetween(-w / 2 + 34, 0, -w / 2 + 40, 8)
+        g.lineBetween(-w / 2 + 40, 8, -w / 2 + 52, -8)
+
+        const t = this.add.text(20, 0, '', {
+            fontFamily: 'Arial Black, Arial',
+            fontSize: '20px',
+            color: '#ffffff',
+            align: 'center',
+            wordWrap: { width: w - 110 },
+        }).setOrigin(0.5).setResolution(2)
+
+        bar.add([g, t])
+        bar.setSize(w, h)
+        bar.setInteractive({ useHandCursor: true })
+        bar.on('pointerup', () => {
+            if (this.locked || this.sliding) return
+            this.tweens.add({ targets: bar, scale: 0.96, duration: 80, yoyo: true })
+            onClick()
+        })
+
+        return (source: string) => t.setText(`Confio nesta: ${source}`)
+    }
+
+    private buildInspect(p: InspectPhafse) {
+        const post = this.buildPost(p.item, SOLO.w, SOLO.h, true)
+        post.container.setPosition(SOLO.cx, SOLO.cy)
+        this.cardGeom = post.geom
+
+        this.card(RADAR.x, RADAR.y, RADAR.w, RADAR.h, 26, C.panel)
 
         this.add.text(RADAR.cx, RADAR.headerY, 'RADAR DE CONFIANÇA', {
             fontFamily: 'Arial Black, Arial',
-            fontSize: '25px',
+            fontSize: '30px',
             color: hex(C.blueDark),
         }).setOrigin(0.5).setResolution(2)
 
         this.counterText = this.add.text(RADAR.cx, RADAR.counterY, '', {
             fontFamily: 'Arial',
             fontStyle: 'bold',
-            fontSize: '19px',
+            fontSize: '21px',
             color: hex(C.inkSoft),
         }).setOrigin(0.5).setResolution(2)
         this.updateCounter()
 
         CRITERIA.forEach((def, i) => this.buildCriterionRow(p.item, def.id, i))
 
-        this.add.text(RADAR.cx, RADAR.seloLabelY, 'Que selo você dá para esta notícia?', {
+        this.add.text(RADAR.cx, RADAR.seloLabelY, 'Que selo você dá para esta postagem?', {
             fontFamily: 'Arial',
             fontStyle: 'bold',
-            fontSize: '21px',
+            fontSize: '23px',
             color: hex(C.inkSoft),
         }).setOrigin(0.5).setResolution(2)
 
-        const xs = [RADAR.cx - 132, RADAR.cx + 132]
+        const xs = [RADAR.cx - 148, RADAR.cx + 148]
         p.options.forEach((trust, i) => {
-            const btn = this.button(xs[i], RADAR.seloY, 250, 58, TRUST_LABEL[trust], C.grey, () => {
+            const btn = this.button(xs[i], RADAR.seloY, 282, 64, TRUST_LABEL[trust], C.grey, () => {
                 if (Object.keys(this.marks).length < CRITERIA.length) return
                 this.locked = true
                 this.resolvePhase(trust === p.answer, p.explanation)
-            }, '22px')
+            }, '24px')
 
             const paint = btn.getData('paint') as (c: number) => void
             this.seloPaints.push(() => {
@@ -211,6 +444,321 @@ export class GameScene extends Phaser.Scene {
                 paint(ready ? TRUST_FILL[TRUST_COLOR_KEY[trust]] : C.grey)
             })
         })
+    }
+
+    private buildCase(p: CasePhase) {
+        const post = this.buildPost(p.item, SOLO.w, SOLO.h, true)
+        post.container.setPosition(SOLO.cx, SOLO.cy)
+        this.cardGeom = post.geom
+
+        this.card(RADAR.x, RADAR.y, RADAR.w, RADAR.h, 26, C.panel)
+
+        this.add.text(RADAR.cx, CASEBOARD.headerY, 'SINAIS DA PUBLICAÇÃO', {
+            fontFamily: 'Arial Black, Arial',
+            fontSize: '30px',
+            color: hex(C.blueDark),
+        }).setOrigin(0.5).setResolution(2)
+
+        CRITERIA.forEach((def, i) => {
+            const y = CASEBOARD.rowFirstY + i * CASEBOARD.rowGap
+            const w = CASEBOARD.rowW
+            const h = CASEBOARD.rowH
+            const row = this.add.container(RADAR.cx, y)
+
+            const g = this.add.graphics()
+            g.fillStyle(C.panelSoft, 1)
+            g.fillRoundedRect(-w / 2, -h / 2, w, h, 20)
+            g.lineStyle(2, C.border, 1)
+            g.strokeRoundedRect(-w / 2, -h / 2, w, h, 20)
+            g.fillStyle(C.white, 1)
+            g.fillCircle(-w / 2 + 50, 0, 26)
+            g.lineStyle(3, C.blue, 1)
+            g.strokeCircle(-w / 2 + 50, 0, 26)
+
+            const icon = this.add.graphics()
+            this.drawIcon(icon, def.id, -w / 2 + 50, 0, 22, C.blue)
+
+            const label = this.add.text(-w / 2 + 92, -17, def.name, {
+                fontFamily: 'Arial Black, Arial',
+                fontSize: '21px',
+                color: hex(C.blueDark),
+            }).setOrigin(0, 0.5).setResolution(2)
+
+            const chip = this.add.text(-w / 2 + 92, 14, p.item.signals[def.id].chip, {
+                fontFamily: 'Arial',
+                fontStyle: 'bold',
+                fontSize: '19px',
+                color: hex(C.ink),
+                wordWrap: { width: w - 120 },
+            }).setOrigin(0, 0.5).setResolution(2)
+
+            row.add([g, icon, label, chip])
+        })
+
+        this.add.text(RADAR.cx, CASEBOARD.seloLabelY, 'Escolha o selo desta publicação', {
+            fontFamily: 'Arial',
+            fontStyle: 'bold',
+            fontSize: '23px',
+            color: hex(C.inkSoft),
+        }).setOrigin(0.5).setResolution(2)
+
+        const xs = [RADAR.cx - 190, RADAR.cx, RADAR.cx + 190]
+        p.options.forEach((trust, i) => {
+            this.button(xs[i], CASEBOARD.seloY, 180, 64, TRUST_LABEL[trust], TRUST_FILL[TRUST_COLOR_KEY[trust]], () => {
+                this.locked = true
+                this.openJustify(p, trust)
+            }, '20px')
+        })
+    }
+
+    private buildPost(item: NewsItem, w: number, h: number, tapImage: boolean): PostView {
+        const c = this.add.container(0, 0)
+        const lx = -w / 2
+        const ty = -h / 2
+
+        const shell = this.add.graphics()
+        shell.fillStyle(C.shadow, A.shadow)
+        shell.fillRoundedRect(lx + 4, ty + 10, w, h, 26)
+        shell.fillStyle(C.panel, 1)
+        shell.fillRoundedRect(lx, ty, w, h, 26)
+        shell.lineStyle(3, C.border, 1)
+        shell.strokeRoundedRect(lx, ty, w, h, 26)
+        c.add(shell)
+
+        const avatar = this.add.graphics()
+        const paintAvatar = (tone: number) => {
+            avatar.clear()
+            avatar.fillStyle(tone, 1)
+            avatar.fillCircle(lx + 56, ty + 52, CARD.avatarR)
+            avatar.fillStyle(C.white, A.gloss)
+            avatar.fillEllipse(lx + 56, ty + 41, 36, 15)
+        }
+        paintAvatar(C.blue)
+
+        const initial = this.add.text(lx + 56, ty + 52, item.source.charAt(0).toUpperCase(), {
+            fontFamily: 'Arial Black, Arial',
+            fontSize: '29px',
+            color: '#ffffff',
+        }).setOrigin(0.5).setResolution(2)
+
+        const source = this.add.text(lx + 102, ty + 40, item.source, {
+            fontFamily: 'Arial Black, Arial',
+            fontSize: '22px',
+            color: hex(C.ink),
+            wordWrap: { width: w - 140 },
+        }).setOrigin(0, 0.5).setResolution(2)
+
+        const autoriaIcon = this.add.graphics()
+        this.drawIcon(autoriaIcon, 'autoria', lx + 114, ty + 80, 13, C.inkSoft)
+
+        const autoria = this.add.text(lx + 134, ty + 80, item.signals.autoria.chip, {
+            fontFamily: 'Arial',
+            fontStyle: 'bold',
+            fontSize: '17px',
+            color: hex(C.inkSoft),
+            wordWrap: { width: w - 176 },
+        }).setOrigin(0, 0.5).setResolution(2)
+
+        const dataIcon = this.add.graphics()
+        this.drawIcon(dataIcon, 'data', lx + 114, ty + 106, 13, C.inkSoft)
+
+        const dataText = this.add.text(lx + 134, ty + 106, item.signals.data.chip, {
+            fontFamily: 'Arial',
+            fontStyle: 'bold',
+            fontSize: '17px',
+            color: hex(C.inkSoft),
+            wordWrap: { width: w - 176 },
+        }).setOrigin(0, 0.5).setResolution(2)
+
+        const divider = this.add.graphics()
+        divider.lineStyle(2, C.border, 1)
+        divider.lineBetween(lx + 18, ty + CARD.headerH, lx + w - 18, ty + CARD.headerH)
+
+        c.add([avatar, initial, source, autoriaIcon, autoria, dataIcon, dataText, divider])
+
+        const pillW = (w - CARD.padX * 2 - CARD.pillGap) / 2
+        const pillCy = ty + h - CARD.padBottom - CARD.pillH / 2
+        const actionsY = pillCy - CARD.pillH / 2 - CARD.gapActionsPills
+
+        const fontePill = this.signalPill(lx + CARD.padX + pillW / 2, pillCy, pillW, CARD.pillH, 'fonte', item.signals.fonte.chip)
+        const provasPill = this.signalPill(lx + CARD.padX + pillW + CARD.pillGap + pillW / 2, pillCy, pillW, CARD.pillH, 'provas', item.signals.provas.chip)
+        c.add([fontePill.container, provasPill.container])
+
+        const captionTop = ty + CARD.headerH + CARD.gapHeaderCaption
+        const caption = this.add.text(0, captionTop, item.title, {
+            fontFamily: 'Arial',
+            fontStyle: 'bold',
+            fontSize: '23px',
+            color: hex(C.ink),
+            align: 'center',
+            wordWrap: { width: w - 52 },
+        }).setOrigin(0.5, 0).setResolution(2)
+
+        if (caption.height > CARD.captionMaxH) caption.setFontSize(21)
+        if (caption.height > CARD.captionMaxH) caption.setFontSize(19)
+
+        const imgTop = captionTop + caption.height + CARD.gapCaptionImg
+        const imgH = Math.max(CARD.imgMinH, actionsY - CARD.gapImgActions - imgTop)
+        const imgW = w - CARD.padX * 2
+        const imgCy = imgTop + imgH / 2
+
+        const frame = this.add.graphics()
+        frame.fillStyle(C.greySoft, 1)
+        frame.fillRoundedRect(lx + CARD.padX, imgTop, imgW, imgH, 20)
+        frame.lineStyle(3, C.border, 1)
+        frame.strokeRoundedRect(lx + CARD.padX, imgTop, imgW, imgH, 20)
+
+        const photo = this.add.image(0, imgCy, item.thumb)
+        photo.setScale(Math.min((imgW - 16) / photo.width, (imgH - 16) / photo.height))
+
+        const badge = this.zoomBadge(lx + CARD.padX + imgW - 30, imgTop + imgH - 30)
+        c.add([caption, frame, photo, badge])
+
+        if (tapImage) {
+            const hit = this.add.rectangle(0, imgCy, imgW, imgH, C.white, 0.001)
+            hit.setInteractive({ useHandCursor: true })
+            hit.on('pointerup', () => this.openFullImage(item))
+            c.add(hit)
+        }
+
+        const actions = this.drawSocialIcons(lx + 44, actionsY)
+        const hint = this.add.text(lx + w - 22, actionsY, 'toque na foto para ampliar', {
+            fontFamily: 'Arial',
+            fontStyle: 'bold',
+            fontSize: '16px',
+            color: hex(C.inkSoft),
+        }).setOrigin(1, 0.5).setResolution(2)
+        c.add([actions, hint])
+
+        const reveal = () => {
+            const tone = (id: CriterionId) => item.signals[id].good ? C.green : C.red
+            const state = (id: CriterionId): SignalState => item.signals[id].good ? 'good' : 'bad'
+
+            fontePill.setState(state('fonte'))
+            provasPill.setState(state('provas'))
+            paintAvatar(tone('fonte'))
+
+            autoria.setColor(hex(tone('autoria')))
+            autoriaIcon.clear()
+            this.drawIcon(autoriaIcon, 'autoria', lx + 114, ty + 80, 13, tone('autoria'))
+
+            dataText.setColor(hex(tone('data')))
+            dataIcon.clear()
+            this.drawIcon(dataIcon, 'data', lx + 114, ty + 106, 13, tone('data'))
+        }
+
+        return {
+            container: c,
+            reveal,
+            geom: { headerCy: ty + 64, imgCy, imgH, imgW, pillCy },
+        }
+    }
+
+    private drawSocialIcons(x: number, y: number) {
+        const g = this.add.graphics()
+        g.lineStyle(3, C.grey, 1)
+
+        g.beginPath()
+        g.arc(x - 6, y - 3, 7, Phaser.Math.DegToRad(150), Phaser.Math.DegToRad(340))
+        g.strokePath()
+        g.beginPath()
+        g.arc(x + 6, y - 3, 7, Phaser.Math.DegToRad(200), Phaser.Math.DegToRad(30))
+        g.strokePath()
+        g.lineBetween(x - 12, y + 1, x, y + 12)
+        g.lineBetween(x + 12, y + 1, x, y + 12)
+
+        g.strokeRoundedRect(x + 40, y - 12, 30, 22, 8)
+        g.lineBetween(x + 48, y + 10, x + 54, y + 17)
+        g.lineBetween(x + 54, y + 17, x + 58, y + 10)
+
+        g.strokeCircle(x + 100, y - 8, 5)
+        g.strokeCircle(x + 100, y + 8, 5)
+        g.strokeCircle(x + 118, y, 5)
+        g.lineBetween(x + 104, y - 6, x + 114, y - 2)
+        g.lineBetween(x + 104, y + 6, x + 114, y + 2)
+
+        return g
+    }
+
+    private signalPill(x: number, y: number, w: number, h: number, id: CriterionId, text: string) {
+        const container = this.add.container(x, y)
+        const g = this.add.graphics()
+        const icon = this.add.graphics()
+        const t = this.add.text(-w / 2 + 56, 0, text, {
+            fontFamily: 'Arial',
+            fontStyle: 'bold',
+            fontSize: '17px',
+            color: hex(C.ink),
+            wordWrap: { width: w - 72 },
+        }).setOrigin(0, 0.5).setResolution(2)
+
+        const setState = (state: SignalState) => {
+            const tone = state === 'good' ? C.green : state === 'bad' ? C.red : C.inkSoft
+            const fill = state === 'good' ? C.greenSoft : state === 'bad' ? C.redSoft : C.panelSoft
+            const line = state === 'neutral' ? C.border : tone
+
+            g.clear()
+            g.fillStyle(fill, 1)
+            g.fillRoundedRect(-w / 2, -h / 2, w, h, 18)
+            g.lineStyle(2, line, 1)
+            g.strokeRoundedRect(-w / 2, -h / 2, w, h, 18)
+
+            icon.clear()
+            this.drawIcon(icon, id, -w / 2 + 30, 0, 18, tone)
+            t.setColor(hex(state === 'neutral' ? C.ink : tone))
+        }
+
+        setState('neutral')
+        container.add([g, icon, t])
+        return { container, setState }
+    }
+
+    private zoomBadge(x: number, y: number) {
+        const g = this.add.graphics()
+        g.fillStyle(C.shadow, 0.22)
+        g.fillCircle(x, y + 4, 23)
+        g.fillStyle(C.blue, 1)
+        g.fillCircle(x, y, 23)
+        g.fillStyle(C.white, A.gloss)
+        g.fillEllipse(x, y - 9, 28, 12)
+        g.lineStyle(4, C.white, 1)
+        g.strokeCircle(x - 3, y - 3, 9)
+        g.lineBetween(x + 4, y + 4, x + 11, y + 11)
+        return g
+    }
+
+    private openFullImage(item: NewsItem) {
+        const layer = this.add.container(0, 0).setDepth(600)
+
+        const overlay = this.add.rectangle(W / 2, H / 2, W, H, C.shadow, 0.88).setInteractive()
+        const img = this.add.image(W / 2, 316, item.thumb)
+        img.setScale(Math.min(1000 / img.width, 420 / img.height))
+
+        const frame = this.add.graphics()
+        frame.fillStyle(C.panel, 1)
+        frame.fillRoundedRect(
+            W / 2 - img.displayWidth / 2 - 16,
+            316 - img.displayHeight / 2 - 16,
+            img.displayWidth + 32,
+            img.displayHeight + 32,
+            24,
+        )
+
+        const caption = this.add.text(W / 2, 316 + img.displayHeight / 2 + 62, item.title, {
+            fontFamily: 'Arial Black, Arial',
+            fontSize: '27px',
+            color: '#ffffff',
+            align: 'center',
+            wordWrap: { width: 920 },
+        }).setOrigin(0.5).setResolution(2)
+
+        const close = () => layer.destroy()
+        overlay.on('pointerup', close)
+        const btn = this.button(W / 2, 664, 300, 64, 'Fechar', C.blue, () => { }, '25px', true)
+
+        layer.add([overlay, frame, img, caption, btn])
+        layer.setAlpha(0)
+        this.tweens.add({ targets: layer, alpha: 1, duration: 180 })
     }
 
     private buildCriterionRow(item: NewsItem, id: CriterionId, index: number) {
@@ -223,24 +771,24 @@ export class GameScene extends Phaser.Scene {
         const g = this.add.graphics()
         const icon = this.add.graphics()
 
-        const name = this.add.text(-w / 2 + 86, -13, def.name, {
+        const name = this.add.text(-w / 2 + 94, -16, def.name, {
             fontFamily: 'Arial Black, Arial',
-            fontSize: '22px',
+            fontSize: '23px',
             color: hex(C.ink),
         }).setOrigin(0, 0.5).setResolution(2)
 
-        const hint = this.add.text(-w / 2 + 86, 14, 'Toque para investigar', {
+        const hint = this.add.text(-w / 2 + 94, 15, 'Toque para investigar', {
             fontFamily: 'Arial',
             fontStyle: 'bold',
-            fontSize: '18px',
+            fontSize: '19px',
             color: hex(C.inkSoft),
-            wordWrap: { width: w - 210 },
+            wordWrap: { width: w - 230 },
         }).setOrigin(0, 0.5).setResolution(2)
 
         const badgeBg = this.add.graphics()
         const badge = this.add.text(w / 2 - 26, 0, '', {
             fontFamily: 'Arial Black, Arial',
-            fontSize: '17px',
+            fontSize: '18px',
             color: '#ffffff',
         }).setOrigin(1, 0.5).setResolution(2).setDepth(1)
 
@@ -252,16 +800,16 @@ export class GameScene extends Phaser.Scene {
 
             g.clear()
             g.fillStyle(fill, 1)
-            g.fillRoundedRect(-w / 2, -h / 2, w, h, 18)
+            g.fillRoundedRect(-w / 2, -h / 2, w, h, 20)
             g.lineStyle(3, done ? tone : C.border, 1)
-            g.strokeRoundedRect(-w / 2, -h / 2, w, h, 18)
+            g.strokeRoundedRect(-w / 2, -h / 2, w, h, 20)
             g.fillStyle(C.white, 1)
-            g.fillCircle(-w / 2 + 48, 0, 25)
+            g.fillCircle(-w / 2 + 52, 0, 27)
             g.lineStyle(3, tone, 1)
-            g.strokeCircle(-w / 2 + 48, 0, 25)
+            g.strokeCircle(-w / 2 + 52, 0, 27)
 
             icon.clear()
-            this.drawIcon(icon, id, -w / 2 + 48, 0, 21, tone)
+            this.drawIcon(icon, id, -w / 2 + 52, 0, 23, tone)
 
             if (done) {
                 badge.setText(mark ? 'BOM' : 'RUIM')
@@ -273,7 +821,7 @@ export class GameScene extends Phaser.Scene {
 
             badgeBg.clear()
             badgeBg.fillStyle(done ? tone : C.blue, 1)
-            badgeBg.fillRoundedRect(w / 2 - 26 - badge.width - 24, -19, badge.width + 36, 38, 19)
+            badgeBg.fillRoundedRect(w / 2 - 26 - badge.width - 24, -20, badge.width + 38, 40, 20)
         }
 
         row.add([g, icon, name, hint, badgeBg, badge])
@@ -291,68 +839,6 @@ export class GameScene extends Phaser.Scene {
         })
     }
 
-    private buildCase(p: CasePhase) {
-        this.buildNewsCard(p.item)
-        this.card(RADAR.x, RADAR.y, RADAR.w, RADAR.h, 24, C.panel)
-
-        this.add.text(RADAR.cx, CASEBOARD.headerY, 'SINAIS DA PUBLICAÇÃO', {
-            fontFamily: 'Arial Black, Arial',
-            fontSize: '25px',
-            color: hex(C.blueDark),
-        }).setOrigin(0.5).setResolution(2)
-
-        CRITERIA.forEach((def, i) => {
-            const y = CASEBOARD.rowFirstY + i * CASEBOARD.rowGap
-            const w = CASEBOARD.rowW
-            const h = CASEBOARD.rowH
-            const row = this.add.container(RADAR.cx, y)
-
-            const g = this.add.graphics()
-            g.fillStyle(C.panelSoft, 1)
-            g.fillRoundedRect(-w / 2, -h / 2, w, h, 18)
-            g.lineStyle(2, C.border, 1)
-            g.strokeRoundedRect(-w / 2, -h / 2, w, h, 18)
-            g.fillStyle(C.white, 1)
-            g.fillCircle(-w / 2 + 46, 0, 24)
-            g.lineStyle(3, C.blue, 1)
-            g.strokeCircle(-w / 2 + 46, 0, 24)
-
-            const icon = this.add.graphics()
-            this.drawIcon(icon, def.id, -w / 2 + 46, 0, 20, C.blue)
-
-            const label = this.add.text(-w / 2 + 84, -15, def.name, {
-                fontFamily: 'Arial Black, Arial',
-                fontSize: '20px',
-                color: hex(C.blueDark),
-            }).setOrigin(0, 0.5).setResolution(2)
-
-            const chip = this.add.text(-w / 2 + 84, 13, p.item.signals[def.id].chip, {
-                fontFamily: 'Arial',
-                fontStyle: 'bold',
-                fontSize: '18px',
-                color: hex(C.ink),
-                wordWrap: { width: w - 120 },
-            }).setOrigin(0, 0.5).setResolution(2)
-
-            row.add([g, icon, label, chip])
-        })
-
-        this.add.text(RADAR.cx, CASEBOARD.seloLabelY, 'Escolha o selo desta publicação', {
-            fontFamily: 'Arial',
-            fontStyle: 'bold',
-            fontSize: '21px',
-            color: hex(C.inkSoft),
-        }).setOrigin(0.5).setResolution(2)
-
-        const xs = [RADAR.cx - 190, RADAR.cx, RADAR.cx + 190]
-        p.options.forEach((trust, i) => {
-            this.button(xs[i], CASEBOARD.seloY, 180, 58, TRUST_LABEL[trust], TRUST_FILL[TRUST_COLOR_KEY[trust]], () => {
-                this.locked = true
-                this.openJustify(p, trust)
-            }, '19px')
-        })
-    }
-
     private openCriterion(item: NewsItem, id: CriterionId, onDone: () => void) {
         const def = CRITERIA.find(c => c.id === id)!
         const sig = item.signals[id]
@@ -364,52 +850,52 @@ export class GameScene extends Phaser.Scene {
         const detail = this.add.text(0, 0, sig.detail, {
             fontFamily: 'Arial',
             fontStyle: 'bold',
-            fontSize: '24px',
+            fontSize: '26px',
             color: hex(C.ink),
             align: 'center',
-            wordWrap: { width: 560 },
+            wordWrap: { width: 620 },
         }).setOrigin(0.5).setResolution(2)
 
-        const PH = detail.height + 386
+        const PH = detail.height + 430
         const top = -PH / 2
 
         const bg = this.add.graphics()
         bg.fillStyle(C.shadow, 0.22)
-        bg.fillRoundedRect(-340, top + 12, 680, PH, 28)
+        bg.fillRoundedRect(-380, top + 12, 760, PH, 30)
         bg.fillStyle(C.panel, 1)
-        bg.fillRoundedRect(-340, top, 680, PH, 28)
+        bg.fillRoundedRect(-380, top, 760, PH, 30)
         bg.lineStyle(4, C.blue, 1)
-        bg.strokeRoundedRect(-340, top, 680, PH, 28)
+        bg.strokeRoundedRect(-380, top, 760, PH, 30)
 
         const iconBg = this.add.graphics()
         iconBg.fillStyle(C.greySoft, 1)
-        iconBg.fillCircle(0, top + 62, 38)
+        iconBg.fillCircle(0, top + 70, 44)
         iconBg.lineStyle(3, C.blue, 1)
-        iconBg.strokeCircle(0, top + 62, 38)
+        iconBg.strokeCircle(0, top + 70, 44)
         const icon = this.add.graphics()
-        this.drawIcon(icon, id, 0, top + 62, 30, C.blue)
+        this.drawIcon(icon, id, 0, top + 70, 34, C.blue)
 
-        const name = this.add.text(0, top + 134, def.name, {
+        const name = this.add.text(0, top + 152, def.name, {
             fontFamily: 'Arial Black, Arial',
-            fontSize: '30px',
+            fontSize: '34px',
             color: hex(C.blueDark),
         }).setOrigin(0.5).setResolution(2)
 
-        const question = this.add.text(0, top + 176, def.question, {
+        const question = this.add.text(0, top + 198, def.question, {
             fontFamily: 'Arial',
             fontStyle: 'bold',
-            fontSize: '20px',
+            fontSize: '23px',
             color: hex(C.inkSoft),
             align: 'center',
-            wordWrap: { width: 560 },
+            wordWrap: { width: 620 },
         }).setOrigin(0.5).setResolution(2)
 
         const box = this.add.graphics()
         box.fillStyle(C.panelSoft, 1)
-        box.fillRoundedRect(-302, top + 208, 604, detail.height + 52, 20)
+        box.fillRoundedRect(-340, top + 232, 680, detail.height + 56, 22)
         box.lineStyle(2, C.border, 1)
-        box.strokeRoundedRect(-302, top + 208, 604, detail.height + 52, 20)
-        detail.setY(top + 208 + (detail.height + 52) / 2)
+        box.strokeRoundedRect(-340, top + 232, 680, detail.height + 56, 22)
+        detail.setY(top + 232 + (detail.height + 56) / 2)
 
         const answer = (good: boolean) => {
             this.marks[id] = good
@@ -419,9 +905,9 @@ export class GameScene extends Phaser.Scene {
             onDone()
         }
 
-        const btnY = PH / 2 - 58
-        const okBtn = this.button(-152, btnY, 290, 70, 'Parece bom', C.green, () => answer(true), '23px', true)
-        const noBtn = this.button(152, btnY, 290, 70, 'Não parece bom', C.red, () => answer(false), '23px', true)
+        const btnY = PH / 2 - 66
+        const okBtn = this.button(-172, btnY, 330, 80, 'Parece bom', C.green, () => answer(true), '26px', true)
+        const noBtn = this.button(172, btnY, 330, 80, 'Não parece bom', C.red, () => answer(false), '26px', true)
 
         modal.add([bg, iconBg, icon, name, question, box, detail, okBtn, noBtn])
         modal.setScale(0.92).setAlpha(0)
@@ -435,29 +921,29 @@ export class GameScene extends Phaser.Scene {
             .setDepth(300).setInteractive()
         const modal = this.add.container(W / 2, H / 2).setDepth(301)
 
-        const PH = 320
+        const PH = 350
         const top = -PH / 2
 
         const bg = this.add.graphics()
         bg.fillStyle(C.shadow, 0.22)
-        bg.fillRoundedRect(-320, top + 12, 640, PH, 28)
+        bg.fillRoundedRect(-360, top + 12, 720, PH, 30)
         bg.fillStyle(C.panel, 1)
-        bg.fillRoundedRect(-320, top, 640, PH, 28)
+        bg.fillRoundedRect(-360, top, 720, PH, 30)
         bg.lineStyle(4, C.blue, 1)
-        bg.strokeRoundedRect(-320, top, 640, PH, 28)
+        bg.strokeRoundedRect(-360, top, 720, PH, 30)
 
-        const title = this.add.text(0, top + 54, 'Qual sinal pesou mais na sua escolha?', {
+        const title = this.add.text(0, top + 56, 'Qual sinal pesou mais na sua escolha?', {
             fontFamily: 'Arial Black, Arial',
-            fontSize: '23px',
+            fontSize: '27px',
             color: hex(C.blueDark),
             align: 'center',
-            wordWrap: { width: 540 },
+            wordWrap: { width: 620 },
         }).setOrigin(0.5).setResolution(2)
 
         const buttons = CRITERIA.map((def, i) => {
-            const x = i % 2 === 0 ? -146 : 146
-            const y = top + (i < 2 ? 134 : 210)
-            return this.button(x, y, 272, 66, def.name, C.blue, () => {
+            const x = i % 2 === 0 ? -164 : 164
+            const y = top + (i < 2 ? 144 : 232)
+            return this.button(x, y, 310, 76, def.name, C.blue, () => {
                 const correct = trust === p.answer && def.id === p.justify
                 if (trust === p.answer && def.id !== p.justify) this.criterionScore += 5
                 overlay.destroy()
@@ -465,7 +951,7 @@ export class GameScene extends Phaser.Scene {
                 this.resolvePhase(trust === p.answer, correct
                     ? p.explanation
                     : `${p.explanation} O sinal que mais pesou aqui foi: ${CRITERIA.find(c => c.id === p.justify)!.name}.`)
-            }, '18px', true)
+            }, '22px', true)
         })
 
         modal.add([bg, title, ...buttons])
@@ -473,50 +959,10 @@ export class GameScene extends Phaser.Scene {
         this.tweens.add({ targets: modal, alpha: 1, scale: 1, duration: 220, ease: 'Back.easeOut' })
     }
 
-    private buildNewsCard(item: NewsItem) {
-        this.card(NEWSCARD.x, NEWSCARD.y, NEWSCARD.w, NEWSCARD.h, 24, C.panel)
-
-        const frame = this.add.graphics()
-        frame.fillStyle(C.greySoft, 1)
-        frame.fillRoundedRect(
-            NEWSCARD.cx - NEWSCARD.thumbW / 2,
-            NEWSCARD.thumbY - NEWSCARD.thumbH / 2,
-            NEWSCARD.thumbW, NEWSCARD.thumbH, 18,
-        )
-
-        this.fitImage(item.thumb, NEWSCARD.cx, NEWSCARD.thumbY, NEWSCARD.thumbW - 18, NEWSCARD.thumbH - 18)
-
-        this.add.text(NEWSCARD.cx, NEWSCARD.titleY, item.title, {
-            fontFamily: 'Arial',
-            fontStyle: 'bold',
-            fontSize: '27px',
-            color: hex(C.ink),
-            align: 'center',
-            wordWrap: { width: 396 },
-        }).setOrigin(0.5).setResolution(2)
-
-        const source = this.add.text(NEWSCARD.cx + 20, NEWSCARD.sourceY, item.source, {
-            fontFamily: 'Arial Black, Arial',
-            fontSize: '21px',
-            color: hex(C.blue),
-            align: 'center',
-            wordWrap: { width: 320 },
-        }).setOrigin(0.5).setResolution(2).setDepth(1)
-
-        const pill = this.add.graphics()
-        const pw = source.width + 96
-        pill.fillStyle(C.panelSoft, 1)
-        pill.fillRoundedRect(NEWSCARD.cx - pw / 2, NEWSCARD.sourceY - source.height / 2 - 16, pw, source.height + 32, 22)
-        pill.lineStyle(2, C.border, 1)
-        pill.strokeRoundedRect(NEWSCARD.cx - pw / 2, NEWSCARD.sourceY - source.height / 2 - 16, pw, source.height + 32, 22)
-
-        const icon = this.add.graphics().setDepth(1)
-        this.drawIcon(icon, 'fonte', NEWSCARD.cx - pw / 2 + 36, NEWSCARD.sourceY, 20, C.blue)
-    }
-
     private updateCounter() {
         if (!this.counterText) return
         const done = Object.keys(this.marks).length
+        this.counterText.setText(`${done} de ${CRITERIA.length} sinais checados`)
         this.counterText.setColor(hex(done >= CRITERIA.length ? C.green : C.inkSoft))
     }
 
@@ -546,47 +992,47 @@ export class GameScene extends Phaser.Scene {
     private showFeedback(correct: boolean, message: string, onDone: () => void) {
         const overlay = this.add.rectangle(W / 2, H / 2, W, H, C.shadow, A.overlay)
             .setDepth(400).setInteractive()
-        const modal = this.add.container(W / 2, H / 2 + 26).setDepth(401)
+        const modal = this.add.container(W / 2, H / 2 + 20).setDepth(401)
 
         const body = this.add.text(0, 0, message, {
             fontFamily: 'Arial',
             fontStyle: 'bold',
-            fontSize: '24px',
+            fontSize: '26px',
             color: hex(C.ink),
             align: 'center',
-            wordWrap: { width: 600 },
+            wordWrap: { width: 640 },
         }).setOrigin(0.5).setResolution(2)
 
-        const PH = body.height + 254
+        const PH = body.height + 274
         const top = -PH / 2
         const tone = correct ? C.green : C.amber
 
         const bg = this.add.graphics()
         bg.fillStyle(C.shadow, 0.22)
-        bg.fillRoundedRect(-350, top + 12, 700, PH, 28)
+        bg.fillRoundedRect(-380, top + 12, 760, PH, 30)
         bg.fillStyle(C.panel, 1)
-        bg.fillRoundedRect(-350, top, 700, PH, 28)
+        bg.fillRoundedRect(-380, top, 760, PH, 30)
         bg.lineStyle(4, tone, 1)
-        bg.strokeRoundedRect(-350, top, 700, PH, 28)
+        bg.strokeRoundedRect(-380, top, 760, PH, 30)
         bg.fillStyle(tone, 1)
-        bg.fillRoundedRect(-160, top - 14, 320, 26, 13)
+        bg.fillRoundedRect(-170, top - 14, 340, 26, 13)
 
-        const title = this.add.text(0, top + 54, correct ? 'Radar certeiro!' : 'Vamos olhar de novo', {
+        const title = this.add.text(0, top + 58, correct ? 'Radar certeiro!' : 'Vamos olhar de novo', {
             fontFamily: 'Arial Black, Arial',
-            fontSize: '34px',
+            fontSize: '38px',
             color: hex(correct ? C.green : C.blueDark),
         }).setOrigin(0.5).setResolution(2)
 
-        body.setY(top + 106 + body.height / 2)
+        body.setY(top + 114 + body.height / 2)
 
-        const btn = this.button(0, PH / 2 - 58, 300, 70, 'Continuar', C.blue, () => {
+        const btn = this.button(0, PH / 2 - 62, 330, 78, 'Continuar', C.blue, () => {
             overlay.destroy()
             modal.destroy()
             mascote.destroy()
             onDone()
-        }, '20px', true)
+        }, '25px', true)
 
-        const mascote = this.add.image(W / 2 - 312, H / 2 + 26 + top - 20, correct ? 'mascote-reacao' : 'mascote-normal')
+        const mascote = this.add.image(W / 2 - 348, H / 2 + 20 + top - 18, correct ? 'mascote-reacao' : 'mascote-normal')
             .setDisplaySize(MASCOTE, MASCOTE).setDepth(402)
 
         modal.add([bg, title, body, btn])
@@ -606,49 +1052,49 @@ export class GameScene extends Phaser.Scene {
         const objective = this.add.text(0, 0, this.level.objective, {
             fontFamily: 'Arial',
             fontStyle: 'bold',
-            fontSize: '24px',
+            fontSize: '26px',
             color: hex(C.ink),
             align: 'center',
-            wordWrap: { width: 560 },
+            wordWrap: { width: 610 },
         }).setOrigin(0.5).setResolution(2)
 
-        const PH = objective.height + 296
+        const PH = objective.height + 316
         const top = -PH / 2
 
         const bg = this.add.graphics()
         bg.fillStyle(C.shadow, 0.22)
-        bg.fillRoundedRect(-320, top + 12, 640, PH, 28)
+        bg.fillRoundedRect(-360, top + 12, 720, PH, 30)
         bg.fillStyle(C.panel, 1)
-        bg.fillRoundedRect(-320, top, 640, PH, 28)
+        bg.fillRoundedRect(-360, top, 720, PH, 30)
         bg.lineStyle(4, C.blue, 1)
-        bg.strokeRoundedRect(-320, top, 640, PH, 28)
+        bg.strokeRoundedRect(-360, top, 720, PH, 30)
         bg.fillStyle(C.blue, 1)
-        bg.fillRoundedRect(-150, top - 14, 300, 26, 13)
+        bg.fillRoundedRect(-160, top - 14, 320, 26, 13)
 
-        const badge = this.add.text(0, top + 52, `NÍVEL ${this.level.level}`, {
+        const badge = this.add.text(0, top + 56, `NÍVEL ${this.level.level}`, {
             fontFamily: 'Arial Black, Arial',
-            fontSize: '21px',
+            fontSize: '24px',
             color: hex(C.blue),
         }).setOrigin(0.5).setResolution(2)
 
-        const title = this.add.text(0, top + 100, this.level.title, {
+        const title = this.add.text(0, top + 110, this.level.title, {
             fontFamily: 'Arial Black, Arial',
-            fontSize: '36px',
+            fontSize: '40px',
             color: hex(C.blueDark),
             align: 'center',
-            wordWrap: { width: 560 },
+            wordWrap: { width: 600 },
         }).setOrigin(0.5).setResolution(2)
 
-        objective.setY(top + 154 + objective.height / 2)
+        objective.setY(top + 168 + objective.height / 2)
 
-        const btn = this.button(0, PH / 2 - 58, 300, 70, 'Começar', C.blue, () => {
+        const btn = this.button(0, PH / 2 - 62, 330, 78, 'Começar', C.blue, () => {
             overlay.destroy()
             panel.destroy()
             mascote.destroy()
             onStart()
-        }, '20px', true)
+        }, '25px', true)
 
-        const mascote = this.add.image(W / 2 - 302, H / 2 + top - 20, 'mascote-normal')
+        const mascote = this.add.image(W / 2 - 330, H / 2 + top - 18, 'mascote-normal')
             .setDisplaySize(MASCOTE, MASCOTE).setDepth(502)
 
         panel.add([bg, badge, title, objective, btn])
@@ -695,7 +1141,7 @@ export class GameScene extends Phaser.Scene {
         showLevelComplete(this, {
             title: 'Radar completo!',
             subtitle: `${this.points} pontos`,
-            message: 'Agora você sabe olhar a fonte, a autoria, a data e as provas antes de acreditar.',
+            message: 'Agora você sabe olhar o perfil, quem escreveu, a data e as provas antes de acreditar.',
             accent: C.green,
             overlayColor: C.shadow,
             titleColor: hex(C.blueDark),
@@ -705,87 +1151,154 @@ export class GameScene extends Phaser.Scene {
     }
 
     private runTutorial() {
-        this.tutorialSteps = this.buildTutorialSteps()
-        this.tutorialKey = `radar-l${this.level.level}`
+        this.tutorialQueue = this.buildTutorialQueue()
         EventBus.emit('tutorial-ready')
 
-        if (this.phaseIdx !== 0 || !this.tutorialSteps.length) {
+        if (this.phaseIdx !== 0 || !this.tutorialQueue.length) {
             this.startPhase()
             return
         }
 
-        createTutorial(this, {
-            key: this.tutorialKey,
-            accent: C.blue,
-            safeTop: 130,
-            steps: this.tutorialSteps,
-            onFinish: () => this.startPhase(),
-        })
+        this.playTutorialQueue(true, () => this.startPhase())
     }
 
     private replayTutorial = () => {
-        if (this.ended || !this.tutorialSteps.length) return
+        if (this.ended || !this.tutorialQueue.length) return
         const wasLocked = this.locked
         this.locked = true
-        createTutorial(this, {
-            key: this.tutorialKey,
-            once: false,
-            accent: C.blue,
-            safeTop: 130,
-            steps: this.tutorialSteps,
-            onFinish: () => { this.locked = wasLocked },
-        })
+        this.dragActive = false
+        this.playTutorialQueue(false, () => { this.locked = wasLocked })
     }
 
-    private buildTutorialSteps(): TutorialStep[] {
+    private playTutorialQueue(once: boolean, onDone: () => void) {
+        const next = (i: number) => {
+            if (i >= this.tutorialQueue.length) {
+                onDone()
+                return
+            }
+            const seg = this.tutorialQueue[i]
+            const run = () => createTutorial(this, {
+                key: seg.key,
+                once,
+                accent: C.blue,
+                safeTop: 110,
+                steps: seg.steps,
+                onFinish: () => next(i + 1),
+            })
+
+            if (seg.before) {
+                seg.before()
+                this.time.delayedCall(420, run)
+            } else {
+                run()
+            }
+        }
+
+        next(0)
+    }
+
+    private buildTutorialQueue(): TutorialSegment[] {
+        const g = this.cardGeom
+
         if (this.level.level === 1) {
+            if (!g) return []
+            const cardRect = { x: SWIPE.cx, y: SWIPE.cy, w: SWIPE.w + 24, h: SWIPE.h + 24 }
+
             return [
                 {
-                    text: 'As duas notícias falam do mesmo assunto. Toque nas abas para ver uma de cada vez.',
-                    shape: 'rect', x: W / 2, y: COMPARE.tabY, w: 1060, h: 100, balloonY: 420,
+                    key: 'radar-l1-a',
+                    before: () => this.goTo(0),
+                    steps: [
+                        {
+                            text: 'Esta é a primeira postagem. Ela aparece sozinha na tela, como no celular.',
+                            shape: 'rect', ...cardRect, balloonY: 500,
+                        },
+                        {
+                            text: 'No topo aparece o perfil que publicou, quem escreveu o texto e quando foi publicado.',
+                            shape: 'rect', x: SWIPE.cx, y: SWIPE.cy + g.headerCy, w: SWIPE.w - 16, h: 136,
+                        },
+                        {
+                            text: 'Esta é a foto da postagem. Toque nela para ver a imagem em tela cheia.',
+                            shape: 'rect', x: SWIPE.cx, y: SWIPE.cy + g.imgCy, w: g.imgW + 18, h: g.imgH + 18,
+                        },
+                        {
+                            text: 'Aqui embaixo ficam a fonte da postagem e se ela mostra provas do que diz.',
+                            shape: 'rect', x: SWIPE.cx, y: SWIPE.cy + g.pillCy, w: SWIPE.w - 24, h: CARD.pillH + 18,
+                        },
+                    ],
                 },
                 {
-                    text: 'Nas etiquetas você vê quem publicou, quem assinou, a data e se a notícia mostra provas.',
-                    shape: 'rect', x: W / 2, y: (COMPARE.chipRow1 + COMPARE.chipRow2) / 2, w: 1100, h: 190,
+                    key: 'radar-l1-b',
+                    before: () => this.goTo(1),
+                    steps: [
+                        {
+                            text: 'Pronto! Agora você está vendo a outra postagem sobre o mesmo assunto.',
+                            shape: 'rect', ...cardRect, balloonY: 500,
+                        },
+                        {
+                            text: 'Para trocar de postagem, arraste o dedo para o lado, use as setas ou toque neste botão.',
+                            shape: 'rect', x: SWIPE.swapX, y: SWIPE.rowY, w: SWIPE.swapW + 26, h: SWIPE.swapH + 26,
+                        },
+                        {
+                            text: 'As bolinhas mostram em qual das duas postagens você está agora.',
+                            shape: 'rect', x: SWIPE.cx, y: SWIPE.dotsY, w: 200, h: 66,
+                        },
+                    ],
                 },
                 {
-                    text: 'Quando estiver vendo a notícia que você acha confiável, toque em Escolher esta notícia.',
-                    shape: 'rect', x: W / 2, y: COMPARE.confirmY, w: 520, h: 110,
+                    key: 'radar-l1-c',
+                    before: () => this.goTo(0),
+                    steps: [
+                        {
+                            text: 'Compare as duas com calma: perfil, autor, data, foto e provas.',
+                            shape: 'rect', ...cardRect, balloonY: 500,
+                        },
+                        {
+                            text: 'Este botão verde mostra o nome da postagem que está na tela. Toque nele para confiar nela.',
+                            shape: 'rect', x: SWIPE.chooseX, y: SWIPE.rowY, w: SWIPE.chooseW + 26, h: SWIPE.chooseH + 26,
+                        },
+                    ],
                 },
             ]
         }
 
         if (this.level.level === 2) {
-            return [
-                {
-                    text: 'Aqui está a publicação para você investigar.',
-                    shape: 'rect', x: NEWSCARD.cx, y: NEWSCARD.y + NEWSCARD.h / 2, w: NEWSCARD.w + 24, h: NEWSCARD.h + 24,
-                },
-                {
-                    text: 'Toque em cada sinal do radar para descobrir o que ele revela e marque se parece bom ou ruim.',
-                    shape: 'rect', x: RADAR.cx, y: 384, w: RADAR.rowW + 40, h: 300,
-                },
-                {
-                    text: 'Depois de checar os quatro sinais, os selos ficam coloridos e você escolhe um.',
-                    shape: 'rect', x: RADAR.cx, y: RADAR.seloY, w: RADAR.rowW + 40, h: 90,
-                },
-            ]
+            return [{
+                key: 'radar-l2',
+                steps: [
+                    {
+                        text: 'Agora é só uma postagem. Leia com calma e toque na foto para ampliar.',
+                        shape: 'rect', x: SOLO.cx, y: SOLO.cy, w: SOLO.w + 22, h: SOLO.h + 22,
+                    },
+                    {
+                        text: 'Toque em cada sinal do radar para investigar e marque se ele parece bom ou ruim.',
+                        shape: 'rect', x: RADAR.cx, y: 372, w: RADAR.rowW + 44, h: 380,
+                    },
+                    {
+                        text: 'Depois de checar os quatro sinais, os selos ficam coloridos e você escolhe um.',
+                        shape: 'rect', x: RADAR.cx, y: RADAR.seloY, w: RADAR.rowW + 60, h: 108,
+                    },
+                ],
+            }]
         }
 
-        return [
-            {
-                text: 'Agora os quatro sinais já vêm abertos, mas eles estão misturados: alguns bons, outros ruins.',
-                shape: 'rect', x: RADAR.cx, y: 330, w: RADAR.rowW + 40, h: 250,
-            },
-            {
-                text: 'Existe um selo do meio: Cuidado. Use quando a publicação não é mentira, mas também não é notícia.',
-                shape: 'rect', x: RADAR.cx, y: CASEBOARD.seloY, w: RADAR.rowW + 40, h: 90,
-            },
-            {
-                text: 'Você tem tempo contado. Escolha o selo e depois diga qual sinal pesou mais.',
-                shape: 'none', balloonY: 400,
-            },
-        ]
+        return [{
+            key: 'radar-l3',
+            steps: [
+                {
+                    text: 'Aqui os quatro sinais já vêm abertos, mas estão misturados: alguns bons, outros ruins.',
+                    shape: 'rect', x: RADAR.cx, y: 370, w: CASEBOARD.rowW + 44, h: 380,
+                },
+                {
+                    text: 'Existe um selo do meio: Cuidado. Use quando a postagem não é mentira, mas também não é notícia.',
+                    shape: 'rect', x: RADAR.cx, y: CASEBOARD.seloY, w: CASEBOARD.rowW + 60, h: 108,
+                },
+                {
+                    text: 'O tempo está correndo. Escolha o selo e depois diga qual sinal pesou mais.',
+                    shape: 'none', balloonY: 380,
+                },
+            ],
+        }]
     }
 
     private publishHud() {
@@ -807,45 +1320,6 @@ export class GameScene extends Phaser.Scene {
         g.lineStyle(3, C.border, 1)
         g.strokeRoundedRect(x, y, w, h, r)
         return g
-    }
-
-    private fitImage(key: string, x: number, y: number, boxW: number, boxH: number) {
-        const img = this.add.image(x, y, key)
-        img.setScale(Math.min(boxW / img.width, boxH / img.height))
-        return img
-    }
-
-    private signalChip(x: number, y: number, w: number, h: number, id: CriterionId, text: string) {
-        const container = this.add.container(x, y)
-        const g = this.add.graphics()
-        const icon = this.add.graphics()
-        const t = this.add.text(-w / 2 + 68, 0, text, {
-            fontFamily: 'Arial',
-            fontStyle: 'bold',
-            fontSize: '20px',
-            color: hex(C.ink),
-            wordWrap: { width: w - 90 },
-        }).setOrigin(0, 0.5).setResolution(2)
-
-        const setState = (state: 'neutral' | 'good' | 'bad') => {
-            const tone = state === 'good' ? C.green : state === 'bad' ? C.red : C.inkSoft
-            const fill = state === 'good' ? C.greenSoft : state === 'bad' ? C.redSoft : C.greySoft
-            const line = state === 'neutral' ? C.border : tone
-
-            g.clear()
-            g.fillStyle(fill, 1)
-            g.fillRoundedRect(-w / 2, -h / 2, w, h, 16)
-            g.lineStyle(2, line, 1)
-            g.strokeRoundedRect(-w / 2, -h / 2, w, h, 16)
-
-            icon.clear()
-            this.drawIcon(icon, id, -w / 2 + 36, 0, 20, tone)
-            t.setColor(hex(state === 'neutral' ? C.ink : tone))
-        }
-
-        setState('neutral')
-        container.add([g, icon, t])
-        return { container, setState }
     }
 
     private drawIcon(g: Phaser.GameObjects.Graphics, id: CriterionId, cx: number, cy: number, s: number, color: number) {

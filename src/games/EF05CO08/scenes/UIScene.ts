@@ -29,42 +29,42 @@ export class UIScene extends Phaser.Scene {
   }
 
   create() {
-    this.instructionText = this.add.text(W / 2, 44, '', {
+    this.instructionText = this.add.text(W / 2, 42, '', {
       fontFamily: 'Arial Black, Arial',
-      fontSize: '25px',
+      fontSize: '30px',
       color: hex(C.blueDark),
       stroke: '#ffffff',
-      strokeThickness: 6,
+      strokeThickness: 7,
       align: 'center',
-      wordWrap: { width: 840 },
+      wordWrap: { width: 760 },
     }).setOrigin(0.5).setResolution(2)
 
-    this.subText = this.add.text(W / 2, 86, '', {
+    this.subText = this.add.text(W / 2, 90, '', {
       fontFamily: 'Arial',
       fontStyle: 'bold',
-      fontSize: '17px',
+      fontSize: '22px',
       color: hex(C.inkSoft),
       stroke: '#ffffff',
       strokeThickness: 5,
       align: 'center',
-      wordWrap: { width: 800 },
+      wordWrap: { width: 760 },
     }).setOrigin(0.5).setResolution(2)
 
-    this.levelText = this.add.text(28, 30, '', {
+    this.levelText = this.add.text(26, 32, '', {
       fontFamily: 'Arial Black, Arial',
-      fontSize: '15px',
+      fontSize: '20px',
       color: hex(C.blueDark),
       stroke: '#ffffff',
-      strokeThickness: 4,
+      strokeThickness: 5,
     }).setOrigin(0, 0.5).setResolution(2)
 
-    this.phaseText = this.add.text(28, 54, '', {
+    this.phaseText = this.add.text(26, 62, '', {
       fontFamily: 'Arial',
       fontStyle: 'bold',
-      fontSize: '14px',
+      fontSize: '18px',
       color: hex(C.inkSoft),
       stroke: '#ffffff',
-      strokeThickness: 3,
+      strokeThickness: 4,
     }).setOrigin(0, 0.5).setResolution(2)
 
     this.timerTrack = this.add.graphics()
@@ -96,21 +96,21 @@ export class UIScene extends Phaser.Scene {
   }
 
   private buildHelpButton() {
-    const btn = this.add.container(1230, 46)
+    const btn = this.add.container(1224, 54)
     const g = this.add.graphics()
     g.fillStyle(C.shadow, 0.2)
-    g.fillCircle(0, 5, 23)
+    g.fillCircle(0, 6, 30)
     g.fillStyle(C.blue, 1)
-    g.fillCircle(0, 0, 23)
+    g.fillCircle(0, 0, 30)
     g.fillStyle(C.white, 0.22)
-    g.fillEllipse(0, -9, 30, 14)
+    g.fillEllipse(0, -12, 38, 18)
     const t = this.add.text(0, 0, '?', {
       fontFamily: 'Arial Black, Arial',
-      fontSize: '24px',
+      fontSize: '32px',
       color: '#ffffff',
     }).setOrigin(0.5).setResolution(2)
     btn.add([g, t])
-    btn.setSize(52, 52)
+    btn.setSize(68, 68)
     btn.setInteractive({ useHandCursor: true })
     btn.on('pointerdown', () => {
       this.tweens.add({ targets: btn, scale: 0.9, duration: 80, yoyo: true })
@@ -135,10 +135,10 @@ export class UIScene extends Phaser.Scene {
     this.timerState.p = 1
 
     this.timerTrack.clear()
-    this.timerTrack.fillStyle(C.white, 0.85)
-    this.timerTrack.fillRoundedRect(880, 32, 300, 26, 13)
+    this.timerTrack.fillStyle(C.white, 0.9)
+    this.timerTrack.fillRoundedRect(858, 26, 320, 32, 16)
     this.timerTrack.lineStyle(3, C.border, 1)
-    this.timerTrack.strokeRoundedRect(880, 32, 300, 26, 13)
+    this.timerTrack.strokeRoundedRect(858, 26, 320, 32, 16)
     this.drawTimer(1)
 
     this.timerTween = this.tweens.add({
@@ -162,12 +162,12 @@ export class UIScene extends Phaser.Scene {
   }
 
   private drawTimer(p: number) {
-    const w = 288 * Phaser.Math.Clamp(p, 0, 1)
+    const w = 306 * Phaser.Math.Clamp(p, 0, 1)
     const color = p > 0.5 ? C.green : p > 0.25 ? C.amber : C.red
     this.timerBar.clear()
     if (w > 0) {
       this.timerBar.fillStyle(color, 1)
-      this.timerBar.fillRoundedRect(886, 38, w, 14, 7)
+      this.timerBar.fillRoundedRect(865, 33, w, 18, 9)
     }
   }
 }

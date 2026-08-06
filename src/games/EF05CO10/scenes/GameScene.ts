@@ -1329,7 +1329,11 @@ export class GameScene extends Phaser.Scene {
                 },
                 {
                     text: 'Se escolher errado, o botão Voltar um passo desfaz a última escolha.',
-                    shape: 'rect', x: PANEL.cx, y: PANEL.backY, w: 260, h: 84,
+                    shape: 'rect',
+                    x: PANEL.backX,
+                    y: PANEL.backY,
+                    w: 250,
+                    h: 76,
                 },
                 {
                     text: 'O passo mais importante é a fala. Ela precisa dizer o que mudou, e não só que a tecnologia existe.',
