@@ -60,6 +60,8 @@ export class GameScene extends Phaser.Scene {
     private counterText?: Phaser.GameObjects.Text
     private seloPaints: Array<() => void> = []
     private tutorialQueue: TutorialSegment[] = []
+    private inputBlocker?: Phaser.GameObjects.Rectangle
+    private inputBlockedUntil = 0
 
     private track?: Phaser.GameObjects.Container
     private cards: PostView[] = []
@@ -98,6 +100,9 @@ export class GameScene extends Phaser.Scene {
         this.dragActive = false
         this.dragMoved = false
         this.cardGeom = undefined
+        this.inputBlocker?.destroy()
+        this.inputBlocker = undefined
+        this.inputBlockedUntil = 0
     }
 
     private get level(): LevelConfig {
@@ -113,7 +118,7 @@ export class GameScene extends Phaser.Scene {
         this.buildPhase()
         this.publishHud()
 
-        runtimeGameBridge.emit({ type: 'GAME_READY', gameId: GAME_ID, stage: this.level.level })
+        runtimeGameBridge.emit({ type: 'GAME_READY', gameId: GAME_ID })
 
         EventBus.on('timer-end', this.onTimeUp, this)
         EventBus.on('show-tutorial', this.replayTutorial, this)
@@ -193,7 +198,7 @@ export class GameScene extends Phaser.Scene {
             .setDepth(5)
         layer.setInteractive({ useHandCursor: true })
         layer.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
-            if (this.locked || this.sliding || !this.track) return
+            if (this.isInputBlocked() || this.locked || this.sliding || !this.track) return
             this.dragActive = true
             this.dragMoved = false
             this.dragStartX = pointer.x
@@ -286,40 +291,13 @@ export class GameScene extends Phaser.Scene {
             const zone = this.add.rectangle(x, SWIPE.dotsY, 36, 44, C.white, 0.001)
             zone.setInteractive({ useHandCursor: true })
             zone.on('pointerup', () => {
-                if (this.locked || this.sliding) return
+                if (this.isInputBlocked() || this.locked || this.sliding) return
                 this.goTo(i)
             })
         }
 
         paint(0)
         return paint
-    }
-
-    private arrowButton(x: number, y: number, dir: number) {
-        const btn = this.add.container(x, y)
-        const g = this.add.graphics()
-        const r = SWIPE.arrowR
-
-        g.fillStyle(C.shadow, 0.18)
-        g.fillCircle(0, 6, r)
-        g.fillStyle(C.white, 1)
-        g.fillCircle(0, 0, r)
-        g.lineStyle(3, C.border, 1)
-        g.strokeCircle(0, 0, r)
-        g.lineStyle(6, C.blue, 1)
-        g.lineBetween(dir * 6, -13, dir * -6, 0)
-        g.lineBetween(dir * -6, 0, dir * 6, 13)
-
-        btn.add(g)
-        btn.setSize(r * 2, r * 2)
-        btn.setInteractive({ useHandCursor: true })
-        btn.on('pointerup', () => {
-            if (this.locked || this.sliding) return
-            this.tweens.add({ targets: btn, scale: 0.88, duration: 90, yoyo: true })
-            this.goTo(this.index + dir)
-        })
-
-        return btn
     }
 
     private swapButton(onClick: () => void) {
@@ -354,7 +332,7 @@ export class GameScene extends Phaser.Scene {
         btn.setSize(w, h)
         btn.setInteractive({ useHandCursor: true })
         btn.on('pointerup', () => {
-            if (this.locked || this.sliding) return
+            if (this.isInputBlocked() || this.locked || this.sliding) return
             this.tweens.add({ targets: btn, scale: 0.95, duration: 80, yoyo: true })
             onClick()
         })
@@ -392,7 +370,7 @@ export class GameScene extends Phaser.Scene {
         bar.setSize(w, h)
         bar.setInteractive({ useHandCursor: true })
         bar.on('pointerup', () => {
-            if (this.locked || this.sliding) return
+            if (this.isInputBlocked() || this.locked || this.sliding) return
             this.tweens.add({ targets: bar, scale: 0.96, duration: 80, yoyo: true })
             onClick()
         })
@@ -400,7 +378,7 @@ export class GameScene extends Phaser.Scene {
         return (source: string) => t.setText(`Confio nesta: ${source}`)
     }
 
-    private buildInspect(p: InspectPhafse) {
+    private buildInspect(p: InspectPhase) {
         const post = this.buildPost(p.item, SOLO.w, SOLO.h, true)
         post.container.setPosition(SOLO.cx, SOLO.cy)
         this.cardGeom = post.geom
@@ -617,7 +595,10 @@ export class GameScene extends Phaser.Scene {
         if (tapImage) {
             const hit = this.add.rectangle(0, imgCy, imgW, imgH, C.white, 0.001)
             hit.setInteractive({ useHandCursor: true })
-            hit.on('pointerup', () => this.openFullImage(item))
+            hit.on('pointerup', () => {
+                if (this.isInputBlocked() || this.locked) return
+                this.openFullImage(item)
+            })
             c.add(hit)
         }
 
@@ -752,9 +733,21 @@ export class GameScene extends Phaser.Scene {
             wordWrap: { width: 920 },
         }).setOrigin(0.5).setResolution(2)
 
-        const close = () => layer.destroy()
-        overlay.on('pointerup', close)
-        const btn = this.button(W / 2, 664, 300, 64, 'Fechar', C.blue, () => { }, '25px', true)
+        const close = () => this.closeModalSafely(overlay, layer);
+
+        overlay.on('pointerdown', (_pointer: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => {
+            event.stopPropagation()
+            close()
+        });
+
+        const btn = this.button(W / 2, 664, 300, 64, 'Fechar', C.blue, () => { }, '25px', true);
+        btn.removeAllListeners('pointerdown');
+        btn.on('pointerdown', (_pointer: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => {
+            event.stopPropagation()
+            if (this.isInputBlocked()) return
+            this.tweens.add({ targets: btn, scale: 0.95, duration: 70, yoyo: true })
+            close()
+        });
 
         layer.add([overlay, frame, img, caption, btn])
         layer.setAlpha(0)
@@ -829,7 +822,7 @@ export class GameScene extends Phaser.Scene {
         row.setSize(w, h)
         row.setInteractive({ useHandCursor: true })
         row.on('pointerdown', () => {
-            if (this.locked || this.marks[id] !== undefined) return
+            if (this.isInputBlocked() || this.locked || this.marks[id] !== undefined) return
             this.tweens.add({ targets: row, scale: 0.98, duration: 70, yoyo: true })
             this.openCriterion(item, id, () => {
                 paint()
@@ -898,12 +891,10 @@ export class GameScene extends Phaser.Scene {
         detail.setY(top + 232 + (detail.height + 56) / 2)
 
         const answer = (good: boolean) => {
-            this.marks[id] = good
-            if (good === sig.good) this.criterionScore += 5
-            overlay.destroy()
-            modal.destroy()
-            onDone()
-        }
+            this.marks[id] = good;
+            if (good === sig.good) this.criterionScore += 5;
+            this.closeModalSafely(overlay, modal, onDone);
+        };
 
         const btnY = PH / 2 - 66
         const okBtn = this.button(-172, btnY, 330, 80, 'Parece bom', C.green, () => answer(true), '26px', true)
@@ -941,18 +932,21 @@ export class GameScene extends Phaser.Scene {
         }).setOrigin(0.5).setResolution(2)
 
         const buttons = CRITERIA.map((def, i) => {
-            const x = i % 2 === 0 ? -164 : 164
-            const y = top + (i < 2 ? 144 : 232)
+            const x = i % 2 === 0 ? -164 : 164;
+            const y = top + (i < 2 ? 144 : 232);
             return this.button(x, y, 310, 76, def.name, C.blue, () => {
-                const correct = trust === p.answer && def.id === p.justify
-                if (trust === p.answer && def.id !== p.justify) this.criterionScore += 5
-                overlay.destroy()
-                modal.destroy()
-                this.resolvePhase(trust === p.answer, correct
-                    ? p.explanation
-                    : `${p.explanation} O sinal que mais pesou aqui foi: ${CRITERIA.find(c => c.id === p.justify)!.name}.`)
-            }, '22px', true)
-        })
+                const correct = trust === p.answer && def.id === p.justify;
+                if (trust === p.answer && def.id !== p.justify) this.criterionScore += 5;
+                this.closeModalSafely(overlay, modal, () => {
+                    this.resolvePhase(
+                        trust === p.answer,
+                        correct
+                            ? p.explanation
+                            : `${p.explanation} O sinal que mais pesou aqui foi: ${CRITERIA.find(c => c.id === p.justify)!.name}.`
+                    );
+                });
+            }, '22px', true);
+        });
 
         modal.add([bg, title, ...buttons])
         modal.setScale(0.92).setAlpha(0)
@@ -1024,22 +1018,68 @@ export class GameScene extends Phaser.Scene {
         }).setOrigin(0.5).setResolution(2)
 
         body.setY(top + 114 + body.height / 2)
-
-        const btn = this.button(0, PH / 2 - 62, 330, 78, 'Continuar', C.blue, () => {
-            overlay.destroy()
-            modal.destroy()
-            mascote.destroy()
-            onDone()
-        }, '25px', true)
-
         const mascote = this.add.image(W / 2 - 348, H / 2 + 20 + top - 18, correct ? 'mascote-reacao' : 'mascote-normal')
             .setDisplaySize(MASCOTE, MASCOTE).setDepth(402)
+
+        const btn = this.button(0, PH / 2 - 62, 330, 78, 'Continuar', C.blue, () => {
+            this.closeModalSafely(overlay, modal, () => {
+                mascote.destroy();
+                onDone();
+            });
+        }, '25px', true);
 
         modal.add([bg, title, body, btn])
         modal.setScale(0.92).setAlpha(0)
         mascote.setAlpha(0)
         this.tweens.add({ targets: modal, alpha: 1, scale: 1, duration: 240, ease: 'Back.easeOut' })
         this.tweens.add({ targets: mascote, alpha: 1, duration: 240 })
+    }
+
+    private isInputBlocked() {
+        return this.inputBlocker?.active || this.time.now < this.inputBlockedUntil
+    }
+
+    private blockInput(ms = 320) {
+        this.inputBlockedUntil = Math.max(this.inputBlockedUntil, this.time.now + ms)
+
+        if (!this.inputBlocker?.active) {
+            this.inputBlocker = this.add.rectangle(W / 2, H / 2, W, H, C.shadow, 0.001)
+                .setDepth(9999)
+                .setInteractive()
+            this.inputBlocker.on('pointerdown', (_pointer: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => event.stopPropagation())
+            this.inputBlocker.on('pointerup', (_pointer: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => event.stopPropagation())
+        }
+
+        this.time.delayedCall(ms, () => {
+            if (this.time.now < this.inputBlockedUntil) return
+            this.inputBlocker?.destroy()
+            this.inputBlocker = undefined
+        })
+    }
+    private closeModalSafely(
+        overlay: Phaser.GameObjects.Rectangle,
+        modal: Phaser.GameObjects.Container,
+        onClosed?: () => void
+    ): void {
+        this.blockInput()
+        overlay.disableInteractive();
+        modal.each((child: Phaser.GameObjects.GameObject) => {
+            if ('disableInteractive' in child) {
+                (child as Phaser.GameObjects.Container).disableInteractive();
+            }
+        });
+
+        this.tweens.add({
+            targets: [overlay, modal],
+            alpha: 0,
+            duration: 150,
+        });
+
+        this.time.delayedCall(80, () => {
+            overlay.destroy();
+            modal.destroy();
+            onClosed?.();
+        });
     }
 
     private showLevelIntro(onStart: () => void) {
@@ -1087,15 +1127,15 @@ export class GameScene extends Phaser.Scene {
 
         objective.setY(top + 168 + objective.height / 2)
 
-        const btn = this.button(0, PH / 2 - 62, 330, 78, 'Começar', C.blue, () => {
-            overlay.destroy()
-            panel.destroy()
-            mascote.destroy()
-            onStart()
-        }, '25px', true)
-
         const mascote = this.add.image(W / 2 - 330, H / 2 + top - 18, 'mascote-normal')
             .setDisplaySize(MASCOTE, MASCOTE).setDepth(502)
+
+        const btn = this.button(0, PH / 2 - 62, 330, 78, 'Começar', C.blue, () => {
+            this.closeModalSafely(overlay, panel, () => {
+                mascote.destroy();
+                onStart();
+            });
+        }, '25px', true)
 
         panel.add([bg, badge, title, objective, btn])
         panel.setScale(0.92).setAlpha(0)
@@ -1136,7 +1176,6 @@ export class GameScene extends Phaser.Scene {
 
         this.ended = true
         runtimeGameBridge.emit({ type: 'GAME_COMPLETED', gameId: GAME_ID, stage: this.level.level })
-        runtimeGameBridge.emit({ type: 'FINISH_GAME', gameId: GAME_ID, stage: this.level.level })
 
         showLevelComplete(this, {
             title: 'Radar completo!',
@@ -1387,8 +1426,9 @@ export class GameScene extends Phaser.Scene {
         btn.setData('paint', paint)
         btn.setSize(w, h)
         btn.setInteractive({ useHandCursor: true })
-        btn.on('pointerdown', () => {
-            if (!ignoreLock && this.locked) return
+        btn.on('pointerdown', (_pointer: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => {
+            event.stopPropagation()
+            if (this.isInputBlocked() || (!ignoreLock && this.locked)) return
             this.tweens.add({ targets: btn, scale: 0.95, duration: 70, yoyo: true })
             onClick()
         })
