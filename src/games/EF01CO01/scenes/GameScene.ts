@@ -5,6 +5,7 @@ import type { PlatformCommand } from '../../../shared/contracts/platformCommands
 import type { RoundResult } from '../../../shared/types/game'
 import type { GameItem, LevelConfig, ClassifierBase } from '../types'
 import { LEVELS } from '../data/levels'
+import { createTutorial, type TutorialStep } from '../../../shared/tutorial/createTutorial'
 
 interface DraggableItem extends Phaser.GameObjects.Image {
   itemData: GameItem
@@ -89,7 +90,9 @@ export class GameScene extends Phaser.Scene {
 
     if (DEV_NO_TIMER) {
       this.revealItems()
-      if (this.levelConfig.timeLimit) this.startTimer()
+      this.runTutorial(() => {
+        if (this.levelConfig.timeLimit) this.startTimer()
+      })
     } else {
       this.showStartScreen()
     }
@@ -223,7 +226,93 @@ export class GameScene extends Phaser.Scene {
       this.emitCheckpoint()
       this.revealItems()
       this.playGo()
-      if (this.levelConfig.timeLimit) this.startTimer()
+      this.runTutorial(() => {
+        if (this.levelConfig.timeLimit) this.startTimer()
+      })
+    })
+  }
+
+  // ── Tutorial ─────────────────────────────────────────────────────────────
+
+  private runTutorial(onDone: () => void) {
+    const lvl = this.levelConfig.level
+    const firstItem = this.itemSprites[0]
+    const targetBase = firstItem
+      ? this.bases.find((b) => {
+        const rule = (b.getData('baseData') as ClassifierBase).rule
+        return this.getItemAttrValue(firstItem.itemData, rule.attribute) === rule.value
+      })
+      : undefined
+
+    const itemX = firstItem?.originX_ ?? 640
+    const itemY = firstItem?.originY_ ?? ITEM_Y
+    const baseX = targetBase?.x ?? 640
+    const baseY = targetBase?.y ?? 608
+
+    const steps: TutorialStep[] = []
+
+    if (lvl === 1) {
+      steps.push(
+        {
+          text: 'Cada item tem uma cor. Olhe bem para este aqui.',
+          shape: 'circle', x: itemX, y: itemY, w: 180, h: 180,
+        },
+        {
+          text: 'Estas casinhas recebem os itens da mesma cor.',
+          shape: 'rect', x: 640, y: 608, w: 1180, h: 170,
+        },
+        {
+          text: 'Arraste o item até a casinha da cor certa, segurando com o dedo até soltar lá.',
+          shape: 'rect',
+          x: (itemX + baseX) / 2,
+          y: (itemY + baseY) / 2,
+          w: Math.abs(baseX - itemX) + 260,
+          h: Math.abs(baseY - itemY) + 260,
+          balloonY: 210,
+          pointer: firstItem && targetBase
+            ? { fromX: itemX, fromY: itemY, toX: baseX, toY: baseY }
+            : undefined,
+        },
+        {
+          text: 'Essa barra mostra o tempo passando. Capriche antes que ela acabe!',
+          shape: 'rect', x: 640, y: 43, w: 820, h: 60, balloonY: 170,
+        },
+      )
+    } else if (lvl === 2) {
+      steps.push(
+        {
+          text: 'Agora são quatro casinhas de cores diferentes. Olhe bem antes de arrastar.',
+          shape: 'rect', x: 640, y: 608, w: 1220, h: 170,
+        },
+        {
+          text: 'A forma do item pode enganar — o que importa é sempre a COR.',
+          shape: 'none', balloonY: 300,
+        },
+      )
+    } else if (lvl === 3) {
+      steps.push(
+        {
+          text: 'Mudou a regra: agora é a FORMA que importa, não a cor.',
+          shape: 'rect', x: 640, y: 608, w: 1220, h: 170,
+        },
+        {
+          text: 'Círculo, quadrado, triângulo ou retângulo — observe o contorno de cada item.',
+          shape: 'none', balloonY: 300,
+        },
+      )
+    }
+
+    if (!steps.length) {
+      onDone()
+      return
+    }
+
+    createTutorial(this, {
+      key: `classificadores-l${lvl}`,
+      accent: COLORS.green,
+      safeTop: 70,
+      onFinish: onDone,
+      steps,
     })
   }
 

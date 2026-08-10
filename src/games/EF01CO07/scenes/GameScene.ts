@@ -4,6 +4,7 @@ import { runtimeGameBridge } from "../../../shared/bridge/runtimeGameBridge";
 import type { PlatformCommand } from "../../../shared/contracts/platformCommands";
 import { LEVELS } from "../data/levels";
 import type { SafetyChoice, SafetyLevel, SafetyScene } from "../types";
+import { createTutorial, type TutorialStep } from "../../../shared/tutorial/createTutorial";
 
 const GAME_ID = "guardioes-dos-dados";
 const TIMER_BAR_Y = 55;
@@ -66,7 +67,14 @@ export class GameScene extends Phaser.Scene {
 
     this.renderCurrentScene();
     this.emitProgress();
-    this.levelStarted = true;
+
+    if (this.levelConfig.level === 1) {
+      this.runTutorial(() => {
+        this.levelStarted = true;
+      });
+    } else {
+      this.levelStarted = true;
+    }
   }
 
   update() {
@@ -225,7 +233,9 @@ export class GameScene extends Phaser.Scene {
       this.clearOverlay();
 
       if (this.levelConfig.level === 1) {
-        this.showTutorialStep(0);
+        this.runTutorial(() => {
+          this.levelStarted = true;
+        });
         return;
       }
 
@@ -238,110 +248,33 @@ export class GameScene extends Phaser.Scene {
     buttonText.on("pointerdown", start);
   }
 
-  private showTutorialStep(stepIndex: number) {
-    this.clearOverlay();
-
-    const steps = [
+  private runTutorial(onDone: () => void) {
+    const steps: TutorialStep[] = [
       {
-        title: "Leia a situação",
-        description: "Observe o problema apresentado.",
-        emoji: "👀",
+        text: "Leia a situação com atenção.",
+        shape: "rect", x: 640, y: 564, w: 1000, h: 160,
       },
       {
-        title: "Escolha com segurança",
-        description: "Escolha a atitude mais segura.",
-        emoji: "🛡️",
+        text: "Toque na atitude que parece mais segura.",
+        shape: "rect", x: 640, y: 686, w: 940, h: 90,
       },
       {
-        title: "Aprenda com o feedback",
-        description: "Leia a explicação depois da resposta.",
-        emoji: "✅",
+        text: "O tempo passa aqui em cima. Responda antes que acabe!",
+        shape: "rect", x: 640, y: 55, w: 920, h: 50, balloonY: 190,
+      },
+      {
+        text: "Depois de escolher, leia a explicação para aprender mais.",
+        shape: "none", balloonY: 400, buttonLabel: "Vamos começar!",
       },
     ];
 
-    const step = steps[stepIndex];
-    const isLast = stepIndex >= steps.length - 1;
-
-    this.addOverlayObject(
-      this.add.rectangle(640, 360, 1280, 720, 0x000000, 0.72)
-        .setDepth(400)
-    );
-
-    this.addOverlayObject(
-      this.add.rectangle(640, 300, 880, 270, 0xffffff, 1)
-        .setStrokeStyle(6, 0x2563eb)
-        .setDepth(401)
-    );
-
-    this.addOverlayObject(
-      this.add.text(640, 225, step.emoji, {
-        fontSize: "64px",
-        fontFamily: "Arial",
-        padding: {
-          top: 14,
-          bottom: 14,
-        },
-      })
-        .setOrigin(0.5)
-        .setDepth(402)
-    );
-
-    this.addOverlayObject(
-      this.add.text(640, 300, step.title, {
-        fontSize: "38px",
-        fontFamily: "Arial Black, Arial",
-        color: "#1d4ed8",
-        align: "center",
-      })
-        .setOrigin(0.5)
-        .setDepth(402)
-    );
-
-    this.addOverlayObject(
-      this.add.text(640, 370, step.description, {
-        fontSize: "24px",
-        fontFamily: "Arial",
-        color: "#334155",
-        align: "center",
-        wordWrap: { width: 620 },
-      })
-        .setOrigin(0.5)
-        .setDepth(402)
-    );
-
-    const button = this.addOverlayObject(
-      this.add.rectangle(1020, 300, 80, 80, 0x2563eb, 1)
-        .setStrokeStyle(4, 0xffffff)
-        .setInteractive({ useHandCursor: true })
-        .setDepth(403)
-    );
-
-    const buttonText = this.addOverlayObject(
-      this.add.text(1020, 300, isLast ? "▶" : "→", {
-        fontSize: "40px",
-        fontFamily: "Arial Black, Arial",
-        color: "#ffffff",
-      })
-        .setOrigin(0.5)
-        .setDepth(404)
-    );
-
-    const next = () => {
-      this.playClick();
-
-      if (isLast) {
-        this.clearOverlay();
-        this.levelStarted = true;
-        return;
-      }
-
-      this.showTutorialStep(stepIndex + 1);
-    };
-
-    button.on("pointerdown", next);
-
-    buttonText.setInteractive({ useHandCursor: true });
-    buttonText.on("pointerdown", next);
+    createTutorial(this, {
+      key: `guardioes-l${this.levelConfig.level}`,
+      accent: this.paletteColors.blue,
+      safeTop: 140,
+      onFinish: onDone,
+      steps,
+    });
   }
 
   private createBackground() {

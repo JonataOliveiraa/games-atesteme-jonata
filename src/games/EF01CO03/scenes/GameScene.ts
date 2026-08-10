@@ -6,6 +6,7 @@ import type { PlatformCommand } from '../../../shared/contracts/platformCommands
 import { LEVELS } from '../data/levels';
 import type { AlgorithmCard, AlgorithmLevel } from '../types';
 import { showLevelComplete } from '../data/showLevelComplete';
+import { createTutorial, type TutorialStep } from '../../../shared/tutorial/createTutorial';
 
 type AlgorithmStep = AlgorithmCard & {
   correctOrder: number | null;
@@ -53,6 +54,7 @@ export class GameScene extends Phaser.Scene {
   private timerDuration = 30000;
   private shouldShowLevelStart = false;
   private fallbackAudioContext?: AudioContext;
+  private firstCardPos: { x: number; y: number } | null = null;
 
   constructor() {
     super('GameScene');
@@ -82,6 +84,7 @@ export class GameScene extends Phaser.Scene {
     }));
     this.placedOrder = this.currentLevel.correctOrder.map(() => null);
     this.sequenceSlots = [];
+    this.firstCardPos = null;
   }
 
   create() {
@@ -100,7 +103,85 @@ export class GameScene extends Phaser.Scene {
 
     if (this.shouldShowLevelStart && this.currentLevel.level > 1) {
       this.showNextLevelStartScreen();
+      return;
     }
+
+    if (this.currentLevel.level === 1) {
+      this.runTutorial();
+    }
+  }
+
+  // ── Tutorial ─────────────────────────────────────────────────────────────
+
+  private runTutorial() {
+    const lvl = this.currentLevel.level;
+    const firstSlot = this.sequenceSlots[0];
+    const firstCard = this.firstCardPos;
+    const cardsY = lvl === 1 ? 378 : 366;
+    const slotsY = lvl === 1 ? 214 : 202;
+    const buttonY = lvl === 1 ? 478 : 486;
+
+    const steps: TutorialStep[] = [];
+
+    if (lvl === 1) {
+      steps.push(
+        {
+          text: 'Estes cartões mostram os passos, mas estão fora de ordem.',
+          shape: 'rect', x: 480, y: cardsY, w: 420, h: 150,
+        },
+        {
+          text: 'Aqui é o lugar de cada passo, na ordem 1, 2, 3.',
+          shape: 'rect', x: 480, y: slotsY, w: 520, h: 150, balloonY: 420,
+        },
+        {
+          text: 'Arraste um cartão até o quadradinho certo, sem soltar o dedo no caminho.',
+          shape: 'rect',
+          x: firstCard && firstSlot ? (firstCard.x + firstSlot.x) / 2 : 480,
+          y: firstCard && firstSlot ? (firstCard.y + firstSlot.y) / 2 : 300,
+          w: firstCard && firstSlot ? Math.abs(firstSlot.x - firstCard.x) + 230 : 400,
+          h: firstCard && firstSlot ? Math.abs(firstSlot.y - firstCard.y) + 230 : 260,
+          balloonY: 470,
+          pointer: firstCard && firstSlot
+            ? { fromX: firstCard.x, fromY: firstCard.y, toX: firstSlot.x, toY: firstSlot.y }
+            : undefined,
+        },
+        {
+          text: 'Quando preencher tudo, toque em Testar algoritmo.',
+          shape: 'rect', x: 480, y: buttonY, w: 300, h: 90,
+        },
+      );
+    } else if (lvl === 2) {
+      steps.push(
+        {
+          text: 'Agora são cinco passos — e um cartão que não faz parte da sequência.',
+          shape: 'rect', x: 480, y: cardsY, w: 900, h: 150,
+        },
+        {
+          text: 'Deixe o cartão intruso de fora do caminho.',
+          shape: 'none', balloonY: 400,
+        },
+      );
+    } else if (lvl === 3) {
+      steps.push(
+        {
+          text: 'Este é o desafio maior: seis passos e dois cartões que não pertencem à sequência.',
+          shape: 'rect', x: 480, y: cardsY, w: 950, h: 150,
+        },
+        {
+          text: 'Leia cada cartão com calma antes de arrastar.',
+          shape: 'none', balloonY: 400,
+        },
+      );
+    }
+
+    if (!steps.length) return;
+
+    createTutorial(this, {
+      key: `algoritmos-l${lvl}`,
+      accent: COLORS.softOrange,
+      onFinish: () => { /* cartões já ficam livres assim que a tutorial fecha */ },
+      steps,
+    });
   }
 
   private createBackground() {
@@ -358,7 +439,10 @@ export class GameScene extends Phaser.Scene {
     shuffled.forEach((step, index) => {
       const row = Math.floor(index / cardsPerRow);
       const column = index % cardsPerRow;
-      this.createCard(startX + column * spacing, rowY[row], step, visualScale);
+      const x = startX + column * spacing;
+      const y = rowY[row];
+      this.createCard(x, y, step, visualScale);
+      if (index === 0) this.firstCardPos = { x, y };
     });
   }
 
@@ -786,6 +870,7 @@ export class GameScene extends Phaser.Scene {
       overlay.destroy();
       buttonHitbox.destroy();
       modal.destroy();
+      this.runTutorial();
     });
 
     modal.add([shadow, bg, topBar, title, objective, detail, button]);

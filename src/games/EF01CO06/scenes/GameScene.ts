@@ -8,6 +8,7 @@ import {
 import { runtimeGameBridge } from '../../../shared/bridge/runtimeGameBridge.js'
 import { PlatformCommand } from '../../../shared/contracts/platformCommands.js'
 import { RoundResult } from '../../../shared/types/game.js'
+import { createTutorial, type TutorialStep } from '../../../shared/tutorial/createTutorial.js'
 
 const WIN_W = 470
 const WIN_H = 400
@@ -1566,7 +1567,12 @@ export class GameScene extends Phaser.Scene {
       EventBus.emit('scene-ready', { levelConfig: this.levelConfig })
       this.broadcastMissionState()
       this.emitCheckpoint()
-      this.levelStarted = true
+
+      if (this.levelConfig.level === 1) {
+        this.runTutorial(() => { this.levelStarted = true })
+      } else {
+        this.levelStarted = true
+      }
     })
 
     modal.add([shadow, bg, topBar, title, detail, sepLine, listLabel, ...missionItems, startBtn])
@@ -1574,6 +1580,47 @@ export class GameScene extends Phaser.Scene {
     this.tweens.add({ targets: modal, alpha: 1, scale: 1, duration: 260, ease: 'Back.easeOut' })
   }
 
+  // ── Tutorial ─────────────────────────────────────────────────────────────
+
+  private runTutorial(onDone: () => void) {
+    const apps = this.levelConfig.availableApps
+    const positions = this.computeIconPositions(apps.length)
+    const firstIconPos = positions[0] ?? { x: 108, y: 215 }
+
+    const missionsH = 46 + this.levelConfig.missions.length * 54 + 32 + 36
+    const missionsY = 72 + missionsH / 2
+
+    const steps: TutorialStep[] = [
+      {
+        text: 'Toque duas vezes rápido em um ícone para abrir o aplicativo.',
+        shape: 'circle', x: firstIconPos.x, y: firstIconPos.y, w: 190, h: 190,
+        pointer: {
+          fromX: firstIconPos.x, fromY: firstIconPos.y,
+          toX: firstIconPos.x, toY: firstIconPos.y,
+        },
+      },
+      {
+        text: 'Aqui estão as missões de hoje. Cada uma pede para usar um aplicativo.',
+        shape: 'rect', x: 976, y: missionsY, w: 408, h: missionsH,
+      },
+      {
+        text: 'Depois de abrir, você pode arrastar a janela segurando a barra colorida do topo.',
+        shape: 'none', balloonY: 380,
+      },
+      {
+        text: 'O tempo corre aqui em cima. Fique de olho!',
+        shape: 'rect', x: 640, y: 43, w: 820, h: 60, balloonY: 170,
+      },
+    ]
+
+    createTutorial(this, {
+      key: `desktop-l${this.levelConfig.level}`,
+      accent: 0x2E86C1,
+      safeTop: 70,
+      onFinish: onDone,
+      steps,
+    })
+  }
 
   // ── Efeitos visuais ───────────────────────────────────────────────────────
 
