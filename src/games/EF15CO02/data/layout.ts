@@ -5,13 +5,13 @@ export const TOPBAR = {
   x: 0,
   y: 0,
   w: W,
-  h: 92,
+  h: 76,
   titleX: 40,
-  titleY: 46,
+  titleY: 38,
   hudX: 900,
-  hudY: 46,
+  hudY: 38,
   helpX: 1218,
-  helpY: 46,
+  helpY: 38,
   helpR: 28,
 }
 
@@ -96,7 +96,7 @@ export const STAGE = {
 
 export const TINO = {
   x: 120,
-  y: 704,
+  y: 548,
   w: 200,
   h: 236,
   small: 140,
@@ -122,13 +122,23 @@ export const HUB = {
   bubbleY: 566,
   bubbleW: 620,
   bubbleH: 116,
+  trackCards: [
+    { id: 'sequencia', x: 62, y: 244, w: 210, h: 214 },
+    { id: 'repeticao', x: 296, y: 244, w: 210, h: 214 },
+    { id: 'condicao', x: 530, y: 244, w: 210, h: 214 },
+    { id: 'depuracao', x: 764, y: 244, w: 210, h: 214 },
+    { id: 'final', x: 998, y: 244, w: 210, h: 214 },
+  ],
 }
 
-export const HAND = {
-  size: 76,
-  travel: 420,
+export const MISSION = {
+  problemPanel: { x: 24, y: 112, w: 318, h: 132 },
+  blocksPanel: { x: 24, y: 256, w: 318, h: 332 },
+  workspace: { x: 366, y: 112, w: 392, h: 476 },
+  simulation: { x: 782, y: 112, w: 474, h: 476 },
+  feedback: { x: 858, y: 604, w: 398, h: 96 },
+  runButton: { x: 424, y: 612, w: 310, h: 74 },
 }
-
 export const MODAL = {
   w: 720,
   radius: 32,
@@ -142,4 +152,8 @@ export const REPORT = {
   rowH: 52,
   barW: 300,
 }
+
+
+
+
 

@@ -61,25 +61,25 @@ export class UIScene extends Phaser.Scene {
     bar.fillStyle(C.bgDeep, 1)
     bar.fillRect(0, 0, W, TOPBAR.h)
     bar.fillStyle(C.accent, 1)
-    bar.fillRoundedRect(28, 22, 48, 48, 14)
+    bar.fillRoundedRect(28, 18, 40, 40, 12)
     bar.fillStyle(C.white, 0.2)
-    bar.fillRoundedRect(34, 28, 36, 16, 8)
+    bar.fillRoundedRect(34, 24, 28, 12, 6)
 
-    this.add.text(52, 47, '{}', {
+    this.add.text(48, 38, '{}', {
       fontFamily: 'Arial Black, Arial',
-      fontSize: '20px',
+      fontSize: '17px',
       color: hex(C.bgDeep),
     }).setOrigin(0.5).setDepth(1).setResolution(2)
 
-    this.levelText = this.add.text(92, 25, 'NIVEL 1', {
+    this.levelText = this.add.text(82, 17, 'NIVEL 1', {
       fontFamily: 'Arial Black, Arial',
-      fontSize: '18px',
+      fontSize: '15px',
       color: hex(C.accent),
       stroke: hex(C.shadow),
       strokeThickness: 4,
     }).setDepth(1).setResolution(2)
 
-    this.titleText = this.add.text(92, 56, 'Academia dos Algoritmos', {
+    this.titleText = this.add.text(82, 43, 'Academia dos Algoritmos', {
       fontFamily: 'Arial Black, Arial',
       fontSize: '18px',
       color: hex(C.white),
@@ -87,27 +87,27 @@ export class UIScene extends Phaser.Scene {
       strokeThickness: 4,
     }).setDepth(1).setResolution(2)
 
-    this.instructionText = this.add.text(W / 2, 34, 'Monte, execute e melhore o algoritmo.', {
+    this.instructionText = this.add.text(W / 2, 29, 'Monte, execute e melhore o algoritmo.', {
       fontFamily: 'Arial Black, Arial',
-      fontSize: '23px',
+      fontSize: '20px',
       color: hex(C.white),
       stroke: hex(C.shadow),
       strokeThickness: 5,
       align: 'center',
-      wordWrap: { width: 650 },
+      wordWrap: { width: 560 },
     }).setOrigin(0.5).setDepth(1).setResolution(2)
 
-    this.metaText = this.add.text(W / 2, 70, 'Sequencia', {
+    this.metaText = this.add.text(W / 2, 56, 'Sequencia', {
       fontFamily: 'Arial',
       fontStyle: 'bold',
-      fontSize: '16px',
+      fontSize: '14px',
       color: hex(C.accent),
       stroke: hex(C.shadow),
       strokeThickness: 3,
       align: 'center',
     }).setOrigin(0.5).setDepth(1).setResolution(2)
 
-    this.versionText = this.add.text(940, 33, 'Versoes: 0', {
+    this.versionText = this.add.text(930, 26, 'Versoes: 0', {
       fontFamily: 'Arial Black, Arial',
       fontSize: '16px',
       color: hex(C.panel),
@@ -115,7 +115,7 @@ export class UIScene extends Phaser.Scene {
       strokeThickness: 4,
     }).setOrigin(0, 0.5).setDepth(1).setResolution(2)
 
-    this.timerText = this.add.text(940, 62, '', {
+    this.timerText = this.add.text(930, 52, '', {
       fontFamily: 'Arial Black, Arial',
       fontSize: '16px',
       color: hex(C.warning),
@@ -125,7 +125,7 @@ export class UIScene extends Phaser.Scene {
 
     this.dotsG = this.add.graphics().setDepth(2)
     this.timerG = this.add.graphics().setDepth(2)
-    this.helpBtn = this.buildHelpButton(1224, 46)
+    this.helpBtn = this.buildHelpButton(1224, 38)
     this.helpBtn.setVisible(false)
     this.versionText.setVisible(false)
     this.timerText.setVisible(false)
@@ -138,7 +138,7 @@ export class UIScene extends Phaser.Scene {
     const bg = this.add.graphics()
     const label = this.add.text(0, -1, '?', {
       fontFamily: 'Arial Black, Arial',
-      fontSize: '28px',
+      fontSize: '24px',
       color: hex(C.white),
       stroke: hex(C.shadow),
       strokeThickness: 4,
@@ -147,16 +147,16 @@ export class UIScene extends Phaser.Scene {
     const paint = (hover = false) => {
       bg.clear()
       bg.fillStyle(C.shadow, A.shadow)
-      bg.fillRoundedRect(-29, -24, 58, 58, 18)
+      bg.fillRoundedRect(-25, -20, 50, 50, 16)
       bg.fillStyle(hover ? C.accent : C.condition, 1)
-      bg.fillRoundedRect(-29, -29, 58, 58, 18)
+      bg.fillRoundedRect(-25, -25, 50, 50, 16)
       bg.lineStyle(4, C.white, 0.92)
-      bg.strokeRoundedRect(-29, -29, 58, 58, 18)
+      bg.strokeRoundedRect(-25, -25, 50, 50, 16)
     }
 
     paint(false)
     btn.add([bg, label])
-    btn.setSize(66, 66)
+    btn.setSize(56, 56)
     btn.setInteractive({ useHandCursor: true })
     btn.on('pointerover', () => paint(true))
     btn.on('pointerout', () => paint(false))
@@ -236,8 +236,8 @@ export class UIScene extends Phaser.Scene {
   }
 
   private paintDots() {
-    const gap = 25
-    const y = 76
+    const gap = 22
+    const y = 62
     const startX = 860 - ((this.totalPhases - 1) * gap) / 2
 
     this.dotsG.clear()
@@ -286,3 +286,4 @@ export class UIScene extends Phaser.Scene {
     this.tweens.add({ targets: this.helpBtn, alpha: 1, duration: 220 })
   }
 }
+
