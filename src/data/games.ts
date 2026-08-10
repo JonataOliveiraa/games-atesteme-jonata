@@ -42,6 +42,7 @@ import coverCuradoriaComCreditos from "../assets/games/EF05CO09/cover-curadoria-
 import coverFuturoEmCena from "../assets/games/EF05CO10/cover-futuro-em-cena.png";
 import coverMuseuDasEstruturas from "../assets/games/EF15CO01/cover-museu-das-estruturas.png";
 import coverEscolhaAFerramentaCerta from "../assets/games/EF05CO11/cover-escolha-a-ferramenta-certa.png";
+import coverAcademiaDosAlgoritmos from "../assets/games/EF15CO02/cover-academia-dos-algoritmos.png";
 
 const placeholderGame = (code: string, index: number): Game => ({
   id: index,
@@ -432,6 +433,15 @@ const gameByCode: Partial<Record<string, Omit<Game, "id">>> = {
     icon: "🏛️",
     slug: "museu-das-estruturas",
     thumbnail: coverMuseuDasEstruturas,
+  },
+  EF15CO02: {
+    title: "Academia dos Algoritmos",
+    "description": "Aprenda sobre algoritmos e como aplicá-los para resolver problemas de forma eficiente.",
+    category: "Pensamento Computacional",
+    points: 65,
+    icon: "🏋️‍♂️",
+    slug: "academia-dos-algoritmos",
+    thumbnail: coverAcademiaDosAlgoritmos,
   }
 };
 

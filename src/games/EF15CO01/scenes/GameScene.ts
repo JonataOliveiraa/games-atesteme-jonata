@@ -140,7 +140,7 @@ export class GameScene extends Phaser.Scene {
         this.buildHub()
         this.fadeIn()
 
-        runtimeGameBridge.emit({ type: 'GAME_READY', gameId: GAME_ID, stage: this.level.level })
+        runtimeGameBridge.emit({ type: 'GAME_READY', gameId: GAME_ID })
         this.emitCheckpoint()
 
         EventBus.on('timer-end', this.onTimeUp, this)

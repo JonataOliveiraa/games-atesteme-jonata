@@ -4,6 +4,7 @@ import { runtimeGameBridge } from '../../../shared/bridge/runtimeGameBridge'
 import { LEVELS } from '../data/levels'
 import { ALL_TECH } from '../data/tech'
 import type { CityLocation, LevelConfig, Situation } from '../types'
+import { createTutorial, type TutorialStep } from '../../../shared/tutorial/createTutorial'
 
 const GAME_ID = 'cidade-das-tecnologias'
 
@@ -106,6 +107,36 @@ export class GameScene extends Phaser.Scene {
     this.buildStreet()
     this.buildBuildings()
     this.emitMissionUpdate()
+
+    if (this.levelIdx === 0) this.runTutorial()
+  }
+
+  private runTutorial() {
+    const buildingCx = LAYOUT.firstBuildingX
+    const buildingCy = LAYOUT.buildingBottomY - LAYOUT.buildingH / 2
+
+    const steps: TutorialStep[] = [
+      {
+        text: 'Aqui em cima aparecem a missão atual e quantas faltam.',
+        shape: 'rect', x: 640, y: 56, w: 1280, h: 112, balloonY: 220,
+      },
+      {
+        text: 'Toque em um prédio para ver a situação daquele lugar.',
+        shape: 'rect', x: buildingCx, y: buildingCy, w: 260, h: 280,
+      },
+      {
+        text: 'Leia a pergunta, escolha a tecnologia certa entre as opções e toque em Confirmar.',
+        shape: 'none', balloonY: 400, buttonLabel: 'Entendi!',
+      },
+    ]
+
+    createTutorial(this, {
+      key: 'cidade-l1',
+      accent: 0x2E7D32,
+      safeTop: 116,
+      onFinish: () => { /* nada a liberar: o overlay já bloqueia toques durante a tutorial */ },
+      steps,
+    })
   }
 
   private buildStreet() {

@@ -22,11 +22,15 @@ export class UIScene extends Phaser.Scene {
   create() {
     this.createTopBar()
     this.registerListeners()
+
+    // Phaser não chama um método `shutdown()` da classe automaticamente — é preciso
+    // ligá-lo ao evento real do ciclo de vida, senão o listener abaixo nunca é
+    // removido e sobrevive à destruição da cena (ex.: troca de nível recriando o jogo).
+    this.events.once('shutdown', this.handleShutdown, this)
   }
 
-  shutdown() {
-    EventBus.off('mission-update', undefined, this)
-    EventBus.off('mute-audio',     undefined, this)
+  private handleShutdown() {
+    EventBus.off('mission-update', this.onMissionUpdate, this)
   }
 
   private createTopBar() {
@@ -88,12 +92,14 @@ export class UIScene extends Phaser.Scene {
   }
 
   private registerListeners() {
-    EventBus.on('mission-update', (data: MissionUpdatePayload) => {
-      this.instructionText.setText(data.instruction)
-      this.hintText.setText(data.hint)
-      this.levelStars.setText('★'.repeat(data.level) + '☆'.repeat(3 - data.level))
-      this.updateDots(data.missionIndex, data.totalMissions)
-    }, this)
+    EventBus.on('mission-update', this.onMissionUpdate, this)
+  }
+
+  private onMissionUpdate = (data: MissionUpdatePayload) => {
+    this.instructionText.setText(data.instruction)
+    this.hintText.setText(data.hint)
+    this.levelStars.setText('★'.repeat(data.level) + '☆'.repeat(3 - data.level))
+    this.updateDots(data.missionIndex, data.totalMissions)
   }
 
   private updateDots(completedCount: number, total: number) {

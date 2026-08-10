@@ -56,6 +56,7 @@ const SLUG_TO_CODE: Record<string, GameCode> = {
   "futuro-em-cena": "EF05CO10",
   "escolha-a-ferramenta-certa": "EF05CO11",
   "museu-das-estruturas": "EF15CO01",
+  "academia-dos-algoritmos": "EF15CO02",
 };
 
 const GAME_CONFIG_LOADERS: Partial<
@@ -102,7 +103,8 @@ const GAME_CONFIG_LOADERS: Partial<
   EF05CO09: () => import("../games/EF05CO09/index"),
   EF05CO10: () => import("../games/EF05CO10/index"),
   EF05CO11: () => import("../games/EF05CO11/index"),
-  EF15CO01: () => import("../games/EF15CO01/index")
+  EF15CO01: () => import("../games/EF15CO01/index"),
+  EF15CO02: () => import("../games/EF15CO02/index"),
 };
 
 const GAMES_WITH_IN_GAME_COMPLETION_SCREEN = new Set([

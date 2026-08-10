@@ -111,8 +111,6 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
-  // ── Tutorial ─────────────────────────────────────────────────────────────
-
   private runTutorial() {
     const lvl = this.currentLevel.level;
     const firstSlot = this.sequenceSlots[0];
@@ -127,7 +125,7 @@ export class GameScene extends Phaser.Scene {
       steps.push(
         {
           text: 'Estes cartões mostram os passos, mas estão fora de ordem.',
-          shape: 'rect', x: 480, y: cardsY, w: 420, h: 150,
+          shape: 'rect', x: 480, y: cardsY, w: 420, h: 150, balloonY: 140, balloonX: 480,
         },
         {
           text: 'Aqui é o lugar de cada passo, na ordem 1, 2, 3.',
@@ -140,7 +138,8 @@ export class GameScene extends Phaser.Scene {
           y: firstCard && firstSlot ? (firstCard.y + firstSlot.y) / 2 : 300,
           w: firstCard && firstSlot ? Math.abs(firstSlot.x - firstCard.x) + 230 : 400,
           h: firstCard && firstSlot ? Math.abs(firstSlot.y - firstCard.y) + 230 : 260,
-          balloonY: 470,
+          balloonY: 90,
+          balloonX: 580,
           pointer: firstCard && firstSlot
             ? { fromX: firstCard.x, fromY: firstCard.y, toX: firstSlot.x, toY: firstSlot.y }
             : undefined,

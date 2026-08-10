@@ -4,9 +4,29 @@ import { runtimeGameBridge } from '../../../shared/bridge/runtimeGameBridge'
 import type { PlatformCommand } from '../../../shared/contracts/platformCommands'
 import type { LevelConfig, LogicSentence } from '../types'
 import { LEVELS } from '../data/sentences'
+import { createTutorial } from '../../../shared/tutorial/createTutorial'
+import type { TutorialStep } from '../../../shared/tutorial/createTutorial'
 
 const GAME_ID = 'tribunal-do-verdadeiro-ou-falso'
 const MAX_CONSECUTIVE_ERRORS = 3
+
+// ══════════════════════════════════════════════════════════════════════════
+//  LAYOUT — base 1280×720 com escala ampliada para leitura em telas pequenas.
+//  O canvas usa Scale.FIT, então tudo aqui encolhe junto no mobile: quanto
+//  maior a fonte/alvo em coordenadas de jogo, mais legível e tocável fica.
+// ══════════════════════════════════════════════════════════════════════════
+const TOP_BAR_H = 132          // altura da barra da UIScene (espaço reservado)
+
+const CARD_CX = 740
+const CARD_CY = 368
+const CARD_W = 720
+
+const BTN_Y = 600
+const BTN_W = 344
+const BTN_H = 150
+const BTN_DX = 186             // deslocamento horizontal a partir de CARD_CX
+
+const TIMER_BAR = { x: 420, y: 146, w: 640, h: 28 }
 
 type RoundPhase = 'intro' | 'waiting-answer' | 'feedback' | 'level-complete'
 
@@ -43,6 +63,9 @@ export class GameScene extends Phaser.Scene {
   private timerState = { progress: 1 }
   private timerActive = false
 
+  private tutorialSteps: TutorialStep[] = []
+  private tutorialKey = ''
+
   private unsubPlatform?: () => void
 
   constructor() {
@@ -69,10 +92,16 @@ export class GameScene extends Phaser.Scene {
   }
 
   create() {
+    // O Phaser emite o evento 'shutdown', mas nunca chama um método shutdown()
+    // da classe — sem este bind os listeners do EventBus se acumulariam a cada
+    // scene.restart() feito na troca de nível.
+    this.events.once('shutdown', this.shutdown, this)
+
     this.drawBackground()
     if (this.levelConfig.perSentenceTimer) this.createTimerBar()
     this.registerPlatformCommands()
     EventBus.on('mute-audio', (m: boolean) => { this.isMuted = m }, this)
+    EventBus.on('show-tutorial', this.replayTutorial, this)
 
     runtimeGameBridge.emit({ type: 'GAME_READY', gameId: GAME_ID })
     this.broadcastMissionState()
@@ -80,11 +109,14 @@ export class GameScene extends Phaser.Scene {
 
     this.buildSentenceUI()
 
+    this.tutorialSteps = this.buildTutorialSteps()
+    this.tutorialKey = `ef03co01-l${this.levelConfig.level}`
+    EventBus.emit('tutorial-ready')
+
     if (this.shouldShowLevelStart && this.levelConfig.level > 1) {
       this.showNextLevelStartScreen()
     } else {
-      this.showCurrentSentence()
-      if (this.levelConfig.level === 1) this.showTutorialOverlay()
+      this.startLevelFlow()
     }
   }
 
@@ -95,6 +127,7 @@ export class GameScene extends Phaser.Scene {
     this.timerTween?.stop()
     this.clearOverlay()
     EventBus.off('mute-audio', undefined, this)
+    EventBus.off('show-tutorial', this.replayTutorial, this)
     this.unsubPlatform?.()
     this.unsubPlatform = undefined
   }
@@ -118,10 +151,12 @@ export class GameScene extends Phaser.Scene {
   // ══════════════════════════════════════════════════════════════════════════
 
   private createTimerBar() {
-    const barX = 390, barY = 106, barW = 500, barH = 24
+    const { x, y, w, h } = TIMER_BAR
     const bg = this.add.graphics()
+    bg.fillStyle(0x2a1a0d, 0.9)
+    bg.fillRoundedRect(x - 4, y - 4, w + 8, h + 8, h / 2 + 4)
     bg.fillStyle(0xdff2bc, 1)
-    bg.fillRoundedRect(barX, barY, barW, barH, 12)
+    bg.fillRoundedRect(x, y, w, h, h / 2)
     bg.setDepth(6)
     this.timeBarFill = this.add.graphics()
     this.timeBarFill.setDepth(7)
@@ -130,12 +165,13 @@ export class GameScene extends Phaser.Scene {
 
   private drawTimeBar(progress: number) {
     if (!this.timeBarFill) return
-    const barX = 390, barY = 106, barW = 500, barH = 24
+    const { x, y, w, h } = TIMER_BAR
     this.timeBarFill.clear()
     const color = progress > 0.5 ? 0x7ed321 : progress > 0.25 ? 0xf59e0b : 0xef4444
     this.timeBarFill.fillStyle(color, 1)
-    const w = barW * Phaser.Math.Clamp(progress, 0, 1)
-    if (w > 0) this.timeBarFill.fillRoundedRect(barX, barY, w, barH, 12)
+    const filled = w * Phaser.Math.Clamp(progress, 0, 1)
+    // raio nunca maior que metade da largura, senão o arredondamento estoura
+    if (filled > 0) this.timeBarFill.fillRoundedRect(x, y, filled, h, Math.min(h / 2, filled / 2))
   }
 
   private startSentenceTimer() {
@@ -198,7 +234,8 @@ export class GameScene extends Phaser.Scene {
 
   private drawBackground() {
     this.add.image(640, 360, 'bg-tribunal').setDisplaySize(1280, 720).setDepth(-1)
-    this.add.image(230, 330, 'character-judge').setDisplaySize(280, 380).setOrigin(0.5).setDepth(1)
+    // juiz recuado para a esquerda: abre espaço para o cartão maior
+    this.add.image(190, 372, 'character-judge').setDisplaySize(260, 352).setOrigin(0.5).setDepth(1)
   }
 
   // ══════════════════════════════════════════════════════════════════════════
@@ -206,63 +243,46 @@ export class GameScene extends Phaser.Scene {
   // ══════════════════════════════════════════════════════════════════════════
 
   private buildSentenceUI() {
-    this.sentenceCard = this.add.container(720, 300).setDepth(5)
+    this.sentenceCard = this.add.container(CARD_CX, CARD_CY).setDepth(5)
 
     this.cardShadow = this.add.graphics()
     this.cardBg = this.add.graphics()
 
     this.sourceText = this.add.text(0, 0, '', {
       fontFamily: 'Arial', fontStyle: 'bold',
-      fontSize: '15px', color: '#FFCC80',
+      fontSize: '21px', color: '#FFCC80',
     }).setOrigin(0, 0.5).setResolution(2)
 
     this.sentenceText = this.add.text(0, 0, '', {
       fontFamily: 'Arial', fontStyle: 'bold',
-      fontSize: '23px', color: '#FFF3E0',
-      align: 'center', wordWrap: { width: 580 },
-      lineSpacing: 6,
+      fontSize: '34px', color: '#FFF3E0',
+      align: 'center', wordWrap: { width: CARD_W - 96 },
+      lineSpacing: 10,
     }).setOrigin(0.5).setResolution(2)
 
     this.sentenceCard.add([this.cardShadow, this.cardBg, this.sourceText, this.sentenceText])
 
-    this.negationBadge = this.add.container(720, 150).setDepth(6).setAlpha(0)
+    // posicionado dinamicamente acima do cartão em renderSentenceCard()
+    this.negationBadge = this.add.container(CARD_CX, 214).setDepth(6).setAlpha(0)
     const badgeBg = this.add.graphics()
     badgeBg.fillStyle(0xef4444, 0.95)
-    badgeBg.fillRoundedRect(-150, -18, 300, 36, 18)
-    badgeBg.lineStyle(2, 0xffffff, 0.9)
-    badgeBg.strokeRoundedRect(-150, -18, 300, 36, 18)
-    const badgeTxt = this.add.text(0, 0, 'Atenção à palavra NÃO!', {
-      fontFamily: 'Arial', fontStyle: 'bold', fontSize: '15px', color: '#ffffff',
+    badgeBg.fillRoundedRect(-198, -26, 396, 52, 26)
+    badgeBg.lineStyle(3, 0xffffff, 0.9)
+    badgeBg.strokeRoundedRect(-198, -26, 396, 52, 26)
+    const badgeTxt = this.add.text(0, 0, '⚠ Atenção à palavra NÃO!', {
+      fontFamily: 'Arial Black, Arial', fontStyle: 'bold', fontSize: '22px', color: '#ffffff',
     }).setOrigin(0.5).setResolution(2)
     this.negationBadge.add([badgeBg, badgeTxt])
 
-    this.trueBtn = this.makeAnswerButton(560, 540, true)
-    this.falseBtn = this.makeAnswerButton(880, 540, false)
+    this.trueBtn = this.makeAnswerButton(CARD_CX - BTN_DX, BTN_Y, true)
+    this.falseBtn = this.makeAnswerButton(CARD_CX + BTN_DX, BTN_Y, false)
 
-    this.createButtonLegend()
     this.createGavel()
-  }
-
-  private createButtonLegend() {
-    const y = 640
-    const bg = this.add.graphics().setDepth(4)
-    bg.fillStyle(0x2a1a0d, 0.92)
-    bg.fillRoundedRect(420, y - 24, 600, 48, 16)
-    bg.lineStyle(2, 0xFFCC80, 0.5)
-    bg.strokeRoundedRect(420, y - 24, 600, 48, 16)
-
-    this.add.text(560, y, '✅ VERDADEIRO = a notícia é real', {
-      fontFamily: 'Arial', fontStyle: 'bold', fontSize: '15px', color: '#86efac',
-    }).setOrigin(0.5).setDepth(5).setResolution(2)
-
-    this.add.text(880, y, '❌ FALSO = a notícia é inventada', {
-      fontFamily: 'Arial', fontStyle: 'bold', fontSize: '15px', color: '#fca5a5',
-    }).setOrigin(0.5).setDepth(5).setResolution(2)
   }
 
   private createGavel() {
     this.gavel = this.add.image(0, 0, 'hammer')
-      .setDisplaySize(76, 76).setOrigin(0.5).setDepth(30).setAlpha(0)
+      .setDisplaySize(96, 96).setOrigin(0.5).setDepth(30).setAlpha(0)
   }
 
   private showGavel(x: number, y: number) {
@@ -282,13 +302,13 @@ export class GameScene extends Phaser.Scene {
   }
 
   private renderSentenceCard(sentence: LogicSentence) {
-    const CARD_W = 660, PAD = 34, HEADER_H = 46
+    const PAD = 40, HEADER_H = 58, R = 24
 
     this.sourceText!.setText(`${sentence.source}`)
     this.sentenceText!.setText(sentence.text)
 
     const textH = this.sentenceText!.height
-    const cardH = Math.max(190, HEADER_H + textH + PAD * 2)
+    const cardH = Math.max(240, HEADER_H + textH + PAD * 2)
     const top = -cardH / 2
 
     this.sourceText!.setPosition(-CARD_W / 2 + PAD, top + HEADER_H / 2)
@@ -296,43 +316,57 @@ export class GameScene extends Phaser.Scene {
 
     this.cardShadow!.clear()
     this.cardShadow!.fillStyle(0x000000, 0.28)
-    this.cardShadow!.fillRoundedRect(-CARD_W / 2 + 5, top + 7, CARD_W, cardH, 20)
+    this.cardShadow!.fillRoundedRect(-CARD_W / 2 + 6, top + 9, CARD_W, cardH, R)
 
     this.cardBg!.clear()
     this.cardBg!.fillStyle(0x3b2718, 0.97)
-    this.cardBg!.fillRoundedRect(-CARD_W / 2, top, CARD_W, cardH, 20)
-    this.cardBg!.lineStyle(4, 0xFFCC80, 0.9)
-    this.cardBg!.strokeRoundedRect(-CARD_W / 2, top, CARD_W, cardH, 20)
+    this.cardBg!.fillRoundedRect(-CARD_W / 2, top, CARD_W, cardH, R)
+    this.cardBg!.lineStyle(5, 0xFFCC80, 0.9)
+    this.cardBg!.strokeRoundedRect(-CARD_W / 2, top, CARD_W, cardH, R)
     this.cardBg!.fillStyle(0x2a1a0d, 1)
-    this.cardBg!.fillRoundedRect(-CARD_W / 2, top, CARD_W, HEADER_H, { tl: 20, tr: 20, bl: 0, br: 0 })
+    this.cardBg!.fillRoundedRect(-CARD_W / 2, top, CARD_W, HEADER_H, { tl: R, tr: R, bl: 0, br: 0 })
+
+    // o aviso do NÃO flutua acima do cartão, sem colidir com a barra de tempo
+    const ceiling = this.levelConfig.perSentenceTimer
+      ? TIMER_BAR.y + TIMER_BAR.h
+      : TOP_BAR_H
+    const badgeY = Math.max(ceiling + 38, CARD_CY + top - 42)
+    this.negationBadge?.setPosition(CARD_CX, badgeY)
   }
   private makeAnswerButton(x: number, y: number, value: boolean): Phaser.GameObjects.Container {
     const btn = this.add.container(x, y).setDepth(5)
-    const W = 288, H = 100
+    const W = BTN_W, H = BTN_H, R = 28
 
     const shadow = this.add.graphics()
     shadow.fillStyle(0x000000, 0.20)
-    shadow.fillRoundedRect(-W / 2 + 4, -H / 2 + 6, W, H, 22)
+    shadow.fillRoundedRect(-W / 2 + 5, -H / 2 + 8, W, H, R)
 
     const bg = this.add.graphics()
     bg.fillStyle(value ? 0x22c55e : 0xef4444, 1)
-    bg.fillRoundedRect(-W / 2, -H / 2, W, H, 22)
-    bg.lineStyle(4, 0xffffff, 0.9)
-    bg.strokeRoundedRect(-W / 2, -H / 2, W, H, 22)
+    bg.fillRoundedRect(-W / 2, -H / 2, W, H, R)
+    bg.lineStyle(5, 0xffffff, 0.9)
+    bg.strokeRoundedRect(-W / 2, -H / 2, W, H, R)
 
-    const label = this.add.text(0, 0, value ? 'VERDADEIRO' : 'FALSO', {
+    const label = this.add.text(0, -26, value ? '✅ VERDADEIRO' : '❌ FALSO', {
       fontFamily: 'Arial Black, Arial', fontStyle: 'bold',
-      fontSize: '22px', color: '#ffffff',
-      stroke: value ? '#14532d' : '#7f1d1d', strokeThickness: 3,
+      fontSize: '34px', color: '#ffffff',
+      stroke: value ? '#14532d' : '#7f1d1d', strokeThickness: 4,
     }).setOrigin(0.5).setResolution(2)
 
-    btn.add([shadow, bg, label])
+    // a legenda vive dentro do botão: menos elementos na tela e alvo maior
+    const caption = this.add.text(0, 34, value ? 'a notícia é real' : 'a notícia é inventada', {
+      fontFamily: 'Arial', fontStyle: 'bold',
+      fontSize: '21px', color: '#ffffff',
+      stroke: value ? '#14532d' : '#7f1d1d', strokeThickness: 2,
+    }).setOrigin(0.5).setResolution(2)
+
+    btn.add([shadow, bg, label, caption])
     btn.setSize(W, H)
     btn.setInteractive({ useHandCursor: true })
     btn.on('pointerover', () => {
       if (this.phase !== 'waiting-answer') return
       this.tweens.add({ targets: btn, scale: 1.06, duration: 90 })
-      this.showGavel(x, y - 78)
+      this.showGavel(x, y - H / 2 - 30)
     })
     btn.on('pointerout', () => {
       this.tweens.add({ targets: btn, scale: 1, duration: 90 })
@@ -345,21 +379,79 @@ export class GameScene extends Phaser.Scene {
     return btn
   }
 
-  private showCurrentSentence() {
+  /** Desenha a sentença atual sem liberar a resposta (usado antes do tutorial). */
+  private prepareCurrentSentence() {
     const sentence = this.levelConfig.sentences[this.currentSentenceIndex]
     if (!sentence || !this.sentenceText) return
 
     this.renderSentenceCard(sentence)
     this.negationBadge?.setAlpha(sentence.hasNegation ? 1 : 0)
     this.hideGavel()
+    this.broadcastMissionState()
+  }
 
+  /** Libera os botões e dispara o cronômetro do nível 3. */
+  private activateSentence() {
+    if (this.gameEnded) return
     this.phase = 'waiting-answer'
     this.trueBtn?.setInteractive({ useHandCursor: true })
     this.falseBtn?.setInteractive({ useHandCursor: true })
-
-    this.broadcastMissionState()
-
     if (this.levelConfig.perSentenceTimer) this.startSentenceTimer()
+  }
+
+  private showCurrentSentence() {
+    this.prepareCurrentSentence()
+    this.activateSentence()
+  }
+
+  /** Entrada do nível: mostra a 1ª sentença, roda o tutorial e só então libera. */
+  private startLevelFlow() {
+    this.prepareCurrentSentence()
+
+    if (!this.tutorialSteps.length) {
+      this.activateSentence()
+      return
+    }
+
+    EventBus.emit('tutorial-start')
+    createTutorial(this, {
+      key: this.tutorialKey,
+      accent: 0xf57c00,
+      safeTop: TOP_BAR_H,
+      steps: this.tutorialSteps,
+      onFinish: () => {
+        EventBus.emit('tutorial-end')
+        this.activateSentence()
+      },
+    })
+  }
+
+  /** Reexibição pelo botão "?" da UIScene, sem penalizar o cronômetro. */
+  private replayTutorial = () => {
+    if (this.gameEnded || this.phase !== 'waiting-answer' || !this.tutorialSteps.length) return
+
+    this.phase = 'intro'
+    this.hideGavel()
+    this.trueBtn?.disableInteractive()
+    this.falseBtn?.disableInteractive()
+    this.timerTween?.pause()
+
+    EventBus.emit('tutorial-start')
+    createTutorial(this, {
+      key: this.tutorialKey,
+      once: false,
+      accent: 0xf57c00,
+      safeTop: TOP_BAR_H,
+      steps: this.tutorialSteps,
+      onFinish: () => {
+        EventBus.emit('tutorial-end')
+        if (this.gameEnded) return
+        this.phase = 'waiting-answer'
+        this.trueBtn?.setInteractive({ useHandCursor: true })
+        this.falseBtn?.setInteractive({ useHandCursor: true })
+        this.timerTween?.resume()
+      },
+    })
   }
 
   private handleAnswer(value: boolean | null) {
@@ -402,8 +494,8 @@ export class GameScene extends Phaser.Scene {
 
   private spawnConfetti() {
     for (let i = 0; i < 10; i++) {
-      const star = this.add.image(720 + Phaser.Math.Between(-60, 60), 300, 'effect-star')
-        .setDisplaySize(28, 28).setDepth(8).setAlpha(0.95)
+      const star = this.add.image(CARD_CX + Phaser.Math.Between(-70, 70), CARD_CY, 'effect-star')
+        .setDisplaySize(36, 36).setDepth(8).setAlpha(0.95)
       const targetX = star.x + Phaser.Math.Between(-160, 160)
       const targetY = star.y - Phaser.Math.Between(120, 220)
       this.tweens.add({
@@ -414,27 +506,28 @@ export class GameScene extends Phaser.Scene {
   }
 
   private showExplanation(sentence: LogicSentence) {
-    const panel = this.addOverlayObject(this.add.container(720, 458).setDepth(70))
-    const W = 620, H = sentence.hasNegation ? 176 : 132
+    // fica abaixo do cartão: a frase julgada continua visível durante a explicação
+    const panel = this.addOverlayObject(this.add.container(CARD_CX, 594).setDepth(70))
+    const W = 700, H = sentence.hasNegation ? 228 : 180
 
     const bg = this.add.graphics()
-    bg.fillStyle(0x2a1a0d, 0.96)
-    bg.fillRoundedRect(-W / 2, -H / 2, W, H, 18)
-    bg.lineStyle(3, 0xFFCC80, 0.9)
-    bg.strokeRoundedRect(-W / 2, -H / 2, W, H, 18)
+    bg.fillStyle(0x2a1a0d, 0.97)
+    bg.fillRoundedRect(-W / 2, -H / 2, W, H, 22)
+    bg.lineStyle(4, 0xFFCC80, 0.9)
+    bg.strokeRoundedRect(-W / 2, -H / 2, W, H, 22)
 
     const rows: Phaser.GameObjects.GameObject[] = [bg]
-    let y = -H / 2 + 26
+    let y = -H / 2 + 38
 
     const addRow = (labelTxt: string, valueTxt: string, color: string) => {
-      rows.push(this.add.text(-W / 2 + 22, y, labelTxt, {
-        fontFamily: 'Arial', fontStyle: 'bold', fontSize: '14px', color: '#FFCC80',
+      rows.push(this.add.text(-W / 2 + 26, y, labelTxt, {
+        fontFamily: 'Arial', fontStyle: 'bold', fontSize: '18px', color: '#FFCC80',
       }).setOrigin(0, 0.5).setResolution(2))
-      rows.push(this.add.text(-W / 2 + 190, y, valueTxt, {
-        fontFamily: 'Arial', fontStyle: 'bold', fontSize: '15px', color,
-        wordWrap: { width: W - 215 },
+      rows.push(this.add.text(-W / 2 + 230, y, valueTxt, {
+        fontFamily: 'Arial', fontStyle: 'bold', fontSize: '22px', color,
+        wordWrap: { width: W - 260 },
       }).setOrigin(0, 0.5).setResolution(2))
-      y += 32
+      y += 46
     }
 
     addRow('A frase afirma:', sentence.core, '#FFF3E0')
@@ -513,30 +606,30 @@ export class GameScene extends Phaser.Scene {
 
     const shadow = this.add.graphics()
     shadow.fillStyle(0x000000, 0.18)
-    shadow.fillRoundedRect(-270, -166, 540, 330, 28)
+    shadow.fillRoundedRect(-318, -190, 636, 384, 32)
 
     const bg = this.add.graphics()
     bg.fillStyle(0xfff6e8, 0.98)
-    bg.fillRoundedRect(-278, -178, 556, 330, 28)
-    bg.lineStyle(5, 0xffffff, 0.95)
-    bg.strokeRoundedRect(-278, -178, 556, 330, 28)
+    bg.fillRoundedRect(-328, -204, 656, 384, 32)
+    bg.lineStyle(6, 0xffffff, 0.95)
+    bg.strokeRoundedRect(-328, -204, 656, 384, 32)
 
     const topBar = this.add.graphics()
     topBar.fillStyle(0xff8a2a, 1)
-    topBar.fillRoundedRect(-196, -194, 392, 28, 14)
+    topBar.fillRoundedRect(-230, -222, 460, 34, 17)
     topBar.lineStyle(3, 0xffffff, 0.82)
-    topBar.strokeRoundedRect(-196, -194, 392, 28, 14)
+    topBar.strokeRoundedRect(-230, -222, 460, 34, 17)
 
-    const title = this.add.text(0, -110, 'Parabéns!', {
+    const title = this.add.text(0, -126, 'Parabéns!', {
       fontFamily: 'Arial', fontStyle: 'bold',
-      fontSize: '40px', color: '#25327a',
-      stroke: '#ffffff', strokeThickness: 5,
+      fontSize: '50px', color: '#25327a',
+      stroke: '#ffffff', strokeThickness: 6,
     }).setOrigin(0.5).setResolution(2)
 
-    const completed = this.add.text(0, -50, 'Nível concluído', {
+    const completed = this.add.text(0, -56, 'Nível concluído', {
       fontFamily: 'Arial', fontStyle: 'bold',
-      fontSize: '26px', color: '#f57c00',
-      align: 'center', wordWrap: { width: 420 },
+      fontSize: '32px', color: '#f57c00',
+      align: 'center', wordWrap: { width: 540 },
     }).setOrigin(0.5).setResolution(2)
 
     const successTexts: Record<number, string> = {
@@ -544,10 +637,10 @@ export class GameScene extends Phaser.Scene {
       2: 'Você aprendeu a prestar atenção na palavra NÃO!',
       3: 'Você julgou rápido e bem mesmo com o tempo correndo!',
     }
-    const next = this.add.text(0, 8, successTexts[lvl] ?? '', {
+    const next = this.add.text(0, 16, successTexts[lvl] ?? '', {
       fontFamily: 'Arial', fontStyle: 'bold',
-      fontSize: '17px', color: '#3b3b3b',
-      align: 'center', wordWrap: { width: 430 },
+      fontSize: '22px', color: '#3b3b3b',
+      align: 'center', wordWrap: { width: 540 },
     }).setOrigin(0.5).setResolution(2)
 
     const nextLvl = nextLevel ?? (lvl + 1)
@@ -559,15 +652,15 @@ export class GameScene extends Phaser.Scene {
             : 0xd8dde8,
         1
       )
-      dot.fillCircle(-28 + index * 28, 72, 8)
-      dot.lineStyle(2, 0xffffff, 0.9)
-      dot.strokeCircle(-28 + index * 28, 72, 8)
+      dot.fillCircle(-36 + index * 36, 92, 11)
+      dot.lineStyle(3, 0xffffff, 0.9)
+      dot.strokeCircle(-36 + index * 36, 92, 11)
       return dot
     })
 
-    const waitText = this.add.text(0, 116, nextLevel ? 'Preparando o próximo nível...' : '', {
+    const waitText = this.add.text(0, 142, nextLevel ? 'Preparando o próximo nível...' : '', {
       fontFamily: 'Arial', fontStyle: 'bold',
-      fontSize: '15px', color: '#25327a',
+      fontSize: '20px', color: '#25327a',
     }).setOrigin(0.5).setResolution(2)
 
     modal.add([shadow, bg, topBar, title, completed, next, ...dots, waitText])
@@ -583,77 +676,83 @@ export class GameScene extends Phaser.Scene {
     })
   }
 
-  private showTutorialOverlay() {
-    const overlay = this.add.rectangle(640, 360, 1280, 720, 0x000000, 0.68)
-      .setDepth(200).setInteractive()
+  // ══════════════════════════════════════════════════════════════════════════
+  //  TUTORIAL (createTutorial compartilhado)
+  // ══════════════════════════════════════════════════════════════════════════
 
-    const modal = this.add.container(640, 360).setDepth(201)
-    const W = 540, H = 400
+  /** Áreas destacáveis, em coordenadas absolutas de 1280×720. */
+  private spot = {
+    card: { x: CARD_CX, y: CARD_CY, w: CARD_W + 32, h: 292 },
+    trueBtn: { x: CARD_CX - BTN_DX, y: BTN_Y, w: BTN_W + 26, h: BTN_H + 26 },
+    bothBtns: { x: CARD_CX, y: BTN_Y, w: BTN_DX * 2 + BTN_W + 26, h: BTN_H + 26 },
+    badge: { x: CARD_CX, y: 206, w: 424, h: 78 },
+    timer: {
+      x: TIMER_BAR.x + TIMER_BAR.w / 2,
+      y: TIMER_BAR.y + TIMER_BAR.h / 2,
+      w: TIMER_BAR.w + 34,
+      h: TIMER_BAR.h + 34,
+    },
+    judge: { x: 190, y: 372, w: 300, h: 300 },
+  }
 
-    const modalShadow = this.add.graphics()
-    modalShadow.fillStyle(0x000000, 0.20)
-    modalShadow.fillRoundedRect(-W / 2 + 6, -H / 2 + 8, W, H, 28)
+  private buildTutorialSteps(): TutorialStep[] {
+    if (this.levelConfig.level === 2) {
+      return [
+        {
+          text: 'Agora as frases têm a palavra NÃO. Quando ela aparecer, este aviso acende.',
+          shape: 'rect', ...this.spot.badge,
+        },
+        {
+          text: 'Leia a frase sem o NÃO e pense: essa parte é verdade?',
+          shape: 'rect', ...this.spot.card,
+        },
+        {
+          text: 'Depois é só inverter: se a frase sem o NÃO era verdade, com o NÃO ela fica falsa.',
+          shape: 'rect', ...this.spot.bothBtns,
+        },
+      ]
+    }
 
-    const modalBg = this.add.graphics()
-    modalBg.fillStyle(0xfff6e8, 1)
-    modalBg.fillRoundedRect(-W / 2, -H / 2, W, H, 28)
-    modalBg.lineStyle(5, 0xffffff, 0.95)
-    modalBg.strokeRoundedRect(-W / 2, -H / 2, W, H, 28)
+    if (this.levelConfig.level === 3) {
+      return [
+        {
+          text: 'Esta barra mostra o tempo que você tem para julgar cada frase.',
+          shape: 'rect', ...this.spot.timer,
+        },
+        {
+          text: 'Leia rápido, mas não esqueça de procurar a palavra NÃO antes de decidir.',
+          shape: 'rect', ...this.spot.card,
+        },
+        {
+          text: 'Se o tempo acabar sem resposta, a frase conta como erro. Bom julgamento!',
+          shape: 'rect', ...this.spot.bothBtns,
+        },
+      ]
+    }
 
-    const header = this.add.graphics()
-    header.fillStyle(0x1e3a5f, 1)
-    header.fillRoundedRect(-W / 2, -H / 2, W, 58, 28)
-    header.fillRect(-W / 2, -H / 2 + 30, W, 28)
-
-    const headerText = this.add.text(0, -H / 2 + 29, '📰 Como jogar', {
-      fontFamily: 'Arial Black, Arial', fontStyle: 'bold',
-      fontSize: '22px', color: '#ffffff',
-    }).setOrigin(0.5).setResolution(2)
-
-    const steps = [
-      { text: 'Leia a manchete no cartão com atenção' },
-      { text: 'Pense: essa notícia parece real ou inventada?' },
-      { text: 'Toque em VERDADEIRO ou FALSO para julgar' },
-      { text: 'No Nível 2, a palavra NÃO pode mudar tudo!' },
+    return [
+      {
+        text: 'Este é o cartão do julgamento. Leia a frase com calma antes de responder.',
+        shape: 'rect', ...this.spot.card,
+      },
+      {
+        text: 'Se a frase estiver certa, toque em VERDADEIRO. Se estiver errada, toque em FALSO.',
+        shape: 'rect', ...this.spot.bothBtns,
+        pointer: {
+          fromX: CARD_CX, fromY: CARD_CY + 150,
+          toX: this.spot.trueBtn.x, toY: BTN_Y,
+          textureKey: 'hammer',
+        },
+      },
+      {
+        text: 'O juiz explica cada resposta — inclusive quando você erra. Assim dá para aprender.',
+        shape: 'circle', ...this.spot.judge,
+      },
+      {
+        text: 'Cuidado: errar 3 frases seguidas encerra o julgamento.',
+        shape: 'none',
+      },
     ]
-
-    const stepItems = steps.flatMap((step, i) => {
-      const baseY = -H / 2 + 90 + i * 64
-      const stepTxt = this.add.text(-168, baseY, step.text, {
-        fontFamily: 'Arial', fontStyle: 'bold',
-        fontSize: '18px', color: '#1e293b',
-        wordWrap: { width: 374 },
-      }).setOrigin(0, 0.5).setResolution(2)
-      return [stepTxt]
-    })
-
-    const btnY = H / 2 - 50
-    const btnShadow = this.add.graphics()
-    btnShadow.fillStyle(0x000000, 0.16)
-    btnShadow.fillRoundedRect(-142, btnY - 20 + 4, 284, 48, 24)
-    const btnBg = this.add.graphics()
-    btnBg.fillStyle(0xf57c00, 1)
-    btnBg.fillRoundedRect(-146, btnY - 26, 292, 52, 26)
-    btnBg.lineStyle(4, 0xffffff, 1)
-    btnBg.strokeRoundedRect(-146, btnY - 26, 292, 52, 26)
-    const btnText = this.add.text(0, btnY, '▶ Vamos julgar!', {
-      fontFamily: 'Arial Black, Arial', fontStyle: 'bold',
-      fontSize: '20px', color: '#ffffff',
-      stroke: '#9a3f00', strokeThickness: 3,
-    }).setOrigin(0.5).setResolution(2)
-
-    modal.add([modalShadow, modalBg, header, headerText, ...stepItems, btnShadow, btnBg, btnText])
-    modal.setScale(0.88).setAlpha(0)
-    this.tweens.add({ targets: modal, alpha: 1, scale: 1, duration: 260, ease: 'Back.Out' })
-
-    const btnAbsY = 360 + H / 2 - 50
-    const hitbox = this.add.zone(640, btnAbsY, 292, 60).setDepth(202).setInteractive({ useHandCursor: true })
-    hitbox.on('pointerdown', () => {
-      this.playTick()
-      overlay.destroy()
-      modal.destroy()
-      hitbox.destroy()
-    })
   }
 
   private showNextLevelStartScreen() {
@@ -664,56 +763,56 @@ export class GameScene extends Phaser.Scene {
 
     const shadow = this.add.graphics()
     shadow.fillStyle(0x000000, 0.18)
-    shadow.fillRoundedRect(-270, -154, 540, 312, 28)
+    shadow.fillRoundedRect(-318, -178, 636, 364, 32)
 
     const bg = this.add.graphics()
     bg.fillStyle(0xfff6e8, 0.98)
-    bg.fillRoundedRect(-278, -166, 556, 312, 28)
-    bg.lineStyle(5, 0xffffff, 0.95)
-    bg.strokeRoundedRect(-278, -166, 556, 312, 28)
+    bg.fillRoundedRect(-328, -192, 656, 364, 32)
+    bg.lineStyle(6, 0xffffff, 0.95)
+    bg.strokeRoundedRect(-328, -192, 656, 364, 32)
 
     const topBar = this.add.graphics()
     topBar.fillStyle(0x42d640, 1)
-    topBar.fillRoundedRect(-196, -182, 392, 28, 14)
+    topBar.fillRoundedRect(-230, -210, 460, 34, 17)
     topBar.lineStyle(3, 0xffffff, 0.82)
-    topBar.strokeRoundedRect(-196, -182, 392, 28, 14)
+    topBar.strokeRoundedRect(-230, -210, 460, 34, 17)
 
     const lvl = this.levelConfig.level
-    const title = this.add.text(0, -102, `Nível ${lvl}`, {
+    const title = this.add.text(0, -118, `Nível ${lvl}`, {
       fontFamily: 'Arial', fontStyle: 'bold',
-      fontSize: '38px', color: '#25327a',
-      stroke: '#ffffff', strokeThickness: 5,
+      fontSize: '48px', color: '#25327a',
+      stroke: '#ffffff', strokeThickness: 6,
     }).setOrigin(0.5).setResolution(2)
 
-    const objective = this.add.text(0, -42, this.levelConfig.objective, {
+    const objective = this.add.text(0, -46, this.levelConfig.objective, {
       fontFamily: 'Arial', fontStyle: 'bold',
-      fontSize: '24px', color: '#f57c00',
-      align: 'center', wordWrap: { width: 430 },
+      fontSize: '30px', color: '#f57c00',
+      align: 'center', wordWrap: { width: 560 },
     }).setOrigin(0.5).setResolution(2)
 
-    const detail = this.add.text(0, 12, this.levelConfig.tip, {
+    const detail = this.add.text(0, 32, this.levelConfig.tip, {
       fontFamily: 'Arial', fontStyle: 'bold',
-      fontSize: '16px', color: '#3b3b3b',
-      align: 'center', wordWrap: { width: 420 },
+      fontSize: '21px', color: '#3b3b3b',
+      align: 'center', wordWrap: { width: 550 },
     }).setOrigin(0.5).setResolution(2)
 
-    const button = this.add.container(0, 104)
+    const button = this.add.container(0, 124)
     const buttonShadow = this.add.graphics()
     buttonShadow.fillStyle(0x000000, 0.16)
-    buttonShadow.fillRoundedRect(-136, -20, 272, 48, 24)
+    buttonShadow.fillRoundedRect(-160, -24, 320, 60, 30)
     const buttonBg = this.add.graphics()
     buttonBg.fillStyle(0xf57c00, 1)
-    buttonBg.fillRoundedRect(-140, -26, 280, 52, 26)
-    buttonBg.lineStyle(4, 0xffffff, 1)
-    buttonBg.strokeRoundedRect(-140, -26, 280, 52, 26)
+    buttonBg.fillRoundedRect(-164, -32, 328, 64, 32)
+    buttonBg.lineStyle(5, 0xffffff, 1)
+    buttonBg.strokeRoundedRect(-164, -32, 328, 64, 32)
     const buttonText = this.add.text(0, 0, 'Iniciar nível', {
       fontFamily: 'Arial', fontStyle: 'bold',
-      fontSize: '22px', color: '#ffffff',
+      fontSize: '28px', color: '#ffffff',
       stroke: '#9a3f00', strokeThickness: 3,
     }).setOrigin(0.5).setResolution(2)
     button.add([buttonShadow, buttonBg, buttonText])
 
-    const buttonHitbox = this.add.zone(640, 360 + 104, 280, 58)
+    const buttonHitbox = this.add.zone(640, 360 + 124, 328, 72)
     buttonHitbox.setDepth(452).setInteractive({ useHandCursor: true })
     buttonHitbox.on('pointerover', () => {
       this.tweens.add({ targets: button, scale: 1.04, duration: 90, ease: 'Sine.easeOut' })
@@ -726,7 +825,7 @@ export class GameScene extends Phaser.Scene {
       overlay.destroy()
       buttonHitbox.destroy()
       modal.destroy()
-      this.showCurrentSentence()
+      this.startLevelFlow()
     })
 
     modal.add([shadow, bg, topBar, title, objective, detail, button])
@@ -745,70 +844,70 @@ export class GameScene extends Phaser.Scene {
 
     const shadow = this.add.graphics()
     shadow.fillStyle(0x000000, 0.18)
-    shadow.fillRoundedRect(-292, -178, 584, 366, 34)
+    shadow.fillRoundedRect(-338, -200, 676, 420, 38)
 
     const bg = this.add.graphics()
     bg.fillStyle(0xfff6e8, 0.98)
-    bg.fillRoundedRect(-304, -190, 608, 370, 34)
+    bg.fillRoundedRect(-350, -214, 700, 424, 38)
     bg.lineStyle(6, 0xffffff, 0.96)
-    bg.strokeRoundedRect(-304, -190, 608, 370, 34)
+    bg.strokeRoundedRect(-350, -214, 700, 424, 38)
 
     const ribbon = this.add.graphics()
     ribbon.fillStyle(0x42d640, 1)
-    ribbon.fillRoundedRect(-214, -208, 428, 34, 17)
+    ribbon.fillRoundedRect(-248, -234, 496, 40, 20)
     ribbon.lineStyle(4, 0xffffff, 0.9)
-    ribbon.strokeRoundedRect(-214, -208, 428, 34, 17)
+    ribbon.strokeRoundedRect(-248, -234, 496, 40, 20)
 
-    const title = this.add.text(0, -128, 'Jogo concluído!', {
+    const title = this.add.text(0, -146, 'Jogo concluído!', {
       fontFamily: 'Arial', fontStyle: 'bold',
-      fontSize: '38px', color: '#25327a',
+      fontSize: '48px', color: '#25327a',
       stroke: '#ffffff', strokeThickness: 6,
     }).setOrigin(0.5).setResolution(2)
 
-    const subtitle = this.add.text(0, -74, 'Você julgou todas as sentenças do tribunal!', {
+    const subtitle = this.add.text(0, -84, 'Você julgou todas as sentenças do tribunal!', {
       fontFamily: 'Arial', fontStyle: 'bold',
-      fontSize: '20px', color: '#3b3b3b',
-      align: 'center', wordWrap: { width: 500 },
+      fontSize: '26px', color: '#3b3b3b',
+      align: 'center', wordWrap: { width: 600 },
     }).setOrigin(0.5).setResolution(2)
 
     const levelLabels = [1, 2, 3].map((level, index) => {
-      const item = this.add.container(-190 + index * 190, 54)
+      const item = this.add.container(-210 + index * 210, 44)
       const badge = this.add.graphics()
       badge.fillStyle(index === 0 ? 0xff8a2a : index === 1 ? 0x45c6f0 : 0x42d640, 1)
-      badge.fillRoundedRect(-54, -42, 108, 84, 18)
+      badge.fillRoundedRect(-66, -50, 132, 100, 22)
       badge.lineStyle(4, 0xffffff, 0.95)
-      badge.strokeRoundedRect(-54, -42, 108, 84, 18)
-      const number = this.add.text(0, -13, String(level), {
+      badge.strokeRoundedRect(-66, -50, 132, 100, 22)
+      const number = this.add.text(0, -14, String(level), {
         fontFamily: 'Arial', fontStyle: 'bold',
-        fontSize: '30px', color: '#ffffff',
+        fontSize: '38px', color: '#ffffff',
         stroke: '#25327a', strokeThickness: 4,
       }).setOrigin(0.5).setResolution(2)
-      const label = this.add.text(0, 23, 'concluído', {
+      const label = this.add.text(0, 28, 'concluído', {
         fontFamily: 'Arial', fontStyle: 'bold',
-        fontSize: '12px', color: '#ffffff',
+        fontSize: '16px', color: '#ffffff',
       }).setOrigin(0.5).setResolution(2)
       item.add([badge, number, label])
       return item
     })
 
     const createFinalButton = (x: number, label: string, color: number, stroke: string, onClick: () => void) => {
-      const button = this.add.container(x, 138)
+      const button = this.add.container(x, 160)
       const buttonShadow = this.add.graphics()
       buttonShadow.fillStyle(0x000000, 0.16)
-      buttonShadow.fillRoundedRect(-128, -20, 256, 48, 24)
+      buttonShadow.fillRoundedRect(-152, -24, 304, 60, 30)
       const buttonBg = this.add.graphics()
       buttonBg.fillStyle(color, 1)
-      buttonBg.fillRoundedRect(-132, -26, 264, 52, 26)
-      buttonBg.lineStyle(4, 0xffffff, 1)
-      buttonBg.strokeRoundedRect(-132, -26, 264, 52, 26)
+      buttonBg.fillRoundedRect(-156, -32, 312, 64, 32)
+      buttonBg.lineStyle(5, 0xffffff, 1)
+      buttonBg.strokeRoundedRect(-156, -32, 312, 64, 32)
       const buttonText = this.add.text(0, 0, label, {
         fontFamily: 'Arial', fontStyle: 'bold',
-        fontSize: '20px', color: '#ffffff',
+        fontSize: '25px', color: '#ffffff',
         stroke, strokeThickness: 3,
       }).setOrigin(0.5).setResolution(2)
       button.add([buttonShadow, buttonBg, buttonText])
 
-      const buttonHitbox = this.add.zone(640 + x, 360 + 138, 264, 58)
+      const buttonHitbox = this.add.zone(640 + x, 360 + 160, 312, 72)
       buttonHitbox.setDepth(452).setInteractive({ useHandCursor: true })
       buttonHitbox.on('pointerover', () => {
         this.tweens.add({ targets: button, scale: 1.04, duration: 90, ease: 'Sine.easeOut' })
@@ -823,17 +922,17 @@ export class GameScene extends Phaser.Scene {
       return { button, buttonHitbox }
     }
 
-    const playAgain = createFinalButton(-142, 'Jogar novamente', 0x42d640, '#1b7d1c', () => {
+    const playAgain = createFinalButton(-166, 'Jogar novamente', 0x42d640, '#1b7d1c', () => {
       this.scene.restart({ level: 1, points: 0, lives: 1 })
     })
-    const exitBtn = createFinalButton(142, 'Voltar aos jogos', 0xf57c00, '#9a3f00', () => {
+    const exitBtn = createFinalButton(166, 'Voltar aos jogos', 0xf57c00, '#9a3f00', () => {
       EventBus.emit('exit-game')
     })
 
     const sparkles = Array.from({ length: 14 }, (_, i) => {
       const sp = this.add.graphics()
-      const x = Phaser.Math.Between(-278, 278)
-      const y = Phaser.Math.Between(-168, 158)
+      const x = Phaser.Math.Between(-320, 320)
+      const y = Phaser.Math.Between(-190, 186)
       sp.fillStyle([0x38bdf8, 0xff8a2a, 0x42d640][i % 3], 0.9)
       sp.fillCircle(x, y, Phaser.Math.Between(4, 8))
       this.tweens.add({
@@ -861,48 +960,48 @@ export class GameScene extends Phaser.Scene {
 
     const shadow = this.add.graphics()
     shadow.fillStyle(0x000000, 0.18)
-    shadow.fillRoundedRect(-270, -166, 540, 330, 28)
+    shadow.fillRoundedRect(-318, -190, 636, 388, 32)
 
     const bg = this.add.graphics()
     bg.fillStyle(0xfff6e8, 0.98)
-    bg.fillRoundedRect(-278, -178, 556, 332, 28)
-    bg.lineStyle(5, 0xffffff, 0.95)
-    bg.strokeRoundedRect(-278, -178, 556, 332, 28)
+    bg.fillRoundedRect(-328, -204, 656, 390, 32)
+    bg.lineStyle(6, 0xffffff, 0.95)
+    bg.strokeRoundedRect(-328, -204, 656, 390, 32)
 
     const topBar = this.add.graphics()
     topBar.fillStyle(0xef4444, 1)
-    topBar.fillRoundedRect(-196, -194, 392, 28, 14)
+    topBar.fillRoundedRect(-230, -222, 460, 34, 17)
     topBar.lineStyle(3, 0xffffff, 0.82)
-    topBar.strokeRoundedRect(-196, -194, 392, 28, 14)
+    topBar.strokeRoundedRect(-230, -222, 460, 34, 17)
 
-    const icon = this.add.text(0, -112, reason === 'timeout' ? '⏱' : '❌', {
-      fontSize: '54px',
+    const icon = this.add.text(0, -128, reason === 'timeout' ? '⏱' : '❌', {
+      fontSize: '66px',
     }).setOrigin(0.5)
 
-    const title = this.add.text(0, -50, 'Que pena!', {
+    const title = this.add.text(0, -54, 'Que pena!', {
       fontFamily: 'Arial', fontStyle: 'bold',
-      fontSize: '38px', color: '#25327a',
-      stroke: '#ffffff', strokeThickness: 5,
+      fontSize: '48px', color: '#25327a',
+      stroke: '#ffffff', strokeThickness: 6,
     }).setOrigin(0.5).setResolution(2)
 
     const reasonMsg = reason === 'timeout' ? 'O tempo acabou!' : '3 julgamentos errados seguidos!'
-    const reasonTxt = this.add.text(0, 6, reasonMsg, {
+    const reasonTxt = this.add.text(0, 14, reasonMsg, {
       fontFamily: 'Arial', fontStyle: 'bold',
-      fontSize: '20px', color: '#ef4444',
-      align: 'center', wordWrap: { width: 440 },
+      fontSize: '26px', color: '#ef4444',
+      align: 'center', wordWrap: { width: 560 },
     }).setOrigin(0.5).setResolution(2)
 
     const total = this.levelConfig.sentences.length
-    const statsTxt = this.add.text(0, 52, `${this.currentSentenceIndex} de ${total} sentenças julgadas`, {
+    const statsTxt = this.add.text(0, 66, `${this.currentSentenceIndex} de ${total} sentenças julgadas`, {
       fontFamily: 'Arial', fontStyle: 'bold',
-      fontSize: '17px', color: '#3b3b3b',
-      align: 'center', wordWrap: { width: 440 },
+      fontSize: '22px', color: '#3b3b3b',
+      align: 'center', wordWrap: { width: 560 },
     }).setOrigin(0.5).setResolution(2)
 
-    const retryBtn = this.createModalButton(-140, 118, 'Tentar novamente', 0x42d640, () => {
+    const retryBtn = this.createModalButton(-160, 138, 'Tentar novamente', 0x42d640, () => {
       this.scene.restart({ level: this.levelConfig.level, points: this.currentPoints, lives: this.currentLives })
     })
-    const exitBtn = this.createModalButton(140, 118, 'Sair', 0xf57c00, () => {
+    const exitBtn = this.createModalButton(160, 138, 'Sair', 0xf57c00, () => {
       EventBus.emit('exit-game')
     })
 
@@ -922,15 +1021,15 @@ export class GameScene extends Phaser.Scene {
     const button = this.add.container(x, y)
     const bg = this.add.graphics()
     bg.fillStyle(color, 1)
-    bg.fillRoundedRect(-124, -24, 248, 48, 24)
-    bg.lineStyle(4, 0xffffff, 1)
-    bg.strokeRoundedRect(-124, -24, 248, 48, 24)
+    bg.fillRoundedRect(-148, -32, 296, 64, 32)
+    bg.lineStyle(5, 0xffffff, 1)
+    bg.strokeRoundedRect(-148, -32, 296, 64, 32)
     const text = this.add.text(0, 0, label, {
-      fontSize: '17px', fontFamily: 'Arial Black, Arial',
+      fontSize: '23px', fontFamily: 'Arial Black, Arial',
       color: '#ffffff', stroke: '#0f172a', strokeThickness: 3,
-    }).setOrigin(0.5)
+    }).setOrigin(0.5).setResolution(2)
     button.add([bg, text])
-    button.setSize(256, 68)
+    button.setSize(300, 76)
     button.setInteractive({ useHandCursor: true })
     button.on('pointerover', () => this.tweens.add({ targets: button, scale: 1.05, duration: 90 }))
     button.on('pointerout', () => this.tweens.add({ targets: button, scale: 1, duration: 90 }))

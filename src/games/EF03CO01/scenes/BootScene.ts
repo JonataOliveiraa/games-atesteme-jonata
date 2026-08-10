@@ -44,30 +44,30 @@ export class BootScene extends Phaser.Scene {
       this.add.image(640, 360, 'bg-loading').setDisplaySize(1280, 720).setDepth(0)
     })
 
-    this.add.text(640, 310, '⚖️  Tribunal do Verdadeiro ou Falso', {
-      fontSize: '36px',
+    this.add.text(640, 300, '⚖️  Tribunal do Verdadeiro ou Falso', {
+      fontSize: '48px',
       fontFamily: 'Arial Black, Arial',
       color: '#FFF3E0',
       stroke: '#000000',
-      strokeThickness: 6,
+      strokeThickness: 7,
       align: 'center',
-      wordWrap: { width: 900 },
-    }).setOrigin(0.5).setDepth(1)
+      wordWrap: { width: 1000 },
+    }).setOrigin(0.5).setDepth(1).setResolution(2)
 
-    this.add.text(640, 390, 'Preparando o julgamento...', {
-      fontSize: '22px',
+    this.add.text(640, 396, 'Preparando o julgamento...', {
+      fontSize: '29px',
       fontFamily: 'Arial',
       color: '#FFCC80',
-    }).setOrigin(0.5).setDepth(1)
+    }).setOrigin(0.5).setDepth(1).setResolution(2)
 
-    const barW = 500
-    const barBg = this.add.rectangle(640, 450, barW + 8, 20, 0x2a1a0d)
-      .setStrokeStyle(2, 0xFFCC80).setDepth(1)
-    const bar = this.add.rectangle(640 - barW / 2, 450, 4, 16, 0xFFCC80).setOrigin(0, 0.5).setDepth(1)
+    const barW = 620
+    const barBg = this.add.rectangle(640, 466, barW + 10, 28, 0x2a1a0d)
+      .setStrokeStyle(3, 0xFFCC80).setDepth(1)
+    const bar = this.add.rectangle(640 - barW / 2, 466, 4, 22, 0xFFCC80).setOrigin(0, 0.5).setDepth(1)
     void barBg
 
     this.load.on('progress', (v: number) => {
-      bar.setSize(Math.max(4, barW * v), 16)
+      bar.setSize(Math.max(4, barW * v), 22)
     })
   }
 }
