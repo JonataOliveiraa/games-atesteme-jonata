@@ -1494,7 +1494,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     private roomTutorialSteps(id: StructureId): TutorialStep[] {
-        const stage = { shape: 'rect' as const, x: 796, y: 300, w: 900, h: 400, balloonY: 620 }
+        const stage = { shape: 'rect' as const, x: 796, y: 300, w: 900, h: 400, balloonY: 500 }
 
         if (id === 'lista') {
             return [
@@ -1558,7 +1558,7 @@ export class GameScene extends Phaser.Scene {
         if (this.level.level === 1) {
             return [
                 { text: 'Oi! Eu sou o Tino. Eu falo aqui embaixo o que fazer.', shape: 'rect', ...tinoRect },
-                { text: 'Toque na porta para entrar na sala.', shape: 'rect', ...doorsRect, balloonY: 620 },
+                { text: 'Toque na porta para entrar na sala.', shape: 'rect', ...doorsRect, balloonY: 593 },
             ]
         }
 

@@ -41,6 +41,7 @@ import coverRadarDeConfiabilidade from "../assets/games/EF05CO08/cover-radar-de-
 import coverCuradoriaComCreditos from "../assets/games/EF05CO09/cover-curadoria-com-creditos.png";
 import coverFuturoEmCena from "../assets/games/EF05CO10/cover-futuro-em-cena.png";
 import coverMuseuDasEstruturas from "../assets/games/EF15CO01/cover-museu-das-estruturas.png";
+import coverEscolhaAFerramentaCerta from "../assets/games/EF05CO11/cover-escolha-a-ferramenta-certa.png";
 
 const placeholderGame = (code: string, index: number): Game => ({
   id: index,
@@ -421,7 +422,7 @@ const gameByCode: Partial<Record<string, Omit<Game, "id">>> = {
     points: 65,
     icon: "🔧",
     slug: "escolha-a-ferramenta-certa",
-    thumbnail: coverFuturoEmCena,
+    thumbnail: coverEscolhaAFerramentaCerta,
   },
   EF15CO01: {
     title: "Museu das Estruturas",

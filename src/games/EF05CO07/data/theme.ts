@@ -2,42 +2,42 @@ import type { ProgramId, ResourceState } from '../types'
 
 /** Numeric colors for Phaser objects. */
 export const C = {
-    background: 0x17120d,
-    panelDeep: 0x231a12,
-    surface: 0x34261a,
-    elevated: 0x4a3727,
-    border: 0x7b5b3f,
-    borderSoft: 0x4f3a2a,
-    cyan: 0xf6e7cc,
-    cyanDeep: 0xb99163,
-    violet: 0xc99b65,
+    background: 0x081321,
+    panelDeep: 0x0d1b2e,
+    surface: 0x142840,
+    elevated: 0x1e3a5c,
+    border: 0x3d6690,
+    borderSoft: 0x28415f,
+    cyan: 0x7dd3fc,
+    cyanDeep: 0x3b82f6,
+    violet: 0x8b5cf6,
     green: 0x85d68b,
     yellow: 0xf4c86a,
     red: 0xe56b5f,
-    text: 0xfffbf3,
-    textMuted: 0xd6c4aa,
-    disabled: 0x746554,
-    shadow: 0x080604,
+    text: 0xf2f6fc,
+    textMuted: 0x9fb3cc,
+    disabled: 0x4c5f7a,
+    shadow: 0x030810,
 } as const
 
 /** Matching CSS colors for Phaser text and DOM-adjacent helpers. */
 export const CSS = {
-    background: '#17120D',
-    panelDeep: '#231A12',
-    surface: '#34261A',
-    elevated: '#4A3727',
-    border: '#7B5B3F',
-    borderSoft: '#4F3A2A',
-    cyan: '#F6E7CC',
-    cyanDeep: '#B99163',
-    violet: '#C99B65',
+    background: '#081321',
+    panelDeep: '#0D1B2E',
+    surface: '#142840',
+    elevated: '#1E3A5C',
+    border: '#3D6690',
+    borderSoft: '#28415F',
+    cyan: '#7DD3FC',
+    cyanDeep: '#3B82F6',
+    violet: '#8B5CF6',
     green: '#85D68B',
     yellow: '#F4C86A',
     red: '#E56B5F',
-    text: '#FFFBF3',
-    textMuted: '#D6C4AA',
-    disabled: '#746554',
-    shadow: '#080604',
+    text: '#F2F6FC',
+    textMuted: '#9FB3CC',
+    disabled: '#4C5F7A',
+    shadow: '#030810',
 } as const
 
 export const FONT = {
@@ -125,10 +125,10 @@ export const RESOURCE_STATE_VISUAL: Record<ResourceState, ResourceStateVisual> =
 
 /** Differentiates memory blocks without relying only on icons. */
 export const PROGRAM_COLOR: Record<ProgramId, number> = {
-    navegador: 0xf6e7cc,
+    navegador: C.cyan,
     editor: C.violet,
     jogo: C.green,
     player: C.yellow,
     fotos: C.red,
-    impressao: 0xd7b17a,
+    impressao: 0xf59e0b,
 }
