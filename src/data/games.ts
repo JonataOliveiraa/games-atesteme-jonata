@@ -40,6 +40,7 @@ import sistemaOperacionalThumbnail from "../assets/games/EF05CO07/cover-sistema-
 import coverRadarDeConfiabilidade from "../assets/games/EF05CO08/cover-radar-de-confiabilidade.png";
 import coverCuradoriaComCreditos from "../assets/games/EF05CO09/cover-curadoria-com-creditos.png";
 import coverFuturoEmCena from "../assets/games/EF05CO10/cover-futuro-em-cena.png";
+import coverMuseuDasEstruturas from "../assets/games/EF15CO01/cover-museu-das-estruturas.png";
 
 const placeholderGame = (code: string, index: number): Game => ({
   id: index,
@@ -421,6 +422,15 @@ const gameByCode: Partial<Record<string, Omit<Game, "id">>> = {
     icon: "🔧",
     slug: "escolha-a-ferramenta-certa",
     thumbnail: coverFuturoEmCena,
+  },
+  EF15CO01: {
+    title: "Museu das Estruturas",
+    "description": "Explore diferentes estruturas de dados e aprenda como organizá-las.",
+    category: "Pensamento Computacional",
+    points: 65,
+    icon: "🏛️",
+    slug: "museu-das-estruturas",
+    thumbnail: coverMuseuDasEstruturas,
   }
 };
 

@@ -309,7 +309,7 @@ Os `load.audio(...)` e `load.atlas(...)` já estão comentados em cada `BootScen
 | EF04CO05 | Ateliê de Códigos Digitais | 4º | Mundo Digital | `atelier-codigos-digitais` |
 | EF05CO01 | Baralho das Listas | 5º | Pensamento Computacional | `baralho-das-listas` |
 
-> **27 de 45 jogos implementados** · EF01CO04 é a única lacuna do 1º ano (pendente)
+> **45 de 45 jogos implementados**
 
 ---
 
