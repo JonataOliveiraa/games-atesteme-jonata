@@ -58,6 +58,7 @@ const SLUG_TO_CODE: Record<string, GameCode> = {
   "museu-das-estruturas": "EF15CO01",
   "academia-dos-algoritmos": "EF15CO02",
   "circuito-da-verdade": "EF15CO03",
+  "arquiteto-das-missoes": "EF15CO04",
 };
 
 const GAME_CONFIG_LOADERS: Partial<
@@ -107,6 +108,7 @@ const GAME_CONFIG_LOADERS: Partial<
   EF15CO01: () => import("../games/EF15CO01/index"),
   EF15CO02: () => import("../games/EF15CO02/index"),
   EF15CO03: () => import("../games/EF15CO03/index"),
+  EF15CO04: () => import("../games/EF15CO04/index"),
 };
 
 const GAMES_WITH_IN_GAME_COMPLETION_SCREEN = new Set([

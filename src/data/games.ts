@@ -44,6 +44,7 @@ import coverMuseuDasEstruturas from "../assets/games/EF15CO01/cover-museu-das-es
 import coverEscolhaAFerramentaCerta from "../assets/games/EF05CO11/cover-escolha-a-ferramenta-certa.png";
 import coverAcademiaDosAlgoritmos from "../assets/games/EF15CO02/cover-academia-dos-algoritmos.png";
 import coverCircuitoDaVerdade from "../assets/games/EF15CO03/cover-circuito-da-verdade.png";
+import coverArquitetoDasMissoes from "../assets/games/EF15CO04/cover-arquiteto-das-missoes.png";
 
 const placeholderGame = (code: string, index: number): Game => ({
   id: index,
@@ -452,6 +453,15 @@ const gameByCode: Partial<Record<string, Omit<Game, "id">>> = {
     icon: "🎢",
     slug: "circuito-da-verdade",
     thumbnail: coverCircuitoDaVerdade,
+  },
+  EF15CO04: {
+    title: "Arquiteto das Missões",
+    description: "Projete e organize missões usando lógica e sequências de ações para alcançar objetivos.",
+    category: "Pensamento Computacional",
+    points: 65,
+    icon: "🏗️",
+    slug: "arquiteto-das-missoes",
+    thumbnail: coverArquitetoDasMissoes,
   }
 };
 
