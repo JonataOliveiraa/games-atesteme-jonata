@@ -33,7 +33,7 @@ export const LEVELS: LevelConfig[] = [
     useMap: true,
     title: 'Explorando Mais Lugares',
     objective: 'Agora tem mais lugares! Escolha a tecnologia certa em cada um.',
-    tip: 'A rua também é um lugar — clique nela!',
+    tip: 'A rua também é um lugar. Toque nela!',
     situations: [
       {
         id: 's2-house',
@@ -76,7 +76,7 @@ export const LEVELS: LevelConfig[] = [
     useMap: true,
     perSituationTimer: 20,
     title: 'Desafio da Cidade Completa',
-    objective: 'Todos os lugares abertos — e agora com tempo para responder!',
+    objective: 'Todos os lugares estão abertos. Agora há tempo para responder!',
     tip: 'Responda antes que o tempo acabe',
     situations: [
       {

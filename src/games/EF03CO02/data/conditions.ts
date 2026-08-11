@@ -14,13 +14,23 @@ import type {
 export const MAX_ITERATIONS = 40
 
 export const CONDITION_LABELS: Record<ConditionId, string> = {
-    caminho_livre: 'o caminho estiver livre',
-    nao_no_objetivo: 'não chegar ao objetivo',
-    passos_menos_de_2: 'tiver andado menos de 2 passos',
-    passos_menos_de_3: 'tiver andado menos de 3 passos',
-    passos_menos_de_4: 'tiver andado menos de 4 passos',
-    passos_menos_de_5: 'tiver andado menos de 5 passos',
-    passos_menos_de_6: 'tiver andado menos de 6 passos',
+    caminho_livre: 'a casa da frente estiver livre',
+    nao_no_objetivo: 'não chegou na estrela',
+    passos_menos_de_2: 'andou menos de 2 passos',
+    passos_menos_de_3: 'andou menos de 3 passos',
+    passos_menos_de_4: 'andou menos de 4 passos',
+    passos_menos_de_5: 'andou menos de 5 passos',
+    passos_menos_de_6: 'andou menos de 6 passos',
+}
+
+export const CONDITION_HELP: Record<ConditionId, string> = {
+    caminho_livre: 'Olhe a casa destacada na frente do robô.',
+    nao_no_objetivo: 'Veja se o robô ainda não está na estrela.',
+    passos_menos_de_2: 'Conte só os passos que ele já andou.',
+    passos_menos_de_3: 'Conte só os passos que ele já andou.',
+    passos_menos_de_4: 'Conte só os passos que ele já andou.',
+    passos_menos_de_5: 'Conte só os passos que ele já andou.',
+    passos_menos_de_6: 'Conte só os passos que ele já andou.',
 }
 
 export const CONDITION_ICON: Record<ConditionId, string> = {
@@ -47,10 +57,10 @@ export const ACTION_ICON: Record<ActionId, string> = {
 
 /** Deslocamento de cada direção. Índice = Direction. */
 const DELTA: ReadonlyArray<Coord> = [
-    { c: 0, r: -1 }, // 0 cima
-    { c: 1, r: 0 },  // 1 direita
-    { c: 0, r: 1 },  // 2 baixo
-    { c: -1, r: 0 }, // 3 esquerda
+    { c: 0, r: -1 },
+    { c: 1, r: 0 },
+    { c: 0, r: 1 },
+    { c: -1, r: 0 },
 ]
 
 export function ahead(state: RobotState): Coord {
@@ -96,8 +106,7 @@ const clone = (s: RobotState): RobotState => ({ ...s })
 
 /**
  * Roda o programa e devolve o trace completo. O trace é o que a cena anima:
- * cada 'verificar' é o momento em que a condição é testada, antes da volta,
- * e é justamente o que a habilidade pede para ficar visível.
+ * cada 'verificar' é o momento em que a condição é testada antes da volta.
  */
 export function simulate(ch: MazeChallenge, program: Program): SimulationResult {
     const trace: TraceStep[] = []
@@ -127,14 +136,12 @@ export function simulate(ch: MazeChallenge, program: Program): SimulationResult 
         return true
     }
 
-    // ── setup: roda uma vez, fora do laço ──
     for (const action of program.setup) {
         if (!runAction(action, -1)) {
             return { trace, outcome: 'bateu', final: state, iterations: 0 }
         }
     }
 
-    // ── laço ENQUANTO ──
     let iterations = 0
     for (;;) {
         const before = clone(state)
@@ -162,7 +169,7 @@ export function simulate(ch: MazeChallenge, program: Program): SimulationResult 
         final: state,
         iterations,
     }
-}   
+}
 
 export function conditionSentence(id: ConditionId): string {
     return `Enquanto ${CONDITION_LABELS[id]}`

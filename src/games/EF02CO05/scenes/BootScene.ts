@@ -58,7 +58,6 @@ export class BootScene extends Phaser.Scene {
   }
 
   create() {
-    this.scene.launch('UIScene')
     this.scene.start('GameScene')
   }
 
@@ -70,7 +69,7 @@ export class BootScene extends Phaser.Scene {
       this.add.image(640, 360, 'bg-loading').setDisplaySize(1280, 720).setDepth(0)
     })
 
-    this.add.text(640, 310, '🏙️  Cidade das Tecnologias', {
+    this.add.text(640, 310, 'Cidade das Tecnologias', {
       fontSize: '40px',
       fontFamily: 'Arial Black, Arial',
       color: '#E8F5E9',

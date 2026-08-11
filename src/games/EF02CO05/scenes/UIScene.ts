@@ -37,7 +37,7 @@ export class UIScene extends Phaser.Scene {
     this.add.rectangle(640, 56, 1280, 112, 0x0c3b2e, 0.95)
     this.add.rectangle(640, 112, 1280, 2, 0xA5D6A7, 0.6)
 
-    this.add.text(18, 34, '🏙️', { fontSize: '26px' }).setOrigin(0, 0.5)
+    this.add.text(18, 34, 'Cidade', { fontSize: '26px' }).setOrigin(0, 0.5)
 
     this.instructionText = this.add.text(640, 34, 'Carregando...', {
       fontSize: '24px',
@@ -51,7 +51,7 @@ export class UIScene extends Phaser.Scene {
 
     this.add.rectangle(640, 58, 800, 1, 0xA5D6A7, 0.22)
 
-    this.add.text(186, 80, '👉', { fontSize: '16px' }).setOrigin(0.5)
+    this.add.text(186, 80, 'Dica', { fontSize: '16px' }).setOrigin(0.5)
 
     this.hintText = this.add.text(640, 80, '', {
       fontSize: '17px',
@@ -66,7 +66,7 @@ export class UIScene extends Phaser.Scene {
     this.add.text(1095, 22, 'Nível', {
       fontSize: '11px', color: '#A5D6A7', fontFamily: 'Arial',
     }).setOrigin(0.5)
-    this.levelStars = this.add.text(1095, 46, '★☆☆', {
+    this.levelStars = this.add.text(1095, 46, 'Nível 1', {
       fontSize: '22px', color: '#FFD700',
     }).setOrigin(0.5)
 
@@ -80,11 +80,11 @@ export class UIScene extends Phaser.Scene {
       .setStrokeStyle(1.5, 0xA5D6A7)
       .setInteractive({ useHandCursor: true })
 
-    const icon = this.add.text(1248, 56, '🔊', { fontSize: '22px' }).setOrigin(0.5)
+    const icon = this.add.text(1248, 56, 'Som', { fontSize: '22px' }).setOrigin(0.5)
 
     btn.on('pointerdown', () => {
       muted = !muted
-      icon.setText(muted ? '🔇' : '🔊')
+      icon.setText(muted ? 'Mudo' : 'Som')
       EventBus.emit('mute-audio', muted)
     })
     btn.on('pointerover',  () => btn.setFillStyle(0x103b2c))
@@ -98,7 +98,7 @@ export class UIScene extends Phaser.Scene {
   private onMissionUpdate = (data: MissionUpdatePayload) => {
     this.instructionText.setText(data.instruction)
     this.hintText.setText(data.hint)
-    this.levelStars.setText('★'.repeat(data.level) + '☆'.repeat(3 - data.level))
+    this.levelStars.setText(Nível )
     this.updateDots(data.missionIndex, data.totalMissions)
   }
 

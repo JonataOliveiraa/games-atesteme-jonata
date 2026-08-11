@@ -5,9 +5,9 @@ const at = (c: number, r: number) => ({ c, r })
 export const LEVELS: LevelConfig[] = [
     {
         level: 1,
-        title: 'Verdadeiro ou falso?',
-        objective: 'Antes de cada passo o robô testa a condição. Você responde: verdadeira ou falsa?',
-        tip: 'Verdadeira, o robô repete o passo. Falsa, o laço para na hora.',
+        title: 'Teste o Enquanto',
+        objective: 'O programa já está pronto. Antes de cada volta, diga se a condição do laço é verdadeira ou falsa.',
+        tip: 'Verdadeira: o robô repete o passo. Falsa: ele para. O alvo é parar em cima da estrela.',
         challenges: [
             {
                 id: 'l1-c1',
@@ -17,7 +17,7 @@ export const LEVELS: LevelConfig[] = [
                 walls: [at(3, 1)],
                 given: { condition: 'caminho_livre', setup: [], body: ['avancar'] },
                 solution: { condition: 'caminho_livre', setup: [], body: ['avancar'] },
-                explanation: 'O robô andou até a parede aparecer na frente dele. Aí a condição virou falsa e o laço parou.',
+                explanation: 'O robô andou até a parede aparecer na frente dele. Aí a condição ficou falsa e o laço parou.',
             },
             {
                 id: 'l1-c2',
@@ -27,7 +27,7 @@ export const LEVELS: LevelConfig[] = [
                 walls: [],
                 given: { condition: 'nao_no_objetivo', setup: [], body: ['avancar'] },
                 solution: { condition: 'nao_no_objetivo', setup: [], body: ['avancar'] },
-                explanation: 'Esta condição olhava para a estrela. Quando o robô pisou nela, virou falsa.',
+                explanation: 'Esta condição olha para a estrela. Quando o robô pisou nela, a condição ficou falsa.',
             },
             {
                 id: 'l1-c3',
@@ -37,7 +37,7 @@ export const LEVELS: LevelConfig[] = [
                 walls: [],
                 given: { condition: 'passos_menos_de_2', setup: [], body: ['avancar'] },
                 solution: { condition: 'passos_menos_de_2', setup: [], body: ['avancar'] },
-                explanation: 'Esta condição só conta passos. Ao completar 2, virou falsa — nem olhou o que tinha em volta.',
+                explanation: 'Esta condição só conta passos. Ao completar 2, ficou falsa, sem olhar o resto do caminho.',
             },
             {
                 id: 'l1-c4',
@@ -61,15 +61,11 @@ export const LEVELS: LevelConfig[] = [
             },
         ],
     },
-
-    // ═══════════════════════════════════════════════════════════════════════
-    //  NÍVEL 2 — a criança escolhe a condição entre três
-    // ═══════════════════════════════════════════════════════════════════════
     {
         level: 2,
-        title: 'Escolha a condição',
-        objective: 'Cada condição para o robô num lugar diferente. Qual delas o deixa na estrela?',
-        tip: 'Pense onde cada uma vira falsa antes de escolher.',
+        title: 'Escolha a Condição',
+        objective: 'O robô já sabe andar. Escolha qual condição faz o laço parar exatamente na estrela.',
+        tip: 'Compare as opções: uma olha parede, outra olha estrela, outra conta passos.',
         challenges: [
             {
                 id: 'l2-c1',
@@ -80,7 +76,7 @@ export const LEVELS: LevelConfig[] = [
                 given: { condition: 'nao_no_objetivo', setup: [], body: ['avancar'] },
                 conditionOptions: ['caminho_livre', 'nao_no_objetivo', 'passos_menos_de_2'],
                 solution: { condition: 'nao_no_objetivo', setup: [], body: ['avancar'] },
-                explanation: 'Só "não chegar ao objetivo" para em cima da estrela. O caminho livre passaria direto.',
+                explanation: 'Só "não chegou na estrela" para em cima da estrela. Caminho livre passaria direto.',
             },
             {
                 id: 'l2-c2',
@@ -91,7 +87,7 @@ export const LEVELS: LevelConfig[] = [
                 given: { condition: 'passos_menos_de_3', setup: [], body: ['avancar'] },
                 conditionOptions: ['caminho_livre', 'passos_menos_de_2', 'passos_menos_de_3'],
                 solution: { condition: 'passos_menos_de_3', setup: [], body: ['avancar'] },
-                explanation: 'Sem parede nenhuma, o caminho livre iria até a borda do tabuleiro. Contar 3 passos era o que faltava.',
+                explanation: 'Sem parede nenhuma, caminho livre iria até a borda. Contar 3 passos era o que faltava.',
             },
             {
                 id: 'l2-c3',
@@ -102,7 +98,7 @@ export const LEVELS: LevelConfig[] = [
                 given: { condition: 'caminho_livre', setup: [], body: ['avancar'] },
                 conditionOptions: ['passos_menos_de_2', 'caminho_livre', 'passos_menos_de_6'],
                 solution: { condition: 'caminho_livre', setup: [], body: ['avancar'] },
-                explanation: 'Contar 6 passos faria o robô bater: contar não enxerga parede. Olhar o caminho, sim.',
+                explanation: 'Contar 6 passos faria o robô bater. Contar não enxerga parede; caminho livre enxerga.',
             },
             {
                 id: 'l2-c4',
@@ -113,7 +109,7 @@ export const LEVELS: LevelConfig[] = [
                 given: { condition: 'passos_menos_de_3', setup: [], body: ['avancar'] },
                 conditionOptions: ['caminho_livre', 'passos_menos_de_3', 'passos_menos_de_5'],
                 solution: { condition: 'passos_menos_de_3', setup: [], body: ['avancar'] },
-                explanation: 'A estrela ficava antes da parede, então contar os passos era o único jeito de parar nela.',
+                explanation: 'A estrela ficava antes da parede, então contar os passos era o jeito de parar nela.',
             },
             {
                 id: 'l2-c5',
@@ -128,15 +124,11 @@ export const LEVELS: LevelConfig[] = [
             },
         ],
     },
-
-    // ═══════════════════════════════════════════════════════════════════════
-    //  NÍVEL 3 — a criança monta o programa inteiro
-    // ═══════════════════════════════════════════════════════════════════════
     {
         level: 3,
-        title: 'Monte o programa',
-        objective: 'Aponte o robô, escolha a condição e diga o que ele repete.',
-        tip: 'A curva entra antes do laço. Dentro do laço vai o passo que se repete.',
+        title: 'Monte o Programa',
+        objective: 'Monte o plano completo: ajuste a direção antes do laço, escolha a condição e coloque a ação que repete.',
+        tip: 'Curva fora do laço acontece uma vez. Andar dentro do laço repete até a condição ficar falsa.',
         challenges: [
             {
                 id: 'l3-c1',
@@ -147,7 +139,7 @@ export const LEVELS: LevelConfig[] = [
                 allowedActions: ['avancar', 'virar-esq', 'virar-dir'],
                 allowedConditions: ['caminho_livre', 'nao_no_objetivo', 'passos_menos_de_2'],
                 solution: { condition: 'caminho_livre', setup: ['virar-esq'], body: ['avancar'] },
-                explanation: 'Uma curva para apontar o robô e um laço para subir até a parede. Simples assim.',
+                explanation: 'Uma curva para apontar o robô e um laço para subir até a parede.',
             },
             {
                 id: 'l3-c2',
@@ -158,7 +150,7 @@ export const LEVELS: LevelConfig[] = [
                 allowedActions: ['avancar', 'virar-esq', 'virar-dir'],
                 allowedConditions: ['caminho_livre', 'passos_menos_de_2', 'passos_menos_de_6'],
                 solution: { condition: 'caminho_livre', setup: ['virar-esq'], body: ['avancar'] },
-                explanation: 'Olhando para baixo, virar à esquerda aponta para a direita. Depois é só deixar o laço correr até a parede.',
+                explanation: 'Olhando para baixo, virar à esquerda aponta para a direita. Depois o laço anda até a parede.',
             },
             {
                 id: 'l3-c3',
@@ -169,7 +161,7 @@ export const LEVELS: LevelConfig[] = [
                 allowedActions: ['avancar', 'virar-esq', 'virar-dir'],
                 allowedConditions: ['caminho_livre', 'nao_no_objetivo', 'passos_menos_de_6'],
                 solution: { condition: 'nao_no_objetivo', setup: [], body: ['avancar'] },
-                explanation: 'O robô já estava apontado: nenhuma curva antes do laço. Só a condição da estrela o parava na hora certa.',
+                explanation: 'O robô já estava apontado. Só a condição da estrela o parava na hora certa.',
             },
             {
                 id: 'l3-c4',
@@ -180,7 +172,7 @@ export const LEVELS: LevelConfig[] = [
                 allowedActions: ['avancar', 'virar-esq', 'virar-dir'],
                 allowedConditions: ['caminho_livre', 'passos_menos_de_2', 'passos_menos_de_5'],
                 solution: { condition: 'passos_menos_de_2', setup: [], body: ['avancar'] },
-                explanation: 'Aqui o caminho continuava livre depois da estrela. Só contando os passos dava para parar em cima dela.',
+                explanation: 'Aqui o caminho continuava livre depois da estrela. Só contando passos dava para parar em cima dela.',
             },
             {
                 id: 'l3-c5',

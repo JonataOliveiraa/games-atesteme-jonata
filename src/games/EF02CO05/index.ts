@@ -1,14 +1,13 @@
 import Phaser from 'phaser'
 import { BootScene } from './scenes/BootScene'
 import { GameScene } from './scenes/GameScene'
-import { UIScene }   from './scenes/UIScene'
 
 const EF02CO05Config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
   width: 1280,
   height: 720,
   backgroundColor: '#0c3b2e',
-  scene: [BootScene, GameScene, UIScene],
+  scene: [BootScene, GameScene],
   physics: {
     default: 'arcade',
     arcade: { debug: false },

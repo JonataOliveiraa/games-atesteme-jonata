@@ -57,39 +57,81 @@ export class GameScene extends Phaser.Scene {
 
   create() {
     this.add.image(640, 360, 'bg-city-map').setDisplaySize(1280, 720)
-    EventBus.on('mute-audio', (m: boolean) => { this.muted = m }, this)
-    this.events.once('shutdown', () => EventBus.off('mute-audio', undefined, this))
+    this.buildCornerControls()
 
     this.showLevelIntro()
-    runtimeGameBridge.emit({ type: 'GAME_READY', gameId: GAME_ID, stage: this.levelConfig.level })
+    runtimeGameBridge.emit({ type: 'GAME_READY', gameId: GAME_ID })
+  }
+
+
+  private buildCornerControls() {
+    this.makeIconButton(1238, 42, '?', () => this.runTutorial(true))
+  }
+
+  private makeIconButton(x: number, y: number, label: string, onDown: () => void) {
+    const container = this.add.container(x, y).setDepth(90)
+    const bg = this.add.graphics()
+    const paint = (hover: boolean) => {
+      bg.clear()
+      bg.fillStyle(hover ? 0x2E7D32 : 0x07251c, 0.92)
+      bg.fillRoundedRect(-24, -24, 48, 48, 14)
+      bg.lineStyle(3, 0xE8F5E9, 0.95)
+      bg.strokeRoundedRect(-24, -24, 48, 48, 14)
+    }
+    paint(false)
+
+    const text = this.add.text(0, 0, label, {
+      fontSize: '26px', fontFamily: 'Arial Black, Arial', color: '#E8F5E9',
+      stroke: '#07251c', strokeThickness: 4,
+    }).setOrigin(0.5)
+    const hit = this.add.rectangle(0, 0, 56, 56, 0xffffff, 0.01).setInteractive({ useHandCursor: true })
+    hit.on('pointerover', () => paint(true))
+    hit.on('pointerout', () => paint(false))
+    hit.on('pointerdown', () => {
+      this.playClick()
+      this.tweens.add({ targets: container, scale: 0.92, duration: 70, yoyo: true })
+      onDown()
+    })
+    container.add([bg, text, hit])
+    return container
   }
 
   // ─── Introdução do nível ─────────────────────────────────────
   private showLevelIntro() {
     const container = this.add.container(0, 0).setDepth(500)
-    const overlay = this.add.rectangle(640, 360, 1280, 720, 0x0c3b2e, 0.88).setInteractive()
+    const overlay = this.add.rectangle(640, 360, 1280, 720, 0x0c3b2e, 0.82).setInteractive()
+
+    const introPanel = this.add.graphics()
+    introPanel.fillStyle(0x031b15, 0.34)
+    introPanel.fillRoundedRect(334, 156, 620, 392, 30)
+    introPanel.fillStyle(0x0c3b2e, 0.96)
+    introPanel.fillRoundedRect(243, 144, 800, 392, 30)
+    introPanel.fillStyle(0x1b5e20, 0.72)
+    introPanel.fillRoundedRect(243, 144, 800, 84, 30)
+    introPanel.lineStyle(5, 0xA5D6A7, 0.9)
+    introPanel.strokeRoundedRect(243, 144, 800, 392, 30)
 
     const title = this.add.text(640, 220, this.levelConfig.title, {
-      fontSize: '44px', fontFamily: 'Arial Black, Arial', color: '#E8F5E9',
+      fontSize: '46px', fontFamily: 'Arial Black, Arial', color: '#E8F5E9',
       stroke: '#07251c', strokeThickness: 7,
-    }).setOrigin(0.5)
+    }).setOrigin(0.5).setY(192)
 
     const objective = this.add.text(640, 300, this.levelConfig.objective, {
-      fontSize: '24px', fontFamily: 'Arial', color: '#C8E6C9',
+      fontSize: '35px', fontFamily: 'Arial', color: '#C8E6C9',
       align: 'center', wordWrap: { width: 760 },
     }).setOrigin(0.5)
 
-    const tip = this.add.text(640, 370, `💡 ${this.levelConfig.tip}`, {
-      fontSize: '19px', fontFamily: 'Arial', color: '#A5D6A7',
+    const tip = this.add.text(640, 400, this.levelConfig.tip, {
+      fontSize: '24px', fontFamily: 'Arial', color: '#A5D6A7',
     }).setOrigin(0.5)
 
     const timerNote = this.levelConfig.perSituationTimer
-      ? this.add.text(640, 415, `⏱ ${this.levelConfig.perSituationTimer}s para cada resposta!`, {
-        fontSize: '19px', fontFamily: 'Arial Black', color: '#FFD54F',
+      ? this.add.text(640, 415, `Tempo: ${this.levelConfig.perSituationTimer}s para cada resposta`, {
+        fontSize: '24px', fontFamily: 'Arial Black', color: '#FFD54F',
       }).setOrigin(0.5)
       : null
 
-    const btn = this.makeButton(640, 520, 280, 66, '▶  Explorar!', 0x2E7D32, () => {
+    const btn = this.makeButton(640, 520, 280, 66, 'Explorar', 0x2E7D32, () => {
       this.playClick()
       this.tweens.add({
         targets: container, alpha: 0, duration: 280,
@@ -97,7 +139,7 @@ export class GameScene extends Phaser.Scene {
       })
     })
 
-    const parts: Phaser.GameObjects.GameObject[] = [overlay, title, objective, tip, btn]
+    const parts: Phaser.GameObjects.GameObject[] = [overlay, introPanel, title, objective, tip, btn]
     if (timerNote) parts.push(timerNote)
     container.add(parts)
   }
@@ -106,19 +148,19 @@ export class GameScene extends Phaser.Scene {
   private buildCity() {
     this.buildStreet()
     this.buildBuildings()
-    this.emitMissionUpdate()
+    this.updateProgressBadge()
 
-    if (this.levelIdx === 0) this.runTutorial()
+    if (this.levelIdx === 0) this.runTutorial(false)
   }
 
-  private runTutorial() {
+  private runTutorial(force = true) {
     const buildingCx = LAYOUT.firstBuildingX
     const buildingCy = LAYOUT.buildingBottomY - LAYOUT.buildingH / 2
 
     const steps: TutorialStep[] = [
       {
-        text: 'Aqui em cima aparecem a missão atual e quantas faltam.',
-        shape: 'rect', x: 640, y: 56, w: 1280, h: 112, balloonY: 220,
+        text: 'Toque nos lugares da cidade para descobrir uma situação.',
+        shape: 'rect', x: buildingCx, y: buildingCy, w: 260, h: 280,
       },
       {
         text: 'Toque em um prédio para ver a situação daquele lugar.',
@@ -133,7 +175,8 @@ export class GameScene extends Phaser.Scene {
     createTutorial(this, {
       key: 'cidade-l1',
       accent: 0x2E7D32,
-      safeTop: 116,
+      safeTop: 0,
+      once: !force,
       onFinish: () => { /* nada a liberar: o overlay já bloqueia toques durante a tutorial */ },
       steps,
     })
@@ -214,14 +257,20 @@ export class GameScene extends Phaser.Scene {
     const container = this.add.container(0, 0).setDepth(600)
     this.panelContainer = container
 
-    const overlay = this.add.rectangle(640, 360, 1280, 720, 0x000000, 0.6).setInteractive()
+    const overlay = this.add.rectangle(640, 360, 1280, 720, 0x000000, 0.56).setInteractive()
 
     const PW = 980, PH = 560
     const panel = this.add.graphics()
-    panel.fillStyle(0x0c3b2e, 0.97)
+    panel.fillStyle(0x000000, 0.22)
+    panel.fillRoundedRect(640 - PW / 2 + 10, 380 - PH / 2 + 14, PW, PH, 24)
+    panel.fillStyle(0x0c3b2e, 0.98)
     panel.fillRoundedRect(640 - PW / 2, 380 - PH / 2, PW, PH, 24)
-    panel.lineStyle(4, 0xA5D6A7, 0.95)
+    panel.fillStyle(0x1B5E20, 0.78)
+    panel.fillRoundedRect(640 - PW / 2, 380 - PH / 2, PW, 92, 24)
+    panel.lineStyle(5, 0xA5D6A7, 0.95)
     panel.strokeRoundedRect(640 - PW / 2, 380 - PH / 2, PW, PH, 24)
+    panel.lineStyle(2, 0xC8E6C9, 0.28)
+    panel.lineBetween(640 - PW / 2 + 34, 210, 640 + PW / 2 - 34, 210)
 
     const prompt = this.add.text(640, 165, situation.prompt, {
       fontSize: '25px', fontFamily: 'Arial Black, Arial', color: '#E8F5E9',
@@ -244,13 +293,17 @@ export class GameScene extends Phaser.Scene {
 
     const drawRing = (ring: Phaser.GameObjects.Graphics, cx: number, cy: number, color: number, thickness: number) => {
       ring.clear()
-      ring.fillStyle(0xffffff, 0.97)
+      ring.fillStyle(0x000000, 0.14)
+      ring.fillRoundedRect(cx - CARD_W / 2 + 5, cy - CARD_H / 2 + 7, CARD_W, CARD_H, 18)
+      ring.fillStyle(0xffffff, 0.98)
       ring.fillRoundedRect(cx - CARD_W / 2, cy - CARD_H / 2, CARD_W, CARD_H, 18)
+      ring.fillStyle(0xE8F5E9, 0.5)
+      ring.fillRoundedRect(cx - CARD_W / 2 + 8, cy - CARD_H / 2 + 8, CARD_W - 16, 58, 14)
       ring.lineStyle(thickness, color, 1)
       ring.strokeRoundedRect(cx - CARD_W / 2, cy - CARD_H / 2, CARD_W, CARD_H, 18)
     }
 
-    const confirmBtn = this.makeButton(640, 560, 260, 62, 'Confirmar ✔', 0x2E7D32, () => {
+    const confirmBtn = this.makeButton(640, 560, 260, 62, 'Confirmar', 0x2E7D32, () => {
       if (resolved || !selectedId) return
       resolved = true
       this.resolveAnswer(entry, situation, selectedId, cards, drawRing, container, confirmBtn)
@@ -355,12 +408,12 @@ export class GameScene extends Phaser.Scene {
     }
 
     const feedback = this.add.text(640, 505,
-      (correct ? '✅ Muito bem!  ' : chosenId === null ? '⏱ O tempo acabou!  ' : '❌ Não foi dessa vez!  ') + situation.justification, {
+      (correct ? 'Muito bem! ' : chosenId === null ? 'O tempo acabou! ' : 'Tente outra vez. ') + situation.justification, {
       fontSize: '20px', fontFamily: 'Arial', color: correct ? '#A5D6A7' : '#FFCDD2',
       align: 'center', wordWrap: { width: 860 },
     }).setOrigin(0.5)
 
-    const nextBtn = this.makeButton(640, 585, 240, 58, 'Continuar →', 0x1565C0, () => {
+    const nextBtn = this.makeButton(640, 585, 240, 58, 'Continuar', 0x1565C0, () => {
       this.playClick()
       this.tweens.add({
         targets: container, alpha: 0, duration: 200,
@@ -369,7 +422,7 @@ export class GameScene extends Phaser.Scene {
           this.panelContainer = undefined
           this.answered.add(situation.id)
           this.markLocationDone(entry)
-          this.emitMissionUpdate()
+          this.updateProgressBadge()
           this.checkLevelComplete()
         },
       })
@@ -379,14 +432,29 @@ export class GameScene extends Phaser.Scene {
   }
 
   // ─── Progresso / fim de nível ────────────────────────────────
-  private emitMissionUpdate() {
-    EventBus.emit('mission-update', {
-      instruction: this.levelConfig.objective,
-      hint: this.levelConfig.tip,
-      missionIndex: this.answered.size,
-      totalMissions: this.levelConfig.situations.length,
-      level: this.levelConfig.level,
-    })
+  private updateProgressBadge() {
+    const old = this.children.getByName('progress-badge')
+    old?.destroy()
+
+    const label = `${this.answered.size}/${this.levelConfig.situations.length}`
+    const container = this.add.container(1190, 670).setDepth(80).setName('progress-badge')
+    const bg = this.add.graphics()
+    bg.fillStyle(0x000000, 0.22)
+    bg.fillRoundedRect(-76, -30, 152, 60, 18)
+    bg.fillStyle(0x07251c, 0.88)
+    bg.fillRoundedRect(-80, -34, 152, 60, 18)
+    bg.lineStyle(3, 0xA5D6A7, 0.9)
+    bg.strokeRoundedRect(-80, -34, 152, 60, 18)
+
+    const caption = this.add.text(-4, -14, 'Missões', {
+      fontSize: '13px', fontFamily: 'Arial Black, Arial', color: '#A5D6A7',
+    }).setOrigin(0.5)
+    const text = this.add.text(-4, 12, label, {
+      fontSize: '24px', fontFamily: 'Arial Black, Arial', color: '#E8F5E9',
+      stroke: '#0c3b2e', strokeThickness: 4,
+    }).setOrigin(0.5)
+
+    container.add([bg, caption, text])
   }
 
   private checkLevelComplete() {
@@ -395,39 +463,39 @@ export class GameScene extends Phaser.Scene {
 
     runtimeGameBridge.emit({
       type: 'CHECKPOINT', gameId: GAME_ID,
-      stage: this.levelConfig.level, progress: 100,
+      stage: this.levelConfig.level, progress: 100, score: this.answered.size * 5,
     })
 
     const isLast = this.levelIdx + 1 >= LEVELS.length
     const container = this.add.container(0, 0).setDepth(700)
     const overlay = this.add.rectangle(640, 360, 1280, 720, 0x0c3b2e, 0.9).setInteractive()
 
-    const title = this.add.text(640, 250, isLast ? '🏆 Cidade Completa!' : '🎉 Nível Concluído!', {
+    const title = this.add.text(640, 250, isLast ? 'Cidade Completa!' : 'Nível Concluído!', {
       fontSize: '46px', fontFamily: 'Arial Black', color: '#E8F5E9',
       stroke: '#07251c', strokeThickness: 7,
     }).setOrigin(0.5)
 
     // DEPOIS
     if (isLast) {
-      runtimeGameBridge.emit({ type: 'FINISH_GAME', gameId: GAME_ID, stage: this.levelConfig.level })
+      runtimeGameBridge.emit({ type: 'GAME_COMPLETED', gameId: GAME_ID, stage: this.levelConfig.level })
 
       const subtitle = this.add.text(640, 330, 'Você explorou toda a cidade!', {
         fontSize: '24px', fontFamily: 'Arial', color: '#C8E6C9',
       }).setOrigin(0.5)
 
-      const againBtn = this.makeButton(640, 440, 340, 66, '🔄  Jogar de novo', 0x2E7D32, () => {
+      const againBtn = this.makeButton(640, 440, 340, 66, 'Jogar de novo', 0x2E7D32, () => {
         this.playClick()
         this.scene.restart({ levelIndex: 0 })
       })
 
-      const exitBtn = this.makeButton(640, 530, 340, 66, '🎮  Outros jogos', 0x1565C0, () => {
+      const exitBtn = this.makeButton(640, 530, 340, 66, 'Outros jogos', 0x1565C0, () => {
         this.playClick()
         EventBus.emit('exit-game')
       })
 
       container.add([overlay, title, subtitle, againBtn, exitBtn])
     } else {
-      const nextBtn = this.makeButton(640, 460, 300, 66, 'PRÓXIMO NÍVEL', 0x2E7D32, () => {
+      const nextBtn = this.makeButton(640, 460, 300, 66, 'Próximo nível', 0x2E7D32, () => {
         this.playClick()
         this.scene.restart({ levelIndex: this.levelIdx + 1 })
       })
