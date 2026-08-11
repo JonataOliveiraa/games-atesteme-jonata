@@ -43,6 +43,7 @@ import coverFuturoEmCena from "../assets/games/EF05CO10/cover-futuro-em-cena.png
 import coverMuseuDasEstruturas from "../assets/games/EF15CO01/cover-museu-das-estruturas.png";
 import coverEscolhaAFerramentaCerta from "../assets/games/EF05CO11/cover-escolha-a-ferramenta-certa.png";
 import coverAcademiaDosAlgoritmos from "../assets/games/EF15CO02/cover-academia-dos-algoritmos.png";
+import coverCircuitoDaVerdade from "../assets/games/EF15CO03/cover-circuito-da-verdade.png";
 
 const placeholderGame = (code: string, index: number): Game => ({
   id: index,
@@ -442,6 +443,15 @@ const gameByCode: Partial<Record<string, Omit<Game, "id">>> = {
     icon: "🏋️‍♂️",
     slug: "academia-dos-algoritmos",
     thumbnail: coverAcademiaDosAlgoritmos,
+  },
+  EF15CO03: {
+    title: "Circuito da Verdade",
+    "description": "Aprenda a usar operadores lógicos para controlar atrações em um parque de diversões.",
+    category: "Pensamento Computacional",
+    points: 65,
+    icon: "🎢",
+    slug: "circuito-da-verdade",
+    thumbnail: coverCircuitoDaVerdade,
   }
 };
 

@@ -57,6 +57,7 @@ const SLUG_TO_CODE: Record<string, GameCode> = {
   "escolha-a-ferramenta-certa": "EF05CO11",
   "museu-das-estruturas": "EF15CO01",
   "academia-dos-algoritmos": "EF15CO02",
+  "circuito-da-verdade": "EF15CO03",
 };
 
 const GAME_CONFIG_LOADERS: Partial<
@@ -105,6 +106,7 @@ const GAME_CONFIG_LOADERS: Partial<
   EF05CO11: () => import("../games/EF05CO11/index"),
   EF15CO01: () => import("../games/EF15CO01/index"),
   EF15CO02: () => import("../games/EF15CO02/index"),
+  EF15CO03: () => import("../games/EF15CO03/index"),
 };
 
 const GAMES_WITH_IN_GAME_COMPLETION_SCREEN = new Set([
@@ -399,8 +401,7 @@ export default function GameDetailsPage() {
         errorCountRef.current += 1;
 
         showToast(
-          `-5 pontos • -1 vida (${livesAfterError} restante${
-            livesAfterError === 1 ? "" : "s"
+          `-5 pontos • -1 vida (${livesAfterError} restante${livesAfterError === 1 ? "" : "s"
           })`,
           "error"
         );
@@ -525,8 +526,8 @@ export default function GameDetailsPage() {
   };
 
   const handleExit = () => {
-  navigate(-1);
-};
+    navigate(-1);
+  };
 
   const startGame = () => {
     playBeep();
@@ -689,29 +690,29 @@ export default function GameDetailsPage() {
       "Complete o objetivo para ganhar pontos.",
     ];
 
-useEffect(() => {
-  const hasBlockingOverlay =
-    showNoLivesModal ||
-    showGameOverModal;
+  useEffect(() => {
+    const hasBlockingOverlay =
+      showNoLivesModal ||
+      showGameOverModal;
 
-  const elements = document.querySelectorAll(
-    ".phaser-container, .phaser-container canvas, .game-iframe, iframe"
-  );
+    const elements = document.querySelectorAll(
+      ".phaser-container, .phaser-container canvas, .game-iframe, iframe"
+    );
 
-  elements.forEach((element) => {
-    if (hasBlockingOverlay) {
-      element.classList.add("game-input-blocked");
-    } else {
-      element.classList.remove("game-input-blocked");
-    }
-  });
-
-  return () => {
     elements.forEach((element) => {
-      element.classList.remove("game-input-blocked");
+      if (hasBlockingOverlay) {
+        element.classList.add("game-input-blocked");
+      } else {
+        element.classList.remove("game-input-blocked");
+      }
     });
-  };
-}, [showNoLivesModal, showGameOverModal]);
+
+    return () => {
+      elements.forEach((element) => {
+        element.classList.remove("game-input-blocked");
+      });
+    };
+  }, [showNoLivesModal, showGameOverModal]);
 
   if (blocked && !hasStartedGame && !showGameOverModal) {
     return (
@@ -892,9 +893,8 @@ useEffect(() => {
               />
             ) : (
               <div
-                className={`game-screen game-entry-cover game-entry-${game.slug} ${
-                  showInstructions ? "game-entry-instructions" : ""
-                }`}
+                className={`game-screen game-entry-cover game-entry-${game.slug} ${showInstructions ? "game-entry-instructions" : ""
+                  }`}
                 style={
                   game.thumbnail
                     ? { backgroundImage: `url(${game.thumbnail})` }
@@ -927,24 +927,24 @@ useEffect(() => {
                     <>
                       <h1>{game.title}</h1>
 
-                    <div className="game-entry-actions">
-                      <button type="button" onClick={startGame}>
-                        <span aria-hidden="true">▶</span>
-                        Iniciar
-                      </button>
+                      <div className="game-entry-actions">
+                        <button type="button" onClick={startGame}>
+                          <span aria-hidden="true">▶</span>
+                          Iniciar
+                        </button>
 
-                      <button
-                        type="button"
-                        className="game-entry-secondary"
-                        onClick={() => {
-                          playBeep();
-                          setShowInstructions(true);
-                        }}
-                      >
-                        <span aria-hidden="true">⚙</span>
-                        Instruções
-                      </button>
-                    </div>
+                        <button
+                          type="button"
+                          className="game-entry-secondary"
+                          onClick={() => {
+                            playBeep();
+                            setShowInstructions(true);
+                          }}
+                        >
+                          <span aria-hidden="true">⚙</span>
+                          Instruções
+                        </button>
+                      </div>
                     </>
                   )}
                 </div>
@@ -966,24 +966,24 @@ useEffect(() => {
         </div>
       </section>
 
-          
+
       {/* TELA FULLSCREEN - PERDEU VIDA */}
       {showNoLivesModal && (
         <div
-  className="game-over-overlay"
-  onPointerDown={(e) => {
-  e.stopPropagation();
-}}
-onMouseDown={(e) => {
-  e.stopPropagation();
-}}
-onClick={(e) => {
-  e.stopPropagation();
-}}
-onTouchStart={(e) => {
-  e.stopPropagation();
-}}
->
+          className="game-over-overlay"
+          onPointerDown={(e) => {
+            e.stopPropagation();
+          }}
+          onMouseDown={(e) => {
+            e.stopPropagation();
+          }}
+          onClick={(e) => {
+            e.stopPropagation();
+          }}
+          onTouchStart={(e) => {
+            e.stopPropagation();
+          }}
+        >
           <div className="game-over-modal">
             <h1 className="game-over-title error">Você cometeu um erro!</h1>
 
@@ -1031,72 +1031,72 @@ onTouchStart={(e) => {
 
       {/* TELA FULLSCREEN - GAME OVER */}
       {/* TELA FULLSCREEN - GAME OVER */}
-{showGameOverModal && (
-  <div
-    className="game-over-overlay"
-    onPointerDown={(e) => {
-  e.stopPropagation();
-}}
-onMouseDown={(e) => {
-  e.stopPropagation();
-}}
-onClick={(e) => {
-  e.stopPropagation();
-}}
-onTouchStart={(e) => {
-  e.stopPropagation();
-}}
-  >
-    <div className="game-over-modal">
-      <h1 className="game-over-title">GAME OVER</h1>
-
-      <p className="game-over-text">
-        O jogo foi bloqueado.
-        {blockedUntil && (
-          <>a
-            <br />
-            Liberação automática em:
-            <br />
-            <strong>{new Date(blockedUntil).toLocaleString("pt-BR")}</strong>
-          </>
-        )}
-      </p>
-
-      <p className="game-over-warning">
-        {blocked ? (
-          <>Você pode desbloquear agora usando {unlockCost} pontos. Você tem {points} ponto{points !== 1 ? 's' : ''}.</>
-        ) : (
-          <>Este jogo já está liberado. Você pode voltar aos jogos ou iniciar novamente.</>
-        )}
-      </p>
-
-      <div className="game-over-actions">
-        {blocked && (
-          <button
-            type="button"
-            className="game-over-primary-btn"
-            onClick={handleUnlock}
-            disabled={points < unlockCost}
-          >
-            Desbloquear jogo
-          </button>
-        )}
-
-        <button
-          type="button"
-          className="game-over-secondary-btn"
-          onClick={() => {
-            setShowGameOverModal(false);
-            setHasStartedGame(false);
-            navigate(-1);
+      {showGameOverModal && (
+        <div
+          className="game-over-overlay"
+          onPointerDown={(e) => {
+            e.stopPropagation();
+          }}
+          onMouseDown={(e) => {
+            e.stopPropagation();
+          }}
+          onClick={(e) => {
+            e.stopPropagation();
+          }}
+          onTouchStart={(e) => {
+            e.stopPropagation();
           }}
         >
-          Voltar aos jogos
-        </button>
-      </div>
-    </div>
-  </div>
-)}
+          <div className="game-over-modal">
+            <h1 className="game-over-title">GAME OVER</h1>
+
+            <p className="game-over-text">
+              O jogo foi bloqueado.
+              {blockedUntil && (
+                <>a
+                  <br />
+                  Liberação automática em:
+                  <br />
+                  <strong>{new Date(blockedUntil).toLocaleString("pt-BR")}</strong>
+                </>
+              )}
+            </p>
+
+            <p className="game-over-warning">
+              {blocked ? (
+                <>Você pode desbloquear agora usando {unlockCost} pontos. Você tem {points} ponto{points !== 1 ? 's' : ''}.</>
+              ) : (
+                <>Este jogo já está liberado. Você pode voltar aos jogos ou iniciar novamente.</>
+              )}
+            </p>
+
+            <div className="game-over-actions">
+              {blocked && (
+                <button
+                  type="button"
+                  className="game-over-primary-btn"
+                  onClick={handleUnlock}
+                  disabled={points < unlockCost}
+                >
+                  Desbloquear jogo
+                </button>
+              )}
+
+              <button
+                type="button"
+                className="game-over-secondary-btn"
+                onClick={() => {
+                  setShowGameOverModal(false);
+                  setHasStartedGame(false);
+                  navigate(-1);
+                }}
+              >
+                Voltar aos jogos
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <ConfirmModal
         isOpen={showCongratsModal}
