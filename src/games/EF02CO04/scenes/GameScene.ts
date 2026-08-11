@@ -15,6 +15,7 @@ const ZONE_TOP = 278, ZONE_H = 356
 const ZONE_HEAD = 54
 const FACT_Y = 676
 const SLOT = 104
+const BAR_Y = 664
 
 const C = {
   blue: 0x3B82F6,
@@ -37,6 +38,7 @@ interface ZoneView {
   h: number
   frame: Phaser.GameObjects.Graphics
   filled: number
+  staged: ItemCard[]
 }
 
 type MissionPhase = 'intro' | 'tutorial' | 'playing' | 'feedback' | 'level-complete'
@@ -55,6 +57,10 @@ export class GameScene extends Phaser.Scene {
 
   private questionText?: Phaser.GameObjects.Text
   private factText?: Phaser.GameObjects.Text
+
+  private pending?: { card: ItemCard; zone: ZoneView }
+  private confirmBar?: Phaser.GameObjects.Container
+  private confirmMsg?: Phaser.GameObjects.Text
 
   private itemCards: ItemCard[] = []
   private zones: ZoneView[] = []
@@ -88,6 +94,9 @@ export class GameScene extends Phaser.Scene {
     this.isMuted = false
     this.phase = 'intro'
     this.gameEnded = false
+    this.pending = undefined
+    this.confirmBar = undefined
+    this.confirmMsg = undefined
     this.missionEffectActive = false
     this.itemCards = []
     this.zones = []
@@ -131,6 +140,10 @@ export class GameScene extends Phaser.Scene {
 
     this.unsubPlatform?.()
     this.unsubPlatform = undefined
+  }
+
+  private get confirmMode(): ConfirmMode {
+    return this.levelConfig.confirmMode ?? 'imediato'
   }
 
   private addOverlayObject<T extends Phaser.GameObjects.GameObject>(obj: T): T {
@@ -255,6 +268,8 @@ export class GameScene extends Phaser.Scene {
   }
 
   private clearMission() {
+    this.hideConfirmBar()
+    this.pending = undefined
     this.itemCards.forEach(c => c.container.destroy())
     this.itemCards = []
     this.zones.forEach(z => z.frame.destroy())
@@ -292,7 +307,7 @@ export class GameScene extends Phaser.Scene {
       }).setOrigin(0.5).setDepth(5).setResolution(2)
       label.setData('missionScoped', true)
 
-      this.zones.push({ def, x, y: ZONE_TOP, w: zoneW, h: ZONE_H, frame, filled: 0 })
+      this.zones.push({ def, x, y: ZONE_TOP, w: zoneW, h: ZONE_H, frame, filled: 0, staged: [] })
     })
   }
 
@@ -432,38 +447,60 @@ export class GameScene extends Phaser.Scene {
   }
 
   private tweenCardHome(card: ItemCard) {
+    card.staged = false
     this.tweens.add({
-      targets: card.container, x: card.homeX, y: card.homeY,
+      targets: card.container, x: card.homeX, y: card.homeY, scale: 1,
       duration: 260, ease: 'Back.Out',
     })
   }
 
   private resolveDrop(card: ItemCard, px: number, py: number) {
     const zone = this.zoneAt(px, py)
+    const mode = this.confirmMode
+
+    if (this.pending?.card === card) {
+      this.pending = undefined
+      this.hideConfirmBar()
+    }
+    if (card.staged) this.unstage(card)
 
     if (!zone) {
       this.tweenCardHome(card)
       return
     }
 
+    if (mode === 'imediato') { this.judgeDrop(card, zone); return }
+    if (mode === 'porItem') { this.stagePending(card, zone); return }
+    this.stageForAssembly(card, zone)
+  }
+
+  private judgeDrop(card: ItemCard, zone: ZoneView) {
     if (!zone.def.acceptIds.includes(card.item.id)) {
-      this.errors++
-      this.playError()
-      this.cameras.main.shake(140, 0.005)
-      this.tweenCardHome(card)
-      runtimeGameBridge.emit({
-        type: 'WRONG_ANSWER', gameId: GAME_ID,
-        pointsEarned: -2, stage: this.levelConfig.level,
-      })
-      this.emitCheckpoint()
+      this.rejectCard(card)
       return
     }
+    this.placeCorrect(card, zone)
+  }
 
+  private rejectCard(card: ItemCard) {
+    this.errors++
+    this.playError()
+    this.cameras.main.shake(140, 0.005)
+    this.tweenCardHome(card)
+    runtimeGameBridge.emit({
+      type: 'WRONG_ANSWER', gameId: GAME_ID,
+      pointsEarned: -2, stage: this.levelConfig.level,
+    })
+    this.emitCheckpoint()
+  }
+
+  private placeCorrect(card: ItemCard, zone: ZoneView) {
     card.placed = true
+    card.staged = false
     card.container.disableInteractive()
     this.playCorrect()
 
-    const slot = this.slotPosition(zone)
+    const slot = this.slotPosition(zone, zone.filled)
     zone.filled++
     this.placedCount++
 
@@ -473,9 +510,7 @@ export class GameScene extends Phaser.Scene {
       duration: 280, ease: 'Back.Out',
     })
 
-    this.factText?.setText(card.item.fact)
-    this.factText?.setAlpha(0)
-    this.tweens.add({ targets: this.factText, alpha: 1, duration: 200 })
+    this.showFact(card.item.fact)
 
     runtimeGameBridge.emit({
       type: 'CORRECT_ANSWER', gameId: GAME_ID,
@@ -483,17 +518,164 @@ export class GameScene extends Phaser.Scene {
     })
     this.currentPoints += 5
 
-    if (this.placedCount >= this.requiredCount) {
-      this.hits++
-      this.phase = 'feedback'
-      this.time.delayedCall(900, () => this.celebrateZones())
-    }
+    if (this.placedCount >= this.requiredCount) this.finishMission()
   }
 
-  private slotPosition(zone: ZoneView) {
+  private showFact(fact: string) {
+    this.factText?.setText(fact)
+    this.factText?.setAlpha(0)
+    this.tweens.add({ targets: this.factText, alpha: 1, duration: 200 })
+  }
+
+  private finishMission() {
+    this.hits++
+    this.phase = 'feedback'
+    this.time.delayedCall(900, () => this.celebrateZones())
+  }
+
+  private stagePending(card: ItemCard, zone: ZoneView) {
+    if (this.pending && this.pending.card !== card) this.tweenCardHome(this.pending.card)
+    this.pending = { card, zone }
+    this.playTick()
+
+    const slot = this.slotPosition(zone, zone.filled)
+    this.tweens.add({
+      targets: card.container,
+      x: slot.x, y: slot.y, scale: SLOT / CARD_W,
+      duration: 260, ease: 'Back.Out',
+    })
+    this.drawZoneFrame(zone.frame, zone.x, zone.y, zone.w, zone.h, this.zoneColor(zone.def.kind), true)
+
+    this.showConfirmBar(
+      `Você escolheu ${card.item.name}. É esse mesmo?`,
+      'Sim, é esse', () => this.confirmPending(),
+      'Trocar', () => this.cancelPending(),
+    )
+  }
+
+  private confirmPending() {
+    if (!this.pending) return
+    const { card, zone } = this.pending
+    this.pending = undefined
+    this.hideConfirmBar()
+    this.clearZoneHighlights()
+    this.judgeDrop(card, zone)
+  }
+
+  private cancelPending() {
+    if (!this.pending) return
+    const { card } = this.pending
+    this.pending = undefined
+    this.hideConfirmBar()
+    this.clearZoneHighlights()
+    this.playTick()
+    this.tweenCardHome(card)
+  }
+
+  private stageForAssembly(card: ItemCard, zone: ZoneView) {
+    zone.staged.push(card)
+    card.staged = true
+    this.playTick()
+    this.reflowZone(zone)
+    this.showAssemblyBar()
+  }
+
+  private unstage(card: ItemCard) {
+    const zone = this.zones.find(z => z.staged.includes(card))
+    if (!zone) return
+    zone.staged = zone.staged.filter(c => c !== card)
+    card.staged = false
+    this.reflowZone(zone)
+    if (!this.zones.some(z => z.staged.length)) this.hideConfirmBar()
+  }
+
+  private reflowZone(zone: ZoneView) {
+    zone.staged.forEach((c, i) => {
+      const slot = this.slotPosition(zone, i)
+      this.tweens.add({
+        targets: c.container,
+        x: slot.x, y: slot.y, scale: SLOT / CARD_W,
+        duration: 240, ease: 'Back.Out',
+      })
+    })
+  }
+
+  private showAssemblyBar() {
+    const total = this.zones.reduce((acc, z) => acc + z.staged.length, 0)
+    const msg = total === 1
+      ? '1 item na máquina. Arraste para fora para tirar.'
+      : `${total} itens na máquina. Arraste para fora para tirar.`
+
+    if (this.confirmBar) {
+      this.confirmMsg?.setText(msg)
+      return
+    }
+
+    this.showConfirmBar(msg, 'Está pronto', () => this.confirmAssembly())
+  }
+
+  private confirmAssembly() {
+    const zone = this.zones[0]
+    const staged = [...zone.staged]
+    const wrong = staged.filter(c => !zone.def.acceptIds.includes(c.item.id))
+
+    if (wrong.length) {
+      this.errors += wrong.length
+      this.playError()
+      this.cameras.main.shake(160, 0.005)
+      wrong.forEach(c => {
+        zone.staged = zone.staged.filter(s => s !== c)
+        this.tweenCardHome(c)
+      })
+      this.reflowZone(zone)
+      runtimeGameBridge.emit({
+        type: 'WRONG_ANSWER', gameId: GAME_ID,
+        pointsEarned: -2, stage: this.levelConfig.level,
+      })
+      this.emitCheckpoint()
+      this.confirmMsg?.setText(
+        wrong.length === 1
+          ? 'Um item não é desta máquina. Ele voltou para cima.'
+          : 'Alguns itens não são desta máquina. Eles voltaram para cima.')
+      return
+    }
+
+    const faltam = this.requiredCount - staged.length
+    if (faltam > 0) {
+      this.playError()
+      this.confirmMsg?.setText(faltam === 1
+        ? 'Está quase! Ainda falta 1 item.'
+        : `Está quase! Ainda faltam ${faltam} itens.`)
+      return
+    }
+
+    this.hideConfirmBar()
+    this.playCorrect()
+
+    staged.forEach((c, i) => {
+      c.placed = true
+      c.staged = false
+      c.container.disableInteractive()
+      zone.filled = i + 1
+    })
+    this.placedCount = staged.length
+    zone.staged = []
+
+    this.showFact(staged[staged.length - 1].item.fact)
+    this.currentPoints += 5 * staged.length
+
+    runtimeGameBridge.emit({
+      type: 'CORRECT_ANSWER', gameId: GAME_ID,
+      pointsEarned: 5 * staged.length, stage: this.levelConfig.level,
+    })
+
+    this.finishMission()
+  }
+
+  private slotPosition(zone: ZoneView, index: number) {
     const perRow = Math.max(1, Math.floor((zone.w - 40) / (SLOT + 16)))
-    const col = zone.filled % perRow
-    const row = Math.floor(zone.filled / perRow)
+    const col = index % perRow
+    const row = Math.floor(index / perRow)
     const rowW = perRow * SLOT + (perRow - 1) * 16
     const startX = zone.x + zone.w / 2 - rowW / 2 + SLOT / 2
     return {
@@ -965,6 +1147,75 @@ export class GameScene extends Phaser.Scene {
 
     this.playTone(330, 0.30, 'square', 0.18)
     this.time.delayedCall(100, () => this.playTone(220, 0.40, 'square', 0.16))
+  }
+
+  private showConfirmBar(
+    message: string,
+    okLabel: string,
+    onOk: () => void,
+    cancelLabel?: string,
+    onCancel?: () => void,
+  ) {
+    this.hideConfirmBar()
+
+    const bar = this.add.container(640, BAR_Y).setDepth(80)
+    const bg = this.add.graphics()
+    bg.fillStyle(0x0B1220, 0.55)
+    bg.fillRoundedRect(-404, -35, 808, 78, 22)
+    bg.fillStyle(C.offWhite, 0.98)
+    bg.fillRoundedRect(-400, -39, 800, 78, 22)
+    bg.lineStyle(5, C.blue, 0.95)
+    bg.strokeRoundedRect(-400, -39, 800, 78, 22)
+
+    this.confirmMsg = this.add.text(-376, 0, message, {
+      fontFamily: 'Arial Black, Arial', fontSize: '19px', color: '#1E293B',
+      wordWrap: { width: 400 },
+    }).setOrigin(0, 0.5).setResolution(2)
+
+    const parts: Phaser.GameObjects.GameObject[] = [bg, this.confirmMsg]
+
+    if (cancelLabel && onCancel) {
+      parts.push(this.smallButton(110, 0, 170, cancelLabel, C.slate, onCancel))
+      parts.push(this.smallButton(300, 0, 180, okLabel, C.green, onOk))
+    } else {
+      parts.push(this.smallButton(290, 0, 200, okLabel, C.green, onOk))
+    }
+
+    bar.add(parts)
+    bar.setAlpha(0).setY(BAR_Y + 26)
+    this.tweens.add({ targets: bar, alpha: 1, y: BAR_Y, duration: 220, ease: 'Back.easeOut' })
+    this.confirmBar = bar
+  }
+
+  private hideConfirmBar() {
+    if (!this.confirmBar) return
+    const bar = this.confirmBar
+    this.confirmBar = undefined
+    this.confirmMsg = undefined
+    this.tweens.add({
+      targets: bar, alpha: 0, y: BAR_Y + 20, duration: 180,
+      onComplete: () => bar.destroy(),
+    })
+  }
+
+  private smallButton(x: number, y: number, w: number, label: string, color: number, onClick: () => void) {
+    const btn = this.add.container(x, y)
+    const bg = this.add.graphics()
+    bg.fillStyle(color, 1)
+    bg.fillRoundedRect(-w / 2, -25, w, 50, 25)
+    bg.fillStyle(C.white, 0.2)
+    bg.fillRoundedRect(-w / 2 + 7, -20, w - 14, 15, 8)
+    const text = this.add.text(0, 0, label, {
+      fontFamily: 'Arial Black, Arial', fontSize: '18px', color: '#FFFFFF',
+      align: 'center', wordWrap: { width: w - 20 },
+    }).setOrigin(0.5).setResolution(2)
+    btn.add([bg, text])
+    btn.setSize(w, 56)
+    btn.setInteractive({ useHandCursor: true })
+    btn.on('pointerover', () => this.tweens.add({ targets: btn, scale: 1.05, duration: 90 }))
+    btn.on('pointerout', () => this.tweens.add({ targets: btn, scale: 1, duration: 90 }))
+    btn.on('pointerdown', () => { this.playTick(); onClick() })
+    return btn
   }
 
   private createModalButton(x: number, y: number, label: string, color: number, onClick: () => void) {

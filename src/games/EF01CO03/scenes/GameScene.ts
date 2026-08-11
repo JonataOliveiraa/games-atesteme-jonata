@@ -118,57 +118,96 @@ export class GameScene extends Phaser.Scene {
     const cardsY = lvl === 1 ? 378 : 366;
     const slotsY = lvl === 1 ? 214 : 202;
     const buttonY = lvl === 1 ? 478 : 486;
+    const cardCount = this.steps.length;
+    const slotCount = this.currentLevel.correctOrder.length;
+    const cardAreaW = lvl === 1 ? 440 : cardCount <= 6 ? 880 : 940;
+    const slotAreaW = lvl === 1 ? 540 : slotCount === 5 ? 780 : 850;
 
     const steps: TutorialStep[] = [];
 
     if (lvl === 1) {
       steps.push(
         {
-          text: 'Estes cartões mostram os passos, mas estão fora de ordem.',
-          shape: 'rect', x: 480, y: cardsY, w: 420, h: 150, balloonY: 140, balloonX: 480,
-        },
-        {
-          text: 'Aqui é o lugar de cada passo, na ordem 1, 2, 3.',
-          shape: 'rect', x: 480, y: slotsY, w: 520, h: 150, balloonY: 420,
-        },
-        {
-          text: 'Arraste um cartão até o quadradinho certo, sem soltar o dedo no caminho.',
+          text: 'Arraste os cartoes de baixo.',
           shape: 'rect',
-          x: firstCard && firstSlot ? (firstCard.x + firstSlot.x) / 2 : 480,
-          y: firstCard && firstSlot ? (firstCard.y + firstSlot.y) / 2 : 300,
-          w: firstCard && firstSlot ? Math.abs(firstSlot.x - firstCard.x) + 230 : 400,
-          h: firstCard && firstSlot ? Math.abs(firstSlot.y - firstCard.y) + 230 : 260,
-          balloonY: 90,
-          balloonX: 580,
+          x: 480,
+          y: cardsY,
+          w: cardAreaW,
+          h: 150,
+          balloonX: 480,
+          balloonY: 150,
+        },
+        {
+          text: 'Solte nos espacos 1, 2 e 3.',
+          shape: 'rect',
+          x: 480,
+          y: slotsY,
+          w: slotAreaW,
+          h: 150,
+          balloonX: 480,
+          balloonY: 360,
           pointer: firstCard && firstSlot
             ? { fromX: firstCard.x, fromY: firstCard.y, toX: firstSlot.x, toY: firstSlot.y }
             : undefined,
         },
         {
-          text: 'Quando preencher tudo, toque em Testar algoritmo.',
-          shape: 'rect', x: 480, y: buttonY, w: 300, h: 90,
+          text: 'Tudo pronto? Toque em testar.',
+          shape: 'rect',
+          x: 480,
+          y: buttonY,
+          w: 320,
+          h: 80,
+          balloonX: 480,
+          balloonY: 260,
+          buttonLabel: 'Comecar',
         },
       );
     } else if (lvl === 2) {
       steps.push(
         {
-          text: 'Agora são cinco passos — e um cartão que não faz parte da sequência.',
-          shape: 'rect', x: 480, y: cardsY, w: 900, h: 150,
+          text: 'Monte so os passos certos.',
+          shape: 'rect',
+          x: 480,
+          y: cardsY,
+          w: cardAreaW,
+          h: 150,
+          balloonX: 480,
+          balloonY: 150,
         },
         {
-          text: 'Deixe o cartão intruso de fora do caminho.',
-          shape: 'none', balloonY: 400,
+          text: 'Um cartao nao entra na sequencia.',
+          shape: 'rect',
+          x: 480,
+          y: slotsY,
+          w: slotAreaW,
+          h: 150,
+          balloonX: 480,
+          balloonY: 350,
+          buttonLabel: 'Entendi',
         },
       );
     } else if (lvl === 3) {
       steps.push(
         {
-          text: 'Este é o desafio maior: seis passos e dois cartões que não pertencem à sequência.',
-          shape: 'rect', x: 480, y: cardsY, w: 950, h: 150,
+          text: 'Escolha os seis passos corretos.',
+          shape: 'rect',
+          x: 480,
+          y: cardsY,
+          w: cardAreaW,
+          h: 150,
+          balloonX: 480,
+          balloonY: 150,
         },
         {
-          text: 'Leia cada cartão com calma antes de arrastar.',
-          shape: 'none', balloonY: 400,
+          text: 'Deixe os intrusos fora.',
+          shape: 'rect',
+          x: 480,
+          y: slotsY,
+          w: slotAreaW,
+          h: 150,
+          balloonX: 480,
+          balloonY: 350,
+          buttonLabel: 'Entendi',
         },
       );
     }
@@ -178,11 +217,11 @@ export class GameScene extends Phaser.Scene {
     createTutorial(this, {
       key: `algoritmos-l${lvl}`,
       accent: COLORS.softOrange,
-      onFinish: () => { /* cartões já ficam livres assim que a tutorial fecha */ },
+      safeTop: 16,
+      onFinish: () => { /* cartoes ja ficam livres assim que a tutorial fecha */ },
       steps,
     });
   }
-
   private createBackground() {
     const backgroundKey =
       this.currentLevel.level === 2
@@ -1324,3 +1363,4 @@ export class GameScene extends Phaser.Scene {
     });
   }
 }
+

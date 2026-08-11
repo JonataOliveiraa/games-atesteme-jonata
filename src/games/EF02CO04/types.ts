@@ -9,6 +9,8 @@ export interface MuseumItem {
   fact: string
 }
 
+export type ConfirmMode = 'imediato' | 'porItem' | 'montagem'
+
 export interface DropZoneDef {
   id: string
   label: string
@@ -34,6 +36,8 @@ export interface LevelConfig {
 }
 
 export interface ItemCard {
+  confirmMode?: ConfirmMode
+  staged?: boolean
   container: Phaser.GameObjects.Container
   item: MuseumItem
   homeX: number
