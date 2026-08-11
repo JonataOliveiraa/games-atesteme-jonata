@@ -810,8 +810,6 @@ export class GameScene extends Phaser.Scene {
         for (let x = midX + RAIL.pulseGap / 2; x < x2; x += RAIL.pulseGap) g.fillCircle(x, y2, RAIL.pulseR * 0.5)
     }
 
-    // ----------------------------------------------------------------- painel
-
     private buildPanel() {
         const g = this.add.graphics()
         g.fillStyle(C.shadow, 0.28)
@@ -821,7 +819,6 @@ export class GameScene extends Phaser.Scene {
         g.lineStyle(4, C.gold, 1)
         g.strokeRoundedRect(PANEL.x, PANEL.y, PANEL.w, PANEL.h, PANEL.r)
         g.fillStyle(C.sky, 1)
-        g.fillRoundedRect(PANEL.x + 16, PANEL.y + 16, PANEL.barW, PANEL.h - 32, PANEL.barW / 2)
 
         this.panelIcon = this.add.graphics()
         this.paintPanelIcon(C.sky)

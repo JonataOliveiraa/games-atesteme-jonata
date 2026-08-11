@@ -266,11 +266,10 @@ export class GameScene extends Phaser.Scene {
     panel.fillStyle(0x0c3b2e, 0.98)
     panel.fillRoundedRect(640 - PW / 2, 380 - PH / 2, PW, PH, 24)
     panel.fillStyle(0x1B5E20, 0.78)
-    panel.fillRoundedRect(640 - PW / 2, 380 - PH / 2, PW, 92, 24)
+    panel.fillRoundedRect(640 - PW / 2, 380 - PH / 2, PW, 115, 24)
     panel.lineStyle(5, 0xA5D6A7, 0.95)
     panel.strokeRoundedRect(640 - PW / 2, 380 - PH / 2, PW, PH, 24)
     panel.lineStyle(2, 0xC8E6C9, 0.28)
-    panel.lineBetween(640 - PW / 2 + 34, 210, 640 + PW / 2 - 34, 210)
 
     const prompt = this.add.text(640, 165, situation.prompt, {
       fontSize: '25px', fontFamily: 'Arial Black, Arial', color: '#E8F5E9',
@@ -289,7 +288,7 @@ export class GameScene extends Phaser.Scene {
     const n = situation.options.length
     const totalW = n * CARD_W + (n - 1) * CARD_GAP
     const startX = 640 - totalW / 2 + CARD_W / 2
-    const cardY = 330
+    const cardY = 388
 
     const drawRing = (ring: Phaser.GameObjects.Graphics, cx: number, cy: number, color: number, thickness: number) => {
       ring.clear()
@@ -303,7 +302,7 @@ export class GameScene extends Phaser.Scene {
       ring.strokeRoundedRect(cx - CARD_W / 2, cy - CARD_H / 2, CARD_W, CARD_H, 18)
     }
 
-    const confirmBtn = this.makeButton(640, 560, 260, 62, 'Confirmar', 0x2E7D32, () => {
+    const confirmBtn = this.makeButton(640, 580, 260, 62, 'Confirmar', 0x2E7D32, () => {
       if (resolved || !selectedId) return
       resolved = true
       this.resolveAnswer(entry, situation, selectedId, cards, drawRing, container, confirmBtn)
@@ -407,7 +406,7 @@ export class GameScene extends Phaser.Scene {
       })
     }
 
-    const feedback = this.add.text(640, 505,
+    const feedback = this.add.text(640, 529,
       (correct ? 'Muito bem! ' : chosenId === null ? 'O tempo acabou! ' : 'Tente outra vez. ') + situation.justification, {
       fontSize: '20px', fontFamily: 'Arial', color: correct ? '#A5D6A7' : '#FFCDD2',
       align: 'center', wordWrap: { width: 860 },

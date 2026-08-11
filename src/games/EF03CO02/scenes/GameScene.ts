@@ -208,6 +208,20 @@ export class GameScene extends Phaser.Scene {
         this.add.rectangle(L.W / 2, L.H / 2, L.W, L.H, C.borda, 0.46).setDepth(1)
     }
 
+    private plannedPathCells(ch: MazeChallenge) {
+        const path = new Set<string>()
+        path.add(ch.start.c + ',' + ch.start.r)
+
+        const result = simulate(ch, ch.solution)
+        result.trace.forEach(step => {
+            if (step.kind === 'avancar') {
+                path.add(step.after.c + ',' + step.after.r)
+            }
+        })
+
+        return path
+    }
+
     private drawBoard() {
         this.boardLayer.removeAll(true)
         this.trailLayer.removeAll(true)
@@ -220,6 +234,7 @@ export class GameScene extends Phaser.Scene {
         this.badge = undefined
 
         const ch = this.challenge
+        const plannedPath = this.plannedPathCells(ch)
         const o = L.boardOrigin(ch)
 
         const frame = this.add.graphics()
@@ -232,14 +247,14 @@ export class GameScene extends Phaser.Scene {
         for (let r = 0; r < ch.height; r++) {
             for (let c = 0; c < ch.width; c++) {
                 const p = L.cellCenter(ch, c, r)
-                const isWall = ch.walls.some(w => w.c === c && w.r === r)
                 const isGoal = ch.goal.c === c && ch.goal.r === r
                 const isStart = ch.start.c === c && ch.start.r === r
+                const isPath = plannedPath.has(c + ',' + r)
 
-                const key = isWall ? 'tile-piso'
-                    : isGoal ? 'tile-objetivo'
-                        : isStart ? 'tile-partida'
-                            : 'tile-parede'
+                const key = isGoal ? 'tile-objetivo'
+                    : isStart ? 'tile-partida'
+                        : isPath ? 'tile-parede'
+                            : 'tile-piso'
 
                 this.boardLayer.add(
                     this.add.image(p.x, p.y, key).setDisplaySize(L.TILE, L.TILE),
