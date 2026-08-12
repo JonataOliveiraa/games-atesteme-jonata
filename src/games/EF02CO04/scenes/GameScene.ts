@@ -116,8 +116,13 @@ export class GameScene extends Phaser.Scene {
     this.createHeaderTexts()
     this.registerPlatformCommands()
 
-    EventBus.on('mute-audio', (m: boolean) => { this.isMuted = m }, this)
-    EventBus.on('show-tutorial', () => this.replayTutorial(), this)
+    EventBus.on('mute-audio', this.onMuteAudio, this)
+    EventBus.on('show-tutorial', this.onShowTutorial, this)
+
+    // Phaser não chama `shutdown()` da classe automaticamente: sem este vínculo com o
+    // evento do ciclo de vida os listeners acima sobrevivem à destruição da cena.
+    this.events.once('shutdown', this.handleShutdown, this)
+
     runtimeGameBridge.emit({ type: 'GAME_READY', gameId: GAME_ID })
 
     this.broadcastMissionState()
@@ -126,7 +131,15 @@ export class GameScene extends Phaser.Scene {
     this.showLevelIntroScreen()
   }
 
-  shutdown() {
+  private onMuteAudio(muted: boolean) {
+    this.isMuted = muted
+  }
+
+  private onShowTutorial() {
+    this.replayTutorial()
+  }
+
+  private handleShutdown() {
     this.timerActive = false
     this.timerTween?.stop()
     this.warningBeepTimer?.destroy()
@@ -135,8 +148,8 @@ export class GameScene extends Phaser.Scene {
     this.clearOverlay()
     this.clearTutorial()
 
-    EventBus.off('mute-audio', undefined, this)
-    EventBus.off('show-tutorial', undefined, this)
+    EventBus.off('mute-audio', this.onMuteAudio, this)
+    EventBus.off('show-tutorial', this.onShowTutorial, this)
 
     this.unsubPlatform?.()
     this.unsubPlatform = undefined

@@ -126,7 +126,7 @@ export class GameScene extends Phaser.Scene {
     }).setOrigin(0.5)
 
     const timerNote = this.levelConfig.perSituationTimer
-      ? this.add.text(640, 415, `Tempo: ${this.levelConfig.perSituationTimer}s para cada resposta`, {
+      ? this.add.text(640, 430, `Tempo: ${this.levelConfig.perSituationTimer}s para cada resposta`, {
         fontSize: '24px', fontFamily: 'Arial Black', color: '#FFD54F',
       }).setOrigin(0.5)
       : null
