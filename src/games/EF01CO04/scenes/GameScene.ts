@@ -14,14 +14,42 @@ type SceneState = 'tutorial' | 'map' | 'registering' | 'transmitting' | 'compari
 
 const POINTS_PER_CHANNEL = 5
 const WRONG_CHANNEL_PENALTY = 5
-
+const ACTION_ICON = 104
+const MODAL_WAVE_H = 30   // altura da faixa (era ~86)
+const MODAL_WAVE_R = 18   // raio das bolinhas (era 42)
 const ORIGIN_X = 200, ORIGIN_Y = 250
 const DEST_X = 1080, DEST_Y = 250
 const REQUEST_Y = 458
 const STATION_Y = 618
 const MODAL_X = 640, MODAL_Y = 380
+const MODAL_W = 600, MODAL_H = 640   // ← modal maior, cabe tudo sem apertar
 const BRUSH_KEY = 'brush_dot'
 const MIN_STROKES = 55
+const INTERFACE_BLUE = 0xa2cefe
+const INTERFACE_BLUE_DARK = 0x2d6fb7
+const INTERFACE_BLUE_LIGHT = 0xdcf1ff
+const TEXT_STROKE = '#071827'
+
+// paleta das alternativas
+const OPTION_COLORS = [
+  { fill: 0xf9ce5d, dark: 0xb8902c },  // amarelo
+  { fill: 0x85b47e, dark: 0x57804f },  // verde
+  { fill: 0xea6f67, dark: 0xa94840 },  // vermelho
+  { fill: 0x5882ac, dark: 0x365b80 },  // azul
+]
+
+const BUTTON_DEFAULT = { fill: 0x63b5f8, dark: INTERFACE_BLUE_DARK }
+
+// título com bg próprio, diferente do azul do modal
+const TITLE_BG = 0x5882ac
+const TITLE_BG_DARK = 0x365b80
+
+const SOUND_COLORS = [
+  { fill: 0xffd166, border: 0xd98a00 }, // amarelo
+  { fill: 0xff9aa2, border: 0xd6455a }, // rosa
+  { fill: 0x9ae6b4, border: 0x2f855a }, // verde
+  { fill: 0xa5b4fc, border: 0x4c51bf }, // roxo (reserva p/ 4 opções)
+]
 
 export class GameScene extends Phaser.Scene {
   private currentLevelIndex = 0
@@ -45,6 +73,7 @@ export class GameScene extends Phaser.Scene {
   private revealImage?: Phaser.GameObjects.Image
   private strokeCount = 0
   private isDrawing = false
+  private optionsCache: Map<string, string[]> = new Map()
 
   private completedChannelsThisRound: Set<ChannelType> = new Set()
   private removeCommandListener!: () => void
@@ -172,6 +201,7 @@ export class GameScene extends Phaser.Scene {
     this.buildEnvironment()
     this.startMission()
     this.runLevelTutorial()
+    this.optionsCache.clear()
   }
 
   private buildEnvironment() {
@@ -270,30 +300,48 @@ export class GameScene extends Phaser.Scene {
     const spacing = 86
     const startX = -(spacing * (channels.length - 1)) / 2
     const cardW = Math.max(280, channels.length * spacing + 80)
-    const cardH = 118
-    const headerH = 38
+    const cardH = 122
+    const headerH = 40
+    const r = 22
 
     const card = this.add.graphics()
-    card.fillStyle(0x000000, 0.18)
-    card.fillRoundedRect(-cardW / 2 + 5, -cardH / 2 + 6, cardW, cardH, 20)
-    card.fillStyle(0xffffff, 0.97)
-    card.fillRoundedRect(-cardW / 2, -cardH / 2, cardW, cardH, 20)
-    card.lineStyle(4, 0x4e9b35, 1)
-    card.strokeRoundedRect(-cardW / 2, -cardH / 2, cardW, cardH, 20)
-    card.fillStyle(0x87d251, 1)
-    card.fillRoundedRect(-cardW / 2, -cardH / 2, cardW, headerH, { tl: 20, tr: 20, bl: 0, br: 0 })
 
-    const label = this.add.text(0, -cardH / 2 + headerH / 2, 'QUER RECEBER POR', {
+    // sombra
+    card.fillStyle(0x000000, 0.20)
+    card.fillRoundedRect(-cardW / 2 + 5, -cardH / 2 + 7, cardW, cardH, r)
+
+    // moldura escura + corpo claro (mesmo esquema do modal)
+    card.fillStyle(INTERFACE_BLUE_DARK, 1)
+    card.fillRoundedRect(-cardW / 2, -cardH / 2, cardW, cardH, r)
+    card.fillStyle(0xffffff, 0.97)
+    card.fillRoundedRect(-cardW / 2 + 5, -cardH / 2 + 5, cardW - 10, cardH - 10, r - 4)
+
+    // cabeçalho azul
+    card.fillStyle(INTERFACE_BLUE_DARK, 1)
+    card.fillRoundedRect(-cardW / 2, -cardH / 2, cardW, headerH + 5, { tl: r, tr: r, bl: 0, br: 0 })
+    card.fillStyle(0x63b5f8, 1)
+    card.fillRoundedRect(-cardW / 2 + 5, -cardH / 2 + 5, cardW - 10, headerH, { tl: r - 4, tr: r - 4, bl: 0, br: 0 })
+    card.fillStyle(0xffffff, 0.22)
+    card.fillRoundedRect(-cardW / 2 + 16, -cardH / 2 + 9, cardW - 32, 15, 8)
+
+    // faixa clara atrás dos ícones
+    card.fillStyle(INTERFACE_BLUE_LIGHT, 1)
+    card.fillRoundedRect(-cardW / 2 + 14, -cardH / 2 + headerH + 14, cardW - 28, cardH - headerH - 28, 16)
+
+    const label = this.add.text(0, -cardH / 2 + 5 + headerH / 2, 'QUER RECEBER POR', {
       fontFamily: 'Arial Black, Arial',
       fontSize: '17px',
-      color: '#ffffff'
+      color: '#ffffff',
+      stroke: TEXT_STROKE,
+      strokeThickness: 4
     }).setOrigin(0.5).setResolution(2)
 
     this.requestIndicatorContainer.add([card, label])
 
+    const badgeY = -cardH / 2 + headerH + (cardH - headerH) / 2 + 2
     channels.forEach((channel, i) => {
       const station = STATIONS.find(s => s.channel === channel)!
-      const badge = this.fitted(startX + i * spacing, 22, station.textureKey, 58)
+      const badge = this.fittedContain(startX + i * spacing, badgeY, station.textureKey, 58, 54)
       this.requestIndicatorContainer.add(badge)
       this.requestBadges.set(channel, badge)
     })
@@ -352,7 +400,6 @@ export class GameScene extends Phaser.Scene {
     this.tutorialObjects = []
   }
 
-  /** Escurece a tela e abre um recorte (círculo ou retângulo) sem borda. */
   private spotlight(
     rt: Phaser.GameObjects.RenderTexture,
     shape: 'circle' | 'rect',
@@ -373,36 +420,49 @@ export class GameScene extends Phaser.Scene {
     const overlay = this.add.rectangle(640, 360, 1280, 720, 0x000000, 0.62)
       .setDepth(600).setInteractive()
     const panel = this.add.container(640, 360).setDepth(601)
-    panel.add(this.createModalBackground(620, 420))
+    panel.add(this.createModalBackground(620, 470))
 
-    const badge = this.add.text(0, -150, `NÍVEL ${level.level} DE ${LEVELS.length}`, {
-      fontFamily: 'Arial Black, Arial', fontSize: '20px', color: '#eaffea'
+    // ── selo "NÍVEL X DE Y": texto claro sobre pílula escura ──
+    const badgeTxt = this.add.text(0, -168, `NÍVEL ${level.level} DE ${LEVELS.length}`, {
+      fontFamily: 'Arial Black, Arial', fontSize: '20px', color: '#ffffff'
     }).setOrigin(0.5).setResolution(2)
 
-    const title = this.add.text(0, -98, level.title, {
-      fontFamily: 'Arial Black, Arial', fontSize: '32px', color: '#ffffff',
-      align: 'center', wordWrap: { width: 520 }
-    }).setOrigin(0.5).setResolution(2)
+    const bw = badgeTxt.width + 46
+    const bh = badgeTxt.height + 18
+    const badgeBg = this.add.graphics()
+    badgeBg.fillStyle(0x000000, 0.16); badgeBg.fillRoundedRect(-bw / 2, -168 - bh / 2 + 4, bw, bh, bh / 2)
+    badgeBg.fillStyle(TITLE_BG_DARK, 1); badgeBg.fillRoundedRect(-bw / 2, -168 - bh / 2, bw, bh, bh / 2)
+    badgeBg.fillStyle(0xffffff, 0.20); badgeBg.fillRoundedRect(-bw / 2 + 10, -168 - bh / 2 + 4, bw - 20, bh * 0.34, bh * 0.2)
 
-    const objective = this.add.text(0, -28, level.objective, {
-      fontFamily: 'Arial', fontStyle: 'bold', fontSize: '19px', color: '#eaffea',
+    // ── textos escuros sobre o azul claro ──
+    const title = this.add.text(0, -100, level.title, {
+      fontFamily: 'Arial Black, Arial', fontSize: '32px', color: '#123b5e',
       align: 'center', wordWrap: { width: 500 }
     }).setOrigin(0.5).setResolution(2)
 
-    const phaseLabel = this.add.text(0, 56, `${level.missions.length} fases neste nível`, {
-      fontFamily: 'Arial', fontStyle: 'bold', fontSize: '15px', color: '#c9f0c9'
+    const objective = this.add.text(0, -20, level.objective, {
+      fontFamily: 'Arial', fontStyle: 'bold', fontSize: '19px', color: '#24506f',
+      align: 'center', wordWrap: { width: 480 }
     }).setOrigin(0.5).setResolution(2)
 
+    const phaseLabel = this.add.text(0, 56, `${level.missions.length} fases neste nível`, {
+      fontFamily: 'Arial', fontStyle: 'bold', fontSize: '15px', color: '#365b80'
+    }).setOrigin(0.5).setResolution(2)
+
+    // ── bolinhas de progresso com contorno, pra lerem sobre o azul ──
     const dots = this.add.graphics()
     const gap = 30
     const startX = -((level.missions.length - 1) * gap) / 2
     level.missions.forEach((_, i) => {
-      dots.fillStyle(0xffffff, i === 0 ? 1 : 0.32)
-      dots.fillCircle(startX + i * gap, 90, 9)
+      const cx = startX + i * gap
+      dots.fillStyle(i === 0 ? TITLE_BG_DARK : 0xffffff, i === 0 ? 1 : 0.85)
+      dots.fillCircle(cx, 88, 9)
+      dots.lineStyle(3, TITLE_BG_DARK, 1)
+      dots.strokeCircle(cx, 88, 9)
     })
 
     const btn = this.createThemedButton(300, 60, 'Começar')
-    btn.setPosition(0, 152)
+    btn.setPosition(0, 156)
     btn.setInteractive({ cursor: 'pointer' })
     btn.on('pointerdown', () => {
       this.playTick()
@@ -412,7 +472,7 @@ export class GameScene extends Phaser.Scene {
       })
     })
 
-    panel.add([badge, title, objective, phaseLabel, dots, btn])
+    panel.add([badgeBg, badgeTxt, title, objective, phaseLabel, dots, btn])
     panel.setScale(0.9).setAlpha(0)
     this.tweens.add({ targets: panel, alpha: 1, scale: 1, duration: 280, ease: 'Back.out' })
   }
@@ -511,71 +571,60 @@ export class GameScene extends Phaser.Scene {
     step1()
   }
 
-  // ── Registro da mensagem ───────────────────────────────────────────────
-
   private openRegistration(station: DeliveryStation) {
     this.registerContainer.removeAll(true)
     this.registerContainer.setAlpha(0).setScale(0.9)
 
     if (this.overlay) this.overlay.destroy()
-    this.overlay = this.add.rectangle(640, 360, 1280, 720, 0x000000, 0.5)
-      .setInteractive()
-      .setDepth(10)
+    this.overlay = this.add.rectangle(640, 360, 1280, 720, 0x000000, 0.5).setInteractive().setDepth(10)
 
-    this.registerContainer.add(this.createModalBackground(600, 600))
+    this.registerContainer.add(this.createModalBackground(MODAL_W, MODAL_H))
 
     if (station.channel === 'image') this.buildDrawingInteraction()
     else if (station.channel === 'text') this.buildPhraseInteraction()
     else this.buildSoundInteraction()
 
     this.registerContainer.setDepth(20)
-    this.tweens.add({
-      targets: this.registerContainer,
-      alpha: 1,
-      scale: 1,
-      duration: 300,
-      ease: 'Back.out'
-    })
+    this.tweens.add({ targets: this.registerContainer, alpha: 1, scale: 1, duration: 300, ease: 'Back.out' })
   }
 
-  /** Desenho por revelação: o pincel descobre a figura escondida no quadro. */
   private buildDrawingInteraction() {
     const item = this.currentMission.item
     this.strokeCount = 0
 
-    const title = this.add.text(0, -252, `Passe o pincel e revele o(a) ${item.nameKey}`, {
-      fontFamily: 'Arial, sans-serif',
-      fontSize: '20px',
-      color: '#1a3b1a',
-      fontStyle: 'bold',
-      align: 'center',
-      wordWrap: { width: 480 }
-    }).setOrigin(0.5)
+    const title = this.createInterfaceTitle('Passe o pincel e revele o:', 0, 470, item.nameKey)
+    const contentTop = this.layoutTitle(title)
 
-    const boardY = -40
-    const board = this.fitted(0, boardY, 'quadro_desenho', 380)
+    // espaço livre entre o título e a linha dos botões
+    const areaTop = contentTop
+    const areaBottom = this.actionRowY - ACTION_ICON / 2 - 14
+    const areaH = areaBottom - areaTop
 
-    const ART = 230
-    const guide = this.fitted(0, boardY, item.textureKey, ART).setAlpha(0.16)
+    const board = this.fittedContain(0, 0, 'quadro_desenho', 430, areaH)
+    const boardY = areaTop + board.displayHeight / 2
+    board.setY(boardY)
 
-    const reveal = this.fitted(0, boardY, item.textureKey, ART)
+    // arte proporcional ao quadro real, não a um número fixo
+    const ART = Math.round(Math.min(board.displayWidth, board.displayHeight) * 0.62)
+
+    const guide = this.fittedContain(0, boardY, item.textureKey, ART, ART).setAlpha(0.16)
+    const reveal = this.fittedContain(0, boardY, item.textureKey, ART, ART)
+
     const maskRT = this.make.renderTexture(
       { x: MODAL_X, y: MODAL_Y + boardY, width: ART, height: ART }, false
     )
-
-    this.drawMask = maskRT
-    this.revealImage = reveal
     maskRT.setOrigin(0.5)
     reveal.setMask(maskRT.createBitmapMask())
     this.drawMask = maskRT
+    this.revealImage = reveal
 
     const hitZone = this.add.zone(0, boardY, ART, ART).setInteractive({ cursor: 'crosshair' })
 
-    const confirmBtn = this.buildConfirmButton(60, 220, () => {
+    const confirmBtn = this.buildConfirmButton(78, this.actionRowY, () => {
       if (this.strokeCount < MIN_STROKES) return
       this.completeRegistration('image')
     })
-    confirmBtn.setAlpha(0.35)
+    this.setActionEnabled(confirmBtn, false)
 
     const paint = (pointer: Phaser.Input.Pointer) => {
       const lx = pointer.worldX - MODAL_X
@@ -583,16 +632,14 @@ export class GameScene extends Phaser.Scene {
       if (Math.abs(lx) > ART / 2 || Math.abs(ly) > ART / 2) return
       maskRT.draw(BRUSH_KEY, lx + ART / 2, ly + ART / 2)
       this.strokeCount++
-      if (this.strokeCount === MIN_STROKES) {
-        this.tweens.add({ targets: confirmBtn, alpha: 1, duration: 250 })
-      }
+      if (this.strokeCount === MIN_STROKES) this.setActionEnabled(confirmBtn, true)
     }
 
     hitZone.on('pointerdown', (p: Phaser.Input.Pointer) => { this.isDrawing = true; paint(p) })
     hitZone.on('pointermove', (p: Phaser.Input.Pointer) => { if (this.isDrawing) paint(p) })
     this.input.on('pointerup', () => { this.isDrawing = false })
 
-    const backBtn = this.buildBackButton(-150, 220, () => this.cancelRegistration())
+    const backBtn = this.buildBackButton(-92, this.actionRowY, () => this.cancelRegistration())
 
     this.registerContainer.add([title, board, guide, reveal, hitZone, confirmBtn, backBtn])
   }
@@ -604,144 +651,149 @@ export class GameScene extends Phaser.Scene {
     this.drawMask = undefined
   }
 
-  // Escolha de frase: uma descreve a mensagem, as outras não
   private buildPhraseInteraction() {
     const item = this.currentMission.item
     const options = this.buildPhraseOptions(item)
 
-    const title = this.add.text(0, -230, 'Qual frase conta a mesma mensagem?', {
-      fontFamily: 'Arial, sans-serif',
-      fontSize: '20px',
-      color: '#ffffff',
-      fontStyle: 'bold',
-      align: 'center',
-      wordWrap: { width: 480 }
-    }).setOrigin(0.5)
+    const title = this.createInterfaceTitle('Qual frase conta a mesma mensagem?', 0, 470)
+    const contentTop = this.layoutTitle(title)
 
-    const icon = this.fitted(0, -140, item.textureKey, 90)
+    const showcase = this.createItemShowcase(contentTop + 90, 140)
+    const box = showcase.getData('box') as number
+
+    const areaTop = showcase.y + box / 2 + 20
+    const areaBottom = this.actionRowY - ACTION_ICON / 2 - 10
+    const step = (areaBottom - areaTop) / options.length
+    const btnH = Math.min(60, step - 6)
 
     const buttons: Phaser.GameObjects.Container[] = []
     options.forEach((phrase, i) => {
-      const btn = this.createThemedButton(470, 62, phrase)
-      btn.setPosition(0, -30 + i * 82)
+      const btn = this.createThemedButton(470, btnH, phrase, OPTION_COLORS[i % OPTION_COLORS.length])
+      btn.setPosition(0, areaTop + step * i + step / 2)
       btn.setInteractive({ cursor: 'pointer' })
-
       btn.on('pointerdown', () => {
-        if (phrase === item.phrase) {
-          this.playTick()
-          this.completeRegistration('text')
-          return
-        }
+        if (phrase === item.phrase) { this.playTick(); this.completeRegistration('text'); return }
         this.cameras.main.shake(120, 0.0015)
-        this.flashButtonError(btn, 470, 62)
+        this.flashButtonError(btn, 470, btnH)
       })
-
       buttons.push(btn)
     })
 
-    const backBtn = this.buildBackButton(0, 230, () => this.cancelRegistration())
+    const backBtn = this.buildBackButton(0, this.actionRowY, () => this.cancelRegistration())
 
-    this.registerContainer.add([title, icon, ...buttons, backBtn])
+    this.registerContainer.add([title, showcase, ...buttons, backBtn])
   }
 
   private buildPhraseOptions(item: GameItem): string[] {
+    const key = `p:${this.levelConfig.level}:${this.currentMissionIndex}:${item.id}`
+    const cached = this.optionsCache.get(key)
+    if (cached) return cached
+
     const others = Object.values(CONCEPTS)
       .filter(c => c.id !== item.id)
       .map(c => c.phrase)
     const distractors = Phaser.Utils.Array.Shuffle(others).slice(0, 2)
-    return Phaser.Utils.Array.Shuffle([item.phrase, ...distractors])
+    const result = Phaser.Utils.Array.Shuffle([item.phrase, ...distractors])
+
+    this.optionsCache.set(key, result)
+    return result
   }
 
-  /** Escolha de som: o jogador ouve e identifica o som certo. */
   private buildSoundInteraction() {
     const item = this.currentMission.item
     const options = this.buildSoundOptions(item)
     let selected: string | null = null
 
-    const title = this.add.text(0, -230, 'Ouça e escolha o som certo', {
-      fontFamily: 'Arial, sans-serif',
-      fontSize: '20px',
-      color: '#ffffff',
-      fontStyle: 'bold'
-    }).setOrigin(0.5)
+    const title = this.createInterfaceTitle('Ouça e escolha o som certo', 0, 470)
+    const contentTop = this.layoutTitle(title)
 
-    const icon = this.fitted(0, -140, item.textureKey, 90)
+    const showcase = this.createItemShowcase(contentTop + 95, 150)
+    const ringsY = showcase.y + (showcase.getData('box') as number) / 2 + 74
 
     const spacing = 160
     const startX = -((options.length - 1) * spacing) / 2
-    const rings: Phaser.GameObjects.Graphics[] = []
+    const redraws: Array<(on: boolean) => void> = []
 
-    const confirmBtn = this.buildConfirmButton(60, 200, () => {
+    const confirmBtn = this.buildConfirmButton(78, this.actionRowY, () => {
       if (!selected) return
-      if (selected !== item.soundKey) {
-        this.cameras.main.shake(120, 0.002)
-        this.playError()
-        return
-      }
-      this.playTick()
+      if (selected !== item.soundKey) { this.cameras.main.shake(120, 0.002); this.playError(); return }
       this.completeRegistration('audio')
     })
-    confirmBtn.setAlpha(0.35)
-
-    const drawRing = (g: Phaser.GameObjects.Graphics, x: number, on: boolean) => {
-      g.clear()
-      g.fillStyle(on ? 0xffe08a : 0xffffff, 0.95)
-      g.fillCircle(x, 20, 52)
-      g.lineStyle(5, on ? 0xffb703 : 0x4e9b35, 1)
-      g.strokeCircle(x, 20, 52)
-    }
+    this.setActionEnabled(confirmBtn, false)
 
     options.forEach((soundKey, i) => {
-      const x = startX + i * spacing
-      const ring = this.add.graphics()
-      drawRing(ring, x, false)
-      rings.push(ring)
+      const c = SOUND_COLORS[i % SOUND_COLORS.length]
+      const R = 54
 
-      const label = this.add.text(x, 20, `Som ${i + 1}`, {
-        fontFamily: 'Arial Black, Arial',
-        fontSize: '18px',
-        color: '#1a3b1a'
-      }).setOrigin(0.5)
+      const g = this.add.graphics()
+      const draw = (on: boolean) => {
+        g.clear()
+        g.fillStyle(0x000000, 0.18); g.fillCircle(4, 6, R + 2)
+        g.fillStyle(c.fill, 1); g.fillCircle(0, 0, R)
+        g.fillStyle(0xffffff, 0.34); g.fillEllipse(-12, -22, R * 1.15, R * 0.55)
+        g.lineStyle(on ? 10 : 6, c.border, 1); g.strokeCircle(0, 0, R)
+        if (on) { g.lineStyle(4, 0xffffff, 0.92); g.strokeCircle(0, 0, R - 11) }
+      }
+      draw(false)
+      redraws.push(draw)
 
-      const hit = this.add.zone(x, 20, 110, 110).setInteractive({ cursor: 'pointer' })
-      hit.on('pointerdown', () => {
+      const icon = this.fittedContain(0, 0, 'icone_som', 58, 58)   // ← no lugar do "Som N"
+
+      const opt = this.add.container(startX + i * spacing, ringsY, [g, icon])
+      opt.setSize(R * 2 + 12, R * 2 + 12)
+      opt.setInteractive({ cursor: 'pointer' })
+
+      opt.on('pointerover', () => this.tweens.add({ targets: opt, scale: 1.07, duration: 120 }))
+      opt.on('pointerout', () => this.tweens.add({ targets: opt, scale: 1, duration: 120 }))
+      opt.on('pointerdown', () => {
         this.sound.play(soundKey)
         selected = soundKey
-        rings.forEach((r, ri) => drawRing(r, startX + ri * spacing, ri === i))
-        confirmBtn.setAlpha(1)
+        redraws.forEach((fn, ri) => fn(ri === i))
+        // pulsinho no ícone, reforça que "tocou"
+        this.tweens.add({ targets: icon, scale: icon.scale * 1.18, yoyo: true, duration: 130 })
+        this.tweens.add({ targets: opt, scale: 0.9, duration: 90, yoyo: true })
+        this.setActionEnabled(confirmBtn, true)
       })
 
-      this.registerContainer.add([ring, label, hit])
+      this.registerContainer.add(opt)
     })
 
-    const hint = this.add.text(0, 110, 'Toque em cada som para ouvir', {
-      fontFamily: 'Arial, sans-serif',
-      fontSize: '16px',
-      color: '#ffffff'
-    }).setOrigin(0.5)
+    const hint = this.add.text(0, ringsY + 100, 'Toque em cada som para ouvir', {
+      fontFamily: 'Arial, sans-serif', fontSize: '22px', color: '#ffffff',
+      fontStyle: 'bold', stroke: TEXT_STROKE, strokeThickness: 4
+    }).setOrigin(0.5).setResolution(2)
 
-    const backBtn = this.buildBackButton(-150, 200, () => this.cancelRegistration())
+    const backBtn = this.buildBackButton(-92, this.actionRowY, () => this.cancelRegistration())
 
-    this.registerContainer.add([title, icon, hint, confirmBtn, backBtn])
+    this.registerContainer.add([title, showcase, hint, confirmBtn, backBtn])
   }
 
   private buildSoundOptions(item: GameItem): string[] {
+    const key = `s:${this.levelConfig.level}:${this.currentMissionIndex}:${item.id}`
+    const cached = this.optionsCache.get(key)
+    if (cached) return cached
+
     const others = Object.values(CONCEPTS)
       .filter(c => c.soundKey && c.soundKey !== item.soundKey)
       .map(c => c.soundKey!)
     const distractors = Phaser.Utils.Array.Shuffle(others).slice(0, 2)
-    return Phaser.Utils.Array.Shuffle([item.soundKey!, ...distractors])
+    const result = Phaser.Utils.Array.Shuffle([item.soundKey!, ...distractors])
+
+    this.optionsCache.set(key, result)
+    return result
   }
 
   private flashButtonError(btn: Phaser.GameObjects.Container, w: number, h: number) {
     const bg = btn.getData('bg') as Phaser.GameObjects.Graphics
     if (!bg) return
+    const pal = (btn.getData('palette') ?? BUTTON_DEFAULT) as { fill: number; dark: number }
     bg.clear()
-    bg.fillStyle(0x4e9b35, 1)
-    bg.fillRoundedRect(-w / 2, -h / 2, w, h, 12)
+    const radius = Math.min(28, h / 2)
+    bg.fillStyle(0xa02f2f, 1)
+    bg.fillRoundedRect(-w / 2, -h / 2, w, h, radius)
     bg.fillStyle(0xff6b6b, 1)
-    bg.fillRoundedRect(-w / 2 + 4, -h / 2 + 4, w - 8, h - 8, 10)
-    this.time.delayedCall(300, () => this.redrawThemedButtonBg(bg, w, h))
+    bg.fillRoundedRect(-w / 2 + 5, -h / 2 + 5, w - 10, h - 10, radius - 4)
+    this.time.delayedCall(300, () => this.redrawThemedButtonBg(bg, w, h, pal))
   }
 
   private completeRegistration(channel: ChannelType) {
@@ -1058,8 +1110,6 @@ export class GameScene extends Phaser.Scene {
     })
   }
 
-  // DEPOIS
-  // DEPOIS
   private advanceLevel() {
     const finishedLevel = this.levelConfig.level
     this.state = 'comparing'
@@ -1068,10 +1118,10 @@ export class GameScene extends Phaser.Scene {
       showLevelComplete(this, {
         subtitle: `Nível ${finishedLevel} concluído`,
         message: LEVELS[this.currentLevelIndex + 1].objective,
-        accent: 0x4e9b35,
-        overlayColor: 0x1a3b1a,
-        titleColor: '#1a3b1a',
-        subtitleColor: '#2f7a3d',
+        accent: TITLE_BG_DARK,
+        overlayColor: 0x0f2c47,
+        titleColor: '#123b5e',
+        subtitleColor: '#2b5d85',
         progress: { total: LEVELS.length, current: finishedLevel },
         autoAdvance: {
           delay: 2300,
@@ -1095,14 +1145,14 @@ export class GameScene extends Phaser.Scene {
     showLevelComplete(this, {
       title: 'Jogo concluído!',
       subtitle: 'Você entregou todas as mensagens',
-      accent: 0x4e9b35,
-      overlayColor: 0x1a3b1a,
-      titleColor: '#1a3b1a',
-      subtitleColor: '#2f7a3d',
+      accent: TITLE_BG_DARK,
+      overlayColor: 0x0f2c47,
+      titleColor: '#123b5e',
+      subtitleColor: '#2b5d85',
       progress: { total: LEVELS.length, current: LEVELS.length },
       buttons: [
-        { label: 'Jogar novamente', color: 0x4e9b35, onClick: () => this.startGame(1, 0) },
-        { label: 'Outros jogos', color: 0x2f7a3d, onClick: () => EventBus.emit('exit-game') },
+        { label: 'Jogar novamente', color: TITLE_BG_DARK, onClick: () => this.startGame(1, 0) },
+        { label: 'Outros jogos', color: TITLE_BG, onClick: () => EventBus.emit('exit-game') },
       ],
     })
   }
@@ -1155,64 +1205,249 @@ export class GameScene extends Phaser.Scene {
     this.tweens.add({ targets: panel, alpha: 1, scale: 1, duration: 280, ease: 'Back.out' })
   }
 
-  private createThemedButton(width: number, height: number, text: string) {
-    const bg = this.add.graphics()
-    this.redrawThemedButtonBg(bg, width, height)
+  private createInterfaceTitle(text: string, y: number, width = 470, highlight?: string) {
+    const container = this.add.container(0, y)
+    const w = width
 
     const label = this.add.text(0, 0, text, {
-      fontFamily: 'Arial, sans-serif',
+      fontFamily: 'Arial Black, Arial',
+      fontSize: '22px',
+      color: '#ffffff',
+      stroke: '#1e3category',
+      strokeThickness: 5,
+      align: 'center',
+      wordWrap: { width: w - 96 }
+    }).setOrigin(0.5).setResolution(2)
+
+    const chip = highlight ? this.createHighlightChip(highlight, w - 70) : undefined
+    const chipH = chip ? (chip.getData('h') as number) * (chip.getData('base') as number) : 0
+
+    const h = Math.max(72, label.height + chipH + (chip ? 42 : 34))
+    const r = Math.min(28, h / 2)
+
+    const bg = this.add.graphics()
+    bg.fillStyle(0x000000, 0.18); bg.fillRoundedRect(-w / 2 + 5, -h / 2 + 7, w, h, r)
+    bg.fillStyle(TITLE_BG_DARK, 1); bg.fillRoundedRect(-w / 2, -h / 2, w, h, r)
+    bg.fillStyle(TITLE_BG, 1); bg.fillRoundedRect(-w / 2 + 5, -h / 2 + 5, w - 10, h - 10, Math.max(4, r - 4))
+    bg.fillStyle(0xffffff, 0.18); bg.fillRoundedRect(-w / 2 + 18, -h / 2 + 9, w - 36, 22, 14)
+
+    // posiciona texto e chip empilhados
+    label.setY(-h / 2 + 16 + label.height / 2)
+    chip?.setY(label.y + label.height / 2 + 8 + chipH / 2)
+
+    container.add(chip ? [bg, label, chip] : [bg, label])
+    container.setData('height', h)
+    return container
+  }
+
+  private createHighlightChip(word: string, maxW: number) {
+    const label = this.add.text(0, 0, word.toUpperCase(), {
+      fontFamily: 'Arial Black, Arial',
+      fontSize: '27px',
+      color: '#4a3400'
+    }).setOrigin(0.5).setResolution(2)
+
+    const cw = label.width + 52
+    const ch = label.height + 20
+    const r = ch / 2
+
+    const g = this.add.graphics()
+    g.fillStyle(0xb8902c, 1); g.fillRoundedRect(-cw / 2, -ch / 2 + 4, cw, ch, r)
+    g.fillStyle(0xf9ce5d, 1); g.fillRoundedRect(-cw / 2, -ch / 2, cw, ch, r)
+    g.fillStyle(0xffffff, 0.42); g.fillRoundedRect(-cw / 2 + 10, -ch / 2 + 5, cw - 20, ch * 0.34, r * 0.6)
+
+    const c = this.add.container(0, 0, [g, label])
+    const base = cw > maxW ? maxW / cw : 1
+    c.setScale(base)
+    c.setData('h', ch + 4)
+    c.setData('base', base)
+
+    this.tweens.add({
+      targets: c, scale: base * 1.05,
+      duration: 900, yoyo: true, repeat: -1, ease: 'Sine.inOut'
+    })
+
+    return c
+  }
+
+  private createItemShowcase(y: number, size = 150) {
+    const box = size + 40
+    const g = this.add.graphics()
+    g.fillStyle(0x000000, 0.18); g.fillRoundedRect(-box / 2 + 4, -box / 2 + 7, box, box, 30)
+    g.fillStyle(INTERFACE_BLUE_DARK, 1); g.fillRoundedRect(-box / 2, -box / 2, box, box, 30)
+    g.fillStyle(0xffffff, 0.96); g.fillRoundedRect(-box / 2 + 7, -box / 2 + 7, box - 14, box - 14, 24)
+    g.fillStyle(INTERFACE_BLUE_LIGHT, 1)
+    g.fillRoundedRect(-box / 2 + 7, -box / 2 + 7, box - 14, (box - 14) * 0.52, { tl: 24, tr: 24, bl: 0, br: 0 })
+    g.lineStyle(4, 0x071827, 1); g.strokeRoundedRect(-box / 2, -box / 2, box, box, 30)
+
+    const icon = this.fittedContain(0, 0, this.currentMission.item.textureKey, size, size)
+    const c = this.add.container(0, y, [g, icon])
+    c.setData('box', box)
+    return c
+  }
+
+  private layoutTitle(title: Phaser.GameObjects.Container) {
+    const h = title.getData('height') as number
+    title.setY(-MODAL_H / 2 + 34 + h / 2)
+    return title.y + h / 2 + 16
+  }
+
+  private get actionRowY() { return MODAL_H / 2 - 58 }  // = 262
+
+  private createThemedButton(
+    width: number, height: number, text: string,
+    palette: { fill: number; dark: number } = BUTTON_DEFAULT
+  ) {
+    const bg = this.add.graphics()
+    this.redrawThemedButtonBg(bg, width, height, palette)
+
+    const label = this.add.text(0, 0, text, {
+      fontFamily: 'Arial Black, Arial',
       fontSize: '18px',
       color: '#ffffff',
       fontStyle: 'bold',
       align: 'center',
-      wordWrap: { width: width - 30 }
+      wordWrap: { width: width - 34 },
+      stroke: '#' + palette.dark.toString(16).padStart(6, '0'),
+      strokeThickness: 5
     }).setOrigin(0.5).setResolution(2)
 
     const container = this.add.container(0, 0, [bg, label])
     container.setSize(width, height)
     container.setData('bg', bg)
+    container.setData('palette', palette)
     return container
   }
 
-  private redrawThemedButtonBg(g: Phaser.GameObjects.Graphics, width: number, height: number) {
-    const w = width, h = height, radius = 12
+  private redrawThemedButtonBg(
+    g: Phaser.GameObjects.Graphics, width: number, height: number,
+    palette: { fill: number; dark: number } = BUTTON_DEFAULT
+  ) {
+    const w = width, h = height, radius = Math.min(28, h / 2)
     g.clear()
-    g.fillStyle(0x4e9b35, 1)
+    g.fillStyle(0x000000, 0.18)
+    g.fillRoundedRect(-w / 2 + 4, -h / 2 + 6, w, h, radius)
+    g.fillStyle(palette.dark, 1)
     g.fillRoundedRect(-w / 2, -h / 2, w, h, radius)
-    g.fillStyle(0x87d251, 1)
-    g.fillRoundedRect(-w / 2 + 4, -h / 2 + 4, w - 8, h - 8, radius - 2)
-    g.lineStyle(3, 0x000f00, 1)
-    g.strokeRoundedRect(-w / 2, -h / 2, w, h, radius)
+    g.fillStyle(palette.fill, 1)
+    g.fillRoundedRect(-w / 2 + 5, -h / 2 + 5, w - 10, h - 10, radius - 4)
+    g.fillStyle(0xffffff, 0.26)
+    g.fillRoundedRect(-w / 2 + 14, -h / 2 + 9, w - 28, h * 0.34, radius - 8)
   }
+
 
   private createModalBackground(width: number, height: number) {
     const g = this.add.graphics()
-    const w = width, h = height, radius = 20, shadow = 6
+    const w = width, h = height, radius = 44, shadow = 8
+    const left = -w / 2
+    const top = -h / 2
+    const bottom = h / 2
 
-    g.fillStyle(0x4e9b35, 1)
-    g.fillRoundedRect(-w / 2, -h / 2, w, h, radius)
-    g.fillStyle(0x87d251, 1)
-    g.fillRoundedRect(-w / 2 + shadow, -h / 2 + shadow, w - shadow * 2, h - shadow * 2, radius - 2)
-    g.lineStyle(4, 0x000f00, 1)
-    g.strokeRoundedRect(-w / 2, -h / 2, w, h, radius)
+    // ── corpo do painel ──────────────────────────────────────────────
+    g.fillStyle(0x000000, 0.22)
+    g.fillRoundedRect(left + shadow, top + shadow + 3, w, h, radius)
+    g.fillStyle(INTERFACE_BLUE_DARK, 1)
+    g.fillRoundedRect(left, top, w, h, radius)
+    g.fillStyle(INTERFACE_BLUE, 1)
+    g.fillRoundedRect(left + 6, top + 6, w - 12, h - 12, radius - 6)
+
+    // ── nuvens decorativas do topo ───────────────────────────────────
+    g.fillStyle(0xffffff, 0.72)
+    g.fillCircle(left + 82, top + 84, 28)
+    g.fillCircle(left + 112, top + 72, 38)
+    g.fillCircle(left + 150, top + 88, 30)
+    g.fillRoundedRect(left + 70, top + 88, 105, 24, 12)
+
+    g.fillStyle(0xffffff, 0.58)
+    g.fillCircle(w / 2 - 170, top + 118, 22)
+    g.fillCircle(w / 2 - 142, top + 106, 32)
+    g.fillCircle(w / 2 - 106, top + 120, 24)
+    g.fillRoundedRect(w / 2 - 188, top + 120, 104, 20, 10)
+
+    g.fillStyle(0xffffff, 0.24)
+    g.fillRoundedRect(left + 28, top + 24, w - 56, 42, 22)
+
+    // ── faixa de bolinhas do rodapé ──────────────────────────────────
+    const innerR = radius - 2                                   // raio interno do painel
+    const bandTop = bottom - 6 - MODAL_WAVE_H
+    const cornerR = Math.min(innerR, MODAL_WAVE_H / 2)
+
+    const waveStart = left + innerR                             // ← início do monte
+    const waveEnd = w / 2 - innerR                              // ← fim do monte
+    const step = MODAL_WAVE_R * 1.9                             // ← espaçamento
+
+    g.fillStyle(0x5aaef0, 0.7)
+    g.fillRoundedRect(left + 6, bandTop, w - 12, MODAL_WAVE_H, {
+      tl: 0, tr: 0, bl: cornerR, br: cornerR
+    })
+    for (let x = waveStart; x <= waveEnd; x += step) {
+      g.fillCircle(x, bandTop, MODAL_WAVE_R)
+    }
+
+    g.fillStyle(0x2d6fb7, 0.28)
+    for (let x = waveStart + step / 2; x <= waveEnd; x += step * 1.2) {
+      g.fillCircle(x, bandTop + 9, MODAL_WAVE_R * 0.65)
+    }
+
+    // ── contornos ────────────────────────────────────────────────────
+    g.lineStyle(5, 0x071827, 1)
+    g.strokeRoundedRect(left, top, w, h, radius)
+    g.lineStyle(2, 0xffffff, 0.65)
+    g.strokeRoundedRect(left + 11, top + 11, w - 22, h - 22, radius - 10)
 
     return g
   }
 
+  private fittedContain(x: number, y: number, key: string, maxW: number, maxH = maxW) {
+    const { w, h } = this.srcSize(key)
+    const k = Math.min(maxW / w, maxH / h)
+    return this.add.image(x, y, key).setDisplaySize(w * k, h * k)
+  }
+
   private buildConfirmButton(x: number, y: number, onClick: () => void) {
-    const btn = this.fitted(x, y, 'botao_confirmar', 120)
-    btn.setInteractive({ cursor: 'pointer' })
-    btn.on('pointerdown', onClick)
+    const btn = this.createIconButton('aceitar', ACTION_ICON).setPosition(x, y)
+    btn.on('pointerdown', () => { if (btn.getData('enabled') !== false) onClick() })
     return btn
   }
 
   private buildBackButton(x: number, y: number, onClick: () => void) {
-    const btn = this.fitted(x, y, 'botao_avancar', 90)
-    btn.setScale(-btn.scaleX, btn.scaleY)
-    btn.setInteractive({ cursor: 'pointer' })
+    const btn = this.createIconButton('voltar', ACTION_ICON).setPosition(x, y)
     btn.on('pointerdown', onClick)
     return btn
   }
+
+  private createIconButton(textureKey: string, size: number) {
+    const icon = this.fittedContain(0, 0, textureKey, size, size)
+    const container = this.add.container(0, 0, [icon])
+    container.setSize(icon.displayWidth, icon.displayHeight) // setSize ANTES de setInteractive
+    container.setData('enabled', true)
+    container.setInteractive({ cursor: 'pointer' })
+
+    container.on('pointerover', () => {
+      if (container.getData('enabled') === false) return
+      this.tweens.add({ targets: container, scale: 1.08, duration: 120, ease: 'Sine.out' })
+    })
+    container.on('pointerout', () => {
+      this.tweens.add({ targets: container, scale: 1, duration: 120, ease: 'Sine.out' })
+    })
+    container.on('pointerdown', () => {
+      if (container.getData('enabled') === false) return
+      this.playTick()
+      this.tweens.add({ targets: container, scale: 0.9, duration: 80, yoyo: true })
+    })
+
+    return container
+  }
+
+  private setActionEnabled(btn: Phaser.GameObjects.Container, enabled: boolean) {
+    btn.setData('enabled', enabled)
+    this.tweens.add({ targets: btn, alpha: enabled ? 1 : 0.35, duration: 200 })
+    if (enabled) btn.setInteractive({ cursor: 'pointer' })
+    else btn.disableInteractive()
+  }
+
+
+
 
   private getAudioCtx(): AudioContext | null {
     try {

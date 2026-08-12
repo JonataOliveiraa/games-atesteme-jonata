@@ -31,10 +31,13 @@ import efeitoStarburstUrl from '../../../assets/games/EF01CO04/efeito-starburst.
 import ondaDeSom from '../../../assets/games/EF01CO04/onda_de_som.png'
 import papelDesenhado from '../../../assets/games/EF01CO04/papel_desenhado.png'
 import destinoAnalisaDesenho from '../../../assets/games/EF01CO04/destino_analisa_desenho.png'
-
+import aceitarUrl from '../../../assets/games/EF01CO04/aceitar.png'
+import voltarUrl from '../../../assets/games/EF01CO04/voltar.png'
+import iconeSom from '../../../assets/games/EF01CO04/icone-som.png'
 import somLatidoUrl from '../../../assets/games/EF01CO04/audio/som_latido.ogg'
 import somMiadoUrl from '../../../assets/games/EF01CO04/audio/som_miado.ogg'
 import somBuzinaUrl from '../../../assets/games/EF01CO04/audio/som_buzina.ogg'
+import { createLoadingScreen } from '../../../shared/loading/createLoadingScreen'
 
 export class BootScene extends Phaser.Scene {
   private progressBar!: Phaser.GameObjects.Graphics
@@ -44,39 +47,46 @@ export class BootScene extends Phaser.Scene {
   }
 
   preload() {
-    // Carrega só o essencial pra poder mostrar a tela de loading primeiro.
-    this.load.image('carregando', carregandoUrl)
-  }
+    createLoadingScreen(this, {
+      title: 'Correio Multimídia',
+      description: 'Carregando...',
+      theme: {
+        background: {
+          kind: 'stripes',
+          base: 0x164e72,
+          color: 0x9ee8cf,
+          alpha: 0.12,
+          size: 40,
+          gap: 60,
+          angle: 'diagonal',
+        },
 
-  create() {
-    this.showLoadingScreen()
-    this.loadRemainingAssets()
-  }
+        card: 0x247ba0,
+        cardShadow: 0x0b3954,
+        cardHighlight: 0xffffff,
+        cardBorder: 0xa7f3d0,
 
-  private showLoadingScreen() {
-    const { width, height } = this.scale
+        title: 0xffffff,
+        subtitle: 0xbaf7e3,
+        description: 0xe4f7f3,
 
-    this.add.image(width / 2, height / 2, 'carregando').setDisplaySize(width, height)
+        titleStroke: 0x0b3954,
 
-    const progressBox = this.add.graphics()
-    progressBox.fillStyle(0xffffff, 0.3)
-    progressBox.fillRect(width / 2 - 160, height - 80, 320, 24)
-
-    this.progressBar = this.add.graphics()
-
-    this.load.on('progress', (value: number) => {
-      this.progressBar.clear()
-      this.progressBar.fillStyle(0xffb703, 1)
-      this.progressBar.fillRect(width / 2 - 155, height - 76, 310 * value, 16)
+        progressTrack: 0x123e5a,
+        progressBorder: 0xffffff,
+        progressFill: 0x86efc4,
+        progressHighlight: 0xffffff,
+      },
     })
-  }
-
-  private loadRemainingAssets() {
+    this.load.image('carregando', carregandoUrl)
     this.load.image('bg_mapa', bgMapaUrl)
     this.load.image('painel_origem', painelOrigemUrl)
     this.load.image('painel_destino', painelDestinoUrl)
     this.load.image('balao_pensamento', balaoPensamentoUrl)
     this.load.image('cover_correio_multimidia', coverUrl)
+    this.load.image('aceitar', aceitarUrl)
+    this.load.image('voltar', voltarUrl)
+    this.load.image('icone_som', iconeSom)
 
     this.load.image('estacao_microfone', estacaoMicrofoneUrl)
     this.load.image('estacao_microfone_ativa', estacaoMicrofoneAtivaUrl)
@@ -101,7 +111,7 @@ export class BootScene extends Phaser.Scene {
     this.load.image('onda_de_som', ondaDeSom)
     this.load.image('papel_desenhado', papelDesenhado)
     this.load.image('destino_analisa_desenho', destinoAnalisaDesenho)
-    
+
 
     this.load.audio('som_latido', somLatidoUrl)
     this.load.audio('som_miado', somMiadoUrl)
@@ -111,7 +121,13 @@ export class BootScene extends Phaser.Scene {
       this.scene.start('GameScene')
       this.scene.launch('UIScene')
     })
+  }
 
+  create() {
+    this.loadRemainingAssets()
+  }
+
+  private loadRemainingAssets() {
     this.load.start()
   }
 }
