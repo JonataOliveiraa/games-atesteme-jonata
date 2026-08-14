@@ -6,7 +6,7 @@ export const MISSIONS_L1: Mission[] = [
         text: 'Saber a hora certa do lanche: 9:00',
         steps: [{
             appId: 'relogio', actionKey: 'set-time',
-            hint: 'Arraste o ponteiro grande até o lugar certo',
+            hint: 'Arraste o ponteiro azul até o lugar certo',
             clockStart: { h: 8, m: 45 }, clockTarget: { h: 9, m: 0 },
         }],
     },
@@ -27,34 +27,34 @@ export const MISSIONS_L2: Mission[] = [
         text: 'Marcar o horário do recreio: 10:30',
         steps: [{
             appId: 'relogio', actionKey: 'set-time',
-            hint: 'Arraste o ponteiro grande e use +1h se precisar',
+            hint: 'Dê a volta com o ponteiro azul até chegar em 10:30',
             clockStart: { h: 9, m: 45 }, clockTarget: { h: 10, m: 30 },
         }],
     },
-    {
-        id: 'm2-2',
+{
+    id: 'm2-2',
         text: 'Contar os lápis das duas caixas: 15 e 7',
-        steps: [{
-            appId: 'calculadora', actionKey: 'calculate',
-            hint: 'Some as duas caixas',
-            expectedExpr: '15 + 7', expectedAnswer: 22,
-        }],
+            steps: [{
+                appId: 'calculadora', actionKey: 'calculate',
+                hint: 'Some as duas caixas',
+                expectedExpr: '15 + 7', expectedAnswer: 22,
+            }],
     },
-    {
-        id: 'm2-3',
+{
+    id: 'm2-3',
         text: 'Os trabalhos da turma estão espalhados na mesa',
-        steps: [{
-            appId: 'pasta', actionKey: 'organize-files',
-            hint: 'Cada arquivo tem a sua gaveta',
-        }],
+            steps: [{
+                appId: 'pasta', actionKey: 'organize-files',
+                hint: 'Cada arquivo tem a sua gaveta',
+            }],
     },
-    {
-        id: 'm2-4',
+{
+    id: 'm2-4',
         text: 'Deixar um recado falado para a turma da tarde',
-        steps: [{
-            appId: 'gravador', actionKey: 'save-recording',
-            hint: 'Segure o botão, ouça e depois salve',
-        }],
+            steps: [{
+                appId: 'gravador', actionKey: 'save-recording',
+                hint: 'Segure o botão, ouça e depois salve',
+            }],
     },
 ]
 

@@ -1,7 +1,7 @@
 import Phaser from 'phaser'
 import { C, hex, label, chunkyButton, floatingNote, type AppId } from '../ui/kit'
 import type { MissionStep } from '../types'
-import { FX } from '../../../shared/effects/FX';
+import { FX, Ease } from '../../../shared/effects/FX';
 
 /** Área útil dentro da janela, em coordenadas locais do container. */
 export interface Area { top: number; h: number; w: number; cy: number }
@@ -18,9 +18,9 @@ export interface AppCtx {
 
 export interface AppView {
     objects: Phaser.GameObjects.GameObject[]
-    /** Chamado a cada frame enquanto a janela estiver aberta. */
     tick?: (dt: number) => void
     dispose?: () => void
+    demo?: () => () => void
 }
 
 const fmt = (h: number, m: number) => `${h}:${String(m).padStart(2, '0')}`
@@ -72,104 +72,105 @@ export function clockApp(ctx: AppCtx, area: Area): AppView {
     let settled = false
     let wasOk = false
 
-    // ── COLUNA ESQUERDA: o relógio grande, único elemento arrastável ───────
-    const CX = -158, CY = -6, R = 116
+    const CX = -160, CY = 20, R = 126     // relógio que o jogador gira
+    const RX = 155                         // coluna da direita
 
     objects.push(label(s, 0, area.top + 30, 'Arraste o ponteiro azul até a hora certa',
-        { size: 21, color: C.ink }))
+        { size: 22, color: C.ink }))
 
+    // Divisória: separa "o que você tem" de "o que precisa"
+    const divider = s.add.graphics()
+    divider.fillStyle(C.paperShade, 1)
+    divider.fillRoundedRect(16, -120, 4, 350, 2)
+    objects.push(divider)
+
+    // ── relógio do jogador ────────────────────────────────────────────────
     const face = s.add.graphics()
     drawFace(face, CX, CY, R, true)
     objects.push(face)
 
     for (let i = 0; i < 12; i++) {
         const a = (i * 30 - 90) * Math.PI / 180
-        objects.push(label(s,
-            CX + Math.cos(a) * (R - 36), CY + Math.sin(a) * (R - 36),
-            String(i === 0 ? 12 : i), { size: 21, color: C.ink }))
+        objects.push(label(s, CX + Math.cos(a) * (R - 38), CY + Math.sin(a) * (R - 38),
+            String(i === 0 ? 12 : i), { size: 22, color: C.ink }))
     }
 
     const ghost = s.add.graphics()
     const hands = s.add.graphics()
-    objects.push(ghost, hands)
+    const touch = s.add.graphics().setAlpha(0)   // dedo da demonstração
+    objects.push(ghost, hands, touch)
 
-    // ── COLUNA DIREITA: o alvo mostrado como relógio, não como número ──────
-    const RX = 152
-    const chipG = s.add.graphics()
-    chipG.fillStyle(C.mint, 0.22); chipG.fillRoundedRect(RX - 148, area.top + 58, 296, 250, 24)
-    objects.push(chipG)
-
-    objects.push(label(s, RX, area.top + 86, 'PRECISA FICAR ASSIM', { size: 17, color: C.mintDeep }))
+    // ── como precisa ficar ────────────────────────────────────────────────
+    objects.push(label(s, RX, -118, 'PRECISA FICAR ASSIM', { size: 16, color: C.mintDeep }))
 
     const targetFace = s.add.graphics()
-    drawFace(targetFace, RX, -68, 62, false)
-    drawHands(targetFace, RX, -68, 62, target.h, target.m, 0.55)
+    drawFace(targetFace, RX, -44, 54, false)
+    drawHands(targetFace, RX, -44, 54, target.h, target.m, 0.48)
     objects.push(targetFace)
 
-    objects.push(label(s, RX, 16, `${target.h}:${String(target.m).padStart(2, '0')}`,
-        { size: 30, color: C.mintDeep }))
+    objects.push(label(s, RX, 34, fmt(target.h, target.m), { size: 32, color: C.mintDeep }))
 
-    // Leitura da hora atual, grande e separada do alvo
-    const nowPill = s.add.graphics()
-    nowPill.fillStyle(C.paperEdge, 1); nowPill.fillRoundedRect(RX - 118, 62, 236, 62, 31)
-    objects.push(nowPill)
-    const digital = label(s, RX, 93, fmt(curH, curM), { size: 38, color: C.skyDeep })
+    // ── como está agora ───────────────────────────────────────────────────
+    objects.push(label(s, RX, 80, 'AGORA ESTÁ', { size: 16, color: C.inkSoft }))
+    const digital = label(s, RX, 118, fmt(curH, curM), { size: 44, color: C.skyDeep })
     objects.push(digital)
 
-    // ── Controles de hora, embaixo do relógio a que pertencem ──────────────
-    const hourDown = chunkyButton(s, CX - 68, 168, '−1 hora', () => {
-        if (settled) return
-        curH = curH <= 1 ? 12 : curH - 1; refresh()
-    }, { w: 124, h: 54, tone: C.slate, deep: C.slateDeep, size: 18 })
-
-    const hourUp = chunkyButton(s, CX + 68, 168, '+1 hora', () => {
-        if (settled) return
-        curH = curH >= 12 ? 1 : curH + 1; refresh()
-    }, { w: 124, h: 54, tone: C.slate, deep: C.slateDeep, size: 18 })
-
-    const confirm = chunkyButton(s, RX, 178, 'Está certo!', () => {
+    const confirm = chunkyButton(s, RX, 196, 'Está certo!', () => {
         if (settled) return
         settled = true
         confirm.setEnabled(false)
         if (!ctx.step) { ctx.offTask(); return }
-        FX.seq(
-            () => FX.impact(s, face, 0.1),
-            () => FX.sparks(s, 640 + CX, 374 + CY, { color: C.mint, count: 24 }),
-        )
+        FX.sparks(s, 640 + CX, 374 + CY, { color: C.mint, count: 26 })
         ctx.done('set-time')
-    }, { w: 236, h: 62, tone: C.mint, deep: C.mintDeep, enabled: false })
+    }, { w: 250, h: 62, tone: C.mint, deep: C.mintDeep, enabled: false })
+    objects.push(confirm.root)
 
-    objects.push(hourDown.root, hourUp.root, confirm.root)
+    // ── desenho ───────────────────────────────────────────────────────────
+    const handTip = (m: number) => {
+        const a = (m / 60 * 360 - 90) * Math.PI / 180
+        return { x: CX + Math.cos(a) * (R - 30), y: CY + Math.sin(a) * (R - 30) }
+    }
+
+    const paintHands = (h: number, m: number) => {
+        hands.clear()
+        drawHands(hands, CX, CY, R, h, m)
+        const t = handTip(m)
+        hands.fillStyle(C.skyDeep, 1); hands.fillCircle(t.x, t.y, 18)
+        hands.fillStyle(C.white, 1); hands.fillCircle(t.x, t.y, 8)
+    }
+
+    // Coral com contorno escuro: a interface é branca, um dedo branco sumiria
+    const paintTouch = (m: number) => {
+        const t = handTip(m)
+        touch.clear()
+        touch.fillStyle(C.coralDeep, 0.22); touch.fillCircle(t.x, t.y, 38)
+        touch.fillStyle(C.coral, 1); touch.fillCircle(t.x, t.y, 22)
+        touch.lineStyle(4, C.ink, 0.85); touch.strokeCircle(t.x, t.y, 22)
+        touch.fillStyle(C.white, 0.55); touch.fillCircle(t.x - 7, t.y - 8, 6)
+    }
 
     const refresh = () => {
         ghost.clear()
         const tA = (target.m / 60 * 360 - 90) * Math.PI / 180
-        ghost.lineStyle(11, C.mint, 0.3)
-        ghost.lineBetween(CX, CY, CX + Math.cos(tA) * (R - 26), CY + Math.sin(tA) * (R - 26))
+        ghost.lineStyle(12, C.mint, 0.28)
+        ghost.lineBetween(CX, CY, CX + Math.cos(tA) * (R - 30), CY + Math.sin(tA) * (R - 30))
 
-        hands.clear()
-        drawHands(hands, CX, CY, R, curH, curM)
-        // Alça visível na ponta: é o que diz "isto se pega"
-        const mA = (curM / 60 * 360 - 90) * Math.PI / 180
-        const hx = CX + Math.cos(mA) * (R - 26), hy = CY + Math.sin(mA) * (R - 26)
-        hands.fillStyle(C.skyDeep, 1); hands.fillCircle(hx, hy, 16)
-        hands.fillStyle(C.white, 1); hands.fillCircle(hx, hy, 7)
-
+        paintHands(curH, curM)
         digital.setText(fmt(curH, curM))
+
         const ok = curH % 12 === target.h % 12 && curM === target.m
         digital.setColor(hex(ok ? C.mintDeep : C.skyDeep))
         confirm.setEnabled(ok)
 
-        // Encaixe: só dispara na transição, não a cada frame do arrasto
         if (ok && !wasOk) {
-            FX.ping(s, 640 + CX, 374 + CY, C.mint, { radius: R + 20 })
-            FX.impact(s, digital, 0.2)
+            FX.ping(s, 640 + CX, 374 + CY, C.mint, { radius: R + 26 })
+            FX.impact(s, digital, 0.22)
         }
         wasOk = ok
     }
 
-    // ── Arrasto: escuta a cena, não a zona, senão o ponteiro "escapa" ──────
-    const grab = s.add.zone(CX, CY, R * 2 + 40, R * 2 + 40).setInteractive({ useHandCursor: true })
+    // ── arrasto ───────────────────────────────────────────────────────────
+    const grab = s.add.zone(CX, CY, R * 2 + 44, R * 2 + 44).setInteractive({ useHandCursor: true })
     objects.push(grab)
     let dragging = false
 
@@ -177,14 +178,22 @@ export function clockApp(ctx: AppCtx, area: Area): AppView {
         const win = grab.parentContainer
         const lx = p.worldX - win.x - CX
         const ly = p.worldY - win.y - CY
-        if (Math.hypot(lx, ly) < 20) return
+        if (Math.hypot(lx, ly) < 24) return
+
         let deg = Phaser.Math.RadToDeg(Math.atan2(ly, lx)) + 90
         if (deg < 0) deg += 360
         const m = (Math.round(deg / 30) * 5) % 60
-
         if (m === curM) return
-        if (lastM >= 45 && m <= 15) curH = curH % 12 + 1
-        else if (lastM <= 15 && m >= 45) curH = curH <= 1 ? 12 : curH - 1
+
+        // Menor caminho angular: aguenta arrasto rápido sem perder a virada de hora
+        let delta = m - lastM
+        if (delta > 30) delta -= 60
+        if (delta < -30) delta += 60
+
+        const total = lastM + delta
+        if (total >= 60) curH = curH % 12 + 1
+        else if (total < 0) curH = curH <= 1 ? 12 : curH - 1
+
         lastM = m
         curM = m
         refresh()
@@ -201,13 +210,45 @@ export function clockApp(ctx: AppCtx, area: Area): AppView {
     s.input.on('pointerup', onUp)
     cleanups.push(() => { s.input.off('pointermove', onMove); s.input.off('pointerup', onUp) })
 
-    refresh()
-    return { objects, dispose: () => cleanups.forEach(fn => fn()) }
-}
+    // ── demonstração do tutorial: gira o ponteiro de verdade ──────────────
+    let demoTween: Phaser.Tweens.Tween | undefined
 
-// ═══════════════════════════════════════════════════════ CALCULADORA
-// Sem eval(): parser de duas passadas. Além de seguro, permite mensagem
-// específica quando o resultado está errado.
+    const stopDemo = () => {
+        if (!demoTween) return
+        demoTween.stop()
+        demoTween = undefined
+        touch.clear().setAlpha(0)
+        refresh()          // devolve o relógio exatamente onde a criança o encontrou
+    }
+
+    const demo = () => {
+        if (demoTween) return stopDemo
+
+        const travel = ((target.m - start.m) + 60) % 60 || 60
+        const base = (start.h % 12) * 60 + start.m
+        const p = { v: 0 }
+        touch.setAlpha(1)
+
+        demoTween = s.tweens.add({
+            targets: p, v: 1,
+            duration: 2600, repeat: -1, repeatDelay: 1000, ease: Ease.smooth,
+            onUpdate: () => {
+                const total = base + travel * p.v
+                const mm = total % 60                       // fracionário: giro contínuo
+                const hRaw = Math.floor(total / 60) % 12
+                paintHands(hRaw === 0 ? 12 : hRaw, mm)
+                paintTouch(mm)
+            },
+            onRepeat: () => { p.v = 0 },
+        })
+
+        return stopDemo
+    }
+    cleanups.push(stopDemo)
+
+    refresh()
+    return { objects, demo, dispose: () => cleanups.forEach(fn => fn()) }
+}
 
 function evalExpr(src: string): number | null {
     const tokens = src.match(/\d+\.?\d*|[+\-x/]/g)
@@ -700,8 +741,6 @@ export function paintApp(ctx: AppCtx, area: Area): AppView {
     return { objects, dispose: () => cleanups.forEach(fn => fn()) }
 }
 
-// ═══════════════════════════════════════════════════════ MÚSICAS
-
 export function musicApp(ctx: AppCtx, area: Area): AppView {
     const s = ctx.scene
     const objects: Phaser.GameObjects.GameObject[] = []
@@ -709,19 +748,42 @@ export function musicApp(ctx: AppCtx, area: Area): AppView {
     let progress = 0
     let claimed = false
 
-    const art = s.add.image(0, area.top + 130, 'album-art').setDisplaySize(200, 200)
-    const artFrame = s.add.graphics()
-    artFrame.lineStyle(7, C.slateDeep, 1)
-    artFrame.strokeRoundedRect(-104, area.top + 26, 208, 208, 20)
-    objects.push(art, artFrame)
+    const DISC_Y = area.top + 130
+    const R = 92
 
-    objects.push(label(s, 0, area.top + 262, 'Canção da Turma', { size: 26, color: C.ink }))
+    // A arte gira inteira; os cantos do quadrado saem de cena logo abaixo.
+    const art = s.add.image(0, DISC_Y, 'album-art').setDisplaySize(R * 2, R * 2)
+    objects.push(art)
+
+    // Traço grosso na cor do papel comendo os cantos: vira disco sem máscara,
+    // e sem máscara não há problema de coordenada de mundo dentro do container.
+    const cover = s.add.graphics()
+    cover.lineStyle(56, C.paper, 1)
+    cover.strokeCircle(0, DISC_Y, R + 26)
+    objects.push(cover)
+
+    // Aro fino, não moldura
+    const rim = s.add.graphics()
+    rim.lineStyle(5, C.slateDeep, 1)
+    rim.strokeCircle(0, DISC_Y, R)
+    rim.lineStyle(2, C.white, 0.5)
+    rim.strokeCircle(0, DISC_Y, R - 5)
+    objects.push(rim)
+
+    // Cubo central parado: é ele que deixa a rotação legível
+    const hub = s.add.graphics()
+    hub.fillStyle(C.paper, 1); hub.fillCircle(0, DISC_Y, 24)
+    hub.lineStyle(4, C.slateDeep, 1); hub.strokeCircle(0, DISC_Y, 24)
+    hub.fillStyle(C.slateDeep, 1); hub.fillCircle(0, DISC_Y, 7)
+    objects.push(hub)
+
+    objects.push(label(s, 0, DISC_Y + R + 40, 'Canção da Turma', { size: 26, color: C.ink }))
 
     // Equalizador: prova visual de que o som está tocando
+    const eqY = DISC_Y + R + 92
     const eq = s.add.graphics()
     objects.push(eq)
     const bars = Array.from({ length: 13 }, () => Phaser.Math.FloatBetween(0.2, 1))
-    const eqY = area.top + 320
 
     const drawEq = () => {
         eq.clear()
@@ -734,7 +796,7 @@ export function musicApp(ctx: AppCtx, area: Area): AppView {
     }
     drawEq()
 
-    const trackY = area.top + 372
+    const trackY = eqY + 46
     const track = s.add.graphics()
     objects.push(track)
     const drawTrack = () => {
@@ -746,7 +808,7 @@ export function musicApp(ctx: AppCtx, area: Area): AppView {
     }
     drawTrack()
 
-    const play = chunkyButton(s, 0, area.top + 434, 'Tocar', () => {
+    const play = chunkyButton(s, 0, trackY + 46, 'Tocar', () => {
         playing = !playing
         play.setLabel(playing ? 'Pausar' : 'Tocar')
         drawEq()
@@ -761,7 +823,7 @@ export function musicApp(ctx: AppCtx, area: Area): AppView {
     let acc = 0
     const tick = (dt: number) => {
         if (!playing) return
-        art.setAngle(art.angle + dt * 0.02)
+        art.setAngle(art.angle + dt * 0.05)     // ~50°/s: perceptível sem embrulhar
         progress = Math.min(1, progress + dt / 14000)
         drawTrack()
         acc += dt
@@ -774,7 +836,7 @@ export function musicApp(ctx: AppCtx, area: Area): AppView {
     }
 
     return { objects, tick }
-}
+}   
 
 export const APP_BUILDERS: Partial<Record<AppId, (ctx: AppCtx, area: Area) => AppView>> = {
     relogio: clockApp,

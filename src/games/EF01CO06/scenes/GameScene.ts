@@ -18,7 +18,6 @@ const GAME_ID = 'desktop-digital-infantil'
 
 const WIN_W = 640, WIN_H = 520
 const WIN_HEADER = 74
-/** Deslocamento vertical da janela em relação ao centro da tela. */
 const WIN_DY = 14
 
 const AREA: Area = {
@@ -31,8 +30,11 @@ const AREA: Area = {
 const HEADER_H = 92
 const SHELF_H = 86
 
-const CARD_X = 212, CARD_Y = 356
-const CARD_W = 350, CARD_H = 300
+const CARD_X = 212, CARD_Y = 348
+const CARD_W = 350, CARD_H = 344
+const CARD_BAND_H = 56
+const CARD_CONTENT_TOP = -CARD_H / 2 + CARD_BAND_H + 20
+const CARD_TITLE_MAX_H = 116
 
 /** Quanto tempo a criança pode hesitar antes do jogo acender o ícone certo. */
 const HINT_AFTER_MS = 9000
@@ -205,31 +207,31 @@ export class GameScene extends Phaser.Scene {
     return `${this.clockNow.h}:${String(this.clockNow.m).padStart(2, '0')}`
   }
 
-  // ═══════════════════════════════════════════════ bilhete de tarefa
-
   private buildTaskCard() {
     const root = this.add.container(CARD_X, CARD_Y).setDepth(20)
     root.setAngle(-2)   // levemente torto: parece bilhete pregado, não HUD
     this.taskCard = root
 
     const card = paperCard(this, CARD_W, CARD_H, { fill: C.paper, edge: C.sun })
-    const band = headerBand(this, CARD_W, 56, -CARD_H / 2, C.sun, C.sunDeep)
-    const bandTxt = label(this, 0, -CARD_H / 2 + 28, 'A TURMA PRECISA', { size: 19, color: C.ink })
+    const band = headerBand(this, CARD_W, CARD_BAND_H, -CARD_H / 2, C.sun, C.sunDeep)
+    const bandTxt = label(this, 0, -CARD_H / 2 + CARD_BAND_H / 2, 'A TURMA PRECISA',
+      { size: 19, color: C.ink })
 
-    this.taskTitle = label(this, 0, -CARD_H / 2 + 92, '',
-      { size: 24, color: C.ink, wrap: CARD_W - 52 })
-    this.taskBody = label(this, 0, 20, '',
-      { size: 19, color: C.inkSoft, weight: 'bold', wrap: CARD_W - 52 })
+    this.taskTitle = label(this, 0, CARD_CONTENT_TOP, '',
+      { size: 24, color: C.ink, wrap: CARD_W - 56 })
+    this.taskTitle.setOrigin(0.5, 0)
 
-    // Dica do app: escondida por padrão, é o andaime que aparece se travar
-    this.taskChip = this.add.container(0, CARD_H / 2 - 52).setAlpha(0)
+    this.taskBody = label(this, 0, CARD_CONTENT_TOP + 60, '',
+      { size: 18, color: C.inkSoft, weight: 'bold', wrap: CARD_W - 56 })
+    this.taskBody.setOrigin(0.5, 0)
+
+    this.taskChip = this.add.container(0, CARD_H / 2 - 48).setAlpha(0)
     const chipG = this.add.graphics()
     chipG.fillStyle(C.paperEdge, 1); chipG.fillRoundedRect(-136, -30, 272, 60, 30)
     this.taskChipIcon = this.add.image(-102, 0, 'icon-relogio').setDisplaySize(46, 46)
     this.taskChipText = label(this, 22, 0, '', { size: 17, color: C.ink, wrap: 150 })
     this.taskChip.add([chipG, this.taskChipIcon, this.taskChipText])
 
-    // Tocar no bilhete completa a datilografia — não obriga a esperar
     const skip = this.add.zone(0, 0, CARD_W, CARD_H).setInteractive({ useHandCursor: true })
     skip.on('pointerdown', () => this.taskTyper?.skip())
 
@@ -244,12 +246,21 @@ export class GameScene extends Phaser.Scene {
     if (!m || !st) return
 
     this.taskTyper?.skip()
-    this.taskTyper = FX.type(this, this.taskTitle, m.text, { delay: 26 })
+
+    for (const size of [24, 21, 18, 16]) {
+      this.taskTitle.setFontSize(size)
+      this.taskTitle.setText(m.text)
+      if (this.taskTitle.height <= CARD_TITLE_MAX_H) break
+    }
+
+    this.taskBody.setY(CARD_CONTENT_TOP + this.taskTitle.height + 14)
 
     const multi = m.steps.length > 1
     this.taskBody.setText(multi
       ? `Passo ${this.stepIdx + 1} de ${m.steps.length}: ${st.hint}`
       : st.hint)
+
+    this.taskTyper = FX.type(this, this.taskTitle, m.text, { delay: 26 })
 
     this.taskChip.setAlpha(0)
     const skin = SKIN[st.appId]
@@ -552,7 +563,8 @@ export class GameScene extends Phaser.Scene {
     const steps: TutorialStep[] = [
       {
         text: 'Este bilhete diz o que a turma precisa agora.',
-        shape: 'rect', x: CARD_X, y: CARD_Y, w: CARD_W + 30, h: CARD_H + 30, balloonY: 540,
+        shape: 'rect', x: CARD_X, y: CARD_Y, w: CARD_W + 30, h: CARD_H + 30,
+        balloonX: 830, balloonY: 300,
       },
       {
         text: 'Você escolhe o aplicativo. Toque uma vez para abrir.',
@@ -572,54 +584,48 @@ export class GameScene extends Phaser.Scene {
     })
   }
 
-  /** Tutorial próprio de cada app, na primeira vez que ele é aberto. */
   private maybeAppTutorial(id: AppId, accent: number) {
     const steps = this.appTutorialSteps(id)
     if (!steps) return
-    createTutorial(this, { key: `app-${id}`, once: true, accent, steps, onFinish: () => { } })
+
+    const stopDemo = this.activeApp?.demo?.()
+    createTutorial(this, {
+      key: `app-${id}`, once: true, accent, steps,
+      onFinish: () => stopDemo?.(),
+    })
   }
 
   private appTutorialSteps(id: AppId): TutorialStep[] | null {
     if (id !== 'relogio') return null
 
-    const face = this.winPoint(-158, -6)
-    const goal = this.winPoint(152, -68)
-    const hours = this.winPoint(-158, 168)
-    const ok = this.winPoint(152, 178)
-    const handTip = this.winPoint(-158, -96)
+    const face = this.winPoint(-160, 20)
+    const goal = this.winPoint(155, -44)
+    const ok = this.winPoint(155, 196)
 
-    // Os balões alternam entre esquerda e direita para nunca cobrir o recorte
     return [
       {
-        text: 'Este é o relógio da sala. O ponteiro azul marca os minutos.',
-        shape: 'circle', x: face.x, y: face.y, w: 272, h: 272,
-        balloonX: 900, balloonY: 200,
+        text: 'Este é o relógio da sala.',
+        shape: 'circle', x: face.x, y: face.y, w: 290, h: 290,
+        balloonX: 900, balloonY: 185,
       },
       {
-        text: 'Aqui está como ele precisa ficar. Compare os dois relógios.',
-        shape: 'circle', x: goal.x, y: goal.y, w: 158, h: 158,
-        balloonX: 400, balloonY: 540,
+        text: 'E esta é a hora que a turma precisa. Compare os dois.',
+        shape: 'circle', x: goal.x, y: goal.y, w: 142, h: 142,
+        balloonX: 400, balloonY: 530,
       },
       {
-        text: 'Segure a bolinha azul e gire até chegar no lugar certo.',
-        shape: 'circle', x: face.x, y: face.y, w: 272, h: 272,
-        balloonX: 900, balloonY: 200,
-      },
-      {
-        text: 'Se a hora estiver errada, use estes botões.',
-        shape: 'rect', x: hours.x, y: hours.y, w: 300, h: 92,
-        balloonX: 830, balloonY: 240,
+        text: 'Arraste a bolinha azul, como o dedo está fazendo. Uma volta inteira muda a hora.',
+        shape: 'circle', x: face.x, y: face.y, w: 290, h: 290,
+        balloonX: 900, balloonY: 185,
       },
       {
         text: 'Quando o número ficar verde, toque em Está certo!',
-        shape: 'rect', x: ok.x, y: ok.y, w: 268, h: 94,
-        balloonX: 400, balloonY: 240,
+        shape: 'rect', x: ok.x, y: ok.y, w: 270, h: 92,
+        balloonX: 400, balloonY: 235,
         buttonLabel: 'Vou tentar!',
       },
     ]
   }
-
-  // ═══════════════════════════════════════════════ abertura e fim
 
   private showIntro() {
     const dim = this.add.rectangle(W / 2, H / 2, W, H, C.shadow, 0.55).setDepth(300).setInteractive()
