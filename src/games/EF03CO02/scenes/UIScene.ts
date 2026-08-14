@@ -109,10 +109,17 @@ export class UIScene extends Phaser.Scene {
         return { g, text, zone }
     }
 
-    private registerListeners() {
-        EventBus.on('mission-update', (data: MissionUpdatePayload) => {
-            this.instructionText.setText(data.instruction)
-            this.levelText.setText(`Nível ${data.level} de 3`)
-        }, this)
+    private onMissionUpdate = (data: MissionUpdatePayload): void => {
+        if (!this.scene.isActive()) return
+        if (!this.instructionText?.active || !this.levelText?.active) return
+        this.instructionText.setText(data.instruction)
+        this.levelText.setText(`Nível ${data.level} de 3`)
+    }
+
+    private registerListeners(): void {
+        EventBus.on('mission-update', this.onMissionUpdate, this)
+        this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+            EventBus.off('mission-update', this.onMissionUpdate, this)
+        })
     }
 }   

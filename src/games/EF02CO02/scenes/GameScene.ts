@@ -1,1346 +1,1188 @@
-﻿import Phaser from "phaser";
-import { EventBus } from "../../../shared/EventBus";
-import { runtimeGameBridge } from "../../../shared/bridge/runtimeGameBridge";
-import type { PlatformCommand } from "../../../shared/contracts/platformCommands";
-import { LEVELS } from "../data/levels";
-import type { Direction, GridPoint, RepeatLevel, RobotCommand } from "../types";
+﻿import Phaser from "phaser"
+import { EventBus } from "../../../shared/EventBus"
+import { runtimeGameBridge } from "../../../shared/bridge/runtimeGameBridge"
+import type { PlatformCommand } from "../../../shared/contracts/platformCommands"
+import { showLevelComplete } from "../../../shared/level/showLevelComplete"
+import { createTutorial, type TutorialStep } from "../../../shared/tutorial/createTutorial"
+import { LEVELS } from "../data/levels"
+import type {
+  Direction, GameSceneData, GridPoint, RepeatLevel, RepeatPhase, RobotCommand,
+} from "../types"
+import {
+  W, H, C, hex, label, paperCard, headerBand,
+  chunkyButton, circleButton, floatingNote, confetti, type Btn,
+} from "../ui/kit"
 
-const GAME_ID = "desfile-do-robo-repetidor";
-const TIMER_BAR_W = 820;
-const TIMER_BAR_Y = 48;
-const MODAL_SCALE = 1.18;
-const BOARD_START_X = 86;
-const BOARD_START_Y = 210;
+const GAME_ID = "desfile-do-robo-repetidor"
 
-const COLORS = {
-  blue: 0x2563eb,
-  cyan: 0x38bdf8,
-  green: 0x22c55e,
-  orange: 0xf59e0b,
-  purple: 0x8b5cf6,
-  pink: 0xec4899,
-  ink: "#1e293b",
-};
+const HEADER_H = 76
+const BOARD = { cx: 372, cy: 404, w: 664, h: 552 }
+const SIDE = { cx: 992, cy: 404, w: 512, h: 552 }
+const BAND_H = 54
+const TAPE_Y = 170        // ← junto das outras constantes de layout, no topo
+const TAPE_ENTER_Y = TAPE_Y - 43
 
-export class GameScene extends Phaser.Scene {
-  private levelConfig!: RepeatLevel;
-  private program: RobotCommand[] = [];
-  private robot!: Phaser.GameObjects.Container;
-  private robotState!: { x: number; y: number; direction: Direction };
-  private pathMarks: Phaser.GameObjects.GameObject[] = [];
-  private programObjects: Phaser.GameObjects.GameObject[] = [];
-  private executedPath: GridPoint[] = [];
-  private overlayObjects: Phaser.GameObjects.GameObject[] = [];
-  private infoObjects: Phaser.GameObjects.GameObject[] = [];
-  private directionHitAreas: Array<{ bounds: Phaser.Geom.Rectangle; onClick: () => void }> = [];
-  private actionHitAreas: Array<{ bounds: Phaser.Geom.Rectangle; onClick: () => void }> = [];
-  private infoHitArea?: { bounds: Phaser.Geom.Rectangle; onClick: () => void };
-  private infoCloseHitArea?: { bounds: Phaser.Geom.Rectangle; onClick: () => void };
-  private commandLocked = false;
-  private hasPassedCheckpoint = false;
-  private hits = 0;
-  private errors = 0;
-  private hasStartedTimer = false;
-  private timerEvent?: Phaser.Time.TimerEvent;
-  private timerBar?: Phaser.GameObjects.Rectangle;
-  private unsubscribePlatformCommands?: () => void;
+const DIR_W = 226, DIR_H = 92
+const DIR_X = [SIDE.cx - 122, SIDE.cx + 122]
+const DIR_Y = [262, 370]
 
-  constructor() {
-    super({ key: "GameScene" });
-  }
+const SLOT = 52, SLOT_GAP = 7, SLOT_COLS = 7
+const SLOTS_Y = [502, 502 + SLOT + SLOT_GAP]
 
-  init(data: { level?: number }) {
-    const lvl = (data?.level ?? 1) as 1 | 2 | 3;
-    this.levelConfig = LEVELS.find((level) => level.level === lvl) ?? LEVELS[0];
-    this.program = [];
-    this.robotState = {
-      x: this.levelConfig.start.x,
-      y: this.levelConfig.start.y,
-      direction: this.levelConfig.direction,
-    };
-    this.pathMarks = [];
-    this.programObjects = [];
-    this.executedPath = [];
-    this.overlayObjects = [];
-    this.infoObjects = [];
-    this.directionHitAreas = [];
-    this.actionHitAreas = [];
-    this.infoHitArea = undefined;
-    this.infoCloseHitArea = undefined;
-    this.commandLocked = false;
-    this.hasPassedCheckpoint = this.isCheckpoint(this.robotState.x, this.robotState.y);
-    this.hits = 0;
-    this.errors = 0;
-    this.hasStartedTimer = false;
-    this.timerEvent?.destroy();
-    this.timerEvent = undefined;
-    this.timerBar = undefined;
-  }
-
-  create() {
-    this.createBackground();
-    this.createRobotCutoutTexture();
-    this.createTimerBar();
-    this.createHeader();
-    this.createBoard();
-    this.createCommandPanel();
-    this.createProgramPanel();
-    this.createActionButtons();
-    this.createRobot();
-    this.renderProgram();
-    this.registerPlatformCommands();
-
-    runtimeGameBridge.emit({ type: "GAME_READY", gameId: GAME_ID });
-    this.emitProgress();
-  }
-
-  update() {
-    if (!this.timerEvent || !this.timerBar) return;
-
-    const remaining = this.timerEvent.getRemaining();
-    const total = this.levelConfig.timeLimit * 1000;
-    const pct = Math.max(0, remaining / total);
-    this.timerBar.setSize(TIMER_BAR_W * pct, 18);
-
-    if (pct > 0.5) this.timerBar.setFillStyle(COLORS.green);
-    else if (pct > 0.25) this.timerBar.setFillStyle(COLORS.orange);
-    else this.timerBar.setFillStyle(0xef4444);
-  }
-
-  shutdown() {
-    this.timerEvent?.destroy();
-    this.input.off("pointerdown", this.handleDirectionPointerDown, this);
-    this.input.off("pointermove", this.handleDirectionPointerMove, this);
-    this.input.setDefaultCursor("default");
-    this.unsubscribePlatformCommands?.();
-  }
-
-  private createBackground() {
-  this.add.image(640, 360, "wallpaper")
-    .setDisplaySize(1280, 720)
-    .setDepth(-100);
-
+// Linha de ação medida para caber nos 512px do painel, com folga nas bordas
+const ACTION_Y = 626
+const ACTION_X0 = SIDE.cx - 232
+const ACTION = {
+  run: { x: ACTION_X0 + 95, w: 190 },
+  undo: { x: ACTION_X0 + 263, w: 128 },
+  clear: { x: ACTION_X0 + 400, w: 128 },
 }
 
-  private createRobotCutoutTexture() {
-    if (this.textures.exists("robot-cutout")) return;
+const DIRECTION_META: Record<Direction, { label: string; angle: number; dx: number; dy: number }> = {
+  up: { label: "Cima", angle: -90, dx: 0, dy: -1 },
+  right: { label: "Direita", angle: 0, dx: 1, dy: 0 },
+  down: { label: "Baixo", angle: 90, dx: 0, dy: 1 },
+  left: { label: "Esquerda", angle: 180, dx: -1, dy: 0 },
+}
 
-    const source = this.textures.get("robot").getSourceImage() as HTMLImageElement | HTMLCanvasElement;
-    const width = source.width;
-    const height = source.height;
-    if (!width || !height) return;
+export class GameScene extends Phaser.Scene {
+  private levelIdx = 0
+  private phaseIdx = 0
+  private score = 0
+  private hits = 0
+  private errors = 0
 
-    const canvas = document.createElement("canvas");
-    canvas.width = width;
-    canvas.height = height;
+  private program: RobotCommand[] = []
+  private running = false
+  private ended = false
+  private runningIndex = -1
+  private failedIndex = -1
 
-    const context = canvas.getContext("2d", { willReadFrequently: true });
-    if (!context) return;
+  private robot!: Phaser.GameObjects.Container
+  private robotSprite!: Phaser.GameObjects.Image
+  private robotShadow!: Phaser.GameObjects.Ellipse
+  private robotBaseScale = 1
+  private robotPos!: GridPoint
 
-    context.drawImage(source, 0, 0);
-    const imageData = context.getImageData(0, 0, width, height);
-    const data = imageData.data;
-    const visited = new Uint8Array(width * height);
-    const queue: number[] = [];
+  private checkpointImg?: Phaser.GameObjects.Image
+  private checkpointScale = 1
+  private checkpointTaken = false
 
-    const isBackgroundPixel = (index: number) => {
-      const offset = index * 4;
-      return data[offset + 3] > 0 && data[offset] > 238 && data[offset + 1] > 238 && data[offset + 2] > 238;
-    };
+  private slotLayer!: Phaser.GameObjects.Graphics
+  private blockLayer!: Phaser.GameObjects.Container
+  private counterText!: Phaser.GameObjects.Text
+  private footprints: Phaser.GameObjects.GameObject[] = []
+  private railDots: Phaser.GameObjects.Graphics[] = []
+  private goalLabel!: Phaser.GameObjects.Text
 
-    const enqueue = (x: number, y: number) => {
-      if (x < 0 || x >= width || y < 0 || y >= height) return;
-      const index = y * width + x;
-      if (visited[index] || !isBackgroundPixel(index)) return;
-      visited[index] = 1;
-      queue.push(index);
-    };
+  private tapeRoot?: Phaser.GameObjects.Container
+  private tapeChips: Array<{
+    g: Phaser.GameObjects.Graphics
+    icon: Phaser.GameObjects.Image
+    x: number
+    size: number
+    iconScale: number
+  }> = []
+  private runBtn!: Btn
+  private undoBtn!: Btn
+  private clearBtn!: Btn
+  private dirBtns: Btn[] = []
 
-    for (let x = 0; x < width; x++) {
-      enqueue(x, 0);
-      enqueue(x, height - 1);
+  private focusVeil?: Phaser.GameObjects.Graphics
+
+  private timerFill!: Phaser.GameObjects.Graphics
+  private timerText!: Phaser.GameObjects.Text
+  private timeLeft = 0
+  private timerOn = false
+
+  private unsubPlatform?: () => void
+
+  constructor() { super({ key: "GameScene" }) }
+
+  init(data: GameSceneData) {
+    this.levelIdx = Phaser.Math.Clamp((data?.level ?? 1) - 1, 0, LEVELS.length - 1)
+    this.phaseIdx = Phaser.Math.Clamp(data?.phase ?? 0, 0, this.level.phases.length - 1)
+    this.score = data?.score ?? 0
+    this.hits = data?.hits ?? 0
+    this.errors = data?.errors ?? 0
+
+    this.focusVeil = undefined
+    this.program = []
+    this.running = false
+    this.ended = false
+    this.runningIndex = -1
+    this.failedIndex = -1
+    this.footprints = []
+    this.railDots = []
+    this.dirBtns = []
+    this.checkpointImg = undefined
+    this.checkpointTaken = false
+    this.timeLeft = this.level.timeLimit
+    this.timerOn = false
+    this.robotPos = { ...this.phase.start }
+
+    this.tapeRoot = undefined
+    this.tapeChips = []
+  }
+
+  private get level(): RepeatLevel { return LEVELS[this.levelIdx] }
+  private get phase(): RepeatPhase { return this.level.phases[this.phaseIdx] }
+
+  create() {
+    this.cameras.main.setZoom(1).centerOn(W / 2, H / 2)
+
+    this.buildBackground()
+    this.buildHeader()
+    this.buildBoard()
+    this.buildSidePanel()
+    this.buildRobot()
+    this.renderProgram()
+    this.registerPlatform()
+
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.unsubPlatform?.())
+
+    runtimeGameBridge.emit({ type: "GAME_READY", gameId: GAME_ID })
+    this.emitCheckpoint()
+
+    const begin = () => {
+      if (this.levelIdx === 0 && this.phaseIdx === 0) this.runTutorial(true, () => this.startPlay())
+      else this.startPlay()
     }
 
-    for (let y = 0; y < height; y++) {
-      enqueue(0, y);
-      enqueue(width - 1, y);
+    if (this.phaseIdx === 0) this.showLevelIntro(begin)
+    else begin()
+  }
+
+  update(_t: number, dt: number) {
+    if (!this.timerOn || this.ended) return
+    this.timeLeft = Math.max(0, this.timeLeft - dt / 1000)
+    this.paintTimer()
+    if (this.timeLeft <= 0) {
+      this.timerOn = false
+      floatingNote(this, W / 2, 320, "O bônus de tempo acabou — siga com calma!",
+        { tone: C.sun, deep: C.sunDeep })
+    }
+  }
+
+  // ═════════════════════════════════════════════════ cenário
+
+  private buildBackground() {
+    this.add.image(W / 2, H / 2, "wallpaper")
+      .setDisplaySize(W, H).setDepth(-100).setTint(0x8fa6c4)
+  }
+
+  private buildHeader() {
+    // Faixa azul-roxa em duas camadas: base escura + luz na metade de cima
+    const g = this.add.graphics().setDepth(40)
+    g.fillStyle(C.headerDeep, 0.96)
+    g.fillRoundedRect(-40, -40, W + 80, HEADER_H + 40, 24)
+    g.fillStyle(C.header, 0.95)
+    g.fillRoundedRect(-40, -40, W + 80, HEADER_H + 34, 24)
+    g.fillStyle(C.headerGlow, 0.4)
+    g.fillRoundedRect(-40, -40, W + 80, HEADER_H * 0.55 + 40, 24)
+    g.fillStyle(C.sun, 1); g.fillRect(0, HEADER_H - 4, W, 4)
+
+    // Chip compacto: "N1 · FASE 2/3"
+    const chipW = 216
+    const chip = this.add.graphics().setDepth(41)
+    chip.fillStyle(C.white, 0.16); chip.fillRoundedRect(22, 16, chipW, 44, 22)
+    chip.lineStyle(2, C.white, 0.3); chip.strokeRoundedRect(22, 16, chipW, 44, 22)
+    label(this, 22 + chipW / 2, 38,
+      `N${this.level.level} · FASE ${this.phaseIdx + 1}/${this.level.phases.length}`,
+      { size: 19, color: C.white }).setDepth(42)
+
+    const gap = 40
+    const x0 = W / 2 - gap
+    for (let i = 0; i < this.level.phases.length; i++) {
+      this.railDots.push(this.add.graphics().setDepth(41))
+      this.paintDot(i, x0 + i * gap, 38)
     }
 
-    for (let cursor = 0; cursor < queue.length; cursor++) {
-      const index = queue[cursor];
-      const x = index % width;
-      const y = Math.floor(index / width);
-      const offset = index * 4;
-      data[offset + 3] = 0;
-      enqueue(x + 1, y);
-      enqueue(x - 1, y);
-      enqueue(x, y + 1);
-      enqueue(x, y - 1);
+    this.buildTimerPill(1012, 38)
+
+    circleButton(this, 1210, 38, 26, C.sun, C.sunDeep,
+      () => this.runTutorial(false, () => { })).setDepth(42)
+    label(this, 1210, 39, "?", { size: 32, color: C.ink }).setDepth(43)
+  }
+
+  /** Pílula de tempo: trilho, preenchimento e leitura em segundos. */
+  private buildTimerPill(cx: number, cy: number) {
+    const w = 200, h = 40
+    const g = this.add.graphics().setDepth(41)
+    g.fillStyle(C.headerDeep, 0.9); g.fillRoundedRect(cx - w / 2, cy - h / 2, w, h, h / 2)
+    g.lineStyle(2, C.white, 0.26); g.strokeRoundedRect(cx - w / 2, cy - h / 2, w, h, h / 2)
+
+    // Relógio desenhado: dá contexto sem depender de asset
+    g.lineStyle(3, C.white, 0.85); g.strokeCircle(cx - w / 2 + 26, cy, 11)
+    g.lineBetween(cx - w / 2 + 26, cy, cx - w / 2 + 26, cy - 6)
+    g.lineBetween(cx - w / 2 + 26, cy, cx - w / 2 + 31, cy + 3)
+
+    const trackX = cx - w / 2 + 46
+    const trackW = w - 62
+    g.fillStyle(C.white, 0.14)
+    g.fillRoundedRect(trackX, cy + 6, trackW, 8, 4)
+
+    this.timerFill = this.add.graphics().setDepth(42)
+    this.timerFill.setData("x", trackX)
+    this.timerFill.setData("y", cy + 6)
+    this.timerFill.setData("w", trackW)
+
+    this.timerText = label(this, trackX + trackW / 2, cy - 7, "", { size: 17, color: C.white })
+      .setDepth(42)
+    this.paintTimer()
+  }
+
+  private paintTimer() {
+    const g = this.timerFill
+    const x = g.getData("x") as number
+    const y = g.getData("y") as number
+    const w = g.getData("w") as number
+    const p = this.level.timeLimit > 0
+      ? Phaser.Math.Clamp(this.timeLeft / this.level.timeLimit, 0, 1) : 0
+
+    g.clear()
+    if (p > 0) {
+      g.fillStyle(p > 0.4 ? C.mint : C.sun, 1)
+      g.fillRoundedRect(x, y, Math.max(8, w * p), 8, 4)
     }
 
-    context.putImageData(imageData, 0, 0);
-    this.textures.addCanvas("robot-cutout", canvas);
+    const secs = Math.ceil(this.timeLeft)
+    this.timerText.setText(
+      secs > 0 ? `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, "0")}` : "sem bônus",
+    )
+    this.timerText.setColor(hex(p > 0.4 ? C.white : C.sun))
   }
 
-  private createTimerBar() {
-    this.add.rectangle(640, TIMER_BAR_Y, TIMER_BAR_W + 8, 28, 0x0f172a, 0.32)
-      .setStrokeStyle(3, 0xffffff, 0.85);
-    this.timerBar = this.add.rectangle(640 - TIMER_BAR_W / 2, TIMER_BAR_Y, TIMER_BAR_W, 18, COLORS.green)
-      .setOrigin(0, 0.5);
+  private paintDot(i: number, x: number, y: number) {
+    const d = this.railDots[i]
+    d.clear()
+    if (i < this.phaseIdx) {
+      d.fillStyle(C.mint, 1); d.fillCircle(x, y, 14)
+      d.lineStyle(5, C.white, 1)
+      d.lineBetween(x - 6, y, x - 2, y + 5)
+      d.lineBetween(x - 2, y + 5, x + 6, y - 5)
+    } else if (i === this.phaseIdx) {
+      d.fillStyle(C.sun, 0.32); d.fillCircle(x, y, 15)
+      d.lineStyle(5, C.sun, 1); d.strokeCircle(x, y, 15)
+    } else {
+      d.fillStyle(C.white, 0.16); d.fillCircle(x, y, 11)
+      d.lineStyle(3, C.white, 0.42); d.strokeCircle(x, y, 11)
+    }
   }
 
-  private createHeader() {
-    this.add.text(640, 94, this.levelConfig.title, {
-      fontSize: "38px",
-      fontFamily: "Arial Black, Arial",
-      color: "#25327a",
-      stroke: "#ffffff",
-      strokeThickness: 7,
-    }).setOrigin(0.5);
+  // ═════════════════════════════════════════════════ tabuleiro
 
-    this.add.text(1080, 105, `Nível ${this.levelConfig.level}/3`, {
-      fontSize: "18px",
-      fontFamily: "Arial Black, Arial",
-      color: "#1e3a8a",
-      backgroundColor: "rgba(255,255,255,0.75)",
-      padding: { x: 14, y: 8 },
-    }).setOrigin(0.5);
+  private get cell() {
+    const { cols, rows } = this.phase.gridSize
+    return Math.floor(Math.min((BOARD.w - 70) / cols, (BOARD.h - 110) / rows))
   }
 
-  private createInfoButton(x: number, y: number) {
-    const button = this.add.graphics().setDepth(20);
-    button.fillStyle(0x2563eb, 0.98);
-    button.fillRoundedRect(x - 48, y - 20, 96, 40, 20);
-    button.lineStyle(4, 0xffffff, 0.95);
-    button.strokeRoundedRect(x - 48, y - 20, 96, 40, 20);
-
-    const label = this.add.text(x, y - 1, "Dica", {
-      fontSize: "19px",
-      fontFamily: "Arial Black, Arial",
-      color: "#ffffff",
-      stroke: "#1e3a8a",
-      strokeThickness: 4,
-    }).setOrigin(0.5).setDepth(21);
-
-    const hitArea = this.add.zone(x, y, 118, 62)
-      .setOrigin(0.5)
-      .setDepth(22)
-      .setInteractive({ useHandCursor: true });
-
-    hitArea.on("pointerdown", () => this.showInfoOverlay());
-
-    this.infoHitArea = {
-      bounds: new Phaser.Geom.Rectangle(x - 59, y - 31, 118, 62),
-      onClick: () => this.showInfoOverlay(),
-    };
-
-    return { button, label, hitArea };
+  private get boardOrigin() {
+    const { cols, rows } = this.phase.gridSize
+    const c = this.cell
+    return { x: BOARD.cx - (cols * c) / 2, y: BOARD.cy - (rows * c) / 2 + 22 }
   }
 
-  private showInfoOverlay() {
-    this.clearInfoOverlay();
-
-    const shade = this.add.rectangle(640, 360, 1280, 720, 0x0f172a, 0.46)
-      .setDepth(330)
-      .setInteractive();
-
-    const panel = this.add.graphics().setDepth(331);
-    panel.fillStyle(0xffffff, 0.96);
-    panel.fillRoundedRect(310, 158, 660, 404, 34);
-    panel.lineStyle(6, 0xffffff, 0.98);
-    panel.strokeRoundedRect(310, 158, 660, 404, 34);
-    panel.lineStyle(3, COLORS.cyan, 0.55);
-    panel.strokeRoundedRect(326, 174, 628, 372, 26);
-
-    const title = this.add.text(640, 206, "Como jogar", {
-      fontSize: "34px",
-      fontFamily: "Arial Black, Arial",
-      color: "#25327a",
-      stroke: "#ffffff",
-      strokeThickness: 6,
-    }).setOrigin(0.5).setDepth(332);
-
-    const lines = [
-      "Monte o caminho com as setas.",
-      "Passe pela marca da pata no tabuleiro.",
-      `Limite: ${this.levelConfig.maxBlocks} comandos.`,
-    ];
-
-    const body = this.add.text(640, 324, lines.join("\n"), {
-      fontSize: "25px",
-      fontFamily: "Arial Black, Arial",
-      color: "#334155",
-      stroke: "#ffffff",
-      strokeThickness: 4,
-      align: "center",
-      lineSpacing: 18,
-      wordWrap: { width: 560 },
-    }).setOrigin(0.5).setDepth(332);
-
-    const closeBg = this.add.graphics().setDepth(332);
-    closeBg.fillStyle(COLORS.orange, 1);
-    closeBg.fillRoundedRect(470, 468, 340, 68, 34);
-    closeBg.lineStyle(5, 0xffffff, 0.98);
-    closeBg.strokeRoundedRect(470, 468, 340, 68, 34);
-
-    const closeText = this.add.text(640, 502, "Entendi", {
-      fontSize: "28px",
-      fontFamily: "Arial Black, Arial",
-      color: "#ffffff",
-      stroke: "#7c2d12",
-      strokeThickness: 5,
-    }).setOrigin(0.5).setDepth(333);
-
-    const closeHit = this.add.zone(640, 502, 380, 88)
-      .setOrigin(0.5)
-      .setDepth(334)
-      .setInteractive({ useHandCursor: true });
-    closeHit.on("pointerdown", () => this.clearInfoOverlay());
-
-    this.infoCloseHitArea = {
-      bounds: new Phaser.Geom.Rectangle(450, 458, 380, 88),
-      onClick: () => this.clearInfoOverlay(),
-    };
-
-    this.infoObjects.push(shade, panel, title, body, closeBg, closeText, closeHit);
+  private gridToWorld(gx: number, gy: number) {
+    const c = this.cell
+    const o = this.boardOrigin
+    return { x: o.x + gx * c + c / 2, y: o.y + gy * c + c / 2 }
   }
 
-  private clearInfoOverlay() {
-    this.infoObjects.forEach((object) => object.destroy());
-    this.infoObjects = [];
-    this.infoCloseHitArea = undefined;
-  }
+  private buildBoard() {
+    paperCard(this, BOARD.cx, BOARD.cy, BOARD.w, BOARD.h, { edge: C.sky }).setDepth(0)
+    headerBand(this, BOARD.cx, BOARD.cy - BOARD.h / 2, BOARD.w - 12, BAND_H, C.sky, C.skyDeep, 22)
+      .setDepth(1)
+    this.goalLabel = label(this, BOARD.cx, BOARD.cy - BOARD.h / 2 + BAND_H / 2 + 2,
+      this.phase.goal, { size: 22, color: C.white, wrap: BOARD.w - 80 }).setDepth(2)
 
-  private createBoard() {
-    const { cols, rows } = this.levelConfig.gridSize;
-    const cell = this.getCellSize();
-    const startX = BOARD_START_X;
-    const startY = BOARD_START_Y;
-    const boardW = cols * cell;
-    const boardH = rows * cell;
-
-    this.drawGamePanel(startX + boardW / 2, startY + boardH / 2, boardW + 38, boardH + 38, COLORS.cyan, -2);
-    this.createInfoButton(startX + 76, startY - 42);
+    const { cols, rows } = this.phase.gridSize
+    const c = this.cell
 
     for (let y = 0; y < rows; y++) {
       for (let x = 0; x < cols; x++) {
-        const px = startX + x * cell + cell / 2;
-        const py = startY + y * cell + cell / 2;
-        const isObstacle = this.isObstacle(x, y);
-        const isGoal = this.levelConfig.goal.x === x && this.levelConfig.goal.y === y;
-        const isCheckpoint = this.isCheckpoint(x, y);
-        
-
-        this.add.image(px, py, "grid-tile")
-          .setDisplaySize(cell - 5, cell - 5)
-          .setAlpha(isObstacle ? 0.76 : 0.92)
-          .setDepth(2);
-
-if (isGoal) {
-  this.add.image(
-    px,
-    py,
-    "goal-stage"
-  )
-  .setDisplaySize(
-    cell - 10,
-    cell - 10
-  )
-  .setDepth(4);
-}
-
-if (isObstacle) {
-  this.add.image(
-    px,
-    py,
-    "obstacle-cone"
-  )
-  .setDisplaySize(
-    cell - 10,
-    cell - 10
-  )
-  .setDepth(4);
-}
-
-if (isCheckpoint) {
-  this.add.image(px, py - cell * 0.04, "path-mark")
-    .setDisplaySize(cell - 8, cell - 8)
-    .setDepth(5);
-}
+        const p = this.gridToWorld(x, y)
+        const dark = (x + y) % 2 === 1
+        const tile = this.add.graphics().setDepth(2)
+        tile.fillStyle(dark ? C.paperShade : C.paperEdge, dark ? 0.85 : 0.6)
+        tile.fillRoundedRect(p.x - c / 2 + 3, p.y - c / 2 + 3, c - 6, c - 6, 10)
+        this.add.image(p.x, p.y, "grid-tile")
+          .setDisplaySize(c - 6, c - 6).setAlpha(0.4).setDepth(3)
       }
     }
+
+    // Brilho do palco: Graphics posicionado, desenho em (0,0).
+    // Desenhar em coordenada absoluta e escalar joga o objeto para o canto.
+    const t = this.gridToWorld(this.phase.target.x, this.phase.target.y)
+    const glow = this.add.graphics({ x: t.x, y: t.y }).setDepth(4)
+    glow.fillStyle(C.sun, 0.28)
+    glow.fillCircle(0, 0, c * 0.55)
+    this.tweens.add({
+      targets: glow, alpha: 0.4, scale: 1.14,
+      duration: 900, yoyo: true, repeat: -1, ease: "Sine.easeInOut",
+    })
+    this.add.image(t.x, t.y, "goal-stage").setDisplaySize(c - 8, c - 8).setDepth(5)
+
+    if (this.phase.checkpoint) {
+      const k = this.gridToWorld(this.phase.checkpoint.x, this.phase.checkpoint.y)
+      this.checkpointImg = this.add.image(k.x, k.y, "path-mark")
+        .setDisplaySize(c - 16, c - 16).setDepth(5).setAlpha(0.92)
+      this.checkpointScale = this.checkpointImg.scaleX
+      this.tweens.add({
+        targets: this.checkpointImg, scale: this.checkpointScale * 1.08,
+        duration: 780, yoyo: true, repeat: -1, ease: "Sine.easeInOut",
+      })
+    }
+
+    this.phase.obstacles.forEach((o) => {
+      const p = this.gridToWorld(o.x, o.y)
+      this.add.image(p.x, p.y, "obstacle-cone").setDisplaySize(c - 10, c - 10).setDepth(6)
+    })
   }
 
-  private createCommandPanel() {
-    this.directionHitAreas = [];
-    this.input.off("pointerdown", this.handleDirectionPointerDown, this);
-    this.input.off("pointermove", this.handleDirectionPointerMove, this);
-    this.drawGamePanel(910, 326, 604, 292, COLORS.purple, 1);
-    this.drawPanelHeader(910, 172, 410, "Escolha a direção", COLORS.purple);
+  private buildRobot() {
+    const c = this.cell
+    const p = this.gridToWorld(this.robotPos.x, this.robotPos.y)
 
-    const directions: Array<{ x: number; y: number; label: string; angle: number; direction: Direction; color: number }> = [
-      { x: 786, y: 288, label: "Cima", angle: -90, direction: "up", color: COLORS.blue },
-      { x: 1034, y: 288, label: "Direita", angle: 0, direction: "right", color: COLORS.purple },
-      { x: 786, y: 406, label: "Baixo", angle: 90, direction: "down", color: COLORS.blue },
-      { x: 1034, y: 406, label: "Esquerda", angle: 180, direction: "left", color: COLORS.purple },
-    ];
+    this.robotShadow = this.add.ellipse(0, c * 0.34, c * 0.5, c * 0.18, 0x0a1626, 0.22)
+    this.robotSprite = this.add.image(0, -c * 0.06,
+      this.textures.exists("robot-cutout") ? "robot-cutout" : "robot")
 
-    directions.forEach((button) => {
-      this.createDirectionButton(
-        button.x,
-        button.y,
-        button.angle,
-        button.label,
-        button.color,
-        () => this.addCommand({ type: "move", direction: button.direction })
-      );
-    });
+    const src = this.robotSprite.texture.getSourceImage() as { width: number; height: number }
+    this.robotBaseScale = (c * 0.86) / src.height
+    this.robotSprite.setScale(this.robotBaseScale).setOrigin(0.5, 0.62)
 
-    this.input.on("pointerdown", this.handleDirectionPointerDown, this);
-    this.input.on("pointermove", this.handleDirectionPointerMove, this);
+    this.robot = this.add.container(p.x, p.y, [this.robotShadow, this.robotSprite]).setDepth(20)
+    this.faceDirection(this.phase.direction, true)
   }
 
-  private handleDirectionPointerDown(pointer: Phaser.Input.Pointer) {
-    if (this.infoObjects.length) {
-      if (this.infoCloseHitArea?.bounds.contains(pointer.x, pointer.y)) {
-        this.infoCloseHitArea.onClick();
+  // ═════════════════════════════════════════════════ painel lateral
+
+  private buildSidePanel() {
+    paperCard(this, SIDE.cx, SIDE.cy, SIDE.w, SIDE.h, { edge: C.grape }).setDepth(0)
+    headerBand(this, SIDE.cx, SIDE.cy - SIDE.h / 2, SIDE.w - 12, BAND_H, C.grape, C.grapeDeep, 22)
+      .setDepth(1)
+    label(this, SIDE.cx, SIDE.cy - SIDE.h / 2 + BAND_H / 2 + 2, "MONTE O CAMINHO",
+      { size: 22, color: C.white }).setDepth(2)
+
+    label(this, SIDE.cx, 200, "Toque numa seta para dar um passo",
+      { size: 18, color: C.inkSoft, weight: "bold" }).setDepth(2)
+
+    const order: Direction[] = ["up", "right", "down", "left"]
+    order.forEach((dir, i) => {
+      const meta = DIRECTION_META[dir]
+      const x = DIR_X[i % 2]
+      const y = DIR_Y[Math.floor(i / 2)]
+      const tone = i % 2 === 0 ? C.sky : C.grape
+      const deep = i % 2 === 0 ? C.skyDeep : C.grapeDeep
+
+      // labelX empurra o texto para a direita do ícone: "Esquerda" não cabia centralizado
+      const btn = chunkyButton(this, x, y, DIR_W, DIR_H, meta.label, tone, deep,
+        () => this.addCommand(dir), { size: 20, labelX: 32, wrap: 118 })
+      btn.root.setDepth(3)
+
+      const icon = this.add.image(-64, -3, "block-move").setAngle(meta.angle)
+      this.fitImage(icon, 52, 46)
+      btn.root.addAt(icon, 2)
+
+      this.dirBtns.push(btn)
+    })
+
+    const sep = this.add.graphics().setDepth(2)
+    sep.fillStyle(C.paperShade, 1)
+    sep.fillRoundedRect(SIDE.cx - 210, 432, 420, 4, 2)
+
+    label(this, SIDE.cx - 92, 466, "PROGRAMA", { size: 19, color: C.ink }).setDepth(2)
+    this.counterText = label(this, SIDE.cx + 152, 466, "", { size: 19, color: C.mintDeep })
+      .setDepth(2)
+
+    this.slotLayer = this.add.graphics().setDepth(2)
+    this.blockLayer = this.add.container(0, 0).setDepth(3)
+
+    this.runBtn = chunkyButton(this, ACTION.run.x, ACTION_Y, ACTION.run.w, 66, "Executar",
+      C.mint, C.mintDeep, () => this.execute(), { size: 22 })
+    this.undoBtn = chunkyButton(this, ACTION.undo.x, ACTION_Y, ACTION.undo.w, 66, "Apagar",
+      C.sun, C.sunDeep, () => this.undo(), { size: 19, textColor: C.ink })
+    this.clearBtn = chunkyButton(this, ACTION.clear.x, ACTION_Y, ACTION.clear.w, 66, "Limpar",
+      C.coral, C.coralDeep, () => this.clearProgram(), { size: 19 })
+
+      ;[this.runBtn, this.undoBtn, this.clearBtn].forEach(b => b.root.setDepth(3))
+  }
+
+  private fitImage(image: Phaser.GameObjects.Image, maxW: number, maxH: number) {
+    const src = image.texture.getSourceImage() as { width: number; height: number }
+    const k = Math.min(maxW / (src.width || maxW), maxH / (src.height || maxH))
+    image.setDisplaySize((src.width || maxW) * k, (src.height || maxH) * k)
+    return image
+  }
+
+  // ═════════════════════════════════════════════════ fita de execução
+
+  /** Monta a fita sobre a faixa do tabuleiro. O tamanho do chip encolhe
+   *  conforme o programa cresce, para 14 comandos ainda caberem. */
+  private buildTape() {
+    this.destroyTape()
+    const n = this.program.length
+    if (!n) return
+
+    const size = n <= 8 ? 52 : n <= 11 ? 44 : 38
+    const gap = n <= 8 ? 8 : n <= 11 ? 6 : 5
+    const totalW = n * size + (n - 1) * gap
+    const bgW = totalW + 44
+    const bgH = size + 24
+
+    const root = this.add.container(BOARD.cx, TAPE_Y).setDepth(60)
+
+
+    const bg = this.add.graphics()
+    bg.fillStyle(C.sun, 0.16)
+    bg.fillRoundedRect(-bgW / 2 - 12, -bgH / 2 - 12, bgW + 24, bgH + 24, (bgH + 24) / 2)
+    bg.fillStyle(C.shadow, 0.32)
+    bg.fillRoundedRect(-bgW / 2, -bgH / 2 + 7, bgW, bgH, bgH / 2)
+    bg.fillStyle(C.headerDeep, 0.96)
+    bg.fillRoundedRect(-bgW / 2, -bgH / 2, bgW, bgH, bgH / 2)
+    bg.lineStyle(3, C.sun, 0.85)
+    bg.strokeRoundedRect(-bgW / 2, -bgH / 2, bgW, bgH, bgH / 2)
+    root.add(bg)
+
+    const x0 = -totalW / 2 + size / 2
+    this.program.forEach((cmd, i) => {
+      const cx = x0 + i * (size + gap)
+      const g = this.add.graphics()
+      const icon = this.add.image(cx, 0, "block-move")
+        .setAngle(DIRECTION_META[cmd.direction].angle)
+      this.fitImage(icon, size * 0.6, size * 0.52)
+      root.add([g, icon])
+      this.tapeChips.push({ g, icon, x: cx, size, iconScale: icon.scaleX })
+    })
+
+    this.tapeRoot = root
+    this.paintTape(-1)
+
+    root.setAlpha(0).setY(TAPE_ENTER_Y)
+    this.tweens.add({ targets: root, alpha: 1, y: TAPE_Y, duration: 300, ease: "Back.easeOut" })
+  }
+
+  private paintTape(active: number, failed = -1) {
+    this.tapeChips.forEach((chip, i) => {
+      const cmd = this.program[i]
+      const done = i < active
+      const isNow = i === active
+      const isBad = i === failed
+
+      const tone = isBad ? C.coral : isNow ? C.sun : done ? C.mint : this.commandTone(cmd)
+      const deep = isBad ? C.coralDeep : isNow ? C.sunDeep : done ? C.mintDeep : this.commandDeep(cmd)
+      const s = chip.size
+      const g = chip.g
+
+      g.clear()
+      g.fillStyle(deep, 1)
+      g.fillRoundedRect(chip.x - s / 2, -s / 2, s, s, 12)
+      g.fillStyle(tone, done && !isNow ? 0.6 : 1)
+      g.fillRoundedRect(chip.x - s / 2, -s / 2, s, s - 3, 12)
+      g.fillStyle(C.white, done && !isNow ? 0.12 : 0.26)
+      g.fillRoundedRect(chip.x - s / 2 + 6, -s / 2 + 4, s - 12, 10, 5)
+
+      if (isNow || isBad) {
+        g.lineStyle(4, isBad ? C.white : C.white, 1)
+        g.strokeRoundedRect(chip.x - s / 2 - 4, -s / 2 - 4, s + 8, s + 8, 16)
       }
-      return;
+
+      chip.icon.setAlpha(done && !isNow ? 0.45 : 1)
+      chip.icon.setScale(chip.iconScale)
+    })
+  }
+
+  /** Acende o passo atual e dá um pulso no ícone. */
+  private markTape(i: number) {
+    this.paintTape(i)
+    const chip = this.tapeChips[i]
+    if (!chip) return
+    this.tweens.add({
+      targets: chip.icon,
+      scale: chip.iconScale * 1.4,
+      duration: 150, yoyo: true, ease: "Back.easeOut",
+    })
+  }
+
+  private destroyTape() {
+    this.tapeRoot?.destroy()
+    this.tapeRoot = undefined
+    this.tapeChips = []
+  }
+
+  private hideTape() {
+    const root = this.tapeRoot
+    this.tapeRoot = undefined
+    this.tapeChips = []
+    if (root) {
+      this.tweens.add({
+        targets: root, alpha: 0, y: TAPE_ENTER_Y, duration: 240, ease: "Sine.easeIn",
+        onComplete: () => root.destroy(),
+      })
     }
+    this.tweens.add({ targets: this.goalLabel, alpha: 1, duration: 240 })
+  }
 
-    if (this.infoHitArea?.bounds.contains(pointer.x, pointer.y)) {
-      this.infoHitArea.onClick();
-      return;
+  private slotPos(i: number) {
+    const col = i % SLOT_COLS
+    const row = Math.floor(i / SLOT_COLS)
+    const rowW = SLOT_COLS * SLOT + (SLOT_COLS - 1) * SLOT_GAP
+    return {
+      x: SIDE.cx - rowW / 2 + SLOT / 2 + col * (SLOT + SLOT_GAP),
+      y: SLOTS_Y[Math.min(row, SLOTS_Y.length - 1)],
     }
-
-    if (this.commandLocked || this.overlayObjects.length) return;
-
-    const hit =
-      this.directionHitAreas.find((area) => area.bounds.contains(pointer.x, pointer.y)) ??
-      this.actionHitAreas.find((area) => area.bounds.contains(pointer.x, pointer.y));
-    if (!hit) return;
-
-    hit.onClick();
-  }
-
-  private handleDirectionPointerMove(pointer: Phaser.Input.Pointer) {
-    if (this.overlayObjects.length || this.infoObjects.length) return;
-
-    const isOverInfo = this.infoHitArea?.bounds.contains(pointer.x, pointer.y) ?? false;
-
-    if (this.commandLocked) {
-      this.input.setDefaultCursor(isOverInfo ? "pointer" : "default");
-      return;
-    }
-
-    const isOverDirection = this.directionHitAreas.some((area) => area.bounds.contains(pointer.x, pointer.y));
-    const isOverAction = this.actionHitAreas.some((area) => area.bounds.contains(pointer.x, pointer.y));
-    this.input.setDefaultCursor(isOverInfo || isOverDirection || isOverAction ? "pointer" : "default");
-  }
-
-  private createProgramPanel() {
-    this.drawGamePanel(910, 558, 604, 136, COLORS.blue, 1);
-    this.drawPanelHeader(910, 492, 320, "Programa do robô", COLORS.blue);
-  }
-
-  private createActionButtons() {
-    this.actionHitAreas = [];
-    this.createUiButton(690, 676, 205, 72, "Executar", COLORS.green, () => this.executeProgram());
-    this.createUiButton(910, 676, 195, 72, "Desfazer", COLORS.orange, () => this.undoCommand());
-    this.createUiButton(1130, 676, 185, 72, "Limpar", 0xef4444, () => this.clearProgram());
-  }
-  private createRobot() {
-  const pos = this.gridToWorld(
-    this.robotState.x,
-    this.robotState.y
-  );
-
-  const shadow = this.add.ellipse(
-    0,
-    34,
-    42,
-    16,
-    0x000000,
-    0.2
-  );
-
-  const sprite = this.add.image(
-    0,
-    0,
-    this.textures.exists("robot-cutout") ? "robot-cutout" : "robot"
-  );
-
-  sprite.setDisplaySize(50, 82);
-
-  this.robot = this.add.container(
-    pos.x,
-    pos.y,
-    [shadow, sprite]
-  );
-
-  this.robot.setDepth(20);
-
-  this.updateRobotRotation();
-}
-
-  private addCommand(command: RobotCommand) {
-    if (this.commandLocked) return;
-    if (this.program.length >= this.levelConfig.maxBlocks) {
-      this.showToast("Limite atingido.", 0xf59e0b);
-      return;
-    }
-    this.playClick();
-    this.startTimerOnce();
-    this.program.push(command);
-    this.renderProgram();
-    this.emitProgress();
-  }
-
-  private undoCommand() {
-    if (this.commandLocked || !this.program.length) return;
-    this.playClick();
-    this.program.pop();
-    this.renderProgram();
-  }
-
-  private clearProgram() {
-    if (this.commandLocked) return;
-    this.playClick();
-    this.program = [];
-    this.renderProgram();
   }
 
   private renderProgram() {
-    this.programObjects.forEach((object) => object.destroy());
-    this.programObjects = [];
-    this.drawCommandLimitCounter();
+    this.slotLayer.clear()
+    this.blockLayer.removeAll(true)
 
-    if (!this.program.length) return;
+    for (let i = 0; i < this.phase.maxBlocks; i++) {
+      const p = this.slotPos(i)
+      this.slotLayer.fillStyle(C.paperEdge, 1)
+      this.slotLayer.fillRoundedRect(p.x - SLOT / 2, p.y - SLOT / 2, SLOT, SLOT, 12)
+      this.slotLayer.lineStyle(3, C.paperShade, 1)
+      this.slotLayer.strokeRoundedRect(p.x - SLOT / 2, p.y - SLOT / 2, SLOT, SLOT, 12)
+    }
 
-    this.program.forEach((command, index) => {
-      const col = index % 9;
-      const row = Math.floor(index / 9);
-      const x = 642 + col * 58;
-      const y = 545 + row * 42;
-      const block = this.add.graphics().setDepth(12);
-      block.fillStyle(this.getCommandColor(command), 0.98);
-      block.fillRoundedRect(x - 21, y - 15, 42, 30, 10);
-      block.fillStyle(0xffffff, 0.14);
-      block.fillRoundedRect(x - 15, y - 11, 30, 10, 5);
-      block.lineStyle(3, 0xffffff, 0.9);
-      block.strokeRoundedRect(x - 21, y - 15, 42, 30, 10);
-      this.programObjects.push(block);
-      const icon = this.add.image(x, y, "block-move")
-        .setAngle(this.getCommandAngle(command))
-        .setDepth(13);
-      this.fitImage(icon, 32, 24);
-      this.programObjects.push(icon);
-    });
-  }
+    this.program.forEach((cmd, i) => {
+      const p = this.slotPos(i)
+      const isRunning = i === this.runningIndex
+      const isFailed = i === this.failedIndex
+      const tone = isFailed ? C.coral : isRunning ? C.sun : this.commandTone(cmd)
+      const deep = isFailed ? C.coralDeep : isRunning ? C.sunDeep : this.commandDeep(cmd)
 
-  private drawCommandLimitCounter() {
-    const isFull = this.program.length >= this.levelConfig.maxBlocks;
-    const color = isFull ? 0xf59e0b : COLORS.green;
-    const cell = this.getCellSize();
-    const boardW = this.levelConfig.gridSize.cols * cell;
-    const boardH = this.levelConfig.gridSize.rows * cell;
-    const x = BOARD_START_X + boardW / 2;
-    const y = BOARD_START_Y + boardH + 58;
-    const bg = this.add.graphics().setDepth(13);
-    bg.fillStyle(color, 0.96);
-    bg.fillRoundedRect(x - 56, y - 19, 112, 38, 19);
-    bg.lineStyle(3, 0xffffff, 0.92);
-    bg.strokeRoundedRect(x - 56, y - 19, 112, 38, 19);
-    this.programObjects.push(bg);
+      const g = this.add.graphics()
+      g.fillStyle(deep, 1); g.fillRoundedRect(p.x - SLOT / 2, p.y - SLOT / 2, SLOT, SLOT, 12)
+      g.fillStyle(tone, 1); g.fillRoundedRect(p.x - SLOT / 2, p.y - SLOT / 2, SLOT, SLOT - 4, 12)
+      g.fillStyle(C.white, 0.26)
+      g.fillRoundedRect(p.x - SLOT / 2 + 7, p.y - SLOT / 2 + 5, SLOT - 14, 12, 6)
 
-    this.programObjects.push(this.add.text(x, y, `${this.program.length}/${this.levelConfig.maxBlocks}`, {
-      fontSize: "18px",
-      fontFamily: "Arial Black, Arial",
-      color: "#ffffff",
-      stroke: "#0f172a",
-      strokeThickness: 4,
-      align: "center",
-    }).setOrigin(0.5).setDepth(14));
-  }
+      const icon = this.add.image(p.x, p.y, "block-move")
+        .setAngle(DIRECTION_META[cmd.direction].angle)
+      this.fitImage(icon, 30, 26)
+      this.blockLayer.add([g, icon])
 
-  private async executeProgram() {
-    if (this.commandLocked || !this.program.length) return;
-    this.playClick();
-    this.startTimerOnce();
-    this.commandLocked = true;
-    this.clearPathMarks();
-    this.resetRobot();
-    this.executedPath = [{ x: this.robotState.x, y: this.robotState.y }];
-    this.hasPassedCheckpoint = this.isCheckpoint(this.robotState.x, this.robotState.y);
-
-    for (const command of this.program) {
-      const result = await this.runCommand(command);
-      if (!result.ok) {
-        this.errors += 1;
-        this.playWrong();
-        runtimeGameBridge.emit({ type: "WRONG_ANSWER", gameId: GAME_ID, stage: this.levelConfig.level, pointsEarned: -5 });
-        this.restartCurrentLevelAfterError(result.message);
-        this.emitProgress();
-        return;
+      if (isRunning || isFailed) {
+        const ring = this.add.graphics({ x: p.x, y: p.y })
+        ring.lineStyle(4, isFailed ? C.coralDeep : C.sunDeep, 1)
+        ring.strokeRoundedRect(-SLOT / 2 - 4, -SLOT / 2 - 4, SLOT + 8, SLOT + 8, 15)
+        this.blockLayer.add(ring)
+        this.tweens.add({
+          targets: ring, alpha: 0.3, scale: 1.06,
+          duration: 420, yoyo: true, repeat: -1,
+        })
       }
-    }
+    })
 
-    if (
-      this.robotState.x === this.levelConfig.goal.x &&
-      this.robotState.y === this.levelConfig.goal.y &&
-      this.hasVisitedCheckpoint()
-    ) {
-      this.hits += 1;
-      this.playCorrect();
-      const bonus = this.program.length <= this.levelConfig.minBlocks ? 5 : 0;
-      runtimeGameBridge.emit({ type: "CORRECT_ANSWER", gameId: GAME_ID, stage: this.levelConfig.level, pointsEarned: 5 + bonus });
-      this.emitProgress();
-      this.handleLevelSuccess();
-      return;
-    }
+    const full = this.program.length >= this.phase.maxBlocks
+    this.counterText.setText(`${this.program.length} / ${this.phase.maxBlocks}`)
+    this.counterText.setColor(hex(full ? C.coralDeep : C.mintDeep))
 
-    this.errors += 1;
-    this.playWrong();
-    runtimeGameBridge.emit({ type: "WRONG_ANSWER", gameId: GAME_ID, stage: this.levelConfig.level, pointsEarned: -5 });
-    this.restartCurrentLevelAfterError(
-      this.robotState.x === this.levelConfig.goal.x && this.robotState.y === this.levelConfig.goal.y
-        ? "Você pulou a marca da pata no tabuleiro. O nível vai recomeçar."
-        : "O robô parou fora da estrela. O nível vai recomeçar."
-    );
-    this.emitProgress();
+    const idle = !this.running && !this.ended
+    this.runBtn.setEnabled(idle && this.program.length > 0)
+    this.undoBtn.setEnabled(idle && this.program.length > 0)
+    this.clearBtn.setEnabled(idle && this.program.length > 0)
+    this.dirBtns.forEach(b => b.setEnabled(idle && !full))
   }
 
-  private restartCurrentLevelAfterError(message: string) {
-    this.commandLocked = true;
-    this.timerEvent?.remove(false);
-    this.showToast(message, 0xef4444);
-    this.time.delayedCall(1000, () => {
-      this.scene.restart({ level: this.levelConfig.level });
-    });
+  private commandTone(cmd: RobotCommand) {
+    return cmd.direction === "left" || cmd.direction === "right" ? C.grape : C.sky
+  }
+  private commandDeep(cmd: RobotCommand) {
+    return cmd.direction === "left" || cmd.direction === "right" ? C.grapeDeep : C.skyDeep
   }
 
-  private runCommand(command: RobotCommand) {
-    return new Promise<{ ok: boolean; message: string }>((resolve) => {
-      this.robotState.direction = command.direction;
-      this.updateRobotRotation();
+  private addCommand(direction: Direction) {
+    if (this.running || this.ended) return
+    if (this.program.length >= this.phase.maxBlocks) return
 
-      const next = this.getNextPoint(command.direction);
+    this.failedIndex = -1
+    this.program.push({ type: "move", direction })
+    this.playClick()
+    this.renderProgram()
+
+    // Graphics posicionado + desenho relativo: sem isso o pulso escapa
+    // para o canto inferior direito ao ser escalado.
+    const p = this.slotPos(this.program.length - 1)
+    const pop = this.add.graphics({ x: p.x, y: p.y }).setDepth(4)
+    pop.lineStyle(4, C.white, 0.9)
+    pop.strokeRoundedRect(-SLOT / 2, -SLOT / 2, SLOT, SLOT, 12)
+    this.tweens.add({
+      targets: pop, alpha: 0, scale: 1.35, duration: 280,
+      onComplete: () => pop.destroy(),
+    })
+  }
+
+  private undo() {
+    if (this.running || !this.program.length) return
+    this.program.pop()
+    this.failedIndex = -1
+    this.playClick()
+    this.renderProgram()
+  }
+
+  private clearProgram() {
+    if (this.running || !this.program.length) return
+    this.program = []
+    this.failedIndex = -1
+    this.playClick()
+    this.renderProgram()
+  }
+
+  // ═════════════════════════════════════════════════ execução
+
+  private zoomIn() {
+    this.cameras.main.pan(BOARD.cx, BOARD.cy + 10, 420, "Sine.easeInOut")
+    this.cameras.main.zoomTo(1.24, 420, "Sine.easeInOut")
+  }
+
+  private zoomOut(): Promise<void> {
+    this.cameras.main.pan(W / 2, H / 2, 380, "Sine.easeInOut")
+    this.cameras.main.zoomTo(1, 380, "Sine.easeInOut")
+    return new Promise(r => this.time.delayedCall(400, () => r()))
+  }
+
+  private async execute() {
+    if (this.running || this.ended || !this.program.length) return
+
+    this.running = true
+    this.failedIndex = -1
+    this.clearFootprints()
+    this.resetRobot()
+    this.renderProgram()
+
+    this.tweens.add({ targets: this.goalLabel, alpha: 0, duration: 200 })
+    this.buildTape()
+    this.showFocus()
+    this.zoomIn()
+    await this.wait(520)
+
+    const visited: GridPoint[] = [{ ...this.robotPos }]
+
+    for (let i = 0; i < this.program.length; i++) {
+      const cmd = this.program[i]
+      this.runningIndex = i
+      this.renderProgram()
+      this.markTape(i)
+
+      const next: GridPoint = {
+        x: this.robotPos.x + DIRECTION_META[cmd.direction].dx,
+        y: this.robotPos.y + DIRECTION_META[cmd.direction].dy,
+      }
+
+      await this.showDirectionCue(cmd.direction)
+      await this.faceDirection(cmd.direction)
 
       if (!this.isInside(next.x, next.y)) {
-        resolve({
-          ok: false,
-          message: "O robô saiu da pista. Revise a direção da seta.",
-        });
-        return;
+        await this.bump(cmd.direction)
+        await this.fail(i, "O robô saiu da pista aqui.")
+        return
       }
-
       if (this.isObstacle(next.x, next.y)) {
-        resolve({
-          ok: false,
-          message: "O robô encontrou um cone. Tente outra seta.",
-        });
-        return;
+        await this.bump(cmd.direction)
+        await this.fail(i, "Tem um cone bloqueando este passo.")
+        return
       }
 
-      this.robotState.x = next.x;
-      this.robotState.y = next.y;
-      this.executedPath.push({ x: next.x, y: next.y });
-      if (this.isCheckpoint(next.x, next.y)) {
-        this.hasPassedCheckpoint = true;
+      await this.stepTo(next, cmd.direction)
+      this.robotPos = next
+      visited.push({ ...next })
+
+      if (this.phase.checkpoint
+        && next.x === this.phase.checkpoint.x && next.y === this.phase.checkpoint.y) {
+        this.burstCheckpoint()
       }
-
-      const pos = this.gridToWorld(next.x, next.y);
-      this.markPath(pos.x, pos.y);
-
-      this.tweens.add({
-        targets: this.robot,
-        x: pos.x,
-        y: pos.y - 12,
-        duration: 120,
-        yoyo: true,
-        ease: "Quad.easeOut",
-        onComplete: () => {
-          this.robot.setPosition(pos.x, pos.y);
-          resolve({ ok: true, message: "" });
-        },
-      });
-    });
-  }
-
-  private handleLevelSuccess() {
-    this.timerEvent?.remove(false);
-    this.commandLocked = true;
-    const nextLevel = this.levelConfig.level + 1;
-
-    if (nextLevel <= 3) {
-      runtimeGameBridge.emit({
-        type: "CHECKPOINT",
-        gameId: GAME_ID,
-        stage: nextLevel,
-        progress: 0,
-        score: this.getScore(),
-        hits: this.hits,
-        errors: this.errors,
-      });
-      this.showLevelCompleteTransition(nextLevel as 1 | 2 | 3);
-      return;
     }
 
-    runtimeGameBridge.emit({ type: "GAME_COMPLETED", gameId: GAME_ID, stage: this.levelConfig.level });
-    this.showGameCompleteScreen();
+    this.runningIndex = -1
+    this.paintTape(this.program.length)   // tudo cumprido
+    this.renderProgram()
+
+    const onTarget = this.robotPos.x === this.phase.target.x
+      && this.robotPos.y === this.phase.target.y
+    const passedCheck = !this.phase.checkpoint
+      || visited.some(p => p.x === this.phase.checkpoint!.x && p.y === this.phase.checkpoint!.y)
+
+    if (onTarget && passedCheck) { await this.succeed(); return }
+
+    this.errors += 1
+    this.running = false
+    this.renderProgram()
+    runtimeGameBridge.emit({
+      type: "WRONG_ANSWER", gameId: GAME_ID, stage: this.level.level, pointsEarned: 0,
+    })
+    this.playWrong()
+    this.cameras.main.shake(160, 0.004)
+
+    this.hideTape()
+    this.hideFocus()
+    await this.zoomOut()
+
+    floatingNote(this, W / 2, 320,
+      onTarget
+        ? "Chegou ao palco, mas pulou a pegada. Ajuste o caminho."
+        : "O robô parou fora do palco. Confira o programa.",
+      { tone: C.sun, deep: C.sunDeep })
+    this.time.delayedCall(700, () => this.resetRobot())
   }
 
-  private showLevelCompleteTransition(nextLevel: 1 | 2 | 3) {
-    this.clearOverlay();
-    const overlay = this.addOverlayObject(this.add.rectangle(640, 360, 1280, 720, 0x12324a, 0.56).setDepth(450));
-    overlay.setInteractive();
+  private showFocus() {
+    if (this.focusVeil) return
 
-    const modal = this.addOverlayObject(this.add.container(640, 360).setDepth(451));
-    const shadow = this.add.graphics();
-    shadow.fillStyle(0x000000, 0.18);
-    shadow.fillRoundedRect(-270, -166, 540, 330, 28);
+    const l = BOARD.cx - BOARD.w / 2 - 10
+    const r = BOARD.cx + BOARD.w / 2 + 10
+    const t = BOARD.cy - BOARD.h / 2 - 10
+    const b = BOARD.cy + BOARD.h / 2 + 10
 
-    const bg = this.add.graphics();
-    bg.fillStyle(0xffffff, 0.98);
-    bg.fillRoundedRect(-278, -178, 556, 330, 28);
-    bg.lineStyle(5, 0xffffff, 0.95);
-    bg.strokeRoundedRect(-278, -178, 556, 330, 28);
+    const g = this.add.graphics().setDepth(45).setAlpha(0)
 
-    const topBar = this.add.graphics();
-    topBar.fillStyle(COLORS.orange, 1);
-    topBar.fillRoundedRect(-196, -194, 392, 28, 14);
-    topBar.lineStyle(3, 0xffffff, 0.82);
-    topBar.strokeRoundedRect(-196, -194, 392, 28, 14);
+    g.fillStyle(C.deep, 0.78)
+    g.fillRect(0, 0, W, t)
+    g.fillRect(0, b, W, H - b)
+    g.fillRect(0, t, l, b - t)
+    g.fillRect(r, t, W - r, b - t)
 
-    const badgeIcon = this.add.image(0, -114, "success-badge");
-    this.fitImage(badgeIcon, 82, 82);
+    for (let i = 0; i < 6; i++) {
+      g.lineStyle(9, C.deep, 0.4 * (1 - i / 6))
+      g.strokeRoundedRect(
+        l + 4 + i * 7, t + 4 + i * 7,
+        (r - l) - 8 - i * 14, (b - t) - 8 - i * 14, 30,
+      )
+    }
 
-    const title = this.add.text(0, -58, "Parabéns!", {
-      fontSize: "40px",
-      fontFamily: "Arial Black, Arial",
-      color: "#25327a",
-      stroke: "#ffffff",
-      strokeThickness: 5,
-    }).setOrigin(0.5);
+    this.focusVeil = g
+    this.tweens.add({ targets: g, alpha: 1, duration: 320, ease: "Sine.easeOut" })
+  }
 
-    const score = this.add.text(0, -5, `Nível ${this.levelConfig.level} concluído`, {
-      fontSize: "26px",
-      fontFamily: "Arial Black, Arial",
-      color: "#7c3aed",
-    }).setOrigin(0.5);
-
-    const dots = [1, 2, 3].map((level, index) => {
-      const dot = this.add.graphics();
-      dot.fillStyle(level <= this.levelConfig.level ? COLORS.green : level === nextLevel ? COLORS.orange : 0xd8dde8, 1);
-      dot.fillCircle(-28 + index * 28, 58, 8);
-      dot.lineStyle(2, 0xffffff, 0.9);
-      dot.strokeCircle(-28 + index * 28, 58, 8);
-      return dot;
-    });
-
-    modal.add([shadow, bg, topBar, badgeIcon, title, score, ...dots]);
-    modal.setScale(MODAL_SCALE * 0.9);
-    modal.setAlpha(0);
-
+  private hideFocus() {
+    const g = this.focusVeil
+    if (!g) return
+    this.focusVeil = undefined
     this.tweens.add({
-      targets: modal,
-      alpha: 1,
-      scale: MODAL_SCALE,
-      duration: 260,
-      ease: "Back.easeOut",
-    });
-
-    this.time.delayedCall(3000, () => {
-      this.showNextLevelStartTransition(nextLevel);
-    });
+      targets: g, alpha: 0, duration: 280, ease: "Sine.easeIn",
+      onComplete: () => g.destroy(),
+    })
   }
 
-  private showNextLevelStartTransition(nextLevel: 1 | 2 | 3) {
-    this.clearOverlay();
-    const nextConfig = LEVELS.find((item) => item.level === nextLevel);
-    const overlay = this.addOverlayObject(this.add.rectangle(640, 360, 1280, 720, 0x12324a, 0.58).setDepth(450));
+  private async fail(index: number, message: string) {
+    this.errors += 1
+    this.running = false
+    this.runningIndex = -1
+    this.failedIndex = index
+    this.renderProgram()
 
-    const modal = this.addOverlayObject(this.add.container(640, 360).setDepth(451));
-    const shadow = this.add.graphics();
-    shadow.fillStyle(0x000000, 0.18);
-    shadow.fillRoundedRect(-270, -154, 540, 312, 28);
+    // O chip vermelho fica visível na fita por um instante antes de sair
+    this.paintTape(index, index)
 
-    const bg = this.add.graphics();
-    bg.fillStyle(0xffffff, 0.98);
-    bg.fillRoundedRect(-278, -166, 556, 312, 28);
-    bg.lineStyle(5, 0xffffff, 0.95);
-    bg.strokeRoundedRect(-278, -166, 556, 312, 28);
+    runtimeGameBridge.emit({
+      type: "WRONG_ANSWER", gameId: GAME_ID, stage: this.level.level, pointsEarned: 0,
+    })
+    this.playWrong()
+    this.cameras.main.shake(180, 0.005)
 
-    const topBar = this.add.graphics();
-    topBar.fillStyle(COLORS.green, 1);
-    topBar.fillRoundedRect(-196, -182, 392, 28, 14);
-    topBar.lineStyle(3, 0xffffff, 0.82);
-    topBar.strokeRoundedRect(-196, -182, 392, 28, 14);
+    await this.wait(900)
+    this.hideTape()
+    await this.zoomOut()
 
-    const title = this.add.text(0, -102, `Nível ${nextLevel} liberado!`, {
-      fontSize: "38px",
-      fontFamily: "Arial Black, Arial",
-      color: "#25327a",
-      stroke: "#ffffff",
-      strokeThickness: 5,
-    }).setOrigin(0.5);
-
-    const objective = this.add.text(0, -24, nextConfig?.title ?? "Novo desafio", {
-      fontSize: "24px",
-      fontFamily: "Arial Black, Arial",
-      color: "#7c3aed",
-      align: "center",
-      wordWrap: { width: 430 },
-    }).setOrigin(0.5);
-
-    const button = this.add.container(0, 104);
-    const buttonShadow = this.add.graphics();
-    buttonShadow.fillStyle(0x000000, 0.16);
-    buttonShadow.fillRoundedRect(-136, -20, 272, 48, 24);
-    const buttonBg = this.add.graphics();
-    buttonBg.fillStyle(COLORS.orange, 1);
-    buttonBg.fillRoundedRect(-140, -26, 280, 52, 26);
-    buttonBg.lineStyle(4, 0xffffff, 1);
-    buttonBg.strokeRoundedRect(-140, -26, 280, 52, 26);
-    const buttonText = this.add.text(0, 0, "Iniciar nível", {
-      fontSize: "22px",
-      fontFamily: "Arial Black, Arial",
-      color: "#ffffff",
-      stroke: "#9a3f00",
-      strokeThickness: 3,
-    }).setOrigin(0.5);
-    button.add([buttonShadow, buttonBg, buttonText]);
-
-    let hasStartedNextLevel = false;
-    const startNextLevel = () => {
-      if (hasStartedNextLevel) return;
-      hasStartedNextLevel = true;
-      this.input.setDefaultCursor("default");
-      this.scene.restart({ level: nextLevel });
-    };
-
-    overlay.setInteractive();
-
-    const buttonHitbox = this.addOverlayObject(this.add.zone(640, 360 + 104 * MODAL_SCALE, 280 * MODAL_SCALE, 62 * MODAL_SCALE).setDepth(452));
-    buttonHitbox.setInteractive({ useHandCursor: true });
-    buttonHitbox.on("pointerover", () => {
-      this.input.setDefaultCursor("pointer");
-      this.tweens.add({ targets: button, scale: 1.04, duration: 90, ease: "Sine.easeOut" });
-    });
-    buttonHitbox.on("pointerout", () => {
-      this.input.setDefaultCursor("default");
-      this.tweens.add({ targets: button, scale: 1, duration: 90, ease: "Sine.easeOut" });
-    });
-    buttonHitbox.on("pointerdown", () => {
-      this.playClick();
-      startNextLevel();
-    });
-
-    modal.add([shadow, bg, topBar, title, objective, button]);
-    modal.setScale(MODAL_SCALE * 0.9);
-    modal.setAlpha(0);
-
-    this.tweens.add({
-      targets: modal,
-      alpha: 1,
-      scale: MODAL_SCALE,
-      duration: 260,
-      ease: "Back.easeOut",
-    });
-
+    floatingNote(this, W / 2, 320, message, { tone: C.coral, deep: C.coralDeep })
+    this.time.delayedCall(700, () => this.resetRobot())
   }
 
-  private showGameCompleteScreen() {
-    this.clearOverlay();
-    const overlay = this.addOverlayObject(this.add.rectangle(640, 360, 1280, 720, 0x12324a, 0.62).setDepth(450));
-    overlay.setInteractive();
-    const panel = this.addOverlayObject(this.add.container(640, 360).setDepth(451));
+  private async succeed() {
+    this.running = false
+    this.hits += 1
 
-    const shadow = this.add.graphics();
-    shadow.fillStyle(0x000000, 0.18);
-    shadow.fillRoundedRect(-292, -178, 584, 366, 34);
+    const efficient = this.program.length <= this.phase.minBlocks
+    const inTime = this.timeLeft > 0
+    const gained = 10 + (efficient ? 5 : 0) + (inTime ? 3 : 0)
+    this.score += gained
+    this.timerOn = false
 
-    const bg = this.add.graphics();
-    bg.fillStyle(0xffffff, 0.98);
-    bg.fillRoundedRect(-304, -190, 608, 370, 34);
-    bg.lineStyle(6, 0xffffff, 0.96);
-    bg.strokeRoundedRect(-304, -190, 608, 370, 34);
-    const ribbon = this.add.graphics();
-    ribbon.fillStyle(COLORS.green, 1);
-    ribbon.fillRoundedRect(-214, -208, 428, 34, 17);
-    ribbon.lineStyle(4, 0xffffff, 0.9);
-    ribbon.strokeRoundedRect(-214, -208, 428, 34, 17);
+    runtimeGameBridge.emit({
+      type: "CORRECT_ANSWER", gameId: GAME_ID, stage: this.level.level, pointsEarned: gained,
+    })
+    this.emitCheckpoint()
+    this.playCorrect()
 
-    const title = this.add.text(0, -128, "Desfile completo!", {
-      fontSize: "38px",
-      fontFamily: "Arial Black, Arial",
-      color: "#25327a",
-      stroke: "#ffffff",
-      strokeThickness: 6,
-    }).setOrigin(0.5);
+    const t = this.gridToWorld(this.phase.target.x, this.phase.target.y)
+    this.celebrate(t.x, t.y)
 
-    const subtitle = this.add.text(0, -74, `Pontuação final: ${this.getScore()} • Acertos: ${this.hits} • Erros: ${this.errors}`, {
-      fontSize: "20px",
-      fontFamily: "Arial Black, Arial",
-      color: "#334155",
-      align: "center",
-      wordWrap: { width: 500 },
-    }).setOrigin(0.5);
+    await this.wait(700)
+    this.hideTape()
+    await this.zoomOut()
 
-    const levelLabels = [1, 2, 3].map((level, index) => {
-      const item = this.add.container(-190 + index * 190, 42);
-      const badge = this.add.graphics();
-      badge.fillStyle(index === 0 ? COLORS.orange : index === 1 ? COLORS.cyan : COLORS.green, 1);
-      badge.fillRoundedRect(-54, -42, 108, 84, 18);
-      badge.lineStyle(4, 0xffffff, 0.95);
-      badge.strokeRoundedRect(-54, -42, 108, 84, 18);
-      const number = this.add.text(0, -13, String(level), {
-        fontSize: "30px",
-        fontFamily: "Arial Black, Arial",
-        color: "#ffffff",
-        stroke: "#25327a",
-        strokeThickness: 4,
-      }).setOrigin(0.5);
-      const label = this.add.text(0, 23, "concluído", {
-        fontSize: "12px",
-        fontFamily: "Arial Black, Arial",
-        color: "#ffffff",
-      }).setOrigin(0.5);
-      item.add([badge, number, label]);
-      return item;
-    });
+    await this.wait(700)
+    await this.zoomOut()
 
-    const playAgain = this.createFinalButton(-158, 138, "Jogar novamente", COLORS.green, () => this.scene.restart({ level: 1 }));
-    const exit = this.createFinalButton(158, 138, "Voltar aos jogos", COLORS.orange, () => EventBus.emit("exit-game"));
+    floatingNote(this, W / 2, 320,
+      efficient ? `Perfeito! Caminho mais curto. +${gained}` : `Muito bem! +${gained}`,
+      { tone: C.mint, deep: C.mintDeep })
 
-    const sparkles = Array.from({ length: 14 }, (_, index) => {
-      const sparkle = this.add.graphics();
-      const x = Phaser.Math.Between(-278, 278);
-      const y = Phaser.Math.Between(-168, 158);
-      sparkle.fillStyle(index % 3 === 0 ? COLORS.cyan : index % 3 === 1 ? COLORS.orange : COLORS.green, 0.9);
-      sparkle.fillCircle(x, y, Phaser.Math.Between(4, 8));
+    this.time.delayedCall(1300, () => this.advance())
+  }
+
+  private advance() {
+    const lastPhase = this.phaseIdx + 1 >= this.level.phases.length
+    const lastLevel = this.levelIdx + 1 >= LEVELS.length
+
+    if (!lastPhase) {
+      this.scene.restart({
+        level: this.level.level, phase: this.phaseIdx + 1,
+        score: this.score, hits: this.hits, errors: this.errors,
+      } satisfies GameSceneData)
+      return
+    }
+
+    this.ended = true
+
+    if (!lastLevel) {
+      showLevelComplete(this, {
+        subtitle: `Nível ${this.level.level} concluído`,
+        message: LEVELS[this.levelIdx + 1].objective,
+        accent: C.sun,
+        overlayColor: C.deep,
+        titleColor: hex(C.ink),
+        subtitleColor: hex(C.grapeDeep),
+        progress: { total: LEVELS.length, current: this.level.level },
+        autoAdvance: {
+          delay: 2600,
+          onComplete: () => this.scene.restart({
+            level: this.level.level + 1, phase: 0,
+            score: this.score, hits: this.hits, errors: this.errors,
+          } satisfies GameSceneData),
+        },
+      })
+      return
+    }
+
+    runtimeGameBridge.emit({ type: "GAME_COMPLETED", gameId: GAME_ID, stage: this.level.level })
+    confetti(this)
+    showLevelComplete(this, {
+      title: "Desfile completo!",
+      subtitle: `${this.score} pontos`,
+      message: `Você programou o robô por 9 pistas — ${this.hits} acertos.`,
+      accent: C.mint,
+      overlayColor: C.deep,
+      titleColor: hex(C.ink),
+      subtitleColor: hex(C.mintDeep),
+      progress: { total: LEVELS.length, current: LEVELS.length },
+      buttons: [
+        {
+          label: "Jogar de novo", color: C.mintDeep,
+          onClick: () => this.scene.restart({ level: 1, phase: 0, score: 0, hits: 0, errors: 0 }),
+        },
+        { label: "Outros jogos", color: C.grapeDeep, onClick: () => EventBus.emit("exit-game") },
+      ],
+    })
+  }
+
+  // ═════════════════════════════════════════════════ robô
+
+  private wait(ms: number): Promise<void> {
+    return new Promise(r => this.time.delayedCall(ms, () => r()))
+  }
+
+  /** Seta grande acima do robô: anuncia o passo antes de executá-lo. */
+  private showDirectionCue(dir: Direction): Promise<void> {
+    const c = this.cell
+    const cue = this.add.image(this.robot.x, this.robot.y - c * 0.8, "block-move")
+      .setAngle(DIRECTION_META[dir].angle).setDepth(40)
+    this.fitImage(cue, c * 0.52, c * 0.46)
+
+    const base = cue.scaleX
+    cue.setScale(base * 0.3).setAlpha(0)
+
+    return new Promise((resolve) => {
       this.tweens.add({
-        targets: sparkle,
-        alpha: { from: 0.35, to: 1 },
-        scale: { from: 0.8, to: 1.35 },
-        duration: 720 + index * 35,
-        yoyo: true,
-        repeat: -1,
-        ease: "Sine.easeInOut",
-      });
-      return sparkle;
-    });
+        targets: cue, scale: base, alpha: 1,
+        duration: 170, ease: "Back.easeOut",
+        onComplete: () => {
+          this.tweens.add({
+            targets: cue, alpha: 0, y: cue.y - 16,
+            duration: 180, delay: 90,
+            onComplete: () => { cue.destroy(); resolve() },
+          })
+        },
+      })
+    })
+  }
 
-    panel.add([shadow, bg, ribbon, ...sparkles, title, subtitle, ...levelLabels, playAgain, exit]);
-    this.createModalButtonHitbox(640 - 158 * MODAL_SCALE, 360 + 138 * MODAL_SCALE, 268 * MODAL_SCALE, 62 * MODAL_SCALE, playAgain, () => {
-      this.playClick();
-      this.scene.restart({ level: 1 });
-    });
-    this.createModalButtonHitbox(640 + 158 * MODAL_SCALE, 360 + 138 * MODAL_SCALE, 268 * MODAL_SCALE, 62 * MODAL_SCALE, exit, () => {
-      this.playClick();
-      EventBus.emit("exit-game");
-    });
-    panel.setScale(MODAL_SCALE * 0.9);
-    panel.setAlpha(0);
+  private faceDirection(dir: Direction, instant = false): Promise<void> {
+    const flip = dir === "left"
+    if (instant) { this.robotSprite.setFlipX(flip); return Promise.resolve() }
+    if (this.robotSprite.flipX === flip) return Promise.resolve()
+
+    return new Promise((resolve) => {
+      this.tweens.add({
+        targets: this.robotSprite, scaleX: this.robotBaseScale * 0.25,
+        duration: 90, ease: "Sine.easeIn",
+        onComplete: () => {
+          this.robotSprite.setFlipX(flip)
+          this.tweens.add({
+            targets: this.robotSprite, scaleX: this.robotBaseScale,
+            duration: 120, ease: "Back.easeOut",
+            onComplete: () => resolve(),
+          })
+        },
+      })
+    })
+  }
+
+  private stepTo(target: GridPoint, dir: Direction): Promise<void> {
+    const from = { x: this.robot.x, y: this.robot.y }
+    const to = this.gridToWorld(target.x, target.y)
+    const c = this.cell
+    const hop = c * 0.15
+    const tilt = dir === "left" ? -1 : 1
+
+    this.dropFootprint(from.x, from.y)
+    this.playStep()
+
+    const p = { t: 0 }
+    return new Promise((resolve) => {
+      this.tweens.add({
+        targets: p, t: 1, duration: 380, ease: "Sine.easeInOut",
+        onUpdate: () => {
+          const t = p.t
+          const bob = Math.abs(Math.sin(t * Math.PI * 2))
+          this.robot.x = Phaser.Math.Linear(from.x, to.x, t)
+          this.robot.y = Phaser.Math.Linear(from.y, to.y, t) - bob * hop
+          this.robotSprite.setScale(
+            this.robotBaseScale * (1 - bob * 0.05),
+            this.robotBaseScale * (1 + bob * 0.08),
+          )
+          this.robotSprite.setAngle(Math.sin(t * Math.PI * 4) * 4 * tilt)
+          this.robotShadow.setScale(1 - bob * 0.28, 1 - bob * 0.2)
+          this.robotShadow.setAlpha(0.22 - bob * 0.09)
+        },
+        onComplete: () => {
+          this.robot.setPosition(to.x, to.y)
+          this.robotSprite.setScale(this.robotBaseScale).setAngle(0)
+          this.robotShadow.setScale(1).setAlpha(0.22)
+          resolve()
+        },
+      })
+    })
+  }
+
+  private bump(dir: Direction): Promise<void> {
+    const meta = DIRECTION_META[dir]
+    const c = this.cell
+    const from = { x: this.robot.x, y: this.robot.y }
+
+    this.robotSprite.setTint(0xff9b8f)
+    return new Promise((resolve) => {
+      this.tweens.add({
+        targets: this.robot,
+        x: from.x + meta.dx * c * 0.32, y: from.y + meta.dy * c * 0.32,
+        duration: 130, ease: "Quad.easeOut", yoyo: true,
+        onComplete: () => {
+          this.robot.setPosition(from.x, from.y)
+          this.robotSprite.clearTint()
+          resolve()
+        },
+      })
+    })
+  }
+
+  /** A pegada estoura quando o robô pisa nela — confirma que o requisito foi cumprido. */
+  private burstCheckpoint() {
+    const img = this.checkpointImg
+    if (!img || this.checkpointTaken) return
+    this.checkpointTaken = true
+
+    const x = img.x, y = img.y
+    this.tweens.killTweensOf(img)
     this.tweens.add({
-      targets: panel,
-      alpha: 1,
-      scale: MODAL_SCALE,
-      duration: 280,
-      ease: "Back.easeOut",
-    });
+      targets: img, scale: this.checkpointScale * 2.1, alpha: 0, angle: 45,
+      duration: 340, ease: "Back.easeOut",
+    })
+
+    const ring = this.add.graphics({ x, y }).setDepth(30)
+    ring.lineStyle(6, C.sun, 1)
+    ring.strokeCircle(0, 0, this.cell * 0.28)
+    this.tweens.add({
+      targets: ring, scale: 2.2, alpha: 0, duration: 420,
+      ease: "Cubic.easeOut", onComplete: () => ring.destroy(),
+    })
+
+    for (let i = 0; i < 12; i++) {
+      const a = (Math.PI * 2 * i) / 12
+      const dot = this.add.circle(x, y, 6, i % 2 ? C.sun : C.mint).setDepth(31)
+      this.tweens.add({
+        targets: dot,
+        x: x + Math.cos(a) * this.cell * 0.8,
+        y: y + Math.sin(a) * this.cell * 0.8,
+        alpha: 0, scale: 0.2, duration: 480, ease: "Cubic.easeOut",
+        onComplete: () => dot.destroy(),
+      })
+    }
+
+    this.tone(880, 0.1, "sine", 0.2)
+    this.tone(1180, 0.12, "sine", 0.16, 0.08)
   }
 
-  private createFinalButton(x: number, y: number, label: string, color: number, onClick: () => void) {
-    const button = this.add.container(x, y);
-    const bg = this.add.graphics();
-    bg.fillStyle(color, 1);
-    bg.fillRoundedRect(-132, -26, 264, 52, 26);
-    bg.lineStyle(4, 0xffffff, 1);
-    bg.strokeRoundedRect(-132, -26, 264, 52, 26);
-    const text = this.add.text(0, 0, label, {
-      fontSize: "19px",
-      fontFamily: "Arial Black, Arial",
-      color: "#ffffff",
-      stroke: "#0f172a",
-      strokeThickness: 3,
-    }).setOrigin(0.5);
-    button.add([bg, text]);
-    button.setSize(292, 76);
-    button.setInteractive({
-      hitArea: new Phaser.Geom.Rectangle(-146, -38, 292, 76),
-      hitAreaCallback: Phaser.Geom.Rectangle.Contains,
-      useHandCursor: true,
-    });
-    button.on("pointerover", () => {
-      this.tweens.add({ targets: button, scale: 1.04, duration: 90, ease: "Sine.easeOut" });
-    });
-    button.on("pointerout", () => {
-      this.tweens.add({ targets: button, scale: 1, duration: 90, ease: "Sine.easeOut" });
-    });
-    button.on("pointerdown", () => {
-      this.playClick();
-      onClick();
-    });
-    return button;
+  private restoreCheckpoint() {
+    const img = this.checkpointImg
+    if (!img) return
+    this.checkpointTaken = false
+    this.tweens.killTweensOf(img)
+    img.setScale(this.checkpointScale).setAlpha(0.92).setAngle(0)
+    this.tweens.add({
+      targets: img, scale: this.checkpointScale * 1.08,
+      duration: 780, yoyo: true, repeat: -1, ease: "Sine.easeInOut",
+    })
   }
 
-  private createModalButtonHitbox(
-    x: number,
-    y: number,
-    width: number,
-    height: number,
-    visualTarget: Phaser.GameObjects.Container,
-    onClick: () => void
-  ) {
-    const hitbox = this.addOverlayObject(this.add.zone(x, y, width, height).setDepth(452));
-    hitbox.setInteractive({ useHandCursor: true });
-    hitbox.on("pointerover", () => {
-      this.input.setDefaultCursor("pointer");
-      this.tweens.add({ targets: visualTarget, scale: 1.04, duration: 90, ease: "Sine.easeOut" });
-    });
-    hitbox.on("pointerout", () => {
-      this.input.setDefaultCursor("default");
-      this.tweens.add({ targets: visualTarget, scale: 1, duration: 90, ease: "Sine.easeOut" });
-    });
-    hitbox.on("pointerdown", onClick);
-    return hitbox;
+  private dropFootprint(x: number, y: number) {
+    const c = this.cell
+    const mark = this.add.image(x, y + c * 0.22, "path-mark")
+      .setDisplaySize(c * 0.3, c * 0.3).setAlpha(0.55)
+      .setAngle(Phaser.Math.Between(-16, 16)).setDepth(7)
+    this.footprints.push(mark)
+    this.tweens.add({ targets: mark, alpha: 0.28, duration: 600 })
   }
 
-  private addOverlayObject<T extends Phaser.GameObjects.GameObject>(object: T): T {
-    this.overlayObjects.push(object);
-    return object;
-  }
-
-  private clearOverlay() {
-    this.overlayObjects.forEach((object) => object.destroy());
-    this.overlayObjects = [];
-  }
-
-  private getNextPoint(direction: Direction): GridPoint {
-    const delta = {
-      up: { x: 0, y: -1 },
-      right: { x: 1, y: 0 },
-      down: { x: 0, y: 1 },
-      left: { x: -1, y: 0 },
-    }[direction];
-    return { x: this.robotState.x + delta.x, y: this.robotState.y + delta.y };
+  private clearFootprints() {
+    this.footprints.forEach(f => f.destroy())
+    this.footprints = []
   }
 
   private resetRobot() {
-    this.robotState = { x: this.levelConfig.start.x, y: this.levelConfig.start.y, direction: this.levelConfig.direction };
-    this.hasPassedCheckpoint = this.isCheckpoint(this.robotState.x, this.robotState.y);
-    const pos = this.gridToWorld(this.robotState.x, this.robotState.y);
-    this.robot.setPosition(pos.x, pos.y);
-    this.updateRobotRotation();
+    this.robotPos = { ...this.phase.start }
+    const p = this.gridToWorld(this.robotPos.x, this.robotPos.y)
+    this.clearFootprints()
+    this.restoreCheckpoint()
+    this.tweens.add({ targets: this.robot, x: p.x, y: p.y, duration: 260, ease: "Back.easeOut" })
+    this.faceDirection(this.phase.direction, true)
   }
 
-  private updateRobotRotation() {
-    this.robot.setAngle(0);
+  private celebrate(x: number, y: number) {
+    for (let i = 0; i < 14; i++) {
+      const a = (Math.PI * 2 * i) / 14
+      const dot = this.add.circle(x, y, 7, [C.sun, C.mint, C.coral, C.sky][i % 4]).setDepth(30)
+      this.tweens.add({
+        targets: dot, x: x + Math.cos(a) * 90, y: y + Math.sin(a) * 90,
+        alpha: 0, scale: 0.3, duration: 620, ease: "Cubic.easeOut",
+        onComplete: () => dot.destroy(),
+      })
+    }
+    this.tweens.add({
+      targets: this.robot, y: this.robot.y - 24,
+      duration: 220, yoyo: true, repeat: 2, ease: "Sine.easeOut",
+    })
   }
 
-  private markPath(x: number, y: number) {
-    const mark = this.add.image(x, y, "path-mark")
-      .setDisplaySize(30, 30)
-      .setAlpha(0.82)
-      .setDepth(5);
-    this.pathMarks.push(mark);
+  // ═════════════════════════════════════════════════ overlays
+
+  private startPlay() {
+    this.timerOn = true
+    this.renderProgram()
   }
 
-  private clearPathMarks() {
-    this.pathMarks.forEach((mark) => mark.destroy());
-    this.pathMarks = [];
+  private showLevelIntro(onStart: () => void) {
+    const dim = this.add.rectangle(W / 2, H / 2, W, H, C.shadow, 0.6)
+      .setDepth(300).setInteractive()
+    const modal = this.add.container(W / 2, H / 2).setDepth(301)
+
+    const MW = 620, MH = 400
+    modal.add(paperCard(this, 0, 0, MW, MH, { edge: C.sun }))
+    modal.add(headerBand(this, 0, -MH / 2 + 6, MW - 12, 48, C.sun, C.sunDeep, 22))
+    modal.add(label(this, 0, -MH / 2 + 30, `NÍVEL ${this.level.level} DE ${LEVELS.length}`,
+      { size: 20, color: C.ink }))
+    modal.add(label(this, 0, -MH / 2 + 108, this.level.title, { size: 40, color: C.ink }))
+    modal.add(label(this, 0, -MH / 2 + 176, this.level.objective,
+      { size: 21, color: C.inkSoft, weight: "bold", wrap: MW - 110 }))
+    modal.add(label(this, 0, -MH / 2 + 252, "3 pistas neste nível",
+      { size: 18, color: C.grapeDeep }))
+
+    const go = () => {
+      this.tweens.add({
+        targets: [modal, dim], alpha: 0, duration: 200,
+        onComplete: () => { modal.destroy(); dim.destroy(); onStart() },
+      })
+    }
+    modal.add(chunkyButton(this, 0, MH / 2 - 62, 280, 66, "Começar",
+      C.mint, C.mintDeep, go, { size: 23 }).root)
+
+    modal.setScale(0.9).setAlpha(0)
+    this.tweens.add({ targets: modal, scale: 1, alpha: 1, duration: 280, ease: "Back.easeOut" })
   }
 
-  private gridToWorld(x: number, y: number) {
-    const cell = this.getCellSize();
-    return { x: BOARD_START_X + x * cell + cell / 2, y: BOARD_START_Y + y * cell + cell / 2 };
-  }
-
-  private getCellSize() {
-    const { cols, rows } = this.levelConfig.gridSize;
-    return Math.min(475 / cols, 408 / rows);
+  private runTutorial(once: boolean, onDone: () => void) {
+    const steps: TutorialStep[] = [
+      {
+        text: "O robô precisa chegar ao palco e pisar na pegada do caminho.",
+        shape: "rect", x: BOARD.cx, y: BOARD.cy, w: BOARD.w + 24, h: BOARD.h + 24,
+        balloonX: 990, balloonY: 250,
+      },
+      {
+        text: "Toque nas setas. Cada toque é um passo do robô.",
+        shape: "rect", x: SIDE.cx, y: 316, w: SIDE.w - 30, h: 230,
+        balloonX: 400, balloonY: 250,
+      },
+      {
+        text: "Os passos aparecem aqui, na ordem em que o robô vai obedecer.",
+        shape: "rect", x: SIDE.cx, y: 514, w: SIDE.w - 30, h: 150,
+        balloonX: 400, balloonY: 250,
+      },
+      {
+        text: "Toque em Executar: a tela aproxima e cada seta acende antes do passo. Se errar, o passo fica vermelho — é só corrigir.",
+        shape: "rect", x: ACTION.run.x, y: ACTION_Y, w: 210, h: 90,
+        balloonX: 420, balloonY: 300,
+        buttonLabel: "Vamos lá!",
+      },
+    ]
+    createTutorial(this, {
+      key: `robo-l${this.level.level}`, once, accent: C.sun,
+      safeTop: HEADER_H + 12, steps, onFinish: onDone,
+    })
   }
 
   private isInside(x: number, y: number) {
-    return x >= 0 && x < this.levelConfig.gridSize.cols && y >= 0 && y < this.levelConfig.gridSize.rows;
+    return x >= 0 && x < this.phase.gridSize.cols && y >= 0 && y < this.phase.gridSize.rows
   }
 
   private isObstacle(x: number, y: number) {
-    return this.levelConfig.obstacles.some((point) => point.x === x && point.y === y);
+    return this.phase.obstacles.some(o => o.x === x && o.y === y)
   }
 
-  private isCheckpoint(x: number, y: number) {
-    return this.levelConfig.checkpoint?.x === x && this.levelConfig.checkpoint.y === y;
-  }
-
-  private hasVisitedCheckpoint() {
-    if (!this.levelConfig.checkpoint) return true;
-    return this.executedPath.some((point) => this.isCheckpoint(point.x, point.y));
-  }
-
-  private getCommandAngle(command: RobotCommand) {
-    return {
-      up: -90,
-      right: 0,
-      down: 90,
-      left: 180,
-    }[command.direction];
-  }
-
-  private getCommandColor(command: RobotCommand) {
-    if (command.direction === "left" || command.direction === "right") return COLORS.purple;
-    return COLORS.blue;
-  }
-
-  private createUiButton(x: number, y: number, width: number, height: number, label: string, color: number, onClick: () => void) {
-    const button = this.add.container(x, y).setDepth(12);
-    const shadow = this.add.graphics();
-    shadow.fillStyle(0x0f172a, 0.24);
-    shadow.fillRoundedRect(-width / 2 + 4, -height / 2 + 6, width, height, 16);
-    const bg = this.add.graphics();
-    bg.fillStyle(color, 0.96);
-    bg.fillRoundedRect(-width / 2, -height / 2, width, height, 16);
-    bg.lineStyle(3, 0xffffff, 0.92);
-    bg.strokeRoundedRect(-width / 2, -height / 2, width, height, 16);
-    const text = this.add.text(0, 0, label, {
-      fontSize: width < 120 ? "15px" : "17px",
-      fontFamily: "Arial Black, Arial",
-      color: "#ffffff",
-      align: "center",
-      wordWrap: { width: width - 12 },
-    }).setOrigin(0.5);
-
-    button.add([shadow, bg, text]);
-    this.actionHitAreas.push({
-      bounds: new Phaser.Geom.Rectangle(x - width / 2, y - height / 2, width, height),
-      onClick,
-    });
-  }
-
-  private createDirectionButton(
-    x: number,
-    y: number,
-    angle: number,
-    label: string,
-    color: number,
-    onClick: () => void
-  ) {
-    const width = 220;
-    const height = 92;
-    const button = this.add.container(x, y).setDepth(12);
-
-    const shadow = this.add.graphics();
-    shadow.fillStyle(0x0f172a, 0.26);
-    shadow.fillRoundedRect(-width / 2 + 5, -height / 2 + 6, width, height, 18);
-
-    const bg = this.add.graphics();
-    bg.fillStyle(color, 0.98);
-    bg.fillRoundedRect(-width / 2, -height / 2, width, height, 18);
-    bg.fillStyle(0xffffff, 0.16);
-    bg.fillRoundedRect(-width / 2 + 10, -height / 2 + 10, 72, height - 20, 14);
-    bg.lineStyle(3, 0xffffff, 0.92);
-    bg.strokeRoundedRect(-width / 2, -height / 2, width, height, 18);
-
-    const icon = this.add.image(-74, -2, "block-move")
-      .setAngle(angle);
-    this.fitImage(icon, 64, 56);
-
-    const text = this.add.text(34, 0, label, {
-      fontSize: "20px",
-      fontFamily: "Arial Black, Arial",
-      color: "#ffffff",
-      stroke: "#0f172a",
-      strokeThickness: 3,
-      align: "center",
-      wordWrap: { width: 116 },
-    }).setOrigin(0.5);
-
-    button.add([shadow, bg, icon, text]);
-    this.directionHitAreas.push({
-      bounds: new Phaser.Geom.Rectangle(x - width / 2, y - height / 2, width, height),
-      onClick,
-    });
-  }
-
-  private fitImage(image: Phaser.GameObjects.Image, maxWidth: number, maxHeight: number) {
-    const texture = image.texture.getSourceImage() as HTMLImageElement | HTMLCanvasElement;
-    const sourceWidth = texture.width || maxWidth;
-    const sourceHeight = texture.height || maxHeight;
-    const scale = Math.min(maxWidth / sourceWidth, maxHeight / sourceHeight);
-    image.setDisplaySize(sourceWidth * scale, sourceHeight * scale);
-    return image;
-  }
-
-  private drawGamePanel(
-    x: number,
-    y: number,
-    width: number,
-    height: number,
-    accentColor: number,
-    depth: number
-  ) {
-    const shadow = this.add.graphics();
-    shadow.fillStyle(0x0f172a, 0.32);
-    shadow.fillRoundedRect(x - width / 2 + 10, y - height / 2 + 12, width, height, 26);
-    shadow.setDepth(depth);
-
-    const panel = this.add.graphics();
-    panel.fillStyle(0x102a43, 0.76);
-    panel.fillRoundedRect(x - width / 2, y - height / 2, width, height, 26);
-    panel.fillStyle(0xffffff, 0.12);
-    panel.fillRoundedRect(x - width / 2 + 10, y - height / 2 + 10, width - 20, 34, 18);
-    panel.lineStyle(3, accentColor, 0.9);
-    panel.strokeRoundedRect(x - width / 2, y - height / 2, width, height, 26);
-    panel.lineStyle(2, 0xffffff, 0.36);
-    panel.strokeRoundedRect(x - width / 2 + 5, y - height / 2 + 5, width - 10, height - 10, 22);
-    panel.setDepth(depth + 0.1);
-
-    return panel;
-  }
-
-  private drawPanelHeader(x: number, y: number, width: number, label: string, color: number) {
-    const container = this.add.container(x, y).setDepth(11);
-    const shadow = this.add.graphics();
-    shadow.fillStyle(0x0f172a, 0.28);
-    shadow.fillRoundedRect(-width / 2 + 4, -21 + 5, width, 42, 21);
-
-    const bg = this.add.graphics();
-    bg.fillStyle(color, 1);
-    bg.fillRoundedRect(-width / 2, -21, width, 42, 21);
-    bg.lineStyle(3, 0xffffff, 0.88);
-    bg.strokeRoundedRect(-width / 2, -21, width, 42, 21);
-
-    const text = this.add.text(0, 0, label, {
-      fontSize: "19px",
-      fontFamily: "Arial Black, Arial",
-      color: "#ffffff",
-      align: "center",
-    }).setOrigin(0.5);
-
-    container.add([shadow, bg, text]);
-    return container;
-  }
-
-  private drawRoundedBox(
-    x: number,
-    y: number,
-    width: number,
-    height: number,
-    fillColor: number,
-    fillAlpha: number,
-    strokeColor: number,
-    strokeAlpha: number,
-    radius: number,
-    depth: number,
-    strokeWidth = 4
-  ) {
-    const box = this.add.graphics();
-    box.fillStyle(fillColor, fillAlpha);
-    box.fillRoundedRect(x - width / 2, y - height / 2, width, height, radius);
-    box.lineStyle(strokeWidth, strokeColor, strokeAlpha);
-    box.strokeRoundedRect(x - width / 2, y - height / 2, width, height, radius);
-    box.setDepth(depth);
-    return box;
-  }
-
-  private showToast(message: string, color: number) {
-    const container = this.add.container(640, 640).setDepth(200);
-    const bg = this.add.graphics();
-    bg.fillStyle(color, 0.96);
-    bg.fillRoundedRect(-390, -34, 780, 68, 22);
-    bg.lineStyle(4, 0xffffff, 0.94);
-    bg.strokeRoundedRect(-390, -34, 780, 68, 22);
-    const text = this.add.text(0, 0, message, {
-      fontSize: "20px",
-      fontFamily: "Arial Black, Arial",
-      color: "#ffffff",
-      align: "center",
-      wordWrap: { width: 700 },
-    }).setOrigin(0.5);
-    container.add([bg, text]);
-    this.tweens.add({
-      targets: container,
-      y: 620,
-      alpha: 0,
-      delay: 1300,
-      duration: 420,
-      onComplete: () => container.destroy(),
-    });
-  }
-
-  private startTimerOnce() {
-    if (this.hasStartedTimer) return;
-    this.hasStartedTimer = true;
-    this.timerEvent = this.time.addEvent({
-      delay: this.levelConfig.timeLimit * 1000,
-      callback: () => {
-        this.errors += 1;
-        this.playWrong();
-        runtimeGameBridge.emit({ type: "GAME_OVER", gameId: GAME_ID, stage: this.levelConfig.level });
-        this.showToast("Tempo esgotado. Tente montar um caminho mais direto.", 0xef4444);
-      },
-    });
-  }
-
-  private emitProgress() {
-    const progress = this.program.length ? Math.min(95, Math.round((this.program.length / this.levelConfig.maxBlocks) * 100)) : 0;
+  private emitCheckpoint() {
+    const total = LEVELS.reduce((n, l) => n + l.phases.length, 0)
+    const before = LEVELS.slice(0, this.levelIdx).reduce((n, l) => n + l.phases.length, 0)
     runtimeGameBridge.emit({
-      type: "CHECKPOINT",
-      gameId: GAME_ID,
-      progress,
-      score: this.getScore(),
-      stage: this.levelConfig.level,
-      hits: this.hits,
-      errors: this.errors,
-    });
+      type: "CHECKPOINT", gameId: GAME_ID, stage: this.level.level,
+      progress: Math.round(((before + this.phaseIdx) / total) * 100),
+      score: this.score, hits: this.hits, errors: this.errors,
+    })
   }
 
-  private getScore() {
-    return this.hits * 10 - this.errors * 5;
+  private registerPlatform() {
+    this.unsubPlatform = runtimeGameBridge.onCommand((cmd: PlatformCommand) => {
+      if (cmd.type !== "START_GAME" || cmd.gameId !== GAME_ID) return
+      if (cmd.stage === this.level.level) return
+      this.scene.restart({ level: cmd.stage, phase: 0, score: this.score })
+    })
   }
 
-  private registerPlatformCommands() {
-    this.unsubscribePlatformCommands = runtimeGameBridge.onCommand((command: PlatformCommand) => {
-      if (command.type !== "START_GAME") return;
-      if (command.gameId !== GAME_ID) return;
-      if (command.stage === this.levelConfig.level) return;
-      this.scene.restart({ level: command.stage as 1 | 2 | 3 });
-    });
+  private tone(freq: number, dur: number, type: OscillatorType = "sine", vol = 0.16, delay = 0) {
+    const ctx = (this.sound as Phaser.Sound.WebAudioSoundManager).context
+    if (!ctx) return
+    const osc = ctx.createOscillator(), gain = ctx.createGain()
+    osc.connect(gain); gain.connect(ctx.destination)
+    osc.type = type
+    osc.frequency.setValueAtTime(freq, ctx.currentTime + delay)
+    gain.gain.setValueAtTime(vol, ctx.currentTime + delay)
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + dur)
+    osc.start(ctx.currentTime + delay)
+    osc.stop(ctx.currentTime + delay + dur + 0.01)
   }
-
-  private getAudioContext(): AudioContext | null {
-    if (!("context" in this.sound)) return null;
-    return (this.sound as Phaser.Sound.WebAudioSoundManager).context;
-  }
-
-  private playTone(frequency: number, duration: number, type: OscillatorType = "sine", volume = 0.2, delaySeconds = 0) {
-    const ctx = this.getAudioContext();
-    if (!ctx) return;
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.type = type;
-    osc.frequency.setValueAtTime(frequency, ctx.currentTime + delaySeconds);
-    gain.gain.setValueAtTime(volume, ctx.currentTime + delaySeconds);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delaySeconds + duration);
-    osc.start(ctx.currentTime + delaySeconds);
-    osc.stop(ctx.currentTime + delaySeconds + duration + 0.01);
-  }
-
-  private playClick() {
-    this.playTone(440, 0.05, "sine", 0.12);
-  }
-
+  private playClick() { this.tone(520, 0.05, "sine", 0.1) }
+  private playStep() { this.tone(Phaser.Math.Between(300, 360), 0.06, "triangle", 0.07) }
+  private playWrong() { this.tone(240, 0.14, "square", 0.13); this.tone(180, 0.2, "square", 0.1, 0.12) }
   private playCorrect() {
-    this.playTone(523, 0.12, "sine", 0.26, 0);
-    this.playTone(659, 0.12, "sine", 0.26, 0.1);
-    this.playTone(784, 0.18, "sine", 0.3, 0.2);
-  }
-
-  private playWrong() {
-    this.playTone(220, 0.1, "square", 0.16, 0);
-    this.playTone(165, 0.16, "square", 0.1, 0.12);
+    [523, 659, 784, 1046].forEach((f, i) => this.tone(f, 0.18, "sine", 0.2, i * 0.1))
   }
 }

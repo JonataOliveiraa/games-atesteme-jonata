@@ -12,12 +12,6 @@ export interface SystemLayoutConfig {
     height?: number
 }
 
-/**
- * Miniatura de uma interface de sistema operacional construída pelo Phaser.
- *
- * O componente é apenas visual: seleção, foco e validação da resposta ficam
- * sob responsabilidade da cena que o utiliza.
- */
 export class SystemLayout extends Phaser.GameObjects.Container {
     private readonly graphics: Phaser.GameObjects.Graphics
     private readonly previewWidth: number

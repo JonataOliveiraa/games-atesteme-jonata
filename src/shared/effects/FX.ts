@@ -573,7 +573,6 @@ export class FX {
         return { skip, then: (a, b) => promise.then(a, b) }
     }
 
-    /** Contador animado. `format` monta a string final. */
     static count(
         scene: Phaser.Scene,
         label: Phaser.GameObjects.Text,
@@ -594,7 +593,6 @@ export class FX {
         })
     }
 
-    /** "+10" que sobe e some. Recompensa imediata no ponto da ação. */
     static popText(
         scene: Phaser.Scene,
         x: number,
