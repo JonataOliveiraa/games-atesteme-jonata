@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import Phaser from "phaser";
+import { EventBus } from "../../shared/EventBus";
 import { useFullscreen } from "../../hooks/useFullscreen";
 
 interface PhaserCanvasProps {
@@ -20,6 +21,14 @@ export default function PhaserCanvas({ config, gameId }: PhaserCanvasProps) {
       gameRef.current = null;
     }
 
+    const GAME_CHANNELS = [
+      "mission-update", "mute-audio", "timer-start", "timer-pause",
+      "timer-resume", "timer-stop", "timer-end", "show-tutorial",
+      "hud-dim", "lose-game", "round-complete", "scene-ready",
+    ];
+
+    GAME_CHANNELS.forEach((c) => EventBus.removeAllListeners(c));
+
     gameRef.current = new Phaser.Game({
       ...config,
       parent: containerRef.current,
@@ -30,6 +39,7 @@ export default function PhaserCanvas({ config, gameId }: PhaserCanvasProps) {
         gameRef.current.destroy(true);
         gameRef.current = null;
       }
+      EventBus.removeAllListeners();
     };
   }, [config]);
 

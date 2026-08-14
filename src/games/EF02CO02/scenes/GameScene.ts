@@ -19,7 +19,7 @@ const HEADER_H = 76
 const BOARD = { cx: 372, cy: 404, w: 664, h: 552 }
 const SIDE = { cx: 992, cy: 404, w: 512, h: 552 }
 const BAND_H = 54
-const TAPE_Y = 170        // ← junto das outras constantes de layout, no topo
+const TAPE_Y = 170
 const TAPE_ENTER_Y = TAPE_Y - 43
 
 const DIR_W = 226, DIR_H = 92
@@ -29,7 +29,6 @@ const DIR_Y = [262, 370]
 const SLOT = 52, SLOT_GAP = 7, SLOT_COLS = 7
 const SLOTS_Y = [502, 502 + SLOT + SLOT_GAP]
 
-// Linha de ação medida para caber nos 512px do painel, com folga nas bordas
 const ACTION_Y = 626
 const ACTION_X0 = SIDE.cx - 232
 const ACTION = {

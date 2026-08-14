@@ -1,0 +1,853 @@
+import type { Game } from "../types/game";
+
+import classificadoresThumbnail from "../assets/games/EF01CO01/base-dos-classificadores/cover-01.png";
+import trilhaThumbnail from "../assets/games/EF01CO02/trilha-do-passo-a-passo/splash_art.png";
+import algorithmsThumbnail from "../assets/games/EF01CO03/oficina-dos-algoritmos/algorithm-game-cover.png";
+import correioThumbnail from "../assets/games/EF01CO04/correio-multimidia/cover-correio-multimidia.png";
+import pixelSecretThumbnail from "../assets/games/EF01CO05/pixel-secreto/cover5.png";
+import desktopThumbnail from "../assets/games/EF01CO06/desktop-digital-infantil/cover.png";
+import guardiansThumbnail from "../assets/games/EF01CO07/guardioes-dos-dados/cover.png";
+import hangarThumbnail from "../assets/games/EF02CO01/hangar-dos-modelos/cover-hangar.png";
+import robotParadeThumbnail from "../assets/games/EF02CO02/desfile-do-robo-repetidor/cover.png";
+import machineFactoryThumbnail from "../assets/games/EF02CO03/fabrica-de-maquinas/cover.png";
+import museumThumbnail from "../assets/games/EF02CO04/museu-vivo-do-computador/cover.png";
+import cityThumbnail from "../assets/games/EF02CO05/cidade-das-tecnologias/cover.png";
+import checklistThumbnail from "../assets/games/EF02CO06/checklist-do-jogador-seguro/cover.png";
+import tribunalThumbnail from "../assets/games/EF03CO01/tribunal-do-verdadeiro-ou-falso/cover.png";
+import mazeThumbnail from "../assets/games/EF03CO02/labirinto-do-enquanto/cover-labirinto-do-enquanto.png";
+import chefThumbnail from "../assets/games/EF03CO03/chef-dos-subproblemas/cover.png";
+import informationBuilderThumbnail from "../assets/games/EF03CO04/montador-de-informacoes/cover-montador-informacoes.png";
+import correctFormatThumbnail from "../assets/games/EF03CO05/formato-certo/cover-formato-certo.png";
+import inputOutputThumbnail from "../assets/games/EF03CO06/central-de-entrada-e-saida/cover-central-entrada-saida.png";
+import searchDetectivesThumbnail from "../assets/games/EF03CO07/detetives-da-busca/cover-detetives-da-busca.png";
+import multiFormatStudioThumbnail from "../assets/games/EF03CO08/estudio-multiformato/cover-estudio-multiformato.png";
+import investigationThumbnail from "../assets/games/EF03CO09/investigacao-dados-risco/cover-investigacao-dados-risco.png";
+import battleCoordsThumbnail from "../assets/games/EF04CO01/batalha-das-coordenadas/cover-batalha-coordenadas.png";
+import archiveRecordsThumbnail from "../assets/games/EF04CO02/arquivo-dos-registros/cover-arquivo-registros.png";
+import buildingLoopsThumbnail from "../assets/games/EF04CO03/predio-dos-lacos/cover-predio-dos-lacos.png";
+import machineTranslatorThumbnail from "../assets/games/EF04CO04/tradutor-da-maquina/cover-tradutor-da-maquina.png";
+import digitalAtelierThumbnail from "../assets/games/EF04CO05/atelier-codigos-digitais/cover-atelier-codigos-digitais.png";
+import digitalStudioThumbnail from "../assets/games/EF04CO06/estudio-producao-digital/cover-estudio-producao-digital.png";
+import ethicMissionThumbnail from "../assets/games/EF04CO07/missao-etica-digital/bg-data-center.png";
+import sourceHuntThumbnail from "../assets/games/EF04CO08/caca-fonte-confiavel/cover-caca-fonte-confiavel.png";
+import cardListThumbnail from "../assets/games/EF05CO01/baralho-das-listas/cover-baralho-das-listas.png";
+import networkMapsThumbnail from "../assets/games/EF05CO02/mapas-em-rede/cover-mapas-em-rede.png";
+import coverLogicArena from "../assets/games/EF05CO03/arena-da-logica/cover-arena-da-logica.png";
+import coverCidadeDasDecisoes from "../assets/games/EF05CO04/cidade-das-decisoes/cover-cidade-das-decisoes.png";
+import coverMonteSeuComputador from "../assets/games/EF05CO05/monte-seu-computador/cover-monte-seu-computador.png";
+import coverMissaoArquivoSeguro from "../assets/games/EF05CO06/missao-arquivo-seguro/cover-missao-arquivo-seguro.png";
+import sistemaOperacionalThumbnail from "../assets/games/EF05CO07/sistema-operacional/cover-sistema-operacional.png";
+import coverRadarDeConfiabilidade from "../assets/games/EF05CO08/radar-de-confiabilidade/cover-radar-de-confiabilidade.png";
+import coverCuradoriaComCreditos from "../assets/games/EF05CO09/curadoria-com-creditos/cover-curadoria-com-creditos.png";
+import coverFuturoEmCena from "../assets/games/EF05CO10/futuro-em-cena/cover-futuro-em-cena.png";
+import coverEscolhaAFerramentaCerta from "../assets/games/EF05CO11/escolha-a-ferramenta-certa/cover-escolha-a-ferramenta-certa.png";
+import coverMuseuDasEstruturas from "../assets/games/EF15CO01/museu-das-estruturas/cover-museu-das-estruturas.png";
+import coverAcademiaDosAlgoritmos from "../assets/games/EF15CO02/academia-dos-algoritmos/cover-academia-dos-algoritmos.png";
+import coverCircuitoDaVerdade from "../assets/games/EF15CO03/circuito-da-verdade/cover-circuito-da-verdade.png";
+import coverArquitetoDasMissoes from "../assets/games/EF15CO04/arquiteto-das-missoes/cover-arquiteto-das-missoes.png";
+
+/**
+ * FONTE ÚNICA DE VERDADE do catálogo.
+ *
+ * REGRAS DE OURO
+ *
+ * 1. `id` nunca muda e nunca é reaproveitado. Se um jogo for removido,
+ *    marque status "draft" — não devolva o id para a fila.
+ *
+ * 2. Jogo novo entra com o próximo id livre (046, 047, ...), independente
+ *    do ano ou da habilidade. A posição na trilha é `order`, não `id`.
+ *
+ * 3. `order` anda de 10 em 10. Para encaixar um jogo entre 001 e 002,
+ *    use order 15 — não renumere ninguém.
+ *
+ * 4. `skill` é TAG, não identidade. A relação é:
+ *
+ *        1 habilidade  ->  N jogos          (EF01CO01 com 3 jogos: ok)
+ *        1 jogo        ->  1 habilidade     (regra fixa do projeto)
+ *
+ *    É esse 1:1 do lado do jogo que permite a pasta ser agrupada por
+ *    habilidade. Se a regra cair, `skill` vira `skills: SkillCode[]` e a
+ *    estrutura de pastas precisa ser achatada — porque uma pasta tem um
+ *    pai só, e um conjunto de tags não cabe numa árvore.
+ *
+ * 5. `module` é o caminho da pasta, relativo a src/games/ e a
+ *    src/assets/games/. Convenção: "<skill>/<slug>".
+ *
+ *        src/games/EF01CO01/base-dos-classificadores/index.ts
+ *        src/assets/games/EF01CO01/base-dos-classificadores/cover-01.png
+ *
+ * EXEMPLO — dois jogos compartilhando a habilidade EF01CO01:
+ *
+ *   { id: "001", slug: "base-dos-classificadores",
+ *     module: "EF01CO01/base-dos-classificadores",   skill: "EF01CO01", order: 10 }
+ *
+ *   { id: "046", slug: "fabrica-dos-classificadores",
+ *     module: "EF01CO01/fabrica-dos-classificadores", skill: "EF01CO01", order: 15 }
+ *
+ *   getGamesBySkill("EF01CO01")  ->  [001, 046]
+ */
+export const catalog: Game[] = [
+  {
+    id: "001",
+    slug: "base-dos-classificadores",
+    module: "EF01CO01/base-dos-classificadores",
+    skill: "EF01CO01",
+    years: [1],
+    tags: ["classificação", "arrastar", "atributos"],
+    order: 10,
+    status: "published",
+    title: "Base dos Classificadores",
+    description:
+      "Arraste figuras e personagens para as bases certas, separando por cor, forma ou tamanho.",
+    category: "Pensamento Computacional",
+    points: 60,
+    icon: "🗂️",
+    thumbnail: classificadoresThumbnail,
+  },
+  {
+    id: "002",
+    slug: "trilha-do-passo-a-passo",
+    module: "EF01CO02/trilha-do-passo-a-passo",
+    skill: "EF01CO02",
+    years: [1],
+    tags: ["sequência", "quiz"],
+    order: 20,
+    status: "published",
+    title: "Trilha do Passo a Passo",
+    description: "Teste seus conhecimentos com perguntas de diversas categorias.",
+    category: "Pensamento Computacional",
+    points: 50,
+    icon: "👣",
+    thumbnail: trilhaThumbnail,
+  },
+  {
+    id: "003",
+    slug: "oficina-dos-algoritmos",
+    module: "EF01CO03/oficina-dos-algoritmos",
+    skill: "EF01CO03",
+    years: [1],
+    tags: ["algoritmo", "ordenação", "arrastar"],
+    order: 30,
+    status: "published",
+    title: "Oficina dos Algoritmos",
+    description:
+      "Monte a ordem correta dos passos e teste o algoritmo para ver a sequência funcionando.",
+    category: "Pensamento Computacional",
+    points: 50,
+    icon: "🛠️",
+    thumbnail: algorithmsThumbnail,
+  },
+  {
+    id: "004",
+    slug: "correio-multimidia",
+    module: "EF01CO04/correio-multimidia",
+    skill: "EF01CO04",
+    years: [1],
+    tags: ["mídia", "representação", "áudio", "desenho"],
+    order: 40,
+    status: "published",
+    title: "Correio Multimídia",
+    description:
+      "Envie mensagens por áudio, texto ou desenho e descubra que a informação continua a mesma, não importa o formato!",
+    category: "Mundo Digital",
+    points: 50,
+    icon: "📬",
+    thumbnail: correioThumbnail,
+  },
+  {
+    id: "005",
+    slug: "pixel-secreto",
+    module: "EF01CO05/pixel-secreto",
+    skill: "EF01CO05",
+    years: [1],
+    tags: ["pixel", "cor", "grade"],
+    order: 50,
+    status: "published",
+    title: "Pixel Secreto",
+    description: "Descubra imagens escondidas preenchendo grades com códigos de cor.",
+    category: "Pensamento Computacional",
+    points: 50,
+    icon: "🎨",
+    thumbnail: pixelSecretThumbnail,
+  },
+  {
+    id: "006",
+    slug: "desktop-digital-infantil",
+    module: "EF01CO06/desktop-digital-infantil",
+    skill: "EF01CO06",
+    years: [1],
+    tags: ["desktop", "aplicativos", "missões"],
+    order: 60,
+    status: "published",
+    title: "Desktop Digital Infantil",
+    description:
+      "Explore apps de um desktop infantil e complete missões usando câmera, calculadora, gravador e muito mais.",
+    category: "Cultura Digital",
+    points: 60,
+    icon: "🖥️",
+    thumbnail: desktopThumbnail,
+  },
+  {
+    id: "007",
+    slug: "guardioes-dos-dados",
+    module: "EF01CO07/guardioes-dos-dados",
+    skill: "EF01CO07",
+    years: [1],
+    tags: ["segurança", "privacidade", "decisão"],
+    order: 70,
+    status: "published",
+    title: "Guardiões dos Dados",
+    description:
+      "Escolha atitudes seguras em situações com celular, tablet, computador, jogos e aplicativos.",
+    category: "Pensamento Computacional",
+    points: 50,
+    icon: "🛡️",
+    thumbnail: guardiansThumbnail,
+  },
+  {
+    id: "008",
+    slug: "hangar-dos-modelos",
+    module: "EF02CO01/hangar-dos-modelos",
+    skill: "EF02CO01",
+    years: [2],
+    tags: ["atributos", "filtro", "agrupamento"],
+    order: 80,
+    status: "published",
+    title: "Hangar dos Modelos",
+    description:
+      "Filtre, compare e agrupe meios de transporte por atributos como meio, motor e rodas.",
+    category: "Pensamento Computacional",
+    points: 55,
+    icon: "✈️",
+    thumbnail: hangarThumbnail,
+  },
+  {
+    id: "009",
+    slug: "desfile-do-robo-repetidor",
+    module: "EF02CO02/desfile-do-robo-repetidor",
+    skill: "EF02CO02",
+    years: [2],
+    tags: ["repetição", "robô", "programação em blocos"],
+    order: 90,
+    status: "published",
+    title: "Desfile do Robô Repetidor",
+    description: "Monte um caminho com setas para guiar o robô até o palco.",
+    category: "Pensamento Computacional",
+    points: 55,
+    icon: "🤖",
+    thumbnail: robotParadeThumbnail,
+  },
+  {
+    id: "010",
+    slug: "fabrica-de-maquinas",
+    module: "EF02CO03/fabrica-de-maquinas",
+    skill: "EF02CO03",
+    years: [2],
+    tags: ["sequência", "processo", "arrastar"],
+    order: 100,
+    status: "published",
+    title: "Fábrica de Máquinas",
+    description: "Organize máquinas na ordem correta para completar a linha de produção.",
+    category: "Mundo Digital",
+    points: 60,
+    icon: "🏭",
+    thumbnail: machineFactoryThumbnail,
+  },
+  {
+    id: "011",
+    slug: "museu-vivo-do-computador",
+    module: "EF02CO04/museu-vivo-do-computador",
+    skill: "EF02CO04",
+    years: [2],
+    tags: ["hardware", "software"],
+    order: 110,
+    status: "published",
+    title: "Museu Vivo do Computador",
+    description:
+      "Explore peças de computador e descubra qual é hardware, qual é software e como elas funcionam juntas.",
+    category: "Mundo Digital",
+    points: 60,
+    icon: "🏛️",
+    thumbnail: museumThumbnail,
+  },
+  {
+    id: "012",
+    slug: "cidade-das-tecnologias",
+    module: "EF02CO05/cidade-das-tecnologias",
+    skill: "EF02CO05",
+    years: [2],
+    tags: ["tecnologia", "cotidiano", "mapa"],
+    order: 120,
+    status: "published",
+    title: "Cidade das Tecnologias",
+    description:
+      "Explore o mapa da cidade e escolha a tecnologia certa para cada situação do dia a dia.",
+    category: "Cultura Digital",
+    points: 55,
+    icon: "🏙️",
+    thumbnail: cityThumbnail,
+  },
+  {
+    id: "013",
+    slug: "checklist-do-jogador-seguro",
+    module: "EF02CO06/checklist-do-jogador-seguro",
+    skill: "EF02CO06",
+    years: [2],
+    tags: ["segurança", "configuração", "jogos online"],
+    order: 130,
+    status: "published",
+    title: "Checklist do Jogador Seguro",
+    description:
+      "Configure as proteções do dispositivo e reaja a riscos antes de entrar no jogo online.",
+    category: "Cultura Digital",
+    points: 60,
+    icon: "🛡️",
+    thumbnail: checklistThumbnail,
+  },
+  {
+    id: "014",
+    slug: "tribunal-do-verdadeiro-ou-falso",
+    module: "EF03CO01/tribunal-do-verdadeiro-ou-falso",
+    skill: "EF03CO01",
+    years: [3],
+    tags: ["lógica", "negação", "booleano"],
+    order: 140,
+    status: "published",
+    title: "Tribunal do Verdadeiro ou Falso",
+    description:
+      "Julgue sentenças do dia a dia e fique atento à palavra NÃO antes de decidir.",
+    category: "Pensamento Computacional",
+    points: 55,
+    icon: "⚖️",
+    thumbnail: tribunalThumbnail,
+  },
+  {
+    id: "015",
+    slug: "labirinto-do-enquanto",
+    module: "EF03CO02/labirinto-do-enquanto",
+    skill: "EF03CO02",
+    years: [3],
+    tags: ["laço", "while", "condição", "robô"],
+    order: 150,
+    status: "published",
+    title: "Labirinto do Enquanto",
+    description:
+      "Monte o laço enquanto, escolha a condição certa e preveja onde o robô vai parar.",
+    category: "Pensamento Computacional",
+    points: 60,
+    icon: "🤖",
+    thumbnail: mazeThumbnail,
+  },
+  {
+    id: "016",
+    slug: "chef-dos-subproblemas",
+    module: "EF03CO03/chef-dos-subproblemas",
+    skill: "EF03CO03",
+    years: [3],
+    tags: ["decomposição", "linha do tempo"],
+    order: 160,
+    status: "published",
+    title: "Chef dos Subproblemas",
+    description:
+      "Decomponha missões da cozinha em subtarefas e monte o plano certo na linha do tempo.",
+    category: "Pensamento Computacional",
+    points: 60,
+    icon: "👨‍🍳",
+    thumbnail: chefThumbnail,
+  },
+  {
+    id: "017",
+    slug: "montador-de-informacoes",
+    module: "EF03CO04/montador-de-informacoes",
+    skill: "EF03CO04",
+    years: [3],
+    tags: ["dado", "informação", "campos"],
+    order: 170,
+    status: "published",
+    title: "Montador de Informações",
+    description:
+      "Combine dados soltos em campos corretos para formar datas, endereços e imagens.",
+    category: "Mundo Digital",
+    points: 60,
+    icon: "🧩",
+    thumbnail: informationBuilderThumbnail,
+  },
+  {
+    id: "018",
+    slug: "formato-certo",
+    module: "EF03CO05/formato-certo",
+    skill: "EF03CO05",
+    years: [3],
+    tags: ["estrutura de dados", "formato"],
+    order: 180,
+    status: "published",
+    title: "Formato Certo",
+    description:
+      "Escolha a estrutura certa para guardar datas, pixels e sequências de caracteres.",
+    category: "Mundo Digital",
+    points: 60,
+    icon: "[]",
+    thumbnail: correctFormatThumbnail,
+  },
+  {
+    id: "019",
+    slug: "central-de-entrada-e-saida",
+    module: "EF03CO06/central-de-entrada-e-saida",
+    skill: "EF03CO06",
+    years: [3],
+    tags: ["entrada", "saída", "periféricos"],
+    order: 190,
+    status: "published",
+    title: "Central de Entrada e Saída",
+    description:
+      "Conecte dispositivos de entrada e saída para o computador se comunicar com o mundo.",
+    category: "Mundo Digital",
+    points: 60,
+    icon: "🔌",
+    thumbnail: inputOutputThumbnail,
+  },
+  {
+    id: "020",
+    slug: "detetives-da-busca",
+    module: "EF03CO07/detetives-da-busca",
+    skill: "EF03CO07",
+    years: [3],
+    tags: ["busca", "palavra-chave", "navegador"],
+    order: 200,
+    status: "published",
+    title: "Detetives da Busca",
+    description:
+      "Use palavras-chave, filtros e comparação de resultados em um navegador seguro.",
+    category: "Cultura Digital",
+    points: 60,
+    icon: "🔍",
+    thumbnail: searchDetectivesThumbnail,
+  },
+  {
+    id: "021",
+    slug: "estudio-multiformato",
+    module: "EF03CO08/estudio-multiformato",
+    skill: "EF03CO08",
+    years: [3],
+    tags: ["produção", "formato", "mural"],
+    order: 210,
+    status: "published",
+    title: "Estúdio Multiformato",
+    description:
+      "Escolha a ferramenta digital certa e crie produções em diferentes formatos para o mural da turma.",
+    category: "Cultura Digital",
+    points: 60,
+    icon: "🎨",
+    thumbnail: multiFormatStudioThumbnail,
+  },
+  {
+    id: "022",
+    slug: "investigacao-dados-risco",
+    module: "EF03CO09/investigacao-dados-risco",
+    skill: "EF03CO09",
+    years: [3],
+    tags: ["privacidade", "dados pessoais", "investigação"],
+    order: 220,
+    status: "published",
+    title: "Investigação: Dados em Risco",
+    description:
+      "Identifique dados pessoais perigosos, descubra consequências do compartilhamento e investigue incidentes de privacidade online.",
+    category: "Cultura Digital",
+    points: 60,
+    icon: "🔍",
+    thumbnail: investigationThumbnail,
+  },
+  {
+    id: "023",
+    slug: "batalha-das-coordenadas",
+    module: "EF04CO01/batalha-das-coordenadas",
+    skill: "EF04CO01",
+    years: [4],
+    tags: ["coordenadas", "matriz", "grade"],
+    order: 230,
+    status: "published",
+    title: "Batalha das Coordenadas",
+    description:
+      "Localize células em grades matriciais usando coordenadas (linha, coluna) e afunde navios escondidos no mapa.",
+    category: "Pensamento Computacional",
+    points: 65,
+    icon: "🗺️",
+    thumbnail: battleCoordsThumbnail,
+  },
+  {
+    id: "024",
+    slug: "arquivo-dos-registros",
+    module: "EF04CO02/arquivo-dos-registros",
+    skill: "EF04CO02",
+    years: [4],
+    tags: ["registro", "campo", "filtro"],
+    order: 240,
+    status: "published",
+    title: "Arquivo dos Registros",
+    description:
+      "Leia fichas com campos nomeados, filtre registros por campo e responda perguntas sobre o conjunto de dados.",
+    category: "Pensamento Computacional",
+    points: 65,
+    icon: "🗂️",
+    thumbnail: archiveRecordsThumbnail,
+  },
+  {
+    id: "025",
+    slug: "predio-dos-lacos",
+    module: "EF04CO03/predio-dos-lacos",
+    skill: "EF04CO03",
+    years: [4],
+    tags: ["laço", "aninhado", "repetição"],
+    order: 250,
+    status: "published",
+    title: "Prédio dos Laços",
+    description:
+      "Configure laços simples e aninhados para guiar o limpador de janelas pelo prédio e limpar todos os andares.",
+    category: "Pensamento Computacional",
+    points: 65,
+    icon: "🔁",
+    thumbnail: buildingLoopsThumbnail,
+  },
+  {
+    id: "026",
+    slug: "tradutor-da-maquina",
+    module: "EF04CO04/tradutor-da-maquina",
+    skill: "EF04CO04",
+    years: [4],
+    tags: ["binário", "ascii", "codificação"],
+    order: 260,
+    status: "published",
+    title: "Tradutor da Máquina",
+    description:
+      "Traduza letras para código binário e vice-versa usando a tabela ASCII simplificada.",
+    category: "Mundo Digital",
+    points: 60,
+    icon: "💻",
+    thumbnail: machineTranslatorThumbnail,
+  },
+  {
+    id: "027",
+    slug: "atelier-codigos-digitais",
+    module: "EF04CO05/atelier-codigos-digitais",
+    skill: "EF04CO05",
+    years: [4],
+    tags: ["binário", "ascii", "rgb", "cor"],
+    order: 270,
+    status: "published",
+    title: "Ateliê de Códigos Digitais",
+    description:
+      "Explore três oficinas: reproduza padrões binários, decodifique ASCII e misture cores RGB.",
+    category: "Mundo Digital",
+    points: 65,
+    icon: "🎨",
+    thumbnail: digitalAtelierThumbnail,
+  },
+  {
+    id: "028",
+    slug: "estudio-producao-digital",
+    module: "EF04CO06/estudio-producao-digital",
+    skill: "EF04CO06",
+    years: [4],
+    tags: ["produção", "revisão", "publicação"],
+    order: 280,
+    status: "published",
+    title: "Estúdio de Produção Digital",
+    description:
+      "Escolha o formato certo para cada missão, produza conteúdo em texto, slides ou vídeo e publique após revisão.",
+    category: "Cultura Digital",
+    points: 65,
+    icon: "🎬",
+    thumbnail: digitalStudioThumbnail,
+  },
+  {
+    id: "029",
+    slug: "missao-etica-digital",
+    module: "EF04CO07/missao-etica-digital",
+    skill: "EF04CO07",
+    years: [4],
+    tags: ["ética", "reputação", "arquivos"],
+    order: 290,
+    status: "published",
+    title: "Missão Ética Digital",
+    description:
+      "Tome decisões éticas ao lidar com arquivos digitais alheios e mantenha sua reputação digital em alta.",
+    category: "Cultura Digital",
+    points: 65,
+    icon: "⚖️",
+    thumbnail: ethicMissionThumbnail,
+  },
+  {
+    id: "030",
+    slug: "caca-fonte-confiavel",
+    module: "EF04CO08/caca-fonte-confiavel",
+    skill: "EF04CO08",
+    years: [4],
+    tags: ["fonte", "confiabilidade", "checagem"],
+    order: 300,
+    status: "published",
+    title: "Caça à Fonte Confiável",
+    description:
+      "Avalie critérios de confiabilidade em páginas simuladas, compare fontes e classifique as mais confiáveis.",
+    category: "Cultura Digital",
+    points: 65,
+    icon: "🔍",
+    thumbnail: sourceHuntThumbnail,
+  },
+  {
+    id: "031",
+    slug: "baralho-das-listas",
+    module: "EF05CO01/baralho-das-listas",
+    skill: "EF05CO01",
+    years: [5],
+    tags: ["lista", "inserção", "busca"],
+    order: 310,
+    status: "published",
+    title: "Baralho das Listas",
+    description: "Insira, remova, substitua e busque cartas mantendo a lista em ordem.",
+    category: "Pensamento Computacional",
+    points: 65,
+    icon: "🃏",
+    thumbnail: cardListThumbnail,
+  },
+  {
+    id: "032",
+    slug: "mapas-em-rede",
+    module: "EF05CO02/mapas-em-rede",
+    skill: "EF05CO02",
+    years: [5],
+    tags: ["rede", "grafo", "caminho"],
+    order: 320,
+    status: "published",
+    title: "Mapas em Rede",
+    description: "Explore o mapa e trace caminhos entre dispositivos.",
+    category: "Pensamento Computacional",
+    points: 65,
+    icon: "🗺️",
+    thumbnail: networkMapsThumbnail,
+  },
+  {
+    id: "033",
+    slug: "arena-da-logica",
+    // O slug antigo tinha acento — inválido em URL e quebrava link copiado.
+    // Mantido como alias para não perder quem já salvou o endereço.
+    aliases: ["arena-da-lógica"],
+    module: "EF05CO03/arena-da-logica",
+    skill: "EF05CO03",
+    years: [5],
+    tags: ["lógica", "portões lógicos", "circuito"],
+    order: 330,
+    status: "published",
+    title: "Arena da Lógica",
+    description: "Resolva desafios de lógica com portões lógicos e circuitos digitais.",
+    category: "Pensamento Computacional",
+    points: 65,
+    icon: "🧠",
+    thumbnail: coverLogicArena,
+  },
+  {
+    id: "034",
+    slug: "cidade-das-decisoes",
+    module: "EF05CO04/cidade-das-decisoes",
+    skill: "EF05CO04",
+    years: [5],
+    tags: ["decisão", "condicional", "estratégia"],
+    order: 340,
+    status: "published",
+    title: "Cidade das Decisões",
+    description:
+      "Navegue pela cidade tomando decisões estratégicas e resolvendo desafios lógicos.",
+    category: "Pensamento Computacional",
+    points: 65,
+    icon: "🏙️",
+    thumbnail: coverCidadeDasDecisoes,
+  },
+  {
+    id: "035",
+    slug: "monte-seu-computador",
+    module: "EF05CO05/monte-seu-computador",
+    skill: "EF05CO05",
+    years: [5],
+    tags: ["hardware", "montagem", "peças"],
+    order: 350,
+    status: "published",
+    title: "Monte seu Computador",
+    description:
+      "Aprenda sobre as peças de um computador, suas funções e como montá-lo corretamente.",
+    category: "Pensamento Computacional",
+    points: 65,
+    icon: "💻",
+    thumbnail: coverMonteSeuComputador,
+  },
+  {
+    id: "036",
+    slug: "missao-arquivo-seguro",
+    module: "EF05CO06/missao-arquivo-seguro",
+    skill: "EF05CO06",
+    years: [5],
+    tags: ["segurança", "backup", "privacidade"],
+    order: 360,
+    status: "published",
+    title: "Missão Arquivo Seguro",
+    description:
+      "Proteja seus arquivos digitais contra ameaças e mantenha sua privacidade online.",
+    category: "Cultura Digital",
+    points: 65,
+    icon: "🔒",
+    thumbnail: coverMissaoArquivoSeguro,
+  },
+  {
+    id: "037",
+    slug: "sistema-operacional",
+    module: "EF05CO07/sistema-operacional",
+    skill: "EF05CO07",
+    years: [5],
+    tags: ["sistema operacional", "arquivos", "processos"],
+    order: 370,
+    status: "published",
+    title: "Sistema Operacional",
+    description:
+      "Aprenda sobre o funcionamento de um sistema operacional e suas principais funções.",
+    category: "Pensamento Computacional",
+    points: 65,
+    icon: "🖥️",
+    thumbnail: sistemaOperacionalThumbnail,
+  },
+  {
+    id: "038",
+    slug: "radar-de-confiabilidade",
+    module: "EF05CO08/radar-de-confiabilidade",
+    skill: "EF05CO08",
+    years: [5],
+    tags: ["fonte", "confiabilidade", "checagem"],
+    order: 380,
+    status: "published",
+    title: "Radar de Confiabilidade",
+    description:
+      "Avalie critérios de confiabilidade, compare fontes e classifique as mais confiáveis.",
+    category: "Cultura Digital",
+    points: 65,
+    icon: "🔍",
+    thumbnail: coverRadarDeConfiabilidade,
+  },
+  {
+    id: "039",
+    slug: "curadoria-com-creditos",
+    module: "EF05CO09/curadoria-com-creditos",
+    skill: "EF05CO09",
+    years: [5],
+    tags: ["curadoria", "créditos", "autoria"],
+    order: 390,
+    status: "published",
+    title: "Curadoria com Créditos",
+    description:
+      "Selecione conteúdos, verifique a origem e dê o crédito correto a cada autor.",
+    category: "Cultura Digital",
+    points: 65,
+    icon: "🩺",
+    thumbnail: coverCuradoriaComCreditos,
+  },
+  {
+    id: "040",
+    slug: "futuro-em-cena",
+    module: "EF05CO10/futuro-em-cena",
+    skill: "EF05CO10",
+    years: [5],
+    tags: ["narrativa", "interativo", "história"],
+    order: 400,
+    status: "published",
+    title: "Futuro em Cena",
+    description:
+      "Crie uma história interativa, escolha personagens, cenários e desfechos para compartilhar com os amigos.",
+    category: "Cultura Digital",
+    points: 65,
+    icon: "🎭",
+    thumbnail: coverFuturoEmCena,
+  },
+  {
+    id: "041",
+    slug: "escolha-a-ferramenta-certa",
+    module: "EF05CO11/escolha-a-ferramenta-certa",
+    skill: "EF05CO11",
+    years: [5],
+    tags: ["ferramenta", "formato", "produção"],
+    order: 410,
+    status: "published",
+    title: "Escolha a Ferramenta Certa",
+    description:
+      "Escolha o formato certo para cada missão, produza conteúdo em texto, slides ou vídeo e publique após revisão.",
+    category: "Cultura Digital",
+    points: 65,
+    icon: "🔧",
+    thumbnail: coverEscolhaAFerramentaCerta,
+  },
+  {
+    id: "042",
+    slug: "museu-das-estruturas",
+    module: "EF15CO01/museu-das-estruturas",
+    skill: "EF15CO01",
+    years: [1, 2, 3, 4, 5],
+    tags: ["estrutura de dados", "organização"],
+    order: 420,
+    status: "published",
+    title: "Museu das Estruturas",
+    description: "Explore diferentes estruturas de dados e aprenda como organizá-las.",
+    category: "Pensamento Computacional",
+    points: 65,
+    icon: "🏛️",
+    thumbnail: coverMuseuDasEstruturas,
+  },
+  {
+    id: "043",
+    slug: "academia-dos-algoritmos",
+    module: "EF15CO02/academia-dos-algoritmos",
+    skill: "EF15CO02",
+    years: [1, 2, 3, 4, 5],
+    tags: ["algoritmo", "eficiência"],
+    order: 430,
+    status: "published",
+    title: "Academia dos Algoritmos",
+    description:
+      "Aprenda sobre algoritmos e como aplicá-los para resolver problemas de forma eficiente.",
+    category: "Pensamento Computacional",
+    points: 65,
+    icon: "🏋️",
+    thumbnail: coverAcademiaDosAlgoritmos,
+  },
+  {
+    id: "044",
+    slug: "circuito-da-verdade",
+    module: "EF15CO03/circuito-da-verdade",
+    skill: "EF15CO03",
+    years: [1, 2, 3, 4, 5],
+    tags: ["lógica", "operadores", "and/or/not"],
+    order: 440,
+    status: "published",
+    title: "Circuito da Verdade",
+    description:
+      "Aprenda a usar operadores lógicos para controlar atrações em um parque de diversões.",
+    category: "Pensamento Computacional",
+    points: 65,
+    icon: "🎢",
+    thumbnail: coverCircuitoDaVerdade,
+  },
+  {
+    id: "045",
+    slug: "arquiteto-das-missoes",
+    module: "EF15CO04/arquiteto-das-missoes",
+    skill: "EF15CO04",
+    years: [1, 2, 3, 4, 5],
+    tags: ["planejamento", "sequência", "missões"],
+    order: 450,
+    status: "published",
+    title: "Arquiteto das Missões",
+    description:
+      "Projete e organize missões usando lógica e sequências de ações para alcançar objetivos.",
+    category: "Pensamento Computacional",
+    points: 65,
+    icon: "🏗️",
+    thumbnail: coverArquitetoDasMissoes,
+  },
+];
+
+/** Próximo id livre. Use ao cadastrar um jogo novo. */
+export const NEXT_FREE_ID = "046";

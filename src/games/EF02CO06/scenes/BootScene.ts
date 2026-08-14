@@ -1,33 +1,33 @@
 import Phaser from 'phaser'
 
-import bgDeviceUrl   from '../../../assets/games/EF02CO06/bg-device.png'
-import bgLoadingUrl  from '../../../assets/games/EF02CO06/bg-loading.png'
+import bgDeviceUrl from '../../../assets/games/EF02CO06/bg-device.png'
+import bgLoadingUrl from '../../../assets/games/EF02CO06/bg-loading.png'
 
-import iconShieldOkUrl    from '../../../assets/games/EF02CO06/icon-shield-ok.png'
-import iconShieldWarnUrl  from '../../../assets/games/EF02CO06/icon-shield-warn.png'
-import iconPasswordUrl    from '../../../assets/games/EF02CO06/icon-password.png'
-import iconLocationUrl    from '../../../assets/games/EF02CO06/icon-location.png'
-import iconCameraUrl      from '../../../assets/games/EF02CO06/icon-camera.png'
-import iconPurchasesUrl   from '../../../assets/games/EF02CO06/icon-purchases.png'
-import iconStrangersUrl   from '../../../assets/games/EF02CO06/icon-strangers.png'
-import iconPrivacityUrl   from '../../../assets/games/EF02CO06/icon-privacity.png'
+import iconShieldOkUrl from '../../../assets/games/EF02CO06/icon-shield-ok.png'
+import iconShieldWarnUrl from '../../../assets/games/EF02CO06/icon-shield-warn.png'
+import iconPasswordUrl from '../../../assets/games/EF02CO06/icon-password.png'
+import iconLocationUrl from '../../../assets/games/EF02CO06/icon-location.png'
+import iconCameraUrl from '../../../assets/games/EF02CO06/icon-camera.png'
+import iconPurchasesUrl from '../../../assets/games/EF02CO06/icon-purchases.png'
+import iconStrangersUrl from '../../../assets/games/EF02CO06/icon-strangers.png'
+import iconPrivacityUrl from '../../../assets/games/EF02CO06/icon-privacity.png'
 
-import toggleOnUrl  from '../../../assets/games/EF02CO06/toggle-on.png'
+import toggleOnUrl from '../../../assets/games/EF02CO06/toggle-on.png'
 import toggleOffUrl from '../../../assets/games/EF02CO06/toggle-off.png'
 
 import characterPlayersUrl from '../../../assets/games/EF02CO06/character-players.png'
 
 const ASSETS: Array<[string, string]> = [
-  ['bg-device',       bgDeviceUrl],
-  ['icon-shield-ok',   iconShieldOkUrl],
+  ['bg-device', bgDeviceUrl],
+  ['icon-shield-ok', iconShieldOkUrl],
   ['icon-shield-warn', iconShieldWarnUrl],
-  ['icon-password',    iconPasswordUrl],
-  ['icon-location',    iconLocationUrl],
-  ['icon-camera',      iconCameraUrl],
-  ['icon-purchases',   iconPurchasesUrl],
-  ['icon-strangers',   iconStrangersUrl],
-  ['icon-privacity',   iconPrivacityUrl],
-  ['toggle-on',  toggleOnUrl],
+  ['icon-password', iconPasswordUrl],
+  ['icon-location', iconLocationUrl],
+  ['icon-camera', iconCameraUrl],
+  ['icon-purchases', iconPurchasesUrl],
+  ['icon-strangers', iconStrangersUrl],
+  ['icon-privacity', iconPrivacityUrl],
+  ['toggle-on', toggleOnUrl],
   ['toggle-off', toggleOffUrl],
   ['character-players', characterPlayersUrl],
 ]
@@ -44,6 +44,7 @@ export class BootScene extends Phaser.Scene {
   }
 
   create() {
+    this.scene.launch('UIScene')
     this.scene.start('GameScene')
   }
 
@@ -55,7 +56,7 @@ export class BootScene extends Phaser.Scene {
       this.add.image(640, 360, 'bg-loading').setDisplaySize(1280, 720).setDepth(0)
     })
 
-    this.add.text(640, 310, '🛡️  Checklist do Jogador Seguro', {
+    this.add.text(640, 310, 'Checklist do Jogador Seguro', {
       fontSize: '38px',
       fontFamily: 'Arial Black, Arial',
       color: '#E3F2FD',
