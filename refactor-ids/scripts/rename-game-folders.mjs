@@ -95,7 +95,7 @@ function gitMv(from, to) {
 
 function* walk(dir) {
   for (const entry of readdirSync(dir)) {
-    if (entry === "node_modules" || entry === ".git") continue;
+    if (entry === "node_modules" || entry === ".git") continue; 
     const full = join(dir, entry);
     if (statSync(full).isDirectory()) yield* walk(full);
     else yield full;
