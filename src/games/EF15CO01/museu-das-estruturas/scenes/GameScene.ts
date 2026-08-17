@@ -1498,8 +1498,8 @@ export class GameScene extends Phaser.Scene {
 
         if (id === 'lista') {
             return [
-                { text: 'Aqui as peças ficam em fila, uma depois da outra.', ...stage },
-                { text: 'Toque na peça que vem primeiro. Ela pula pro lugar sozinha.', ...stage },
+                { text: 'Veja esses círculos! Eles estão desorganizados...', ...stage },
+                { text: 'Toque no menor círculo, ele vai se organizar!', ...stage },
             ]
         }
         if (id === 'matriz') {

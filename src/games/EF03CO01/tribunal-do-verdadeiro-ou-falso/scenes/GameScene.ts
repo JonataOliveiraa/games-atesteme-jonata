@@ -10,11 +10,6 @@ import type { TutorialStep } from '../../../../shared/tutorial/createTutorial'
 const GAME_ID = 'tribunal-do-verdadeiro-ou-falso'
 const MAX_CONSECUTIVE_ERRORS = 3
 
-// ══════════════════════════════════════════════════════════════════════════
-//  LAYOUT — base 1280×720 com escala ampliada para leitura em telas pequenas.
-//  O canvas usa Scale.FIT, então tudo aqui encolhe junto no mobile: quanto
-//  maior a fonte/alvo em coordenadas de jogo, mais legível e tocável fica.
-// ══════════════════════════════════════════════════════════════════════════
 const TOP_BAR_H = 132          // altura da barra da UIScene (espaço reservado)
 
 const CARD_CX = 740
@@ -337,30 +332,25 @@ export class GameScene extends Phaser.Scene {
     const btn = this.add.container(x, y).setDepth(5)
     const W = BTN_W, H = BTN_H, R = 28
 
-    const shadow = this.add.graphics()
-    shadow.fillStyle(0x000000, 0.20)
-    shadow.fillRoundedRect(-W / 2 + 5, -H / 2 + 8, W, H, R)
-
     const bg = this.add.graphics()
     bg.fillStyle(value ? 0x22c55e : 0xef4444, 1)
     bg.fillRoundedRect(-W / 2, -H / 2, W, H, R)
     bg.lineStyle(5, 0xffffff, 0.9)
     bg.strokeRoundedRect(-W / 2, -H / 2, W, H, R)
 
-    const label = this.add.text(0, -26, value ? '✅ VERDADEIRO' : '❌ FALSO', {
+    const label = this.add.text(0, -26, value ? 'Verdadeiro' : 'Falso', {
       fontFamily: 'Arial Black, Arial', fontStyle: 'bold',
       fontSize: '34px', color: '#ffffff',
       stroke: value ? '#14532d' : '#7f1d1d', strokeThickness: 4,
     }).setOrigin(0.5).setResolution(2)
 
-    // a legenda vive dentro do botão: menos elementos na tela e alvo maior
     const caption = this.add.text(0, 34, value ? 'a notícia é real' : 'a notícia é inventada', {
       fontFamily: 'Arial', fontStyle: 'bold',
       fontSize: '21px', color: '#ffffff',
       stroke: value ? '#14532d' : '#7f1d1d', strokeThickness: 2,
     }).setOrigin(0.5).setResolution(2)
 
-    btn.add([shadow, bg, label, caption])
+    btn.add([bg, label, caption])
     btn.setSize(W, H)
     btn.setInteractive({ useHandCursor: true })
     btn.on('pointerover', () => {
@@ -974,10 +964,6 @@ export class GameScene extends Phaser.Scene {
     topBar.lineStyle(3, 0xffffff, 0.82)
     topBar.strokeRoundedRect(-230, -222, 460, 34, 17)
 
-    const icon = this.add.text(0, -128, reason === 'timeout' ? '⏱' : '❌', {
-      fontSize: '66px',
-    }).setOrigin(0.5)
-
     const title = this.add.text(0, -54, 'Que pena!', {
       fontFamily: 'Arial', fontStyle: 'bold',
       fontSize: '48px', color: '#25327a',
@@ -1005,7 +991,7 @@ export class GameScene extends Phaser.Scene {
       EventBus.emit('exit-game')
     })
 
-    panel.add([shadow, bg, topBar, icon, title, reasonTxt, statsTxt, retryBtn, exitBtn])
+    panel.add([shadow, bg, topBar, title, reasonTxt, statsTxt, retryBtn, exitBtn])
     panel.setScale(0.9).setAlpha(0)
     this.tweens.add({ targets: panel, alpha: 1, scale: 1, duration: 260, ease: 'Back.easeOut' })
 

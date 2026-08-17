@@ -1,6 +1,8 @@
 import Phaser from "phaser";
 import { EventBus } from "../../../../shared/EventBus";
 import { runtimeGameBridge } from "../../../../shared/bridge/runtimeGameBridge";
+import { createTutorial, type TutorialStep } from "../../../../shared/tutorial/createTutorial";
+import { showLevelComplete } from "../../../../shared/level/showLevelComplete";
 import { LEVELS, FORMAT_OPTIONS } from "../data/levels";
 import type {
   StudioLevel,
@@ -12,19 +14,55 @@ import type {
 
 const GAME_ID = "estudio-multiformato";
 
-// ── Layout constants (mirrors EF03CO07 exactly) ──────────────────────────────
-const TIMER_BAR_W = 980;
-const TIMER_BAR_Y = 30;
+// ── Layout constants ────────────────────────────────────────────────────────
+// HUD de uma linha: identidade | progresso | tempo, tudo na mesma altura.
+const HUD_CY = 56;
+const HUD_PROGRESS_X = 736;   // centro do bloco 600 → 872
+const HUD_DOTS_CY = 74;
+const TIMER_BAR_X = 1040;
+const TIMER_BAR_Y = HUD_CY;
+const TIMER_BAR_W = 196;      // 942 → 1138, dentro do bloco da direita
+const TIMER_BAR_H = 18;
 const PANEL_X = 72;
-const PANEL_Y = 142;
+const PANEL_Y = 116;  // logo abaixo do HUD, que agora termina em y 94
 const PANEL_W = 1136; // x: 72 → 1208
-const PANEL_H = 486;  // y: 142 → 628
+const PANEL_H = 512;  // y: 116 → 628
 const MODAL_SCALE = 1.12;
 
 // Mural lives on the right 350 px of the panel (split at x = 858)
 const SPLIT_X = 858;
 const LEFT_CX = (PANEL_X + SPLIT_X) / 2;        // ≈ 465
 const RIGHT_CX = (SPLIT_X + PANEL_X + PANEL_W) / 2; // ≈ 1033
+
+// ── Shared vertical rhythm ──────────────────────────────────────────────────
+// Uma única fonte de verdade para onde cada bloco senta dentro do painel.
+// O tutorial lê estas constantes, então holofote e UI nunca saem de sincronia.
+const CONFIRM_CY = PANEL_Y + PANEL_H - 42;        // 586 — botão Confirmar
+const CARD_H = 196;                               // altura dos cartões de formato
+const N1_TASK_CY = PANEL_Y + 128;                 // 244 — cartão da tarefa (N1)
+const N1_CARDS_CY = PANEL_Y + 320;                // 436 — fileira de 4 formatos
+const N3_GOAL_CY = PANEL_Y + 128;                 // 244 — cartão do objetivo (N3)
+const N3_CARDS_CY = PANEL_Y + 320;                // 436 — fileira de 3 formatos
+
+// Editor (N2 e criadores do N3): rótulo → instrução → tela → paleta → publicar
+const EDITOR_LABEL_CY = PANEL_Y + 28;             // 144
+const EDITOR_INSTRUCTION_CY = PANEL_Y + 70;       // 186
+const EDITOR_CANVAS_TOP = PANEL_Y + 96;           // 212
+const EDITOR_CANVAS_H = 296;                      // fundo 508 — cabe no painel
+const EDITOR_CANVAS_CY = EDITOR_CANVAS_TOP + EDITOR_CANVAS_H / 2; // 360
+const EDITOR_PALETTE_CY = EDITOR_CANVAS_TOP + EDITOR_CANVAS_H + 32; // 540
+const EDITOR_PUBLISH_CY = EDITOR_CANVAS_TOP + EDITOR_CANVAS_H + 88; // 596
+const EDITOR_CANVAS_LEFT = PANEL_X + 16;          // 88
+const EDITOR_CANVAS_W = SPLIT_X - PANEL_X - 34;   // ≈ 752
+
+// Editor de texto: banco de palavras → prévia → publicar
+const TEXT_BANK_TOP = PANEL_Y + 96;               // 212 — 2 linhas de chips
+const TEXT_PREVIEW_TOP = PANEL_Y + 300;           // 416 — prévia acima do Publicar
+
+// Mural: dois encaixes de tamanho fixo, centrados na cortiça abaixo da faixa.
+const MURAL_SLOT_H = 154;
+const MURAL_SLOT_GAP = 178;
+const MURAL_SLOT_TOP = PANEL_Y + 106;             // 222 — abaixo da faixa "Mural"
 
 const COLORS = {
   purple: 0x7c3aed,
@@ -46,15 +84,26 @@ export class GameScene extends Phaser.Scene {
   private hits = 0;
   private errors = 0;
 
+  private timerTrack?: Phaser.GameObjects.Graphics;
   private timerBar?: Phaser.GameObjects.Graphics;
+  private timerLabel?: Phaser.GameObjects.Text;
   private timerEvent?: Phaser.Time.TimerEvent;
+  private hudLayer?: Phaser.GameObjects.Container;
+  private helpBtn?: Phaser.GameObjects.Container;
+  private progressDots?: Phaser.GameObjects.Graphics;
+  private progressLabel?: Phaser.GameObjects.Text;
+  private tutorialOpen = false;
+  private fallbackAudioContext?: AudioContext;
 
   private startScreenObjects: Phaser.GameObjects.GameObject[] = [];
   private overlayObjects: Phaser.GameObjects.GameObject[] = [];
 
   // N1
   private n1TaskIndex = 0;
+  private n1AnswerLocked = false;
   private taskObjects: Phaser.GameObjects.GameObject[] = [];
+  /** Centro de cada cartão de formato, para ancorar o efeito de acerto. */
+  private n1CardPositions = new Map<FormatId, { x: number; y: number }>();
 
   // N2
   private n2Phase = 0;
@@ -63,17 +112,19 @@ export class GameScene extends Phaser.Scene {
   private drawPoints: Array<{ x: number; y: number; color: number }> = [];
   private activeColor = COLORS.green;
   private drawCount = 0;
+  private publishLocked = false;
   private selectedWords: string[] = [];
 
   // N3
   private cycleIndex = 0;
+  private n3AnswerLocked = false;
   private cycleObjects: Phaser.GameObjects.GameObject[] = [];
 
   private selectedFormatId: FormatId | null = null;
 
   // Mural (lives inside the panel, right section)
   private muralContainer?: Phaser.GameObjects.Container;
-  private muralItems: Array<{ color: number; emoji: string }> = [];
+  private muralItems: Array<{ color: number; kind: FormatId }> = [];
 
   constructor() {
     super({ key: "GameScene" });
@@ -86,36 +137,47 @@ export class GameScene extends Phaser.Scene {
     this.hits = data?.hits ?? 0;
     this.errors = data?.errors ?? 0;
     this.n1TaskIndex = 0;
+    this.n1AnswerLocked = false;
     this.n2Phase = 0;
     this.drawPoints = [];
     this.drawCount = 0;
+    this.publishLocked = false;
     this.selectedWords = [];
     this.muralItems = [];
     this.cycleIndex = 0;
+    this.n3AnswerLocked = false;
     this.selectedFormatId = null;
     this.startScreenObjects = [];
     this.overlayObjects = [];
     this.taskObjects = [];
     this.phaseObjects = [];
     this.cycleObjects = [];
+    this.n1CardPositions.clear();
+    this.tutorialOpen = false;
   }
 
   create() {
     this.createBackground();
-    this.createTimerBar();
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.onShutdown());
     this.showStartScreen();
   }
 
   update() {
     if (!this.timerEvent || !this.timerBar) return;
-    const pct = Math.max(0, this.timerEvent.getRemaining() / (this.levelConfig.timeLimit * 1000));
+    const remainingMs = Math.max(0, this.timerEvent.getRemaining());
+    const pct = Math.max(0, remainingMs / (this.levelConfig.timeLimit * 1000));
     const color = pct > 0.5 ? COLORS.green : pct > 0.25 ? COLORS.orange : COLORS.red;
     this.drawTimerFill(TIMER_BAR_W * pct, color);
+    if (this.timerLabel) this.timerLabel.setText(`${Math.ceil(remainingMs / 1000)}s`);
   }
 
   private onShutdown() {
     this.timerEvent?.destroy();
+    this.timerEvent = undefined;
+    if (this.fallbackAudioContext && this.fallbackAudioContext.state !== "closed") {
+      void this.fallbackAudioContext.close();
+    }
+    this.fallbackAudioContext = undefined;
     this.input.setDefaultCursor("default");
   }
 
@@ -137,28 +199,52 @@ export class GameScene extends Phaser.Scene {
   // ─── Timer Bar ────────────────────────────────────────────────────────────
 
   private createTimerBar() {
-    const track = this.add.graphics().setDepth(45);
-    track.fillStyle(0x334155, 0.16);
-    track.fillRoundedRect(640 - TIMER_BAR_W / 2, TIMER_BAR_Y - 16, TIMER_BAR_W, 32, 16);
-    this.timerBar = this.add.graphics().setDepth(46);
+    const timerTrack = this.add.graphics();
+    const timerBar = this.add.graphics();
+    // Segundos à esquerda da barra, na mesma linha — sem rótulo "Tempo".
+    const timerLabel = this.addSharpText(TIMER_BAR_X - TIMER_BAR_W / 2 - 14, TIMER_BAR_Y, `${this.levelConfig.timeLimit}s`, {
+      fontSize: "22px",
+      fontFamily: "Arial Black, Arial",
+      color: "#1e1b4b",
+      stroke: "#ffffff",
+      strokeThickness: 4,
+    }).setOrigin(1, 0.5);
+
+    this.timerTrack = timerTrack;
+    this.timerBar = timerBar;
+    this.timerLabel = timerLabel;
+    this.hudLayer?.add([timerTrack, timerBar, timerLabel]);
+
+    timerTrack.clear();
+    timerTrack.fillStyle(0x1e1b4b, 0.18);
+    timerTrack.fillRoundedRect(TIMER_BAR_X - TIMER_BAR_W / 2, TIMER_BAR_Y - TIMER_BAR_H / 2, TIMER_BAR_W, TIMER_BAR_H, TIMER_BAR_H / 2);
+    timerTrack.lineStyle(2, 0x7c3aed, 0.45);
+    timerTrack.strokeRoundedRect(TIMER_BAR_X - TIMER_BAR_W / 2, TIMER_BAR_Y - TIMER_BAR_H / 2, TIMER_BAR_W, TIMER_BAR_H, TIMER_BAR_H / 2);
     this.drawTimerFill(TIMER_BAR_W, COLORS.green);
   }
 
   private drawTimerFill(width: number, color: number) {
     if (!this.timerBar) return;
     this.timerBar.clear();
-    if (width <= 0) return;
+    const x = TIMER_BAR_X - TIMER_BAR_W / 2;
+    const y = TIMER_BAR_Y - TIMER_BAR_H / 2;
+    const fillW = Math.max(0, Math.min(TIMER_BAR_W, width));
+    if (fillW <= 0) return;
     this.timerBar.fillStyle(color, 1);
-    this.timerBar.fillRoundedRect(640 - TIMER_BAR_W / 2, TIMER_BAR_Y - 16, Math.max(0, width), 32, 16);
+    this.timerBar.fillRoundedRect(x + 3, y + 3, Math.max(7, fillW - 6), TIMER_BAR_H - 6, (TIMER_BAR_H - 6) / 2);
+    this.timerBar.fillStyle(0xffffff, 0.22);
+    this.timerBar.fillRoundedRect(x + 8, y + 5, Math.max(0, fillW - 16), 4, 2);
   }
 
   private startTimer() {
+    this.timerEvent?.remove(false);
     this.timerEvent = this.time.delayedCall(this.levelConfig.timeLimit * 1000, () => this.onTimeUp());
   }
 
   private onTimeUp() {
     if (this.gameEnded) return;
     this.gameEnded = true;
+    this.hideHud();
     this.input.enabled = false;
     this.errors += 1;
     this.playWrong();
@@ -176,49 +262,59 @@ export class GameScene extends Phaser.Scene {
     const panel = this.add.container(640, 360).setDepth(62);
     this.startScreenObjects.push(panel);
 
+    // Card mais enxuto: nível · título · uma frase · dica · botão.
+    // O `detail` saiu — repetia o objetivo com outras palavras.
+    const PW = 600;
+    const PH = 340;
     const shadow = this.add.graphics();
     shadow.fillStyle(0x000000, 0.22);
-    shadow.fillRoundedRect(-308, -208, 616, 416, 34);
+    shadow.fillRoundedRect(-PW / 2 + 10, -PH / 2 + 12, PW, PH, 32);
     const bg = this.add.graphics();
     bg.fillStyle(0xffffff, 0.97);
-    bg.fillRoundedRect(-320, -220, 640, 420, 34);
+    bg.fillRoundedRect(-PW / 2, -PH / 2, PW, PH, 32);
     bg.lineStyle(6, COLORS.purple, 0.9);
-    bg.strokeRoundedRect(-320, -220, 640, 420, 34);
+    bg.strokeRoundedRect(-PW / 2, -PH / 2, PW, PH, 32);
     const topBar = this.add.graphics();
     topBar.fillStyle(COLORS.purple, 1);
-    topBar.fillRoundedRect(-240, -238, 480, 34, 17);
-    const lvlLabel = this.addSharpText(0, -221, `Nível ${this.levelConfig.level} / 3`, {
-      fontSize: "18px", fontFamily: "Arial Black, Arial", color: "#ffffff", stroke: "#3b0764", strokeThickness: 3,
+    topBar.fillRoundedRect(-110, -PH / 2 - 17, 220, 34, 17);
+    const lvlLabel = this.addSharpText(0, -PH / 2, `Nível ${this.levelConfig.level} / 3`, {
+      fontSize: "20px", fontFamily: "Arial Black, Arial", color: "#ffffff", stroke: "#3b0764", strokeThickness: 3,
     }).setOrigin(0.5);
-    const title = this.addSharpText(0, -148, this.levelConfig.title, {
-      fontSize: "38px", fontFamily: "Arial Black, Arial", color: "#7c3aed", stroke: "#ffffff", strokeThickness: 6, align: "center",
+    const title = this.addSharpText(0, -104, this.levelConfig.title, {
+      fontSize: "40px", fontFamily: "Arial Black, Arial", color: "#7c3aed", stroke: "#ffffff", strokeThickness: 6, align: "center",
     }).setOrigin(0.5);
-    const obj = this.addSharpText(0, -76, this.levelConfig.objective, {
-      fontSize: "21px", fontFamily: "Arial Black, Arial", color: "#1e1b4b", align: "center", wordWrap: { width: 560 },
+    const obj = this.addSharpText(0, -38, this.levelConfig.objective, {
+      fontSize: "23px", fontFamily: "Arial Black, Arial", color: "#1e1b4b", align: "center", wordWrap: { width: 508 },
     }).setOrigin(0.5);
-    const detail = this.addSharpText(0, 0, this.levelConfig.detail, {
-      fontSize: "17px", fontFamily: "Arial Black, Arial", color: "#475569", align: "center", wordWrap: { width: 540 },
-    }).setOrigin(0.5);
-    const tipBg = this.add.graphics();
-    tipBg.fillStyle(COLORS.amber, 0.18);
-    tipBg.fillRoundedRect(-250, 56, 500, 48, 14);
-    const tip = this.addSharpText(0, 80, `💡 ${this.levelConfig.tip}`, {
-      fontSize: "15px", fontFamily: "Arial Black, Arial", color: "#92400e", align: "center", wordWrap: { width: 470 },
-    }).setOrigin(0.5);
+
+    const parts: Phaser.GameObjects.GameObject[] = [shadow, bg, topBar, lvlLabel, title, obj];
+
+    if (this.levelConfig.tip) {
+      const tipBg = this.add.graphics();
+      tipBg.fillStyle(COLORS.amber, 0.2);
+      tipBg.fillRoundedRect(-244, 16, 488, 50, 16);
+      const tip = this.addSharpText(0, 41, this.levelConfig.tip, {
+        fontSize: "18px", fontFamily: "Arial Black, Arial", color: "#92400e", align: "center", wordWrap: { width: 456 },
+      }).setOrigin(0.5);
+      parts.push(tipBg, tip);
+    }
+
     const btnBg = this.add.graphics();
     btnBg.fillStyle(COLORS.purple, 1);
-    btnBg.fillRoundedRect(-120, 122, 240, 54, 27);
+    btnBg.fillRoundedRect(-120, 92, 240, 56, 28);
     btnBg.lineStyle(4, 0xffffff, 1);
-    btnBg.strokeRoundedRect(-120, 122, 240, 54, 27);
-    const btnText = this.addSharpText(0, 149, "▶ Iniciar", {
+    btnBg.strokeRoundedRect(-120, 92, 240, 56, 28);
+    const btnText = this.addSharpText(0, 120, "Iniciar", {
       fontSize: "24px", fontFamily: "Arial Black, Arial", color: "#ffffff", stroke: "#3b0764", strokeThickness: 3,
     }).setOrigin(0.5);
-    panel.add([shadow, bg, topBar, lvlLabel, title, obj, detail, tipBg, tip, btnBg, btnText]);
+    parts.push(btnBg, btnText);
+
+    panel.add(parts);
     panel.setAlpha(0);
     panel.setScale(0.9);
     this.tweens.add({ targets: panel, alpha: 1, scale: MODAL_SCALE, duration: 280, ease: "Back.easeOut" });
 
-    const hz = this.add.zone(640, 360 + 149 * MODAL_SCALE, 256 * MODAL_SCALE, 66 * MODAL_SCALE).setDepth(70);
+    const hz = this.add.zone(640, 360 + 120 * MODAL_SCALE, 256 * MODAL_SCALE, 68 * MODAL_SCALE).setDepth(70);
     hz.setInteractive({ useHandCursor: true });
     this.startScreenObjects.push(hz);
     hz.on("pointerover", () => { this.input.setDefaultCursor("pointer"); this.tweens.add({ targets: panel, scale: MODAL_SCALE * 1.02, duration: 80 }); });
@@ -229,8 +325,8 @@ export class GameScene extends Phaser.Scene {
       this.startScreenObjects = [];
       this.input.setDefaultCursor("default");
       runtimeGameBridge.emit({ type: "GAME_READY", gameId: GAME_ID });
-      this.startTimer();
       this.buildLevelUI();
+      this.runTutorial();
     });
   }
 
@@ -250,32 +346,235 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
-  // ─── Header (identical pattern to EF03CO07) ───────────────────────────────
+  private runTutorial() {
+    this.helpBtn?.setVisible(false);
+    this.playTutorial(true, () => this.startTimer());
+  }
+
+  private replayTutorial() {
+    if (this.gameEnded || this.tutorialOpen) return;
+    const wasPaused = this.timerEvent?.paused ?? false;
+    if (this.timerEvent) this.timerEvent.paused = true;
+    this.playTutorial(false, () => {
+      if (this.timerEvent) this.timerEvent.paused = wasPaused;
+    });
+  }
+
+  private playTutorial(once: boolean, onDone: () => void) {
+    if (this.tutorialOpen) return;
+    this.tutorialOpen = true;
+    this.helpBtn?.setVisible(false);
+    createTutorial(this, {
+      key: `estudio-multiformato-l${this.levelConfig.level}`,
+      once,
+      accent: COLORS.purple,
+      safeTop: 100,
+      steps: this.tutorialSteps(),
+      onFinish: () => {
+        this.tutorialOpen = false;
+        this.revealHelpButton();
+        onDone();
+      },
+    });
+  }
+
+  private tutorialSteps(): TutorialStep[] {
+    // Os retângulos abaixo espelham a geometria real construída em
+    // showN1Content / showN2DrawPhase / showN3Cycle. Se um desses layouts
+    // mudar, ajuste aqui também — senão o holofote sai de lugar.
+    const MURAL_STEP = {
+      shape: "rect" as const,
+      x: RIGHT_CX,
+      y: PANEL_Y + PANEL_H / 2,
+      w: 342,
+      h: PANEL_H - 20,
+      balloonX: 468,
+      balloonY: 556,
+    };
+
+    // Uma frase curta por passo. Antes eram frases inteiras que a criança
+    // pulava sem ler.
+    if (this.levelConfig.level === 1) {
+      return [
+        {
+          text: "Leia o pedido.",
+          shape: "rect", x: 640, y: N1_TASK_CY, w: 890, h: 124, balloonY: 400,
+        },
+        {
+          text: "Toque no formato que combina.",
+          shape: "rect", x: 640, y: N1_CARDS_CY, w: 900, h: CARD_H + 30, balloonY: 196,
+        },
+        {
+          text: "Depois, toque em Confirmar.",
+          shape: "rect", x: 640, y: CONFIRM_CY, w: 292, h: 78, balloonY: 344,
+        },
+      ];
+    }
+
+    if (this.levelConfig.level === 2) {
+      return [
+        {
+          text: "Crie aqui.",
+          shape: "rect", x: LEFT_CX, y: EDITOR_CANVAS_CY, w: 782, h: EDITOR_CANVAS_H + 24, balloonY: 568,
+        },
+        {
+          text: "Terminou? Toque em Publicar.",
+          shape: "rect", x: LEFT_CX, y: EDITOR_PUBLISH_CY, w: 300, h: 78, balloonY: 392,
+        },
+        { ...MURAL_STEP, text: "Suas produções ficam no mural." },
+      ];
+    }
+
+    return [
+      {
+        text: "Leia o objetivo da missão.",
+        shape: "rect", x: LEFT_CX, y: N3_GOAL_CY, w: 780, h: 136, balloonY: 480,
+      },
+      {
+        text: "Toque no cartão que combina.",
+        shape: "rect", x: LEFT_CX, y: N3_CARDS_CY, w: 640, h: CARD_H + 30, balloonY: 196,
+      },
+      { ...MURAL_STEP, text: "Publique duas para terminar." },
+    ];
+  }
+
+  // ─── Header ───────────────────────────────────────────────────────────────
 
   private createHeader() {
-    this.addSharpText(640, 68, this.levelConfig.title, {
-      fontSize: "40px", fontFamily: "Arial Black, Arial", color: "#ffffff", stroke: "#3b0764", strokeThickness: 6,
+    this.hudLayer?.destroy(true);
+    this.hudLayer = this.add.container(0, 0).setDepth(44);
+
+    // HUD de uma linha só. O objetivo saiu daqui: já foi lido na abertura e
+    // continua a um toque no botão "?". Sobram três blocos alinhados na
+    // mesma altura — identidade (esquerda), progresso (centro), tempo (direita).
+    const shadow = this.add.graphics();
+    shadow.fillStyle(0x0f172a, 0.2);
+    shadow.fillRoundedRect(46, 26, 1190, 74, 22);
+
+    const bar = this.add.graphics();
+    bar.fillStyle(0xffffff, 0.94);
+    bar.fillRoundedRect(44, 18, 1192, 76, 22);
+    bar.lineStyle(4, COLORS.purple, 0.72);
+    bar.strokeRoundedRect(44, 18, 1192, 76, 22);
+    bar.lineStyle(2, 0xffffff, 0.92);
+    bar.strokeRoundedRect(53, 27, 1174, 58, 15);
+    // Separadores verticais entre os três blocos
+    bar.lineStyle(2, COLORS.purple, 0.16);
+    bar.lineBetween(600, 34, 600, 78);
+    bar.lineBetween(872, 34, 872, 78);
+
+    const badge = this.add.graphics();
+    badge.fillStyle(COLORS.purple, 1);
+    badge.fillRoundedRect(70, 38, 116, 36, 18);
+    badge.fillStyle(0xffffff, 0.18);
+    badge.fillRoundedRect(76, 42, 104, 12, 6);
+
+    const badgeText = this.addSharpText(128, 56, `Nível ${this.levelConfig.level}/3`, {
+      fontSize: "19px",
+      fontFamily: "Arial Black, Arial",
+      color: "#ffffff",
+      stroke: "#3b0764",
+      strokeThickness: 3,
     }).setOrigin(0.5);
 
-    const card = this.add.graphics().setDepth(5);
-    card.fillStyle(0xffffff, 0.82);
-    card.fillRoundedRect(230, 96, 820, 44, 22);
-    card.fillStyle(COLORS.yellow, 0.18);
-    card.fillRoundedRect(242, 104, 796, 20, 10);
-    card.lineStyle(4, COLORS.orange, 0.9);
-    card.strokeRoundedRect(230, 96, 820, 44, 22);
-    card.lineStyle(3, 0xffffff, 0.95);
-    card.strokeRoundedRect(234, 100, 812, 36, 18);
+    const title = this.addSharpText(204, 56, this.levelConfig.title, {
+      fontSize: "29px",
+      fontFamily: "Arial Black, Arial",
+      color: "#1e1b4b",
+      stroke: "#ffffff",
+      strokeThickness: 5,
+    }).setOrigin(0, 0.5);
 
-    this.addSharpText(640, 119, this.levelConfig.objective, {
-      fontSize: "21px", fontFamily: "Arial Black, Arial", color: "#1e1b4b",
-      stroke: "#ffffff", strokeThickness: 3, align: "center", wordWrap: { width: 760 },
-    }).setOrigin(0.5).setDepth(6);
-
-    this.addSharpText(1146, 100, `Nível ${this.levelConfig.level}/3`, {
-      fontSize: "18px", fontFamily: "Arial Black, Arial", color: "#1e1b4b",
-      backgroundColor: "rgba(255,255,255,0.82)", padding: { x: 14, y: 8 },
+    const progressLabel = this.addSharpText(HUD_PROGRESS_X, 44, "", {
+      fontSize: "18px",
+      fontFamily: "Arial Black, Arial",
+      color: "#7c3aed",
+      align: "center",
     }).setOrigin(0.5);
+    const progressDots = this.add.graphics();
+    const helpBtn = this.buildHelpButton(1194, 56);
+    helpBtn.setVisible(false);
+
+    this.progressLabel = progressLabel;
+    this.progressDots = progressDots;
+    this.helpBtn = helpBtn;
+    this.hudLayer.add([shadow, bar, badge, badgeText, title, progressLabel, progressDots, helpBtn]);
+    this.createTimerBar();
+    this.tweens.add({ targets: this.hudLayer, y: { from: -20, to: 0 }, alpha: { from: 0, to: 1 }, duration: 240, ease: "Cubic.easeOut" });
+  }
+
+  private buildHelpButton(x: number, y: number) {
+    const btn = this.add.container(x, y);
+    const bg = this.add.graphics();
+    bg.fillStyle(0x0f172a, 0.16);
+    bg.fillCircle(0, 6, 27);
+    bg.fillStyle(COLORS.amber, 1);
+    bg.fillCircle(0, 0, 27);
+    bg.fillStyle(0xffffff, 0.22);
+    bg.fillEllipse(0, -10, 30, 12);
+    bg.lineStyle(3, 0xffffff, 0.86);
+    bg.strokeCircle(0, 0, 27);
+
+    const mark = this.addSharpText(0, -1, "?", {
+      fontSize: "27px",
+      fontFamily: "Arial Black, Arial",
+      color: "#1e1b4b",
+    }).setOrigin(0.5);
+
+    btn.add([bg, mark]);
+    btn.setSize(66, 66);
+    btn.setInteractive({ useHandCursor: true });
+    btn.on("pointerover", () => {
+      if (this.gameEnded || this.tutorialOpen) return;
+      this.input.setDefaultCursor("pointer");
+      this.tweens.add({ targets: btn, scale: 1.06, duration: 90 });
+    });
+    btn.on("pointerout", () => {
+      this.input.setDefaultCursor("default");
+      this.tweens.add({ targets: btn, scale: 1, duration: 90 });
+    });
+    btn.on("pointerdown", () => {
+      if (this.gameEnded || this.tutorialOpen) return;
+      this.playClick();
+      this.tweens.add({ targets: btn, scale: 0.9, duration: 70, yoyo: true });
+      this.replayTutorial();
+    });
+    return btn;
+  }
+
+  private revealHelpButton() {
+    if (!this.helpBtn || this.gameEnded) return;
+    if (this.helpBtn.visible) {
+      this.helpBtn.setInteractive({ useHandCursor: true });
+      return;
+    }
+    this.helpBtn.setVisible(true).setAlpha(0);
+    this.helpBtn.setInteractive({ useHandCursor: true });
+    this.tweens.add({ targets: this.helpBtn, alpha: 1, duration: 220 });
+  }
+
+  private hideHud() {
+    this.hudLayer?.setVisible(false);
+    this.helpBtn?.disableInteractive();
+  }
+
+  private updateHeaderProgress(label: string, current: number, total: number) {
+    this.progressLabel?.setText(label);
+    if (!this.progressDots) return;
+    this.progressDots.clear();
+    const gap = total > 4 ? 22 : 28;
+    const startX = HUD_PROGRESS_X - ((total - 1) * gap) / 2;
+    for (let i = 0; i < total; i++) {
+      const x = startX + i * gap;
+      const done = i + 1 < current;
+      const now = i + 1 === current;
+      this.progressDots.fillStyle(done ? COLORS.green : now ? COLORS.purple : 0xcbd5e1, done || now ? 1 : 0.7);
+      if (now) this.progressDots.fillRoundedRect(x - 14, HUD_DOTS_CY - 7, 28, 14, 7);
+      else this.progressDots.fillCircle(x, HUD_DOTS_CY, 7);
+      this.progressDots.lineStyle(2, 0xffffff, 0.9);
+      if (now) this.progressDots.strokeRoundedRect(x - 14, HUD_DOTS_CY - 7, 28, 14, 7);
+      else this.progressDots.strokeCircle(x, HUD_DOTS_CY, 7);
+    }
   }
 
   // ─── Panel Background (mirrors EF03CO07 drawPanel) ────────────────────────
@@ -298,20 +597,72 @@ export class GameScene extends Phaser.Scene {
   // ─── Mural Section (right zone of panel, x=858–1208) ─────────────────────
 
   private createMuralSection() {
-    // Mural board PNG background
-    const MURAL_W = PANEL_X + PANEL_W - SPLIT_X - 8;
-    const muralBg = this.add.image(RIGHT_CX, PANEL_Y + PANEL_H / 2, "studio-mural-board").setDepth(3);
-    muralBg.texture.setFilter(Phaser.Textures.FilterMode.LINEAR);
-    this.fitImage(muralBg, MURAL_W, PANEL_H - 12);
-    muralBg.setAlpha(0.88);
+    // Mural board drawn with Graphics (school cork board in a wooden frame).
+    const MURAL_W = PANEL_X + PANEL_W - SPLIT_X - 12;
+    const MURAL_H = PANEL_H - 24;
+    const left = RIGHT_CX - MURAL_W / 2;
+    const top = PANEL_Y + 12;
 
-    // Subtle divider line on top of bg
+    const board = this.add.graphics().setDepth(3);
+
+    // Drop shadow
+    board.fillStyle(0x1e1b4b, 0.16);
+    board.fillRoundedRect(left + 5, top + 7, MURAL_W, MURAL_H, 20);
+
+    // Wooden frame
+    board.fillStyle(0x8b5e3c, 1);
+    board.fillRoundedRect(left, top, MURAL_W, MURAL_H, 20);
+    board.fillStyle(0xa9714b, 1);
+    board.fillRoundedRect(left + 4, top + 4, MURAL_W - 8, MURAL_H - 8, 17);
+    board.fillStyle(0x6d4526, 0.55);
+    board.fillRoundedRect(left + 10, top + 10, MURAL_W - 20, 6, 3);
+
+    // Cork surface
+    const ix = left + 14;
+    const iy = top + 14;
+    const iw = MURAL_W - 28;
+    const ih = MURAL_H - 28;
+    board.fillStyle(0xd9a86c, 1);
+    board.fillRoundedRect(ix, iy, iw, ih, 12);
+    board.fillStyle(0xc79256, 0.55);
+    board.fillRoundedRect(ix, iy + ih * 0.55, iw, ih * 0.45, 12);
+
+    // Cork speckles — deterministic so it never flickers between rebuilds
+    board.fillStyle(0x8f6234, 0.28);
+    for (let i = 0; i < 90; i++) {
+      const sx = ix + 8 + ((i * 97) % Math.max(1, Math.floor(iw - 16)));
+      const sy = iy + 8 + ((i * 233) % Math.max(1, Math.floor(ih - 16)));
+      board.fillCircle(sx, sy, 1 + (i % 3));
+    }
+
+    // Inner shading so the cork reads as recessed
+    board.lineStyle(4, 0x6d4526, 0.35);
+    board.strokeRoundedRect(ix, iy, iw, ih, 12);
+    board.lineStyle(2, 0xffffff, 0.28);
+    board.strokeRoundedRect(ix + 4, iy + 4, iw - 8, ih - 8, 10);
+
+    // Header ribbon on the board
+    const ribbonW = iw - 24;
+    board.fillStyle(COLORS.purple, 0.95);
+    board.fillRoundedRect(ix + 12, iy + 10, ribbonW, 44, 14);
+    board.fillStyle(0xffffff, 0.18);
+    board.fillRoundedRect(ix + 18, iy + 15, ribbonW - 12, 16, 8);
+
+    // Pins holding the ribbon
+    [ix + 30, ix + iw - 30].forEach((px) => {
+      board.fillStyle(0xffffff, 0.9);
+      board.fillCircle(px, iy + 32, 6);
+      board.fillStyle(COLORS.amber, 1);
+      board.fillCircle(px, iy + 32, 4);
+    });
+
+    // Divider between editor and mural
     const div = this.add.graphics().setDepth(9);
-    div.lineStyle(2, COLORS.purple, 0.22);
-    div.lineBetween(SPLIT_X, PANEL_Y + 24, SPLIT_X, PANEL_Y + PANEL_H - 24);
+    div.lineStyle(3, 0xffffff, 0.35);
+    div.lineBetween(SPLIT_X - 6, PANEL_Y + 24, SPLIT_X - 6, PANEL_Y + PANEL_H - 24);
 
-    this.addSharpText(RIGHT_CX, PANEL_Y + 30, "🖼 Mural da Turma", {
-      fontSize: "18px", fontFamily: "Arial Black, Arial", color: "#7c3aed", stroke: "#ffffff", strokeThickness: 4,
+    this.addSharpText(RIGHT_CX, iy + 32, "Mural", {
+      fontSize: "22px", fontFamily: "Arial Black, Arial", color: "#ffffff", stroke: "#3b0764", strokeThickness: 4,
     }).setOrigin(0.5).setDepth(10);
 
     this.muralContainer = this.add.container(0, 0).setDepth(10);
@@ -323,30 +674,49 @@ export class GameScene extends Phaser.Scene {
     this.muralContainer.removeAll(true);
 
     if (this.muralItems.length === 0) {
-      const placeholder = this.addSharpText(RIGHT_CX, PANEL_Y + 180, "Publique suas\ncriações aqui!", {
-        fontSize: "18px", fontFamily: "Arial Black, Arial", color: "#a78bfa", align: "center",
-      }).setOrigin(0.5);
-      this.muralContainer.add(placeholder);
+      // Duas molduras vazias já comunicam "cabem duas produções aqui".
+      // Não precisa de frase.
+      const slots = this.add.graphics();
+      for (let i = 0; i < 2; i++) {
+        const sy = MURAL_SLOT_TOP + i * MURAL_SLOT_GAP;
+        slots.lineStyle(4, 0xffffff, 0.42);
+        slots.strokeRoundedRect(RIGHT_CX - 140, sy, 280, MURAL_SLOT_H, 18);
+        slots.fillStyle(0xffffff, 0.12);
+        slots.fillCircle(RIGHT_CX, sy + MURAL_SLOT_H / 2, 26);
+      }
+      this.muralContainer.add(slots);
       return;
     }
 
     this.muralItems.forEach((item, index) => {
-      const cy = PANEL_Y + 100 + index * 170;
+      const cy = MURAL_SLOT_TOP + index * MURAL_SLOT_GAP;
       const card = this.add.graphics();
-      card.fillStyle(item.color, 0.88);
-      card.fillRoundedRect(RIGHT_CX - 140, cy, 280, 140, 18);
+      card.fillStyle(0x0f172a, 0.18);
+      card.fillRoundedRect(RIGHT_CX - 136, cy + 6, 280, MURAL_SLOT_H, 18);
+      card.fillStyle(item.color, 0.94);
+      card.fillRoundedRect(RIGHT_CX - 140, cy, 280, MURAL_SLOT_H, 18);
+      card.fillStyle(0xffffff, 0.16);
+      card.fillRoundedRect(RIGHT_CX - 130, cy + 8, 260, 24, 12);
       card.lineStyle(4, 0xffffff, 0.95);
-      card.strokeRoundedRect(RIGHT_CX - 140, cy, 280, 140, 18);
-      const emojiText = this.addSharpText(RIGHT_CX, cy + 52, item.emoji, { fontSize: "48px", fontFamily: "Arial Black, Arial" }).setOrigin(0.5);
-      const pubLabel = this.addSharpText(RIGHT_CX, cy + 110, "Publicado ✓", {
-        fontSize: "15px", fontFamily: "Arial Black, Arial", color: "#ffffff", stroke: "#0f172a", strokeThickness: 3,
-      }).setOrigin(0.5);
-      this.muralContainer!.add([card, emojiText, pubLabel]);
+      card.strokeRoundedRect(RIGHT_CX - 140, cy, 280, MURAL_SLOT_H, 18);
+      // Alfinete
+      card.fillStyle(0x0f172a, 0.22);
+      card.fillCircle(RIGHT_CX + 1, cy + 1, 9);
+      card.fillStyle(0xffffff, 0.95);
+      card.fillCircle(RIGHT_CX, cy, 9);
+      card.fillStyle(COLORS.amber, 1);
+      card.fillCircle(RIGHT_CX, cy, 5);
+
+      // Só o ícone — a etiqueta "Publicado" era redundante: estar no mural
+      // já significa publicado.
+      const icon = this.createFormatIcon(item.kind, 0xffffff, 72);
+      icon.setPosition(RIGHT_CX, cy + MURAL_SLOT_H / 2 + 6);
+      this.muralContainer!.add([card, icon]);
     });
   }
 
-  private addToMural(color: number, emoji: string) {
-    this.muralItems.push({ color, emoji });
+  private addToMural(color: number, kind: FormatId) {
+    this.muralItems.push({ color, kind });
     this.refreshMural();
   }
 
@@ -355,52 +725,43 @@ export class GameScene extends Phaser.Scene {
   private showN1Content() {
     this.taskObjects.forEach((o) => o.destroy());
     this.taskObjects = [];
+    this.n1AnswerLocked = false;
 
     const tasks = this.levelConfig.formatMatchTasks!;
     if (this.n1TaskIndex >= tasks.length) { this.completeLevel(); return; }
     const task = tasks[this.n1TaskIndex];
+    this.updateHeaderProgress(`Tarefa ${this.n1TaskIndex + 1} de ${tasks.length}`, this.n1TaskIndex + 1, tasks.length);
 
-    // Progress bar dots
-    const dotsContainer = this.addTask(this.add.container(640, PANEL_Y + 30).setDepth(12));
-    tasks.forEach((_, i) => {
-      const dot = this.add.graphics();
-      dot.fillStyle(i < this.n1TaskIndex ? COLORS.green : i === this.n1TaskIndex ? COLORS.purple : 0xd1d5db, 1);
-      dot.fillCircle(-20 + i * 20, 0, 7);
-      dot.lineStyle(2, 0xffffff, 0.8);
-      dot.strokeCircle(-20 + i * 20, 0, 7);
-      dotsContainer.add(dot);
-    });
-    this.addTask(this.addSharpText(640, PANEL_Y + 53, `Tarefa ${this.n1TaskIndex + 1} de ${tasks.length}`, {
-      fontSize: "19px", fontFamily: "Arial Black, Arial", color: "#7c3aed", stroke: "#ffffff", strokeThickness: 4,
-    }).setOrigin(0.5).setDepth(12));
 
-    // Task card
-    const taskCard = this.addTask(this.add.container(640, PANEL_Y + 160).setDepth(12));
+    // Cartão do pedido — texto único, centralizado, sem ícone competindo
+    const taskCard = this.addTask(this.add.container(640, N1_TASK_CY).setDepth(12));
     const tcBg = this.add.graphics();
-    tcBg.fillStyle(0xffffff, 0.9);
-    tcBg.fillRoundedRect(-460, -64, 920, 128, 24);
+    tcBg.fillStyle(0xffffff, 0.94);
+    tcBg.fillRoundedRect(-430, -52, 860, 104, 22);
     tcBg.lineStyle(4, COLORS.purple, 0.7);
-    tcBg.strokeRoundedRect(-460, -64, 920, 128, 24);
-    const tcIcon = this.addSharpText(-420, 0, "🎯", { fontSize: "40px", fontFamily: "Arial Black, Arial" }).setOrigin(0.5);
-    const tcText = this.addSharpText(40, 0, task.goal, {
-      fontSize: "22px", fontFamily: "Arial Black, Arial", color: "#1e1b4b", align: "center", wordWrap: { width: 740 },
+    tcBg.strokeRoundedRect(-430, -52, 860, 104, 22);
+    const tcIcon = this.createTargetIcon(-378, 0, 42, COLORS.purple);
+    const tcText = this.addSharpText(26, 0, task.goal, {
+      fontSize: "27px", fontFamily: "Arial Black, Arial", color: "#1e1b4b", align: "center", wordWrap: { width: 720 },
     }).setOrigin(0.5);
     taskCard.add([tcBg, tcIcon, tcText]);
     taskCard.setAlpha(0);
     this.tweens.add({ targets: taskCard, alpha: 1, duration: 200, ease: "Sine.easeOut" });
 
-    // Format buttons — 4 in a row (shifted up to leave room for confirm button)
-    const btnY = PANEL_Y + 320;
-    const btnW = 268;
-    const btnH = 168;
-    const gap = 8;
+    // Format buttons — 4 in a row, centrados no painel
+    const btnY = N1_CARDS_CY;
+    const btnW = 188;
+    const btnH = CARD_H;
+    const gap = 40;
     const totalW = 4 * btnW + 3 * gap;
     const startX = 640 - totalW / 2 + btnW / 2;
     this.selectedFormatId = null;
+    this.n1CardPositions.clear();
     const n1Rings: Phaser.GameObjects.Graphics[] = [];
     FORMAT_OPTIONS.forEach((fmt, i) => {
       const bx = startX + i * (btnW + gap);
-      const { ring } = this.createFormatBtn(bx, btnY, btnW, btnH, fmt.id, fmt.icon, fmt.label, fmt.color, (id) => {
+      this.n1CardPositions.set(fmt.id, { x: bx, y: btnY });
+      const { ring } = this.createFormatBtn(bx, btnY, btnW, btnH, fmt.id, fmt.label, fmt.color, (id) => {
         this.selectedFormatId = id;
         n1Rings.forEach((r) => r.setVisible(false));
         ring.setVisible(true);
@@ -410,39 +771,43 @@ export class GameScene extends Phaser.Scene {
       n1Rings.push(ring);
     });
     // Confirm button — activates after a format card is selected
-    const confirmY = PANEL_Y + PANEL_H - 40;
+    const confirmY = CONFIRM_CY;
     const confirmBtn = this.addTask(this.add.container(640, confirmY).setDepth(30));
     const cBg = this.add.graphics();
     cBg.fillStyle(COLORS.purple, 1);
-    cBg.fillRoundedRect(-120, -26, 240, 52, 26);
+    cBg.fillRoundedRect(-134, -29, 268, 58, 29);
     cBg.lineStyle(4, 0xffffff, 1);
-    cBg.strokeRoundedRect(-120, -26, 240, 52, 26);
-    const cTxt = this.addSharpText(0, 0, "✅ Confirmar", {
-      fontSize: "20px", fontFamily: "Arial Black, Arial", color: "#ffffff", stroke: "#3b0764", strokeThickness: 3,
+    cBg.strokeRoundedRect(-134, -29, 268, 58, 29);
+    const cTxt = this.addSharpText(0, 0, "Confirmar", {
+      fontSize: "23px", fontFamily: "Arial Black, Arial", color: "#ffffff", stroke: "#3b0764", strokeThickness: 3,
     }).setOrigin(0.5);
     confirmBtn.add([cBg, cTxt]);
     confirmBtn.setAlpha(0.35);
     confirmBtn.setName("confirmBtn");
-    const confirmZone = this.addTask(this.add.zone(640, confirmY, 254, 64).setDepth(56));
+    const confirmZone = this.addTask(this.add.zone(640, confirmY, 282, 70).setDepth(56));
     confirmZone.setInteractive({ useHandCursor: true });
     confirmZone.on("pointerover", () => this.input.setDefaultCursor("pointer"));
     confirmZone.on("pointerout", () => this.input.setDefaultCursor("default"));
     confirmZone.on("pointerdown", () => {
       const id = this.selectedFormatId;
-      if (!id || this.gameEnded) return;
+      if (!id || this.gameEnded || this.n1AnswerLocked) return;
       this.playClick();
       this.onN1FormatSelected(id, task.correctFormat, task.hint);
     });
   }
 
   private onN1FormatSelected(selected: FormatId, correct: FormatId, hint: string) {
-    if (this.gameEnded) return;
+    if (this.gameEnded || this.n1AnswerLocked) return;
+    this.n1AnswerLocked = true;
     if (selected === correct) {
+      // Sem popup: o acerto é celebrado NO cartão escolhido — anel verde,
+      // check e faíscas. A criança olha para onde tocou, não para o rodapé.
       this.hits += 1;
       this.playSuccess();
-      this.showToast(`✅ Correto! ${hint}`, COLORS.green, 1600);
+      const card = this.n1CardPositions.get(selected);
+      if (card) this.burstSuccess(card.x, card.y);
       runtimeGameBridge.emit({ type: "CORRECT_ANSWER", gameId: GAME_ID, stage: this.levelConfig.level, pointsEarned: 20 });
-      this.time.delayedCall(1700, () => {
+      this.time.delayedCall(900, () => {
         if (this.gameEnded) return;
         this.n1TaskIndex += 1;
         this.showN1Content();
@@ -450,51 +815,149 @@ export class GameScene extends Phaser.Scene {
     } else {
       this.errors += 1;
       this.playWrong();
-      this.showToast(`❌ ${hint}`, COLORS.red, 2200);
+      this.showToast(`Ainda não. ${hint}`, COLORS.red, 2200);
       runtimeGameBridge.emit({ type: "WRONG_ANSWER", gameId: GAME_ID, stage: this.levelConfig.level, pointsEarned: -5 });
+      this.time.delayedCall(350, () => {
+        if (!this.gameEnded) this.n1AnswerLocked = false;
+      });
     }
   }
 
   private createFormatBtn(
     x: number, y: number, w: number, h: number,
-    formatId: FormatId, icon: string, label: string, color: number,
+    formatId: FormatId, label: string, color: number,
     onSelect: (id: FormatId) => void,
   ): { btn: Phaser.GameObjects.Container; ring: Phaser.GameObjects.Graphics } {
     const btn = this.addTask(this.add.container(x, y).setDepth(20));
     const textureKey = `format-card-${formatId}`;
+    let hitW = w;
+    let hitH = h;
+
+    const shadow = this.add.graphics();
+    shadow.fillStyle(0x000000, 0.18);
+    shadow.fillRoundedRect(-w / 2 + 5, -h / 2 + 8, w, h, 24);
+    btn.add(shadow);
+
     if (this.textures.exists(textureKey) && this.textures.get(textureKey).getSourceImage().width > 4) {
       const cardImg = this.add.image(0, 0, textureKey);
       cardImg.texture.setFilter(Phaser.Textures.FilterMode.LINEAR);
       this.fitImage(cardImg, w, h);
+      hitW = cardImg.displayWidth;
+      hitH = cardImg.displayHeight;
       btn.add(cardImg);
     } else {
       const bg = this.add.graphics();
-      bg.fillStyle(0xffffff, 0.88);
+      bg.fillStyle(0xffffff, 0.92);
       bg.fillRoundedRect(-w / 2, -h / 2, w, h, 22);
-      bg.fillStyle(color, 0.14);
-      bg.fillRoundedRect(-w / 2 + 10, -h / 2 + 10, w - 20, h * 0.4, 12);
+      bg.fillStyle(color, 0.16);
+      bg.fillRoundedRect(-w / 2 + 10, -h / 2 + 10, w - 20, h * 0.42, 12);
       bg.lineStyle(4, color, 0.85);
       bg.strokeRoundedRect(-w / 2, -h / 2, w, h, 22);
-      const iconTxt = this.addSharpText(0, -16, icon, { fontSize: "44px", fontFamily: "Arial Black, Arial" }).setOrigin(0.5);
-      btn.add([bg, iconTxt]);
+      const iconShape = this.createFormatIcon(formatId, color, 58);
+      btn.add([bg, iconShape]);
     }
-    const lblTxt = this.addSharpText(0, h / 2 - 20, label, {
-      fontSize: "18px", fontFamily: "Arial Black, Arial", color: "#ffffff", stroke: "#1e1b4b", strokeThickness: 4,
+
+    const lblPill = this.add.graphics();
+    lblPill.fillStyle(color, 0.96);
+    lblPill.fillRoundedRect(-hitW / 2 + 10, hitH / 2 - 52, hitW - 20, 42, 21);
+    lblPill.lineStyle(2, 0xffffff, 0.9);
+    lblPill.strokeRoundedRect(-hitW / 2 + 10, hitH / 2 - 52, hitW - 20, 42, 21);
+    const lblTxt = this.addSharpText(0, hitH / 2 - 31, label, {
+      fontSize: "20px", fontFamily: "Arial Black, Arial", color: "#ffffff", stroke: "#1e1b4b", strokeThickness: 3,
     }).setOrigin(0.5);
+
     const ring = this.add.graphics();
-    ring.lineStyle(6, 0xfacc15, 1);
-    ring.strokeRoundedRect(-w / 2 - 5, -h / 2 - 5, w + 10, h + 10, 26);
+    ring.lineStyle(7, 0xfacc15, 1);
+    ring.strokeRoundedRect(-hitW / 2 - 6, -hitH / 2 - 6, hitW + 12, hitH + 12, 24);
     ring.setVisible(false);
-    btn.add([lblTxt, ring]);
-    const zone = this.addTask(this.add.zone(x, y, w + 14, h + 14).setDepth(55));
+    btn.add([lblPill, lblTxt, ring]);
+
+    const zone = this.addTask(this.add.zone(x, y, hitW, hitH).setDepth(55));
     zone.setInteractive({ useHandCursor: true });
-    zone.on("pointerover", () => { this.input.setDefaultCursor("pointer"); this.tweens.add({ targets: btn, scale: 1.06, duration: 80 }); });
-    zone.on("pointerout", () => { this.input.setDefaultCursor("default"); this.tweens.add({ targets: btn, scale: 1, duration: 80 }); });
-    zone.on("pointerdown", () => { if (this.gameEnded) return; this.playClick(); onSelect(formatId); });
+    zone.on("pointerover", () => { this.input.setDefaultCursor("pointer"); this.tweens.add({ targets: btn, scale: 1.045, y: y - 4, duration: 110 }); });
+    zone.on("pointerout", () => { this.input.setDefaultCursor("default"); this.tweens.add({ targets: btn, scale: 1, y, duration: 110 }); });
+    zone.on("pointerdown", () => {
+      if (this.gameEnded) return;
+      this.playClick();
+      this.tweens.add({ targets: btn, scale: 0.96, duration: 70, yoyo: true });
+      onSelect(formatId);
+    });
     return { btn, ring };
   }
 
   private addTask<T extends Phaser.GameObjects.GameObject>(o: T) { this.taskObjects.push(o); return o; }
+
+  /**
+   * Efeito de acerto do N1, ancorado no cartão que a criança tocou:
+   * anel verde que se expande, check desenhado e faíscas saindo do centro.
+   * Substitui o antigo toast — celebra sem tapar a tela nem exigir leitura.
+   */
+  private burstSuccess(x: number, y: number) {
+    // Anel que expande e desaparece
+    for (let i = 0; i < 2; i++) {
+      const ring = this.add.graphics().setDepth(70);
+      ring.lineStyle(7 - i * 2, COLORS.green, 1);
+      ring.strokeCircle(0, 0, 54);
+      ring.setPosition(x, y);
+      ring.setScale(0.55);
+      this.tweens.add({
+        targets: ring,
+        scale: 2.1 + i * 0.4,
+        alpha: 0,
+        duration: 620 + i * 160,
+        delay: i * 90,
+        ease: "Cubic.easeOut",
+        onComplete: () => ring.destroy(),
+      });
+    }
+
+    // Selo com check no centro do cartão
+    const badge = this.add.container(x, y).setDepth(72);
+    const disc = this.add.graphics();
+    disc.fillStyle(0x0f172a, 0.2);
+    disc.fillCircle(2, 4, 42);
+    disc.fillStyle(COLORS.green, 1);
+    disc.fillCircle(0, 0, 42);
+    disc.lineStyle(5, 0xffffff, 0.95);
+    disc.strokeCircle(0, 0, 42);
+    const check = this.add.graphics();
+    check.lineStyle(9, 0xffffff, 1);
+    check.beginPath();
+    check.moveTo(-18, 2);
+    check.lineTo(-5, 16);
+    check.lineTo(20, -14);
+    check.strokePath();
+    badge.add([disc, check]);
+    badge.setScale(0.2).setAlpha(0);
+    this.tweens.add({ targets: badge, scale: 1, alpha: 1, duration: 260, ease: "Back.easeOut" });
+    this.tweens.add({
+      targets: badge,
+      scale: 1.25, alpha: 0,
+      delay: 520, duration: 300, ease: "Cubic.easeIn",
+      onComplete: () => badge.destroy(),
+    });
+
+    // Faíscas radiais
+    const SPARKS = 10;
+    for (let i = 0; i < SPARKS; i++) {
+      const angle = (Math.PI * 2 * i) / SPARKS - Math.PI / 2;
+      const dist = 92 + (i % 3) * 20;
+      const spark = this.add.graphics().setDepth(71);
+      spark.fillStyle(i % 2 === 0 ? COLORS.green : COLORS.amber, 1);
+      spark.fillCircle(0, 0, 7 - (i % 3));
+      spark.setPosition(x, y);
+      this.tweens.add({
+        targets: spark,
+        x: x + Math.cos(angle) * dist,
+        y: y + Math.sin(angle) * dist,
+        alpha: 0,
+        scale: 0.3,
+        duration: 560,
+        ease: "Cubic.easeOut",
+        onComplete: () => spark.destroy(),
+      });
+    }
+  }
 
   // ─── N2 — Drawing Phase (left zone) ──────────────────────────────────────
 
@@ -503,51 +966,39 @@ export class GameScene extends Phaser.Scene {
     this.phaseObjects = [];
     this.drawPoints = [];
     this.drawCount = 0;
+    this.publishLocked = false;
 
     const ch = this.levelConfig.drawChallenge!;
+    this.updateHeaderProgress("Criação 1 de 2", 1, 2);
 
-    this.showEditorLabel(`🎨 Fase 1 de 2 — Desenho: ${ch.theme}`, COLORS.pink);
-    this.addSharpText(LEFT_CX, PANEL_Y + 78, ch.instruction, {
-      fontSize: "18px", fontFamily: "Arial Black, Arial", color: "#7c3aed", stroke: "#ffffff", strokeThickness: 3, align: "center",
-      wordWrap: { width: 700 },
-    }).setOrigin(0.5).setDepth(15);
+    // "Fase 1 de 2" saiu: o HUD já mostra o progresso com pontinhos.
+    this.showEditorLabel(`Desenho · ${ch.theme}`, COLORS.pink);
+    this.addPhase(this.addSharpText(LEFT_CX, EDITOR_INSTRUCTION_CY, ch.instruction, {
+      fontSize: "21px", fontFamily: "Arial Black, Arial", color: "#5b21b6", stroke: "#ffffff", strokeThickness: 4, align: "center",
+      wordWrap: { width: 720 },
+    }).setOrigin(0.5).setDepth(15));
 
     // Canvas background
-    const CANVAS_LEFT = PANEL_X + 16;
-    const CANVAS_TOP = PANEL_Y + 80;
-    const CANVAS_W = SPLIT_X - PANEL_X - 32;  // ≈ 770
-    const CANVAS_H = 330;
-    const CANVAS_CX = CANVAS_LEFT + CANVAS_W / 2;
-    const CANVAS_CY = CANVAS_TOP + CANVAS_H / 2;
-    const studioCanvas = this.addPhase(this.add.image(CANVAS_CX, CANVAS_CY, "studio-canvas").setDepth(10));
-    studioCanvas.texture.setFilter(Phaser.Textures.FilterMode.LINEAR);
-    this.fitImage(studioCanvas, CANVAS_W, CANVAS_H);
+    const CANVAS_LEFT = EDITOR_CANVAS_LEFT;
+    const CANVAS_TOP = EDITOR_CANVAS_TOP;
+    const CANVAS_W = EDITOR_CANVAS_W;
+    const CANVAS_H = EDITOR_CANVAS_H;
+    this.addPhase(this.buildCanvasSurface(CANVAS_LEFT, CANVAS_TOP, CANVAS_W, CANVAS_H));
 
     this.drawCanvas = this.addPhase(this.add.graphics().setDepth(11)) as Phaser.GameObjects.Graphics;
 
     // Color palette
     this.activeColor = ch.colors[0];
-    ch.colors.forEach((color, i) => {
-      const cx = PANEL_X + 40 + i * 60;
-      const cy = CANVAS_TOP + CANVAS_H + 36;
-      const dot = this.addPhase(this.add.graphics().setDepth(20));
-      dot.fillStyle(color, 1);
-      dot.fillCircle(cx, cy, 22);
-      dot.lineStyle(4, 0xffffff, 1);
-      dot.strokeCircle(cx, cy, 22);
-      const zone = this.addPhase(this.add.zone(cx, cy, 54, 54).setDepth(55));
-      zone.setInteractive({ useHandCursor: true });
-      zone.on("pointerdown", () => { if (this.gameEnded) return; this.activeColor = color; this.playClick(); });
-    });
+    this.buildPalette(ch.colors, EDITOR_PALETTE_CY);
 
     // Counter
-    this.addPhase(this.addSharpText(LEFT_CX, CANVAS_TOP + CANVAS_H + 36, `Manchas: 0 / ${ch.minStrokes}`, {
-      fontSize: "19px", fontFamily: "Arial Black, Arial", color: "#1e1b4b", stroke: "#ffffff", strokeThickness: 3,
-    }).setOrigin(0.5).setDepth(20)).setName("drawCounter");
+    this.addPhase(this.addSharpText(EDITOR_CANVAS_LEFT + EDITOR_CANVAS_W - 20, EDITOR_PALETTE_CY, `0/${ch.minStrokes}`, {
+      fontSize: "26px", fontFamily: "Arial Black, Arial", color: "#1e1b4b", stroke: "#ffffff", strokeThickness: 5,
+    }).setOrigin(1, 0.5).setDepth(20)).setName("drawCounter");
 
     // Publish button (dimmed until threshold)
-    const pubBtn = this.addPhase(this.createPublishButton(LEFT_CX, CANVAS_TOP + CANVAS_H + 80, () => {
-      if (this.gameEnded || this.drawCount < ch.minStrokes) return;
+    const pubBtn = this.addPhase(this.createPublishButton(LEFT_CX, EDITOR_PUBLISH_CY, () => {
+      if (this.gameEnded || this.publishLocked || this.drawCount < ch.minStrokes) return;
       this.onPublishDraw();
     }));
     pubBtn.setAlpha(0.35);
@@ -569,7 +1020,7 @@ export class GameScene extends Phaser.Scene {
       this.drawCount += 1;
       this.redrawCanvas();
       const counter = this.children.getByName("drawCounter") as Phaser.GameObjects.Text | null;
-      if (counter) counter.setText(`Manchas: ${this.drawCount} / ${ch.minStrokes}`);
+      if (counter) counter.setText(`${Math.min(this.drawCount, ch.minStrokes)}/${ch.minStrokes}`);
       if (this.drawCount >= ch.minStrokes) {
         const btn = this.children.getByName("publishBtn") as Phaser.GameObjects.Container | null;
         if (btn && btn.alpha < 1) this.tweens.add({ targets: btn, alpha: 1, duration: 200 });
@@ -577,6 +1028,49 @@ export class GameScene extends Phaser.Scene {
     };
     drawZone.on("pointermove", onPaint);
     drawZone.on("pointerdown", onPaint);
+  }
+
+  /**
+   * Superfície de pintura. Usa o PNG studio-canvas quando ele existe e cai
+   * para Graphics quando não — mesma proteção aplicada aos cartões de formato,
+   * para que apagar um asset não derrube mais o jogo.
+   */
+  private buildCanvasSurface(left: number, top: number, w: number, h: number) {
+    if (this.textures.exists("studio-canvas") && this.textures.get("studio-canvas").getSourceImage().width > 4) {
+      const img = this.add.image(left + w / 2, top + h / 2, "studio-canvas").setDepth(10);
+      img.texture.setFilter(Phaser.Textures.FilterMode.LINEAR);
+      this.fitImage(img, w, h);
+      return img;
+    }
+
+    const g = this.add.graphics().setDepth(10);
+    g.fillStyle(0x1e1b4b, 0.14);
+    g.fillRoundedRect(left + 5, top + 6, w, h, 16);
+    g.fillStyle(0xffffff, 0.97);
+    g.fillRoundedRect(left, top, w, h, 16);
+    g.lineStyle(5, COLORS.purple, 0.55);
+    g.strokeRoundedRect(left, top, w, h, 16);
+    // Grade leve, para a criança perceber a área de pintura
+    g.lineStyle(1, COLORS.purple, 0.1);
+    for (let x = left + 40; x < left + w; x += 40) g.lineBetween(x, top + 8, x, top + h - 8);
+    for (let y = top + 40; y < top + h; y += 40) g.lineBetween(left + 8, y, left + w - 8, y);
+    return g;
+  }
+
+  private buildPalette(colors: number[], cy: number) {
+    colors.forEach((color, i) => {
+      const cx = PANEL_X + 44 + i * 66;
+      const dot = this.addPhase(this.add.graphics().setDepth(20));
+      dot.fillStyle(0x0f172a, 0.2);
+      dot.fillCircle(cx + 1, cy + 3, 25);
+      dot.fillStyle(color, 1);
+      dot.fillCircle(cx, cy, 25);
+      dot.lineStyle(4, 0xffffff, 1);
+      dot.strokeCircle(cx, cy, 25);
+      const zone = this.addPhase(this.add.zone(cx, cy, 60, 60).setDepth(55));
+      zone.setInteractive({ useHandCursor: true });
+      zone.on("pointerdown", () => { if (this.gameEnded) return; this.activeColor = color; this.playClick(); });
+    });
   }
 
   private redrawCanvas() {
@@ -589,12 +1083,13 @@ export class GameScene extends Phaser.Scene {
   }
 
   private onPublishDraw() {
-    if (this.gameEnded) return;
+    if (this.gameEnded || this.publishLocked) return;
+    this.lockPublishButton();
     this.hits += 1;
     this.playSuccess();
     runtimeGameBridge.emit({ type: "CORRECT_ANSWER", gameId: GAME_ID, stage: this.levelConfig.level, pointsEarned: 20 });
-    this.flyToMural(CANVAS_FLY_X(), CANVAS_FLY_Y(), COLORS.pink, "🎨", () => {
-      this.addToMural(COLORS.pink, "🎨");
+    this.flyToMural(CANVAS_FLY_X(), CANVAS_FLY_Y(), COLORS.pink, "drawing", () => {
+      this.addToMural(COLORS.pink, "drawing");
       this.showN2TextPhase();
     });
   }
@@ -605,20 +1100,22 @@ export class GameScene extends Phaser.Scene {
     this.phaseObjects.forEach((o) => o.destroy());
     this.phaseObjects = [];
     this.selectedWords = [];
+    this.publishLocked = false;
 
     const ch = this.levelConfig.textChallenge!;
-    this.showEditorLabel(`📝 Fase 2 de 2 — Texto: ${ch.theme}`, COLORS.blue);
-    this.addPhase(this.addSharpText(LEFT_CX, PANEL_Y + 78, ch.instruction, {
-      fontSize: "18px", fontFamily: "Arial Black, Arial", color: "#1e3a8a", stroke: "#ffffff", strokeThickness: 3, align: "center",
-      wordWrap: { width: 700 },
+    this.updateHeaderProgress("Criação 2 de 2", 2, 2);
+    this.showEditorLabel(`Texto · ${ch.theme}`, COLORS.blue);
+    this.addPhase(this.addSharpText(LEFT_CX, EDITOR_INSTRUCTION_CY, ch.instruction, {
+      fontSize: "21px", fontFamily: "Arial Black, Arial", color: "#1e3a8a", stroke: "#ffffff", strokeThickness: 4, align: "center",
+      wordWrap: { width: 720 },
     }).setOrigin(0.5).setDepth(15));
 
-    this.buildWordBank(ch.wordBank, ch.minWords, LEFT_CX, PANEL_Y + 140, () => this.onPublishText());
+    this.buildWordBank(ch.wordBank, ch.minWords, LEFT_CX, TEXT_BANK_TOP);
 
-    this.buildPostPreview(LEFT_CX, PANEL_Y + 358);
+    this.buildPostPreview(LEFT_CX, TEXT_PREVIEW_TOP);
 
-    const pubBtn = this.addPhase(this.createPublishButton(LEFT_CX, PANEL_Y + 448, () => {
-      if (this.gameEnded || this.selectedWords.length < ch.minWords) return;
+    const pubBtn = this.addPhase(this.createPublishButton(LEFT_CX, EDITOR_PUBLISH_CY, () => {
+      if (this.gameEnded || this.publishLocked || this.selectedWords.length < ch.minWords) return;
       this.onPublishText();
     }));
     pubBtn.setAlpha(this.selectedWords.length >= ch.minWords ? 1 : 0.35);
@@ -626,16 +1123,17 @@ export class GameScene extends Phaser.Scene {
   }
 
   private onPublishText() {
-    if (this.gameEnded) return;
+    if (this.gameEnded || this.publishLocked) return;
     const minWords = this.levelConfig.level === 2
       ? this.levelConfig.textChallenge!.minWords
       : (this.levelConfig.creationCycles![this.cycleIndex].challenge as TextChallenge).minWords;
     if (this.selectedWords.length < minWords) return;
+    this.lockPublishButton();
     this.hits += 1;
     this.playSuccess();
     runtimeGameBridge.emit({ type: "CORRECT_ANSWER", gameId: GAME_ID, stage: this.levelConfig.level, pointsEarned: 20 });
-    this.flyToMural(CANVAS_FLY_X(), CANVAS_FLY_Y(), COLORS.blue, "📝", () => {
-      this.addToMural(COLORS.blue, "📝");
+    this.flyToMural(CANVAS_FLY_X(), CANVAS_FLY_Y(), COLORS.blue, "text", () => {
+      this.addToMural(COLORS.blue, "text");
       if (this.levelConfig.level === 2) {
         this.completeLevel();
       } else {
@@ -662,46 +1160,68 @@ export class GameScene extends Phaser.Scene {
     this.selectedWords = [];
     this.drawPoints = [];
     this.drawCount = 0;
+    this.n3AnswerLocked = false;
 
     const cycles = this.levelConfig.creationCycles!;
     if (this.cycleIndex >= cycles.length) { this.completeFinalLevel(); return; }
     const cycle = cycles[this.cycleIndex];
+    this.updateHeaderProgress(`Missão ${this.cycleIndex + 1} de ${cycles.length}`, this.cycleIndex + 1, cycles.length);
 
-    this.showEditorLabel(`Missão ${this.cycleIndex + 1} de ${cycles.length} — Escolha o formato`, COLORS.purple);
+    this.showEditorLabel("Toque no cartão certo", COLORS.purple);
+    const guideBg = this.add.graphics();
+    const guideText = this.addSharpText(0, 0, "", {
+      fontSize: "20px", fontFamily: "Arial Black, Arial", color: "#1e1b4b", align: "center",
+    }).setOrigin(0.5);
+    const guide = this.addCycle(this.add.container(LEFT_CX, N3_GOAL_CY + 80).setDepth(18));
+    const paintGuide = (color: number, message: string) => {
+      guideBg.clear();
+      guideBg.fillStyle(0x0f172a, 0.14);
+      guideBg.fillRoundedRect(-294, -17, 588, 40, 20);
+      guideBg.fillStyle(color, 0.96);
+      guideBg.fillRoundedRect(-300, -23, 600, 40, 20);
+      guideBg.fillStyle(0xffffff, 0.2);
+      guideBg.fillRoundedRect(-288, -17, 576, 12, 6);
+      guideText.setText(message);
+    };
+    paintGuide(COLORS.amber, "Qual cartão combina com o pedido?");
+    guide.add([guideBg, guideText]);
 
-    // Goal card (left zone)
-    const goalCard = this.addCycle(this.add.container(LEFT_CX, PANEL_Y + 148).setDepth(12));
+    const goalCard = this.addCycle(this.add.container(LEFT_CX, N3_GOAL_CY).setDepth(12));
     const gcBg = this.add.graphics();
-    gcBg.fillStyle(0xffffff, 0.9);
-    gcBg.fillRoundedRect(-370, -56, 740, 112, 22);
+    gcBg.fillStyle(0xffffff, 0.94);
+    gcBg.fillRoundedRect(-376, -52, 752, 104, 22);
     gcBg.lineStyle(4, COLORS.purple, 0.7);
-    gcBg.strokeRoundedRect(-370, -56, 740, 112, 22);
-    const gcIcon = this.addSharpText(-330, 0, "🎯", { fontSize: "38px", fontFamily: "Arial Black, Arial" }).setOrigin(0.5);
+    gcBg.strokeRoundedRect(-376, -52, 752, 104, 22);
+    const gcIcon = this.createTargetIcon(-326, 0, 42, COLORS.purple);
     const gcText = this.addSharpText(30, 0, cycle.goal, {
-      fontSize: "20px", fontFamily: "Arial Black, Arial", color: "#1e1b4b", align: "center", wordWrap: { width: 600 },
+      fontSize: "25px", fontFamily: "Arial Black, Arial", color: "#1e1b4b", align: "center", wordWrap: { width: 616 },
     }).setOrigin(0.5);
     goalCard.add([gcBg, gcIcon, gcText]);
     goalCard.setAlpha(0);
     this.tweens.add({ targets: goalCard, alpha: 1, duration: 220 });
 
-    // Format buttons (3 in left zone) — PNG cards (shifted up to leave room for confirm button)
-    const btnW = 244;
-    const btnH = 140;
-    const gap = 14;
+    const btnW = 178;
+    const btnH = 186;
+    const gap = 30;
     const totalW = cycle.formatOptions.length * btnW + (cycle.formatOptions.length - 1) * gap;
     const startX = LEFT_CX - totalW / 2 + btnW / 2;
-    const btnY = PANEL_Y + 308;
+    const btnY = N3_CARDS_CY;
     this.selectedFormatId = null;
     const n3Rings: Phaser.GameObjects.Graphics[] = [];
+    const cardGuides: Phaser.GameObjects.Graphics[] = [];
     cycle.formatOptions.forEach((fmtId, i) => {
       const fmt = FORMAT_OPTIONS.find((f) => f.id === fmtId)!;
       const bx = startX + i * (btnW + gap);
       const btn = this.addCycle(this.add.container(bx, btnY).setDepth(20));
       const textureKey = `format-card-${fmtId}`;
+      let hitW = btnW;
+      let hitH = btnH;
       if (this.textures.exists(textureKey) && this.textures.get(textureKey).getSourceImage().width > 4) {
         const cardImg = this.add.image(0, 0, textureKey);
         cardImg.texture.setFilter(Phaser.Textures.FilterMode.LINEAR);
         this.fitImage(cardImg, btnW, btnH);
+        hitW = cardImg.displayWidth;
+        hitH = cardImg.displayHeight;
         btn.add(cardImg);
       } else {
         const bg = this.add.graphics();
@@ -711,71 +1231,79 @@ export class GameScene extends Phaser.Scene {
         bg.fillRoundedRect(-btnW / 2 + 10, -btnH / 2 + 10, btnW - 20, btnH * 0.38, 12);
         bg.lineStyle(4, fmt.color, 0.85);
         bg.strokeRoundedRect(-btnW / 2, -btnH / 2, btnW, btnH, 22);
-        const iconTxt = this.addSharpText(0, -14, fmt.icon, { fontSize: "42px", fontFamily: "Arial Black, Arial" }).setOrigin(0.5);
-        btn.add([bg, iconTxt]);
+        const iconShape = this.createFormatIcon(fmtId, fmt.color, 54);
+        btn.add([bg, iconShape]);
       }
-      const lblTxt = this.addSharpText(0, btnH / 2 - 20, fmt.label, {
-        fontSize: "18px", fontFamily: "Arial Black, Arial", color: "#ffffff", stroke: "#1e1b4b", strokeThickness: 4,
+      const lblPill = this.add.graphics();
+      lblPill.fillStyle(fmt.color, 0.96);
+      lblPill.fillRoundedRect(-btnW / 2 + 10, btnH / 2 - 50, btnW - 20, 40, 20);
+      lblPill.lineStyle(2, 0xffffff, 0.9);
+      lblPill.strokeRoundedRect(-btnW / 2 + 10, btnH / 2 - 50, btnW - 20, 40, 20);
+      const lblTxt = this.addSharpText(0, btnH / 2 - 30, fmt.label, {
+        fontSize: "20px", fontFamily: "Arial Black, Arial", color: "#ffffff", stroke: "#1e1b4b", strokeThickness: 3,
       }).setOrigin(0.5);
+      btn.add(lblPill);
       const ring = this.add.graphics();
       ring.lineStyle(6, 0xfacc15, 1);
       ring.strokeRoundedRect(-btnW / 2 - 5, -btnH / 2 - 5, btnW + 10, btnH + 10, 26);
       ring.setVisible(false);
       btn.add([lblTxt, ring]);
       n3Rings.push(ring);
-      const zone = this.addCycle(this.add.zone(bx, btnY, btnW + 14, btnH + 14).setDepth(55));
+      const cardGuide = this.addCycle(this.add.graphics().setDepth(18));
+      cardGuide.lineStyle(4, COLORS.amber, 0.72);
+      cardGuide.strokeRoundedRect(bx - hitW / 2 - 8, btnY - hitH / 2 - 8, hitW + 16, hitH + 16, 28);
+      cardGuides.push(cardGuide);
+      this.tweens.add({ targets: cardGuide, alpha: { from: 0.32, to: 0.92 }, y: { from: 0, to: 7 }, duration: 620, yoyo: true, repeat: -1, delay: i * 90 });
+      const zone = this.addCycle(this.add.zone(bx, btnY, hitW, hitH).setDepth(55));
       zone.setInteractive({ useHandCursor: true });
       zone.on("pointerover", () => { this.input.setDefaultCursor("pointer"); this.tweens.add({ targets: btn, scale: 1.06, duration: 80 }); });
       zone.on("pointerout", () => { this.input.setDefaultCursor("default"); this.tweens.add({ targets: btn, scale: 1, duration: 80 }); });
       zone.on("pointerdown", () => {
-        if (this.gameEnded) return;
+        if (this.gameEnded || this.n3AnswerLocked) return;
         this.playClick();
-        this.selectedFormatId = fmtId;
-        n3Rings.forEach((r) => r.setVisible(false));
-        ring.setVisible(true);
-        const cb = this.children.getByName("n3ConfirmBtn") as Phaser.GameObjects.Container | null;
-        if (cb) this.tweens.add({ targets: cb, alpha: 1, duration: 150 });
+        const isCorrect = fmtId === cycle.correctFormat;
+        if (isCorrect) {
+          this.selectedFormatId = fmtId;
+          n3Rings.forEach((r) => r.setVisible(false));
+          ring.setVisible(true);
+          cardGuides.forEach((g) => {
+            this.tweens.killTweensOf(g);
+            this.tweens.add({ targets: g, alpha: 0.14, y: 0, duration: 140 });
+          });
+          paintGuide(COLORS.green, "Certo. Agora vamos criar.");
+        } else {
+          paintGuide(COLORS.red, "Tente outro cartão.");
+          const flash = this.addCycle(this.add.graphics().setDepth(58));
+          flash.lineStyle(7, COLORS.red, 1);
+          flash.strokeRoundedRect(bx - hitW / 2 - 8, btnY - hitH / 2 - 8, hitW + 16, hitH + 16, 28);
+          this.tweens.add({ targets: flash, alpha: 0, duration: 520, onComplete: () => flash.destroy() });
+          this.tweens.add({ targets: btn, x: { from: bx - 7, to: bx + 7 }, duration: 48, yoyo: true, repeat: 3, onComplete: () => btn.setX(bx) });
+          this.time.delayedCall(650, () => {
+            if (!this.gameEnded && !this.n3AnswerLocked) paintGuide(COLORS.amber, "Qual cartão combina com o pedido?");
+          });
+        }
+        this.onN3FormatSelected(fmtId, cycle.correctFormat);
       });
-    });
-    // Confirm button for N3 — activates after a format card is selected
-    const confirmY = PANEL_Y + PANEL_H - 40;
-    const n3ConfirmBtn = this.addCycle(this.add.container(LEFT_CX, confirmY).setDepth(30));
-    const n3Bg = this.add.graphics();
-    n3Bg.fillStyle(COLORS.purple, 1);
-    n3Bg.fillRoundedRect(-120, -26, 240, 52, 26);
-    n3Bg.lineStyle(4, 0xffffff, 1);
-    n3Bg.strokeRoundedRect(-120, -26, 240, 52, 26);
-    const n3Txt = this.addSharpText(0, 0, "✅ Confirmar", {
-      fontSize: "20px", fontFamily: "Arial Black, Arial", color: "#ffffff", stroke: "#3b0764", strokeThickness: 3,
-    }).setOrigin(0.5);
-    n3ConfirmBtn.add([n3Bg, n3Txt]);
-    n3ConfirmBtn.setAlpha(0.35);
-    n3ConfirmBtn.setName("n3ConfirmBtn");
-    const n3ConfirmZone = this.addCycle(this.add.zone(LEFT_CX, confirmY, 254, 64).setDepth(56));
-    n3ConfirmZone.setInteractive({ useHandCursor: true });
-    n3ConfirmZone.on("pointerover", () => this.input.setDefaultCursor("pointer"));
-    n3ConfirmZone.on("pointerout", () => this.input.setDefaultCursor("default"));
-    n3ConfirmZone.on("pointerdown", () => {
-      const id = this.selectedFormatId;
-      if (!id || this.gameEnded) return;
-      this.playClick();
-      this.onN3FormatSelected(id, cycle.correctFormat);
     });
   }
 
   private onN3FormatSelected(selected: FormatId, correct: FormatId) {
-    if (this.gameEnded) return;
+    if (this.gameEnded || this.n3AnswerLocked) return;
+    this.n3AnswerLocked = true;
     if (selected !== correct) {
       this.errors += 1;
       this.playWrong();
       const hint = FORMAT_OPTIONS.find((f) => f.id === correct)!;
-      this.showToast(`❌ Dica: use ${hint.icon} ${hint.label} para esta missão!`, COLORS.red, 2200);
+      this.showToast(`Dica: use ${hint.label} para esta missão.`, COLORS.red, 2200);
       runtimeGameBridge.emit({ type: "WRONG_ANSWER", gameId: GAME_ID, stage: this.levelConfig.level, pointsEarned: -5 });
+      this.time.delayedCall(350, () => {
+        if (!this.gameEnded) this.n3AnswerLocked = false;
+      });
       return;
     }
     this.hits += 1;
     this.playSuccess();
-    this.showToast("✅ Formato certo! Agora crie sua produção.", COLORS.green, 1400);
+    this.showToast("Formato certo. Agora crie sua produção.", COLORS.green, 1400);
     runtimeGameBridge.emit({ type: "CORRECT_ANSWER", gameId: GAME_ID, stage: this.levelConfig.level, pointsEarned: 10 });
     const cycle = this.levelConfig.creationCycles![this.cycleIndex];
     this.time.delayedCall(1500, () => {
@@ -795,43 +1323,32 @@ export class GameScene extends Phaser.Scene {
     this.phaseObjects = [];
     this.drawPoints = [];
     this.drawCount = 0;
+    this.publishLocked = false;
+    this.updateHeaderProgress(`Produção ${this.cycleIndex + 1} de ${this.levelConfig.creationCycles!.length}`, this.cycleIndex + 1, this.levelConfig.creationCycles!.length);
 
-    this.showEditorLabel(`🎨 Crie: ${ch.theme}`, COLORS.pink);
-    this.addPhase(this.addSharpText(LEFT_CX, PANEL_Y + 78, ch.instruction, {
-      fontSize: "18px", fontFamily: "Arial Black, Arial", color: "#7c3aed", stroke: "#ffffff", strokeThickness: 3, align: "center",
-      wordWrap: { width: 700 },
+    this.showEditorLabel(`Crie: ${ch.theme}`, COLORS.pink);
+    this.addPhase(this.addSharpText(LEFT_CX, EDITOR_INSTRUCTION_CY, ch.instruction, {
+      fontSize: "21px", fontFamily: "Arial Black, Arial", color: "#5b21b6", stroke: "#ffffff", strokeThickness: 4, align: "center",
+      wordWrap: { width: 720 },
     }).setOrigin(0.5).setDepth(15));
 
-    const CANVAS_LEFT = PANEL_X + 16;
-    const CANVAS_TOP = PANEL_Y + 80;
-    const CANVAS_W = SPLIT_X - PANEL_X - 32;
-    const CANVAS_H = 310;
+    const CANVAS_LEFT = EDITOR_CANVAS_LEFT;
+    const CANVAS_TOP = EDITOR_CANVAS_TOP;
+    const CANVAS_W = EDITOR_CANVAS_W;
+    const CANVAS_H = EDITOR_CANVAS_H;
 
-    const studioCanvas = this.addPhase(this.add.image(CANVAS_LEFT + CANVAS_W / 2, CANVAS_TOP + CANVAS_H / 2, "studio-canvas").setDepth(10));
-    studioCanvas.texture.setFilter(Phaser.Textures.FilterMode.LINEAR);
-    this.fitImage(studioCanvas, CANVAS_W, CANVAS_H);
+    this.addPhase(this.buildCanvasSurface(CANVAS_LEFT, CANVAS_TOP, CANVAS_W, CANVAS_H));
     this.drawCanvas = this.addPhase(this.add.graphics().setDepth(11)) as Phaser.GameObjects.Graphics;
 
     this.activeColor = ch.colors[0];
-    ch.colors.forEach((color, i) => {
-      const cx = PANEL_X + 40 + i * 60;
-      const cy = CANVAS_TOP + CANVAS_H + 32;
-      const dot = this.addPhase(this.add.graphics().setDepth(20));
-      dot.fillStyle(color, 1);
-      dot.fillCircle(cx, cy, 20);
-      dot.lineStyle(3, 0xffffff, 1);
-      dot.strokeCircle(cx, cy, 20);
-      const zone = this.addPhase(this.add.zone(cx, cy, 50, 50).setDepth(55));
-      zone.setInteractive({ useHandCursor: true });
-      zone.on("pointerdown", () => { if (this.gameEnded) return; this.activeColor = color; this.playClick(); });
-    });
+    this.buildPalette(ch.colors, EDITOR_PALETTE_CY);
 
-    this.addPhase(this.addSharpText(LEFT_CX, CANVAS_TOP + CANVAS_H + 32, `Manchas: 0 / ${ch.minStrokes}`, {
-      fontSize: "18px", fontFamily: "Arial Black, Arial", color: "#1e1b4b", stroke: "#ffffff", strokeThickness: 3,
-    }).setOrigin(0.5).setDepth(20)).setName("drawCounter");
+    this.addPhase(this.addSharpText(EDITOR_CANVAS_LEFT + EDITOR_CANVAS_W - 20, EDITOR_PALETTE_CY, `0/${ch.minStrokes}`, {
+      fontSize: "26px", fontFamily: "Arial Black, Arial", color: "#1e1b4b", stroke: "#ffffff", strokeThickness: 5,
+    }).setOrigin(1, 0.5).setDepth(20)).setName("drawCounter");
 
-    const pubBtn = this.addPhase(this.createPublishButton(LEFT_CX, CANVAS_TOP + CANVAS_H + 72, () => {
-      if (this.gameEnded || this.drawCount < ch.minStrokes) return;
+    const pubBtn = this.addPhase(this.createPublishButton(LEFT_CX, EDITOR_PUBLISH_CY, () => {
+      if (this.gameEnded || this.publishLocked || this.drawCount < ch.minStrokes) return;
       this.onN3PublishDraw();
     }));
     pubBtn.setAlpha(0.35);
@@ -846,7 +1363,7 @@ export class GameScene extends Phaser.Scene {
       this.drawCount += 1;
       this.redrawCanvas();
       const counter = this.children.getByName("drawCounter") as Phaser.GameObjects.Text | null;
-      if (counter) counter.setText(`Manchas: ${this.drawCount} / ${ch.minStrokes}`);
+      if (counter) counter.setText(`${Math.min(this.drawCount, ch.minStrokes)}/${ch.minStrokes}`);
       if (this.drawCount >= ch.minStrokes) {
         const btn = this.children.getByName("publishBtn") as Phaser.GameObjects.Container | null;
         if (btn && btn.alpha < 1) this.tweens.add({ targets: btn, alpha: 1, duration: 200 });
@@ -857,11 +1374,13 @@ export class GameScene extends Phaser.Scene {
   }
 
   private onN3PublishDraw() {
+    if (this.gameEnded || this.publishLocked) return;
+    this.lockPublishButton();
     this.hits += 1;
     this.playSuccess();
     runtimeGameBridge.emit({ type: "CORRECT_ANSWER", gameId: GAME_ID, stage: this.levelConfig.level, pointsEarned: 20 });
-    this.flyToMural(CANVAS_FLY_X(), CANVAS_FLY_Y(), COLORS.pink, "🎨", () => {
-      this.addToMural(COLORS.pink, "🎨");
+    this.flyToMural(CANVAS_FLY_X(), CANVAS_FLY_Y(), COLORS.pink, "drawing", () => {
+      this.addToMural(COLORS.pink, "drawing");
       this.cycleIndex += 1;
       this.selectedWords = [];
       this.phaseObjects.forEach((o) => o.destroy());
@@ -878,18 +1397,20 @@ export class GameScene extends Phaser.Scene {
     this.phaseObjects.forEach((o) => o.destroy());
     this.phaseObjects = [];
     this.selectedWords = [];
+    this.publishLocked = false;
+    this.updateHeaderProgress(`Produção ${this.cycleIndex + 1} de ${this.levelConfig.creationCycles!.length}`, this.cycleIndex + 1, this.levelConfig.creationCycles!.length);
 
-    this.showEditorLabel(`📝 Crie: ${ch.theme}`, COLORS.blue);
-    this.addPhase(this.addSharpText(LEFT_CX, PANEL_Y + 78, ch.instruction, {
-      fontSize: "18px", fontFamily: "Arial Black, Arial", color: "#1e3a8a", stroke: "#ffffff", strokeThickness: 3, align: "center",
-      wordWrap: { width: 700 },
+    this.showEditorLabel(`Crie: ${ch.theme}`, COLORS.blue);
+    this.addPhase(this.addSharpText(LEFT_CX, EDITOR_INSTRUCTION_CY, ch.instruction, {
+      fontSize: "21px", fontFamily: "Arial Black, Arial", color: "#1e3a8a", stroke: "#ffffff", strokeThickness: 4, align: "center",
+      wordWrap: { width: 720 },
     }).setOrigin(0.5).setDepth(15));
 
-    this.buildWordBank(ch.wordBank, ch.minWords, LEFT_CX, PANEL_Y + 140, () => this.onPublishText());
-    this.buildPostPreview(LEFT_CX, PANEL_Y + 358);
+    this.buildWordBank(ch.wordBank, ch.minWords, LEFT_CX, TEXT_BANK_TOP);
+    this.buildPostPreview(LEFT_CX, TEXT_PREVIEW_TOP);
 
-    const pubBtn = this.addPhase(this.createPublishButton(LEFT_CX, PANEL_Y + 448, () => {
-      if (this.gameEnded || this.selectedWords.length < ch.minWords) return;
+    const pubBtn = this.addPhase(this.createPublishButton(LEFT_CX, EDITOR_PUBLISH_CY, () => {
+      if (this.gameEnded || this.publishLocked || this.selectedWords.length < ch.minWords) return;
       this.onPublishText();
     }));
     pubBtn.setAlpha(0.35);
@@ -900,12 +1421,12 @@ export class GameScene extends Phaser.Scene {
 
   // ─── Word Bank ────────────────────────────────────────────────────────────
 
-  private buildWordBank(words: string[], minWords: number, cx: number, topY: number, onPublish: () => void) {
+  private buildWordBank(words: string[], minWords: number, cx: number, topY: number) {
     const cols = 4;
-    const chipW = 158;
-    const chipH = 50;
+    const chipW = 172;
+    const chipH = 58;
     const gapX = 10;
-    const gapY = 10;
+    const gapY = 12;
     const startX = cx - ((cols * chipW + (cols - 1) * gapX) / 2) + chipW / 2;
 
     words.forEach((word, i) => {
@@ -920,7 +1441,7 @@ export class GameScene extends Phaser.Scene {
       chipBg.lineStyle(3, COLORS.blue, 0.8);
       chipBg.strokeRoundedRect(-chipW / 2, -chipH / 2, chipW, chipH, chipH / 2);
       const chipText = this.addSharpText(0, 0, word, {
-        fontSize: "18px", fontFamily: "Arial Black, Arial",
+        fontSize: "22px", fontFamily: "Arial Black, Arial",
         color: isSelected ? "#ffffff" : "#1e3a8a",
         stroke: "#ffffff", strokeThickness: isSelected ? 0 : 3,
       }).setOrigin(0.5);
@@ -949,7 +1470,7 @@ export class GameScene extends Phaser.Scene {
           newBg.lineStyle(3, COLORS.blue, 0.8);
           newBg.strokeRoundedRect(-chipW / 2, -chipH / 2, chipW, chipH, chipH / 2);
           const newText = this.addSharpText(0, 0, word, {
-            fontSize: "18px", fontFamily: "Arial Black, Arial",
+            fontSize: "22px", fontFamily: "Arial Black, Arial",
             color: nowSelected ? "#ffffff" : "#1e3a8a",
             stroke: "#ffffff", strokeThickness: nowSelected ? 0 : 3,
           }).setOrigin(0.5);
@@ -965,15 +1486,16 @@ export class GameScene extends Phaser.Scene {
 
   private buildPostPreview(cx: number, y: number) {
     const postBg = this.addPhase(this.add.graphics().setDepth(10));
-    postBg.fillStyle(0xffffff, 0.88);
-    postBg.fillRoundedRect(cx - 360, y, 720, 76, 16);
-    postBg.lineStyle(3, COLORS.blue, 0.5);
-    postBg.strokeRoundedRect(cx - 360, y, 720, 76, 16);
-    this.addPhase(this.addSharpText(cx, y + 16, "Mensagem:", {
-      fontSize: "14px", fontFamily: "Arial Black, Arial", color: "#1e3a8a",
-    }).setOrigin(0.5).setDepth(14));
+    postBg.fillStyle(0x0f172a, 0.14);
+    postBg.fillRoundedRect(cx - 356, y + 5, 720, 88, 18);
+    postBg.fillStyle(0xffffff, 0.94);
+    postBg.fillRoundedRect(cx - 360, y, 720, 88, 18);
+    postBg.lineStyle(4, COLORS.blue, 0.55);
+    postBg.strokeRoundedRect(cx - 360, y, 720, 88, 18);
+    // Sem rótulo "Mensagem": o campo com as palavras dentro já se explica.
     const preview = this.addPhase(this.addSharpText(cx, y + 44, "...", {
-      fontSize: "20px", fontFamily: "Arial Black, Arial", color: "#1e1b4b", stroke: "#ffffff", strokeThickness: 3, align: "center",
+      fontSize: "26px", fontFamily: "Arial Black, Arial", color: "#1e1b4b", stroke: "#ffffff", strokeThickness: 3,
+      align: "center", wordWrap: { width: 660 },
     }).setOrigin(0.5).setDepth(14));
     preview.setName("postPreview");
   }
@@ -983,26 +1505,42 @@ export class GameScene extends Phaser.Scene {
   // ─── Editor Phase Label (inside panel, top-left of editor zone) ───────────
 
   private showEditorLabel(title: string, color: number) {
-    this.addPhase(this.add.graphics().setDepth(9)).fillStyle(color, 0.85).fillRoundedRect(PANEL_X + 16, PANEL_Y + 10, 600, 34, 17);
-    this.addPhase(this.addSharpText(PANEL_X + 26, PANEL_Y + 27, title, {
-      fontSize: "17px", fontFamily: "Arial Black, Arial", color: "#ffffff", stroke: "#0f172a", strokeThickness: 3,
-    }).setOrigin(0, 0.5).setDepth(12));
+    // Pílula do tamanho do texto, não da largura toda do editor —
+    // uma faixa de 648 px com 3 palavras dentro parecia desalinhada.
+    const label = this.addSharpText(0, EDITOR_LABEL_CY, title, {
+      fontSize: "21px", fontFamily: "Arial Black, Arial", color: "#ffffff", stroke: "#0f172a", strokeThickness: 3,
+    }).setOrigin(0, 0.5).setDepth(12);
+    const pillW = Math.min(label.width + 44, EDITOR_CANVAS_W);
+    label.setX(EDITOR_CANVAS_LEFT + 22);
+
+    const g = this.addPhase(this.add.graphics().setDepth(9));
+    g.fillStyle(color, 0.94);
+    g.fillRoundedRect(EDITOR_CANVAS_LEFT, EDITOR_LABEL_CY - 21, pillW, 42, 21);
+    g.fillStyle(0xffffff, 0.18);
+    g.fillRoundedRect(EDITOR_CANVAS_LEFT + 8, EDITOR_LABEL_CY - 15, pillW - 16, 13, 7);
+    this.addPhase(label);
   }
 
   // ─── Publish Button ───────────────────────────────────────────────────────
+
+  private lockPublishButton() {
+    this.publishLocked = true;
+    const btn = this.children.getByName("publishBtn") as Phaser.GameObjects.Container | null;
+    if (btn) this.tweens.add({ targets: btn, alpha: 0.5, scale: 0.98, duration: 120 });
+  }
 
   private createPublishButton(x: number, y: number, onClick: () => void) {
     const btn = this.addPhase(this.add.container(x, y).setDepth(30));
     const bg = this.add.graphics();
     bg.fillStyle(COLORS.purple, 1);
-    bg.fillRoundedRect(-140, -26, 280, 52, 26);
+    bg.fillRoundedRect(-134, -29, 268, 58, 29);
     bg.lineStyle(4, 0xffffff, 1);
-    bg.strokeRoundedRect(-140, -26, 280, 52, 26);
-    const txt = this.addSharpText(0, 0, "📤 Publicar no Mural", {
-      fontSize: "19px", fontFamily: "Arial Black, Arial", color: "#ffffff", stroke: "#3b0764", strokeThickness: 3,
+    bg.strokeRoundedRect(-134, -29, 268, 58, 29);
+    const txt = this.addSharpText(0, 0, "Publicar", {
+      fontSize: "23px", fontFamily: "Arial Black, Arial", color: "#ffffff", stroke: "#3b0764", strokeThickness: 3,
     }).setOrigin(0.5);
     btn.add([bg, txt]);
-    const zone = this.addPhase(this.add.zone(x, y, 294, 64).setDepth(55));
+    const zone = this.addPhase(this.add.zone(x, y, 282, 70).setDepth(55));
     zone.setInteractive({ useHandCursor: true });
     zone.on("pointerover", () => this.input.setDefaultCursor("pointer"));
     zone.on("pointerout", () => this.input.setDefaultCursor("default"));
@@ -1012,25 +1550,41 @@ export class GameScene extends Phaser.Scene {
 
   // ─── Fly to Mural Animation ───────────────────────────────────────────────
 
-  private flyToMural(fromX: number, fromY: number, color: number, emoji: string, onDone: () => void) {
+  private flyToMural(fromX: number, fromY: number, color: number, kind: FormatId, onDone: () => void) {
     const muralIndex = this.muralItems.length;
-    const targetY = PANEL_Y + 100 + muralIndex * 170 + 70;
+    const targetY = MURAL_SLOT_TOP + muralIndex * MURAL_SLOT_GAP + MURAL_SLOT_H / 2;
 
     const card = this.add.container(fromX, fromY).setDepth(80);
     const bg = this.add.graphics();
-    bg.fillStyle(color, 0.9);
-    bg.fillRoundedRect(-38, -28, 76, 56, 10);
+    bg.fillStyle(color, 0.92);
+    bg.fillRoundedRect(-42, -32, 84, 64, 12);
     bg.lineStyle(3, 0xffffff, 1);
-    bg.strokeRoundedRect(-38, -28, 76, 56, 10);
-    const emo = this.addSharpText(0, 0, emoji, { fontSize: "28px", fontFamily: "Arial Black, Arial" }).setOrigin(0.5);
-    card.add([bg, emo]);
+    bg.strokeRoundedRect(-42, -32, 84, 64, 12);
+    const icon = this.createFormatIcon(kind, 0xffffff, 36);
+    card.add([bg, icon]);
+
+    for (let i = 0; i < 5; i++) {
+      const trail = this.add.graphics().setDepth(78);
+      trail.fillStyle(color, 0.45);
+      trail.fillCircle(fromX, fromY, 5 + i);
+      this.tweens.add({
+        targets: trail,
+        x: RIGHT_CX - fromX - i * 18,
+        y: targetY - fromY + i * 8,
+        alpha: 0,
+        duration: 520 + i * 80,
+        ease: "Sine.easeOut",
+        onComplete: () => trail.destroy(),
+      });
+    }
 
     this.tweens.add({
       targets: card,
       x: RIGHT_CX,
       y: targetY,
-      scaleX: 0.55,
-      scaleY: 0.55,
+      angle: 8,
+      scaleX: 0.62,
+      scaleY: 0.62,
       duration: 680,
       ease: "Cubic.easeOut",
       onComplete: () => { card.destroy(); onDone(); },
@@ -1043,6 +1597,7 @@ export class GameScene extends Phaser.Scene {
     if (this.gameEnded) return;
     this.gameEnded = true;
     this.timerEvent?.remove(false);
+    this.hideHud();
     this.input.enabled = false;
     this.playSuccess();
     const nextLevel = (this.levelConfig.level + 1) as StudioLevelNumber;
@@ -1062,6 +1617,7 @@ export class GameScene extends Phaser.Scene {
     if (this.gameEnded) return;
     this.gameEnded = true;
     this.timerEvent?.remove(false);
+    this.hideHud();
     this.input.enabled = false;
     this.playSuccess();
     runtimeGameBridge.emit({ type: "GAME_COMPLETED", gameId: GAME_ID, stage: 3 });
@@ -1072,102 +1628,39 @@ export class GameScene extends Phaser.Scene {
 
   private showLevelCompleteScreen(nextLevel: StudioLevelNumber) {
     this.clearOverlay();
-    const bg = this.addOverlay(this.add.rectangle(640, 360, 1280, 720, 0x1e1b4b, 0.62).setDepth(60));
-    bg.setInteractive();
-    const panel = this.addOverlay(this.add.container(640, 360).setDepth(62));
-    const shadow = this.add.graphics();
-    shadow.fillStyle(0x000000, 0.18);
-    shadow.fillRoundedRect(-278, -178, 556, 356, 30);
-    const panelBg = this.add.graphics();
-    panelBg.fillStyle(0xffffff, 0.97);
-    panelBg.fillRoundedRect(-290, -190, 580, 360, 30);
-    panelBg.lineStyle(5, COLORS.green, 0.9);
-    panelBg.strokeRoundedRect(-290, -190, 580, 360, 30);
-    const topBar = this.add.graphics();
-    topBar.fillStyle(COLORS.green, 1);
-    topBar.fillRoundedRect(-200, -206, 400, 28, 14);
-    const stars = this.addSharpText(0, -134, "⭐⭐", { fontSize: "52px", fontFamily: "Arial Black, Arial" }).setOrigin(0.5);
-    const title = this.addSharpText(0, -70, "Parabéns!", {
-      fontSize: "42px", fontFamily: "Arial Black, Arial", color: "#15803d", stroke: "#ffffff", strokeThickness: 6,
-    }).setOrigin(0.5);
-    const sub = this.addSharpText(0, -14, `Nível ${this.levelConfig.level} concluído!`, {
-      fontSize: "22px", fontFamily: "Arial Black, Arial", color: "#334155", align: "center",
-    }).setOrigin(0.5);
-    const next = this.addSharpText(0, 38, `Preparando nível ${nextLevel}...`, {
-      fontSize: "20px", fontFamily: "Arial Black, Arial", color: "#7c3aed", align: "center",
-    }).setOrigin(0.5);
-    const dots = [1, 2, 3].map((num, i) => {
-      const d = this.add.graphics();
-      d.fillStyle(num <= this.levelConfig.level ? COLORS.green : num === nextLevel ? COLORS.amber : 0xd1d5db, 1);
-      d.fillCircle(-28 + i * 28, 88, 9);
-      d.lineStyle(2, 0xffffff, 0.8);
-      d.strokeCircle(-28 + i * 28, 88, 9);
-      return d;
+    showLevelComplete(this, {
+      subtitle: `Nível ${this.levelConfig.level} concluído`,
+      message: `Abrindo nível ${nextLevel}...`,
+      accent: COLORS.green,
+      overlayColor: COLORS.ink,
+      titleColor: "#1e1b4b",
+      subtitleColor: "#15803d",
+      progress: { total: 3, current: this.levelConfig.level },
+      autoAdvance: {
+        delay: 1800,
+        label: `Abrindo nível ${nextLevel}...`,
+        onComplete: () => this.scene.restart({ level: nextLevel, hits: this.hits, errors: this.errors }),
+      },
     });
-    panel.add([shadow, panelBg, topBar, stars, title, sub, next, ...dots]);
-    this.animateModal(panel);
-    // Confetti
-    for (let i = 0; i < 14; i++) {
-      const cx = Phaser.Math.Between(300, 980);
-      const cy = Phaser.Math.Between(120, 600);
-      const c = [COLORS.purple, COLORS.green, COLORS.amber, COLORS.blue, COLORS.pink][i % 5];
-      const conf = this.addOverlay(this.add.graphics().setDepth(63));
-      conf.fillStyle(c, 0.85);
-      conf.fillRoundedRect(cx - 8, cy - 4, 16, 8, 4);
-      this.tweens.add({ targets: conf, alpha: 0, y: cy + 56, duration: 1600, delay: i * 90 });
-    }
-    this.time.delayedCall(1800, () => this.scene.restart({ level: nextLevel, hits: this.hits, errors: this.errors }));
   }
 
   private showFinalCompleteScreen() {
     this.clearOverlay();
-    const bg = this.addOverlay(this.add.rectangle(640, 360, 1280, 720, 0x1e1b4b, 0.66).setDepth(60));
-    bg.setInteractive();
-    const panel = this.addOverlay(this.add.container(640, 360).setDepth(62));
-    const shadow = this.add.graphics();
-    shadow.fillStyle(0x000000, 0.2);
-    shadow.fillRoundedRect(-308, -210, 616, 420, 34);
-    const panelBg = this.add.graphics();
-    panelBg.fillStyle(0xffffff, 0.97);
-    panelBg.fillRoundedRect(-320, -222, 640, 424, 34);
-    panelBg.lineStyle(6, COLORS.purple, 0.9);
-    panelBg.strokeRoundedRect(-320, -222, 640, 424, 34);
-    const ribbon = this.add.graphics();
-    ribbon.fillStyle(COLORS.purple, 1);
-    ribbon.fillRoundedRect(-220, -238, 440, 28, 14);
-    const stars = this.addSharpText(0, -164, "⭐⭐⭐", { fontSize: "54px", fontFamily: "Arial Black, Arial" }).setOrigin(0.5);
-    this.tweens.add({ targets: stars, scale: { from: 0.9, to: 1.08 }, duration: 700, yoyo: true, repeat: -1 });
-    const title = this.addSharpText(0, -90, "Parabéns!", {
-      fontSize: "44px", fontFamily: "Arial Black, Arial", color: "#7c3aed", stroke: "#ffffff", strokeThickness: 7,
-    }).setOrigin(0.5);
-    const sub = this.addSharpText(0, -30, "Você completou todos os níveis do\nEstúdio Multiformato!", {
-      fontSize: "24px", fontFamily: "Arial Black, Arial", color: "#1e1b4b", align: "center",
-    }).setOrigin(0.5);
-    const desc = this.addSharpText(0, 38, `Pontuação: ${this.getScore()} · Acertos: ${this.hits} · Erros: ${this.errors}`, {
-      fontSize: "19px", fontFamily: "Arial Black, Arial", color: "#475569", align: "center",
-    }).setOrigin(0.5);
-    const sparkles = Array.from({ length: 16 }, (_, i) => {
-      const sp = this.add.graphics();
-      sp.fillStyle([COLORS.purple, COLORS.amber, COLORS.green, COLORS.blue, COLORS.pink][i % 5], 0.9);
-      sp.fillCircle(Phaser.Math.Between(-290, 290), Phaser.Math.Between(-200, 190), Phaser.Math.Between(4, 9));
-      this.tweens.add({ targets: sp, alpha: { from: 0.3, to: 1 }, scale: { from: 0.7, to: 1.4 }, duration: 640 + i * 40, yoyo: true, repeat: -1 });
-      return sp;
+    this.input.enabled = true;
+    showLevelComplete(this, {
+      title: "Estúdio completo!",
+      subtitle: `${this.getScore()} pontos`,
+      message: `${this.hits} acertos · ${this.errors} erros`,
+      accent: COLORS.purple,
+      overlayColor: COLORS.ink,
+      titleColor: "#1e1b4b",
+      subtitleColor: "#7c3aed",
+      progress: { total: 3, current: 3 },
+      buttons: [
+        { label: "Reiniciar", color: COLORS.green, onClick: () => { this.playClick(); this.scene.restart({ level: 1, hits: 0, errors: 0 }); } },
+        { label: "Voltar", color: COLORS.purple, onClick: () => { this.playClick(); EventBus.emit("exit-game"); } },
+      ],
     });
-    const exitBg = this.add.graphics();
-    exitBg.fillStyle(COLORS.purple, 1);
-    exitBg.fillRoundedRect(-130, 82, 260, 52, 26);
-    exitBg.lineStyle(4, 0xffffff, 1);
-    exitBg.strokeRoundedRect(-130, 82, 260, 52, 26);
-    const exitTxt = this.addSharpText(0, 108, "Voltar aos Jogos", {
-      fontSize: "21px", fontFamily: "Arial Black, Arial", color: "#ffffff", stroke: "#3b0764", strokeThickness: 3,
-    }).setOrigin(0.5);
-    panel.add([shadow, panelBg, ribbon, ...sparkles, stars, title, sub, desc, exitBg, exitTxt]);
-    this.animateModal(panel);
-    const ez = this.addOverlay(this.add.zone(640, 360 + 108 * MODAL_SCALE, 278 * MODAL_SCALE, 64 * MODAL_SCALE).setDepth(70));
-    ez.setInteractive({ useHandCursor: true });
-    ez.on("pointerover", () => this.input.setDefaultCursor("pointer"));
-    ez.on("pointerout", () => this.input.setDefaultCursor("default"));
-    ez.on("pointerdown", () => { this.playClick(); EventBus.emit("exit-game"); });
   }
 
   private showGameOverScreen() {
@@ -1187,30 +1680,31 @@ export class GameScene extends Phaser.Scene {
     const topBar = this.add.graphics();
     topBar.fillStyle(COLORS.red, 1);
     topBar.fillRoundedRect(-210, -224, 420, 28, 14);
-    const icon = this.addSharpText(0, -144, "⏰", { fontSize: "54px", fontFamily: "Arial Black, Arial" }).setOrigin(0.5);
-    const title = this.addSharpText(0, -78, "GAME OVER", {
-      fontSize: "42px", fontFamily: "Arial Black, Arial", color: "#dc2626", stroke: "#ffffff", strokeThickness: 6,
+    const icon = this.createClockIcon(0, -138, 58);
+    const title = this.addSharpText(0, -62, "Tempo esgotado!", {
+      fontSize: "40px", fontFamily: "Arial Black, Arial", color: "#dc2626", stroke: "#ffffff", strokeThickness: 6,
+      align: "center", wordWrap: { width: 540 },
     }).setOrigin(0.5);
-    const reason = this.addSharpText(0, -22, "O tempo esgotou!", {
-      fontSize: "24px", fontFamily: "Arial Black, Arial", color: "#475569", align: "center",
+    const reason = this.addSharpText(0, 2, `${this.getScore()} pontos`, {
+      fontSize: "26px", fontFamily: "Arial Black, Arial", color: "#334155", align: "center",
     }).setOrigin(0.5);
-    const stats = this.addSharpText(0, 28, `Acertos: ${this.hits}  ·  Erros: ${this.errors}  ·  Pontos: ${this.getScore()}`, {
-      fontSize: "18px", fontFamily: "Arial Black, Arial", color: "#64748b",
+    const stats = this.addSharpText(0, 40, `${this.hits} acertos · ${this.errors} erros`, {
+      fontSize: "19px", fontFamily: "Arial Black, Arial", color: "#64748b",
     }).setOrigin(0.5);
     const retryBg = this.add.graphics();
     retryBg.fillStyle(COLORS.green, 1);
     retryBg.fillRoundedRect(-262, 68, 240, 52, 26);
     retryBg.lineStyle(4, 0xffffff, 1);
     retryBg.strokeRoundedRect(-262, 68, 240, 52, 26);
-    const retryTxt = this.addSharpText(-142, 94, "🔄 Tentar Novamente", {
-      fontSize: "17px", fontFamily: "Arial Black, Arial", color: "#ffffff", stroke: "#14532d", strokeThickness: 3,
+    const retryTxt = this.addSharpText(-142, 94, "Jogar de novo", {
+      fontSize: "21px", fontFamily: "Arial Black, Arial", color: "#ffffff", stroke: "#14532d", strokeThickness: 3,
     }).setOrigin(0.5);
     const exitBg = this.add.graphics();
     exitBg.fillStyle(COLORS.orange, 1);
     exitBg.fillRoundedRect(22, 68, 240, 52, 26);
     exitBg.lineStyle(4, 0xffffff, 1);
     exitBg.strokeRoundedRect(22, 68, 240, 52, 26);
-    const exitTxt = this.addSharpText(142, 94, "🚪 Sair", {
+    const exitTxt = this.addSharpText(142, 94, "Sair", {
       fontSize: "20px", fontFamily: "Arial Black, Arial", color: "#ffffff", stroke: "#78350f", strokeThickness: 3,
     }).setOrigin(0.5);
     panel.add([shadow, panelBg, topBar, icon, title, reason, stats, retryBg, retryTxt, exitBg, exitTxt]);
@@ -1238,10 +1732,90 @@ export class GameScene extends Phaser.Scene {
     this.tweens.add({ targets: m, alpha: 1, scale: MODAL_SCALE, duration: 260, ease: "Back.easeOut" });
   }
 
+  // ─── Graphics Icons ───────────────────────────────────────────────────────
+
+  private createFormatIcon(formatId: FormatId, color: number, size: number) {
+    const g = this.add.graphics();
+    const s = size;
+    g.lineStyle(Math.max(3, s * 0.07), color, 1);
+    g.fillStyle(color, 1);
+
+    if (formatId === "drawing") {
+      g.fillCircle(-s * 0.18, -s * 0.16, s * 0.14);
+      g.fillCircle(s * 0.04, -s * 0.2, s * 0.11);
+      g.fillCircle(s * 0.2, 0, s * 0.12);
+      g.lineBetween(-s * 0.18, s * 0.2, s * 0.22, s * 0.32);
+      g.fillTriangle(s * 0.24, s * 0.34, s * 0.34, s * 0.22, s * 0.39, s * 0.39);
+    } else if (formatId === "text") {
+      g.strokeRoundedRect(-s * 0.34, -s * 0.32, s * 0.68, s * 0.64, s * 0.08);
+      g.lineBetween(-s * 0.2, -s * 0.12, s * 0.22, -s * 0.12);
+      g.lineBetween(-s * 0.2, s * 0.04, s * 0.18, s * 0.04);
+      g.lineBetween(-s * 0.2, s * 0.2, s * 0.12, s * 0.2);
+    } else if (formatId === "audio") {
+      g.fillTriangle(-s * 0.34, -s * 0.12, -s * 0.1, -s * 0.3, -s * 0.1, s * 0.3);
+      g.fillRect(-s * 0.38, -s * 0.14, s * 0.18, s * 0.28);
+      g.lineBetween(s * 0.02, -s * 0.18, s * 0.18, -s * 0.3);
+      g.lineBetween(s * 0.02, s * 0.18, s * 0.18, s * 0.3);
+      g.lineBetween(s * 0.16, -s * 0.28, s * 0.34, -s * 0.38);
+      g.lineBetween(s * 0.16, s * 0.28, s * 0.34, s * 0.38);
+    } else {
+      g.strokeRoundedRect(-s * 0.38, -s * 0.26, s * 0.76, s * 0.56, s * 0.08);
+      g.fillRoundedRect(-s * 0.2, -s * 0.38, s * 0.28, s * 0.14, s * 0.04);
+      g.strokeCircle(0, s * 0.02, s * 0.16);
+      g.fillCircle(s * 0.24, -s * 0.14, s * 0.05);
+    }
+
+    return g;
+  }
+
+  private createTargetIcon(x: number, y: number, size: number, color: number) {
+    const g = this.add.graphics();
+    g.setPosition(x, y);
+    g.lineStyle(4, color, 1);
+    g.strokeCircle(0, 0, size * 0.42);
+    g.strokeCircle(0, 0, size * 0.24);
+    g.fillStyle(color, 1);
+    g.fillCircle(0, 0, size * 0.08);
+    return g;
+  }
+
+  private createStarRow(x: number, y: number, count: number) {
+    const c = this.add.container(x, y);
+    for (let i = 0; i < count; i++) {
+      const g = this.add.graphics();
+      const ox = (i - (count - 1) / 2) * 54;
+      g.setPosition(ox, 0);
+      g.fillStyle(COLORS.amber, 1);
+      g.lineStyle(3, 0xffffff, 1);
+      const pts = [];
+      for (let p = 0; p < 10; p++) {
+        const r = p % 2 === 0 ? 22 : 10;
+        const a = -Math.PI / 2 + p * Math.PI / 5;
+        pts.push(new Phaser.Geom.Point(Math.cos(a) * r, Math.sin(a) * r));
+      }
+      g.fillPoints(pts, true);
+      g.strokePoints(pts, true);
+      c.add(g);
+    }
+    return c;
+  }
+
+  private createClockIcon(x: number, y: number, size: number) {
+    const g = this.add.graphics();
+    g.setPosition(x, y);
+    g.lineStyle(5, COLORS.red, 1);
+    g.fillStyle(0xffffff, 0.95);
+    g.fillCircle(0, 0, size * 0.42);
+    g.strokeCircle(0, 0, size * 0.42);
+    g.lineStyle(4, COLORS.red, 1);
+    g.lineBetween(0, 0, 0, -size * 0.22);
+    g.lineBetween(0, 0, size * 0.18, size * 0.08);
+    return g;
+  }
+
   // ─── Utilities ────────────────────────────────────────────────────────────
 
   private getScore() { return Math.max(0, this.hits * 20 - this.errors * 5); }
-  private toCssColor(c: number) { return `#${c.toString(16).padStart(6, "0")}`; }
 
   private fitImage(image: Phaser.GameObjects.Image, maxW: number, maxH: number) {
     const scale = Math.min(maxW / image.width, maxH / image.height);
@@ -1263,7 +1837,8 @@ export class GameScene extends Phaser.Scene {
     bg.lineStyle(4, 0xffffff, 0.9);
     bg.strokeRoundedRect(-500, -44, 1000, 88, 24);
     const txt = this.addSharpText(0, 0, message, {
-      fontSize: "20px", fontFamily: "Arial Black, Arial", color: "#ffffff", align: "center", wordWrap: { width: 900 },
+      fontSize: "23px", fontFamily: "Arial Black, Arial", color: "#ffffff",
+      stroke: "#0f172a", strokeThickness: 3, align: "center", wordWrap: { width: 900 },
     }).setOrigin(0.5);
     container.add([bg, txt]);
     this.tweens.add({ targets: container, y: 600, alpha: 0, duration: 300, delay: duration, onComplete: () => container.destroy() });
@@ -1271,24 +1846,57 @@ export class GameScene extends Phaser.Scene {
 
   // ─── Audio ────────────────────────────────────────────────────────────────
 
-  private playClick() { this.playTone(520, 0.05, "sine", 0.05); }
+  private playClick() {
+    this.playTone(760, 0.045, "triangle", 0.045, -120);
+    this.time.delayedCall(34, () => this.playTone(1040, 0.035, "sine", 0.028, -80));
+  }
+
   private playSuccess() {
     this.playTone(660, 0.1, "triangle", 0.06);
     this.time.delayedCall(100, () => this.playTone(880, 0.1, "triangle", 0.06));
     this.time.delayedCall(200, () => this.playTone(1100, 0.14, "triangle", 0.07));
   }
-  private playWrong() { this.playTone(200, 0.14, "sawtooth", 0.05); }
-  private playTone(frequency: number, duration: number, type: OscillatorType, volume: number) {
-    const AC = window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-    if (!AC) return;
-    const ctx = new AC();
+
+  private playWrong() {
+    this.playTone(200, 0.14, "sawtooth", 0.05, -60);
+  }
+
+  private playTone(frequency: number, duration: number, type: OscillatorType, volume: number, sweep = 0) {
+    const ctx = this.getAudioContext();
+    if (!ctx) return;
+    if (ctx.state === "suspended") void ctx.resume();
+
+    const now = ctx.currentTime;
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
-    osc.type = type; osc.frequency.value = frequency; gain.gain.value = volume;
-    osc.connect(gain); gain.connect(ctx.destination);
-    osc.start(); osc.stop(ctx.currentTime + duration);
-    osc.onended = () => ctx.close();
+    osc.type = type;
+    osc.frequency.setValueAtTime(frequency, now);
+    if (sweep !== 0) {
+      osc.frequency.exponentialRampToValueAtTime(Math.max(40, frequency + sweep), now + duration);
+    }
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(volume, now + 0.008);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(now);
+    osc.stop(now + duration + 0.02);
+    osc.onended = () => {
+      osc.disconnect();
+      gain.disconnect();
+    };
   }
+
+  private getAudioContext(): AudioContext | null {
+    if ("context" in this.sound) {
+      return (this.sound as Phaser.Sound.WebAudioSoundManager).context;
+    }
+    const AC = window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    if (!AC) return null;
+    if (!this.fallbackAudioContext) this.fallbackAudioContext = new AC();
+    return this.fallbackAudioContext;
+  }
+
 }
 
 // Helper: approximate center of the drawing canvas for fly animation origin

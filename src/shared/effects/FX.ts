@@ -663,7 +663,6 @@ export class FX {
         return Promise.all(jobs).then(() => undefined)
     }
 
-    /** Chuva de confete com gravidade e giro. Fim de nível, conquista. */
     static confetti(
         scene: Phaser.Scene,
         { colors = [0xf9ce5d, 0x85b47e, 0xea6f67, 0x5882ac], count = 60, duration = 2200, depth = 9400 } = {},
@@ -677,7 +676,7 @@ export class FX {
                 x, -30,
                 Phaser.Math.Between(8, 15),
                 Phaser.Math.Between(12, 22),
-                Phaser.Utils.Array.GetRandom(colors),
+                Phaser.Utils.Array.GetRandom(colors),   
             ).setDepth(depth).setAngle(Phaser.Math.Between(0, 360))
 
             const drift = Phaser.Math.Between(-120, 120)

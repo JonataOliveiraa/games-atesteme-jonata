@@ -5,7 +5,6 @@ import bgFormatWorkshopUrl from "../../../../assets/games/EF03CO08/estudio-multi
 import bgCreativeStudioUrl from "../../../../assets/games/EF03CO08/estudio-multiformato/bg-creative-studio.png";
 import bgMissionStudioUrl from "../../../../assets/games/EF03CO08/estudio-multiformato/bg-mission-studio.png";
 import studioCanvasUrl from "../../../../assets/games/EF03CO08/estudio-multiformato/studio-canvas.png";
-import studioMuralBoardUrl from "../../../../assets/games/EF03CO08/estudio-multiformato/studio-mural-board.png";
 import formatCardDrawingUrl from "../../../../assets/games/EF03CO08/estudio-multiformato/format-card-drawing.png";
 import formatCardTextUrl from "../../../../assets/games/EF03CO08/estudio-multiformato/format-card-text.png";
 import formatCardAudioUrl from "../../../../assets/games/EF03CO08/estudio-multiformato/format-card-audio.png";
@@ -17,7 +16,6 @@ const ASSETS: Array<[string, string]> = [
   ["bg-creative-studio", bgCreativeStudioUrl],
   ["bg-mission-studio", bgMissionStudioUrl],
   ["studio-canvas", studioCanvasUrl],
-  ["studio-mural-board", studioMuralBoardUrl],
   ["format-card-drawing", formatCardDrawingUrl],
   ["format-card-text", formatCardTextUrl],
   ["format-card-audio", formatCardAudioUrl],

@@ -43,9 +43,10 @@ export interface CreationCycle {
 export interface StudioLevel {
   level: StudioLevelNumber;
   title: string;
+  /** Uma frase, mostrada só na tela de abertura. O HUD não repete texto. */
   objective: string;
-  detail: string;
-  tip: string;
+  /** Dica curta da abertura. Opcional: nível sem dica útil simplesmente omite. */
+  tip?: string;
   timeLimit: number;
   formatMatchTasks?: FormatMatchTask[];
   drawChallenge?: DrawingChallenge;

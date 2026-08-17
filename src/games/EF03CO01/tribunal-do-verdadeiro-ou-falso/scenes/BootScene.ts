@@ -1,23 +1,24 @@
 import Phaser from 'phaser'
 
-import bgTribunalUrl     from '../../../../assets/games/EF03CO01/tribunal-do-verdadeiro-ou-falso/bg-tribunal.png'
-import bgLoadingUrl      from '../../../../assets/games/EF03CO01/tribunal-do-verdadeiro-ou-falso/bg-loading.png'
+import bgTribunalUrl from '../../../../assets/games/EF03CO01/tribunal-do-verdadeiro-ou-falso/bg-tribunal.png'
+import bgLoadingUrl from '../../../../assets/games/EF03CO01/tribunal-do-verdadeiro-ou-falso/bg-loading.png'
 import characterJudgeUrl from '../../../../assets/games/EF03CO01/tribunal-do-verdadeiro-ou-falso/character-judge.png'
 import characterWitnessUrl from '../../../../assets/games/EF03CO01/tribunal-do-verdadeiro-ou-falso/character-witness.png'
-import cardSentenceUrl   from '../../../../assets/games/EF03CO01/tribunal-do-verdadeiro-ou-falso/card-setence.png'
-import hammerUrl  from '../../../../assets/games/EF03CO01/tribunal-do-verdadeiro-ou-falso/hammer.png'
-import effectStarUrl     from '../../../../assets/games/EF03CO01/tribunal-do-verdadeiro-ou-falso/effect-star.png'
-import effectWrongUrl    from '../../../../assets/games/EF03CO01/tribunal-do-verdadeiro-ou-falso/effect-wrong.png'
-import badgeLevelUrl     from '../../../../assets/games/EF03CO01/tribunal-do-verdadeiro-ou-falso/badge-level.png'
+import cardSentenceUrl from '../../../../assets/games/EF03CO01/tribunal-do-verdadeiro-ou-falso/card-setence.png'
+import hammerUrl from '../../../../assets/games/EF03CO01/tribunal-do-verdadeiro-ou-falso/hammer.png'
+import effectStarUrl from '../../../../assets/games/EF03CO01/tribunal-do-verdadeiro-ou-falso/effect-star.png'
+import effectWrongUrl from '../../../../assets/games/EF03CO01/tribunal-do-verdadeiro-ou-falso/effect-wrong.png'
+import badgeLevelUrl from '../../../../assets/games/EF03CO01/tribunal-do-verdadeiro-ou-falso/badge-level.png'
+import { createLoadingScreen } from '../../../../shared/loading/createLoadingScreen'
 
 const ASSETS: Array<[string, string]> = [
-  ['bg-tribunal',      bgTribunalUrl],
-  ['character-judge',   characterJudgeUrl],
+  ['bg-tribunal', bgTribunalUrl],
+  ['character-judge', characterJudgeUrl],
   ['character-witness', characterWitnessUrl],
-  ['card-sentence',     cardSentenceUrl],
-  ['effect-star',       effectStarUrl],
-  ['effect-wrong',      effectWrongUrl],
-  ['badge-level',       badgeLevelUrl],
+  ['card-sentence', cardSentenceUrl],
+  ['effect-star', effectStarUrl],
+  ['effect-wrong', effectWrongUrl],
+  ['badge-level', badgeLevelUrl],
   ['hammer', hammerUrl]
 ]
 
@@ -28,46 +29,40 @@ export class BootScene extends Phaser.Scene {
 
   preload() {
     this.load.image('bg-loading', bgLoadingUrl)
-    this.createLoadingScreen()
+    createLoadingScreen(this, {
+      title: 'Tribunal do Verdadeiro ou Falso',
+      subtitle: 'Eureka!',
+      description: 'Entrando...',
+      theme: {
+        background: {
+          kind: 'stripes',
+          base: 0x3a1f1b,
+          color: 0xd8b98a,
+          alpha: 0.08,
+          size: 68,
+          
+        },
+
+        card: 0x6b3f2a,
+        cardShadow: 0x24120f,
+        cardHighlight: 0xf7e7c6,
+        cardBorder: 0xd5a24c,
+
+        title: 0xfff3da,
+        subtitle: 0xd95b4f,
+        description: 0xf0d9b5,
+        titleStroke: 0x2a1411,
+
+        progressTrack: 0x321b17,
+        progressBorder: 0xd5a24c,
+        progressFill: 0xa83f35,
+        progressHighlight: 0xffe7bd,
+      },
+    })
     ASSETS.forEach(([key, url]) => this.load.image(key, url))
   }
 
   create() {
     this.scene.start('GameScene')
-  }
-
-  private createLoadingScreen() {
-    const fallback = this.add.rectangle(640, 360, 1280, 720, 0x2a1a0d).setDepth(0)
-
-    this.load.once('filecomplete-image-bg-loading', () => {
-      fallback.destroy()
-      this.add.image(640, 360, 'bg-loading').setDisplaySize(1280, 720).setDepth(0)
-    })
-
-    this.add.text(640, 300, '⚖️  Tribunal do Verdadeiro ou Falso', {
-      fontSize: '48px',
-      fontFamily: 'Arial Black, Arial',
-      color: '#FFF3E0',
-      stroke: '#000000',
-      strokeThickness: 7,
-      align: 'center',
-      wordWrap: { width: 1000 },
-    }).setOrigin(0.5).setDepth(1).setResolution(2)
-
-    this.add.text(640, 396, 'Preparando o julgamento...', {
-      fontSize: '29px',
-      fontFamily: 'Arial',
-      color: '#FFCC80',
-    }).setOrigin(0.5).setDepth(1).setResolution(2)
-
-    const barW = 620
-    const barBg = this.add.rectangle(640, 466, barW + 10, 28, 0x2a1a0d)
-      .setStrokeStyle(3, 0xFFCC80).setDepth(1)
-    const bar = this.add.rectangle(640 - barW / 2, 466, 4, 22, 0xFFCC80).setOrigin(0, 0.5).setDepth(1)
-    void barBg
-
-    this.load.on('progress', (v: number) => {
-      bar.setSize(Math.max(4, barW * v), 22)
-    })
   }
 }
