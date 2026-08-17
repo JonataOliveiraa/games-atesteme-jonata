@@ -31,7 +31,7 @@ export interface RankingResult {
 }
 
 export interface RankingGameOption {
-  id: number;
+  id: string;
   title: string;
   category: string;
   icon: string;

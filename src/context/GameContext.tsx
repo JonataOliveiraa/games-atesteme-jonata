@@ -6,7 +6,8 @@ import {
   type ReactNode,
 } from "react";
 import { GameContext } from "./gameContextInstance";
-import { games } from "../data/games";
+import { resolveGameId } from "../data/gameIndex";
+import { STORAGE_KEY, readPersistedState } from "./migrateState";
 import type {
   BlockedGamesMap,
   GameEventPayload,
@@ -14,7 +15,6 @@ import type {
   UserGameHistory,
 } from "../types/platform";
 
-const STORAGE_KEY = "platform-state-v5";
 const EXTRA_LIFE_COST = 20;
 const UNLOCK_COST = 30;
 const CORRECT_POINTS = 5;
@@ -66,18 +66,8 @@ const INITIAL_STATE: PlatformState = {
   gameErrorCounts: {},
 };
 
-const GAME_CODE_TO_SLUG: Record<string, string> = {
-  EF01CO01: "base-dos-classificadores",
-  EF01CO03: "oficina-dos-algoritmos",
-  EF01CO05: "pixel-secreto",
-  EF01CO07: "guardioes-dos-dados",
-
-};
-
 function normalizeGameId(gameId: string): string {
-  const gameBySlug = games.find((game) => game.slug === gameId);
-  if (gameBySlug) return gameBySlug.slug;
-  return GAME_CODE_TO_SLUG[gameId] ?? gameId;
+  return resolveGameId(gameId) ?? gameId;
 }
 
 function getBlockedUntilAfterTwoDays(): string {
@@ -146,28 +136,22 @@ function normalizeState(state: PlatformState): PlatformState {
 }
 
 function loadInitialState(): PlatformState {
-  const raw = localStorage.getItem(STORAGE_KEY);
+  const parsed = readPersistedState() as Partial<PlatformState> | null;
 
-  if (!raw) {
+  if (!parsed) {
     return INITIAL_STATE;
   }
 
-  try {
-    const parsed = JSON.parse(raw) as Partial<PlatformState>;
-
-    return normalizeState({
-      points: 9999999999,
-      extraLifeCost: parsed.extraLifeCost ?? INITIAL_STATE.extraLifeCost,
-      unlockCost: parsed.unlockCost ?? INITIAL_STATE.unlockCost,
-      blockedGames: parsed.blockedGames ?? {},
-      gameLives: parsed.gameLives ?? {},
-      history: parsed.history ?? [],
-      gameStreaks: parsed.gameStreaks ?? {},
-      gameErrorCounts: parsed.gameErrorCounts ?? {},
-    });
-  } catch {
-    return INITIAL_STATE;
-  }
+  return normalizeState({
+    points: parsed.points ?? INITIAL_STATE.points,
+    extraLifeCost: parsed.extraLifeCost ?? INITIAL_STATE.extraLifeCost,
+    unlockCost: parsed.unlockCost ?? INITIAL_STATE.unlockCost,
+    blockedGames: parsed.blockedGames ?? {},
+    gameLives: parsed.gameLives ?? {},
+    history: parsed.history ?? [],
+    gameStreaks: parsed.gameStreaks ?? {},
+    gameErrorCounts: parsed.gameErrorCounts ?? {},
+  });
 }
 
 export function GameProvider({ children }: Props) {

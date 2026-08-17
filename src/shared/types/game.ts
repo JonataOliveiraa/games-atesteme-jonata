@@ -1,4 +1,11 @@
-export type GameCode =
+/**
+ * Código de habilidade da BNCC.
+ *
+ * ANTES este tipo se chamava `GameCode` e era usado como identidade do jogo.
+ * Agora ele é só o que sempre foi: um código de habilidade curricular,
+ * usado como TAG. A identidade do jogo é `Game["id"]`.
+ */
+export type SkillCode =
   | 'EF01CO01' | 'EF01CO02' | 'EF01CO03' | 'EF01CO04' | 'EF01CO05'
   | 'EF01CO06' | 'EF01CO07'
   | 'EF02CO01' | 'EF02CO02' | 'EF02CO03' | 'EF02CO04' | 'EF02CO05' | 'EF02CO06'
@@ -10,21 +17,47 @@ export type GameCode =
   | 'EF05CO06' | 'EF05CO07' | 'EF05CO08' | 'EF05CO09' | 'EF05CO10' | 'EF05CO11'
   | 'EF15CO01' | 'EF15CO02' | 'EF15CO03' | 'EF15CO04'
 
+/**
+ * @deprecated Use `SkillCode`. Alias mantido só para os arquivos que
+ * ainda não migraram — apague quando o TypeScript parar de reclamar.
+ */
+export type GameCode = SkillCode
+
 export type GameLevel = 1 | 2 | 3
 
 export type Eixo = 'Pensamento Computacional' | 'Mundo Digital' | 'Cultura Digital'
 
+/**
+ * Anos escolares cobertos por um código de habilidade.
+ * EF15 = "1º ao 5º ano" (anos iniciais inteiros), por isso a tabela
+ * explícita em vez de um parseInt no meio da string.
+ */
+export const YEARS_BY_SKILL_PREFIX: Record<string, number[]> = {
+  EF01: [1],
+  EF02: [2],
+  EF03: [3],
+  EF04: [4],
+  EF05: [5],
+  EF15: [1, 2, 3, 4, 5],
+}
+
+export function yearsOfSkill(code: SkillCode): number[] {
+  return YEARS_BY_SKILL_PREFIX[code.slice(0, 4)] ?? []
+}
+
 export interface GameMeta {
-  code: GameCode
+  /** identidade do jogo, não mais o código da habilidade */
+  id: string
   name: string
-  year: string
+  skills: SkillCode[]
   eixo: Eixo
   objeto: string
   habilidade: string
 }
 
 export interface RoundResult {
-  gameCode: GameCode
+  /** identidade do jogo */
+  gameId: string
   level: GameLevel
   criterion: string
   hits: number
@@ -34,7 +67,7 @@ export interface RoundResult {
 }
 
 export interface GameProgress {
-  gameCode: GameCode
+  gameId: string
   currentLevel: GameLevel
   roundsCompleted: number
   results: RoundResult[]

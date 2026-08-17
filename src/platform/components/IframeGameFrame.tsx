@@ -5,6 +5,7 @@ import {
   isIframePlatformEventMessage,
   type IframePlatformCommandMessage,
 } from "../../shared/contracts/iframeMessages";
+import { resolveGameId } from "../../data/gameIndex";
 
 interface IframeGameFrameProps {
   gameId: string;
@@ -52,9 +53,11 @@ export default function IframeGameFrame({
       if (!isIframePlatformEventMessage(data)) return;
 
       const event = data.payload;
-      if (event.gameId !== gameId) return;
+      const normalizedEventGameId = resolveGameId(event.gameId) ?? event.gameId;
+      const normalizedCurrentGameId = resolveGameId(gameId) ?? gameId;
 
-      onPlatformEvent(event);
+      if (normalizedEventGameId !== normalizedCurrentGameId) return;
+      onPlatformEvent({ ...event, gameId: normalizedEventGameId });
     };
 
     window.addEventListener("message", handleMessage);

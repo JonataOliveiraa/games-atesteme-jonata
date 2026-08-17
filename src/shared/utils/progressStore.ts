@@ -1,14 +1,14 @@
-import type { GameCode, GameProgress, RoundResult } from '../types/game'
+import type { GameProgress, RoundResult } from '../types/game'
 
-const KEY = (code: GameCode) => `bncc-progress-${code}`
+const KEY = (gameId: string) => `bncc-progress-${gameId}`
 
 export const progressStore = {
-  save(code: GameCode, progress: GameProgress): void {
-    localStorage.setItem(KEY(code), JSON.stringify(progress))
+  save(gameId: string, progress: GameProgress): void {
+    localStorage.setItem(KEY(gameId), JSON.stringify(progress))
   },
 
-  load(code: GameCode): GameProgress | null {
-    const raw = localStorage.getItem(KEY(code))
+  load(gameId: string): GameProgress | null {
+    const raw = localStorage.getItem(KEY(gameId))
     if (!raw) return null
     try {
       return JSON.parse(raw) as GameProgress
@@ -18,16 +18,16 @@ export const progressStore = {
   },
 
   saveRound(result: RoundResult): void {
-    const existing = progressStore.load(result.gameCode)
+    const existing = progressStore.load(result.gameId)
     const progress: GameProgress = existing ?? {
-      gameCode: result.gameCode,
+      gameId: result.gameId,
       currentLevel: result.level,
       roundsCompleted: 0,
       results: [],
       lastPlayed: Date.now(),
     }
 
-    progressStore.save(result.gameCode, {
+    progressStore.save(result.gameId, {
       ...progress,
       currentLevel: result.level,
       roundsCompleted: progress.roundsCompleted + 1,
@@ -36,8 +36,8 @@ export const progressStore = {
     })
   },
 
-  report(code: GameCode): { dominated: string[]; weak: string[] } {
-    const p = progressStore.load(code)
+  report(gameId: string): { dominated: string[]; weak: string[] } {
+    const p = progressStore.load(gameId)
     if (!p) return { dominated: [], weak: [] }
 
     const byCriterion = new Map<string, RoundResult[]>()
