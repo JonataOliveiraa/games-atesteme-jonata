@@ -3,113 +3,14 @@ import { useNavigate, useParams } from "react-router-dom";
 import ConfirmModal from "../components/ConfirmModal";
 import Toast from "../components/Toast";
 import { useGame } from "../context/useGame";
-import { games } from "../data/games";
+import { getGameBySlug, loadGameConfig } from "../data/gameIndex";
 import GameFrame from "../platform/components/GameFrame";
-import type { GameCode } from "../shared/types/game";
 import type { PlatformEvent } from "../shared/contracts/platformEvents";
 import type { GameEventPayload } from "../types/platform";
 import type Phaser from "phaser";
 import { EventBus } from "../shared/EventBus";
 import { gameBridge } from "../shared/bridge/gameBridge";
 import { useBeepSound } from "../hooks/useBeepSound";
-
-const SLUG_TO_CODE: Record<string, GameCode> = {
-  "base-dos-classificadores": "EF01CO01",
-  "trilha-do-passo-a-passo": "EF01CO02",
-  "oficina-dos-algoritmos": "EF01CO03",
-  "correio-multimidia": "EF01CO04",
-  "pixel-secreto": "EF01CO05",
-  "desktop-digital-infantil": "EF01CO06",
-  "guardioes-dos-dados": "EF01CO07",
-  "hangar-dos-modelos": "EF02CO01",
-  "desfile-do-robo-repetidor": "EF02CO02",
-  "fabrica-de-maquinas": "EF02CO03",
-  "museu-vivo-do-computador": "EF02CO04",
-  "checklist-do-jogador-seguro": "EF02CO06",
-  "tribunal-do-verdadeiro-ou-falso": "EF03CO01",
-  "cidade-das-tecnologias": "EF02CO05",
-  "chef-dos-subproblemas": "EF03CO03",
-  "labirinto-do-enquanto": "EF03CO02",
-  "montador-de-informacoes": "EF03CO04",
-  "formato-certo": "EF03CO05",
-  "central-de-entrada-e-saida": "EF03CO06",
-  "detetives-da-busca": "EF03CO07",
-  "estudio-multiformato": "EF03CO08",
-  "investigacao-dados-risco": "EF03CO09",
-  "batalha-das-coordenadas": "EF04CO01",
-  "arquivo-dos-registros": "EF04CO02",
-  "predio-dos-lacos": "EF04CO03",
-  "tradutor-da-maquina": "EF04CO04",
-  "atelier-codigos-digitais": "EF04CO05",
-  "estudio-producao-digital": "EF04CO06",
-  "missao-etica-digital": "EF04CO07",
-  "caca-fonte-confiavel": "EF04CO08",
-  "baralho-das-listas": "EF05CO01",
-  "mapas-em-rede": "EF05CO02",
-  "arena-da-lógica": "EF05CO03",
-  "cidade-das-decisoes": "EF05CO04",
-  "monte-seu-computador": "EF05CO05",
-  "missao-arquivo-seguro": "EF05CO06",
-  "sistema-operacional": "EF05CO07",
-  "radar-de-confiabilidade": "EF05CO08",
-  "curadoria-com-creditos": "EF05CO09",
-  "futuro-em-cena": "EF05CO10",
-  "escolha-a-ferramenta-certa": "EF05CO11",
-  "museu-das-estruturas": "EF15CO01",
-  "academia-dos-algoritmos": "EF15CO02",
-  "circuito-da-verdade": "EF15CO03",
-  "arquiteto-das-missoes": "EF15CO04",
-};
-
-const GAME_CONFIG_LOADERS: Partial<
-  Record<GameCode, () => Promise<{ default: Phaser.Types.Core.GameConfig }>>
-> = {
-  EF01CO01: () => import("../games/EF01CO01/index"),
-  EF01CO02: () => import("../games/EF01CO02/index"),
-  EF01CO03: () => import("../games/EF01CO03/index"),
-  EF01CO04: () => import("../games/EF01CO04/index"),
-  EF01CO05: () => import("../games/EF01CO05/index"),
-  EF01CO06: () => import("../games/EF01CO06/index"),
-  EF01CO07: () => import("../games/EF01CO07/index"),
-  EF02CO01: () => import("../games/EF02CO01/index"),
-  EF02CO02: () => import("../games/EF02CO02/index"),
-  EF02CO03: () => import("../games/EF02CO03/index"),
-  EF02CO04: () => import("../games/EF02CO04/index"),
-  EF02CO06: () => import("../games/EF02CO06/index"),
-  EF03CO01: () => import("../games/EF03CO01/index"),
-  EF02CO05: () => import("../games/EF02CO05/index"),
-  EF03CO03: () => import("../games/EF03CO03/index"),
-  EF03CO02: () => import("../games/EF03CO02/index"),
-  EF03CO04: () => import("../games/EF03CO04/index"),
-  EF03CO05: () => import("../games/EF03CO05/index"),
-  EF03CO06: () => import("../games/EF03CO06/index"),
-  EF03CO07: () => import("../games/EF03CO07/index"),
-  EF03CO08: () => import("../games/EF03CO08/index"),
-  EF03CO09: () => import("../games/EF03CO09/index"),
-  EF04CO01: () => import("../games/EF04CO01/index"),
-  EF04CO02: () => import("../games/EF04CO02/index"),
-  EF04CO03: () => import("../games/EF04CO03/index"),
-  EF04CO04: () => import("../games/EF04CO04/index"),
-  EF04CO05: () => import("../games/EF04CO05/index"),
-  EF04CO06: () => import("../games/EF04CO06/index"),
-  EF04CO07: () => import("../games/EF04CO07/index"),
-  EF04CO08: () => import("../games/EF04CO08/index"),
-  EF05CO01: () => import("../games/EF05CO01/index"),
-  EF05CO02: () => import("../games/EF05CO02/index"),
-  EF05CO03: () => import("../games/EF05CO03/index"),
-  EF05CO04: () => import("../games/EF05CO04/index"),
-  EF05CO05: () => import("../games/EF05CO05/index"),
-  EF05CO06: () => import("../games/EF05CO06/index"),
-  EF05CO07: () => import("../games/EF05CO07/index"),
-  EF05CO08: () => import("../games/EF05CO08/index"),
-  EF05CO09: () => import("../games/EF05CO09/index"),
-  EF05CO10: () => import("../games/EF05CO10/index"),
-  EF05CO11: () => import("../games/EF05CO11/index"),
-  EF15CO01: () => import("../games/EF15CO01/index"),
-  EF15CO02: () => import("../games/EF15CO02/index"),
-  EF15CO03: () => import("../games/EF15CO03/index"),
-  EF15CO04: () => import("../games/EF15CO04/index"),
-};
 
 const GAMES_WITH_IN_GAME_COMPLETION_SCREEN = new Set([
   "oficina-dos-algoritmos",
@@ -193,36 +94,35 @@ export default function GameDetailsPage() {
   const lifePurchasePendingRef = useRef(false);
   const alreadyOfferedExtraLifeRef = useRef(false);
 
-  const game = games.find((item) => item.slug === slug);
-  const gameCode = slug ? SLUG_TO_CODE[slug] : undefined;
+  const game = slug ? getGameBySlug(slug) : undefined;
   const isPixelSecreto = game?.slug === "pixel-secreto";
-  const startsInsidePhaser = gameCode === "EF01CO02";
+  const startsInsidePhaser = game?.module === "EF01CO02/trilha-do-passo-a-passo";
 
   useEffect(() => {
     let cancelled = false;
 
-    async function loadGameConfig() {
-      if (!gameCode) return;
+    if (!game) return;
 
-      const loader = GAME_CONFIG_LOADERS[gameCode];
-      if (!loader) return;
-
-      try {
-        const mod = await loader();
+    loadGameConfig(game)
+      .then((mod) => {
         if (!cancelled) {
           setGameConfig(mod.default);
         }
-      } catch (error) {
+      })
+      .catch((error) => {
         console.error("Erro ao carregar configuração do jogo:", error);
-      }
-    }
-
-    loadGameConfig();
+      });
 
     return () => {
       cancelled = true;
     };
-  }, [gameCode]);
+  }, [game]);
+
+  useEffect(() => {
+    if (game && slug && game.slug !== slug) {
+      navigate(`/jogos/${game.slug}`, { replace: true });
+    }
+  }, [game, slug, navigate]);
 
   useEffect(() => {
     const openExtraLifeModal = () => {
@@ -277,9 +177,9 @@ export default function GameDetailsPage() {
     );
   }
 
-  const gameLives = getGameLives(game.slug);
-  const blocked = isGameBlocked(game.slug);
-  const blockedUntil = getGameBlockedUntil(game.slug);
+  const gameLives = getGameLives(game.id);
+  const blocked = isGameBlocked(game.id);
+  const blockedUntil = getGameBlockedUntil(game.id);
 
   const resumePixelSecreto = () => {
     if (!isPixelSecreto) return;
@@ -474,7 +374,7 @@ export default function GameDetailsPage() {
       return;
     }
 
-    buyExtraLife(game.slug);
+    buyExtraLife(game.id);
 
     lifePurchasePendingRef.current = true;
     window.setTimeout(() => {
@@ -501,7 +401,7 @@ export default function GameDetailsPage() {
       return;
     }
 
-    const success = unlockGameAccess(game.slug);
+    const success = unlockGameAccess(game.id);
 
     if (!success) {
       showToast("Não foi possível desbloquear este jogo agora.", "error");
@@ -883,10 +783,10 @@ export default function GameDetailsPage() {
         </div>
 
         <div className="game-area">
-          {gameCode && gameConfig ? (
+          {game && gameConfig ? (
             hasStartedGame || startsInsidePhaser ? (
               <GameFrame
-                gameId={game.slug}
+                gameId={game.id}
                 level={currentLevel}
                 points={points}
                 lives={gameLives}
@@ -952,7 +852,7 @@ export default function GameDetailsPage() {
                 </div>
               </div>
             )
-          ) : gameCode ? (
+          ) : game ? (
             <div className="game-screen">
               <p style={{ color: "var(--muted)" }}>Carregando jogo...</p>
             </div>

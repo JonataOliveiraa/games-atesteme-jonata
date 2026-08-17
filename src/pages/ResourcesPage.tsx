@@ -1,16 +1,16 @@
 import { useMemo, useState } from "react";
 import ConfirmModal from "../components/ConfirmModal";
 import { useGame } from "../context/useGame";
-import { games } from "../data/games";
+import { games, getGameById } from "../data/games";
 import { useBeepSound } from "../hooks/useBeepSound";
 
 type UnlockTarget = {
-  slug: string;
+  id: string;
   title: string;
 } | null;
 
 type LifeTarget = {
-  slug: string;
+  id: string;
   title: string;
 } | null;
 
@@ -41,14 +41,14 @@ export default function ResourcesPage() {
   const [showResetModal, setShowResetModal] = useState(false);
 
   const blockedGamesList = useMemo(() => {
-    return games.filter((game) => isGameBlocked(game.slug));
+    return games.filter((game) => isGameBlocked(game.id));
   }, [isGameBlocked]);
 
   const blockedGamesCount = blockedGamesList.length;
   const recentHistory = history.slice(0, 8);
 
   const getGameTitle = (gameId: string) => {
-    const game = games.find((item) => item.slug === gameId);
+    const game = getGameById(gameId);
     return game ? game.title : gameId;
   };
 
@@ -83,9 +83,9 @@ export default function ResourcesPage() {
     }
   };
 
-  const openUnlockModal = (gameSlug: string, gameTitle: string) => {
+  const openUnlockModal = (gameId: string, gameTitle: string) => {
     setUnlockTarget({
-      slug: gameSlug,
+      id: gameId,
       title: gameTitle,
     });
   };
@@ -94,9 +94,9 @@ export default function ResourcesPage() {
     setUnlockTarget(null);
   };
 
-  const openLifeModal = (gameSlug: string, gameTitle: string) => {
+  const openLifeModal = (gameId: string, gameTitle: string) => {
     setLifeTarget({
-      slug: gameSlug,
+      id: gameId,
       title: gameTitle,
     });
   };
@@ -110,7 +110,7 @@ export default function ResourcesPage() {
 
     playBeep();
 
-    const success = unlockGameAccess(unlockTarget.slug);
+    const success = unlockGameAccess(unlockTarget.id);
 
     if (!success) {
       setFeedbackMessage(
@@ -131,7 +131,7 @@ export default function ResourcesPage() {
 
     playBeep();
 
-    const success = buyExtraLife(lifeTarget.slug);
+    const success = buyExtraLife(lifeTarget.id);
 
     if (!success) {
       setFeedbackMessage(
@@ -191,7 +191,7 @@ export default function ResourcesPage() {
               <>
                 <div className="status-tags">
                   {blockedGamesList.map((game) => (
-                    <span key={game.slug} className="status-tag">
+                    <span key={game.id} className="status-tag">
                       {game.title}
                     </span>
                   ))}
@@ -246,10 +246,10 @@ export default function ResourcesPage() {
           </div>
         ) : (
           blockedGamesList.map((game) => {
-            const blockedUntil = getGameBlockedUntil(game.slug);
+            const blockedUntil = getGameBlockedUntil(game.id);
 
             return (
-              <div key={game.slug} className="reward-card">
+              <div key={game.id} className="reward-card">
                 <div className="reward-top">
                   <div className="reward-icon">{game.icon}</div>
                   <div>
@@ -280,7 +280,7 @@ export default function ResourcesPage() {
                     <span>Seus pontos: {points}</span>
                     <button
                       type="button"
-                      onClick={() => openUnlockModal(game.slug, game.title)}
+                      onClick={() => openUnlockModal(game.id, game.title)}
                       disabled={points < unlockCost}
                     >
                       Desbloquear
@@ -299,12 +299,12 @@ export default function ResourcesPage() {
 
       <div className="history-list">
         {games.map((game) => {
-          const blocked = isGameBlocked(game.slug);
-          const blockedUntil = getGameBlockedUntil(game.slug);
-          const lives = getGameLives(game.slug);
+          const blocked = isGameBlocked(game.id);
+          const blockedUntil = getGameBlockedUntil(game.id);
+          const lives = getGameLives(game.id);
 
           return (
-            <div key={game.slug} className="history-card">
+            <div key={game.id} className="history-card">
               <div className="history-main">
                 <strong>
                   {game.icon} {game.title}
@@ -330,7 +330,7 @@ export default function ResourcesPage() {
               <div className="history-meta" style={{ marginTop: 8 }}>
                 <button
                   type="button"
-                  onClick={() => openLifeModal(game.slug, game.title)}
+                  onClick={() => openLifeModal(game.id, game.title)}
                   disabled={points < extraLifeCost}
                 >
                   Comprar vida

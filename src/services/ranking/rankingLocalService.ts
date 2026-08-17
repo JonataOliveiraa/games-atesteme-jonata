@@ -87,11 +87,11 @@ function getUserGeneralScore(
 
 function getUserGameScore(
   history: UserGameHistory[],
-  gameSlug: string,
+  gameId: string,
   period: RankingPeriod
 ): number {
   const filteredHistory = filterHistoryByPeriod(history, period);
-  const gameHistory = filteredHistory.filter((item) => item.gameId === gameSlug);
+  const gameHistory = filteredHistory.filter((item) => item.gameId === gameId);
 
   return Math.max(0, sumPoints(gameHistory));
 }
@@ -183,9 +183,9 @@ export function getGameRankingLocal(
   game: Game,
   period: RankingPeriod
 ): RankingResult {
-  const userScore = getUserGameScore(data.history, game.slug, period);
+  const userScore = getUserGameScore(data.history, game.id, period);
 
-  const mockEntries = buildMockEntries(game.slug, period).map((entry) => ({
+  const mockEntries = buildMockEntries(game.id, period).map((entry) => ({
     ...entry,
     score: entry.score + game.points,
   }));

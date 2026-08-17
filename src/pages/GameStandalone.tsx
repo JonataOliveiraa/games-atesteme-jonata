@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import Phaser from "phaser";
-import config from "../games/EF01CO01";
+import config from "../games/EF01CO01/base-dos-classificadores";
 
 export default function GameStandalone() {
   const ref = useRef<HTMLDivElement>(null);

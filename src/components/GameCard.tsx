@@ -29,8 +29,8 @@ export default function GameCard(props: Props) {
   const [showUnlockModal, setShowUnlockModal] = useState(false);
   const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
 
-  const blocked = isGameBlocked(game.slug);
-  const blockedUntil = getGameBlockedUntil(game.slug);
+  const blocked = isGameBlocked(game.id);
+  const blockedUntil = getGameBlockedUntil(game.id);
 
   const handleClick: React.MouseEventHandler<HTMLAnchorElement> = (event) => {
     if (!blocked) return;
@@ -40,7 +40,7 @@ export default function GameCard(props: Props) {
   };
 
   const handleConfirmUnlock = () => {
-    const success = unlockGameAccess(game.slug);
+    const success = unlockGameAccess(game.id);
 
     if (!success) {
       setFeedbackMessage(

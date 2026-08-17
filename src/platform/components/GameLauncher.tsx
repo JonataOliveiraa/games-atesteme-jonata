@@ -3,6 +3,7 @@ import PhaserCanvas from "./PhaserCanvas";
 import { gameBridge } from "../../shared/bridge/gameBridge";
 import type { PlatformEvent } from "../../shared/contracts/platformEvents";
 import type { PlatformCommand } from "../../shared/contracts/platformCommands";
+import { resolveGameId } from "../../data/gameIndex";
 import type Phaser from "phaser";
 
 interface GameLauncherProps {
@@ -30,8 +31,11 @@ export default function GameLauncher({
 
   useEffect(() => {
     const unsubscribe = gameBridge.onGameEvent((event) => {
-      if (event.gameId !== gameId) return;
-      latestHandlerRef.current(event);
+      const normalizedEventGameId = resolveGameId(event.gameId) ?? event.gameId;
+      const normalizedCurrentGameId = resolveGameId(gameId) ?? gameId;
+
+      if (normalizedEventGameId !== normalizedCurrentGameId) return;
+      latestHandlerRef.current({ ...event, gameId: normalizedEventGameId });
     });
 
     return () => {

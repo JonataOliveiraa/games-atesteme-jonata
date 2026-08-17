@@ -1750,7 +1750,7 @@ button {
 .game-screen.algorithms-cover {
   background:
     linear-gradient(90deg, rgba(24, 31, 75, .7), rgba(24, 31, 75, .18)),
-    url("../assets/games/EF01CO03/algorithm-game-cover.png") center / cover no-repeat;
+    url("../assets/games/EF01CO03/oficina-dos-algoritmos/algorithm-game-cover.png") center / cover no-repeat;
 }
 
 .game-screen.pixel-secret-cover::before,

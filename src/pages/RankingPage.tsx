@@ -247,7 +247,7 @@ export default function RankingPage() {
           <div className="ranking-games-grid">
             {filteredGames.map((game) => (
               <button
-                key={game.slug}
+                key={game.id}
                 type="button"
                 className="ranking-game-button"
                 onClick={() => handleSelectGame(game)}
