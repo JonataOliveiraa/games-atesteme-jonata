@@ -1,6 +1,6 @@
 import GameCard from "../components/GameCard";
 import { useBeepSound } from "../hooks/useBeepSound";
-import { games } from "../data/games";
+import { games } from "../data/gameIndex";
 import { useGame } from "../context/useGame";
 import { useSearchParams } from "react-router-dom";
 

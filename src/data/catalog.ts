@@ -15,7 +15,7 @@ import cityThumbnail from "../assets/games/EF02CO05/cidade-das-tecnologias/cover
 import checklistThumbnail from "../assets/games/EF02CO06/checklist-do-jogador-seguro/cover.png";
 import tribunalThumbnail from "../assets/games/EF03CO01/tribunal-do-verdadeiro-ou-falso/cover.png";
 import mazeThumbnail from "../assets/games/EF03CO02/labirinto-do-enquanto/cover-labirinto-do-enquanto.png";
-import chefThumbnail from "../assets/games/EF03CO03/chef-dos-subproblemas/cover.png";
+import chefThumbnail from "../assets/games/EF03CO03/chef-dos-subproblemas/cover-chef-dos-subproblemas.png";
 import informationBuilderThumbnail from "../assets/games/EF03CO04/montador-de-informacoes/cover-montador-informacoes.png";
 import correctFormatThumbnail from "../assets/games/EF03CO05/formato-certo/cover-formato-certo.png";
 import inputOutputThumbnail from "../assets/games/EF03CO06/central-de-entrada-e-saida/cover-central-entrada-saida.png";
@@ -47,10 +47,6 @@ import coverCircuitoDaVerdade from "../assets/games/EF15CO03/circuito-da-verdade
 import coverArquitetoDasMissoes from "../assets/games/EF15CO04/arquiteto-das-missoes/cover-arquiteto-das-missoes.png";
 
 /**
- * FONTE ÚNICA DE VERDADE do catálogo.
- *
- * REGRAS DE OURO
- *
  * 1. `id` nunca muda e nunca é reaproveitado. Se um jogo for removido,
  *    marque status "draft" — não devolva o id para a fila.
  *

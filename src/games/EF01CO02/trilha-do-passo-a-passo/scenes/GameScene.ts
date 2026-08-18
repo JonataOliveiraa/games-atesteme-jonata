@@ -233,7 +233,7 @@ export class GameScene extends Phaser.Scene {
                 steps: [
                     {
                         text: 'O robô está todo desmontado: são seis peças.',
-                        shape: 'rect', x: robotX, y: robotY, w: ROBOT_W + 50, h: ROBOT_H + 40,
+                        shape: 'rect', x: robotX + 130, y: robotY, w: ROBOT_W + 50, h: ROBOT_H + 40,
                     },
                     {
                         text: 'Atenção ao lado! Braço esquerdo e direito são peças diferentes. Confira o nome no card.',

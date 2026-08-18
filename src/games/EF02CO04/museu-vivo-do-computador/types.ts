@@ -28,6 +28,7 @@ export interface MuseumMission {
 
 export interface LevelConfig {
   level: 1 | 2 | 3
+  confirmMode?: ConfirmMode
   timeLimit: number
   missions: MuseumMission[]
   title: string
@@ -36,7 +37,6 @@ export interface LevelConfig {
 }
 
 export interface ItemCard {
-  confirmMode?: ConfirmMode
   staged?: boolean
   container: Phaser.GameObjects.Container
   item: MuseumItem

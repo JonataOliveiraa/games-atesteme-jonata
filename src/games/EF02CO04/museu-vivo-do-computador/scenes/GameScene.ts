@@ -2,7 +2,7 @@ import Phaser from 'phaser'
 import { EventBus } from '../../../../shared/EventBus'
 import { runtimeGameBridge } from '../../../../shared/bridge/runtimeGameBridge'
 import type { PlatformCommand } from '../../../../shared/contracts/platformCommands'
-import type { LevelConfig, MuseumItem, ItemCard, DropZoneDef, ZoneKind } from '../types'
+import type { LevelConfig, MuseumItem, ItemCard, DropZoneDef, ZoneKind, ConfirmMode } from '../types'
 import { LEVELS } from '../data/levels'
 import { ALL_ITEMS } from '../data/items'
 
@@ -15,7 +15,7 @@ const ZONE_TOP = 278, ZONE_H = 356
 const ZONE_HEAD = 54
 const FACT_Y = 676
 const SLOT = 104
-const BAR_Y = 664
+const BAR_Y = 670
 
 const C = {
   blue: 0x3B82F6,
@@ -59,6 +59,7 @@ export class GameScene extends Phaser.Scene {
   private factText?: Phaser.GameObjects.Text
 
   private pending?: { card: ItemCard; zone: ZoneView }
+  private suppressDropForCard?: ItemCard
   private confirmBar?: Phaser.GameObjects.Container
   private confirmMsg?: Phaser.GameObjects.Text
 
@@ -95,6 +96,7 @@ export class GameScene extends Phaser.Scene {
     this.phase = 'intro'
     this.gameEnded = false
     this.pending = undefined
+    this.suppressDropForCard = undefined
     this.confirmBar = undefined
     this.confirmMsg = undefined
     this.missionEffectActive = false
@@ -283,6 +285,7 @@ export class GameScene extends Phaser.Scene {
   private clearMission() {
     this.hideConfirmBar()
     this.pending = undefined
+    this.suppressDropForCard = undefined
     this.itemCards.forEach(c => c.container.destroy())
     this.itemCards = []
     this.zones.forEach(z => z.frame.destroy())
@@ -411,14 +414,24 @@ export class GameScene extends Phaser.Scene {
 
     const card: ItemCard = { container, item, homeX: cx, homeY: cy, placed: false }
 
+    container.on('pointerdown', () => {
+      if (this.phase !== 'playing') return
+      if (this.confirmMode !== 'porItem') return
+      if (this.pending?.card !== card || !card.staged) return
+      this.suppressDropForCard = card
+      this.cancelPending()
+    })
+
     container.on('dragstart', () => {
       if (this.phase !== 'playing') return
+      if (this.suppressDropForCard === card) return
       container.setDepth(60)
       this.tweens.add({ targets: container, scale: 1.08, duration: 90 })
     })
 
     container.on('drag', (_p: Phaser.Input.Pointer, dx: number, dy: number) => {
       if (this.phase !== 'playing') return
+      if (this.suppressDropForCard === card) return
       container.setPosition(dx, dy)
       this.highlightZoneUnder(dx, dy)
     })
@@ -428,6 +441,7 @@ export class GameScene extends Phaser.Scene {
       this.tweens.add({ targets: container, scale: 1, duration: 90 })
       this.clearZoneHighlights()
       if (card.placed) return
+      if (this.suppressDropForCard === card) { this.suppressDropForCard = undefined; return }
       if (this.phase !== 'playing') { this.tweenCardHome(card); return }
       this.resolveDrop(card, pointer.x, pointer.y)
     })
@@ -547,8 +561,14 @@ export class GameScene extends Phaser.Scene {
   }
 
   private stagePending(card: ItemCard, zone: ZoneView) {
-    if (this.pending && this.pending.card !== card) this.tweenCardHome(this.pending.card)
+    if (this.pending && this.pending.card !== card) {
+      this.pending.card.staged = false
+      this.input.setDraggable(this.pending.card.container, true)
+      this.tweenCardHome(this.pending.card)
+    }
     this.pending = { card, zone }
+    card.staged = true
+    this.input.setDraggable(card.container, false)
     this.playTick()
 
     const slot = this.slotPosition(zone, zone.filled)
@@ -559,11 +579,7 @@ export class GameScene extends Phaser.Scene {
     })
     this.drawZoneFrame(zone.frame, zone.x, zone.y, zone.w, zone.h, this.zoneColor(zone.def.kind), true)
 
-    this.showConfirmBar(
-      `Você escolheu ${card.item.name}. É esse mesmo?`,
-      'Sim, é esse', () => this.confirmPending(),
-      'Trocar', () => this.cancelPending(),
-    )
+    this.showConfirmBar('', 'Escolher', () => this.confirmPending())
   }
 
   private confirmPending() {
@@ -572,6 +588,8 @@ export class GameScene extends Phaser.Scene {
     this.pending = undefined
     this.hideConfirmBar()
     this.clearZoneHighlights()
+    card.staged = false
+    this.input.setDraggable(card.container, true)
     this.judgeDrop(card, zone)
   }
 
@@ -581,8 +599,14 @@ export class GameScene extends Phaser.Scene {
     this.pending = undefined
     this.hideConfirmBar()
     this.clearZoneHighlights()
+    card.staged = false
+    this.input.setDraggable(card.container, false)
     this.playTick()
     this.tweenCardHome(card)
+    this.time.delayedCall(280, () => {
+      if (!card.placed) this.input.setDraggable(card.container, true)
+      if (this.suppressDropForCard === card) this.suppressDropForCard = undefined
+    })
   }
 
   private stageForAssembly(card: ItemCard, zone: ZoneView) {
@@ -1171,7 +1195,18 @@ export class GameScene extends Phaser.Scene {
   ) {
     this.hideConfirmBar()
 
+    const hasMessage = message.trim().length > 0
     const bar = this.add.container(640, BAR_Y).setDepth(80)
+
+    if (!hasMessage) {
+      bar.add(this.smallButton(0, 0, 220, okLabel, C.green, onOk))
+      bar.setAlpha(0).setY(BAR_Y + 20)
+      this.tweens.add({ targets: bar, alpha: 1, y: BAR_Y, duration: 180, ease: 'Back.easeOut' })
+      this.confirmBar = bar
+      this.confirmMsg = undefined
+      return
+    }
+
     const bg = this.add.graphics()
     bg.fillStyle(0x0B1220, 0.55)
     bg.fillRoundedRect(-404, -35, 808, 78, 22)
@@ -1199,7 +1234,6 @@ export class GameScene extends Phaser.Scene {
     this.tweens.add({ targets: bar, alpha: 1, y: BAR_Y, duration: 220, ease: 'Back.easeOut' })
     this.confirmBar = bar
   }
-
   private hideConfirmBar() {
     if (!this.confirmBar) return
     const bar = this.confirmBar

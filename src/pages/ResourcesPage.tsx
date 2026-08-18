@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import ConfirmModal from "../components/ConfirmModal";
 import { useGame } from "../context/useGame";
-import { games, getGameById } from "../data/games";
+import { games, getGameById } from "../data/gameIndex";
 import { useBeepSound } from "../hooks/useBeepSound";
 
 type UnlockTarget = {

@@ -32,6 +32,7 @@ export const LEVELS: LevelConfig[] = [
   },
   {
     level: 2,
+    confirmMode: 'porItem',
     timeLimit: 60,
     title: 'Cada peça com seu programa',
     objective: 'Arraste o programa que faz cada peça funcionar.',

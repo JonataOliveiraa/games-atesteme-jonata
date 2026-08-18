@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import { EventBus } from "../../../../shared/EventBus";
 import { runtimeGameBridge } from "../../../../shared/bridge/runtimeGameBridge";
+import { createTutorial, type TutorialStep } from "../../../../shared/tutorial/createTutorial";
 import { LEVELS } from "../data/levels";
 import type {
   InvestigationLevel,
@@ -45,6 +46,8 @@ export class GameScene extends Phaser.Scene {
 
   private timerBar?: Phaser.GameObjects.Graphics;
   private timerEvent?: Phaser.Time.TimerEvent;
+  private helpButton?: Phaser.GameObjects.Container;
+  private tutorialOpen = false;
 
   private startScreenObjects: Phaser.GameObjects.GameObject[] = [];
   private overlayObjects: Phaser.GameObjects.GameObject[] = [];
@@ -86,6 +89,7 @@ export class GameScene extends Phaser.Scene {
   create() {
     this.createBackground();
     this.createTimerBar();
+    EventBus.on("show-tutorial", this.replayTutorial, this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.onShutdown());
     this.showStartScreen();
   }
@@ -103,6 +107,7 @@ export class GameScene extends Phaser.Scene {
 
   private onShutdown() {
     this.timerEvent?.destroy();
+    EventBus.off("show-tutorial", this.replayTutorial, this);
     this.input.setDefaultCursor("default");
   }
 
@@ -308,8 +313,8 @@ export class GameScene extends Phaser.Scene {
       this.startScreenObjects = [];
       this.input.setDefaultCursor("default");
       runtimeGameBridge.emit({ type: "GAME_READY", gameId: GAME_ID });
-      this.startTimer();
       this.buildLevelUI();
+      this.runTutorial(true, () => this.startTimer());
     });
   }
 
@@ -358,15 +363,175 @@ export class GameScene extends Phaser.Scene {
       .setOrigin(0.5)
       .setDepth(6);
 
-    this.addSharpText(1146, 100, `Nível ${this.levelConfig.level}/3`, {
+    this.addSharpText(1128, 100, `Nível ${this.levelConfig.level}/3`, {
       fontSize: "18px",
       fontFamily: "Arial Black, Arial",
       color: "#f59e0b",
       backgroundColor: "rgba(26,5,5,0.82)",
       padding: { x: 14, y: 8 },
     }).setOrigin(0.5);
+
+    this.helpButton = this.createHelpButton(1212, 100);
   }
 
+  private createHelpButton(x: number, y: number) {
+    const btn = this.add.container(x, y).setDepth(65);
+    const bg = this.add.graphics();
+    bg.fillStyle(0x1c0a0a, 0.94);
+    bg.fillCircle(0, 0, 24);
+    bg.fillStyle(COLORS.amber, 0.16);
+    bg.fillCircle(0, -5, 15);
+    bg.lineStyle(3, COLORS.amber, 0.9);
+    bg.strokeCircle(0, 0, 24);
+
+    const label = this.addSharpText(0, -1, "?", {
+      fontSize: "26px",
+      fontFamily: "Arial Black, Arial",
+      color: "#fef3c7",
+      stroke: "#1a0505",
+      strokeThickness: 3,
+    }).setOrigin(0.5);
+
+    btn.add([bg, label]);
+    btn.setSize(58, 58);
+    btn.setInteractive(new Phaser.Geom.Circle(0, 0, 29), Phaser.Geom.Circle.Contains);
+    btn.on("pointerover", () => {
+      if (this.gameEnded || this.tutorialOpen) return;
+      this.input.setDefaultCursor("pointer");
+      this.tweens.add({ targets: btn, scale: 1.08, duration: 90 });
+    });
+    btn.on("pointerout", () => {
+      this.input.setDefaultCursor("default");
+      this.tweens.add({ targets: btn, scale: 1, duration: 90 });
+    });
+    btn.on("pointerdown", () => {
+      if (this.gameEnded || this.tutorialOpen) return;
+      this.playClick();
+      this.replayTutorial();
+    });
+    return btn;
+  }
+
+  private replayTutorial() {
+    if (this.startScreenObjects.length > 0 || this.gameEnded || this.tutorialOpen) return;
+    this.runTutorial(false);
+  }
+
+  private runTutorial(once: boolean, onDone?: () => void) {
+    if (this.tutorialOpen) {
+      onDone?.();
+      return;
+    }
+
+    this.tutorialOpen = true;
+    const timerWasPaused = this.timerEvent?.paused ?? false;
+    if (this.timerEvent) this.timerEvent.paused = true;
+
+    createTutorial(this, {
+      key: `investigacao-dados-risco-n${this.levelConfig.level}`,
+      once,
+      accent: COLORS.amber,
+      safeTop: 150,
+      steps: this.getTutorialSteps(),
+      onFinish: () => {
+        this.tutorialOpen = false;
+        if (this.timerEvent) this.timerEvent.paused = timerWasPaused;
+        onDone?.();
+      },
+    });
+  }
+
+  private getTutorialSteps(): TutorialStep[] {
+    const panelCX = PANEL_X + PANEL_W / 2;
+    const baseSteps: TutorialStep[] = [
+      {
+        text: "O tempo fica no topo. Investigue antes que ele acabe.",
+        shape: "rect",
+        x: 640,
+        y: TIMER_BAR_Y,
+        w: TIMER_BAR_W + 24,
+        h: 48,
+        balloonY: 176,
+      },
+    ];
+
+    if (this.levelConfig.level === 1) {
+      return [
+        ...baseSteps,
+        {
+          text: "Leia a pista no cartão central.",
+          shape: "rect",
+          x: panelCX,
+          y: PANEL_Y + PANEL_H / 2 - 50,
+          w: 640,
+          h: 210,
+          balloonY: 208,
+        },
+        {
+          text: "Escolha se essa informação é segura ou perigosa.",
+          shape: "rect",
+          x: panelCX,
+          y: PANEL_Y + PANEL_H - 90,
+          w: 650,
+          h: 116,
+          balloonY: 330,
+          buttonLabel: "Investigar",
+        },
+      ];
+    }
+
+    if (this.levelConfig.level === 2) {
+      return [
+        ...baseSteps,
+        {
+          text: "Leia o caso: alguém compartilhou um dado.",
+          shape: "rect",
+          x: panelCX,
+          y: PANEL_Y + 130,
+          w: 1040,
+          h: 130,
+        },
+        {
+          text: "Toque na consequência mais provável.",
+          shape: "rect",
+          x: panelCX,
+          y: PANEL_Y + PANEL_H - 138,
+          w: 1060,
+          h: 116,
+          buttonLabel: "Entendi",
+        },
+      ];
+    }
+
+    return [
+      ...baseSteps,
+      {
+        text: "Leia o incidente para entender o risco.",
+        shape: "rect",
+        x: panelCX,
+        y: PANEL_Y + 110,
+        w: 1020,
+        h: 126,
+      },
+      {
+        text: "No passo 1, encontre o erro. No passo 2, escolha a solução.",
+        shape: "rect",
+        x: panelCX,
+        y: PANEL_Y + 220,
+        w: 1040,
+        h: 86,
+      },
+      {
+        text: "Analise as três opções e escolha a melhor resposta.",
+        shape: "rect",
+        x: panelCX,
+        y: PANEL_Y + PANEL_H - 140,
+        w: 1060,
+        h: 128,
+        buttonLabel: "Começar",
+      },
+    ];
+  }
   // ─── Panel Background ───────────────────────────────────────────────────────
 
   private drawPanelBg() {

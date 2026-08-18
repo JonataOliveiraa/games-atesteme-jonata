@@ -1,7 +1,6 @@
 import Phaser from 'phaser'
 
 import bgMuseumUrl from '../../../../assets/games/EF02CO04/museu-vivo-do-computador/bg-museum.png'
-import bgLoadingUrl from '../../../../assets/games/EF02CO04/museu-vivo-do-computador/bg-loading.png'
 
 import hwKeyboardUrl from '../../../../assets/games/EF02CO04/museu-vivo-do-computador/hw-keyboard.png'
 import hwMouseUrl from '../../../../assets/games/EF02CO04/museu-vivo-do-computador/hw-mouse.png'

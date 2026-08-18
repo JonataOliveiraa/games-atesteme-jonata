@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { games } from "../data/games";
+import { games } from "../data/gameIndex";
 import { useGame } from "../context/useGame";
 import {
   getGameRanking,

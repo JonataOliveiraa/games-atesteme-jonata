@@ -1,18 +1,94 @@
 import Phaser from 'phaser'
 
-import bgKitchenUrl from '../../../../assets/games/EF03CO03/chef-dos-subproblemas/bg-kitchen.png'
-import bgLoadingUrl from '../../../../assets/games/EF03CO03/chef-dos-subproblemas/bg-loading.png'
-import characterChefUrl from '../../../../assets/games/EF03CO03/chef-dos-subproblemas/character-chef.png'
-import iconCheckUrl from '../../../../assets/games/EF03CO03/chef-dos-subproblemas/icon-check-subtask.png'
-import cardTaskUrl from '../../../../assets/games/EF03CO03/chef-dos-subproblemas/ard-subtask.png'
-import slotBgUrl from '../../../../assets/games/EF03CO03/chef-dos-subproblemas/slot-bg.png'
+import bgChefBancadaUrl from '../../../../assets/games/EF03CO03/chef-dos-subproblemas/bg-chef-bancada.png'
+import coverUrl from '../../../../assets/games/EF03CO03/chef-dos-subproblemas/cover-chef-dos-subproblemas.png'
+
+import c1Url from '../../../../assets/games/EF03CO03/chef-dos-subproblemas/c1.png'
+import c2Url from '../../../../assets/games/EF03CO03/chef-dos-subproblemas/c2.png'
+import c3Url from '../../../../assets/games/EF03CO03/chef-dos-subproblemas/c3.png'
+import c4Url from '../../../../assets/games/EF03CO03/chef-dos-subproblemas/c4.png'
+import c5Url from '../../../../assets/games/EF03CO03/chef-dos-subproblemas/c5.png'
+import c6Url from '../../../../assets/games/EF03CO03/chef-dos-subproblemas/c6.png'
+import c7Url from '../../../../assets/games/EF03CO03/chef-dos-subproblemas/c7.png'
+import c8Url from '../../../../assets/games/EF03CO03/chef-dos-subproblemas/c8.png'
+
+import missionBreakfastUrl from '../../../../assets/games/EF03CO03/chef-dos-subproblemas/icon-missao-cafe-manha.png'
+import missionLunchboxUrl from '../../../../assets/games/EF03CO03/chef-dos-subproblemas/icone-missao-lancheira.png'
+import missionPicnicUrl from '../../../../assets/games/EF03CO03/chef-dos-subproblemas/icone-missao-piquenique.png'
+
+import iconAguaUrl from '../../../../assets/games/EF03CO03/chef-dos-subproblemas/icone-agua.png'
+import iconAmpulhetaUrl from '../../../../assets/games/EF03CO03/chef-dos-subproblemas/icone-ampulheta.png'
+import iconBoloUrl from '../../../../assets/games/EF03CO03/chef-dos-subproblemas/icone-bolo.png'
+import iconCafeUrl from '../../../../assets/games/EF03CO03/chef-dos-subproblemas/icone-cafe.png'
+import iconCestaVaziaUrl from '../../../../assets/games/EF03CO03/chef-dos-subproblemas/icone-cesta-vazia.png'
+import iconCopoUrl from '../../../../assets/games/EF03CO03/chef-dos-subproblemas/icone-copo.png'
+import iconLancheUrl from '../../../../assets/games/EF03CO03/chef-dos-subproblemas/icone-lanche.png'
+import iconSanduicheUrl from '../../../../assets/games/EF03CO03/chef-dos-subproblemas/icone-sanduiche.png'
+// Quadros de estado usados nas sequências (ver comentário em ASSETS).
+import iconCestaFechadaUrl from '../../../../assets/games/EF03CO03/chef-dos-subproblemas/icone-cesta-fechada-com-pano.png'
+import iconMassaNaFormaUrl from '../../../../assets/games/EF03CO03/chef-dos-subproblemas/icone-massa-na-forma.png'
+import iconMesaPostaUrl from '../../../../assets/games/EF03CO03/chef-dos-subproblemas/icone-talheres-na-mesa.png'
+import iconPanelaFervendoUrl from '../../../../assets/games/EF03CO03/chef-dos-subproblemas/icone-panela-fervendo.png'
+import iconPratoComTalherUrl from '../../../../assets/games/EF03CO03/chef-dos-subproblemas/icone-talher-e-prato.png'
+import iconGuardanapoUrl from '../../../../assets/games/EF03CO03/chef-dos-subproblemas/icone-guardanapo.png'
+import iconIngredientesUrl from '../../../../assets/games/EF03CO03/chef-dos-subproblemas/icone-ingredientes.png'
+import iconMacaUrl from '../../../../assets/games/EF03CO03/chef-dos-subproblemas/icone-maca.png'
+import iconManteigaUrl from '../../../../assets/games/EF03CO03/chef-dos-subproblemas/icone-manteiga.png'
+import iconPanelaUrl from '../../../../assets/games/EF03CO03/chef-dos-subproblemas/icone-panela.png'
+import iconPaoUrl from '../../../../assets/games/EF03CO03/chef-dos-subproblemas/icone-pao.png'
+import iconPratoUrl from '../../../../assets/games/EF03CO03/chef-dos-subproblemas/icone-prato.png'
+import iconQueijoUrl from '../../../../assets/games/EF03CO03/chef-dos-subproblemas/icone-queijo.png'
+import iconSucoUrl from '../../../../assets/games/EF03CO03/chef-dos-subproblemas/icone-suco.png'
+import iconTalherUrl from '../../../../assets/games/EF03CO03/chef-dos-subproblemas/icone-talher.png'
 
 const ASSETS: Array<[string, string]> = [
-  ['bg-kitchen', bgKitchenUrl],
-  ['character-chef', characterChefUrl],
-  ['icon-check', iconCheckUrl],
-  ['card-task', cardTaskUrl],
-  ['slot-bg', slotBgUrl],
+  ['bg-chef-bancada', bgChefBancadaUrl],
+  ['cover-chef-dos-subproblemas', coverUrl],
+  ['chef-c1', c1Url],
+  ['chef-c2', c2Url],
+  ['chef-c3', c3Url],
+  ['chef-c4', c4Url],
+  ['chef-c5', c5Url],
+  ['chef-c6', c6Url],
+  ['chef-c7', c7Url],
+  ['chef-c8', c8Url],
+  ['mission-breakfast', missionBreakfastUrl],
+  ['mission-lunchbox', missionLunchboxUrl],
+  ['mission-picnic', missionPicnicUrl],
+  ['icon-agua', iconAguaUrl],
+  ['icon-ampulheta', iconAmpulhetaUrl],
+  ['icon-bolo', iconBoloUrl],
+  ['icon-cafe', iconCafeUrl],
+  ['icon-copo', iconCopoUrl],
+  ['icon-guardanapo', iconGuardanapoUrl],
+  ['icon-ingredientes', iconIngredientesUrl],
+  ['icon-maca', iconMacaUrl],
+  ['icon-manteiga', iconManteigaUrl],
+  ['icon-panela', iconPanelaUrl],
+  ['icon-pao', iconPaoUrl],
+  ['icon-prato', iconPratoUrl],
+  ['icon-queijo', iconQueijoUrl],
+  ['icon-suco', iconSucoUrl],
+  ['icon-talher', iconTalherUrl],
+  // Ícones de prato (grupo), não de ação: representam o subproblema inteiro.
+  ['icon-sanduiche', iconSanduicheUrl],
+  ['icon-lanche', iconLancheUrl],
+  /*
+   * QUADROS DE ESTADO.
+   *
+   * A etapa de ordenar não usa ícones de objeto: usa o MESMO objeto em
+   * momentos diferentes. É o que torna a ordem legível sem texto — ninguém
+   * põe a cesta já fechada em primeiro. Cada sequência é
+   * "estado inicial → o que se acrescenta → estado final".
+   */
+  ['icon-prato-com-talher', iconPratoComTalherUrl],
+  ['icon-mesa-posta', iconMesaPostaUrl],
+  ['icon-panela-fervendo', iconPanelaFervendoUrl],
+  ['icon-cesta-fechada', iconCestaFechadaUrl],
+  ['icon-massa-na-forma', iconMassaNaFormaUrl],
+  // O conteúdo de N2/N3 sempre pediu `icon-cesto`; agora existe o arquivo de
+  // verdade e o alias provisório para `icone-ingredientes` pôde sair.
+  ['icon-cesto', iconCestaVaziaUrl],
 ]
 
 export class BootScene extends Phaser.Scene {
@@ -21,40 +97,52 @@ export class BootScene extends Phaser.Scene {
   }
 
   preload() {
-    this.load.image('bg-loading', bgLoadingUrl)
     this.createLoadingScreen()
     ASSETS.forEach(([key, url]) => this.load.image(key, url))
   }
 
   create() {
     this.scene.start('GameScene')
-    this.scene.launch('UIScene')
   }
 
   private createLoadingScreen() {
-    const fallback = this.add.rectangle(640, 360, 1280, 720, 0x3e2723).setDepth(0)
+    this.cameras.main.setBackgroundColor('#050504')
 
-    this.load.once('filecomplete-image-bg-loading', () => {
-      fallback.destroy()
-      this.add.image(640, 360, 'bg-loading').setDisplaySize(1280, 720).setDepth(0)
-    })
+    const bg = this.add.graphics().setDepth(0)
+    bg.fillStyle(0x050504, 1)
+    bg.fillRect(0, 0, 1280, 720)
+    bg.fillStyle(0xf0bc59, 0.12)
+    bg.fillRoundedRect(210, 158, 860, 382, 36)
+    bg.lineStyle(4, 0xf0bc59, 0.76)
+    bg.strokeRoundedRect(210, 158, 860, 382, 36)
 
-    this.add.text(640, 296, 'Chef dos Subproblemas', {
-      fontSize: '48px', fontFamily: 'Arial Black, Arial',
-      color: '#FFF3E0', stroke: '#000000', strokeThickness: 7,
+    this.add.text(640, 282, 'Chef dos Subproblemas', {
+      fontFamily: 'Arial Black, Arial',
+      fontSize: '48px',
+      color: '#f7f6f2',
       align: 'center',
-    }).setOrigin(0.5).setDepth(1)
+    }).setOrigin(0.5).setDepth(1).setResolution(2)
 
-    this.add.text(640, 390, 'Preparando os subproblemas...', {
-      fontSize: '26px', fontFamily: 'Arial', color: '#FFCC80',
-    }).setOrigin(0.5).setDepth(1)
+    this.add.text(640, 344, 'Preparando a bancada...', {
+      fontFamily: 'Arial',
+      fontStyle: 'bold',
+      fontSize: '24px',
+      color: '#f0bc59',
+      align: 'center',
+    }).setOrigin(0.5).setDepth(1).setResolution(2)
 
-    const barW = 500
-    const barBg = this.add.rectangle(640, 450, barW + 8, 20, 0x3e2723)
-      .setStrokeStyle(2, 0xFFCC80).setDepth(1)
-    const bar = this.add.rectangle(640 - barW / 2, 450, 4, 16, 0xFFCC80)
-      .setOrigin(0, 0.5).setDepth(2)
-    void barBg
-    this.load.on('progress', (v: number) => { bar.setSize(Math.max(4, barW * v), 16) })
+    const barW = 480
+    const barBg = this.add.graphics().setDepth(1)
+    barBg.fillStyle(0xf7f6f2, 0.18)
+    barBg.fillRoundedRect(640 - barW / 2, 414, barW, 20, 10)
+
+    const bar = this.add.graphics().setDepth(2)
+    const paint = (v: number) => {
+      bar.clear()
+      bar.fillStyle(0xf0bc59, 1)
+      bar.fillRoundedRect(640 - barW / 2, 414, Math.max(16, barW * v), 20, 10)
+    }
+    paint(0.04)
+    this.load.on('progress', paint)
   }
 }
