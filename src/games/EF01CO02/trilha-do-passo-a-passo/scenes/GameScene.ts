@@ -134,7 +134,7 @@ export class GameScene extends Phaser.Scene {
             });
         });
 
-        container.add([bg, thinkingBot, title, sub, startBtn]);
+        container.add([bg, thinkingBot, sub, startBtn]);
     }
 
     private startGameLogic() {

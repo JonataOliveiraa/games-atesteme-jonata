@@ -28,7 +28,7 @@ const C = {
   red: 0xf06a5f,
   redSoft: 0x3f2024,
   grey: 0x7f94aa,
-  greySoft: 0x20364d,
+  greySoft: 0x8da0b5,
   white: 0xffffff,
   shadow: 0x02070d,
 }
@@ -120,7 +120,7 @@ export class GameScene extends Phaser.Scene {
     this.tweens.add({ targets: bg, x: W / 2 + 12, duration: 5200, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
 
     const veil = this.add.graphics().setDepth(-2)
-    veil.fillStyle(C.sky, 0.78)
+    veil.fillStyle(C.sky, 0.28)
     veil.fillRect(0, 0, W, H)
   }
 

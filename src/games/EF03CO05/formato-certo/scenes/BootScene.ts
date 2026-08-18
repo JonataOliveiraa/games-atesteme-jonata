@@ -1,68 +1,53 @@
-import Phaser from "phaser";
+import Phaser from 'phaser'
+import { createLoadingScreen } from '../../../../shared/loading/createLoadingScreen'
+import { C } from '../data/theme'
 
-import successBadgeUrl from "../../../../assets/games/EF02CO02/desfile-do-robo-repetidor/success-badge.png";
-import bgDateFormatUrl from "../../../../assets/games/EF03CO05/formato-certo/bg-date-format.png";
-import bgTextFormatUrl from "../../../../assets/games/EF03CO05/formato-certo/bg-text-format.png";
-import dataColorBlueUrl from "../../../../assets/games/EF03CO05/formato-certo/data-color-blue.png";
-import dataColorRedUrl from "../../../../assets/games/EF03CO05/formato-certo/data-color-red.png";
-import dataColorYellowUrl from "../../../../assets/games/EF03CO05/formato-certo/data-color-yellow.png";
-import dataDashUrl from "../../../../assets/games/EF03CO05/formato-certo/data-dash.png";
-import dataDay18Url from "../../../../assets/games/EF03CO05/formato-certo/data-day-18.png";
-import dataLetterAUrl from "../../../../assets/games/EF03CO05/formato-certo/data-letter-a.png";
-import dataNumber1Url from "../../../../assets/games/EF03CO05/formato-certo/data-number-1.png";
-import dataNumber2Url from "../../../../assets/games/EF03CO05/formato-certo/data-number-2.png";
-import dataRoom4Url from "../../../../assets/games/EF03CO05/formato-certo/data-room-4.png";
-import dataStarExtraUrl from "../../../../assets/games/EF03CO05/formato-certo/data-star-extra.png";
-import dataYear2026Url from "../../../../assets/games/EF03CO05/formato-certo/data-year-2026.png";
-import dataStreetSignUrl from "../../../../assets/games/EF03CO04/montador-de-informacoes/data-street-sign.png";
-import formatDateBoxUrl from "../../../../assets/games/EF03CO05/formato-certo/format-date-box.png";
-
-const ASSETS: Array<[string, string]> = [
-  ["success-badge", successBadgeUrl],
-  ["bg-date-format", bgDateFormatUrl],
-  ["bg-text-format", bgTextFormatUrl],
-  ["format-date-box", formatDateBoxUrl],
-  ["data-color-blue", dataColorBlueUrl],
-  ["data-color-red", dataColorRedUrl],
-  ["data-color-yellow", dataColorYellowUrl],
-  ["data-dash", dataDashUrl],
-  ["data-day-18", dataDay18Url],
-  ["data-letter-a", dataLetterAUrl],
-  ["data-number-1", dataNumber1Url],
-  ["data-number-2", dataNumber2Url],
-  ["data-room-4", dataRoom4Url],
-  ["data-star-extra", dataStarExtraUrl],
-  ["data-street-sign", dataStreetSignUrl],
-  ["data-year-2026", dataYear2026Url],
-];
-
+/**
+ * Não há assets para carregar.
+ *
+ * Caixa, campo, peça, leitor e cenário são todos desenhados em Graphics — ver
+ * VISUAL.md §1. A cena existe para dar à plataforma o mesmo ritmo de abertura
+ * dos outros jogos e para servir de gancho caso arte volte a entrar.
+ */
 export class BootScene extends Phaser.Scene {
-  constructor() {
-    super({ key: "BootScene" });
-  }
+    constructor() {
+        super({ key: 'BootScene' })
+    }
 
-  preload() {
-    this.createLoadingScreen();
-    ASSETS.forEach(([key, url]) => this.load.image(key, url));
-  }
+    preload() {
+        createLoadingScreen(this, {
+            title: 'Formato Certo',
+            subtitle: 'Eureka!',
+            description: 'Ligando a bancada...',
+            theme: {
+                background: {
+                    kind: 'dots',
+                    base: C.wall,
+                    color: C.white,
+                    alpha: 0.05,
+                    size: 34,
+                    radius: 2,
+                },
 
-  create() {
-    this.scene.start("GameScene");
-  }
+                card: C.wallLight,
+                cardShadow: C.shadow,
+                cardHighlight: C.white,
+                cardBorder: C.pixels,
 
-  private createLoadingScreen() {
-    this.add.rectangle(640, 360, 1280, 720, 0xe0f7ff);
-    this.add.text(640, 296, "Formato Certo", {
-      fontSize: "52px",
-      fontFamily: "Arial Black, Arial",
-      color: "#25327a",
-      stroke: "#ffffff",
-      strokeThickness: 8,
-    }).setOrigin(0.5);
-    this.add.text(640, 374, "Preparando formatos...", {
-      fontSize: "26px",
-      fontFamily: "Arial Black, Arial",
-      color: "#334155",
-    }).setOrigin(0.5);
-  }
+                title: C.cream,
+                subtitle: C.pixels,
+                description: C.idle,
+                titleStroke: C.ink,
+
+                progressTrack: C.ink,
+                progressBorder: C.idle,
+                progressFill: C.ok,
+                progressHighlight: C.okSoft,
+            },
+        })
+    }
+
+    create() {
+        this.scene.start('GameScene')
+    }
 }

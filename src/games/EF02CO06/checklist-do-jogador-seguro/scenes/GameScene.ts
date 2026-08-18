@@ -77,7 +77,7 @@ export class GameScene extends Phaser.Scene {
     this.buildBackground()
     this.buildConfirm()
     this.buildRound()
-    this.registerEvents() 
+    this.registerEvents()
 
     runtimeGameBridge.emit({ type: 'GAME_READY', gameId: GAME_ID })
     this.broadcastMission()
@@ -155,10 +155,20 @@ export class GameScene extends Phaser.Scene {
       this.delayedTimer = this.time.delayedCall(round.delayedItem.appearAfterMs, () => {
         if (this.ended) return
         const item = ALL_SECURITY_ITEMS.find(it => it.id === round.delayedItem!.itemId)!
-        this.cards.push(
-          this.makeCard(item, round.delayedItem!.initialOn, slot.x, slot.y, 0, true),
+        const delayedCard = this.makeCard(
+          item,
+          round.delayedItem!.initialOn,
+          slot.x,
+          slot.y,
+          0,
+          true,
         )
+
+        this.cards.push(delayedCard)
         this.awaitingRisk = false
+
+        delayedCard.lock(this.locked || this.ended)
+
         this.refreshConfirm()
         this.showRiskAlert(round.delayedItem!.alertText)
         this.playAlert()

@@ -9,7 +9,9 @@ import hammerUrl from '../../../../assets/games/EF03CO01/tribunal-do-verdadeiro-
 import effectStarUrl from '../../../../assets/games/EF03CO01/tribunal-do-verdadeiro-ou-falso/effect-star.png'
 import effectWrongUrl from '../../../../assets/games/EF03CO01/tribunal-do-verdadeiro-ou-falso/effect-wrong.png'
 import badgeLevelUrl from '../../../../assets/games/EF03CO01/tribunal-do-verdadeiro-ou-falso/badge-level.png'
+
 import { createLoadingScreen } from '../../../../shared/loading/createLoadingScreen'
+import { C } from '../data/theme'
 
 const ASSETS: Array<[string, string]> = [
   ['bg-tribunal', bgTribunalUrl],
@@ -19,7 +21,7 @@ const ASSETS: Array<[string, string]> = [
   ['effect-star', effectStarUrl],
   ['effect-wrong', effectWrongUrl],
   ['badge-level', badgeLevelUrl],
-  ['hammer', hammerUrl]
+  ['hammer', hammerUrl],
 ]
 
 export class BootScene extends Phaser.Scene {
@@ -29,36 +31,39 @@ export class BootScene extends Phaser.Scene {
 
   preload() {
     this.load.image('bg-loading', bgLoadingUrl)
+
+    // A tela de carregamento puxa do mesmo `theme` que o jogo: trocar a
+    // paleta em um lugar repinta as duas, sem hexadecimal duplicado aqui.
     createLoadingScreen(this, {
       title: 'Tribunal do Verdadeiro ou Falso',
       subtitle: 'Eureka!',
-      description: 'Entrando...',
+      description: 'Entrando na sala...',
       theme: {
         background: {
           kind: 'stripes',
-          base: 0x3a1f1b,
-          color: 0xd8b98a,
+          base: C.ink,
+          color: C.brassDark,
           alpha: 0.08,
           size: 68,
-          
         },
 
-        card: 0x6b3f2a,
-        cardShadow: 0x24120f,
-        cardHighlight: 0xf7e7c6,
-        cardBorder: 0xd5a24c,
+        card: C.woodMid,
+        cardShadow: C.shadow,
+        cardHighlight: C.cream,
+        cardBorder: C.brass,
 
-        title: 0xfff3da,
-        subtitle: 0xd95b4f,
-        description: 0xf0d9b5,
-        titleStroke: 0x2a1411,
+        title: C.cream,
+        subtitle: C.amber,
+        description: C.brassDim,
+        titleStroke: C.ink,
 
-        progressTrack: 0x321b17,
-        progressBorder: 0xd5a24c,
-        progressFill: 0xa83f35,
-        progressHighlight: 0xffe7bd,
+        progressTrack: C.wood,
+        progressBorder: C.brass,
+        progressFill: C.amber,
+        progressHighlight: C.brassDim,
       },
     })
+
     ASSETS.forEach(([key, url]) => this.load.image(key, url))
   }
 

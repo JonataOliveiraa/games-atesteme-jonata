@@ -1,7 +1,7 @@
 import Phaser from 'phaser'
+import { createLoadingScreen } from '../../../../shared/loading/createLoadingScreen'
 
 import bgDeviceUrl from '../../../../assets/games/EF02CO06/checklist-do-jogador-seguro/bg-device.png'
-import bgLoadingUrl from '../../../../assets/games/EF02CO06/checklist-do-jogador-seguro/bg-loading.png'
 
 import iconShieldOkUrl from '../../../../assets/games/EF02CO06/checklist-do-jogador-seguro/icon-shield-ok.png'
 import iconShieldWarnUrl from '../../../../assets/games/EF02CO06/checklist-do-jogador-seguro/icon-shield-warn.png'
@@ -17,8 +17,27 @@ import toggleOffUrl from '../../../../assets/games/EF02CO06/checklist-do-jogador
 
 import characterPlayersUrl from '../../../../assets/games/EF02CO06/checklist-do-jogador-seguro/character-players.png'
 
+const C = {
+  bg: 0x0d47a1,
+  bgDeep: 0x0b2f6b,
+
+  panel: 0xe3f2fd,
+  shadow: 0x000000,
+  white: 0xffffff,
+
+  blue: 0x1565c0,
+  blueDark: 0x0d47a1,
+
+  yellow: 0xffd166,
+  yellowDark: 0xf59e0b,
+
+  ink: 0x102a43,
+  muted: 0x35516d,
+}
+
 const ASSETS: Array<[string, string]> = [
   ['bg-device', bgDeviceUrl],
+
   ['icon-shield-ok', iconShieldOkUrl],
   ['icon-shield-warn', iconShieldWarnUrl],
   ['icon-password', iconPasswordUrl],
@@ -27,8 +46,10 @@ const ASSETS: Array<[string, string]> = [
   ['icon-purchases', iconPurchasesUrl],
   ['icon-strangers', iconStrangersUrl],
   ['icon-privacity', iconPrivacityUrl],
+
   ['toggle-on', toggleOnUrl],
   ['toggle-off', toggleOffUrl],
+
   ['character-players', characterPlayersUrl],
 ]
 
@@ -38,48 +59,43 @@ export class BootScene extends Phaser.Scene {
   }
 
   preload() {
-    this.load.image('bg-loading', bgLoadingUrl)
-    this.createLoadingScreen()
+    createLoadingScreen(this, {
+      title: 'Checklist',
+      subtitle: 'DO JOGADOR SEGURO',
+      description: 'Preparando as configuracoes de seguranca',
+      theme: {
+        background: {
+          kind: 'stripes',
+          base: C.bg,
+          color: C.yellow,
+          alpha: 0.12,
+          size: 24,
+          gap: 54,
+          angle: 'diagonal',
+        },
+
+        card: C.panel,
+        cardShadow: C.shadow,
+        cardHighlight: C.white,
+        cardBorder: C.yellow,
+
+        title: C.blueDark,
+        subtitle: C.yellowDark,
+        description: C.muted,
+        titleStroke: C.white,
+
+        progressTrack: C.bgDeep,
+        progressBorder: C.white,
+        progressFill: C.yellow,
+        progressHighlight: C.white,
+      },
+    })
+
     ASSETS.forEach(([key, url]) => this.load.image(key, url))
   }
 
   create() {
     this.scene.launch('UIScene')
     this.scene.start('GameScene')
-  }
-
-  private createLoadingScreen() {
-    const fallback = this.add.rectangle(640, 360, 1280, 720, 0x0D1B2A).setDepth(0)
-
-    this.load.once('filecomplete-image-bg-loading', () => {
-      fallback.destroy()
-      this.add.image(640, 360, 'bg-loading').setDisplaySize(1280, 720).setDepth(0)
-    })
-
-    this.add.text(640, 310, 'Checklist do Jogador Seguro', {
-      fontSize: '38px',
-      fontFamily: 'Arial Black, Arial',
-      color: '#E3F2FD',
-      stroke: '#000000',
-      strokeThickness: 6,
-      align: 'center',
-      wordWrap: { width: 900 },
-    }).setOrigin(0.5).setDepth(1)
-
-    this.add.text(640, 390, 'Preparando as configurações de segurança...', {
-      fontSize: '22px',
-      fontFamily: 'Arial',
-      color: '#90CAF9',
-    }).setOrigin(0.5).setDepth(1)
-
-    const barW = 500
-    const barBg = this.add.rectangle(640, 450, barW + 8, 20, 0x0D1B2A)
-      .setStrokeStyle(2, 0x4FC3F7).setDepth(1)
-    const bar = this.add.rectangle(640 - barW / 2, 450, 4, 16, 0x4FC3F7).setOrigin(0, 0.5).setDepth(1)
-    void barBg
-
-    this.load.on('progress', (v: number) => {
-      bar.setSize(Math.max(4, barW * v), 16)
-    })
   }
 }

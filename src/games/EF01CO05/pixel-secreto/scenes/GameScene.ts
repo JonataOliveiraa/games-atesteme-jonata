@@ -646,12 +646,12 @@ export class GameScene extends Phaser.Scene {
 
       const swatch = this.add.graphics();
       swatch.fillStyle(item.color, 1);
-      swatch.fillRoundedRect(-110, -20, 48, 42, 12);
+      swatch.fillRoundedRect(-110, -21, 48, 42, 12);
       swatch.lineStyle(4, 0x334155, 0.7);
-      swatch.strokeRoundedRect(-110, -20, 48, 42, 12);
+      swatch.strokeRoundedRect(-110, -21, 48, 42, 12);
 
       const code = this.add
-        .text(-86, 1, item.code, {
+        .text(-86, -2, item.code, {
           fontSize: "22px",
           fontFamily: "Arial Black, Arial",
           color: item.textColor ?? "#ffffff",
@@ -661,7 +661,7 @@ export class GameScene extends Phaser.Scene {
         .setOrigin(0.5);
 
       const label = this.add
-        .text(-44, 0, item.label, {
+        .text(-38, 0, item.label, {
           fontSize: "21px",
           fontFamily: "Arial Black, Arial",
           color: "#25327a",

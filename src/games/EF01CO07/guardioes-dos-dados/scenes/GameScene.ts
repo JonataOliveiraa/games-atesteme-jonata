@@ -252,11 +252,11 @@ export class GameScene extends Phaser.Scene {
     const steps: TutorialStep[] = [
       {
         text: "Leia a situação com atenção.",
-        shape: "rect", x: 640, y: 564, w: 1000, h: 160,
+        shape: "rect", x: 640, y: 564, w: 1000, h: 160, balloonY: 300,
       },
       {
         text: "Toque na atitude que parece mais segura.",
-        shape: "rect", x: 640, y: 686, w: 940, h: 90,
+        shape: "rect", x: 640, y: 686, w: 940, h: 90, balloonY: 440
       },
       {
         text: "O tempo passa aqui em cima. Responda antes que acabe!",
