@@ -7,14 +7,14 @@ import { showLevelComplete, type LevelCompleteHandle } from '../../../../shared/
 import { FX, Ease } from '../../../../shared/effects/FX'
 
 import { LEVELS, TOTAL_MISSIONS, FORMAT_INFO, shufflePieces } from '../data/missions'
-import { C, formatTone } from '../data/theme'
+import { C, A, formatTone } from '../data/theme'
 import { W, HUD, BENCH, REQUEST, BOXES, TRAY, READER } from '../data/layout'
 import type {
     BoxReading, FormatBoxSpec, FormatId, Level, Mission, MissionState, Piece,
 } from '../types'
 import {
     createHud, createTimerBar, createRequestCard, createFormatBox, createPiece,
-    createBigButton, drawBoxPreview, paintWorkbench, paintTray, showToast,
+    createBigButton, drawBoxPreview, createWorkbench, paintTray, showToast,
     flyToField, dealIn,
     type Hud, type TimerBar, type RequestCard, type FormatBox, type PieceView,
     type BigButton, type FieldView,
@@ -97,9 +97,24 @@ export class GameScene extends Phaser.Scene {
         super({ key: 'GameScene' })
     }
 
-    init(data: { level?: number; points?: number }) {
-        this.levelIdx = Phaser.Math.Clamp(data?.level ?? 1, 1, 3) - 1
-        this.missionIdx = 0
+    /**
+     * Ponto de entrada da partida.
+     *
+     * `level` é 1-based e `phase` é 0-based, para bater com o resto da
+     * plataforma: o `stage` que a bridge manda é o número do nível como a
+     * criança o vê, e a fase é índice de array. Mesma assinatura do Museu das
+     * Estruturas, que já abre assim.
+     *
+     * Os dois são grampeados ao que existe de verdade. Um `phase: 7` num
+     * nível de três missões faria `this.mission` devolver `undefined`, e o
+     * estouro apareceria três telas adiante, dentro do `playMission`, sem
+     * nenhuma pista de que veio daqui.
+     */
+    init(data: { level?: number; phase?: number; points?: number }) {
+        this.levelIdx = Phaser.Math.Clamp(data?.level ?? 1, 1, LEVELS.length) - 1
+        this.missionIdx = Phaser.Math.Clamp(
+            data?.phase ?? 0, 0, LEVELS[this.levelIdx].missions.length - 1,
+        )
         this.points = data?.points ?? 0
         this.hits = 0
         this.errors = 0
@@ -129,8 +144,7 @@ export class GameScene extends Phaser.Scene {
     create() {
         this.events.once(Phaser.Scenes.Events.SHUTDOWN, this.shutdownScene, this)
 
-        const bg = this.add.graphics().setDepth(-20)
-        paintWorkbench(bg)
+        createWorkbench(this)
 
         this.trayPanel = this.add.graphics().setDepth(8)
         paintTray(this.trayPanel)
@@ -139,7 +153,7 @@ export class GameScene extends Phaser.Scene {
         this.hud.setLevel(this.level.level)
         this.hud.setTitle(this.level.title)
         this.hud.setHint(this.level.tip)
-        this.hud.setProgress(0, this.level.missions.length)
+        this.hud.setProgress(this.missionIdx, this.level.missions.length)
 
         this.timerBar = createTimerBar(this)
         this.requestCard = createRequestCard(this)
@@ -166,7 +180,9 @@ export class GameScene extends Phaser.Scene {
         runtimeGameBridge.emit({ type: 'GAME_READY', gameId: GAME_ID })
         this.emitCheckpoint()
 
-        void this.playMission(true)
+        // O tutorial é a abertura do nível, não de uma missão qualquer: quem
+        // entra direto na fase 3 para testar não quer ser apresentado ao jogo.
+        void this.playMission(this.missionIdx === 0)
     }
 
     private shutdownScene() {
@@ -209,6 +225,18 @@ export class GameScene extends Phaser.Scene {
         const gen = ++this.gen
 
         this.state = 'briefing'
+        /*
+         * `locked` é estado de MOMENTO, não de missão, e precisa zerar aqui
+         * junto com o resto.
+         *
+         * Sem esta linha, a missão que termina bem deixa a trava ligada: o
+         * `onRead` liga antes de ler e o caminho de sucesso vai direto para o
+         * `advance()` sem desligar. A missão seguinte montava as caixas e
+         * entrava em 'choosing' normalmente, mas todo clique morria no
+         * `if (this.locked)` do `onChoose` — as caixas até reagiam ao passar o
+         * mouse, porque o hover só olha `tappable`, e só o clique sumia.
+         */
+        this.locked = false
         this.clearBoard()
         this.stopTimer()
         this.timerBar.set(1)
@@ -222,6 +250,15 @@ export class GameScene extends Phaser.Scene {
 
         const m = this.mission
         this.hud.setProgress(this.missionIdx, this.level.missions.length)
+        /*
+         * Cada missão traz a sua própria dica em `missions.ts`, e nenhuma
+         * delas aparecia na tela: o HUD mostrava a dica do NÍVEL, escrita uma
+         * vez no `create()` e nunca trocada. No N2 é justamente a dica da
+         * missão que carrega a informação que falta — "o convite quer o mês
+         * por extenso, o nome da foto quer o número" — sem a qual as duas
+         * peças escritas `18` são indistinguíveis para quem está jogando.
+         */
+        this.hud.setHint(m.hint)
         this.emitCheckpoint()
 
         await this.requestCard.show(m.request, m.requestIcon)
@@ -380,9 +417,46 @@ export class GameScene extends Phaser.Scene {
             FX.popIn(this, box.container, { from: 0.84, delay: 100 + i * 110, duration: 380 })
         })
 
-        this.buildTray()
+        const dealt = this.buildTray()
         this.applyPresets()
         this.syncReadButton()
+
+        // depois da cascata de entrada: o `popIn` tenciona alfa até 1 e
+        // apagaria qualquer peça que já tivesse sido escurecida antes dele
+        const gen = this.gen
+        void dealt.then(() => {
+            if (gen !== this.gen) return
+            this.syncTrayLocks()
+        })
+    }
+
+    /**
+     * Peça que só serve a caixa trancada entra apagada.
+     *
+     * No N2 a bandeja mostra desde o início as peças das DUAS caixas, mas só
+     * a primeira aceita alguma coisa. Sem sinal nenhum, metade da bandeja
+     * simplesmente não funciona e não há como saber por quê — foi a maior
+     * fonte de confusão do nível. Apagada, a peça se explica sozinha, e
+     * acende junto com a caixa dela.
+     *
+     * A intrusa nunca apaga: ela é isca por projeto, e apagá-la entregaria a
+     * resposta antes de a criança pensar.
+     */
+    private syncTrayLocks() {
+        if (this.boxes.length < 2) return
+
+        const open = new Set<string>()
+        const locked = new Set<string>()
+
+        this.boxes.forEach((box, i) => {
+            const target = this.unlocked[i] ? open : locked
+            box.spec.fields.forEach(f => target.add(f.accepts))
+        })
+
+        this.pieces.forEach((view, id) => {
+            const onlyLocked = !this.pieceAt.has(id) && locked.has(id) && !open.has(id)
+            view.container.setAlpha(onlyLocked ? A.dim : 1)
+        })
     }
 
     /** Todas as peças ganham casa na bandeja, inclusive as que já vêm postas. */
@@ -421,7 +495,7 @@ export class GameScene extends Phaser.Scene {
             })
         }
 
-        dealIn(this, views)
+        return dealIn(this, views)
     }
 
     /**
@@ -502,6 +576,7 @@ export class GameScene extends Phaser.Scene {
             FX.to(this, box.container, { scale: 1.05 }, { duration: 200, yoyo: true, ease: Ease.back(2) })
             void FX.ping(this, box.x, box.y, formatTone(box.spec.format), { radius: 110 })
             this.playUnlock()
+            this.syncTrayLocks()
         } else {
             // esvaziou a primeira: a segunda tranca de novo e devolve o que tinha
             box.spec.fields.forEach(f => {
@@ -511,6 +586,7 @@ export class GameScene extends Phaser.Scene {
             box.container.setAlpha(0.5)
             box.fields.forEach(f => { f.g.setVisible(false); f.label.setVisible(false) })
             box.setState('closed')
+            this.syncTrayLocks()
         }
     }
 
@@ -577,10 +653,48 @@ export class GameScene extends Phaser.Scene {
         drag.view.lift(false)
 
         if (!target) {
+            this.explainRefusal(drag.pieceId, pointer)
             this.returnHome(drag.pieceId)
             return
         }
         void this.place(drag.pieceId, target.box, target.field, drag.from)
+    }
+
+    /**
+     * Por que a caixa não aceitou.
+     *
+     * O `findField` recusa em silêncio: pula a caixa trancada e a de outro
+     * formato, devolve `null`, e a peça simplesmente volta para a bandeja. Do
+     * lado de quem joga isso é indistinguível de um jogo quebrado — foi o que
+     * deixou o N2 confuso, e a criança repete o mesmo arraste esperando que
+     * funcione.
+     *
+     * Aqui a recusa vira frase. Segue a regra do leitor (MECANICA.md): relata
+     * o que houve, não julga. Nada de "errado" nem som de erro — recusar dado
+     * de outro tipo é a DEFINIÇÃO do formato, não um erro de quem jogou.
+     */
+    private explainRefusal(pieceId: string, pointer: Phaser.Input.Pointer) {
+        const piece = this.pieceData.get(pieceId)
+        if (!piece) return
+
+        // Área da caixa inteira, não do poço: com a caixa trancada os poços
+        // estão invisíveis, e ninguém mira num alvo que não vê.
+        const i = this.boxes.findIndex(b =>
+            Math.abs(pointer.x - b.x) <= b.w / 2 && Math.abs(pointer.y - b.y) <= b.h / 2)
+        if (i < 0) return
+
+        const box = this.boxes[i]
+
+        if (!this.unlocked[i]) {
+            const first = this.boxes[0]
+            showToast(this, `A ${box.spec.title} abre quando a ${first.spec.title} encher.`, C.idle, 2200)
+            void first.shine()
+            return
+        }
+
+        if (piece.format !== box.spec.format) {
+            showToast(this, `${box.spec.title} guarda ${FORMAT_INFO[box.spec.format].guards}.`, C.idle, 2200)
+        }
     }
 
     /** Só devolve o campo se a peça de fato pode entrar nele. */

@@ -201,7 +201,16 @@ export const LEVELS: Level[] = [
             },
             {
                 id: 'm2-2',
-                request: 'As cores da bandeira vão no desenho e na lista do pintor.',
+                /*
+                 * A ORDEM precisa estar escrita aqui.
+                 *
+                 * Os campos são "Ponto 1, 2, 3" e "1º, 2º, 3º": dizem a
+                 * posição, nunca a cor. Sem a ordem no pedido não há como
+                 * saber que o primeiro ponto é o vermelho — restava adivinhar
+                 * e esperar o leitor reclamar. Os outros oito pedidos do jogo
+                 * nomeiam o valor exato; este era o único que não nomeava.
+                 */
+                request: 'A bandeira é vermelho, azul e amarelo. Vai no desenho e na lista do pintor.',
                 requestIcon: 'pixels',
                 boxes: [
                     {

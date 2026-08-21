@@ -91,11 +91,38 @@ export function refusalLine(chosen: FormatId, needed: FormatId): string {
 
 /* ═════════════════════════════════════════════════════ o componente */
 
+/*
+ * O VISOR, REFEITO.
+ *
+ * A versão anterior desenhava oito camadas ao mesmo tempo num retângulo de
+ * 268x300: grade de fósforo, riscos de tubo, reflexo diagonal no vidro, faixa
+ * de status com led e rótulo, o conteúdo, a frase, chuvisco e um rastro de
+ * seis retângulos atrás da linha de varredura. No Nível 2, com duas caixas
+ * para mostrar, tudo isso ainda era dividido em duas metades de 110px. Não dá
+ * para ler.
+ *
+ * Duas regras governam o arquivo agora:
+ *
+ * 1. UMA COISA POR VEZ. Duas caixas viram duas leituras em sequência, nunca
+ *    lado a lado. Enquanto varre, a tela está vazia. A frase só entra depois
+ *    de o conteúdo estar parado.
+ *
+ * 2. NADA DE CENÁRIO DENTRO DO VIDRO. Grade, riscos, reflexo, led e rótulo de
+ *    status saíram inteiros. Eram decoração competindo por atenção com o
+ *    único elemento que importa: o dado que a caixa devolveu. O estado do
+ *    aparelho já é dito pela cor do vidro e pela frase — dizê-lo três vezes
+ *    não deixa ninguém mais informado.
+ *
+ * O que NÃO mudou é a regra de conteúdo do MECANICA.md: o leitor relata o que
+ * leu, nunca julga. `1A-2` não é mensagem de erro, é o resultado honesto de
+ * ler aquela caixa daquele jeito.
+ */
+
 export type ReaderState = 'off' | 'scanning' | 'fail' | 'success'
 
 export interface Reader {
     container: Phaser.GameObjects.Container
-    /** Varre e mostra o resultado. Resolve quando o texto terminou de sair. */
+    /** Varre e mostra o resultado. Resolve quando a última frase terminou. */
     read(readings: BoxReading[]): Promise<void>
     /** Falha sem leitura: caixa errada, tempo esgotado. */
     refuse(reason: string): Promise<void>
@@ -106,37 +133,43 @@ export interface Reader {
 const SW = READER.screenW
 const SH = READER.screenH
 
-/** Faixa de status no topo do visor. */
-const STRIP_H = 30
-const STRIP_Y = -SH / 2 + STRIP_H / 2
-/** Área útil do conteúdo, entre a faixa de status e a frase. */
-const BODY_TOP = -SH / 2 + STRIP_H + 8
-const BODY_BOTTOM = SH / 2 - 76
+/** Respiro interno do vidro. */
+const PAD = 18
 
-const STATUS: Record<ReaderState, { text: string; tone: number }> = {
-    off: { text: 'PRONTO', tone: C.idle },
-    scanning: { text: 'LENDO...', tone: C.screenGlow },
-    fail: { text: 'SEM LEITURA', tone: C.fail },
-    success: { text: 'RECUPERADO', tone: C.screenGlow },
+/** Nome da caixa, só quando há mais de uma para ler. */
+const HEAD_Y = -SH / 2 + 28
+
+/**
+ * Centro do conteúdo.
+ *
+ * Acima do centro geométrico porque a frase mora embaixo: sem o deslocamento,
+ * um bloco alto de data encostava nela.
+ */
+const BODY_CY = -14
+
+/** Base da frase. O texto cresce para cima a partir daqui. */
+const PHRASE_BOTTOM = SH / 2 - PAD
+
+const TINT: Record<ReaderState, number> = {
+    off: C.idle,
+    scanning: C.screenGlow,
+    fail: C.fail,
+    success: C.screenGlow,
 }
+
+/** Pausa entre a leitura de uma caixa e a da seguinte, no Nível 2. */
+const BETWEEN_BOXES = 1500
 
 export function createReader(scene: Phaser.Scene): Reader {
     const container = scene.add.container(READER.cx, READER.screenY).setDepth(30)
 
+    // Três superfícies, e nenhuma delas é decoração: moldura, vidro, varredura.
     const chassis = scene.add.graphics()
     const glass = scene.add.graphics()
-    const grid = scene.add.graphics()
     const content = scene.add.container(0, 0)
-    const noise = scene.add.graphics()
     const scan = scene.add.graphics()
-    const crt = scene.add.graphics()
-    const strip = scene.add.graphics()
 
-    const statusText = scene.add.text(-SW / 2 + 34, STRIP_Y, 'PRONTO', {
-        fontFamily: FONT.black, fontSize: '14px', color: hex(C.idle),
-    }).setOrigin(0, 0.5).setResolution(2)
-
-    container.add([chassis, glass, grid, content, noise, scan, crt, strip, statusText])
+    container.add([chassis, glass, content, scan])
 
     const title = scene.add.text(READER.cx, READER.labelY, 'LEITOR', {
         fontFamily: FONT.black, fontSize: SIZE.readerTitle, color: hex(C.idle),
@@ -144,7 +177,6 @@ export function createReader(scene: Phaser.Scene): Reader {
 
     let state: ReaderState = 'off'
     let idleTween: Phaser.Tweens.Tween | undefined
-    let ledTween: Phaser.Tweens.Tween | undefined
 
     /**
      * A máquina de escrever ativa.
@@ -184,70 +216,31 @@ export function createReader(scene: Phaser.Scene): Reader {
         }
     }
 
+    /**
+     * O vidro é o ÚNICO sinal ambiente de estado.
+     *
+     * Antes o estado aparecia em quatro lugares — tinta do vidro, led, rótulo
+     * "SEM LEITURA" e a cor do próprio dado. Ficou um: a borda e um banho de
+     * cor discreto. O dado continua colorido porque ali a cor é informação
+     * por célula, não estado do aparelho.
+     */
     const paintGlass = () => {
-        const tint = STATUS[state].tone
+        const tint = TINT[state]
 
         glass.clear()
         glass.fillStyle(C.screen, 1)
         glass.fillRoundedRect(-SW / 2, -SH / 2, SW, SH, READER.screenR)
 
-        glass.fillStyle(tint, state === 'success' ? 0.13 : state === 'fail' ? 0.09 : 0.04)
+        glass.fillStyle(tint, state === 'off' ? 0.03 : 0.08)
         glass.fillRoundedRect(-SW / 2, -SH / 2, SW, SH, READER.screenR)
 
-        glass.fillStyle(C.white, 0.05)
-        glass.fillTriangle(-SW / 2, -SH / 2, SW / 2, -SH / 2, -SW / 2, SH / 2)
-
-        glass.lineStyle(3, tint, state === 'off' ? 0.25 : 0.65)
+        glass.lineStyle(3, tint, state === 'off' ? 0.25 : 0.7)
         glass.strokeRoundedRect(-SW / 2, -SH / 2, SW, SH, READER.screenR)
-    }
-
-    /** Grade fraca de fundo: o visor parece um aparelho, não um retângulo. */
-    const paintGrid = () => {
-        grid.clear()
-        grid.lineStyle(1, C.screenGlow, 0.07)
-        for (let x = -SW / 2 + 20; x < SW / 2; x += 20) grid.lineBetween(x, BODY_TOP, x, SH / 2 - 10)
-        for (let y = BODY_TOP; y < SH / 2 - 10; y += 20) grid.lineBetween(-SW / 2 + 8, y, SW / 2 - 8, y)
-    }
-
-    /** Linhas horizontais de tubo. Sempre ligadas, bem fracas. */
-    const paintCrt = () => {
-        crt.clear()
-        crt.fillStyle(C.shadow, 0.16)
-        for (let y = -SH / 2 + 2; y < SH / 2; y += 4) {
-            crt.fillRect(-SW / 2 + 2, y, SW - 4, 1.5)
-        }
-    }
-
-    const paintStrip = () => {
-        const { tone } = STATUS[state]
-        strip.clear()
-        strip.fillStyle(tone, 0.14)
-        strip.fillRoundedRect(-SW / 2 + 6, -SH / 2 + 6, SW - 12, STRIP_H - 4, 10)
-        strip.fillStyle(tone, 0.35)
-        strip.fillRect(-SW / 2 + 10, -SH / 2 + STRIP_H + 1, SW - 20, 1)
-        // led
-        strip.fillStyle(tone, 1)
-        strip.fillCircle(-SW / 2 + 22, STRIP_Y, 5)
-        strip.fillStyle(C.white, 0.5)
-        strip.fillCircle(-SW / 2 + 20.5, STRIP_Y - 1.5, 2)
-
-        statusText.setText(STATUS[state].text).setColor(hex(tone))
     }
 
     const setState = (s: ReaderState) => {
         state = s
         paintGlass()
-        paintStrip()
-
-        ledTween?.remove()
-        ledTween = undefined
-        strip.setAlpha(1)
-        if (s === 'scanning') {
-            ledTween = scene.tweens.add({
-                targets: strip, alpha: 0.55,
-                duration: 260, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
-            })
-        }
     }
 
     /* ── estado apagado ───────────────────────────────────────────── */
@@ -256,16 +249,15 @@ export function createReader(scene: Phaser.Scene): Reader {
         idleTween?.remove()
         idleTween = undefined
         clearContent()
-        noise.clear()
         scan.clear()
         setState('off')
 
-        const cursor = scene.add.text(0, (BODY_TOP + BODY_BOTTOM) / 2, '▮', {
+        const cursor = scene.add.text(0, BODY_CY, '▮', {
             fontFamily: FONT.black, fontSize: '26px', color: hex(C.screenGlow),
         }).setOrigin(0.5).setResolution(2).setAlpha(0.55)
         content.add(cursor)
 
-        const hint = scene.add.text(0, (BODY_TOP + BODY_BOTTOM) / 2 + 34, 'aguardando dados', {
+        const hint = scene.add.text(0, BODY_CY + 36, 'aguardando dados', {
             fontFamily: FONT.body, fontStyle: 'bold', fontSize: '14px', color: hex(C.idle),
         }).setOrigin(0.5).setResolution(2).setAlpha(0.6)
         content.add(hint)
@@ -276,70 +268,40 @@ export function createReader(scene: Phaser.Scene): Reader {
         })
     }
 
-    /* ── animações ────────────────────────────────────────────────── */
+    /* ── varredura ────────────────────────────────────────────────── */
 
-    /** Duas passadas com rastro. A varredura é o "estou trabalhando". */
+    /**
+     * Uma linha, uma passada, tela vazia.
+     *
+     * O rastro de seis retângulos saiu: a linha já diz "estou trabalhando", e
+     * o rastro só engrossava o borrão. Duas passadas viraram uma — a segunda
+     * não acrescentava informação nenhuma e dobrava a espera antes da
+     * resposta, que é o que a criança quer ver.
+     */
     const runScan = async () => {
         idleTween?.remove()
         idleTween = undefined
         clearContent()
-        noise.clear()
         setState('scanning')
 
-        const s = { y: BODY_TOP, pass: 0 }
+        const s = { y: -SH / 2 + PAD }
         const draw = () => {
             scan.clear()
-            // rastro
-            for (let i = 6; i >= 1; i -= 1) {
-                scan.fillStyle(C.screenGlow, 0.05 * i / 6 + 0.02)
-                scan.fillRect(-SW / 2 + 6, s.y - i * 7, SW - 12, 7)
-            }
-            // linha
-            scan.fillStyle(C.screenGlow, 0.85)
-            scan.fillRect(-SW / 2 + 6, s.y, SW - 12, 4)
-            scan.fillStyle(C.white, 0.5)
-            scan.fillRect(-SW / 2 + 6, s.y + 1, SW - 12, 1)
+            scan.fillStyle(C.screenGlow, 0.7)
+            scan.fillRect(-SW / 2 + 8, s.y, SW - 16, 3)
         }
         draw()
 
         await new Promise<void>(resolve => {
             scene.tweens.add({
-                targets: s, y: SH / 2 - 12,
-                duration: 320 * FX.getTimeScale(scene),
-                repeat: 1, ease: 'Sine.easeInOut',
+                targets: s, y: SH / 2 - PAD,
+                duration: 460 * FX.getTimeScale(scene),
+                ease: 'Sine.easeInOut',
                 onUpdate: draw,
-                onRepeat: () => { s.y = BODY_TOP },
                 onComplete: () => resolve(),
             })
         })
         scan.clear()
-    }
-
-    /** Chuvisco com três quadros de tremida — falha de leitura, não erro. */
-    const burstNoise = async () => {
-        const frame = () => {
-            noise.clear()
-            for (let i = 0; i < 44; i += 1) {
-                noise.fillStyle(i % 3 === 0 ? C.fail : C.screenGlow, Phaser.Math.FloatBetween(0.12, 0.36))
-                noise.fillRect(
-                    Phaser.Math.Between(-SW / 2 + 6, SW / 2 - 40),
-                    Phaser.Math.Between(BODY_TOP, SH / 2 - 12),
-                    Phaser.Math.Between(16, 44),
-                    Phaser.Math.Between(3, 9),
-                )
-            }
-        }
-
-        for (let i = 0; i < 3; i += 1) {
-            frame()
-            noise.setAlpha(1)
-            container.setX(READER.cx + (i % 2 === 0 ? 3 : -3))
-            await FX.wait(scene, 70)
-        }
-        container.setX(READER.cx)
-        await FX.to(scene, noise, { alpha: 0 }, { duration: 380 })
-        noise.clear()
-        noise.setAlpha(1)
     }
 
     /* ── renderizadores por formato ───────────────────────────────── */
@@ -349,63 +311,59 @@ export function createReader(scene: Phaser.Scene): Reader {
             fontFamily: FONT.body, fontStyle: 'bold', fontSize: SIZE.readerNote, color: hex(color),
         }).setOrigin(origin, 0.5).setResolution(2)
 
-    /** Data: as três linhas rotuladas, depois a composição. */
-    const renderDate = (r: BoxReading, top: number, h: number) => {
+    /**
+     * Data: uma linha por campo e, embaixo, a data montada.
+     *
+     * As duas colunas se encontram no meio — rótulo alinhado à direita, valor
+     * à esquerda — e a régua entre elas é o que deixa "dia / mês / ano" legível
+     * de relance. A linha separadora que existia aqui saiu: espaço em branco
+     * separa igual e não desenha nada.
+     */
+    const renderDate = (r: BoxReading) => {
         const nodes: Phaser.GameObjects.GameObject[] = []
-        const rowH = Math.min(26, (h - 34) / r.cells.length)
+        const rowH = 28
+        const total = r.cells.length * rowH + 38
+        const top = BODY_CY - total / 2 + rowH / 2
 
         r.cells.forEach((cell, i) => {
-            const y = top + 12 + i * rowH
-            nodes.push(smallText(-SW / 2 + 22, y, cell.field.label.toLowerCase(), C.idle, 0))
-            nodes.push(scene.add.text(-SW / 2 + 96, y, cell.piece?.reads ?? '—', {
+            const y = top + i * rowH
+            nodes.push(smallText(-8, y, cell.field.label.toLowerCase(), C.idle, 1))
+            nodes.push(scene.add.text(8, y, cell.piece?.reads ?? '—', {
                 fontFamily: FONT.black, fontSize: SIZE.readerNote,
                 color: hex(cell.ok ? C.screenGlow : C.fail),
             }).setOrigin(0, 0.5).setResolution(2))
         })
-
-        const line = scene.add.graphics()
-        const sepY = top + 12 + r.cells.length * rowH - 4
-        line.fillStyle(C.screenGlow, 0.25)
-        line.fillRect(-SW / 2 + 20, sepY, SW - 40, 2)
-        nodes.push(line)
 
         const composed = r.ok
             ? `${r.cells[0]?.piece?.reads} de ${r.cells[1]?.piece?.reads}` +
             (r.cells[2] ? ` de ${r.cells[2].piece?.reads}` : '')
             : r.cells.map(c => c.piece?.reads ?? '—').join(' / ')
 
-        nodes.push(scene.add.text(0, sepY + 20, composed, {
+        nodes.push(scene.add.text(0, top + r.cells.length * rowH + 12, composed, {
             fontFamily: FONT.black, fontSize: SIZE.readerBody,
             color: hex(r.ok ? C.screenGlow : C.fail),
-            align: 'center', wordWrap: { width: SW - 32 },
+            align: 'center', wordWrap: { width: SW - 2 * PAD },
         }).setOrigin(0.5).setResolution(2))
 
         return nodes
     }
 
-    /** Texto: a sequência em letras grandes, com as posições marcadas. */
-    const renderText = (r: BoxReading, top: number, h: number) => {
-        const nodes: Phaser.GameObjects.GameObject[] = []
+    /**
+     * Texto: só a sequência, grande.
+     *
+     * Os traços que marcavam posição embaixo saíram. A posição já está na
+     * ordem dos caracteres, e a peça errada já aparece na cor da falha — o
+     * traço repetia pela terceira vez o que duas coisas já diziam.
+     */
+    const renderText = (r: BoxReading) => {
         const literal = literalOf(r.cells)
 
-        nodes.push(scene.add.text(0, top + h / 2 - 12, literal, {
+        return [scene.add.text(0, BODY_CY, literal, {
             fontFamily: FONT.black,
             fontSize: literal.length > 8 ? SIZE.readerBody : SIZE.readerBig,
             color: hex(r.ok ? C.screenGlow : C.fail),
-            align: 'center', wordWrap: { width: SW - 28 },
-        }).setOrigin(0.5).setResolution(2))
-
-        const ticks = scene.add.graphics()
-        const n = r.cells.length
-        const step = 22
-        const start = -((n - 1) * step) / 2
-        r.cells.forEach((cell, i) => {
-            ticks.fillStyle(cell.ok ? C.screenGlow : C.fail, cell.ok ? 0.8 : 1)
-            ticks.fillRoundedRect(start + i * step - 8, top + h / 2 + 14, 16, 5, 2)
-        })
-        nodes.push(ticks)
-
-        return nodes
+            align: 'center', wordWrap: { width: SW - 2 * PAD },
+        }).setOrigin(0.5).setResolution(2)]
     }
 
     /**
@@ -413,14 +371,14 @@ export function createReader(scene: Phaser.Scene): Reader {
      * é cor vira XADREZ CINZA — o padrão que todo editor de imagem usa para
      * "nada aqui". A criança vê o buraco antes de ler qualquer palavra.
      */
-    const renderPixels = (r: BoxReading, top: number, h: number) => {
+    const renderPixels = (r: BoxReading) => {
         const g = scene.add.graphics()
         const n = r.cells.length
-        const size = Math.min(52, (SW - 40) / n - 8)
-        const gap = 8
+        const gap = 10
+        const size = Math.min(58, (SW - 2 * PAD - (n - 1) * gap) / n)
         const total = n * size + (n - 1) * gap
         const start = -total / 2
-        const y = top + h / 2 - size / 2 - 4
+        const y = BODY_CY - size / 2
 
         r.cells.forEach((cell, i) => {
             const x = start + i * (size + gap)
@@ -449,33 +407,18 @@ export function createReader(scene: Phaser.Scene): Reader {
         return [g]
     }
 
-    const renderBox = (r: BoxReading, top: number, h: number) => {
-        const nodes: Phaser.GameObjects.GameObject[] = []
-        nodes.push(smallText(-SW / 2 + 22, top - 2, r.box.title.toUpperCase(), formatTone(r.box.format), 0))
-
-        const inner = top + 12
-        const innerH = h - 12
-
-        if (r.box.format === 'date') nodes.push(...renderDate(r, inner, innerH))
-        else if (r.box.format === 'text') nodes.push(...renderText(r, inner, innerH))
-        else nodes.push(...renderPixels(r, inner, innerH))
-
-        return nodes
-    }
-
-    /* ── API ──────────────────────────────────────────────────────── */
+    /* ── uma leitura por vez ──────────────────────────────────────── */
 
     const showPhrase = async (phrase: string, tone: number) => {
-        const label = scene.add.text(0, SH / 2 - 52, '', {
+        const label = scene.add.text(0, 0, '', {
             fontFamily: FONT.body, fontStyle: 'bold', fontSize: SIZE.readerNote,
-            color: hex(tone), align: 'center', wordWrap: { width: SW - 30 }, lineSpacing: 3,
-        }).setOrigin(0.5).setResolution(2)
+            color: hex(tone), align: 'center', wordWrap: { width: SW - 2 * PAD }, lineSpacing: 3,
+        }).setOrigin(0.5, 1).setResolution(2)
         content.add(label)
 
-        // mede com o texto completo para o bloco não subir letra a letra
-        label.setText(phrase)
-        label.setY(SH / 2 - 20 - label.height / 2)
-        label.setText('')
+        // ancorada pela base: com origem no topo, a frase de duas linhas
+        // empurrava a de uma linha para cima no meio da digitação
+        label.setY(PHRASE_BOTTOM)
 
         const tw = FX.type(scene, label, phrase, { delay: TYPE_MS.reader })
         typing = tw
@@ -483,36 +426,42 @@ export function createReader(scene: Phaser.Scene): Reader {
         typing = null
     }
 
-    const revealRows = async (readings: BoxReading[]) => {
-        const areaH = (BODY_BOTTOM - BODY_TOP) / readings.length
+    /** Mostra UMA caixa. Nada da caixa anterior continua na tela. */
+    const showReading = async (r: BoxReading, withHeader: boolean) => {
+        clearContent()
+        setState(r.ok ? 'success' : 'fail')
 
-        for (let i = 0; i < readings.length; i += 1) {
-            const nodes = renderBox(readings[i], BODY_TOP + i * areaH + 8, areaH - 10)
-            nodes.forEach(nd => {
-                content.add(nd)
-                const obj = nd as unknown as Phaser.GameObjects.Container
-                const restX = obj.x ?? 0
-                obj.setAlpha(0)
-                obj.setX(restX - 14)
-                FX.to(scene, obj, { alpha: 1, x: restX }, { duration: 220, ease: Ease.smooth })
-            })
-            if (i < readings.length - 1) await FX.wait(scene, 160)
+        if (withHeader) {
+            content.add(smallText(0, HEAD_Y, r.box.title.toUpperCase(), formatTone(r.box.format)))
         }
+
+        const nodes = r.box.format === 'date' ? renderDate(r)
+            : r.box.format === 'text' ? renderText(r)
+                : renderPixels(r)
+
+        nodes.forEach(nd => {
+            content.add(nd)
+            const obj = nd as unknown as Phaser.GameObjects.Container
+            obj.setAlpha(0)
+            FX.to(scene, obj, { alpha: 1 }, { duration: 200, ease: Ease.smooth })
+        })
+
+        await FX.wait(scene, 220)
+        if (!r.ok) await showPhrase(r.failure, C.failSoft)
     }
 
     const read = async (readings: BoxReading[]) => {
         await runScan()
 
-        const ok = readings.every(r => r.ok)
-        setState(ok ? 'success' : 'fail')
+        const many = readings.length > 1
 
-        if (!ok) await burstNoise()
-        await revealRows(readings)
+        for (let i = 0; i < readings.length; i += 1) {
+            await showReading(readings[i], many)
+            // a última fica na tela: quem fecha é a frase final ou a próxima fase
+            if (i < readings.length - 1) await FX.wait(scene, BETWEEN_BOXES)
+        }
 
-        const failing = readings.find(r => !r.ok)
-        if (failing) {
-            await showPhrase(failing.failure, C.failSoft)
-        } else {
+        if (readings.every(r => r.ok)) {
             void FX.sparks(scene, READER.cx, READER.screenY, {
                 color: C.screenGlow, count: 20, spread: 160,
             })
@@ -522,14 +471,12 @@ export function createReader(scene: Phaser.Scene): Reader {
 
     const refuse = async (reason: string) => {
         await runScan()
+        clearContent()
         setState('fail')
-        await burstNoise()
         await showPhrase(reason, C.failSoft)
     }
 
     paintChassis()
-    paintGrid()
-    paintCrt()
     goOff()
 
     return {
@@ -541,7 +488,6 @@ export function createReader(scene: Phaser.Scene): Reader {
             // A digitação morre ANTES dos objetos: ver o comentário de `typing`.
             stopTyping()
             idleTween?.remove()
-            ledTween?.remove()
             title.destroy()
             container.destroy()
         },

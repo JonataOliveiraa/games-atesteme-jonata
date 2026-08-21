@@ -1,13 +1,32 @@
 import Phaser from 'phaser'
-import { EventBus } from '../../../../shared/EventBus'
 import { FX, Ease } from '../../../../shared/effects/FX'
 import {
     C, A, FONT, SIZE, LONG_REQUEST, LONG_PIECE_LABEL, TYPE_MS, hex, formatTone,
 } from '../data/theme'
 import {
-    W, H, HUD, TIMER, BENCH, REQUEST, BOXES, FIELD, TRAY, TOAST,
+    W, H, HUD, TIMER, BENCH, REQUEST, BOXES, FIELD, TRAY, TOAST, MARK,
 } from '../data/layout'
 import type { Field, FormatBoxSpec, FormatId, Piece } from '../types'
+
+/** Selo do cartão de pedido. A chave é a mesma registrada na `BootScene`. */
+const SEAL: Record<FormatId, string> = {
+    date: 'selo-data',
+    pixels: 'selo-pixels',
+    text: 'selo-texto',
+}
+
+/**
+ * Encaixa a imagem numa CAIXA MÁXIMA, sem distorcer.
+ *
+ * Escala pela menor razão em vez de `setDisplaySize`: os PNGs são 350x350 com
+ * folga transparente em volta, então forçar largura e altura esticaria o
+ * desenho. A medida do layout é um teto, e a arte se acomoda dentro dele com a
+ * proporção que tem.
+ */
+function fitImage(image: Phaser.GameObjects.Image, maxW: number, maxH: number) {
+    image.setScale(Math.min(maxW / image.width, maxH / image.height))
+    return image
+}
 
 /*
  * Duas metades, e a separação é a regra do projeto (VISUAL.md §1):
@@ -79,6 +98,36 @@ export function paintWorkbench(g: Phaser.GameObjects.Graphics) {
     g.fillStyle(C.ink, 0.2)
     g.fillRect(0, 0, W, 70)
     g.fillRect(0, H - 70, W, 70)
+}
+
+/**
+ * O cenário, decidindo entre arte e código.
+ *
+ * Construtor e não painter porque o caminho da textura cria dois objetos —
+ * imagem e véu — e painter, por definição, não cria nada. A GameScene chama
+ * isto e continua sem desenhar (VISUAL.md §1).
+ *
+ * A imagem entra por COBERTURA (`Math.max`), nunca esticada: a arte é 16:9,
+ * mas se um dia vier com outra proporção é melhor cortar a sobra do que
+ * deformar a bancada.
+ */
+export function createWorkbench(scene: Phaser.Scene): void {
+    if (!scene.textures.exists('bg-oficina')) {
+        const g = scene.add.graphics().setDepth(-20)
+        paintWorkbench(g)
+        return
+    }
+
+    const bg = scene.add.image(W / 2, H / 2, 'bg-oficina').setDepth(-20)
+    bg.setScale(Math.max(W / bg.width, H / bg.height))
+
+    const veil = scene.add.graphics().setDepth(-19)
+    veil.fillStyle(C.ink, A.bgVeil)
+    veil.fillRect(0, 0, W, H)
+    // mesma vinheta do desenho em código: prende o olho no meio da tela
+    veil.fillStyle(C.ink, 0.2)
+    veil.fillRect(0, 0, W, 70)
+    veil.fillRect(0, H - 70, W, 70)
 }
 
 export function paintHudBar(g: Phaser.GameObjects.Graphics) {
@@ -419,6 +468,76 @@ function drawStar(g: Phaser.GameObjects.Graphics, cx: number, cy: number, outer:
     g.fillPoints(pts, true)
 }
 
+export interface PieceMark {
+    /** Imagem quando há textura; o mesmo Graphics de sempre quando não há. */
+    object: Phaser.GameObjects.GameObject
+    /**
+     * Onde o texto da peça deve cair.
+     *
+     * Não é constante: depende de a marca ser arte ou desenho. O calendário em
+     * textura empurra o nome do mês para o rodapé do cartão; o desenhado em
+     * código o mantém dentro da folha. Devolver isto daqui evita que a
+     * `createPiece` precise saber qual dos dois está na tela.
+     *
+     * `null` só no `numero`, onde o glifo é o próprio conteúdo.
+     */
+    labelY: number | null
+}
+
+/**
+ * A marca da peça, decidindo entre arte e código.
+ *
+ * Uma peça sem textura correspondente cai no `drawPieceMark` sem nenhum aviso
+ * na tela — nunca aparece o quadrado verde de textura ausente do Phaser.
+ */
+export function createPieceMark(
+    scene: Phaser.Scene,
+    piece: Piece,
+    h: number,
+): PieceMark {
+    const spec = piece.kind === 'mes' ? MARK.mes
+        : piece.kind === 'cor' ? MARK.cor
+            : piece.kind === 'palavra' ? MARK.palavra
+                : piece.kind === 'intrusa' ? MARK.intrusa
+                    : null
+
+    const key = piece.kind === 'mes' ? 'marca-mes'
+        : piece.kind === 'cor' ? 'marca-cor'
+            : piece.kind === 'palavra' ? 'marca-palavra'
+                : piece.kind === 'intrusa' ? 'marca-intrusa'
+                    : null
+
+    if (spec && key && scene.textures.exists(key)) {
+        const box = spec.box * h
+        const image = scene.add.image(spec.dx * box, spec.dy * h, key)
+        fitImage(image, box, box)
+
+        /*
+         * A gota é a única marca que muda de cor, e é por isso que o PNG dela
+         * vem quase branco: `setTint` multiplica, então branco vira exatamente
+         * a cor pedida e o sombreado do desenho sobrevive por baixo. Uma
+         * textura já vermelha não teria como virar azul.
+         */
+        if (piece.kind === 'cor') image.setTint(piece.tone ?? C.idle)
+
+        return { object: image, labelY: spec.labelBelow ? h / 2 - 18 : 0 }
+    }
+
+    const g = scene.add.graphics()
+    const y = drawPieceMark(g, piece, h)
+
+    /*
+     * Mês e palavra tinham o y do texto escrito à mão dentro da `createPiece`,
+     * diferente do que o painter devolvia. Os valores vêm repetidos aqui para
+     * o caminho sem textura continuar pixel a pixel como estava.
+     */
+    const legacyY = piece.kind === 'mes' ? 7
+        : piece.kind === 'palavra' ? -1
+            : y
+
+    return { object: g, labelY: legacyY }
+}
+
 /* ═══════════════════════════════════════════════════════════════ HUD */
 
 export interface Hud {
@@ -471,9 +590,6 @@ export function createHud(
     const help = createRoundButton(scene, HUD.helpX, HUD.cy, HUD.helpR, '?', onHelp, C.pixels)
     container.add(help.container)
 
-    const mute = createMuteButton(scene)
-    container.add(mute.container)
-
     FX.slideIn(scene, container, { dy: 26, duration: 340 })
 
     return {
@@ -507,7 +623,7 @@ export function createHud(
             }
         },
         setHelpEnabled: help.setEnabled,
-        destroy: () => { help.destroy(); mute.destroy(); container.destroy() },
+        destroy: () => { help.destroy(); container.destroy() },
     }
 }
 
@@ -573,34 +689,6 @@ export function createRoundButton(
     }
 }
 
-function createMuteButton(scene: Phaser.Scene) {
-    let muted = false
-    const container = scene.add.container(HUD.muteX, HUD.cy)
-
-    const g = scene.add.graphics()
-    g.fillStyle(C.shadow, 0.3)
-    g.fillCircle(0, 4, HUD.muteR)
-    g.fillStyle(C.wallLight, 1)
-    g.fillCircle(0, 0, HUD.muteR)
-    g.lineStyle(3, C.idle, 0.9)
-    g.strokeCircle(0, 0, HUD.muteR)
-
-    const icon = scene.add.text(0, 0, '🔊', { fontSize: '26px' }).setOrigin(0.5)
-    container.add([g, icon])
-
-    const hit = scene.add.zone(HUD.muteX, HUD.cy, HUD.muteR * 2 + 18, HUD.muteR * 2 + 18).setOrigin(0.5)
-    hit.setInteractive({ useHandCursor: true })
-    hit.on('pointerover', () => FX.to(scene, container, { scale: 1.1 }, { duration: 120 }))
-    hit.on('pointerout', () => FX.to(scene, container, { scale: 1 }, { duration: 120 }))
-    hit.on('pointerup', () => {
-        muted = !muted
-        icon.setText(muted ? '🔇' : '🔊')
-        FX.press(scene, container)
-        EventBus.emit('mute-audio', muted)
-    })
-
-    return { container, destroy: () => { hit.destroy(); container.destroy() } }
-}
 
 export interface BigButton {
     container: Phaser.GameObjects.Container
@@ -709,17 +797,35 @@ export function createRequestCard(scene: Phaser.Scene): RequestCard {
     const surface = scene.add.graphics()
     const mark = scene.add.graphics()
 
+    /*
+     * O selo troca de formato a cada rodada. Uma imagem só, que muda de
+     * textura, em vez de criar e destruir a cada pedido: sem lixo por rodada e
+     * sem risco de sobrar um selo antigo por baixo do novo.
+     */
+    const sealImage = scene.add.image(REQUEST.iconX, 0, '__DEFAULT').setVisible(false)
+
     const body = scene.add.text(REQUEST.textX, 0, '', {
         fontFamily: FONT.body, fontStyle: 'bold', fontSize: SIZE.request,
         color: hex(C.slate), wordWrap: { width: REQUEST.wrap }, lineSpacing: 6,
     }).setOrigin(0, 0.5).setResolution(2)
 
-    container.add([surface, mark, body])
+    container.add([surface, mark, sealImage, body])
 
     let typing: { skip: () => void } | null = null
 
     /** Desenha o selo do formato pedido: calendário, grade ou "A". */
     const drawMark = (icon: FormatId) => {
+        const key = SEAL[icon]
+
+        if (scene.textures.exists(key)) {
+            mark.clear()
+            sealImage.setTexture(key).setVisible(true)
+            fitImage(sealImage, REQUEST.iconTexBox, REQUEST.iconTexBox)
+            return
+        }
+
+        sealImage.setVisible(false)
+
         const tone = formatTone(icon)
         mark.clear()
         mark.fillStyle(C.white, 1)
@@ -993,10 +1099,10 @@ export function createPiece(
     const body = scene.add.graphics()
     paintPiece(body, w, h, TRAY.cardR, { tone, hasOwner })
 
-    const markG = scene.add.graphics()
-    const labelY = drawPieceMark(markG, piece, h)
+    const mark = createPieceMark(scene, piece, h)
+    const labelY = mark.labelY
 
-    container.add([body, markG])
+    container.add([body, mark.object])
 
     let glyph: Phaser.GameObjects.Text | undefined
     let label: Phaser.GameObjects.Text | undefined
@@ -1010,12 +1116,12 @@ export function createPiece(
         container.add(glyph)
     } else if (piece.kind === 'mes') {
         // 16px encolhia para ~12px dentro do poço e o mês virava borrão
-        glyph = scene.add.text(0, 7, piece.label, {
+        glyph = scene.add.text(0, labelY ?? 7, piece.label, {
             fontFamily: FONT.black, fontSize: SIZE.pieceLabel, color: hex(C.date),
         }).setOrigin(0.5).setResolution(2)
         container.add(glyph)
     } else if (piece.kind === 'palavra') {
-        glyph = scene.add.text(0, -1, piece.label, {
+        glyph = scene.add.text(0, labelY ?? -1, piece.label, {
             fontFamily: FONT.black,
             fontSize: piece.label.length > LONG_PIECE_LABEL ? SIZE.pieceLabelSmall : SIZE.pieceLabel,
             color: hex(C.text),

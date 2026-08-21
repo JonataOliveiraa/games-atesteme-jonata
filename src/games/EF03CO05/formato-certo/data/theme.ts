@@ -62,6 +62,18 @@ export const A = {
     gloss: 0.22,
     inset: 0.34,
     dim: 0.42,
+    /**
+     * Véu sobre o cenário em textura.
+     *
+     * A parede da arte é clara e cheia de objeto — ferramenta, prateleira,
+     * vaso. Sem véu ela disputa atenção com a bancada, que é onde o jogo
+     * acontece, e o texto claro do leitor perde contraste em cima dela. O véu
+     * empurra o fundo para trás sem exigir arte nova: dá para calibrar aqui
+     * em vez de reexportar o PNG.
+     *
+     * Só vale para o fundo em imagem. O desenho em Graphics já nasce escuro.
+     */
+    bgVeil: 0.28,
 } as const
 
 export const FONT = {

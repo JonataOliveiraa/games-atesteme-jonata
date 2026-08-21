@@ -90,7 +90,7 @@ Duas colunas. **Bancada à esquerda**, **leitor à direita**. Nada atravessa a f
 
 ```
 ┌──────────────────────────────────────────────────────────┐
-│ HUD  nível · progresso · título · ajuda · som      10–94  │
+│ HUD  nível · progresso · título · ajuda            10–94  │
 ├────────────────────────────────────────┬─────────────────┤
 │ ▬▬▬▬▬ barra de tempo ▬▬▬▬▬     104–130 │                 │
 │ ┌────────────────────────────────────┐ │   L E I T O R   │
@@ -113,7 +113,7 @@ export const HUD = {
   pillX: 42, pillY: 32, pillW: 134, pillH: 40,
   dotsX: 202, dotsMaxW: 190, dotR: 8,
   titleX: 660, titleY: 40, titleW: 600, hintY: 70, hintW: 620,
-  helpX: 1146, helpR: 27, muteX: 1216, muteR: 27,
+  helpX: 1216, helpR: 27,   // o `?` ocupa o canto: não há botão de som
 }
 
 export const TIMER = { cx: 490, y: 104, w: 880, h: 26, r: 13, warnAt: 0.5, panicAt: 0.25 }
@@ -165,9 +165,11 @@ export const TOAST = { y: 656, hiddenY: 790, w: 720, h: 72, r: 22 }
 
 ## 4. Os painters
 
-### 4.1 `paintWorkbench(g)` — o cenário
+### 4.1 `createWorkbench(scene)` — o cenário
 
-Desenhado em código, sem PNG.
+Com `bg-oficina.png` carregada, entra a imagem por **cobertura** (`Math.max`, nunca esticada), mais um véu de `ink` a `A.bgVeil` e a vinheta. Sem a textura, cai no `paintWorkbench(g)` abaixo. Ver §10.
+
+O `paintWorkbench` desenha:
 
 1. **Parede**: 14 faixas horizontais de `wall` → `wallLight`, de cima para baixo. Degradê barato e sem textura.
 2. **Prateleira ao fundo**: uma linha em `y≈150` e cinco retângulos arredondados de silhueta em `shadow` a 0.18 — sugerem caixas guardadas sem competir com nada.
@@ -225,16 +227,24 @@ Cinco desenhos por cima, por `kind`:
 
 **A peça intrusa não tem borda colorida.** Todas as outras carregam a cor do formato a que pertencem. Quem não pertence a nenhum não ganha cor. É a dica silenciosa de que aquilo não vai encaixar em lugar nenhum.
 
-### 4.5 `paintReaderScreen(g, w, h, r, state)`
+### 4.5 O visor (`reader.ts`)
 
-O visor. Fundo `screen` quase preto, moldura de aparelho, e um brilho de fósforo que muda com o estado.
+Duas regras, e elas vieram de o visor ter ficado ilegível:
 
-| `state` | Visor | Detalhe |
-|---|---|---|
-| `off` | escuro, um traço `—` piscando devagar | antes do primeiro LER |
-| `scanning` | linha horizontal varrendo de cima a baixo, 2× | ~600 ms |
-| `fail` | chuvisco: 40 retângulos aleatórios em `fail` a 0.3, + a leitura literal | ~700 ms de chuvisco, depois o texto fica |
-| `success` | fundo clareia para `screenGlow` a 0.12, informação recuperada em `okSoft` | |
+**Uma coisa por vez.** Duas caixas viram duas leituras em sequência, nunca lado a lado — no N2 o espaço se dividia em duas metades de 110px e nenhuma das duas cabia. Enquanto varre, a tela está vazia. A frase só entra depois de o conteúdo estar parado.
+
+**Nada de cenário dentro do vidro.** Saíram inteiros: grade de fósforo, riscos de tubo, reflexo diagonal, faixa de status com led e rótulo, chuvisco de 44 retângulos e o rastro de seis retângulos atrás da varredura. Eram oito camadas competindo com o único elemento que importa — o dado que a caixa devolveu.
+
+Sobraram três superfícies: **moldura**, **vidro** e **linha de varredura**.
+
+| `state` | Visor |
+|---|---|
+| `off` | escuro, cursor `▮` piscando e "aguardando dados" |
+| `scanning` | uma linha, uma passada de cima a baixo, ~460 ms, tela vazia |
+| `fail` | borda e banho em `fail`, a leitura literal, depois a frase honesta |
+| `success` | borda e banho em `screenGlow`, a informação recuperada, faíscas |
+
+**O estado do aparelho é dito uma vez só**, pela cor da borda e do banho. Antes era dito quatro vezes — tinta do vidro, led, rótulo "SEM LEITURA" e a cor do dado. O dado continua colorido porque ali a cor é informação por célula, não estado do aparelho.
 
 ## 5. Como cada formato se recupera no visor
 
@@ -245,14 +255,14 @@ A parte mais importante da tela. **O visor mostra o que leu, não um veredicto.*
  dia  18
  mês  junho
  ano  2026
- ─────────────
+
  18 de junho de 2026
 ```
 Na falha, a última linha vira a frase honesta: `dia 2026 · não existe dia 2026`.
 
 **Pixels** — a imagem, desenhada de verdade: os pontos na ordem dos campos, como uma faixa de três quadrados grandes. Campo vazio ou com peça errada vira um **buraco quadriculado** — o padrão de xadrez cinza que todo editor de imagem usa para "nada aqui". A criança vê o buraco antes de ler qualquer palavra.
 
-**Texto** — a sequência em letras grandes e monoespaçadas, com as posições marcadas embaixo. `1A-2` aparece exatamente assim, do tamanho de `A-12`, para a comparação ser imediata.
+**Texto** — só a sequência, em letras grandes. `1A-2` aparece exatamente assim, do tamanho de `A-12`, para a comparação ser imediata. Os traços de posição embaixo saíram: a posição já está na ordem dos caracteres e a peça errada já vem na cor da falha.
 
 ## 6. Animação
 
@@ -267,7 +277,7 @@ Tudo pelo `FX` compartilhado, que devolve `Promise` — sem pirâmide de `onComp
 | Soltar no campo | `FX.arcTo` com `height 74` — **arco, nunca linha reta** |
 | Soltar fora | volta para casa com `Ease.settle` (oscilação amortecida) |
 | Caixa completa | `FX.shine` atravessando + pulso 1.05 |
-| LER | leitor: `scanning` 600 ms → resultado |
+| LER | leitor: varredura 460 ms → uma caixa por vez, 1,5 s entre elas |
 | Sucesso | `FX.sparks` no visor, `FX.stars` na caixa, `FX.flash` suave |
 | Falha | `FX.shakeCam('leve')`, campo culpado treme (`FX.shake`, 12px, 4×) |
 | Tempo esgotado | barra pisca em `fail`, peças voltam em cascata |
@@ -281,7 +291,7 @@ Daltonismo e projetor ruim de sala de aula. Nenhuma informação depende só de 
 - **campo vazio** → rebaixado + borda pontilhada
 - **campo preenchido** → elevado + borda cheia
 - **caixa com defeito** → borda **tracejada**
-- **leitura com falha** → **chuvisco** no visor, não só texto vermelho
+- **leitura com falha** → a **leitura literal** no visor, não só texto vermelho
 - **pixel faltando** → **xadrez cinza**, não um quadrado vermelho
 - **peça intrusa** → **sem** borda, enquanto todas as outras têm
 
@@ -300,9 +310,11 @@ O que `effects.ts` exporta:
 ```ts
 // painters puros
 paintWorkbench, paintFormatBox, paintField, paintPiece, paintTray,
-paintReaderScreen, paintHudBar, paintRequestCard
+paintHudBar, paintRequestCard, drawPieceMark
 
 // construtores
+createWorkbench(scene)                  → void        // arte ou painter
+createPieceMark(scene, piece, h)        → PieceMark   // arte ou painter
 createHud(scene, { onHelp })            → Hud
 createTimerBar(scene)                   → TimerBar
 createRequestCard(scene)                → RequestCard
@@ -313,6 +325,29 @@ createBigButton(scene, spec)            → BigButton    // Zone separada!
 showToast(scene, msg, tone, life)
 ```
 
-E `reader.ts` exporta `createReader(scene) → Reader`, detalhado em [MECANICA.md §5](./MECANICA.md).
+E `reader.ts` exporta `createReader(scene) → Reader` — as superfícies dele moram lá, não aqui. Ver §4.5 e [MECANICA.md §5](./MECANICA.md).
 
 **A zona de toque é sempre um objeto separado do que anima.** O container cresce no hover e afunda no clique; se a área de toque fosse ele, a borda mudaria de tamanho no meio do gesto e um `pointerup` perto da margem cairia fora, comendo o clique. Foi a lição mais cara do Chef e vale para todo botão, peça e campo daqui.
+
+## 10. Camada de textura
+
+Oito PNGs em `src/assets/games/EF03CO05/formato-certo/`, importados e registrados na `BootScene` — mesma convenção dos outros jogos. A chave Phaser é o nome do arquivo, e o `effects.ts` a usa direto.
+
+**Regra de entrada.** Só vira arte o que o `Graphics` não faz bem: o cenário — madeira, luz, profundidade — e as quatro marcas de peça, que são desenho de objeto. Caixa, poço, cartão, HUD, barra de tempo, botão, tarja e visor continuam desenhados em código, porque mudam de cor e de estado o tempo todo: a caixa sozinha tem 5 estados × 3 tons × 3 larguras, que como PNG seriam 45 arquivos.
+
+| Chave | Onde entra | Detalhe |
+|---|---|---|
+| `bg-oficina` | `createWorkbench` | cobertura + véu `A.bgVeil` + vinheta |
+| `marca-mes` | peça `kind: 'mes'` | nome do mês vai **abaixo** da folha |
+| `marca-cor` | peça `kind: 'cor'` | quase branca, recebe `setTint` |
+| `marca-palavra` | peça `kind: 'palavra'` | palavra vai **abaixo** da etiqueta |
+| `marca-intrusa` | peça `kind: 'intrusa'` | cinza, sem cor de formato |
+| `selo-data` · `selo-pixels` · `selo-texto` | `createRequestCard` | uma `Image` que troca de textura por rodada |
+
+**Textura é opcional, e o fallback é permanente.** Todo consumo passa por um `scene.textures.exists()`; sem o arquivo, o painter em `Graphics` desenha como sempre desenhou. Isso garante que o `npm run build` nunca dependa de PNG, que um arquivo que falhe ao carregar não derrube a fase, e que dê para comparar arte contra código só tirando o arquivo da pasta. Nunca aparece o quadrado verde de textura ausente do Phaser.
+
+**Encaixe por proporção, não por tamanho.** `fitImage` escala pela menor razão. Os PNGs são 350×350 com folga transparente, então `MARK.box` e `REQUEST.iconTexBox` são **caixa máxima**, não medida exigida — arte com proporção diferente encolhe em vez de esticar.
+
+**Texto nunca vai por cima da arte.** Mês e palavra escrevem ABAIXO da marca (`MARK.*.labelBelow`). Escrever dentro do desenho obriga o código a apostar que a palavra cabe na área branca da imagem, e o texto vem de `missions.ts` — a aposta se perde no dia em que a palavra for mais longa. Fora da imagem quem limita é a largura do cartão, que o layout conhece.
+
+**`MARK` é fração da altura do cartão**, única exceção à regra de pixels de `layout.ts`. O cartão tem dois tamanhos (132×112 e 116×90 quando a bandeja quebra em duas fileiras) e a marca precisa encolher junto.

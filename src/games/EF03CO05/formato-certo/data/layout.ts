@@ -32,10 +32,14 @@ export const HUD = {
     hintY: 70,
     hintW: 620,
 
-    helpX: 1146,
+    /**
+     * O `?` ocupa o canto direito, que era do botão de som.
+     *
+     * Com o som fora, deixá-lo em 1146 abria 90px de barra vazia depois dele
+     * — lê como botão que sumiu, não como barra com um botão só.
+     */
+    helpX: 1216,
     helpR: 27,
-    muteX: 1216,
-    muteR: 27,
 }
 
 export const TIMER = {
@@ -66,6 +70,14 @@ export const REQUEST = {
     r: 24,
     iconX: -382,
     iconSize: 62,
+    /**
+     * Caixa do selo quando ele vem de textura.
+     *
+     * Maior que `iconSize` porque o PNG é 350x350 com folga transparente em
+     * volta: o desenho útil ocupa cerca de 90% do quadro, e a caixa maior
+     * devolve ao selo o mesmo peso visual que o desenho em Graphics tinha.
+     */
+    iconTexBox: 70,
     textX: -318,
     wrap: 620,
 }
@@ -130,6 +142,47 @@ export const TRAY = {
     /** Acima disso a bandeja quebra em duas fileiras. */
     perRowMax: 5,
 }
+
+/**
+ * Marca da peça quando ela vem de textura.
+ *
+ * FRAÇÕES DA ALTURA DO CARTÃO, e não pixels — única exceção da regra deste
+ * arquivo. O cartão tem dois tamanhos (132x112 e, com a bandeja em duas
+ * fileiras, 116x90), e a marca precisa encolher junto: em pixel fixo, a
+ * imagem que cabe no cartão grande transborda no pequeno.
+ *
+ * `box` é CAIXA MÁXIMA — `fitImage` encaixa por proporção, então o desenho
+ * útil sai menor que ela. Os PNGs são 350x350 com folga transparente, e as
+ * frações abaixo já descontam essa folga.
+ *
+ * `dx` é fração da própria caixa, não da altura: só a etiqueta usa, para
+ * alinhar a área branca de escrita ao centro do texto.
+ */
+export const MARK = {
+    /**
+     * O nome do mês NÃO vai por cima do calendário: o corpo da textura já vem
+     * preenchido com a grade de quadradinhos, e texto azul sobre ela some. A
+     * marca sobe e o nome desce para o rodapé do cartão.
+     */
+    mes: { box: 0.60, dx: 0, dy: -0.15, labelBelow: true },
+
+    /** Gota. Vem quase branca de propósito — recebe `setTint` com a cor do ponto. */
+    cor: { box: 0.66, dx: 0, dy: -0.15, labelBelow: true },
+
+    /**
+     * Etiqueta. A palavra vai ABAIXO dela, nunca por cima.
+     *
+     * Escrever dentro do desenho obriga o código a apostar que a palavra cabe
+     * na área branca da arte — e o texto vem de `missions.ts`, então essa
+     * aposta se perde no dia em que alguém escrever uma palavra mais longa.
+     * Fora da imagem, o que limita é a largura do cartão, que o layout
+     * conhece. Mesma razão do calendário.
+     */
+    palavra: { box: 0.95, dx: 0, dy: -0.11, labelBelow: true },
+
+    /** Estrela cinza. Sem cor, como no desenho em código. */
+    intrusa: { box: 0.54, dx: 0, dy: -0.15, labelBelow: true },
+} as const
 
 /** Coluna do leitor. */
 export const READER = {

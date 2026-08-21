@@ -63,7 +63,7 @@ export class BootScene extends Phaser.Scene {
     ASSETS.forEach(([key, url]) => this.load.image(key, url))
   }
 
-  create() {
+    create() {
     this.scene.launch('UIScene')
     this.scene.start('GameScene', { level: 1, phase: 0, points: 0 })
   }

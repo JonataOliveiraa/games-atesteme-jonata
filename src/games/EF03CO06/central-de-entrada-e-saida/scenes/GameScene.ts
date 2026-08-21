@@ -1,1077 +1,1200 @@
-import Phaser from "phaser";
-import { EventBus } from "../../../../shared/EventBus";
-import { runtimeGameBridge } from "../../../../shared/bridge/runtimeGameBridge";
-import type { DeviceId, InterfaceLevel, SlotId } from "../types";
-import { DEVICES, LEVELS, shuffleDevices } from "../data/levels";
+import Phaser from 'phaser'
+import { EventBus } from '../../../../shared/EventBus'
+import { runtimeGameBridge } from '../../../../shared/bridge/runtimeGameBridge'
+import type { PlatformCommand } from '../../../../shared/contracts/platformCommands'
+import { createTutorial, type TutorialStep } from '../../../../shared/tutorial/createTutorial'
+import { showLevelComplete } from '../../../../shared/level/showLevelComplete'
+import { FX, Ease } from '../../../../shared/effects/FX'
+import { DEVICES, DEVICE_INFO, INFOS, LEVELS } from '../data/levels'
+import { C, A, FONT, SIZE, hex, OP_NAME, ICON_FALLBACK } from '../data/theme'
+import { W, H, HUD, BOARD, OP, COMPUTER, PORTS, SORT_CARD, TASK, RAIL, BANK } from '../data/layout'
+import {
+  paintPort, paintCard, paintSlot, paintBoard, badge, createFlow,
+  makePacket, flyPacket, createScreen, createOpDialog,
+  createBigButton, createRoundButton, cardAccept, cardReject, dealIn,
+  flyToSlot,
+  type OpDialog, type BigButton, type ScreenView,
+} from './effects'
+import { createCable, deviceSignal } from './signals'
+import type { DeviceId, DeviceKind, OpFrame, PlayState } from '../types'
 
-const GAME_ID = "central-de-entrada-e-saida";
-const TIMER_BAR_W = 980;
-const TIMER_BAR_Y = 30;
-const CARD_W = 150;
-const CARD_H = 150;
-const SLOT_W = 390;
-const SLOT_H = CARD_H;
-const MODAL_SCALE = 1.14;
+const GAME_ID = 'central-de-entrada-e-saida'
 
-const COLORS = {
-  blue: 0x2563eb,
-  cyan: 0x38bdf8,
-  green: 0x22c55e,
-  orange: 0xf59e0b,
-  purple: 0x8b5cf6,
-  red: 0xef4444,
-  cream: 0xfff6e8,
-  ink: 0x102a43,
-};
+/**
+ * Profundidade dos cabos dentro do `stage`.
+ *
+ * Vale pouco, e é honesto dizer: `stage` é um Container, e Container do Phaser
+ * desenha os filhos na ORDEM DE INSERÇÃO. `setDepth` num filho agenda a
+ * ordenação da lista da cena, não a do pai. Como o cabo nasce depois do
+ * computador, ele fica por cima por mais baixo que seja o número.
+ *
+ * Quem resolve a sobreposição é o traçado: o cabo contorna a máquina em vez de
+ * cruzá-la. Ver `routeToPort` e `computerPlug`.
+ */
+const CABLE_DEPTH = 5
 
-const LEVEL_CATEGORIES: Record<number, { icon: string; label: string; color: number }> = {
-  1: { icon: "🎵", label: "Áudio", color: COLORS.blue },
-  2: { icon: "🎥", label: "Vídeo", color: COLORS.purple },
-  3: { icon: "⌨", label: "Periféricos", color: COLORS.green },
-};
+interface PortView {
+  kind: DeviceKind
+  x: number
+  y: number
+  bg: Phaser.GameObjects.Graphics
+  box: Phaser.GameObjects.Container
+}
 
-const LEVEL_ICON_KEYS: Record<number, string> = {
-  1: "icon-audio",
-  2: "icon-video",
-  3: "icon-periferico",
-};
+interface CardView {
+  id: DeviceId
+  box: Phaser.GameObjects.Container
+  bg: Phaser.GameObjects.Graphics
+  x: number
+  y: number
+  w: number
+  h: number
+}
 
-const DEVICE_TEXTURES: Partial<Record<DeviceId, string>> = {
-  camera: "device-camera",
-  controller: "device-controller",
-  keyboard: "device-keyboard",
-  microphone: "device-microphone",
-  monitor: "device-monitor",
-  mouse: "device-mouse",
-  printer: "device-printer",
-  speaker: "device-speaker",
-};
-
-type CardRecord = {
-  id: DeviceId;
-  card: Phaser.GameObjects.Container;
-  hitbox: Phaser.GameObjects.Zone;
-  homeX: number;
-  homeY: number;
-  slotId: SlotId | null;
-};
+interface SlotView {
+  kind: DeviceKind
+  x: number
+  y: number
+  bg: Phaser.GameObjects.Graphics
+  box: Phaser.GameObjects.Container
+  deviceId?: DeviceId
+  icon?: Phaser.GameObjects.Container
+}
 
 export class GameScene extends Phaser.Scene {
-  private levelConfig!: InterfaceLevel;
-  private devices: DeviceId[] = [];
-  private cards = new Map<DeviceId, CardRecord>();
-  private slotRects = new Map<SlotId, Phaser.Geom.Rectangle>();
-  private slotContents = new Map<SlotId, DeviceId[]>();
-  private slotLabels = new Map<SlotId, Phaser.GameObjects.Text>();
-  private overlayObjects: Phaser.GameObjects.GameObject[] = [];
-  private timerBar?: Phaser.GameObjects.Graphics;
-  private timerEvent?: Phaser.Time.TimerEvent;
-  private commandLocked = false;
-  private hits = 0;
-  private errors = 0;
-  private hasStartedTimer = false;
+  private levelIdx = 0
+  private roundIdx = 0
+  private points = 0
+  private hits = 0
+  private errors = 0
+  private state: PlayState = 'sort'
+  private locked = false
+  private ended = false
+  private isMuted = false
+  private stageGen = 0
+
+  private stage?: Phaser.GameObjects.Container
+  private hud?: Phaser.GameObjects.Container
+  private opLayer?: Phaser.GameObjects.Container
+  private actionLayer?: Phaser.GameObjects.Container
+  private op?: Phaser.GameObjects.Image
+  private dialog?: OpDialog
+  private primary?: BigButton
+  private idleTween?: Phaser.Tweens.Tween
+  private opSpot = 0
+  private unsubPlatform?: () => void
+
+  private computer?: Phaser.GameObjects.Image
+  private screen?: ScreenView
+  private ports: PortView[] = []
+  private cards = new Map<DeviceId, CardView>()
+  private slots: SlotView[] = []
+  private sortCardPos = { x: SORT_CARD.cx, y: SORT_CARD.cy }
 
   constructor() {
-    super({ key: "GameScene" });
+    super({ key: 'GameScene' })
   }
 
-  init(data?: { level?: number; hits?: number; errors?: number }) {
-    const level = Phaser.Math.Clamp(data?.level ?? 1, 1, 3) as 1 | 2 | 3;
-    this.levelConfig = LEVELS.find((item) => item.level === level) ?? LEVELS[0];
-    this.devices = shuffleDevices(this.levelConfig.devices);
-    this.hits = data?.hits ?? 0;
-    this.errors = data?.errors ?? 0;
-    this.commandLocked = false;
-    this.hasStartedTimer = false;
-    this.cards.clear();
-    this.slotRects.clear();
-    this.slotContents.clear();
-    this.slotLabels.clear();
-    this.overlayObjects = [];
+  init(data: { level?: number; points?: number }) {
+    this.levelIdx = Phaser.Math.Clamp(data.level ?? 1, 1, 3) - 1
+    this.roundIdx = 0
+    this.points = data.points ?? 0
+    this.hits = 0
+    this.errors = 0
+    this.locked = false
+    this.ended = false
   }
 
   create() {
-    this.createBackground();
-    this.createTimerBar();
-    this.createHeader();
-    this.createInfoButton();
-    this.createComputerPanel();
-    this.createSlotsPanel();
-    this.createDevicesPanel();
-    this.createActionButton();
-    this.emitProgress();
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.shutdown());
+    this.drawBackground()
+    this.registerPlatformCommands()
+    EventBus.on('mute-audio', this.onMuteAudio, this)
+    EventBus.on('show-tutorial', this.replayTutorial, this)
+    this.events.once('shutdown', this.shutdownScene, this)
+
+    this.opLayer = this.add.container(0, 0).setDepth(12)
+    this.actionLayer = this.add.container(0, 0).setDepth(13)
+    this.buildOp()
+
+    runtimeGameBridge.emit({ type: 'GAME_READY', gameId: GAME_ID })
+    this.emitCheckpoint()
+    this.startLevel()
   }
 
-  update() {
-    if (!this.timerEvent || !this.timerBar) return;
-    const pct = Math.max(0, this.timerEvent.getRemaining() / (this.levelConfig.timeLimit * 1000));
-    const color = pct > 0.5 ? COLORS.green : pct > 0.25 ? COLORS.orange : COLORS.red;
-    this.drawTimerFill(TIMER_BAR_W * pct, color);
+  private get level() { return LEVELS[this.levelIdx] }
+
+  private get totalRounds() {
+    const l = this.level
+    return (l.sortRounds ?? l.pickRounds ?? l.chainRounds ?? []).length
   }
 
-  shutdown() {
-    this.timerEvent?.destroy();
-    this.input.setDefaultCursor("default");
+  private shutdownScene() {
+    EventBus.off('mute-audio', this.onMuteAudio, this)
+    EventBus.off('show-tutorial', this.replayTutorial, this)
+    this.idleTween?.remove()
+    this.dialog?.destroy()
+    this.unsubPlatform?.()
   }
 
-  private createBackground() {
-    const key = this.levelConfig.level === 2 ? "bg-input-output-lab" : "bg-interface-central";
-    const bg = this.add.image(640, 360, key).setDepth(-100);
-    const scale = Math.max(1280 / bg.width, 720 / bg.height);
-    bg.setScale(scale);
-    this.add.rectangle(640, 360, 1280, 720, 0xffffff, 0.1).setDepth(-98);
-    this.add.rectangle(640, 360, 1280, 720, 0x102a43, 0.18).setDepth(-97);
+  private registerPlatformCommands() {
+    this.unsubPlatform = runtimeGameBridge.onCommand((cmd: PlatformCommand) => {
+      if (cmd.type === 'START_GAME') this.points = cmd.points ?? this.points
+    })
   }
 
-  private createTimerBar() {
-    const track = this.add.graphics().setDepth(45);
-    track.fillStyle(0x334155, 0.16);
-    track.fillRoundedRect(640 - TIMER_BAR_W / 2, TIMER_BAR_Y - 16, TIMER_BAR_W, 32, 16);
-    this.timerBar = this.add.graphics().setDepth(46);
-    this.drawTimerFill(TIMER_BAR_W, COLORS.green);
+  private onMuteAudio(muted: boolean) {
+    this.isMuted = muted
   }
 
-  private drawTimerFill(width: number, color: number) {
-    if (!this.timerBar) return;
-    this.timerBar.clear();
-    if (width <= 0) return;
-    this.timerBar.fillStyle(color, 1);
-    this.timerBar.fillRoundedRect(640 - TIMER_BAR_W / 2, TIMER_BAR_Y - 16, Math.max(0, width), 32, 16);
+  private drawBackground() {
+    const bg = this.add.image(W / 2, H / 2, 'bg-central').setDepth(-20)
+    bg.setScale(Math.max(W / bg.width, H / bg.height))
+    const veil = this.add.graphics().setDepth(-19)
+    veil.fillStyle(C.ink, A.veil)
+    veil.fillRect(0, 0, W, H)
+    veil.fillStyle(C.ink, 0.18)
+    veil.fillRect(0, 0, W, 60)
+    veil.fillRect(0, H - 60, W, 60)
   }
 
-  private createHeader() {
-    this.addSharpText(640, 68, this.levelConfig.title, {
-      fontSize: "38px",
-      fontFamily: "Arial Black, Arial",
-      color: "#ffffff",
-      stroke: "#1e3a8a",
-      strokeThickness: 5,
-    }).setOrigin(0.5);
-
-    const headerCat = LEVEL_CATEGORIES[this.levelConfig.level];
-    this.addSharpText(1084, 96, `${headerCat.icon}  Nível ${this.levelConfig.level}/3`, {
-      fontSize: "18px",
-      fontFamily: "Arial Black, Arial",
-      color: "#1e3a8a",
-      backgroundColor: "rgba(255,255,255,0.78)",
-      padding: { x: 14, y: 8 },
-    }).setOrigin(0.5);
+  private buildOp() {
+    if (!this.opLayer) return
+    const home = OP.spots[0]
+    this.op = this.add.image(home.x, home.y, 'op-01')
+    this.fit(this.op, OP.maxW, OP.maxH)
+    this.opLayer.add(this.op)
+    this.dialog = createOpDialog(this, this.opLayer, this.op, 12)
+    this.startIdle()
   }
 
-  private createInfoButton() {
-    const x = 198;
-    const y = 76;
-    const button = this.add.container(x, y).setDepth(120);
-    const bg = this.add.graphics();
-    bg.fillStyle(COLORS.blue, 0.96);
-    bg.fillCircle(0, 0, 24);
-    bg.lineStyle(4, 0xffffff, 0.96);
-    bg.strokeCircle(0, 0, 24);
-    const label = this.addSharpText(0, -1, "i", {
-      fontSize: "28px",
-      fontFamily: "Arial Black, Arial",
-      color: "#ffffff",
-      stroke: "#1e3a8a",
-      strokeThickness: 3,
-    }).setOrigin(0.5);
-    button.add([bg, label]);
-
-    const hitbox = this.add.zone(x, y, 64, 64).setDepth(121);
-    hitbox.setInteractive({ useHandCursor: true });
-    hitbox.on("pointerover", () => {
-      this.input.setDefaultCursor("pointer");
-      this.tweens.add({ targets: button, scale: 1.08, duration: 90, ease: "Sine.easeOut" });
-    });
-    hitbox.on("pointerout", () => {
-      this.input.setDefaultCursor("default");
-      this.tweens.add({ targets: button, scale: 1, duration: 90, ease: "Sine.easeOut" });
-    });
-    hitbox.on("pointerdown", () => {
-      this.playClick();
-      this.showInfoModal();
-    });
+  private startIdle() {
+    if (!this.op) return
+    this.idleTween?.remove()
+    this.idleTween = FX.float(this, this.op, { amount: 7, duration: 2200 })
   }
 
-  private showInfoModal() {
-    this.clearOverlay();
-    const overlay = this.addOverlayObject(this.add.rectangle(640, 360, 1280, 720, 0x12324a, 0.56).setDepth(450));
-    overlay.setInteractive();
-
-    const modal = this.addOverlayObject(this.add.container(640, 360).setDepth(451));
-    const shadow = this.add.graphics();
-    shadow.fillStyle(0x000000, 0.18);
-    shadow.fillRoundedRect(-286, -152, 572, 304, 30);
-    const bg = this.add.graphics();
-    bg.fillStyle(0xffffff, 0.98);
-    bg.fillRoundedRect(-298, -164, 596, 312, 30);
-    bg.lineStyle(6, 0xffffff, 0.96);
-    bg.strokeRoundedRect(-298, -164, 596, 312, 30);
-    const title = this.addSharpText(0, -102, "Como jogar", {
-      fontSize: "34px",
-      fontFamily: "Arial Black, Arial",
-      color: "#25327a",
-      stroke: "#ffffff",
-      strokeThickness: 5,
-    }).setOrigin(0.5);
-    const text = this.addSharpText(0, -18, this.getInfoText(), {
-      fontSize: "22px",
-      fontFamily: "Arial Black, Arial",
-      color: "#334155",
-      align: "center",
-      wordWrap: { width: 500 },
-    }).setOrigin(0.5);
-    const close = this.createModalButton(0, 104, "Entendi", COLORS.orange);
-    const closeHitbox = this.addOverlayObject(this.add.zone(640, 360 + 104 * MODAL_SCALE, 300 * MODAL_SCALE, 76 * MODAL_SCALE).setDepth(452));
-    closeHitbox.setInteractive({ useHandCursor: true });
-    closeHitbox.on("pointerover", () => {
-      this.input.setDefaultCursor("pointer");
-      this.tweens.add({ targets: close, scale: 1.04, duration: 90, ease: "Sine.easeOut" });
-    });
-    closeHitbox.on("pointerout", () => {
-      this.input.setDefaultCursor("default");
-      this.tweens.add({ targets: close, scale: 1, duration: 90, ease: "Sine.easeOut" });
-    });
-    closeHitbox.on("pointerdown", () => {
-      this.playClick();
-      this.clearOverlay();
-    });
-
-    modal.add([shadow, bg, title, text, close]);
-    this.animateModal(modal);
+  /**
+   * Troca a pose.
+   *
+   * `flip` existe por causa da arte: na `op-02` o Vico aponta para a DIREITA,
+   * e ele mora na coluna direita da tela — apontar para a direita é apontar
+   * para fora do jogo. Espelhado, o mesmo desenho aponta para o tabuleiro, que
+   * é onde está a coisa de que ele está falando.
+   */
+  private setPose(frame: OpFrame, flip = false) {
+    if (!this.op) return
+    this.op.setTexture(frame)
+    this.op.setFlipX(flip)
+    this.fit(this.op, OP.maxW, OP.maxH)
+    FX.impact(this, this.op, 0.1)
   }
 
-  private getInfoText() {
-    if (this.levelConfig.level === 1) {
-      return "Arraste cada dispositivo para Entrada ou Saída.";
+  /** Aponta para alguma coisa da tela, virando-se para o lado certo. */
+  private pointAt(x: number) {
+    if (!this.op) return
+    this.setPose('op-02', x < this.op.x)
+  }
+
+  /**
+   * Salta para o ponto da rodada.
+   *
+   * O `float` do repouso também mexe em `y`; deixar os dois correndo juntos
+   * faz o boneco tremer no ar e aterrissar fora do lugar. Por isso o idle
+   * morre antes do salto e só volta depois de ele assentar.
+   */
+  private async hopToSpot(index: number) {
+    if (!this.op) return
+    const spot = OP.spots[index % OP.spots.length]
+    if (Math.abs(this.op.x - spot.x) < 2 && Math.abs(this.op.y - spot.y) < 2) return
+
+    const gen = this.stageGen
+    this.idleTween?.remove()
+    this.idleTween = undefined
+
+    await FX.arcTo(this, this.op, spot, { height: OP.hopH, duration: 420 })
+    if (gen !== this.stageGen || !this.op) return
+
+    /*
+     * Nada de `FX.impact` no pouso.
+     *
+     * O `setPose` do apontar dispara um impacto de ~530ms e o pouso cai no
+     * meio dele. Dois impactos sobrepostos no mesmo alvo fazem o segundo
+     * gravar como "escala de repouso" um valor que ainda estava animando, e o
+     * boneco fica permanentemente de outro tamanho. O `fit` devolve a escala
+     * certa, e o arco já dá o peso do salto sem ajuda.
+     */
+    this.fit(this.op, OP.maxW, OP.maxH)
+    this.startIdle()
+  }
+
+  /**
+   * Abertura de rodada: o Vico troca de lugar e aponta para o tabuleiro.
+   *
+   * Depois volta sozinho para a pose neutra — sem isso ele ficava congelado
+   * apontando enquanto a criança pensava, que é quando ele deveria só esperar.
+   */
+  private openRound() {
+    const gen = this.stageGen
+    this.opSpot += 1
+    void this.hopToSpot(this.opSpot)
+    this.pointAt(BOARD.cx)
+
+    this.time.delayedCall(1200, () => {
+      if (gen !== this.stageGen) return
+      if (this.dialog?.isBusy()) return
+      this.setPose('op-01')
+    })
+  }
+
+  private react(frame: OpFrame, line: string) {
+    this.setPose(frame)
+    this.dialog?.react(line)
+  }
+
+  /** Reage e, passado o tempo de leitura, volta ao repouso. */
+  private reactThenIdle(frame: OpFrame, line: string, backAfter = 2000) {
+    const gen = this.stageGen
+    this.react(frame, line)
+    this.time.delayedCall(backAfter, () => {
+      if (gen !== this.stageGen) return
+      if (this.dialog?.isBusy()) return
+      this.setPose('op-01')
+    })
+  }
+
+  private async speak(frame: OpFrame, ...lines: Array<string | undefined>) {
+    const gen = this.stageGen
+    this.setPose(frame)
+    this.locked = true
+    this.syncPrimary()
+    await this.dialog?.speak(lines.filter((l): l is string => !!l))
+    if (gen !== this.stageGen) return
+    this.setPose('op-01')
+    this.locked = false
+    this.syncPrimary()
+  }
+
+  private renderHud() {
+    this.hud?.destroy()
+    this.hud = this.add.container(0, 0).setDepth(80)
+
+    const bg = this.add.graphics()
+    bg.fillStyle(C.ink, 0.94)
+    bg.fillRoundedRect(HUD.x, HUD.y, HUD.w, HUD.h, 24)
+    bg.fillStyle(C.cream, 0.08)
+    bg.fillRoundedRect(HUD.x + 14, HUD.y + 10, HUD.w - 28, 20, 10)
+    bg.lineStyle(3, C.glow, 0.8)
+    bg.strokeRoundedRect(HUD.x, HUD.y, HUD.w, HUD.h, 24)
+    this.hud.add(bg)
+
+    const pill = this.add.graphics()
+    pill.fillStyle(C.inBlue, 1)
+    pill.fillRoundedRect(HUD.pillX, HUD.pillY, HUD.pillW, HUD.pillH, HUD.pillH / 2)
+    pill.fillStyle(C.white, 0.26)
+    pill.fillRoundedRect(HUD.pillX + 10, HUD.pillY + 6, HUD.pillW - 20, 12, 6)
+    this.hud.add(pill)
+
+    this.hud.add(this.add.text(HUD.pillX + HUD.pillW / 2, HUD.cy, `NÍVEL ${this.level.level}`, {
+      fontFamily: FONT.black, fontSize: SIZE.hudLevel, color: hex(C.white),
+    }).setOrigin(0.5).setResolution(2))
+
+    const total = this.totalRounds
+    const dots = this.add.graphics()
+    for (let i = 0; i < total; i += 1) {
+      const dx = HUD.phaseX + i * 30
+      const done = i < this.roundIdx
+      const now = i === this.roundIdx
+      dots.fillStyle(done ? C.green : now ? C.inBlue : C.cream, done || now ? 1 : 0.3)
+      if (now) dots.fillRoundedRect(dx - 14, HUD.cy - 8, 28, 16, 8)
+      else dots.fillCircle(dx, HUD.cy, 8)
     }
-    if (this.levelConfig.level === 2) {
-      return "Na videochamada, separe os dispositivos pelo caminho da informação: o que entra no computador e o que sai dele.";
-    }
-    return "Monte a central para escrever um bilhete no computador e entregar no papel.";
+    this.hud.add(dots)
+
+    this.hud.add(this.add.text(HUD.titleX, HUD.cy, this.level.title, {
+      fontFamily: FONT.black, fontSize: SIZE.hudTitle, color: hex(C.cream),
+      align: 'center', wordWrap: { width: 520 },
+    }).setOrigin(0.5).setResolution(2))
+
+    this.hud.add(createRoundButton(this, HUD.helpX, HUD.cy, HUD.helpR, '?', () => this.replayTutorial()))
+
+    FX.slideIn(this, this.hud, { dy: 26, duration: 340 })
   }
 
-  private createComputerPanel() {
-    const PX = 300, PY = 116, PW = 680, PH = 100;
-    const panelCX = PX + PW / 2;  // 640
-    const panelCY = PY + PH / 2;  // 166
+  private startLevel() {
+    const gen = this.stageGen
+    if (this.level.sortRounds) this.showSort()
+    else if (this.level.pickRounds) this.showPick()
+    else this.showChain()
 
-    this.drawPanel(PX, PY, PW, PH, COLORS.blue, 1);
-
-    const ctr = this.add.container(panelCX, panelCY).setDepth(7);
-
-    // Title: 20px below panel top
-    const titleY = -PH / 2 + 20;  // container: -30, world: 136
-
-    // Arrow row: 32px below title, centred in the remaining space
-    const arrowY = titleY + 32;   // container: 2, world: 168
-
-    // Monitor icon — centred on arrow row, well within panel bounds
-    const monitor = this.add.graphics();
-    const mW = 60, mH = 34;
-    monitor.fillStyle(0x1e293b, 0.95);
-    monitor.fillRoundedRect(-mW / 2, arrowY - mH / 2, mW, mH, 7);
-    monitor.fillStyle(0x7dd3fc, 0.9);
-    monitor.fillRoundedRect(-mW / 2 + 5, arrowY - mH / 2 + 5, mW - 10, mH - 10, 5);
-
-    const titleText = this.addSharpText(0, titleY, "Computador", {
-      fontSize: "18px",
-      fontFamily: "Arial Black, Arial",
-      color: "#ffffff",
-      stroke: "#1e3a8a",
-      strokeThickness: 4,
-    }).setOrigin(0.5);
-
-    const textOffsetX = PW / 4;  // 170
-
-    const enterText = this.addSharpText(-textOffsetX, arrowY, "ENTRA →", {
-      fontSize: "20px",
-      fontFamily: "Arial Black, Arial",
-      color: "#ffffff",
-      stroke: "#2563eb",
-      strokeThickness: 5,
-    }).setOrigin(0.5);
-
-    const exitText = this.addSharpText(textOffsetX, arrowY, "→ SAI", {
-      fontSize: "20px",
-      fontFamily: "Arial Black, Arial",
-      color: "#ffffff",
-      stroke: "#f59e0b",
-      strokeThickness: 5,
-    }).setOrigin(0.5);
-
-    ctr.add([monitor, titleText, enterText, exitText]);
+    void this.speak('op-03', ...this.level.opening).then(() => {
+      if (gen !== this.stageGen) return
+      this.runTutorial(false)
+    })
   }
 
-  private createSlotsPanel() {
-    this.drawPanel(72, 230, 1136, 206, COLORS.purple, 1);
-    const spacing = this.levelConfig.slots.length === 1 ? 0 : 430;
-    const startX = 640 - ((this.levelConfig.slots.length - 1) * spacing) / 2;
-    this.levelConfig.slots.forEach((slot, index) => {
-      const x = startX + index * spacing;
-      const y = 338;
-      this.slotRects.set(slot.id, new Phaser.Geom.Rectangle(x - SLOT_W / 2, y - SLOT_H / 2, SLOT_W, SLOT_H));
-      this.slotContents.set(slot.id, []);
-      this.drawSlot(slot.id, x, y, slot.label, index);
-    });
+  private drawComputer(y: number, maxW: number, maxH: number) {
+    this.computer = this.add.image(COMPUTER.cx, y, 'computador-central').setDepth(8)
+    this.fit(this.computer, maxW, maxH)
+    this.stage?.add(this.computer)
+    if (this.stage) this.screen = createScreen(this, this.stage, this.computer, COMPUTER.screen)
+    FX.popIn(this, this.computer, { from: 0.85, duration: 380 })
   }
 
-  private drawSlot(slotId: SlotId, x: number, y: number, label: string, index: number) {
-    const colors = [COLORS.blue, COLORS.orange, COLORS.green];
-    const g = this.add.graphics().setDepth(5);
-    g.fillStyle(COLORS.cream, 0.78);
-    g.fillRoundedRect(x - SLOT_W / 2, y - SLOT_H / 2, SLOT_W, SLOT_H, 22);
-    g.fillStyle(0xffffff, 0.25);
-    g.fillRoundedRect(x - SLOT_W / 2 + 16, y - SLOT_H / 2 + 12, SLOT_W - 32, 34, 16);
-    g.lineStyle(6, colors[index % colors.length], 0.9);
-    g.strokeRoundedRect(x - SLOT_W / 2, y - SLOT_H / 2, SLOT_W, SLOT_H, 22);
-    // Centered in the white header strip (strip top = y - SLOT_H/2 + 12, height 34)
-    this.addSharpText(x, y - SLOT_H / 2 + 29, label, {
-      fontSize: "21px",
-      fontFamily: "Arial Black, Arial",
-      color: "#25327a",
-      stroke: "#ffffff",
-      strokeThickness: 4,
-      align: "center",
-      wordWrap: { width: 330 },
-    }).setOrigin(0.5).setDepth(6);
-    const countText = this.addSharpText(x, y + 52, "", {
-      fontSize: "15px",
-      fontFamily: "Arial Black, Arial",
-      color: "#475569",
-    }).setOrigin(0.5).setDepth(6);
-    this.slotLabels.set(slotId, countText);
+  private showSort() {
+    this.clearStage()
+    this.renderHud()
+    this.drawBoard(this.level.helper)
+    this.state = 'sort'
+    this.locked = false
+
+    const round = this.level.sortRounds?.[this.roundIdx]
+    if (!round) return
+
+    this.drawComputer(COMPUTER.sortY, COMPUTER.maxW, COMPUTER.maxH)
+    this.drawSortCard(round.deviceId)
+    this.drawPorts()
+    this.emitCheckpoint()
+    this.openRound()
   }
 
-  private createDevicesPanel() {
-    this.drawPanel(72, 454, 1136, 180, COLORS.orange, 1);
-    const spacing = this.devices.length <= 5 ? 198 : 168;
-    const startX = 640 - ((this.devices.length - 1) * spacing) / 2;
-    this.devices.forEach((id, index) => {
-      const x = startX + index * spacing;
-      const y = 538;
-      const { card, hitbox } = this.createDeviceCard(id, x, y);
-      this.cards.set(id, { id, card, hitbox, homeX: x, homeY: y, slotId: null });
-    });
+  private drawSortCard(id: DeviceId) {
+    const device = DEVICES[id]
+    const { w, h, r, cx, cy } = SORT_CARD
+    const box = this.add.container(cx, cy).setDepth(20)
+
+    const bg = this.add.graphics()
+    paintCard(bg, w, h, r, 'normal')
+
+    const icon = this.add.image(SORT_CARD.iconX, 0, this.safeTex(device.textureKey))
+    this.fit(icon, SORT_CARD.iconSize, SORT_CARD.iconSize)
+
+    const label = this.add.text(SORT_CARD.labelX, 0, device.label, {
+      fontFamily: FONT.black, fontSize: '28px', color: hex(C.ink),
+      wordWrap: { width: w - 150 },
+    }).setOrigin(0, 0.5).setResolution(2)
+
+    box.add([bg, icon, label])
+    this.stage?.add(box)
+    this.sortCardPos = { x: cx, y: cy }
+    FX.popIn(this, box, { from: 0.8, duration: 380 })
+    FX.float(this, icon, { amount: 5, duration: 2000 })
   }
 
-  private createDeviceCard(id: DeviceId, x: number, y: number) {
-    const device = DEVICES[id];
-    const card = this.add.container(x, y).setDepth(20);
-    const shadow = this.add.graphics();
-    shadow.fillStyle(0x000000, 0.13);
-    shadow.fillRoundedRect(-CARD_W / 2 + 3, -CARD_H / 2 + 10, CARD_W - 6, CARD_H - 4, 20);
-    const bg = this.add.graphics();
-    bg.fillStyle(COLORS.cream, 0.96);
-    bg.fillRoundedRect(-CARD_W / 2, -CARD_H / 2, CARD_W, CARD_H, 20);
-    bg.fillStyle(0xffffff, 0.25);
-    bg.fillRoundedRect(-CARD_W / 2 + 14, -CARD_H / 2 + 12, CARD_W - 28, 34, 16);
-    bg.lineStyle(4, device.color, 0.88);
-    bg.strokeRoundedRect(-CARD_W / 2, -CARD_H / 2, CARD_W, CARD_H, 20);
-    const textureKey = DEVICE_TEXTURES[id];
-    const icon = textureKey && this.textures.exists(textureKey)
-      ? this.fitImage(this.add.image(0, -28, textureKey), 112, 88)
-      : this.addSharpText(0, -24, device.icon, {
-          fontSize: "48px",
-          fontFamily: "Arial Black, Arial",
-          color: this.toCssColor(device.color),
-          stroke: "#ffffff",
-          strokeThickness: 5,
-        }).setOrigin(0.5);
-    const label = this.addSharpText(0, 54, device.name, {
-      fontSize: device.name.length > 11 ? "13px" : "15px",
-      fontFamily: "Arial Black, Arial",
-      color: "#334155",
-      align: "center",
-      wordWrap: { width: 128 },
-    }).setOrigin(0.5);
-    card.add([shadow, bg, icon, label]);
+  private drawPorts() {
+    const defs: Array<{ kind: DeviceKind; label: string; tone: number; dir: 1 | -1 }> = [
+      // ENTRADA aponta para cima: a informação sobe para dentro do computador.
+      { kind: 'input', label: 'ENTRADA', tone: C.inBlue, dir: -1 },
+      { kind: 'output', label: 'SAÍDA', tone: C.outAmber, dir: 1 },
+    ]
 
-    const hitbox = this.add.zone(x, y, CARD_W + 28, CARD_H + 24).setDepth(80);
-    hitbox.setInteractive({ draggable: true, useHandCursor: true });
-    hitbox.on("pointerdown", () => this.startTimerOnce());
-    this.input.setDraggable(hitbox);
-    hitbox.on("drag", (_pointer: Phaser.Input.Pointer, dragX: number, dragY: number) => {
-      if (this.commandLocked) return;
-      card.setPosition(dragX, dragY);
-      hitbox.setPosition(dragX, dragY);
-    });
-    hitbox.on("dragend", (_pointer: Phaser.Input.Pointer) => this.dropCard(id, card.x, card.y));
-    return { card, hitbox };
+    const startX = BOARD.cx - (PORTS.w + PORTS.gap) / 2
+
+    defs.forEach((def, i) => {
+      const x = startX + i * (PORTS.w + PORTS.gap)
+      const box = this.add.container(x, PORTS.cy).setDepth(14)
+      const bg = this.add.graphics()
+      paintPort(bg, PORTS.w, PORTS.h, PORTS.r, def.tone, 'normal')
+
+      const label = this.add.text(0, PORTS.labelDY, def.label, {
+        fontFamily: FONT.black, fontSize: SIZE.portLabel, color: hex(C.white),
+      }).setOrigin(0.5).setResolution(2)
+
+      const flow = createFlow(this, {
+        dir: def.dir,
+        tone: def.tone,
+        w: PORTS.chevW,
+        thick: PORTS.chevThick,
+        gap: PORTS.chevGap,
+      })
+      flow.setY(PORTS.flowY)
+
+      box.add([bg, label, flow])
+
+      const hit = this.add.zone(0, 0, PORTS.w, PORTS.h).setOrigin(0.5).setInteractive({ useHandCursor: true })
+      hit.on('pointerdown', () => this.tapPort(def.kind))
+      hit.on('pointerover', () => {
+        if (this.locked) return
+        paintPort(bg, PORTS.w, PORTS.h, PORTS.r, def.tone, 'hover')
+        FX.to(this, box, { scale: 1.04 }, { duration: 130 })
+      })
+      hit.on('pointerout', () => {
+        if (this.locked) return
+        paintPort(bg, PORTS.w, PORTS.h, PORTS.r, def.tone, 'normal')
+        FX.to(this, box, { scale: 1 }, { duration: 130 })
+      })
+      box.add(hit)
+
+      this.stage?.add(box)
+      this.ports.push({ kind: def.kind, x, y: PORTS.cy, bg, box })
+      FX.popIn(this, box, { from: 0.82, delay: 140 + i * 90, duration: 400 })
+    })
   }
 
-  private createActionButton() {
-    this.createUiButton(640, 682, 360, 46, "Testar conexão", COLORS.green, () => this.validateConnections());
+  /**
+   * Onde o cabo pluga na máquina: a borda de BAIXO, no meio.
+   *
+   * Antes ele terminava 60px dentro do corpo do computador, então a ponta e o
+   * plugue ficavam desenhados sobre a carcaça. Encostando na silhueta o cabo
+   * parece entrar no aparelho.
+   */
+  private computerPlug(fallbackY: number) {
+    const c = this.computer
+    if (!c) return { x: COMPUTER.cx, y: fallbackY }
+    return { x: c.x, y: c.y + c.displayHeight / 2 - 6 }
   }
 
-  private dropCard(id: DeviceId, x: number, y: number) {
-    if (this.commandLocked) return;
-    const targetSlot = [...this.slotRects.entries()].find(([, rect]) => rect.contains(x, y))?.[0] ?? null;
-    if (!targetSlot) {
-      this.returnCardHome(id);
-      return;
-    }
-    this.placeCardInSlot(id, targetSlot);
-  }
-
-  private placeCardInSlot(id: DeviceId, slotId: SlotId) {
-    const slot = this.levelConfig.slots.find((item) => item.id === slotId);
-    if (!slot) return;
-    if (!slot.accepts.includes(id)) {
-      this.errors += 1;
-      this.playWrong();
-      this.showToast(this.levelConfig.hint, COLORS.red);
-      this.returnCardHome(id);
-      runtimeGameBridge.emit({ type: "WRONG_ANSWER", gameId: GAME_ID, stage: this.levelConfig.level, pointsEarned: -5 });
-      this.emitProgress();
-      return;
-    }
-
-    const current = this.slotContents.get(slotId) ?? [];
-    if (current.includes(id)) return;
-    if (current.length >= slot.accepts.length) {
-      this.returnCardHome(id);
-      return;
-    }
-
-    this.removeFromPreviousSlot(id);
-    current.push(id);
-    this.slotContents.set(slotId, current);
-
-    const record = this.cards.get(id);
-    const rect = this.slotRects.get(slotId);
-    if (!record || !rect) return;
-    record.slotId = slotId;
-    const index = current.length - 1;
-    const slotCapacity = slot.accepts.length;
-    const centerX = slotCapacity > 1 ? rect.centerX - ((slotCapacity - 1) * 168) / 2 + index * 168 : rect.centerX;
-    const centerY = rect.centerY;
-    this.tweens.add({ targets: [record.card, record.hitbox], x: centerX, y: centerY, duration: 160, ease: "Back.easeOut" });
-    record.card.setScale(1);
-    this.updateSlotLabel(slotId);
-    this.playClick();
-    this.emitProgress();
-  }
-
-  private removeFromPreviousSlot(id: DeviceId) {
-    const record = this.cards.get(id);
-    if (!record?.slotId) return;
-    const content = this.slotContents.get(record.slotId) ?? [];
-    this.slotContents.set(record.slotId, content.filter((item) => item !== id));
-    this.updateSlotLabel(record.slotId);
-    record.slotId = null;
-  }
-
-  private returnCardHome(id: DeviceId) {
-    const record = this.cards.get(id);
-    if (!record) return;
-    this.removeFromPreviousSlot(id);
-    record.card.setScale(1);
-    this.tweens.add({ targets: [record.card, record.hitbox], x: record.homeX, y: record.homeY, duration: 180, ease: "Sine.easeOut" });
-  }
-
-  private updateSlotLabel(slotId: SlotId) {
-    const label = this.slotLabels.get(slotId);
-    const slot = this.levelConfig.slots.find((item) => item.id === slotId);
-    if (!label || !slot) return;
-    const count = this.slotContents.get(slotId)?.length ?? 0;
-    label.setText("");
-    label.setVisible(count === 0);
-  }
-
-  private validateConnections() {
-    if (this.commandLocked) return;
-    this.startTimerOnce();
-    const complete = this.levelConfig.slots.every((slot) => {
-      const content = this.slotContents.get(slot.id) ?? [];
-      return slot.accepts.every((id) => content.includes(id));
-    });
-    if (!complete) {
-      this.errors += 1;
-      this.playWrong();
-      this.showToast("Ainda falta conectar o dispositivo certo.", COLORS.red);
-      runtimeGameBridge.emit({ type: "WRONG_ANSWER", gameId: GAME_ID, stage: this.levelConfig.level, pointsEarned: -5 });
-      this.emitProgress();
-      return;
-    }
-    this.completeLevel();
-  }
-
-  private completeLevel() {
-    if (this.commandLocked) return;
-    this.commandLocked = true;
-    this.timerEvent?.remove(false);
-    this.hits += 1;
-    this.playSuccess();
-    this.animateSignal();
-    this.showToast(this.levelConfig.successMessage, COLORS.green, 2500);
-    runtimeGameBridge.emit({ type: "CORRECT_ANSWER", gameId: GAME_ID, stage: this.levelConfig.level, pointsEarned: 20 });
-    this.emitProgress();
-    this.time.delayedCall(1700, () => {
-      const nextLevel = this.levelConfig.level + 1;
-      if (nextLevel <= 3) {
-        runtimeGameBridge.emit({ type: "CHECKPOINT", gameId: GAME_ID, stage: nextLevel, progress: 0, score: this.getScore(), hits: this.hits, errors: this.errors });
-        this.showLevelCompleteTransition(nextLevel as 1 | 2 | 3);
-      } else {
-        runtimeGameBridge.emit({ type: "GAME_COMPLETED", gameId: GAME_ID, stage: this.levelConfig.level });
-        this.showGameCompleteScreen();
-      }
-    });
-  }
-
-  private animateSignal() {
-    const line = this.add.graphics().setDepth(60);
-    line.lineStyle(8, COLORS.green, 0.9);
-    line.beginPath();
-    line.moveTo(240, 438);
-    line.lineTo(640, 242);
-    line.lineTo(1040, 438);
-    line.strokePath();
-    this.tweens.add({ targets: line, alpha: 0, duration: 900, delay: 450, onComplete: () => line.destroy() });
-  }
-
-  private startTimerOnce() {
-    if (this.hasStartedTimer) return;
-    this.hasStartedTimer = true;
-    this.timerEvent = this.time.delayedCall(this.levelConfig.timeLimit * 1000, () => {
-      if (this.commandLocked) return;
-      this.commandLocked = true;
-      this.errors += 1;
-      runtimeGameBridge.emit({ type: "WRONG_ANSWER", gameId: GAME_ID, stage: this.levelConfig.level, pointsEarned: -5 });
-      this.showGameOverScreen();
-    });
-  }
-
-  private showLevelCompleteTransition(nextLevel: 1 | 2 | 3) {
-    this.clearOverlay();
-    const overlay = this.addOverlayObject(this.add.rectangle(640, 360, 1280, 720, 0x12324a, 0.56).setDepth(450));
-    overlay.setInteractive();
-
-    const modal = this.addOverlayObject(this.add.container(640, 360).setDepth(451));
-    const shadow = this.add.graphics();
-    shadow.fillStyle(0x000000, 0.18);
-    shadow.fillRoundedRect(-292, -178, 584, 370, 30);
-    const bg = this.add.graphics();
-    bg.fillStyle(0xffffff, 0.98);
-    bg.fillRoundedRect(-304, -190, 608, 376, 30);
-    bg.lineStyle(6, 0xffffff, 0.96);
-    bg.strokeRoundedRect(-304, -190, 608, 376, 30);
-    const topBar = this.add.graphics();
-    topBar.fillStyle(COLORS.orange, 1);
-    topBar.fillRoundedRect(-214, -207, 428, 30, 15);
-    topBar.lineStyle(3, 0xffffff, 0.82);
-    topBar.strokeRoundedRect(-214, -207, 428, 30, 15);
-
-    const lvl = this.levelConfig.level;
-    const cat = LEVEL_CATEGORIES[lvl];
-    const title = this.addSharpText(0, -138, "⭐  Parabéns!", {
-      fontSize: "40px",
-      fontFamily: "Arial Black, Arial",
-      color: "#25327a",
-      stroke: "#ffffff",
-      strokeThickness: 5,
-    }).setOrigin(0.5);
-    const subtitleIcon = this.fitImage(this.add.image(-130, -82, LEVEL_ICON_KEYS[lvl]), 26, 26).setOrigin(0.5);
-    const subtitle = this.addSharpText(-102, -82, `Nível ${lvl} concluído  —  ${cat.label}`, {
-      fontSize: "22px",
-      fontFamily: "Arial Black, Arial",
-      color: this.toCssColor(cat.color),
-    }).setOrigin(0, 0.5);
-    const learnedTexts: Record<number, string> = {
-      1: "Microfone → entra  •  Alto-falante → sai",
-      2: "Câmera → entra  •  Monitor → sai",
-      3: "Teclado + Mouse → entram  •  Monitor + Impressora → saem",
-    };
-    const learned = this.addSharpText(0, -36, learnedTexts[lvl] ?? "", {
-      fontSize: "16px",
-      fontFamily: "Arial Black, Arial",
-      color: "#475569",
-      align: "center",
-      wordWrap: { width: 520 },
-    }).setOrigin(0.5);
-
-    const chipPositions = [-190, 0, 190] as const;
-    const chips = ([1, 2, 3] as const).map((level, index) => {
-      const chip = this.add.container(chipPositions[index], 30);
-      const catDef = LEVEL_CATEGORIES[level];
-      const isDone = level <= lvl;
-      const isNext = level === nextLevel;
-      const chipBg = this.add.graphics();
-      chipBg.fillStyle(isDone ? COLORS.green : isNext ? COLORS.orange : 0xd8dde8, isDone || isNext ? 1 : 0.7);
-      chipBg.fillRoundedRect(-84, -28, 168, 56, 16);
-      chipBg.lineStyle(3, 0xffffff, isDone || isNext ? 1 : 0.5);
-      chipBg.strokeRoundedRect(-84, -28, 168, 56, 16);
-      const chipIcon = this.fitImage(this.add.image(-30, 0, LEVEL_ICON_KEYS[level]), 26, 26).setOrigin(0.5);
-      const chipLabel = this.addSharpText(16, -5, catDef.label, {
-        fontSize: "14px",
-        fontFamily: "Arial Black, Arial",
-        color: isDone || isNext ? "#ffffff" : "#64748b",
-      }).setOrigin(0, 0.5);
-      if (isDone) {
-        const check = this.addSharpText(70, -12, "✓", {
-          fontSize: "15px",
-          fontFamily: "Arial Black, Arial",
-          color: "#ffffff",
-        }).setOrigin(0.5);
-        chip.add([chipBg, chipIcon, chipLabel, check]);
-      } else {
-        chip.add([chipBg, chipIcon, chipLabel]);
-      }
-      return chip;
-    });
-
-    const waitText = this.addSharpText(0, 102, "Preparando o próximo nível...", {
-      fontSize: "15px",
-      fontFamily: "Arial Black, Arial",
-      color: "#94a3b8",
-    }).setOrigin(0.5);
-
-    modal.add([shadow, bg, topBar, title, subtitleIcon, subtitle, learned, ...chips, waitText]);
-    this.animateModal(modal);
-    this.time.delayedCall(3500, () => this.showNextLevelStartTransition(nextLevel));
-  }
-
-  private showNextLevelStartTransition(nextLevel: 1 | 2 | 3) {
-    this.clearOverlay();
-    const nextConfig = LEVELS.find((item) => item.level === nextLevel);
-    const cat = LEVEL_CATEGORIES[nextLevel];
-
-    const overlay = this.addOverlayObject(this.add.rectangle(640, 360, 1280, 720, 0x12324a, 0.58).setDepth(450));
-    overlay.setInteractive();
-    const modal = this.createModalBase(640, 360, cat.color);
-
-    const catIcon = this.fitImage(this.add.image(0, -118, LEVEL_ICON_KEYS[nextLevel]), 64, 64).setOrigin(0.5);
-    const nextLabel = this.addSharpText(0, -64, `Próximo:  ${cat.label}`, {
-      fontSize: "28px",
-      fontFamily: "Arial Black, Arial",
-      color: this.toCssColor(cat.color),
-    }).setOrigin(0.5);
-    const title = this.addSharpText(0, -18, nextConfig?.title ?? "Nova conexão", {
-      fontSize: "20px",
-      fontFamily: "Arial Black, Arial",
-      color: "#334155",
-      align: "center",
-      wordWrap: { width: 430 },
-    }).setOrigin(0.5);
-    const deviceCount = nextConfig?.devices.length ?? 2;
-    const deviceHint = this.addSharpText(0, 26, `${deviceCount} dispositivo${deviceCount > 1 ? "s" : ""} para classificar`, {
-      fontSize: "17px",
-      fontFamily: "Arial Black, Arial",
-      color: "#94a3b8",
-    }).setOrigin(0.5);
-    const button = this.createModalButton(0, 104, "Iniciar ▶", COLORS.orange);
-
-    let hasStartedNextLevel = false;
-    const startNextLevel = () => {
-      if (hasStartedNextLevel) return;
-      hasStartedNextLevel = true;
-      this.input.setDefaultCursor("default");
-      this.scene.restart({ level: nextLevel, hits: this.hits, errors: this.errors });
-    };
-
-    const hitbox = this.addOverlayObject(this.add.zone(640, 360 + 104 * MODAL_SCALE, 300 * MODAL_SCALE, 76 * MODAL_SCALE).setDepth(452));
-    hitbox.setInteractive({ useHandCursor: true });
-    hitbox.on("pointerover", () => {
-      this.input.setDefaultCursor("pointer");
-      this.tweens.add({ targets: button, scale: 1.04, duration: 90, ease: "Sine.easeOut" });
-    });
-    hitbox.on("pointerout", () => {
-      this.input.setDefaultCursor("default");
-      this.tweens.add({ targets: button, scale: 1, duration: 90, ease: "Sine.easeOut" });
-    });
-    hitbox.on("pointerdown", () => {
-      this.playClick();
-      startNextLevel();
-    });
-    modal.add([catIcon, nextLabel, title, deviceHint, button]);
-    this.animateModal(modal);
-  }
-
-  private showGameCompleteScreen() {
-    this.clearOverlay();
-    const overlay = this.addOverlayObject(this.add.rectangle(640, 360, 1280, 720, 0x12324a, 0.62).setDepth(450));
-    overlay.setInteractive();
-    const panel = this.addOverlayObject(this.add.container(640, 360).setDepth(451));
-    const shadow = this.add.graphics();
-    shadow.fillStyle(0x000000, 0.18);
-    shadow.fillRoundedRect(-292, -178, 584, 366, 34);
-    const bg = this.add.graphics();
-    bg.fillStyle(0xffffff, 0.98);
-    bg.fillRoundedRect(-304, -190, 608, 370, 34);
-    bg.lineStyle(6, 0xffffff, 0.96);
-    bg.strokeRoundedRect(-304, -190, 608, 370, 34);
-    const ribbon = this.add.graphics();
-    ribbon.fillStyle(COLORS.green, 1);
-    ribbon.fillRoundedRect(-214, -208, 428, 34, 17);
-    ribbon.lineStyle(4, 0xffffff, 0.9);
-    ribbon.strokeRoundedRect(-214, -208, 428, 34, 17);
-    const title = this.addSharpText(0, -128, "Central conectada!", {
-      fontSize: "38px",
-      fontFamily: "Arial Black, Arial",
-      color: "#25327a",
-      stroke: "#ffffff",
-      strokeThickness: 6,
-    }).setOrigin(0.5);
-    const subtitle = this.addSharpText(0, -74, "Você dominou os 3 padrões de entrada e saída!", {
-      fontSize: "20px",
-      fontFamily: "Arial Black, Arial",
-      color: "#334155",
-      align: "center",
-      wordWrap: { width: 500 },
-    }).setOrigin(0.5);
-    const sparkles = Array.from({ length: 14 }, (_, index) => {
-      const sparkle = this.add.graphics();
-      const x = Phaser.Math.Between(-278, 278);
-      const y = Phaser.Math.Between(-168, 158);
-      sparkle.fillStyle(index % 3 === 0 ? COLORS.cyan : index % 3 === 1 ? COLORS.orange : COLORS.green, 0.9);
-      sparkle.fillCircle(x, y, Phaser.Math.Between(4, 8));
-      this.tweens.add({
-        targets: sparkle,
-        alpha: { from: 0.35, to: 1 },
-        scale: { from: 0.8, to: 1.35 },
-        duration: 720 + index * 35,
-        yoyo: true,
-        repeat: -1,
-        ease: "Sine.easeInOut",
-      });
-      return sparkle;
-    });
-    const levelLabels = [1, 2, 3].map((level, index) => {
-      const item = this.add.container(-190 + index * 190, 42);
-      const catDef = LEVEL_CATEGORIES[level];
-      const badge = this.add.graphics();
-      badge.fillStyle(catDef.color, 1);
-      badge.fillRoundedRect(-54, -42, 108, 84, 18);
-      badge.lineStyle(4, 0xffffff, 0.95);
-      badge.strokeRoundedRect(-54, -42, 108, 84, 18);
-      const iconKey = LEVEL_ICON_KEYS[level];
-      const catIconImg = this.fitImage(this.add.image(0, -16, iconKey), 52, 38).setOrigin(0.5);
-      const catLabelText = this.addSharpText(0, 16, catDef.label, {
-        fontSize: "13px",
-        fontFamily: "Arial Black, Arial",
-        color: "#ffffff",
-      }).setOrigin(0.5);
-      const checkText = this.addSharpText(0, 34, "✓ ok", {
-        fontSize: "11px",
-        fontFamily: "Arial Black, Arial",
-        color: "rgba(255,255,255,0.85)",
-      }).setOrigin(0.5);
-      item.add([badge, catIconImg, catLabelText, checkText]);
-      return item;
-    });
-    const playAgain = this.createFinalButton(-158, 138, "Jogar novamente", COLORS.green, () => this.scene.restart({ level: 1 }));
-    const exit = this.createFinalButton(158, 138, "Voltar aos jogos", COLORS.orange, () => EventBus.emit("exit-game"));
-    panel.add([shadow, bg, ribbon, ...sparkles, title, subtitle, ...levelLabels, playAgain, exit]);
-    this.animateModal(panel);
-  }
-
-  private showGameOverScreen() {
-    this.clearOverlay();
-    const overlay = this.addOverlayObject(this.add.rectangle(640, 360, 1280, 720, 0x12324a, 0.60).setDepth(450));
-    overlay.setInteractive();
-
-    const modal = this.addOverlayObject(this.add.container(640, 360).setDepth(451));
-    const shadow = this.add.graphics();
-    shadow.fillStyle(0x000000, 0.18);
-    shadow.fillRoundedRect(-270, -152, 540, 316, 28);
-    const bg = this.add.graphics();
-    bg.fillStyle(0xffffff, 0.98);
-    bg.fillRoundedRect(-278, -164, 556, 320, 28);
-    bg.lineStyle(5, 0xffffff, 0.95);
-    bg.strokeRoundedRect(-278, -164, 556, 320, 28);
-    const topBar = this.add.graphics();
-    topBar.fillStyle(COLORS.red, 1);
-    topBar.fillRoundedRect(-196, -180, 392, 28, 14);
-    topBar.lineStyle(3, 0xffffff, 0.82);
-    topBar.strokeRoundedRect(-196, -180, 392, 28, 14);
-
-    const cat = LEVEL_CATEGORIES[this.levelConfig.level];
-    const icon = this.addSharpText(0, -104, "⏱", { fontSize: "52px" }).setOrigin(0.5);
-    const title = this.addSharpText(0, -46, "Tempo esgotado!", this.modalTitleStyle()).setOrigin(0.5);
-    const levelLine = this.addSharpText(0, 4, `${cat.icon}  Nível ${this.levelConfig.level}  —  ${cat.label}`, {
-      fontSize: "20px",
-      fontFamily: "Arial Black, Arial",
-      color: this.toCssColor(cat.color),
-    }).setOrigin(0.5);
-    const hint = this.addSharpText(0, 44, "Tente conectar os dispositivos mais rápido!", {
-      fontSize: "17px",
-      fontFamily: "Arial Black, Arial",
-      color: "#475569",
-      align: "center",
-      wordWrap: { width: 460 },
-    }).setOrigin(0.5);
-
-    const retryBtn = this.createModalButton(-132, 108, "🔄 Tentar novamente", COLORS.green);
-    const exitBtn = this.createModalButton(132, 108, "Sair", COLORS.orange);
-
-    const retryHitbox = this.addOverlayObject(this.add.zone(640 - 132 * MODAL_SCALE, 360 + 108 * MODAL_SCALE, 268 * MODAL_SCALE, 70 * MODAL_SCALE).setDepth(452));
-    retryHitbox.setInteractive({ useHandCursor: true });
-    retryHitbox.on("pointerover", () => {
-      this.input.setDefaultCursor("pointer");
-      this.tweens.add({ targets: retryBtn, scale: 1.04, duration: 90, ease: "Sine.easeOut" });
-    });
-    retryHitbox.on("pointerout", () => {
-      this.input.setDefaultCursor("default");
-      this.tweens.add({ targets: retryBtn, scale: 1, duration: 90, ease: "Sine.easeOut" });
-    });
-    retryHitbox.on("pointerdown", () => {
-      this.playClick();
-      this.scene.restart({ level: this.levelConfig.level, hits: this.hits, errors: this.errors });
-    });
-
-    const exitHitbox = this.addOverlayObject(this.add.zone(640 + 132 * MODAL_SCALE, 360 + 108 * MODAL_SCALE, 268 * MODAL_SCALE, 70 * MODAL_SCALE).setDepth(452));
-    exitHitbox.setInteractive({ useHandCursor: true });
-    exitHitbox.on("pointerover", () => {
-      this.input.setDefaultCursor("pointer");
-      this.tweens.add({ targets: exitBtn, scale: 1.04, duration: 90, ease: "Sine.easeOut" });
-    });
-    exitHitbox.on("pointerout", () => {
-      this.input.setDefaultCursor("default");
-      this.tweens.add({ targets: exitBtn, scale: 1, duration: 90, ease: "Sine.easeOut" });
-    });
-    exitHitbox.on("pointerdown", () => {
-      this.playClick();
-      EventBus.emit("exit-game");
-    });
-
-    modal.add([shadow, bg, topBar, icon, title, levelLine, hint, retryBtn, exitBtn]);
-    this.animateModal(modal);
-    this.playWrong();
-  }
-
-  private createModalBase(x: number, y: number, color: number) {
-    const modal = this.addOverlayObject(this.add.container(x, y).setDepth(451));
-    const shadow = this.add.graphics();
-    shadow.fillStyle(0x000000, 0.18);
-    shadow.fillRoundedRect(-270, -166, 540, 330, 28);
-    const bg = this.add.graphics();
-    bg.fillStyle(0xffffff, 0.98);
-    bg.fillRoundedRect(-278, -178, 556, 330, 28);
-    bg.lineStyle(5, 0xffffff, 0.95);
-    bg.strokeRoundedRect(-278, -178, 556, 330, 28);
-    const topBar = this.add.graphics();
-    topBar.fillStyle(color, 1);
-    topBar.fillRoundedRect(-196, -194, 392, 28, 14);
-    topBar.lineStyle(3, 0xffffff, 0.82);
-    topBar.strokeRoundedRect(-196, -194, 392, 28, 14);
-    modal.add([shadow, bg, topBar]);
-    return modal;
-  }
-
-  private createModalButton(x: number, y: number, label: string, color: number) {
-    const button = this.add.container(x, y);
-    const shadow = this.add.graphics();
-    shadow.fillStyle(0x000000, 0.16);
-    shadow.fillRoundedRect(-136, -20, 272, 48, 24);
-    const bg = this.add.graphics();
-    bg.fillStyle(color, 1);
-    bg.fillRoundedRect(-140, -26, 280, 52, 26);
-    bg.lineStyle(4, 0xffffff, 1);
-    bg.strokeRoundedRect(-140, -26, 280, 52, 26);
-    const text = this.addSharpText(0, 0, label, {
-      fontSize: "22px",
-      fontFamily: "Arial Black, Arial",
-      color: "#ffffff",
-      stroke: "#9a3f00",
-      strokeThickness: 3,
-    }).setOrigin(0.5);
-    button.add([shadow, bg, text]);
-    return button;
-  }
-
-  private createFinalButton(x: number, y: number, label: string, color: number, onClick: () => void) {
-    const button = this.add.container(x, y);
-    const bg = this.add.graphics();
-    bg.fillStyle(color, 1);
-    bg.fillRoundedRect(-132, -26, 264, 52, 26);
-    bg.lineStyle(4, 0xffffff, 1);
-    bg.strokeRoundedRect(-132, -26, 264, 52, 26);
-    const text = this.addSharpText(0, 0, label, {
-      fontSize: "19px",
-      fontFamily: "Arial Black, Arial",
-      color: "#ffffff",
-      stroke: "#0f172a",
-      strokeThickness: 3,
-    }).setOrigin(0.5);
-    button.add([bg, text]);
-    const hitbox = this.addOverlayObject(this.add.zone(640 + x * MODAL_SCALE, 360 + y * MODAL_SCALE, 310 * MODAL_SCALE, 86 * MODAL_SCALE).setDepth(452));
-    hitbox.setInteractive({ useHandCursor: true });
-    hitbox.on("pointerover", () => {
-      this.input.setDefaultCursor("pointer");
-      this.tweens.add({ targets: button, scale: 1.04, duration: 90, ease: "Sine.easeOut" });
-    });
-    hitbox.on("pointerout", () => {
-      this.input.setDefaultCursor("default");
-      this.tweens.add({ targets: button, scale: 1, duration: 90, ease: "Sine.easeOut" });
-    });
-    hitbox.on("pointerdown", () => {
-      this.playClick();
-      onClick();
-    });
-    return button;
-  }
-
-  private createUiButton(x: number, y: number, width: number, height: number, label: string, color: number, onClick: () => void) {
-    const button = this.add.container(x, y).setDepth(35);
-    const shadow = this.add.graphics();
-    shadow.fillStyle(0x0f172a, 0.22);
-    shadow.fillRoundedRect(-width / 2 + 5, -height / 2 + 7, width, height, height / 2);
-    const bg = this.add.graphics();
-    bg.fillStyle(color, 0.98);
-    bg.fillRoundedRect(-width / 2, -height / 2, width, height, height / 2);
-    bg.fillStyle(0xffffff, 0.16);
-    bg.fillRoundedRect(-width / 2 + 16, -height / 2 + 10, width - 32, 18, 9);
-    bg.lineStyle(3, 0xffffff, 0.92);
-    bg.strokeRoundedRect(-width / 2, -height / 2, width, height, height / 2);
-    const text = this.addSharpText(0, 0, label, {
-      fontSize: "22px",
-      fontFamily: "Arial Black, Arial",
-      color: "#ffffff",
-      stroke: "#0f172a",
-      strokeThickness: 3,
-    }).setOrigin(0.5);
-    button.add([shadow, bg, text]);
-    const zone = this.add.zone(x, y, width + 14, height + 14).setDepth(90);
-    zone.setInteractive({ useHandCursor: true });
-    zone.on("pointerover", () => this.input.setDefaultCursor("pointer"));
-    zone.on("pointerout", () => this.input.setDefaultCursor("default"));
-    zone.on("pointerdown", onClick);
-    return button;
-  }
-
-  private drawPanel(x: number, y: number, width: number, height: number, _accentColor: number, depth: number) {
-    const shadow = this.add.graphics();
-    shadow.fillStyle(0x5b3410, 0.16);
-    shadow.fillRoundedRect(x + 9, y + 12, width, height, 30);
-    shadow.setDepth(depth);
-    const panel = this.add.graphics();
-    panel.fillStyle(0xffffff, 0.34);
-    panel.fillRoundedRect(x, y, width, height, 30);
-    panel.fillStyle(0xfff1d6, 0.18);
-    panel.fillRoundedRect(x + 12, y + 12, width - 24, height - 24, 24);
-    panel.fillStyle(0xffffff, 0.2);
-    panel.fillRoundedRect(x + 20, y + 16, width - 40, Math.min(42, height - 28), 18);
-    panel.lineStyle(7, 0xffffff, 0.95);
-    panel.strokeRoundedRect(x, y, width, height, 30);
-    panel.setDepth(depth + 0.1);
-    return panel;
-  }
-
-  private drawPanelHeader(x: number, y: number, label: string) {
-    return this.addSharpText(x, y + 16, label, {
-      fontSize: "21px",
-      fontFamily: "Arial Black, Arial",
-      color: "#1e3a8a",
-      stroke: "#ffffff",
-      strokeThickness: 4,
-    }).setOrigin(0.5).setDepth(11);
-  }
-
-  private showToast(message: string, color: number, duration = 2300) {
-    const container = this.add.container(640, 616).setDepth(200);
-    const bg = this.add.graphics();
-    bg.fillStyle(color, 0.96);
-    bg.fillRoundedRect(-500, -52, 1000, 104, 28);
-    bg.lineStyle(4, 0xffffff, 0.94);
-    bg.strokeRoundedRect(-500, -52, 1000, 104, 28);
-    const text = this.addSharpText(0, 0, message, {
-      fontSize: "22px",
-      fontFamily: "Arial Black, Arial",
-      color: "#ffffff",
-      align: "center",
-      lineSpacing: 5,
-      wordWrap: { width: 900 },
-    }).setOrigin(0.5);
-    container.add([bg, text]);
-    this.tweens.add({ targets: container, y: 596, alpha: 0, duration: 320, delay: duration, onComplete: () => container.destroy() });
-  }
-
-  private addOverlayObject<T extends Phaser.GameObjects.GameObject>(object: T) {
-    this.overlayObjects.push(object);
-    return object;
-  }
-
-  private clearOverlay() {
-    this.overlayObjects.forEach((object) => object.destroy());
-    this.overlayObjects = [];
-    this.input.setDefaultCursor("default");
-  }
-
-  private animateModal(modal: Phaser.GameObjects.Container) {
-    modal.setScale(MODAL_SCALE * 0.9);
-    modal.setAlpha(0);
-    this.tweens.add({ targets: modal, alpha: 1, scale: MODAL_SCALE, duration: 260, ease: "Back.easeOut" });
-  }
-
-  private modalTitleStyle(): Phaser.Types.GameObjects.Text.TextStyle {
+  /** Caixa que o cabo não pode invadir. */
+  private computerBox() {
+    const c = this.computer
+    if (!c) return null
     return {
-      fontSize: "38px",
-      fontFamily: "Arial Black, Arial",
-      color: "#25327a",
-      stroke: "#ffffff",
-      strokeThickness: 5,
-    };
+      left: c.x - c.displayWidth / 2,
+      right: c.x + c.displayWidth / 2,
+      top: c.y - c.displayHeight / 2,
+    }
   }
 
-  private addSharpText(x: number, y: number, text: string, style: Phaser.Types.GameObjects.Text.TextStyle) {
-    const obj = this.add.text(x, y, text, style);
-    obj.setResolution(2);
-    return obj;
+  /**
+   * Rota do cartão até a porta, passando POR FORA do computador.
+   *
+   * A máquina fica exatamente entre os dois: o cartão no topo do meio, as
+   * portas embaixo nos cantos. Uma curva direta corta a carcaça no caminho.
+   * Os dois pontos de passagem levam o cabo para fora da largura do
+   * computador antes de descer — sai pela lateral, desce rente à borda do
+   * tabuleiro e entra na porta por cima.
+   */
+  private routeToPort(portX: number) {
+    const box = this.computerBox()
+    if (!box) return undefined
+
+    const side = portX < COMPUTER.cx ? -1 : 1
+    // 26px de folga da carcaça: o cabo passa ao lado, não encostado nela
+    const clearX = side < 0 ? Math.min(box.left - 26, portX) : Math.max(box.right + 26, portX)
+
+    return [
+      { x: clearX, y: box.top - 14 },
+      { x: portX, y: (box.top + PORTS.cy) / 2 + 40 },
+    ]
   }
 
-  private fitImage(image: Phaser.GameObjects.Image, maxW: number, maxH: number) {
-    image.texture.setFilter(Phaser.Textures.FilterMode.LINEAR);
-    const scale = Math.min(maxW / image.width, maxH / image.height);
-    image.setScale(scale);
-    return image;
+  private async tapPort(kind: DeviceKind) {
+    if (this.locked || this.ended) return
+    const round = this.level.sortRounds?.[this.roundIdx]
+    if (!round) return
+
+    const gen = this.stageGen
+    this.locked = true
+    const device = DEVICES[round.deviceId]
+    const port = this.ports.find(p => p.kind === kind)
+    if (!port) return
+
+    const tone = kind === 'input' ? C.inBlue : C.outAmber
+    const cable = createCable(
+      this,
+      this.stage!,
+      { x: this.sortCardPos.x, y: this.sortCardPos.y + SORT_CARD.h / 2 },
+      { x: port.x, y: port.y + PORTS.plugDY },
+      tone,
+      { via: this.routeToPort(port.x), sag: 70, depth: CABLE_DEPTH },
+    )
+    await cable.plugIn(380)
+    if (gen !== this.stageGen) { cable.destroy(); return }
+
+    if (kind !== device.kind) {
+      this.errors += 1
+      runtimeGameBridge.emit({ type: 'WRONG_ANSWER', gameId: GAME_ID, pointsEarned: -2, stage: this.level.level })
+      this.emitCheckpoint()
+      this.playError()
+      paintPort(port.bg, PORTS.w, PORTS.h, PORTS.r, tone, 'wrong')
+      FX.shakeCam(this, 'leve')
+      this.reactThenIdle('op-05', round.wrongLine)
+      await cable.fault()
+      if (gen !== this.stageGen) { cable.destroy(); return }
+      await cable.unplug(280)
+      if (gen !== this.stageGen) return
+      paintPort(port.bg, PORTS.w, PORTS.h, PORTS.r, tone, 'normal')
+      this.locked = false
+      return
+    }
+
+    paintPort(port.bg, PORTS.w, PORTS.h, PORTS.r, tone, 'correct')
+
+    /*
+     * `sag` positivo: a barriga do fio cai PARA BAIXO.
+     *
+     * Era -46, ou seja, arqueava para cima — e como o destino já ficava dentro
+     * da máquina, o fio subia por dentro dela. Caindo, ele passa por baixo do
+     * computador e encosta na borda inferior.
+     */
+    const wireUp = createCable(
+      this,
+      this.stage!,
+      { x: port.x, y: port.y - PORTS.h / 2 },
+      this.computerPlug(COMPUTER.sortY + 70),
+      tone,
+      { sag: 46, depth: CABLE_DEPTH },
+    )
+    const infoKey = INFOS[DEVICE_INFO[round.deviceId]].textureKey
+    const signalX = this.sortCardPos.x + SORT_CARD.iconX
+    const bail = () => { cable.destroy(); wireUp.destroy() }
+
+    await wireUp.plugIn(300)
+    if (gen !== this.stageGen) { bail(); return }
+
+    if (kind === 'input') {
+      await deviceSignal(this, this.stage!, signalX, this.sortCardPos.y, round.deviceId)
+      if (gen !== this.stageGen) { bail(); return }
+      await cable.pulse({ duration: 720, iconKey: infoKey })
+      if (gen !== this.stageGen) { bail(); return }
+      await wireUp.pulse({ duration: 620, iconKey: infoKey })
+      if (gen !== this.stageGen) { bail(); return }
+      await this.screen?.show(infoKey, tone)
+      if (gen !== this.stageGen) return
+    } else {
+      await this.screen?.show(infoKey, tone)
+      if (gen !== this.stageGen) { bail(); return }
+      await wireUp.pulse({ reverse: true, duration: 620, iconKey: infoKey })
+      if (gen !== this.stageGen) { bail(); return }
+      await cable.pulse({ reverse: true, duration: 720, iconKey: infoKey })
+      if (gen !== this.stageGen) { bail(); return }
+      await deviceSignal(this, this.stage!, signalX, this.sortCardPos.y, round.deviceId)
+      if (gen !== this.stageGen) return
+    }
+
+    this.award(20)
+    this.react(this.cheerFrame(), round.successLine)
+    cardAccept(this, port.box, port.x, port.y)
+    FX.sparks(this, port.x, port.y, { color: C.green, count: 16, spread: 150 })
+
+    this.time.delayedCall(1500, () => {
+      if (gen !== this.stageGen) return
+      this.nextRound()
+    })
   }
 
-  private toCssColor(color: number) {
-    return `#${color.toString(16).padStart(6, "0")}`;
+  private showPick() {
+    this.clearStage()
+    this.renderHud()
+    this.drawBoard(this.level.helper)
+    this.state = 'pick'
+    this.locked = false
+
+    const round = this.level.pickRounds?.[this.roundIdx]
+    if (!round) return
+
+    this.drawTaskCard(round.taskLabel, INFOS[round.taskInfoId].textureKey, C.inBlue)
+    this.drawComputer(COMPUTER.pickY, COMPUTER.maxW, COMPUTER.maxH)
+    this.drawBank(round.options, id => this.tapPick(id))
+    this.emitCheckpoint()
+    this.openRound()
   }
 
-  private getScore() {
-    return Math.max(0, this.hits * 20 - this.errors * 5);
+  private async tapPick(id: DeviceId) {
+    if (this.locked || this.ended) return
+    const round = this.level.pickRounds?.[this.roundIdx]
+    if (!round) return
+
+    const gen = this.stageGen
+    const card = this.cards.get(id)
+    const device = DEVICES[id]
+    if (!card) return
+
+    if (id !== round.answerId) {
+      this.errors += 1
+      runtimeGameBridge.emit({ type: 'WRONG_ANSWER', gameId: GAME_ID, pointsEarned: -2, stage: this.level.level })
+      this.emitCheckpoint()
+      this.playError()
+      paintCard(card.bg, card.w, card.h, BANK.r, 'wrong')
+      cardReject(this, card.box)
+      const line = `O ${device.label.toLowerCase()} ${device.action}.`
+      this.reactThenIdle('op-05', line)
+      this.time.delayedCall(900, () => {
+        if (gen !== this.stageGen) return
+        paintCard(card.bg, card.w, card.h, BANK.r, 'normal')
+      })
+      return
+    }
+
+    this.locked = true
+    paintCard(card.bg, card.w, card.h, BANK.r, 'correct')
+    cardAccept(this, card.box, card.x, card.y)
+
+    const tone = device.kind === 'input' ? C.inBlue : C.outAmber
+    const packet = makePacket(this, card.x, card.y - card.h / 2, tone)
+    const dest = device.kind === 'input'
+      ? { x: COMPUTER.cx, y: COMPUTER.pickY }
+      : { x: card.x, y: card.y - card.h / 2 }
+
+    if (device.kind === 'input') {
+      await flyPacket(this, packet, dest, 560)
+      if (gen !== this.stageGen) { packet.destroy(); return }
+      await FX.to(this, packet.node, { alpha: 0, scale: 0.5 }, { duration: 180 })
+      packet.destroy()
+      await this.screen?.show(INFOS[round.taskInfoId].textureKey, tone)
+    } else {
+      packet.destroy()
+      await this.screen?.show(INFOS[round.taskInfoId].textureKey, tone)
+      if (gen !== this.stageGen) return
+      const out = makePacket(this, COMPUTER.cx, COMPUTER.pickY, tone, INFOS[round.taskInfoId].textureKey)
+      await flyPacket(this, out, { x: card.x, y: card.y - card.h / 2 }, 620)
+      if (gen !== this.stageGen) { out.destroy(); return }
+      FX.impact(this, card.box, 0.18)
+      await FX.to(this, out.node, { alpha: 0, scale: 0.5 }, { duration: 180 })
+      out.destroy()
+    }
+
+    if (gen !== this.stageGen) return
+
+    const mark = badge(this, card.x, card.y - card.h / 2 - 8, device.kind === 'input' ? 'entrada' : 'saída', tone)
+    mark.setDepth(60)
+    this.stage?.add(mark)
+    FX.popIn(this, mark, { from: 0.6, duration: 300 })
+
+    this.award(20)
+    this.react(this.cheerFrame(), round.successLine)
+    FX.sparks(this, card.x, card.y, { color: C.green, count: 16, spread: 150 })
+
+    this.time.delayedCall(1600, () => {
+      if (gen !== this.stageGen) return
+      this.nextRound()
+    })
   }
 
-  private emitProgress() {
+  private showChain() {
+    this.clearStage()
+    this.renderHud()
+    this.drawBoard(this.level.helper)
+    this.state = 'chain'
+    this.locked = false
+
+    const round = this.level.chainRounds?.[this.roundIdx]
+    if (!round) return
+
+    this.drawTaskCard(round.taskLabel, INFOS[round.inInfoId].textureKey, C.inBlue)
+    this.drawRail()
+    this.drawComputer(COMPUTER.chainY, COMPUTER.chainMaxW, COMPUTER.chainMaxH)
+    this.drawBank(round.options, id => this.tapChain(id))
+    this.primary = this.makePrimary('Ligar a central', () => this.runChain())
+    this.syncPrimary()
+    this.emitCheckpoint()
+    this.openRound()
+  }
+
+  private drawRail() {
+    const defs: Array<{ kind: DeviceKind; label: string; tone: number; x: number }> = [
+      { kind: 'input', label: 'ENTRADA', tone: C.inBlue, x: BOARD.cx - RAIL.offsetX },
+      { kind: 'output', label: 'SAÍDA', tone: C.outAmber, x: BOARD.cx + RAIL.offsetX },
+    ]
+
+    defs.forEach((def, i) => {
+      /*
+       * Mesmas setas em "V" das portas do Nível 1, deitadas.
+       * O `createFlow` nasce apontando para baixo; girar -90° manda para a
+       * direita, que é o sentido do percurso: entrada -> computador -> saída.
+       */
+      const arrowX = def.kind === 'input'
+        ? def.x + RAIL.slotW / 2 + 48
+        : def.x - RAIL.slotW / 2 - 48
+      const flow = createFlow(this, {
+        dir: 1, tone: def.tone, w: 44, thick: 11, gap: 18,
+      })
+      flow.setPosition(arrowX, RAIL.cy).setRotation(-Math.PI / 2).setDepth(6)
+      this.stage?.add(flow)
+      FX.fadeIn(this, flow, 300, 260 + i * 80)
+
+      const box = this.add.container(def.x, RAIL.cy).setDepth(14)
+      const bg = this.add.graphics()
+      paintSlot(bg, RAIL.slotW, RAIL.slotH, RAIL.r, def.tone, false)
+
+      const label = this.add.text(0, RAIL.labelDY, def.label, {
+        fontFamily: FONT.black, fontSize: SIZE.railLabel, color: hex(def.tone),
+      }).setOrigin(0.5).setResolution(2)
+
+      /*
+       * O "toque um aparelho" saiu dos dois encaixes. Era a mesma frase duas
+       * vezes na mesma linha, e o encaixe vazio já se explica: moldura
+       * tracejada, fundo rebaixado e o rótulo ENTRADA/SAÍDA em cima.
+       */
+      box.add([bg, label])
+
+      const hit = this.add.zone(0, 0, RAIL.slotW, RAIL.slotH).setOrigin(0.5).setInteractive({ useHandCursor: true })
+      hit.on('pointerdown', () => this.clearSlot(def.kind))
+      box.add(hit)
+
+      this.stage?.add(box)
+      this.slots.push({ kind: def.kind, x: def.x, y: RAIL.cy, bg, box })
+      FX.popIn(this, box, { from: 0.82, delay: 140 + i * 90, duration: 400 })
+    })
+  }
+
+  private async tapChain(id: DeviceId) {
+    if (this.locked || this.ended) return
+    const device = DEVICES[id]
+    const slot = this.slots.find(s => s.kind === device.kind)
+    const card = this.cards.get(id)
+    if (!slot || !card) return
+
+    if (slot.deviceId) {
+      cardReject(this, card.box)
+      this.reactThenIdle('op-05', 'Esse lado já está cheio. Toque no encaixe para tirar.', 1600)
+      return
+    }
+
+    const gen = this.stageGen
+    this.cards.delete(id)
+    slot.deviceId = id
+    this.playDrop()
+    this.syncPrimary()
+
+    card.box.setDepth(120)
+    FX.kill(this, card.box)
+    await flyToSlot(this, card.box, { x: slot.x, y: slot.y }, 0.9)
+    if (gen !== this.stageGen) { card.box.destroy(); return }
+
+    const tone = device.kind === 'input' ? C.inBlue : C.outAmber
+    paintSlot(slot.bg, RAIL.slotW, RAIL.slotH, RAIL.r, tone, true)
+
+    const holder = this.add.container(slot.x, slot.y).setDepth(30)
+    const icon = this.add.image(0, -14, this.safeTex(device.textureKey))
+    this.fit(icon, 104, 104)
+    const name = this.add.text(0, 66, device.label, {
+      fontFamily: FONT.black, fontSize: SIZE.cardLabel, color: hex(C.ink),
+      align: 'center', wordWrap: { width: RAIL.slotW - 26 },
+    }).setOrigin(0.5).setResolution(2)
+    holder.add([icon, name])
+    this.stage?.add(holder)
+    slot.icon = holder
+    FX.popIn(this, holder, { from: 0.7, duration: 260 })
+
+    cardAccept(this, slot.box, slot.x, slot.y)
+    await FX.to(this, card.box, { alpha: 0, scale: card.box.scale * 0.86 }, { duration: 140 })
+    card.box.destroy()
+    this.syncPrimary()
+  }
+
+  private clearSlot(kind: DeviceKind) {
+    if (this.locked || this.state !== 'chain') return
+    const slot = this.slots.find(s => s.kind === kind)
+    if (!slot?.deviceId) return
+
+    const id = slot.deviceId
+    const home = this.bankHome(id)
+    slot.icon?.destroy()
+    slot.icon = undefined
+    slot.deviceId = undefined
+    paintSlot(slot.bg, RAIL.slotW, RAIL.slotH, RAIL.r, kind === 'input' ? C.inBlue : C.outAmber, false)
+
+    if (home) {
+      const card = this.makeCard(id, home.x, home.y, home.w, home.h, target => this.tapChain(target))
+      FX.popIn(this, card.box, { from: 0.6, duration: 300 })
+    }
+    this.playClick()
+    this.syncPrimary()
+  }
+
+  private async runChain() {
+    const round = this.level.chainRounds?.[this.roundIdx]
+    const inSlot = this.slots.find(s => s.kind === 'input')
+    const outSlot = this.slots.find(s => s.kind === 'output')
+    if (!round || !inSlot?.deviceId || !outSlot?.deviceId || this.locked) return
+
+    const gen = this.stageGen
+    this.locked = true
+    this.syncPrimary()
+
+    if (inSlot.deviceId !== round.inputId || outSlot.deviceId !== round.outputId) {
+      this.errors += 1
+      runtimeGameBridge.emit({ type: 'WRONG_ANSWER', gameId: GAME_ID, pointsEarned: -2, stage: this.level.level })
+      this.emitCheckpoint()
+      this.playError()
+      FX.shakeCam(this, 'leve')
+
+      const bad = inSlot.deviceId !== round.inputId ? inSlot : outSlot
+      const line = `O ${DEVICES[bad.deviceId!].label.toLowerCase()} ${DEVICES[bad.deviceId!].action}. Esse pedido pede outro.`
+      paintSlot(bad.bg, RAIL.slotW, RAIL.slotH, RAIL.r, C.red, true)
+      FX.shake(this, bad.box, { amount: 10, times: 3 })
+      this.reactThenIdle('op-05', line)
+
+      this.time.delayedCall(1100, () => {
+        if (gen !== this.stageGen) return
+        this.clearSlot(bad.kind)
+        this.locked = false
+        this.syncPrimary()
+      })
+      return
+    }
+
+    this.state = 'run'
+    // op-02 aponta para a direita na arte; o computador está à esquerda dele,
+    // então o `pointAt` espelha e o gesto passa a mirar a máquina.
+    this.pointAt(COMPUTER.cx)
+    this.dialog?.react('Ligando a central...')
+
+    const c = this.computer
+    const plugL = c
+      ? { x: c.x - c.displayWidth / 2 + c.displayWidth * COMPUTER.plugIn.fx, y: c.y - c.displayHeight / 2 + c.displayHeight * COMPUTER.plugIn.fy }
+      : { x: COMPUTER.cx - 120, y: COMPUTER.chainY }
+    const plugR = c
+      ? { x: c.x - c.displayWidth / 2 + c.displayWidth * COMPUTER.plugOut.fx, y: c.y - c.displayHeight / 2 + c.displayHeight * COMPUTER.plugOut.fy }
+      : { x: COMPUTER.cx + 120, y: COMPUTER.chainY }
+
+    const inCable = createCable(this, this.stage!, { x: inSlot.x + RAIL.slotW / 2 - 20, y: inSlot.y + 40 }, plugL, C.inBlue, { sag: 58, depth: CABLE_DEPTH })
+    const outCable = createCable(this, this.stage!, plugR, { x: outSlot.x - RAIL.slotW / 2 + 20, y: outSlot.y + 40 }, C.outAmber, { sag: 58, depth: CABLE_DEPTH })
+    await inCable.plugIn(360)
+    if (gen !== this.stageGen) { inCable.destroy(); outCable.destroy(); return }
+    await outCable.plugIn(360)
+    if (gen !== this.stageGen) { inCable.destroy(); outCable.destroy(); return }
+
+    FX.impact(this, inSlot.box, 0.16)
+    await deviceSignal(this, this.stage!, inSlot.x, inSlot.y, round.inputId)
+    if (gen !== this.stageGen) { inCable.destroy(); outCable.destroy(); return }
+
+    await inCable.pulse({ duration: 820, iconKey: INFOS[round.inInfoId].textureKey })
+    if (gen !== this.stageGen) { inCable.destroy(); outCable.destroy(); return }
+
+    await this.screen?.show(INFOS[round.inInfoId].textureKey, C.inBlue)
+    if (gen !== this.stageGen) return
+    await this.screen?.process()
+    if (gen !== this.stageGen) return
+    await this.screen?.show(INFOS[round.outInfoId].textureKey, C.outAmber)
+    if (gen !== this.stageGen) return
+
+    await outCable.pulse({ duration: 820, iconKey: INFOS[round.outInfoId].textureKey })
+    if (gen !== this.stageGen) { inCable.destroy(); outCable.destroy(); return }
+
+    FX.impact(this, outSlot.box, 0.2)
+    await deviceSignal(this, this.stage!, outSlot.x, outSlot.y, round.outputId)
+    if (gen !== this.stageGen) return
+    FX.ping(this, outSlot.x, outSlot.y, C.outAmber, { radius: 100 })
+
+    if (gen !== this.stageGen) return
+    paintSlot(inSlot.bg, RAIL.slotW, RAIL.slotH, RAIL.r, C.green, true)
+    paintSlot(outSlot.bg, RAIL.slotW, RAIL.slotH, RAIL.r, C.green, true)
+
+    this.award(40)
+    this.react(this.cheerFrame(), round.successLine)
+    FX.flash(this, C.cream, { duration: 300, peak: 0.3 })
+    FX.sparks(this, COMPUTER.cx, COMPUTER.chainY, { color: C.green, count: 26, spread: 240 })
+
+    this.time.delayedCall(1700, () => {
+      if (gen !== this.stageGen) return
+      this.nextRound()
+    })
+  }
+
+  private drawTaskCard(label: string, iconKey: string, tone: number) {
+    const box = this.add.container(TASK.cx, TASK.cy).setDepth(20)
+    const { w, h, r } = TASK
+
+    const bg = this.add.graphics()
+    bg.fillStyle(C.shadow, 0.18)
+    bg.fillRoundedRect(-w / 2 + 5, -h / 2 + 9, w, h, r)
+    bg.fillStyle(C.cream, 0.99)
+    bg.fillRoundedRect(-w / 2, -h / 2, w, h, r)
+    bg.fillStyle(tone, 0.2)
+    bg.fillRoundedRect(-w / 2 + 14, -h / 2 + 12, w - 28, 18, 9)
+    bg.lineStyle(5, tone, 0.95)
+    bg.strokeRoundedRect(-w / 2, -h / 2, w, h, r)
+
+    const halo = this.add.graphics()
+    halo.fillStyle(tone, 0.24)
+    halo.fillCircle(TASK.iconX, 0, 46)
+
+    const icon = this.add.image(TASK.iconX, 0, this.safeTex(iconKey))
+    this.fit(icon, TASK.iconSize, TASK.iconSize)
+
+    /*
+     * "Pedido da central" saiu. Era um rótulo que não informava nada: o cartão
+     * já é o pedido, tem moldura própria, ícone e fica sempre no mesmo lugar.
+     * Sem ele o pedido de verdade ocupa o centro do cartão e cresce.
+     */
+    const text = this.add.text(TASK.titleX, 0, label, {
+      fontFamily: FONT.black, fontSize: SIZE.taskTitle, color: hex(C.ink),
+      wordWrap: { width: w - 200 },
+    }).setOrigin(0, 0.5).setResolution(2)
+
+    box.add([bg, halo, icon, text])
+    this.stage?.add(box)
+    FX.slideIn(this, box, { dy: 30, duration: 420 })
+    FX.float(this, icon, { amount: 5, duration: 2000 })
+  }
+
+  private drawBank(ids: DeviceId[], onTap: (id: DeviceId) => void) {
+    const n = ids.length
+    const w = Math.min(BANK.cardW, (BANK.maxW - (n - 1) * BANK.gap) / n)
+    const total = n * w + (n - 1) * BANK.gap
+    const start = BANK.cx - total / 2 + w / 2
+
+    const made = ids.map((id, i) =>
+      this.makeCard(id, start + i * (w + BANK.gap), BANK.singleY, w, BANK.cardH, onTap).box)
+
+    dealIn(this, made)
+  }
+
+  private makeCard(id: DeviceId, x: number, y: number, w: number, h: number, onTap: (id: DeviceId) => void) {
+    this.cards.get(id)?.box.destroy()
+    this.cards.delete(id)
+
+    const device = DEVICES[id]
+    const box = this.add.container(x, y).setDepth(20)
+
+    const bg = this.add.graphics()
+    paintCard(bg, w, h, BANK.r, 'normal')
+
+    const icon = this.add.image(0, BANK.iconDY, this.safeTex(device.textureKey))
+    this.fit(icon, w * 0.56, h * 0.5)
+
+    const label = this.add.text(0, BANK.labelDY, device.label, {
+      fontFamily: FONT.black, fontSize: SIZE.cardLabel, color: hex(C.ink),
+      align: 'center', wordWrap: { width: w - 20 },
+    }).setOrigin(0.5).setResolution(2)
+
+    box.add([bg, icon, label])
+
+    const alive = () => !this.locked && this.cards.has(id)
+    const hit = this.add.zone(0, 0, w, h).setOrigin(0.5).setInteractive({ useHandCursor: true })
+    hit.on('pointerdown', () => { if (alive()) { this.playClick(); onTap(id) } })
+    hit.on('pointerover', () => {
+      if (!alive()) return
+      paintCard(bg, w, h, BANK.r, 'hover')
+      FX.to(this, box, { scale: 1.06, y: y - 6 }, { duration: 130 })
+    })
+    hit.on('pointerout', () => {
+      if (!alive()) return
+      paintCard(bg, w, h, BANK.r, 'normal')
+      FX.to(this, box, { scale: 1, y }, { duration: 130 })
+    })
+    box.add(hit)
+
+    this.stage?.add(box)
+    const view: CardView = { id, box, bg, x, y, w, h }
+    this.cards.set(id, view)
+    return view
+  }
+
+  private bankHome(id: DeviceId) {
+    const round = this.level.chainRounds?.[this.roundIdx]
+    if (!round) return null
+    const ids = round.options
+    const n = ids.length
+    const index = ids.indexOf(id)
+    if (index < 0) return null
+    const w = Math.min(BANK.cardW, (BANK.maxW - (n - 1) * BANK.gap) / n)
+    const total = n * w + (n - 1) * BANK.gap
+    const start = BANK.cx - total / 2 + w / 2
+    return { x: start + index * (w + BANK.gap), y: BANK.singleY, w, h: BANK.cardH }
+  }
+
+  private syncPrimary() {
+    if (this.state !== 'chain') {
+      this.primary?.setEnabled(false)
+      return
+    }
+    const ready = this.slots.every(s => !!s.deviceId)
+    this.primary?.setEnabled(ready && !this.locked)
+  }
+
+  private nextRound() {
+    this.roundIdx += 1
+    if (this.roundIdx >= this.totalRounds) {
+      this.endLevel()
+      return
+    }
+    if (this.level.sortRounds) this.showSort()
+    else if (this.level.pickRounds) this.showPick()
+    else this.showChain()
+  }
+
+  /** Última rodada do nível? Então o acerto vale comemoração, não só um "ok". */
+  private cheerFrame(): OpFrame {
+    return this.roundIdx + 1 >= this.totalRounds ? 'op-06' : 'op-04'
+  }
+
+  private award(value: number) {
+    this.points += value
+    this.hits += 1
+    runtimeGameBridge.emit({ type: 'CORRECT_ANSWER', gameId: GAME_ID, pointsEarned: value, stage: this.level.level })
+    this.emitCheckpoint()
+    this.playCorrect()
+    FX.popText(this, BOARD.cx, TASK.cy + 70, `+${value}`, { color: hex(C.green), size: '40px' })
+  }
+
+  private endLevel() {
+    this.ended = true
+    this.locked = true
+    this.state = 'complete'
+    this.setPose('op-06')
+    runtimeGameBridge.emit({ type: 'GAME_COMPLETED', gameId: GAME_ID, stage: this.level.level })
+    this.emitCheckpoint(true)
+
+    const next = this.level.level < 3 ? this.level.level + 1 : null
+    if (next) {
+      showLevelComplete(this, {
+        title: `Nível ${this.level.level} completo`,
+        subtitle: this.level.title,
+        message: this.level.successMessage,
+        accent: C.inBlue,
+        panelColor: C.cream,
+        overlayColor: C.ink,
+        progress: { total: 3, current: this.level.level },
+        autoAdvance: {
+          delay: 1800,
+          label: `Preparando nível ${next}...`,
+          onComplete: () => this.scene.restart({ level: next, points: this.points }),
+        },
+      })
+      return
+    }
+
+    FX.confetti(this, { colors: [C.inBlue, C.outAmber, C.green, C.cream] })
+    showLevelComplete(this, {
+      title: 'Central completa',
+      subtitle: 'Central de Entrada e Saída',
+      message: 'A informação entra, o computador trabalha e ela sai mudada.',
+      accent: C.green,
+      panelColor: C.cream,
+      overlayColor: C.ink,
+      progress: { total: 3, current: 3 },
+      buttons: [
+        { label: 'Jogar de novo', color: C.green, onClick: () => this.scene.restart({ level: 1, points: 0 }) },
+        { label: 'Escolher jogo', color: C.inBlue, onClick: () => EventBus.emit('exit-game') },
+      ],
+    })
+  }
+
+  private runTutorial(force: boolean) {
+    const steps: TutorialStep[] = this.state === 'sort'
+      ? [
+        { text: 'Este é o aparelho da vez.', shape: 'rect', x: SORT_CARD.cx, y: SORT_CARD.cy, w: SORT_CARD.w + 30, h: SORT_CARD.h + 26, balloonY: 470 },
+        { text: 'Toque na porta certa: entra ou sai.', shape: 'rect', x: BOARD.cx, y: PORTS.cy, w: PORTS.w * 2 + PORTS.gap + 30, h: PORTS.h + 30, balloonY: 300 },
+      ]
+      : this.state === 'pick'
+        ? [
+          { text: 'O pedido fica aqui em cima.', shape: 'rect', x: TASK.cx, y: TASK.cy, w: TASK.w + 26, h: TASK.h + 26, balloonY: 470 },
+          { text: 'Toque no aparelho que faz o pedido.', shape: 'rect', x: BANK.cx, y: BANK.singleY, w: BANK.maxW + 24, h: BANK.cardH + 30, balloonY: 300 },
+        ]
+        : [
+          { text: 'A informação entra aqui e sai ali.', shape: 'rect', x: BOARD.cx, y: RAIL.cy, w: BANK.maxW + 24, h: RAIL.slotH + 34, balloonY: 590 },
+          { text: 'Escolha um aparelho de cada lado.', shape: 'rect', x: BANK.cx, y: BANK.singleY, w: BANK.maxW + 24, h: BANK.cardH + 30, balloonY: 250 },
+          { text: 'Depois ligue a central.', shape: 'rect', x: OP.cx, y: OP.btnY, w: OP.btnW + 30, h: OP.btnH + 26, balloonX: 520, balloonY: 336 },
+        ]
+
+    this.locked = true
+    this.setPose('op-03')
+    createTutorial(this, {
+      key: `central-${this.state}`,
+      once: !force,
+      accent: C.inBlue,
+      safeTop: HUD.y + HUD.h + 14,
+      steps,
+      onFinish: () => { this.locked = false; this.syncPrimary() },
+    })
+  }
+
+  private replayTutorial() {
+    if (this.state === 'sort' || this.state === 'pick' || this.state === 'chain') this.runTutorial(true)
+  }
+
+  private clearStage() {
+    this.stageGen += 1
+    this.stage?.destroy()
+    this.stage = this.add.container(0, 0).setDepth(5)
+    this.ports = []
+    this.slots = []
+    this.cards.clear()
+    this.screen = undefined
+    this.computer = undefined
+    this.primary?.destroy()
+    this.primary = undefined
+  }
+
+  /**
+   * O cabeçalho do tabuleiro perdeu o título.
+   *
+   * Ele repetia, palavra por palavra, o título que já está no HUD a 70px de
+   * distância — duas vezes "Entra ou sai?" na mesma tela. Ficou só a linha de
+   * apoio, que é a única das duas que diz o que fazer agora.
+   */
+  private drawBoard(helper: string) {
+    const g = this.add.graphics()
+    paintBoard(g, BOARD.x, BOARD.y, BOARD.w, BOARD.h, BOARD.r)
+
+    this.stage?.add(g)
+    FX.fadeIn(this, g, 320)
+
+    // Nível sem linha de apoio não ganha cabeçalho vazio: o painel entra limpo.
+    if (!helper) return
+
+    const helperText = this.add.text(BOARD.cx, BOARD.y + 22, helper, {
+      fontFamily: FONT.body, fontStyle: 'bold', fontSize: SIZE.boardHelper, color: hex(C.cream),
+      align: 'center', wordWrap: { width: BOARD.w - 120 },
+    }).setOrigin(0.5).setResolution(2)
+
+    this.stage?.add(helperText)
+  }
+
+  private makePrimary(label: string, onClick: () => void) {
+    if (!this.actionLayer) return undefined
+    const btn = createBigButton(
+      this, this.actionLayer,
+      OP.cx, OP.btnY, OP.btnW, OP.btnH,
+      label,
+      () => { this.playClick(); onClick() },
+    )
+    btn.setEnabled(false)
+    return btn
+  }
+
+  private safeTex(key: string) {
+    return this.textures.exists(key) ? key : ICON_FALLBACK
+  }
+
+  private fit(image: Phaser.GameObjects.Image, maxW: number, maxH: number) {
+    image.setScale(Math.min(maxW / image.width, maxH / image.height))
+  }
+
+  private emitCheckpoint(forceComplete = false) {
+    const before = LEVELS.slice(0, this.levelIdx)
+      .reduce((sum, l) => sum + (l.sortRounds ?? l.pickRounds ?? l.chainRounds ?? []).length, 0)
+    const total = LEVELS
+      .reduce((sum, l) => sum + (l.sortRounds ?? l.pickRounds ?? l.chainRounds ?? []).length, 0)
+    const completed = before + this.roundIdx + (forceComplete ? 1 : 0)
     runtimeGameBridge.emit({
-      type: "CHECKPOINT",
+      type: 'CHECKPOINT',
       gameId: GAME_ID,
-      stage: this.levelConfig.level,
-      progress: Math.round((this.levelConfig.level / 3) * 100),
-      score: this.getScore(),
+      progress: Math.round((completed / total) * 100),
+      score: this.points,
+      stage: this.level.level,
       hits: this.hits,
       errors: this.errors,
-    });
+    })
   }
 
-  private playClick() {
-    this.playTone(520, 0.05, "sine", 0.05);
+  private getAudioCtx(): AudioContext | null {
+    if (this.isMuted) return null
+    try { return (this.sound as Phaser.Sound.WebAudioSoundManager).context } catch { return null }
   }
 
-  private playSuccess() {
-    this.playTone(740, 0.12, "triangle", 0.06);
-    this.time.delayedCall(90, () => this.playTone(980, 0.12, "triangle", 0.05));
+  private playTone(freq: number, dur: number, type: OscillatorType = 'sine', gain = 0.12) {
+    const ctx = this.getAudioCtx()
+    if (!ctx) return
+    const osc = ctx.createOscillator()
+    const g = ctx.createGain()
+    osc.connect(g)
+    g.connect(ctx.destination)
+    osc.type = type
+    osc.frequency.setValueAtTime(freq, ctx.currentTime)
+    g.gain.setValueAtTime(gain, ctx.currentTime)
+    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur)
+    osc.start()
+    osc.stop(ctx.currentTime + dur)
   }
 
-  private playWrong() {
-    this.playTone(190, 0.16, "sawtooth", 0.04);
+  private playClick() { this.playTone(420, 0.045, 'sine', 0.07) }
+  private playDrop() { this.playTone(560, 0.06, 'triangle', 0.08) }
+  private playCorrect() {
+    this.playTone(620, 0.08, 'sine', 0.13)
+    this.time.delayedCall(85, () => this.playTone(820, 0.1, 'sine', 0.1))
   }
-
-  private playTone(frequency: number, duration: number, type: OscillatorType, volume: number) {
-    const AudioContextClass = window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-    if (!AudioContextClass) return;
-    const context = new AudioContextClass();
-    const oscillator = context.createOscillator();
-    const gain = context.createGain();
-    oscillator.type = type;
-    oscillator.frequency.value = frequency;
-    gain.gain.value = volume;
-    oscillator.connect(gain);
-    gain.connect(context.destination);
-    oscillator.start();
-    oscillator.stop(context.currentTime + duration);
-    oscillator.onended = () => context.close();
-  }
+  private playError() { this.playTone(210, 0.18, 'square', 0.11) }
 }
