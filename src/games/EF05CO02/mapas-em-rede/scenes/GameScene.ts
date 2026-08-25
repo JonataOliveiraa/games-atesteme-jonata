@@ -4,6 +4,7 @@ import { EventBus } from '../../../../shared/EventBus'
 import { createTutorial, type TutorialStep } from '../../../../shared/tutorial/createTutorial'
 import { showLevelComplete } from '../../../../shared/level/showLevelComplete'
 import { LEVELS } from '../data/levels'
+import { HUD, SUB, BANDA, RODAPE } from '../data/layout'
 import type {
     GraphEdge,
     GraphNode,
@@ -23,9 +24,8 @@ const NODE_R = 42
 const LABEL_DY = 64
 const HIT_R = 54
 
-const TASK_Y = 132
 const BAR_Y = 664
-const BAR_TOP = 618
+const BAR_TOP = RODAPE.top
 
 const C = {
     blue: 0x3b82f6,
@@ -128,7 +128,8 @@ export class GameScene extends Phaser.Scene {
             EventBus.emit('timer-stop')
         })
 
-        runtimeGameBridge.emit({ type: 'GAME_READY', gameId: GAME_ID, stage: this.level.level })
+        // `GAME_READY` não leva `stage` no contrato — leva só o `gameId`
+        runtimeGameBridge.emit({ type: 'GAME_READY', gameId: GAME_ID })
         this.emitCheckpoint()
 
         if (this.phaseIdx > 0) EventBus.emit('tutorial-ready')
@@ -165,42 +166,111 @@ export class GameScene extends Phaser.Scene {
         this.taskLayer = this.add.container(0, 0).setDepth(18)
     }
 
+    /**
+     * Onde a faixa de tarefa começa nesta fase.
+     *
+     * Depende de haver subtítulo: com ele, tudo desce uma linha. É o único
+     * número do topo que muda de fase para fase, e ter isso escrito num lugar
+     * só é o que impede a lista de aterrissar em cima do mapa.
+     */
+    private get bandaTop(): number {
+        return this.hudSub ? BANDA.comSub : BANDA.semSub
+    }
+
+    /** Mede um texto DE VERDADE, em vez de chutar `length * 9.5`. */
+    private medir(texto: string, size: number, familia = 'Arial Black, Arial'): number {
+        const t = this.add.text(-9999, -9999, texto, {
+            fontFamily: familia, fontSize: `${size}px`,
+        }).setResolution(2)
+        const w = t.width
+        t.destroy()
+        return w
+    }
+
+    /** Fatia `n` itens em `linhas` blocos contíguos do mesmo tamanho. */
+    private fatiar(n: number, linhas: number): number[][] {
+        const porLinha = Math.ceil(n / linhas)
+        const out: number[][] = []
+        for (let i = 0; i < n; i += porLinha) {
+            out.push(Array.from({ length: Math.min(porLinha, n - i) }, (_, k) => i + k))
+        }
+        return out
+    }
+
+    /**
+     * A LISTA DE PARES A LIGAR.
+     *
+     * ── O BUG QUE ELA TINHA ──────────────────────────────────────────────
+     *
+     * A largura de cada ficha era um CHUTE: `texto.length * 9.5 + 62`. Na fase
+     * de seis ruas do Nível 1 a conta dava 1362px contra 1200 disponíveis, e o
+     * empacotamento era guloso — enchia a primeira linha até estourar e jogava
+     * o que sobrou para baixo. Resultado: cinco fichas em cima e uma sozinha
+     * embaixo, "Biblioteca — Praça", pousada em cima do mapa.
+     *
+     * Três consertos, nesta ordem:
+     *
+     *   1. medir o texto de verdade (`medir`), e não adivinhar;
+     *   2. EQUILIBRAR as linhas — seis pares viram 3+3, e não 5+1;
+     *   3. encolher a letra antes de aceitar mais uma linha, e só então
+     *      desistir — e o resultado é conferido contra `BANDA.teto`, que é
+     *      onde o mapa começa.
+     */
     private buildChecklist() {
         const p = this.phase
         if (p.kind !== 'representar') return
 
         const pairs = p.edges
-        const chipH = 40
-        const gap = 10
-        const pad = 18
+        const textos = pairs.map(e => `${this.labelOf(e.a)} — ${this.labelOf(e.b)}`)
+        const gap = BANDA.chipGap
+        const chipH = BANDA.chipH
 
-        const widths = pairs.map(e => {
-            const t = `${this.labelOf(e.a)} — ${this.labelOf(e.b)}`
-            return Math.max(150, t.length * 9.5 + 62)
-        })
+        /* ── qual corpo de letra e quantas linhas cabem ────────────────── */
+        let size = BANDA.chipSizes[BANDA.chipSizes.length - 1]
+        let widths: number[] = []
+        let rows: number[][] = []
 
-        const rows: number[][] = [[]]
-        let acc = 0
-        widths.forEach((w, i) => {
-            if (acc + w + gap > W - 80 && rows[rows.length - 1].length) {
-                rows.push([])
-                acc = 0
+        const alturaDe = (n: number) =>
+            BANDA.tituloH + n * chipH + (n - 1) * gap
+
+        busca:
+        for (const s of BANDA.chipSizes) {
+            const w = textos.map(t =>
+                Math.max(BANDA.chipMin, this.medir(t, s) + BANDA.chipPadX * 2 + BANDA.chipMarcaDX))
+
+            for (let linhas = 1; linhas <= BANDA.chipMaxLinhas; linhas += 1) {
+                if (this.bandaTop + alturaDe(linhas) > BANDA.teto) break
+                const fatias = this.fatiar(pairs.length, linhas)
+                const cabe = fatias.every(f =>
+                    f.reduce((acc, i) => acc + w[i], 0) + (f.length - 1) * gap <= BANDA.maxLargura)
+                if (!cabe) continue
+                size = s; widths = w; rows = fatias
+                break busca
             }
-            rows[rows.length - 1].push(i)
-            acc += w + gap
-        })
+        }
+
+        // rede: nenhum tamanho serviu. Fica no menor, na quantidade máxima de
+        // linhas — feio, mas dentro do teto, e nunca em cima do mapa
+        if (!rows.length) {
+            size = BANDA.chipSizes[BANDA.chipSizes.length - 1]
+            widths = textos.map(t =>
+                Math.max(BANDA.chipMin, this.medir(t, size) + BANDA.chipPadX * 2 + BANDA.chipMarcaDX))
+            rows = this.fatiar(pairs.length, BANDA.chipMaxLinhas)
+        }
+
+        const top = this.bandaTop
 
         this.taskLayer.add(
-            this.add.text(W / 2, TASK_Y - 20, 'LIGUE ESTES PARES', {
-                fontFamily: 'Arial Black, Arial', fontSize: '20px',
+            this.add.text(W / 2, top, 'RUAS PARA LIGAR', {
+                fontFamily: 'Arial Black, Arial', fontSize: '14px',
                 color: '#93c5fd', stroke: '#0f2547', strokeThickness: 4,
-            }).setOrigin(0.5).setResolution(2),
+            }).setOrigin(0.5, 0).setResolution(2),
         )
 
         rows.forEach((row, ri) => {
-            const total = row.reduce((s, i) => s + widths[i], 0) + (row.length - 1) * gap
+            const total = row.reduce((s2, i) => s2 + widths[i], 0) + (row.length - 1) * gap
             let x = W / 2 - total / 2
-            const y = TASK_Y + ri * (chipH + gap)
+            const y = top + BANDA.tituloH + ri * (chipH + gap)
 
             row.forEach(i => {
                 const e = pairs[i]
@@ -210,14 +280,14 @@ export class GameScene extends Phaser.Scene {
                 const check = this.add.graphics()
 
                 const label = this.add.text(
-                    x + pad + 26, y + chipH / 2,
-                    `${this.labelOf(e.a)} — ${this.labelOf(e.b)}`, {
-                    fontFamily: 'Arial Black, Arial', fontSize: '16px',
+                    x + BANDA.chipPadX + BANDA.chipMarcaDX, y + chipH / 2,
+                    textos[i], {
+                    fontFamily: 'Arial Black, Arial', fontSize: `${size}px`,
                     color: '#ffffff', stroke: '#0f2547', strokeThickness: 4,
                 }).setOrigin(0, 0.5).setResolution(2)
 
                 g.setData('rect', { x, y, w, h: chipH })
-                check.setData('cx', x + pad + 6)
+                check.setData('cx', x + BANDA.chipPadX + 3)
                 check.setData('cy', y + chipH / 2)
 
                 this.taskLayer.add([g, check, label])
@@ -276,11 +346,16 @@ export class GameScene extends Phaser.Scene {
         }
 
         if (p.kind === 'rota') {
-            this.hudSub = (
-                p.mustPass?.length
-                    ? `Comece em ${this.labelOf(p.startId)}, passe em ${p.mustPass.map(id => this.labelOf(id)).join(', ')} e termine em ${this.labelOf(p.endId)}.`
-                    : `Comece em ${this.labelOf(p.startId)} e termine em ${this.labelOf(p.endId)}.`
-            )
+            /*
+             * Sem subtítulo aqui, de propósito.
+             *
+             * Ele dizia "Comece em Casa, passe na Praça e termine na Escola" —
+             * exatamente o que a faixa PERCURSO logo abaixo mostra em fichas
+             * coloridas, com bandeira, alfinete e chegada. Era a mesma
+             * informação duas vezes, e era a linha que faltava para a faixa
+             * caber acima do mapa.
+             */
+            this.hudSub = ''
             this.buildNodes(p.nodes, 'main')
             this.edges = p.edges.map(e => ({ ...e }))
             this.buildRouteHud()
@@ -316,7 +391,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     private hintErase() {
-        this.add.text(500, 670, 'Toque na bolinha do meio de uma linha para apagá-la', {
+        this.add.text(470, RODAPE.cy, 'Toque na bolinha do meio de uma linha para apagá-la', {
             fontFamily: 'Arial',
             fontStyle: 'bold',
             fontSize: '18px',
@@ -557,7 +632,7 @@ export class GameScene extends Phaser.Scene {
 
         if (this.routePath.length === 0) {
             if (id !== p.startId) {
-                this.flashNode(view, C.red)
+                this.flashNode(view)
                 this.playTone(220, 0.1, 'square', 0.1)
                 return
             }
@@ -570,7 +645,7 @@ export class GameScene extends Phaser.Scene {
         } else {
             const last = this.routePath[this.routePath.length - 1]
             if (!this.areNeighbors(last, id) || this.routePath.includes(id)) {
-                this.flashNode(view, C.red)
+                this.flashNode(view)
                 this.playTone(220, 0.1, 'square', 0.1)
                 return
             }
@@ -701,59 +776,80 @@ export class GameScene extends Phaser.Scene {
             { id: p.endId, role: 'end' },
         ]
 
-        const CHIP_W = 176
-        const CHIP_H = 38
-        const ARROW_W = 40
-        const LABEL_W = 106
-        const STRIP_PAD = 12
-        const STRIP_Y = TASK_Y - 12
-        const STRIP_H = CHIP_H + 8
-
+        /*
+         * ── A FICHA DE PERCURSO MEDE O PRÓPRIO TEXTO ─────────────────────
+         *
+         * Antes toda ficha tinha 176px fixos, e a faixa inteira era montada a
+         * partir desse número. Com "🏁 Sorveteria" dentro, o texto encostava
+         * nas bordas; com "🚩 Casa", sobrava metade da ficha vazia. Agora cada
+         * ficha é do tamanho do que ela diz, e a letra encolhe se a faixa toda
+         * não couber na tela.
+         *
+         * O subtítulo destas fases foi desligado de propósito (ver `buildPhase`):
+         * ele repetia em texto corrido o que estas fichas já mostram, e era a
+         * linha que faltava para tudo caber acima do mapa.
+         */
         const roleColor: Record<string, number> = { start: 0x16a34a, pass: 0xd97706, end: 0xdc2626 }
-        const roleIcon:  Record<string, string>  = { start: '🚩', pass: '📍', end: '🏁' }
+        const roleIcon: Record<string, string> = { start: '🚩', pass: '📍', end: '🏁' }
 
-        const innerW = LABEL_W + stops.length * CHIP_W + (stops.length - 1) * ARROW_W
-        const stripX = W / 2 - (innerW + STRIP_PAD * 2) / 2
+        const textos = stops.map(st => `${roleIcon[st.role]} ${this.labelOf(st.id)}`)
 
-        // Background strip
+        let size = BANDA.stripSizes[BANDA.stripSizes.length - 1]
+        let widths = textos.map(t => Math.max(BANDA.fichaMin, this.medir(t, size) + BANDA.fichaPadX * 2))
+        let innerW = 0
+
+        for (const s2 of BANDA.stripSizes) {
+            const w = textos.map(t => Math.max(BANDA.fichaMin, this.medir(t, s2) + BANDA.fichaPadX * 2))
+            const total = BANDA.rotuloW + w.reduce((a, b) => a + b, 0)
+                + (stops.length - 1) * BANDA.setaW
+            if (total + BANDA.stripPad * 2 <= BANDA.maxLargura) {
+                size = s2; widths = w; innerW = total
+                break
+            }
+            size = s2; widths = w; innerW = total
+        }
+
+        const CHIP_H = BANDA.fichaH
+        const STRIP_Y = this.bandaTop
+        const STRIP_H = CHIP_H + 8
+        const stripX = W / 2 - (innerW + BANDA.stripPad * 2) / 2
+
         const bg = this.add.graphics().setDepth(12)
         bg.fillStyle(C.ink, 0.88)
-        bg.fillRoundedRect(stripX, STRIP_Y, innerW + STRIP_PAD * 2, STRIP_H, STRIP_H / 2)
+        bg.fillRoundedRect(stripX, STRIP_Y, innerW + BANDA.stripPad * 2, STRIP_H, STRIP_H / 2)
         bg.lineStyle(3, C.blue, 0.72)
-        bg.strokeRoundedRect(stripX, STRIP_Y, innerW + STRIP_PAD * 2, STRIP_H, STRIP_H / 2)
+        bg.strokeRoundedRect(stripX, STRIP_Y, innerW + BANDA.stripPad * 2, STRIP_H, STRIP_H / 2)
 
-        // "PERCURSO:" label on the left
-        this.add.text(stripX + STRIP_PAD, STRIP_Y + STRIP_H / 2, 'PERCURSO:', {
+        this.add.text(stripX + BANDA.stripPad + 6, STRIP_Y + STRIP_H / 2, 'PERCURSO:', {
             fontFamily: 'Arial Black, Arial', fontSize: '14px',
             color: '#93c5fd', stroke: '#0f2547', strokeThickness: 3,
         }).setOrigin(0, 0.5).setDepth(13).setResolution(2)
 
-        // Chips and arrows
-        let cx = stripX + STRIP_PAD + LABEL_W
+        let cx = stripX + BANDA.stripPad + BANDA.rotuloW
 
         stops.forEach((stop, i) => {
             const color = roleColor[stop.role]
+            const cw = widths[i]
 
             const chipBg = this.add.graphics().setDepth(13)
             chipBg.fillStyle(color, 0.86)
-            chipBg.fillRoundedRect(cx, STRIP_Y + 4, CHIP_W, CHIP_H, CHIP_H / 2)
+            chipBg.fillRoundedRect(cx, STRIP_Y + 4, cw, CHIP_H, CHIP_H / 2)
             chipBg.lineStyle(2, 0xffffff, 0.82)
-            chipBg.strokeRoundedRect(cx, STRIP_Y + 4, CHIP_W, CHIP_H, CHIP_H / 2)
+            chipBg.strokeRoundedRect(cx, STRIP_Y + 4, cw, CHIP_H, CHIP_H / 2)
 
-            this.add.text(cx + CHIP_W / 2, STRIP_Y + STRIP_H / 2,
-                `${roleIcon[stop.role]} ${this.labelOf(stop.id)}`, {
-                fontFamily: 'Arial Black, Arial', fontSize: '15px',
+            this.add.text(cx + cw / 2, STRIP_Y + STRIP_H / 2, textos[i], {
+                fontFamily: 'Arial Black, Arial', fontSize: `${size}px`,
                 color: '#ffffff', stroke: '#0f2547', strokeThickness: 4,
             }).setOrigin(0.5).setDepth(14).setResolution(2)
 
-            cx += CHIP_W
+            cx += cw
 
             if (i < stops.length - 1) {
-                this.add.text(cx + ARROW_W / 2, STRIP_Y + STRIP_H / 2, '→', {
+                this.add.text(cx + BANDA.setaW / 2, STRIP_Y + STRIP_H / 2, '→', {
                     fontFamily: 'Arial Black, Arial', fontSize: '20px',
                     color: '#94a3b8', stroke: '#0f2547', strokeThickness: 4,
                 }).setOrigin(0.5).setDepth(13).setResolution(2)
-                cx += ARROW_W
+                cx += BANDA.setaW
             }
         })
     }
@@ -783,7 +879,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     private buildRouteHud() {
-        this.costText = this.add.text(220, 668, '0 quadras', {
+        this.costText = this.add.text(RODAPE.custoX, RODAPE.cy, '0 quadras', {
             fontFamily: 'Arial Black, Arial',
             fontSize: '24px',
             color: '#ffffff',
@@ -791,7 +887,7 @@ export class GameScene extends Phaser.Scene {
             strokeThickness: 5,
         }).setOrigin(0.5).setDepth(12).setResolution(2)
 
-        this.makeButton(450, 668, 190, 50, 'Apagar rota', C.slate, () => {
+        this.makeButton(RODAPE.apagarX, RODAPE.cy, RODAPE.apagarW, 50, 'Apagar rota', C.slate, () => {
             if (this.locked) return
             this.routePath = []
             this.playTone(300, 0.06, 'square', 0.1)
@@ -799,20 +895,30 @@ export class GameScene extends Phaser.Scene {
         })
     }
 
+    /**
+     * As quatro opções da consulta.
+     *
+     * Elas eram centradas em W/2 com 196px cada: quatro botões ocupavam
+     * 221..1059, e o Confirmar começava em 930. Os dois se sobrepunham em
+     * 129px — dava para tocar num achando que tocava no outro. Agora as opções
+     * se centram no que sobra À ESQUERDA do Confirmar, e os dois blocos têm
+     * fronteira.
+     */
     private buildOptions(p: QueryPhase) {
-        const gap = 18
-        const bw = 196
+        const gap = RODAPE.opcaoGap
+        const bw = RODAPE.opcaoW
+        const bh = RODAPE.opcaoH
         const total = p.options.length * bw + (p.options.length - 1) * gap
-        const startX = W / 2 - total / 2 + bw / 2
+        const startX = RODAPE.opcoesCX - total / 2 + bw / 2
 
         p.options.forEach((opt, i) => {
-            const btn = this.makeButton(startX + i * (bw + gap), 660, bw, 54, opt, C.blueDark, () => {
+            const btn = this.makeButton(startX + i * (bw + gap), RODAPE.cy, bw, bh, opt, C.blueDark, () => {
                 if (this.locked) return
                 this.selectedOption = i
                 this.playTone(620, 0.05, 'sine', 0.1)
                 this.optionButtons.forEach((b, bi) => {
                     const g = b.getData('bg') as Phaser.GameObjects.Graphics
-                    this.paintButton(g, bw, 54, bi === i ? C.amber : C.blueDark)
+                    this.paintButton(g, bw, bh, bi === i ? C.amber : C.blueDark)
                 })
                 this.confirmBtn?.setAlpha(1)
             })
@@ -835,18 +941,20 @@ export class GameScene extends Phaser.Scene {
     }
 
     private buildIsoButtons(p: IsomorphismPhase) {
-        this.makeButton(440, 668, 300, 56, 'São o mesmo grafo', C.blue, () => {
+        this.makeButton(400, RODAPE.cy, 300, 56, 'São o mesmo grafo', C.blue, () => {
             if (this.locked) return
             this.resolveIsomorphism(p, true)
         })
-        this.makeButton(840, 668, 300, 56, 'São diferentes', C.purple, () => {
+        this.makeButton(760, RODAPE.cy, 300, 56, 'São diferentes', C.purple, () => {
             if (this.locked) return
             this.resolveIsomorphism(p, false)
         })
     }
 
     private buildConfirm(label: string, onClick: () => void) {
-        this.confirmBtn = this.makeButton(1060, 668, 260, 54, label, C.green, () => {
+        this.confirmBtn = this.makeButton(
+            RODAPE.confirmX, RODAPE.cy, RODAPE.confirmW, RODAPE.confirmH,
+            label, C.green, () => {
             if (this.locked) return
             onClick()
         })
@@ -1022,8 +1130,12 @@ export class GameScene extends Phaser.Scene {
         }
 
         this.ended = true
+        /*
+         * `FINISH_GAME` não existe no contrato de eventos: a linha que o
+         * emitia era ignorada em silêncio pela plataforma. Quem fecha o jogo é
+         * `GAME_COMPLETED`, e ele já está aqui.
+         */
         runtimeGameBridge.emit({ type: 'GAME_COMPLETED', gameId: GAME_ID, stage: this.level.level })
-        runtimeGameBridge.emit({ type: 'FINISH_GAME', gameId: GAME_ID, stage: this.level.level })
 
         showLevelComplete(this, {
             title: 'Jogo concluído!',
@@ -1138,7 +1250,7 @@ export class GameScene extends Phaser.Scene {
                     },
                     {
                         text: 'Esta lista diz quais lugares têm rua direta entre eles. É o seu roteiro.',
-                        shape: 'rect', x: W / 2, y: TASK_Y + 20, w: 1120, h: 130, balloonY: 430,
+                        shape: 'rect', x: W / 2, y: BANDA.semSub + 60, w: 1180, h: 150, balloonY: 430,
                     },
                     {
                         text: 'Encoste o dedo numa bolinha e arraste até a outra sem soltar. A linha aparece quando você chega.',
@@ -1154,7 +1266,7 @@ export class GameScene extends Phaser.Scene {
                     },
                     {
                         text: 'Cada rua desenhada marca um item da lista com um sinal verde.',
-                        shape: 'rect', x: W / 2, y: TASK_Y + 20, w: 1120, h: 130, balloonY: 430,
+                        shape: 'rect', x: W / 2, y: BANDA.semSub + 60, w: 1180, h: 150, balloonY: 430,
                     },
                     {
                         text: 'Desenhou errado? Toque na bolinha branca no meio da linha para apagá-la.',
@@ -1162,7 +1274,7 @@ export class GameScene extends Phaser.Scene {
                     },
                     {
                         text: 'Com a lista toda marcada, toque em Confirmar ligações.',
-                        shape: 'rect', x: 1060, y: BAR_Y, w: 320, h: 100,
+                        shape: 'rect', x: RODAPE.confirmX, y: BAR_Y, w: RODAPE.confirmW + 60, h: 100,
                     },
                 ],
             })
@@ -1202,15 +1314,17 @@ export class GameScene extends Phaser.Scene {
                 steps: [
                     {
                         text: 'Neste nível cada fase pede uma coisa diferente. Leia a frase do topo antes de começar.',
-                        shape: 'rect', x: W / 2, y: 62, w: 1160, h: 110, balloonY: 400,
+                        shape: 'rect', x: HUD.instrCX, y: HUD.cy, w: HUD.instrW + 40, h: 76, balloonY: 400,
                     },
                     {
                         text: 'Às vezes o desenho é um bairro, às vezes são amizades. O jeito de ler é o mesmo: quem liga com quem.',
                         shape: 'none', balloonY: 400,
                     },
                     {
-                        text: 'E agora tem tempo. A barra esvazia de verde para vermelho: quando acabar, a fase reinicia.',
-                        shape: 'rect', x: W - 186, y: 44, w: 360, h: 70, balloonY: 400,
+                        text: 'Esta barra é o tempo. Quando ela esvaziar, a fase recomeça — sem pressa, dá para tentar quantas vezes quiser.',
+                        shape: 'rect',
+                        x: HUD.barCX + HUD.barIconDX / 2, y: HUD.cy,
+                        w: HUD.barW + 120, h: 60, balloonY: 400,
                     },
                 ],
             })
@@ -1322,7 +1436,16 @@ export class GameScene extends Phaser.Scene {
         })
     }
 
+    /**
+     * O relógio existe em TODOS os níveis agora.
+     *
+     * Antes só o Nível 3 declarava `timeLimit`, então nos Níveis 1 e 2 a barra
+     * simplesmente não aparecia — o jogo "não tinha contagem de tempo". O
+     * desfecho de zerar já existia e continua o mesmo: `onTimeUp` devolve a
+     * fase para ser refeita, e não o nível inteiro.
+     */
     private startTimer() {
+        if (!this.level.timeLimit) return
         EventBus.emit('timer-start', this.level.timeLimit)
     }
 

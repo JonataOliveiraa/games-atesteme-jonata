@@ -25,6 +25,19 @@ export interface TutorialPointer {
     toX: number
     toY: number
     textureKey?: string
+    /**
+     * TOQUE, e não trajeto.
+     *
+     * O ponteiro padrão viaja de `from` para `to` num traço contínuo — que é o
+     * desenho universal de ARRASTAR. Num jogo que só aceita toques, isso ensina
+     * o gesto errado com muita clareza, e a criança fica tentando arrastar uma
+     * peça que não se arrasta.
+     *
+     * Com `tap`, o ponteiro fica parado em `to` e bate ali, com uma onda saindo
+     * do ponto. `from` é ignorado. Use `tap` sempre que o alvo for um só; deixe
+     * o trajeto para quando o gesto REALMENTE for levar uma coisa até outra.
+     */
+    tap?: boolean
 }
 
 export interface TutorialStep {
@@ -119,8 +132,15 @@ export function createTutorial(scene: Phaser.Scene, options: TutorialOptions) {
     button.setInteractive({ useHandCursor: true })
 
     let pointer: Phaser.GameObjects.GameObject | undefined
+    /** A ondinha que sai do ponto tocado. Só existe no modo `tap`. */
+    let ripple: Phaser.GameObjects.Graphics | undefined
 
     const clearPointer = () => {
+        if (ripple) {
+            scene.tweens.killTweensOf(ripple)
+            ripple.destroy()
+            ripple = undefined
+        }
         if (!pointer) return
         scene.tweens.killTweensOf(pointer)
         pointer.destroy()
@@ -242,6 +262,54 @@ export function createTutorial(scene: Phaser.Scene, options: TutorialOptions) {
             g.fillCircle(0, 0, 7)
             g.setPosition(p.fromX, p.fromY)
             pointer = g
+        }
+
+        if (p.tap) {
+            /*
+             * ── O TOQUE ──────────────────────────────────────────────────
+             *
+             * O dedo não sai do lugar: ele afunda um pouco e volta, e do ponto
+             * sai um anel que se abre e some. Os dois ciclos duram 1080ms de
+             * propósito — em tempos diferentes eles se desencontram e o que era
+             * um toque vira dois eventos separados piscando fora de compasso.
+             */
+            const obj = pointer as Phaser.GameObjects.Image
+            obj.setPosition(p.toX, p.toY)
+            /*
+             * O afundar é RELATIVO à escala que o ponteiro já tem.
+             *
+             * Com textura, `setDisplaySize` acima já deixou a imagem numa escala
+             * qualquer para caber em 58px; tweenar para 0,74 absoluto encolheria
+             * o dedo a um ponto. O desenho de emergência nasce em 1, e para ele
+             * dá no mesmo.
+             */
+            const base = obj.scaleX || 1
+
+            ripple = scene.add.graphics().setDepth(9004)
+            ripple.lineStyle(4, 0xffffff, 0.95)
+            ripple.strokeCircle(0, 0, 26)
+            ripple.setPosition(p.toX, p.toY).setAlpha(0)
+
+            scene.tweens.add({
+                targets: pointer,
+                scale: base * 0.74,
+                duration: 180,
+                hold: 90,
+                yoyo: true,
+                ease: 'Sine.easeInOut',
+                repeat: -1,
+                repeatDelay: 630,
+            })
+            scene.tweens.add({
+                targets: ripple,
+                scale: { from: 0.45, to: 1.8 },
+                alpha: { from: 0.85, to: 0 },
+                duration: 620,
+                ease: 'Sine.easeOut',
+                repeat: -1,
+                repeatDelay: 460,
+            })
+            return
         }
 
         scene.tweens.add({

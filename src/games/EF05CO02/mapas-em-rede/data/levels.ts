@@ -1,8 +1,20 @@
 import type { LevelConfig } from '../types'
 
+/**
+ * Os oito lugares onde um nó pode morar, num tabuleiro de 4x2.
+ *
+ * A fileira de cima desceu de 268 para 302. Com raio 42, o mapa passa a
+ * começar em 260 — e é isso que dá à faixa de tarefa do topo espaço para duas
+ * linhas de fichas sem pousar em cima do bairro (ver `BANDA.teto` em
+ * `data/layout.ts`, que declara 252 como limite).
+ *
+ * A de baixo desceu 5px junto, para o conjunto continuar centrado: com o
+ * rótulo 64px abaixo do nó, a última letra fica em ~593, contra o rodapé em
+ * 618.
+ */
 const LOT = {
-  a1: { x: 230, y: 268 }, a2: { x: 500, y: 268 }, a3: { x: 780, y: 268 }, a4: { x: 1050, y: 268 },
-  b1: { x: 230, y: 500 }, b2: { x: 500, y: 500 }, b3: { x: 780, y: 500 }, b4: { x: 1050, y: 500 },
+  a1: { x: 230, y: 302 }, a2: { x: 500, y: 302 }, a3: { x: 780, y: 302 }, a4: { x: 1050, y: 302 },
+  b1: { x: 230, y: 505 }, b2: { x: 500, y: 505 }, b3: { x: 780, y: 505 }, b4: { x: 1050, y: 505 },
 }
 
 const on = (base: { id: string; label: string; textureKey: string }, lot: { x: number; y: number }) =>
@@ -36,14 +48,23 @@ export const LEVELS: LevelConfig[] = [
     level: 1,
     title: 'Ligando o bairro',
     objective: 'A lista no topo mostra quais lugares têm rua direta. Arraste de um até o outro para desenhar cada rua.',
+    /**
+     * O relógio do nível, em segundos.
+     *
+     * Antes só o Nível 3 tinha, e por isso os dois primeiros não mostravam
+     * barra nenhuma. O orçamento é FOLGADO de propósito: a pior fase deste
+     * nível pede seis arrastes, e zerar manda refazer a fase — perder tem que
+     * acontecer com quem travou de verdade, não com quem lê devagar.
+     */
+    timeLimit: 110,
     phases: [
       {
         id: 'l1f1',
         kind: 'representar',
         context: 'mapa',
         name: 'Duas ruas',
-        instruction: 'Toque nos lugares em sequência para montar uma rota da Casa até a Escola',
-        rule: 'Casa e Escola não aparecem na lista: para ir de uma à outra é preciso passar pela Praça.',
+        instruction: 'Arraste de um lugar até o outro para desenhar as duas ruas da lista.',
+        rule: 'Casa e Escola não aparecem juntas na lista: para ir de uma à outra é preciso passar pela Praça.',
         nodes: [
           on(L.escola, LOT.a1),
           on(L.praca, LOT.b2),
@@ -126,6 +147,8 @@ export const LEVELS: LevelConfig[] = [
     level: 2,
     title: 'Contando quadras',
     objective: 'Toque nos lugares em sequência para montar a rota e ver quantas quadras dá.',
+    /** Achar o menor caminho é o passo mais lento do jogo: dois minutos. */
+    timeLimit: 120,
     phases: [
       {
         id: 'l2f1',
@@ -238,14 +261,21 @@ export const LEVELS: LevelConfig[] = [
     level: 3,
     title: 'Lendo o grafo',
     objective: 'Mapas e amizades viram o mesmo tipo de desenho. Responda usando as ligações.',
-    timeLimit: 60,
+    /**
+     * 90, e não 60.
+     *
+     * Duas das quatro fases daqui são perguntas de leitura ("Quem é amigo da
+     * Ana E da Elis?"), e sessenta segundos incluindo LER o enunciado, ler a
+     * pergunta e percorrer sete linhas com o dedo era corrida, não leitura.
+     */
+    timeLimit: 90,
     phases: [
       {
         id: 'l3f1',
         kind: 'rota',
         context: 'mapa',
         name: 'Rota esperta',
-        instruction: 'Os dois desenhos estão diferentes. Arraste as bolinhas e compare quem liga com quem.',
+        instruction: 'Ache a rota mais curta da Casa até a Sorveteria.',
         startId: 'casa',
         endId: 'sorveteria',
         requireOptimal: true,

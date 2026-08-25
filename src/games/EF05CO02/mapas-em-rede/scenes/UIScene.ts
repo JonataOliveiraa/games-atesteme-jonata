@@ -1,8 +1,25 @@
 import Phaser from 'phaser'
 import { EventBus } from '../../../../shared/EventBus'
+import { createTimeBar, type TimeBar } from '../../../../shared/hud/createTimeBar'
+import { W, HUD, SUB } from '../data/layout'
 
-const W = 1280
-
+/**
+ * O HEADER.
+ *
+ * ── O QUE ESTAVA ERRADO ──────────────────────────────────────────────────
+ *
+ * O enunciado era um texto centrado em W/2 com quebra de 1120px: ele começava
+ * em x=100 e terminava em x=1180, ou seja, passava POR BAIXO do relógio
+ * (x 862..1186) e do botão `?` (x 1208..1260), e por cima do "NÍVEL 1" da
+ * esquerda. Frase curta não batia; frase longa batia — e o jogo parecia ter a
+ * UI desalinhada por acaso, quando na verdade os três blocos disputavam o
+ * mesmo espaço.
+ *
+ * Agora a faixa é de ponta a ponta e tem três zonas que não se cruzam: nível e
+ * fases à esquerda, tempo e ajuda à direita, e o enunciado no vão livre do
+ * meio, com largura própria. Se a frase não couber, ELA encolhe — nunca invade
+ * o vizinho.
+ */
 interface HudData {
   instruction: string
   sub: string
@@ -11,16 +28,33 @@ interface HudData {
   totalPhases: number
 }
 
+/**
+ * Encolhe o texto até caber em `maxLinhas`.
+ *
+ * O `wordWrap` do estilo continua mandando na largura; o que muda é o corpo da
+ * letra. Sem isto, a única saída de uma frase comprida é quebrar em mais uma
+ * linha — que é exatamente o defeito que se está consertando.
+ */
+function caberEm(
+  t: Phaser.GameObjects.Text,
+  str: string,
+  sizes: number[],
+  maxLinhas: number,
+) {
+  for (let i = 0; i < sizes.length; i += 1) {
+    t.setFontSize(sizes[i])
+    t.setText(str)
+    if (t.getWrappedText(str).length <= maxLinhas) return
+  }
+}
+
 export class UIScene extends Phaser.Scene {
   private instructionText!: Phaser.GameObjects.Text
   private subText!: Phaser.GameObjects.Text
   private levelText!: Phaser.GameObjects.Text
-  private phaseText!: Phaser.GameObjects.Text
+  private dots!: Phaser.GameObjects.Graphics
 
-  private timerTrack!: Phaser.GameObjects.Graphics
-  private timerBar!: Phaser.GameObjects.Graphics
-  private timerTween?: Phaser.Tweens.Tween
-  private timerState = { p: 1 }
+  private tempo!: TimeBar
   private helpBtn!: Phaser.GameObjects.Container
 
   constructor() {
@@ -28,46 +62,75 @@ export class UIScene extends Phaser.Scene {
   }
 
   create() {
-    this.instructionText = this.add.text(W / 2, 40, '', {
-      fontFamily: 'Arial Black, Arial',
-      fontSize: '25px',
-      color: '#ffffff',
-      stroke: '#0f2547',
-      strokeThickness: 6,
-      align: 'center',
-      wordWrap: { width: 1120 },
-    }).setOrigin(0.5).setResolution(2)
+    this.buildBar()
 
-    this.subText = this.add.text(W / 2, 82, '', {
-      fontFamily: 'Arial',
-      fontStyle: 'bold',
-      fontSize: '18px',
+    this.instructionText = this.add.text(HUD.instrCX, HUD.cy, '', {
+      fontFamily: 'Arial Black, Arial',
+      fontSize: `${HUD.instrSizes[0]}px`,
       color: '#ffffff',
       stroke: '#0f2547',
       strokeThickness: 5,
       align: 'center',
-      wordWrap: { width: 1040 },
-    }).setOrigin(0.5).setResolution(2)
+      wordWrap: { width: HUD.instrW },
+    }).setOrigin(0.5).setDepth(11).setResolution(2)
 
-    this.levelText = this.add.text(28, 26, '', {
-      fontFamily: 'Arial Black, Arial',
-      fontSize: '15px',
-      color: '#ffffff',
-      stroke: '#0f2547',
-      strokeThickness: 4,
-    }).setOrigin(0, 0.5).setResolution(2)
-
-    this.phaseText = this.add.text(28, 50, '', {
+    this.subText = this.add.text(W / 2, SUB.y, '', {
       fontFamily: 'Arial',
       fontStyle: 'bold',
-      fontSize: '14px',
-      color: '#e2e8f0',
+      fontSize: `${SUB.sizes[0]}px`,
+      color: '#dbeafe',
       stroke: '#0f2547',
-      strokeThickness: 3,
-    }).setOrigin(0, 0.5).setResolution(2)
+      strokeThickness: 5,
+      align: 'center',
+      wordWrap: { width: SUB.w },
+    }).setOrigin(0.5).setDepth(11).setResolution(2)
 
-    this.timerTrack = this.add.graphics()
-    this.timerBar = this.add.graphics()
+    this.levelText = this.add.text(
+      HUD.pillX + HUD.pillW / 2, HUD.pillY + HUD.pillH / 2, '', {
+      fontFamily: 'Arial Black, Arial', fontSize: '16px', color: '#ffffff',
+    }).setOrigin(0.5).setDepth(11).setResolution(2)
+
+    this.dots = this.add.graphics().setDepth(11)
+
+    /*
+     * A BARRA DE TEMPO é do kit compartilhado.
+     *
+     * A anterior era uma barra desenhada à mão aqui dentro, movida por um tween
+     * de 60s que só existia no Nível 3 — nos Níveis 1 e 2 o jogo simplesmente
+     * não tinha tempo nenhum. Agora é o mesmo componente dos outros jogos, e a
+     * cena de jogo liga e desliga por evento.
+     *
+     * Cores do CROMO deste jogo (azul-noite, azul claro, papel), e não da
+     * paleta de significado: verde e vermelho aqui são "acertou" e "errou".
+     */
+    this.tempo = createTimeBar(this, {
+      cx: HUD.barCX, cy: HUD.cy, w: HUD.barW, h: HUD.barH,
+      duration: 60_000,
+      iconDX: HUD.barIconDX,
+      iconR: HUD.barIconR,
+      depth: 11,
+      theme: {
+        track: 0x0f2547,
+        border: 0x3b82f6,
+        borderAlpha: 0.75,
+        fill: 0xdbeafe,
+        warn: 0xf59e0b,
+        danger: 0xef4444,
+        idle: 0x64748b,
+        icon: 0xdbeafe,
+      },
+      onEmpty: () => EventBus.emit('timer-end'),
+    })
+    /*
+     * Ela nasce PARADA e invisível.
+     *
+     * O `tick` roda todo frame desde o primeiro; sem parar a barra aqui, ela
+     * contaria durante a tela de abertura e o tutorial e poderia zerar antes de
+     * a fase começar — um `timer-end` fantasma que só não estoura porque a cena
+     * de jogo está travada nessa hora.
+     */
+    this.tempo.setRunning(false)
+    this.tempo.container.setVisible(false)
 
     this.registry.events.on('changedata-hud', (_p: unknown, data: HudData) => {
       this.applyHud(data)
@@ -76,7 +139,7 @@ export class UIScene extends Phaser.Scene {
     EventBus.on('timer-start', (seconds: number) => this.startTimer(seconds), this)
     EventBus.on('timer-stop', () => this.stopTimer(), this)
 
-    this.helpBtn = this.buildHelpButton(W - 46, 44)
+    this.helpBtn = this.buildHelpButton(HUD.helpX, HUD.cy)
     this.helpBtn.setVisible(false)
 
     EventBus.on('tutorial-ready', () => {
@@ -98,61 +161,67 @@ export class UIScene extends Phaser.Scene {
     EventBus.off('show-tutorial', undefined, this)
   }
 
-  update() {
-    if (this.timerTween) this.drawTimer(this.timerState.p)
+  update(_time: number, delta: number) {
+    this.tempo?.tick(delta)
+  }
+
+  /** A faixa e a pílula do nível: o único desenho fixo do header. */
+  private buildBar() {
+    const g = this.add.graphics().setDepth(10)
+    g.fillStyle(0x0f2547, 0.94)
+    g.fillRect(0, 0, W, HUD.h)
+    g.fillStyle(0xffffff, 0.05)
+    g.fillRect(0, 0, W, 26)
+    g.fillStyle(0x3b82f6, 1)
+    g.fillRect(0, HUD.h - HUD.linha, W, HUD.linha)
+    g.fillStyle(0x000000, 0.28)
+    g.fillRect(0, HUD.h, W, 8)
+
+    const pill = this.add.graphics().setDepth(10)
+    pill.fillStyle(0x1e3a8a, 1)
+    pill.fillRoundedRect(HUD.pillX, HUD.pillY, HUD.pillW, HUD.pillH, HUD.pillH / 2)
+    pill.fillStyle(0xffffff, 0.2)
+    pill.fillRoundedRect(HUD.pillX + 9, HUD.pillY + 5, HUD.pillW - 18, 11, 6)
   }
 
   private applyHud(data: HudData) {
-    this.instructionText.setText(data.instruction)
-    this.subText.setText(data.sub)
+    caberEm(this.instructionText, data.instruction, HUD.instrSizes, HUD.instrMaxLinhas)
+    caberEm(this.subText, data.sub ?? '', SUB.sizes, SUB.maxLinhas)
     this.levelText.setText(`NÍVEL ${data.level}`)
-    this.phaseText.setText(`Fase ${data.phase} de ${data.totalPhases}`)
+    this.paintDots(data.phase, data.totalPhases)
   }
 
-  private startTimer(seconds: number) {
-    this.stopTimer()
-    this.timerState.p = 1
-
-    this.timerTrack.clear()
-    this.timerTrack.fillStyle(0x0f2547, 0.55)
-
-    this.timerTrack.fillRoundedRect(W - 418, 30, 324, 28, 14)
-    this.timerTrack.lineStyle(2, 0x3b82f6, 0.7)
-    this.timerTrack.strokeRoundedRect(W - 418, 30, 324, 28, 14)
-    this.drawTimer(1)
-
-    this.timerTween = this.tweens.add({
-      targets: this.timerState,
-      p: 0,
-      duration: seconds * 1000,
-      ease: 'Linear',
-      onComplete: () => {
-        this.drawTimer(0)
-        this.timerTween = undefined
-        EventBus.emit('timer-end')
-      },
-    })
-  }
-
-  private stopTimer() {
-    this.timerTween?.stop()
-    this.timerTween = undefined
-    this.timerTrack.clear()
-    this.timerBar.clear()
-  }
-
-  private drawTimer(p: number) {
-    const w = 312 * Phaser.Math.Clamp(p, 0, 1)
-    const color = p > 0.5 ? 0x22c55e : p > 0.25 ? 0xf59e0b : 0xef4444
-    this.timerBar.clear()
-    if (w > 0) {
-      this.timerBar.fillStyle(color, 1)
-      this.timerBar.fillRoundedRect(W - 342, 36, w, 16, 8)
+  /**
+   * As fases viraram BOLINHAS, e não mais "Fase 2 de 4".
+   *
+   * Quatro pontinhos dizem a mesma coisa que sete palavras, e liberam a linha
+   * de baixo da pílula — que é onde o texto do nível ficava espremido contra o
+   * enunciado. Um bloco de texto a menos no topo.
+   */
+  private paintDots(phase: number, total: number) {
+    this.dots.clear()
+    for (let i = 0; i < total; i += 1) {
+      const x = HUD.dotsX + i * HUD.dotGap
+      const feito = i < phase - 1
+      const atual = i === phase - 1
+      this.dots.fillStyle(feito ? 0x22c55e : atual ? 0x93c5fd : 0xffffff, atual ? 1 : feito ? 1 : 0.22)
+      if (atual) this.dots.fillRoundedRect(x - 10, HUD.cy - HUD.dotR, 20, HUD.dotR * 2, HUD.dotR)
+      else this.dots.fillCircle(x, HUD.cy, HUD.dotR)
     }
   }
 
+  private startTimer(seconds: number) {
+    this.tempo.container.setVisible(true)
+    this.tempo.reset(seconds * 1000)
+    this.tempo.setRunning(true)
+  }
+
+  private stopTimer() {
+    this.tempo?.setRunning(false)
+  }
+
   private buildHelpButton(x: number, y: number) {
-    const s = 52
+    const s = HUD.helpS
     const box = this.add.container(0, 0).setDepth(40)
     const g = this.add.graphics()
 
