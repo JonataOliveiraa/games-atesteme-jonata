@@ -1,44 +1,64 @@
-export type TranslatorLevelNumber = 1 | 2 | 3;
-export type TranslatorLetter = "A" | "B" | "C" | "D" | "E" | "F" | "G" | "H";
+/**
+ * Tradutor da Máquina — EF04CO04.
+ *
+ * A frase da habilidade é curta: para guardar, manipular e transmitir dados, a
+ * máquina precisa deles CODIFICADOS. O jogo inteiro é essa frase virando um
+ * objeto que a criança pode tocar:
+ *
+ *      A   ↔   65   ↔   1 0 0 0 0 0 1
+ *    letra    número      lâmpadas
+ *
+ * Os três nunca aparecem separados e nunca ficam fora de sincronia.
+ */
 
-export const LETTER_CODE: Record<TranslatorLetter, string> = {
-  A: "000",
-  B: "001",
-  C: "010",
-  D: "011",
-  E: "100",
-  F: "101",
-  G: "110",
-  H: "111",
-};
+export type CaseState = 'briefing' | 'montando' | 'enviando' | 'solved'
 
-export interface N1Round {
-  letter: TranslatorLetter;
-  options: string[];
-  correct: string;
+/** Uma linha da tabela: um caractere e o número que a máquina guarda no lugar dele. */
+export interface Entry {
+    char: string
+    code: number
 }
 
-export interface N2Word {
-  word: string;
-  letters: TranslatorLetter[];
-  codes: string[];
+/**
+ * O que a criança faz no caso.
+ *
+ *   letra     → uma letra só, e a tabela acende sozinha a ficha certa
+ *   palavra   → várias letras em sequência, e a tabela para de apontar
+ *   conserto  → a mensagem chegou torta; achar a fileira errada e arrumar
+ */
+export type Mode = 'letra' | 'palavra' | 'conserto'
+
+export interface Caso {
+    id: string
+    mode: Mode
+    /** O que precisa chegar na máquina. */
+    word: string
+    /**
+     * Só no conserto: o que a máquina LEU.
+     *
+     * Tem o mesmo tamanho de `word` e difere em UMA letra. Qual letra e em que
+     * posição, o jogo descobre comparando as duas — o caso não declara isso.
+     */
+    received?: string
+    question: string
+    hint: string
+    successLine: string
 }
 
-export interface N3Word {
-  code: string;
-  groups: string[];
-  letters: TranslatorLetter[];
-  options: string[][];
+export interface Level {
+    level: number
+    title: string
+    objective: string
+    tip: string
+    cases: Caso[]
 }
 
-export interface TranslatorLevel {
-  level: TranslatorLevelNumber;
-  title: string;
-  objective: string;
-  detail: string;
-  tip: string;
-  timeLimit: number;
-  n1Rounds?: N1Round[];
-  n2Words?: N2Word[];
-  n3Words?: N3Word[];
-}
+/**
+ * Quanto vale cada chave, da esquerda para a direita.
+ *
+ * Sete, porque é o que a tabela ASCII usa para as letras maiúsculas: 65 a 90
+ * cabem todos em sete lâmpadas. Um oitavo bit só acrescentaria uma chave que
+ * nunca acende.
+ */
+export const BITS = [64, 32, 16, 8, 4, 2, 1] as const
+export const BIT_COUNT = BITS.length

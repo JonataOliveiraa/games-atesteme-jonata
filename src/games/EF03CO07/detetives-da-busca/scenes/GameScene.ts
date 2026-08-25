@@ -640,7 +640,7 @@ export class GameScene extends Phaser.Scene {
     private buildTutorialSteps(): TutorialStep[] {
         const spot = this.spots()
         const OVER_MURAL = 470
-        const OVER_TRAY = 610
+        const OVER_TRAY = 556
 
         if (this.level.level === 2) {
             return [

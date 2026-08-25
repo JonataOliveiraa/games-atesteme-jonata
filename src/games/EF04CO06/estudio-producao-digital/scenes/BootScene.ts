@@ -1,52 +1,103 @@
-import Phaser from "phaser";
+import Phaser from 'phaser'
+import { createLoadingScreen } from '../../../../shared/loading/createLoadingScreen'
+import { C } from '../data/theme'
 
-import coverUrl from "../../../../assets/games/EF04CO06/estudio-producao-digital/cover-estudio-producao-digital.png";
-import bgPlanningUrl from "../../../../assets/games/EF04CO06/estudio-producao-digital/bg-studio-planning.png";
-import bgProductionUrl from "../../../../assets/games/EF04CO06/estudio-producao-digital/bg-studio-production.png";
-import bgReviewUrl from "../../../../assets/games/EF04CO06/estudio-producao-digital/bg-studio-review.png";
-import formatTextUrl from "../../../../assets/games/EF04CO06/estudio-producao-digital/format-text.png";
-import formatSlidesUrl from "../../../../assets/games/EF04CO06/estudio-producao-digital/format-slides.png";
-import formatVideoUrl from "../../../../assets/games/EF04CO06/estudio-producao-digital/format-video.png";
-import stageBarUrl from "../../../../assets/games/EF04CO06/estudio-producao-digital/production-stage-bar.png";
+/**
+ * As chaves que o jogo consome: o cenário e as cinco imagens do acervo.
+ *
+ * As cinco fotos não são interface — são CONTEÚDO. Elas são a peça que a
+ * criança coloca na obra, e escolher a certa é metade do que este jogo ensina.
+ * Cartão, ferramenta, carta de mídia e selo da banca têm estado e continuam
+ * todos em `Graphics`.
+ *
+ * A capa fica de fora: quem usa ela é o catálogo, com `import` direto.
+ */
+const WANTED = [
+    'bg-estudio',
+    'foto-lixeiras',
+    'foto-horta',
+    'foto-festa',
+    'foto-quadra',
+    'foto-gato',
+] as const
 
-const ASSETS: Array<[string, string]> = [
-  ["cover-estudio",         coverUrl],
-  ["bg-studio-planning",    bgPlanningUrl],
-  ["bg-studio-production",  bgProductionUrl],
-  ["bg-studio-review",      bgReviewUrl],
-  ["format-text",           formatTextUrl],
-  ["format-slides",         formatSlidesUrl],
-  ["format-video",          formatVideoUrl],
-  ["production-stage-bar",  stageBarUrl],
-];
+/**
+ * As texturas são varridas da pasta, não importadas uma a uma.
+ *
+ * Um `import` de arquivo que ainda não existe quebra o build inteiro. Com
+ * `import.meta.glob` o Vite registra só o que está lá, e cada foto entra no
+ * jogo assim que for salva na pasta — até lá, a peça mostra o nome dela e o
+ * jogo continua jogável.
+ */
+const FILES = import.meta.glob(
+    '../../../../assets/games/EF04CO06/estudio-producao-digital/*.png',
+    { eager: true, import: 'default' },
+) as Record<string, string>
+
+const keyOf = (path: string) =>
+    path.split('/').pop()?.replace(/(\.png)+$/i, '') ?? ''
+
+function found(): Array<[string, string]> {
+    const byKey = new Map<string, string>()
+    Object.entries(FILES).forEach(([path, url]) => {
+        const key = keyOf(path)
+        if (key) byKey.set(key, url)
+    })
+    return WANTED
+        .map(key => [key, byKey.get(key)] as [string, string | undefined])
+        .filter((pair): pair is [string, string] => !!pair[1])
+}
 
 export class BootScene extends Phaser.Scene {
-  constructor() {
-    super({ key: "BootScene" });
-  }
+    constructor() {
+        super({ key: 'BootScene' })
+    }
 
-  preload() {
-    this.createLoadingScreen();
-    ASSETS.forEach(([key, url]) => this.load.image(key, url));
-  }
+    preload() {
+        createLoadingScreen(this, {
+            title: 'Estúdio de Produção Digital',
+            subtitle: 'Cartaz, slides e vídeo',
+            description: 'Acendendo os refletores...',
+            theme: {
+                background: {
+                    kind: 'stripes',
+                    base: C.ink,
+                    color: C.white,
+                    alpha: 0.05,
+                    size: 32,
+                    gap: 36,
+                    angle: 'diagonal',
+                },
 
-  create() {
-    this.scene.start("GameScene");
-  }
+                card: C.wall,
+                cardShadow: C.shadow,
+                cardHighlight: C.white,
+                cardBorder: C.apresentacao,
 
-  private createLoadingScreen() {
-    this.add.rectangle(640, 360, 1280, 720, 0x1e0b3e);
-    this.add.text(640, 300, "🎬 Estúdio de Produção Digital", {
-      fontSize: "40px",
-      fontFamily: "Arial Black, Arial",
-      color: "#a78bfa",
-      stroke: "#7c3aed",
-      strokeThickness: 7,
-    }).setOrigin(0.5);
-    this.add.text(640, 374, "Preparando o estúdio...", {
-      fontSize: "26px",
-      fontFamily: "Arial Black, Arial",
-      color: "#fbbf24",
-    }).setOrigin(0.5);
-  }
+                title: C.paper,
+                subtitle: C.texto,
+                description: C.idle,
+                titleStroke: C.ink,
+
+                progressTrack: C.ink,
+                progressBorder: C.edge,
+                progressFill: C.apresentacao,
+                progressHighlight: C.video,
+            },
+        })
+
+        found().forEach(([key, url]) => this.load.image(key, url))
+    }
+
+    create() {
+        /*
+         * `level` é 1-based, `phase` é 0-based.
+         *
+         * Trocar estes números abre o jogo direto no trabalho que se quer ver —
+         * `{ level: 3, phase: 2 }` cai no vídeo do intervalo. Os dois são
+         * grampeados no `GameScene.init`, então número fora da faixa não quebra
+         * nada.
+         */
+        this.scene.start('GameScene', { level: 1, phase: 0, points: 0 })
+    }
 }

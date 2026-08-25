@@ -1,22 +1,26 @@
-import Phaser from "phaser";
-import { BootScene } from "./scenes/BootScene";
-import { GameScene } from "./scenes/GameScene";
-import { UIScene } from "./scenes/UIScene";
+import Phaser from 'phaser'
+import { BootScene } from './scenes/BootScene'
+import { GameScene } from './scenes/GameScene'
 
+/**
+ * A `UIScene` saiu da lista: ela era uma classe vazia registrada no config. O
+ * HUD nasce e morre junto da cena que conhece o estado.
+ */
 const EF04CO07Config: Phaser.Types.Core.GameConfig = {
-  type: Phaser.AUTO,
-  width: 1280,
-  height: 720,
-  backgroundColor: "#011810",
-  scene: [BootScene, GameScene, UIScene],
-  scale: {
-    mode: Phaser.Scale.FIT,
-    autoCenter: Phaser.Scale.CENTER_BOTH,
-  },
-  input: {
-    activePointers: 3,
-  },
-  audio: { disableWebAudio: false },
-};
+    type: Phaser.AUTO,
+    width: 1280,
+    height: 720,
+    backgroundColor: '#0e1a1f',
+    scene: [BootScene, GameScene],
+    scale: {
+        mode: Phaser.Scale.FIT,
+        autoCenter: Phaser.Scale.CENTER_BOTH,
+    },
+    input: {
+        activePointers: 3,
+    },
+    audio: { disableWebAudio: false },
+    dom: { createContainer: false },
+}
 
-export default EF04CO07Config;
+export default EF04CO07Config

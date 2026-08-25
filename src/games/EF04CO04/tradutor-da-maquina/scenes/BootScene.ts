@@ -1,52 +1,103 @@
-import Phaser from "phaser";
+import Phaser from 'phaser'
+import { createLoadingScreen } from '../../../../shared/loading/createLoadingScreen'
+import { C } from '../data/theme'
 
-import coverUrl from "../../../../assets/games/EF04CO04/tradutor-da-maquina/cover-tradutor-da-maquina.png";
-import bgCircuitLabUrl from "../../../../assets/games/EF04CO04/tradutor-da-maquina/bg-circuit-lab.png";
-import bgEncoderRoomUrl from "../../../../assets/games/EF04CO04/tradutor-da-maquina/bg-encoder-room.png";
-import bgDecoderRoomUrl from "../../../../assets/games/EF04CO04/tradutor-da-maquina/bg-decoder-room.png";
-import keyboardPanelUrl from "../../../../assets/games/EF04CO04/tradutor-da-maquina/keyboard-panel.png";
-import binaryDisplayUrl from "../../../../assets/games/EF04CO04/tradutor-da-maquina/binary-display.png";
-import referenceTableUrl from "../../../../assets/games/EF04CO04/tradutor-da-maquina/reference-table.png";
-import circuitWireUrl from "../../../../assets/games/EF04CO04/tradutor-da-maquina/circuit-wire.png";
+/**
+ * As chaves que o jogo consome — o cenário e as duas caras do robô.
+ *
+ * Chaves, lâmpadas, placas, fichas da tabela, visor e fio são todos
+ * `Graphics`: cada um tem estado (acesa/apagada, alvo/feito, certa/errada) e
+ * como PNG viraria uma pilha de variantes por peça. Textura aqui é só desenho
+ * que nunca muda.
+ *
+ * A capa fica de fora: quem usa ela é o catálogo, com `import` direto.
+ */
+const WANTED = [
+    'bg-tradutor',
+    'maquina-esperando',
+    'maquina-recebeu',
+] as const
 
-const ASSETS: Array<[string, string]> = [
-  ["cover",             coverUrl],
-  ["bg-circuit-lab",   bgCircuitLabUrl],
-  ["bg-encoder-room",  bgEncoderRoomUrl],
-  ["bg-decoder-room",  bgDecoderRoomUrl],
-  ["keyboard-panel",   keyboardPanelUrl],
-  ["binary-display",   binaryDisplayUrl],
-  ["reference-table",  referenceTableUrl],
-  ["circuit-wire",     circuitWireUrl],
-];
+/**
+ * As texturas são varridas da pasta, não importadas uma a uma.
+ *
+ * Um `import` de arquivo que ainda não existe quebra o build inteiro — foi
+ * exatamente o que a versão antiga deste jogo fazia, com sete `import` fixos.
+ * Com `import.meta.glob` o Vite registra só o que está lá, e um arquivo novo
+ * entra no jogo assim que for salvo na pasta, sem tocar em uma linha de código.
+ *
+ * A lista `WANTED` filtra de propósito: a pasta guarda arte que este remake
+ * não usa mais, e ela não deve ocupar memória.
+ */
+const FILES = import.meta.glob(
+    '../../../../assets/games/EF04CO04/tradutor-da-maquina/*.png',
+    { eager: true, import: 'default' },
+) as Record<string, string>
+
+const keyOf = (path: string) =>
+    path.split('/').pop()?.replace(/(\.png)+$/i, '') ?? ''
+
+function found(): Array<[string, string]> {
+    const byKey = new Map<string, string>()
+    Object.entries(FILES).forEach(([path, url]) => {
+        const key = keyOf(path)
+        if (key) byKey.set(key, url)
+    })
+    return WANTED
+        .map(key => [key, byKey.get(key)] as [string, string | undefined])
+        .filter((pair): pair is [string, string] => !!pair[1])
+}
 
 export class BootScene extends Phaser.Scene {
-  constructor() {
-    super({ key: "BootScene" });
-  }
+    constructor() {
+        super({ key: 'BootScene' })
+    }
 
-  preload() {
-    this.createLoadingScreen();
-    ASSETS.forEach(([key, url]) => this.load.image(key, url));
-  }
+    preload() {
+        createLoadingScreen(this, {
+            title: 'Tradutor da Máquina',
+            subtitle: 'Letra, número, lâmpada',
+            description: 'Ligando o painel...',
+            theme: {
+                background: {
+                    kind: 'stripes',
+                    base: C.ink,
+                    color: C.bit,
+                    alpha: 0.06,
+                    size: 30,
+                    gap: 34,
+                    angle: 'diagonal',
+                },
 
-  create() {
-    this.scene.start("GameScene");
-  }
+                card: C.steel,
+                cardShadow: C.shadow,
+                cardHighlight: C.white,
+                cardBorder: C.bit,
 
-  private createLoadingScreen() {
-    this.add.rectangle(640, 360, 1280, 720, 0x0d0528);
-    this.add.text(640, 296, "Tradutor da Máquina", {
-      fontSize: "46px",
-      fontFamily: "Arial Black, Arial",
-      color: "#06b6d4",
-      stroke: "#4c1d95",
-      strokeThickness: 8,
-    }).setOrigin(0.5);
-    this.add.text(640, 374, "Inicializando circuitos...", {
-      fontSize: "26px",
-      fontFamily: "Arial Black, Arial",
-      color: "#84cc16",
-    }).setOrigin(0.5);
-  }
+                title: C.paper,
+                subtitle: C.letra,
+                description: C.idle,
+                titleStroke: C.ink,
+
+                progressTrack: C.ink,
+                progressBorder: C.edge,
+                progressFill: C.bit,
+                progressHighlight: C.bitSoft,
+            },
+        })
+
+        found().forEach(([key, url]) => this.load.image(key, url))
+    }
+
+    create() {
+        /*
+         * `level` é 1-based, `phase` é 0-based.
+         *
+         * Trocar estes números abre o jogo direto no caso que se quer ver —
+         * `{ level: 3, phase: 0 }` cai na mensagem torta. Os dois são
+         * grampeados no `GameScene.init`, então número fora da faixa não
+         * quebra nada.
+         */
+        this.scene.start('GameScene', { level: 1, phase: 0, points: 0 })
+    }
 }

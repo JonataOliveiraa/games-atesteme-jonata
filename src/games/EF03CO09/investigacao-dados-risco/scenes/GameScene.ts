@@ -1,1665 +1,608 @@
-import Phaser from "phaser";
-import { EventBus } from "../../../../shared/EventBus";
-import { runtimeGameBridge } from "../../../../shared/bridge/runtimeGameBridge";
-import { createTutorial, type TutorialStep } from "../../../../shared/tutorial/createTutorial";
-import { LEVELS } from "../data/levels";
-import type {
-  InvestigationLevel,
-  InvestigationLevelNumber,
-  SafetyInfo,
-  ConsequenceScenario,
-  IncidentCase,
-} from "../types";
+import Phaser from 'phaser'
+import { EventBus } from '../../../../shared/EventBus'
+import { runtimeGameBridge } from '../../../../shared/bridge/runtimeGameBridge'
+import type { PlatformCommand } from '../../../../shared/contracts/platformCommands'
+import { createTutorial, type TutorialStep } from '../../../../shared/tutorial/createTutorial'
+import { showLevelComplete, type LevelCompleteHandle } from '../../../../shared/level/showLevelComplete'
+import { FX } from '../../../../shared/effects/FX'
 
-const GAME_ID = "investigacao-dados-risco";
+import { LEVELS, TOTAL_CASES, riskyOf } from '../data/casos'
+import { C, SIZE, hex } from '../data/theme'
+import { HUD, MSG, WATCH, OPT } from '../data/layout'
+import type { Caso, CaseState, Chunk, Level } from '../types'
 
-// ── Layout constants (identical to EF03CO07/08) ───────────────────────────────
-const TIMER_BAR_W = 980;
-const TIMER_BAR_Y = 30;
-const PANEL_X = 72;
-const PANEL_Y = 142;
-const PANEL_W = 1136;
-const PANEL_H = 486;
-const MODAL_SCALE = 1.12;
+import {
+    createScene, createHud, createQuestionLine, createPost, createImpactCard,
+    createWatchers, createIcon, showToast,
+    type Hud, type QuestionLine, type PostView, type ImpactCard, type Watchers,
+} from './effects'
 
-const COLORS = {
-  red: 0xdc2626,
-  darkRed: 0x991b1b,
-  amber: 0xf59e0b,
-  amberDark: 0x92400e,
-  green: 0x16a34a,
-  greenDark: 0x14532d,
-  orange: 0xf97316,
-  blue: 0x3b82f6,
-  white: 0xffffff,
-  ink: 0x1a0505,
-  slate: 0x334155,
-  safe: 0x16a34a,
-  danger: 0xdc2626,
-};
+const GAME_ID = 'investigacao-dados-risco'
+
+const POINTS = {
+    find: 20,
+    choose: 20,
+    miss: -5,
+} as const
 
 export class GameScene extends Phaser.Scene {
-  private levelConfig!: InvestigationLevel;
-  private gameEnded = false;
-  private hits = 0;
-  private errors = 0;
 
-  private timerBar?: Phaser.GameObjects.Graphics;
-  private timerEvent?: Phaser.Time.TimerEvent;
-  private helpButton?: Phaser.GameObjects.Container;
-  private tutorialOpen = false;
+    /* ── partida ───────────────────────────────────────────────────── */
 
-  private startScreenObjects: Phaser.GameObjects.GameObject[] = [];
-  private overlayObjects: Phaser.GameObjects.GameObject[] = [];
-  private cardObjects: Phaser.GameObjects.GameObject[] = [];
+    private levelIdx = 0
+    private caseIdx = 0
+    private points = 0
+    private hits = 0
+    private errors = 0
+    private isMuted = false
+    private state: CaseState = 'briefing'
+    private locked = false
+    private ended = false
 
-  // N1 state
-  private n1Index = 0;
+    /** Todo callback atrasado captura este valor e desiste se ele mudou. */
+    private gen = 0
 
-  // N2 state
-  private n2Index = 0;
+    /* ── interface fixa ────────────────────────────────────────────── */
 
-  // N3 state
-  private n3IncidentIndex = 0;
-  private n3Step = 0; // 0 = step1, 1 = step2
+    private hud!: Hud
+    private question!: QuestionLine
+    private impact!: ImpactCard
+    private watchers!: Watchers
+    private modal?: LevelCompleteHandle
 
-  constructor() {
-    super({ key: "GameScene" });
-  }
+    /* ── tabuleiro do caso ─────────────────────────────────────────── */
 
-  init(data?: { level?: number; hits?: number; errors?: number }) {
-    const level = Phaser.Math.Clamp(
-      data?.level ?? 1,
-      1,
-      3,
-    ) as InvestigationLevelNumber;
-    this.levelConfig = LEVELS.find((l) => l.level === level) ?? LEVELS[0];
-    this.gameEnded = false;
-    this.hits = data?.hits ?? 0;
-    this.errors = data?.errors ?? 0;
-    this.n1Index = 0;
-    this.n2Index = 0;
-    this.n3IncidentIndex = 0;
-    this.n3Step = 0;
-    this.startScreenObjects = [];
-    this.overlayObjects = [];
-    this.cardObjects = [];
-  }
+    private post?: PostView
+    private options: PostView[] = []
+    private optionZones: Phaser.GameObjects.Zone[] = []
+    private optionSeals: Phaser.GameObjects.Container[] = []
+    private found = new Set<string>()
 
-  create() {
-    this.createBackground();
-    this.createTimerBar();
-    EventBus.on("show-tutorial", this.replayTutorial, this);
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.onShutdown());
-    this.showStartScreen();
-  }
+    private unsubPlatform?: () => void
 
-  update() {
-    if (!this.timerEvent || !this.timerBar) return;
-    const pct = Math.max(
-      0,
-      this.timerEvent.getRemaining() / (this.levelConfig.timeLimit * 1000),
-    );
-    const color =
-      pct > 0.5 ? COLORS.green : pct > 0.25 ? COLORS.amber : COLORS.red;
-    this.drawTimerFill(TIMER_BAR_W * pct, color);
-  }
-
-  private onShutdown() {
-    this.timerEvent?.destroy();
-    EventBus.off("show-tutorial", this.replayTutorial, this);
-    this.input.setDefaultCursor("default");
-  }
-
-  // ─── Background ────────────────────────────────────────────────────────────
-
-  private createBackground() {
-    const bgKey =
-      this.levelConfig.level === 1
-        ? "bg-investigation"
-        : this.levelConfig.level === 2
-          ? "bg-crime-scene"
-          : "bg-evidence-board";
-
-    const bg = this.add.image(640, 360, bgKey).setDepth(-100);
-    bg.texture.setFilter(Phaser.Textures.FilterMode.LINEAR);
-    const scale = Math.max(1280 / Math.max(bg.width, 1), 720 / Math.max(bg.height, 1));
-    bg.setScale(scale);
-
-    // Investigation-themed overlay: dark red + amber vignette
-    this.add.rectangle(640, 360, 1280, 720, 0x1a0505, 0.55).setDepth(-90);
-    // Subtle amber grid lines for investigator feel
-    const grid = this.add.graphics().setDepth(-85);
-    grid.lineStyle(1, 0xf59e0b, 0.07);
-    for (let x = 0; x <= 1280; x += 80) grid.lineBetween(x, 0, x, 720);
-    for (let y = 0; y <= 720; y += 80) grid.lineBetween(0, y, 1280, y);
-  }
-
-  // ─── Timer Bar ─────────────────────────────────────────────────────────────
-
-  private createTimerBar() {
-    const track = this.add.graphics().setDepth(45);
-    track.fillStyle(0x334155, 0.18);
-    track.fillRoundedRect(
-      640 - TIMER_BAR_W / 2,
-      TIMER_BAR_Y - 16,
-      TIMER_BAR_W,
-      32,
-      16,
-    );
-    this.timerBar = this.add.graphics().setDepth(46);
-    this.drawTimerFill(TIMER_BAR_W, COLORS.green);
-  }
-
-  private drawTimerFill(width: number, color: number) {
-    if (!this.timerBar) return;
-    this.timerBar.clear();
-    if (width <= 0) return;
-    this.timerBar.fillStyle(color, 1);
-    this.timerBar.fillRoundedRect(
-      640 - TIMER_BAR_W / 2,
-      TIMER_BAR_Y - 16,
-      Math.max(0, width),
-      32,
-      16,
-    );
-  }
-
-  private startTimer() {
-    this.timerEvent = this.time.delayedCall(
-      this.levelConfig.timeLimit * 1000,
-      () => this.onTimeUp(),
-    );
-  }
-
-  private onTimeUp() {
-    if (this.gameEnded) return;
-    this.gameEnded = true;
-    this.input.enabled = false;
-    this.errors += 1;
-    this.playWrong();
-    runtimeGameBridge.emit({
-      type: "WRONG_ANSWER",
-      gameId: GAME_ID,
-      stage: this.levelConfig.level,
-      pointsEarned: -5,
-    });
-    this.time.delayedCall(300, () => this.showGameOverScreen());
-  }
-
-  // ─── Start Screen ──────────────────────────────────────────────────────────
-
-  private showStartScreen() {
-    const overlay = this.add
-      .rectangle(640, 360, 1280, 720, 0x1a0505, 0.72)
-      .setDepth(60);
-    overlay.setInteractive();
-    this.startScreenObjects.push(overlay);
-
-    const panel = this.add.container(640, 360).setDepth(62);
-    this.startScreenObjects.push(panel);
-
-    const shadow = this.add.graphics();
-    shadow.fillStyle(0x000000, 0.24);
-    shadow.fillRoundedRect(-308, -208, 616, 416, 34);
-
-    const bg = this.add.graphics();
-    bg.fillStyle(0x1c0a0a, 0.97);
-    bg.fillRoundedRect(-320, -220, 640, 420, 34);
-    bg.lineStyle(6, COLORS.amber, 0.9);
-    bg.strokeRoundedRect(-320, -220, 640, 420, 34);
-
-    const topBar = this.add.graphics();
-    topBar.fillStyle(COLORS.red, 1);
-    topBar.fillRoundedRect(-240, -238, 480, 34, 17);
-
-    const lvlLabel = this.addSharpText(
-      0,
-      -221,
-      `Nível ${this.levelConfig.level} / 3`,
-      {
-        fontSize: "18px",
-        fontFamily: "Arial Black, Arial",
-        color: "#ffffff",
-        stroke: "#7f1d1d",
-        strokeThickness: 3,
-      },
-    ).setOrigin(0.5);
-
-    const title = this.addSharpText(0, -148, this.levelConfig.title, {
-      fontSize: "36px",
-      fontFamily: "Arial Black, Arial",
-      color: "#f59e0b",
-      stroke: "#1a0505",
-      strokeThickness: 6,
-      align: "center",
-    }).setOrigin(0.5);
-
-    const obj = this.addSharpText(0, -72, this.levelConfig.objective, {
-      fontSize: "19px",
-      fontFamily: "Arial Black, Arial",
-      color: "#f1f5f9",
-      align: "center",
-      wordWrap: { width: 560 },
-    }).setOrigin(0.5);
-
-    const detail = this.addSharpText(0, 6, this.levelConfig.detail, {
-      fontSize: "16px",
-      fontFamily: "Arial Black, Arial",
-      color: "#94a3b8",
-      align: "center",
-      wordWrap: { width: 540 },
-    }).setOrigin(0.5);
-
-    const tipBg = this.add.graphics();
-    tipBg.fillStyle(COLORS.amber, 0.16);
-    tipBg.fillRoundedRect(-250, 56, 500, 52, 14);
-    tipBg.lineStyle(2, COLORS.amber, 0.5);
-    tipBg.strokeRoundedRect(-250, 56, 500, 52, 14);
-
-    const tip = this.addSharpText(0, 82, `💡 ${this.levelConfig.tip}`, {
-      fontSize: "14px",
-      fontFamily: "Arial Black, Arial",
-      color: "#fbbf24",
-      align: "center",
-      wordWrap: { width: 470 },
-    }).setOrigin(0.5);
-
-    const btnBg = this.add.graphics();
-    btnBg.fillStyle(COLORS.red, 1);
-    btnBg.fillRoundedRect(-120, 126, 240, 54, 27);
-    btnBg.lineStyle(4, COLORS.amber, 1);
-    btnBg.strokeRoundedRect(-120, 126, 240, 54, 27);
-
-    const btnText = this.addSharpText(0, 153, "🔍 Investigar", {
-      fontSize: "23px",
-      fontFamily: "Arial Black, Arial",
-      color: "#ffffff",
-      stroke: "#7f1d1d",
-      strokeThickness: 3,
-    }).setOrigin(0.5);
-
-    panel.add([
-      shadow, bg, topBar, lvlLabel, title, obj, detail, tipBg, tip, btnBg,
-      btnText,
-    ]);
-    panel.setAlpha(0);
-    panel.setScale(0.9);
-    this.tweens.add({
-      targets: panel,
-      alpha: 1,
-      scale: MODAL_SCALE,
-      duration: 280,
-      ease: "Back.easeOut",
-    });
-
-    const hz = this.add
-      .zone(640, 360 + 153 * MODAL_SCALE, 256 * MODAL_SCALE, 66 * MODAL_SCALE)
-      .setDepth(70);
-    hz.setInteractive({ useHandCursor: true });
-    this.startScreenObjects.push(hz);
-
-    hz.on("pointerover", () => {
-      this.input.setDefaultCursor("pointer");
-      this.tweens.add({ targets: panel, scale: MODAL_SCALE * 1.02, duration: 80 });
-    });
-    hz.on("pointerout", () => {
-      this.input.setDefaultCursor("default");
-      this.tweens.add({ targets: panel, scale: MODAL_SCALE, duration: 80 });
-    });
-    hz.on("pointerdown", () => {
-      this.playClick();
-      this.startScreenObjects.forEach((o) => o.destroy());
-      this.startScreenObjects = [];
-      this.input.setDefaultCursor("default");
-      runtimeGameBridge.emit({ type: "GAME_READY", gameId: GAME_ID });
-      this.buildLevelUI();
-      this.runTutorial(true, () => this.startTimer());
-    });
-  }
-
-  // ─── Level UI dispatcher ───────────────────────────────────────────────────
-
-  private buildLevelUI() {
-    this.createHeader();
-    this.drawPanelBg();
-    if (this.levelConfig.level === 1) {
-      this.showN1Card();
-    } else if (this.levelConfig.level === 2) {
-      this.showN2Scenario();
-    } else {
-      this.showN3Incident();
-    }
-  }
-
-  // ─── Header ────────────────────────────────────────────────────────────────
-
-  private createHeader() {
-    this.addSharpText(640, 62, this.levelConfig.title, {
-      fontSize: "38px",
-      fontFamily: "Arial Black, Arial",
-      color: "#f59e0b",
-      stroke: "#1a0505",
-      strokeThickness: 6,
-    }).setOrigin(0.5);
-
-    const card = this.add.graphics().setDepth(5);
-    card.fillStyle(0x1c0a0a, 0.82);
-    card.fillRoundedRect(230, 90, 820, 56, 22);
-    card.fillStyle(COLORS.amber, 0.14);
-    card.fillRoundedRect(242, 98, 796, 20, 10);
-    card.lineStyle(4, COLORS.amber, 0.8);
-    card.strokeRoundedRect(230, 90, 820, 56, 22);
-
-    this.addSharpText(640, 118, this.levelConfig.objective, {
-      fontSize: "16px",
-      fontFamily: "Arial Black, Arial",
-      color: "#fef3c7",
-      stroke: "#1a0505",
-      strokeThickness: 3,
-      align: "center",
-      wordWrap: { width: 840 },
-    })
-      .setOrigin(0.5)
-      .setDepth(6);
-
-    this.addSharpText(1128, 100, `Nível ${this.levelConfig.level}/3`, {
-      fontSize: "18px",
-      fontFamily: "Arial Black, Arial",
-      color: "#f59e0b",
-      backgroundColor: "rgba(26,5,5,0.82)",
-      padding: { x: 14, y: 8 },
-    }).setOrigin(0.5);
-
-    this.helpButton = this.createHelpButton(1212, 100);
-  }
-
-  private createHelpButton(x: number, y: number) {
-    const btn = this.add.container(x, y).setDepth(65);
-    const bg = this.add.graphics();
-    bg.fillStyle(0x1c0a0a, 0.94);
-    bg.fillCircle(0, 0, 24);
-    bg.fillStyle(COLORS.amber, 0.16);
-    bg.fillCircle(0, -5, 15);
-    bg.lineStyle(3, COLORS.amber, 0.9);
-    bg.strokeCircle(0, 0, 24);
-
-    const label = this.addSharpText(0, -1, "?", {
-      fontSize: "26px",
-      fontFamily: "Arial Black, Arial",
-      color: "#fef3c7",
-      stroke: "#1a0505",
-      strokeThickness: 3,
-    }).setOrigin(0.5);
-
-    btn.add([bg, label]);
-    btn.setSize(58, 58);
-    btn.setInteractive(new Phaser.Geom.Circle(0, 0, 29), Phaser.Geom.Circle.Contains);
-    btn.on("pointerover", () => {
-      if (this.gameEnded || this.tutorialOpen) return;
-      this.input.setDefaultCursor("pointer");
-      this.tweens.add({ targets: btn, scale: 1.08, duration: 90 });
-    });
-    btn.on("pointerout", () => {
-      this.input.setDefaultCursor("default");
-      this.tweens.add({ targets: btn, scale: 1, duration: 90 });
-    });
-    btn.on("pointerdown", () => {
-      if (this.gameEnded || this.tutorialOpen) return;
-      this.playClick();
-      this.replayTutorial();
-    });
-    return btn;
-  }
-
-  private replayTutorial() {
-    if (this.startScreenObjects.length > 0 || this.gameEnded || this.tutorialOpen) return;
-    this.runTutorial(false);
-  }
-
-  private runTutorial(once: boolean, onDone?: () => void) {
-    if (this.tutorialOpen) {
-      onDone?.();
-      return;
+    constructor() {
+        super({ key: 'GameScene' })
     }
 
-    this.tutorialOpen = true;
-    const timerWasPaused = this.timerEvent?.paused ?? false;
-    if (this.timerEvent) this.timerEvent.paused = true;
-
-    createTutorial(this, {
-      key: `investigacao-dados-risco-n${this.levelConfig.level}`,
-      once,
-      accent: COLORS.amber,
-      safeTop: 150,
-      steps: this.getTutorialSteps(),
-      onFinish: () => {
-        this.tutorialOpen = false;
-        if (this.timerEvent) this.timerEvent.paused = timerWasPaused;
-        onDone?.();
-      },
-    });
-  }
-
-  private getTutorialSteps(): TutorialStep[] {
-    const panelCX = PANEL_X + PANEL_W / 2;
-    const baseSteps: TutorialStep[] = [
-      {
-        text: "O tempo fica no topo. Investigue antes que ele acabe.",
-        shape: "rect",
-        x: 640,
-        y: TIMER_BAR_Y,
-        w: TIMER_BAR_W + 24,
-        h: 48,
-        balloonY: 176,
-      },
-    ];
-
-    if (this.levelConfig.level === 1) {
-      return [
-        ...baseSteps,
-        {
-          text: "Leia a pista no cartão central.",
-          shape: "rect",
-          x: panelCX,
-          y: PANEL_Y + PANEL_H / 2 - 50,
-          w: 640,
-          h: 210,
-          balloonY: 208,
-        },
-        {
-          text: "Escolha se essa informação é segura ou perigosa.",
-          shape: "rect",
-          x: panelCX,
-          y: PANEL_Y + PANEL_H - 90,
-          w: 650,
-          h: 116,
-          balloonY: 330,
-          buttonLabel: "Investigar",
-        },
-      ];
+    /**
+     * `level` é 1-based e `phase` é 0-based. Os dois são grampeados ao que
+     * existe de verdade: um `phase: 7` num nível de três casos faria
+     * `this.caso` devolver `undefined`, e o estouro apareceria três telas
+     * adiante sem nenhuma pista de que veio daqui.
+     */
+    init(data: { level?: number; phase?: number; points?: number }) {
+        this.levelIdx = Phaser.Math.Clamp(data?.level ?? 1, 1, LEVELS.length) - 1
+        this.caseIdx = Phaser.Math.Clamp(
+            data?.phase ?? 0, 0, LEVELS[this.levelIdx].cases.length - 1,
+        )
+        this.points = data?.points ?? 0
+        this.hits = 0
+        this.errors = 0
+        this.isMuted = false
+        this.state = 'briefing'
+        this.locked = false
+        this.ended = false
+        this.gen = 0
+        this.found = new Set()
+        this.options = []
+        this.optionZones = []
+        this.optionSeals = []
+        this.modal = undefined
     }
 
-    if (this.levelConfig.level === 2) {
-      return [
-        ...baseSteps,
-        {
-          text: "Leia o caso: alguém compartilhou um dado.",
-          shape: "rect",
-          x: panelCX,
-          y: PANEL_Y + 130,
-          w: 1040,
-          h: 130,
-        },
-        {
-          text: "Toque na consequência mais provável.",
-          shape: "rect",
-          x: panelCX,
-          y: PANEL_Y + PANEL_H - 138,
-          w: 1060,
-          h: 116,
-          buttonLabel: "Entendi",
-        },
-      ];
+    create() {
+        this.events.once(Phaser.Scenes.Events.SHUTDOWN, this.shutdownScene, this)
+
+        createScene(this)
+
+        this.hud = createHud(this, { onHelp: () => this.replayTutorial() })
+        this.hud.setLevel(this.level.level)
+        this.hud.setTitle(this.level.title)
+
+        this.question = createQuestionLine(this)
+        this.impact = createImpactCard(this)
+        this.watchers = createWatchers(this)
+
+        EventBus.on('mute-audio', this.onMuteAudio, this)
+        EventBus.on('show-tutorial', this.replayTutorial, this)
+        this.registerPlatformCommands()
+
+        runtimeGameBridge.emit({ type: 'GAME_READY', gameId: GAME_ID })
+        this.emitCheckpoint()
+
+        // O tutorial é a abertura do NÍVEL, não de um caso qualquer.
+        void this.playCase(this.caseIdx === 0)
     }
 
-    return [
-      ...baseSteps,
-      {
-        text: "Leia o incidente para entender o risco.",
-        shape: "rect",
-        x: panelCX,
-        y: PANEL_Y + 110,
-        w: 1020,
-        h: 126,
-      },
-      {
-        text: "No passo 1, encontre o erro. No passo 2, escolha a solução.",
-        shape: "rect",
-        x: panelCX,
-        y: PANEL_Y + 220,
-        w: 1040,
-        h: 86,
-      },
-      {
-        text: "Analise as três opções e escolha a melhor resposta.",
-        shape: "rect",
-        x: panelCX,
-        y: PANEL_Y + PANEL_H - 140,
-        w: 1060,
-        h: 128,
-        buttonLabel: "Começar",
-      },
-    ];
-  }
-  // ─── Panel Background ───────────────────────────────────────────────────────
-
-  private drawPanelBg() {
-    const shadow = this.add.graphics().setDepth(1);
-    shadow.fillStyle(0x000000, 0.22);
-    shadow.fillRoundedRect(PANEL_X + 9, PANEL_Y + 12, PANEL_W, PANEL_H, 30);
-
-    const panel = this.add.graphics().setDepth(2);
-    panel.fillStyle(0x1c0a0a, 0.72);
-    panel.fillRoundedRect(PANEL_X, PANEL_Y, PANEL_W, PANEL_H, 30);
-    panel.fillStyle(0xf59e0b, 0.04);
-    panel.fillRoundedRect(PANEL_X + 12, PANEL_Y + 12, PANEL_W - 24, PANEL_H - 24, 24);
-    panel.lineStyle(5, COLORS.amber, 0.75);
-    panel.strokeRoundedRect(PANEL_X, PANEL_Y, PANEL_W, PANEL_H, 30);
-  }
-
-  // ─── Card Objects helper ────────────────────────────────────────────────────
-
-  private addCard<T extends Phaser.GameObjects.GameObject>(o: T) {
-    this.cardObjects.push(o);
-    return o;
-  }
-
-  private clearCards() {
-    this.cardObjects.forEach((o) => o.destroy());
-    this.cardObjects = [];
-  }
-
-  // ─── N1: Seguro ou Perigoso? ────────────────────────────────────────────────
-
-  private showN1Card() {
-    this.clearCards();
-
-    const infos = this.levelConfig.safetyInfos!;
-    if (this.n1Index >= infos.length) {
-      this.completeLevel();
-      return;
+    private shutdownScene() {
+        this.gen += 1
+        EventBus.off('mute-audio', this.onMuteAudio, this)
+        EventBus.off('show-tutorial', this.replayTutorial, this)
+        this.unsubPlatform?.()
+        this.unsubPlatform = undefined
+        this.input.setDefaultCursor('default')
     }
 
-    const info: SafetyInfo = infos[this.n1Index];
-    const panelCX = PANEL_X + PANEL_W / 2;
-    const panelCY = PANEL_Y + PANEL_H / 2;
+    /* ═══════════════════════════════════════════════ atalhos de estado */
 
-    // Progress dots
-    const dotContainer = this.addCard(
-      this.add.container(panelCX, PANEL_Y + 26).setDepth(12),
-    );
-    infos.forEach((_, i) => {
-      const dot = this.add.graphics();
-      dot.fillStyle(
-        i < this.n1Index
-          ? COLORS.green
-          : i === this.n1Index
-            ? COLORS.amber
-            : 0x374151,
-        1,
-      );
-      dot.fillCircle(-50 + i * 20, 0, 7);
-      dot.lineStyle(2, COLORS.amber, 0.5);
-      dot.strokeCircle(-50 + i * 20, 0, 7);
-      dotContainer.add(dot);
-    });
+    private get level(): Level { return LEVELS[this.levelIdx] }
+    private get caso(): Caso { return this.level.cases[this.caseIdx] }
 
-    this.addCard(
-      this.addSharpText(
-        panelCX,
-        PANEL_Y + 50,
-        `Informação ${this.n1Index + 1} de ${infos.length}`,
-        {
-          fontSize: "18px",
-          fontFamily: "Arial Black, Arial",
-          color: "#f59e0b",
-          stroke: "#1a0505",
-          strokeThickness: 3,
-        },
-      )
-        .setOrigin(0.5)
-        .setDepth(12),
-    );
+    /* ═══════════════════════════════════════════════════ ciclo do caso */
 
-    // Evidence card (main info display)
-    const cardContainer = this.addCard(
-      this.add.container(panelCX, panelCY - 50).setDepth(15),
-    );
-    const cardBg = this.add.graphics();
-    cardBg.fillStyle(0x111827, 0.95);
-    cardBg.fillRoundedRect(-300, -90, 600, 180, 24);
-    cardBg.lineStyle(5, COLORS.amber, 0.9);
-    cardBg.strokeRoundedRect(-300, -90, 600, 180, 24);
-
-    // Tape decoration (investigator card feel)
-    const tape = this.add.graphics();
-    tape.fillStyle(COLORS.amber, 0.55);
-    tape.fillRoundedRect(-40, -98, 80, 20, 6);
-
-    const iconText = this.addSharpText(0, -36, info.icon, {
-      fontSize: "52px",
-      fontFamily: "Arial Black, Arial",
-    }).setOrigin(0.5);
-
-    const infoText = this.addSharpText(0, 46, `"${info.text}"`, {
-      fontSize: "28px",
-      fontFamily: "Arial Black, Arial",
-      color: "#f1f5f9",
-      stroke: "#000000",
-      strokeThickness: 4,
-      align: "center",
-      wordWrap: { width: 540 },
-    }).setOrigin(0.5);
-
-    cardContainer.add([cardBg, tape, iconText, infoText]);
-    cardContainer.setAlpha(0);
-    cardContainer.setScale(0.85);
-    this.tweens.add({
-      targets: cardContainer,
-      alpha: 1,
-      scale: 1,
-      duration: 240,
-      ease: "Back.easeOut",
-    });
-
-    // Action buttons
-    const BTN_Y = PANEL_Y + PANEL_H - 90;
-    const BTN_W = 280;
-    const BTN_H = 88;
-
-    this.createActionBtn(
-      panelCX - 160,
-      BTN_Y,
-      BTN_W,
-      BTN_H,
-      "🔒 Seguro",
-      COLORS.safe,
-      0xffffff,
-      () => {
-        if (this.gameEnded) return;
-        this.onN1Answer(true, info);
-      },
-    );
-
-    this.createActionBtn(
-      panelCX + 160,
-      BTN_Y,
-      BTN_W,
-      BTN_H,
-      "⚠️ Perigoso",
-      COLORS.danger,
-      0xffffff,
-      () => {
-        if (this.gameEnded) return;
-        this.onN1Answer(false, info);
-      },
-    );
-  }
-
-  private onN1Answer(selectedSafe: boolean, info: SafetyInfo) {
-    if (this.gameEnded) return;
-    this.playClick();
-
-    if (selectedSafe === info.isSafe) {
-      this.hits += 1;
-      this.playSuccess();
-      const label = info.isSafe ? "✅ Correto! Seguro." : "✅ Correto! Perigoso.";
-      this.showToast(`${label} ${info.explanation}`, COLORS.green, 1600);
-      runtimeGameBridge.emit({
-        type: "CORRECT_ANSWER",
-        gameId: GAME_ID,
-        stage: this.levelConfig.level,
-        pointsEarned: 20,
-      });
-      this.time.delayedCall(1700, () => {
-        if (this.gameEnded) return;
-        this.n1Index += 1;
-        this.showN1Card();
-      });
-    } else {
-      this.errors += 1;
-      this.playWrong();
-      const correct = info.isSafe ? "Seguro" : "Perigoso";
-      this.showToast(
-        `❌ Errado! Era ${correct}. ${info.explanation}`,
-        COLORS.danger,
-        2400,
-      );
-      runtimeGameBridge.emit({
-        type: "WRONG_ANSWER",
-        gameId: GAME_ID,
-        stage: this.levelConfig.level,
-        pointsEarned: -5,
-      });
-      // Shake the card
-      const cardC = this.cardObjects.find(
-        (o) => o instanceof Phaser.GameObjects.Container,
-      ) as Phaser.GameObjects.Container | undefined;
-      if (cardC) {
-        this.tweens.add({
-          targets: cardC,
-          x: { from: cardC.x - 10, to: cardC.x + 10 },
-          duration: 60,
-          yoyo: true,
-          repeat: 3,
-        });
-      }
-    }
-  }
-
-  // ─── N2: Qual a Consequência? ───────────────────────────────────────────────
-
-  private showN2Scenario() {
-    this.clearCards();
-
-    const scenarios = this.levelConfig.scenarios!;
-    if (this.n2Index >= scenarios.length) {
-      this.completeLevel();
-      return;
+    private clearBoard() {
+        this.post?.destroy()
+        this.post = undefined
+        this.options.forEach(o => o.destroy())
+        this.options = []
+        this.optionZones.forEach(z => z.destroy())
+        this.optionZones = []
+        this.optionSeals.forEach(s => s.destroy())
+        this.optionSeals = []
+        this.impact.hide()
+        this.watchers.clear()
+        this.found.clear()
     }
 
-    const scenario: ConsequenceScenario = scenarios[this.n2Index];
-    const panelCX = PANEL_X + PANEL_W / 2;
+    private async playCase(withTutorial: boolean) {
+        const gen = ++this.gen
+        const caso = this.caso
 
-    // Progress
-    this.addCard(
-      this.addSharpText(
-        panelCX,
-        PANEL_Y + 26,
-        `Caso ${this.n2Index + 1} de ${scenarios.length}`,
-        {
-          fontSize: "18px",
-          fontFamily: "Arial Black, Arial",
-          color: "#f59e0b",
-          stroke: "#1a0505",
-          strokeThickness: 3,
-        },
-      )
-        .setOrigin(0.5)
-        .setDepth(12),
-    );
+        this.state = 'briefing'
+        /*
+         * `locked` é estado de MOMENTO, não de caso. Sem zerar aqui, o caso que
+         * termina bem deixa a trava ligada e o seguinte monta a tela inteira
+         * sem aceitar um toque.
+         */
+        this.locked = false
+        this.clearBoard()
 
-    // Scenario card
-    const scenarioCard = this.addCard(
-      this.add.container(panelCX, PANEL_Y + 130).setDepth(15),
-    );
-    const scBg = this.add.graphics();
-    scBg.fillStyle(0x111827, 0.95);
-    scBg.fillRoundedRect(-500, -54, 1000, 108, 24);
-    scBg.lineStyle(4, COLORS.amber, 0.85);
-    scBg.strokeRoundedRect(-500, -54, 1000, 108, 24);
-    const scIcon = this.addSharpText(-460, 0, scenario.personEmoji, {
-      fontSize: "44px",
-      fontFamily: "Arial Black, Arial",
-    }).setOrigin(0.5);
-    const scText = this.addSharpText(30, 0, scenario.scenario, {
-      fontSize: "22px",
-      fontFamily: "Arial Black, Arial",
-      color: "#f1f5f9",
-      align: "center",
-      wordWrap: { width: 860 },
-    }).setOrigin(0.5);
-    scenarioCard.add([scBg, scIcon, scText]);
-    scenarioCard.setAlpha(0);
-    this.tweens.add({ targets: scenarioCard, alpha: 1, duration: 220 });
+        this.hud.setProgress(this.caseIdx, this.level.cases.length)
+        this.hud.setHint(caso.hint)
+        this.emitCheckpoint()
 
-    // "Qual a consequência?" label
-    this.addCard(
-      this.addSharpText(panelCX, PANEL_Y + 224, "⚠️ Qual foi a consequência?", {
-        fontSize: "22px",
-        fontFamily: "Arial Black, Arial",
-        color: "#fbbf24",
-        stroke: "#1a0505",
-        strokeThickness: 4,
-      })
-        .setOrigin(0.5)
-        .setDepth(12),
-    );
+        if (caso.kind === 'achar') this.buildPost()
+        else this.buildOptions()
 
-    // Build shuffled options
-    const options = this.shuffle([
-      { text: scenario.correct, isCorrect: true },
-      { text: scenario.wrong[0], isCorrect: false },
-      { text: scenario.wrong[1], isCorrect: false },
-    ]);
+        await this.question.show(caso.question)
+        if (gen !== this.gen) return
 
-    const OPT_W = 330;
-    const OPT_H = 90;
-    const OPT_GAP = 18;
-    const totalW = options.length * OPT_W + (options.length - 1) * OPT_GAP;
-    const startX = panelCX - totalW / 2 + OPT_W / 2;
-    const OPT_Y = PANEL_Y + PANEL_H - 138;
-
-    options.forEach((opt, i) => {
-      const ox = startX + i * (OPT_W + OPT_GAP);
-      const btn = this.addCard(this.add.container(ox, OPT_Y).setDepth(20));
-
-      const optBg = this.add.graphics();
-      optBg.fillStyle(0x111827, 0.9);
-      optBg.fillRoundedRect(-OPT_W / 2, -OPT_H / 2, OPT_W, OPT_H, 18);
-      optBg.lineStyle(3, COLORS.amber, 0.6);
-      optBg.strokeRoundedRect(-OPT_W / 2, -OPT_H / 2, OPT_W, OPT_H, 18);
-
-      const optText = this.addSharpText(0, 0, opt.text, {
-        fontSize: "18px",
-        fontFamily: "Arial Black, Arial",
-        color: "#f1f5f9",
-        align: "center",
-        wordWrap: { width: OPT_W - 24 },
-      }).setOrigin(0.5);
-
-      btn.add([optBg, optText]);
-
-      const zone = this.addCard(
-        this.add.zone(ox, OPT_Y, OPT_W + 12, OPT_H + 12).setDepth(55),
-      );
-      zone.setInteractive({ useHandCursor: true });
-      zone.on("pointerover", () => {
-        this.input.setDefaultCursor("pointer");
-        this.tweens.add({ targets: btn, scale: 1.05, duration: 80 });
-      });
-      zone.on("pointerout", () => {
-        this.input.setDefaultCursor("default");
-        this.tweens.add({ targets: btn, scale: 1, duration: 80 });
-      });
-      zone.on("pointerdown", () => {
-        if (this.gameEnded) return;
-        this.onN2Answer(opt.isCorrect, btn);
-      });
-    });
-  }
-
-  private onN2Answer(
-    isCorrect: boolean,
-    btn: Phaser.GameObjects.Container,
-  ) {
-    if (this.gameEnded) return;
-    this.playClick();
-
-    if (isCorrect) {
-      this.hits += 1;
-      this.playSuccess();
-      this.showToast("✅ Correto! Essa é a consequência real.", COLORS.green, 1500);
-      // Flash green
-      this.tweens.add({ targets: btn, alpha: 0.4, duration: 100, yoyo: true, repeat: 2 });
-      runtimeGameBridge.emit({
-        type: "CORRECT_ANSWER",
-        gameId: GAME_ID,
-        stage: this.levelConfig.level,
-        pointsEarned: 20,
-      });
-      this.time.delayedCall(1600, () => {
-        if (this.gameEnded) return;
-        this.n2Index += 1;
-        this.showN2Scenario();
-      });
-    } else {
-      this.errors += 1;
-      this.playWrong();
-      this.showToast(
-        "❌ Não é essa. Pense nas consequências reais!",
-        COLORS.danger,
-        2000,
-      );
-      runtimeGameBridge.emit({
-        type: "WRONG_ANSWER",
-        gameId: GAME_ID,
-        stage: this.levelConfig.level,
-        pointsEarned: -5,
-      });
-    }
-  }
-
-  // ─── N3: Investigação Completa ──────────────────────────────────────────────
-
-  private showN3Incident() {
-    this.clearCards();
-
-    const incidents = this.levelConfig.incidents!;
-    if (this.n3IncidentIndex >= incidents.length) {
-      this.completeFinalLevel();
-      return;
-    }
-
-    const incident: IncidentCase = incidents[this.n3IncidentIndex];
-    const panelCX = PANEL_X + PANEL_W / 2;
-
-    // Progress: total steps = incidents × 2
-    const totalSteps = incidents.length * 2;
-    const currentStep = this.n3IncidentIndex * 2 + this.n3Step;
-    this.addCard(
-      this.addSharpText(
-        panelCX,
-        PANEL_Y + 24,
-        `Passo ${currentStep + 1} de ${totalSteps}`,
-        {
-          fontSize: "18px",
-          fontFamily: "Arial Black, Arial",
-          color: "#f59e0b",
-          stroke: "#1a0505",
-          strokeThickness: 3,
-        },
-      )
-        .setOrigin(0.5)
-        .setDepth(12),
-    );
-
-    // Incident card
-    const incidentCard = this.addCard(
-      this.add.container(panelCX, PANEL_Y + 110).setDepth(15),
-    );
-    const incBg = this.add.graphics();
-    incBg.fillStyle(0x111827, 0.95);
-    incBg.fillRoundedRect(-490, -50, 980, 100, 22);
-    incBg.lineStyle(4, COLORS.red, 0.75);
-    incBg.strokeRoundedRect(-490, -50, 980, 100, 22);
-    // incident tape label
-    const tapeLabel = this.add.graphics();
-    tapeLabel.fillStyle(COLORS.red, 0.9);
-    tapeLabel.fillRoundedRect(-80, -60, 160, 22, 8);
-    const tapeTxt = this.addSharpText(0, -49, "⚠ INCIDENTE", {
-      fontSize: "12px",
-      fontFamily: "Arial Black, Arial",
-      color: "#ffffff",
-      stroke: "#7f1d1d",
-      strokeThickness: 2,
-    }).setOrigin(0.5);
-    const incIcon = this.addSharpText(-450, 0, incident.personEmoji, {
-      fontSize: "42px",
-      fontFamily: "Arial Black, Arial",
-    }).setOrigin(0.5);
-    const incText = this.addSharpText(20, 0, incident.incident, {
-      fontSize: "19px",
-      fontFamily: "Arial Black, Arial",
-      color: "#f1f5f9",
-      align: "center",
-      wordWrap: { width: 840 },
-    }).setOrigin(0.5);
-    incidentCard.add([incBg, tapeLabel, tapeTxt, incIcon, incText]);
-    incidentCard.setAlpha(0);
-    this.tweens.add({ targets: incidentCard, alpha: 1, duration: 200 });
-
-    // Step question
-    const step =
-      this.n3Step === 0 ? incident.step1 : incident.step2;
-    const stepLabel = this.n3Step === 0 ? "🔎 Passo 1:" : "💡 Passo 2:";
-
-    this.addCard(
-      this.addSharpText(panelCX, PANEL_Y + 220, `${stepLabel} ${step.q}`, {
-        fontSize: "22px",
-        fontFamily: "Arial Black, Arial",
-        color: "#fbbf24",
-        stroke: "#1a0505",
-        strokeThickness: 4,
-        align: "center",
-        wordWrap: { width: 1000 },
-      })
-        .setOrigin(0.5)
-        .setDepth(12),
-    );
-
-    // Options (3)
-    const options = this.shuffle([
-      { text: step.correct, isCorrect: true },
-      { text: step.wrong[0], isCorrect: false },
-      { text: step.wrong[1], isCorrect: false },
-    ]);
-
-    const OPT_W = 330;
-    const OPT_H = 100;
-    const OPT_GAP = 18;
-    const totalW = options.length * OPT_W + (options.length - 1) * OPT_GAP;
-    const startX = panelCX - totalW / 2 + OPT_W / 2;
-    const OPT_Y = PANEL_Y + PANEL_H - 140;
-
-    options.forEach((opt, i) => {
-      const ox = startX + i * (OPT_W + OPT_GAP);
-      const btn = this.addCard(this.add.container(ox, OPT_Y).setDepth(20));
-
-      const optBg = this.add.graphics();
-      optBg.fillStyle(0x111827, 0.9);
-      optBg.fillRoundedRect(-OPT_W / 2, -OPT_H / 2, OPT_W, OPT_H, 18);
-      optBg.lineStyle(3, COLORS.amber, 0.55);
-      optBg.strokeRoundedRect(-OPT_W / 2, -OPT_H / 2, OPT_W, OPT_H, 18);
-
-      const optText = this.addSharpText(0, 0, opt.text, {
-        fontSize: "17px",
-        fontFamily: "Arial Black, Arial",
-        color: "#f1f5f9",
-        align: "center",
-        wordWrap: { width: OPT_W - 24 },
-      }).setOrigin(0.5);
-
-      btn.add([optBg, optText]);
-
-      const zone = this.addCard(
-        this.add.zone(ox, OPT_Y, OPT_W + 12, OPT_H + 12).setDepth(55),
-      );
-      zone.setInteractive({ useHandCursor: true });
-      zone.on("pointerover", () => {
-        this.input.setDefaultCursor("pointer");
-        this.tweens.add({ targets: btn, scale: 1.05, duration: 80 });
-      });
-      zone.on("pointerout", () => {
-        this.input.setDefaultCursor("default");
-        this.tweens.add({ targets: btn, scale: 1, duration: 80 });
-      });
-      zone.on("pointerdown", () => {
-        if (this.gameEnded) return;
-        this.onN3Answer(opt.isCorrect, btn);
-      });
-    });
-  }
-
-  private onN3Answer(
-    isCorrect: boolean,
-    btn: Phaser.GameObjects.Container,
-  ) {
-    if (this.gameEnded) return;
-    this.playClick();
-
-    if (isCorrect) {
-      this.hits += 1;
-      this.playSuccess();
-      const stepMsg =
-        this.n3Step === 0
-          ? "✅ Erro identificado! Agora descubra a solução."
-          : "✅ Solução correta! Ótimo trabalho, detetive!";
-      this.showToast(stepMsg, COLORS.green, 1500);
-      this.tweens.add({
-        targets: btn,
-        alpha: 0.4,
-        duration: 100,
-        yoyo: true,
-        repeat: 2,
-      });
-      runtimeGameBridge.emit({
-        type: "CORRECT_ANSWER",
-        gameId: GAME_ID,
-        stage: this.levelConfig.level,
-        pointsEarned: 20,
-      });
-      this.time.delayedCall(1600, () => {
-        if (this.gameEnded) return;
-        if (this.n3Step === 0) {
-          this.n3Step = 1;
-          this.showN3Incident();
-        } else {
-          this.n3Step = 0;
-          this.n3IncidentIndex += 1;
-          const incidents = this.levelConfig.incidents!;
-          if (this.n3IncidentIndex >= incidents.length) {
-            this.completeFinalLevel();
-          } else {
-            this.showN3Incident();
-          }
+        if (withTutorial) {
+            const steps = this.buildTutorialSteps()
+            if (steps.length) {
+                this.runTutorial(steps, false, () => {
+                    if (gen !== this.gen) return
+                    this.state = 'investigando'
+                })
+                return
+            }
         }
-      });
-    } else {
-      this.errors += 1;
-      this.playWrong();
-      this.showToast(
-        "❌ Não é essa. Analise melhor o incidente!",
-        COLORS.danger,
-        2000,
-      );
-      runtimeGameBridge.emit({
-        type: "WRONG_ANSWER",
-        gameId: GAME_ID,
-        stage: this.levelConfig.level,
-        pointsEarned: -5,
-      });
-    }
-  }
 
-  // ─── Action Button Helper ───────────────────────────────────────────────────
-
-  private createActionBtn(
-    x: number,
-    y: number,
-    w: number,
-    h: number,
-    label: string,
-    color: number,
-    textColor: number,
-    onClick: () => void,
-  ) {
-    const btn = this.addCard(this.add.container(x, y).setDepth(20));
-    const bg = this.add.graphics();
-    bg.fillStyle(color, 1);
-    bg.fillRoundedRect(-w / 2, -h / 2, w, h, 22);
-    bg.lineStyle(4, COLORS.amber, 0.85);
-    bg.strokeRoundedRect(-w / 2, -h / 2, w, h, 22);
-    // inner highlight
-    bg.fillStyle(0xffffff, 0.08);
-    bg.fillRoundedRect(-w / 2 + 8, -h / 2 + 8, w - 16, h / 2 - 8, 14);
-
-    const txtColor = `#${textColor.toString(16).padStart(6, "0")}`;
-    const txt = this.addSharpText(0, 0, label, {
-      fontSize: "28px",
-      fontFamily: "Arial Black, Arial",
-      color: txtColor,
-      stroke: "#000000",
-      strokeThickness: 4,
-    }).setOrigin(0.5);
-
-    btn.add([bg, txt]);
-
-    const zone = this.addCard(
-      this.add.zone(x, y, w + 14, h + 14).setDepth(55),
-    );
-    zone.setInteractive({ useHandCursor: true });
-    zone.on("pointerover", () => {
-      this.input.setDefaultCursor("pointer");
-      this.tweens.add({ targets: btn, scale: 1.06, duration: 80 });
-    });
-    zone.on("pointerout", () => {
-      this.input.setDefaultCursor("default");
-      this.tweens.add({ targets: btn, scale: 1, duration: 80 });
-    });
-    zone.on("pointerdown", onClick);
-    return btn;
-  }
-
-  // ─── Level Completion ────────────────────────────────────────────────────────
-
-  private completeLevel() {
-    if (this.gameEnded) return;
-    this.gameEnded = true;
-    this.timerEvent?.remove(false);
-    this.input.enabled = false;
-    this.playSuccess();
-    const nextLevel = (this.levelConfig.level + 1) as InvestigationLevelNumber;
-    runtimeGameBridge.emit({
-      type: "CHECKPOINT",
-      gameId: GAME_ID,
-      stage: nextLevel,
-      progress: this.levelConfig.level / 3,
-      score: this.getScore(),
-      hits: this.hits,
-      errors: this.errors,
-    });
-    this.time.delayedCall(400, () => this.showLevelCompleteScreen(nextLevel));
-  }
-
-  private completeFinalLevel() {
-    if (this.gameEnded) return;
-    this.gameEnded = true;
-    this.timerEvent?.remove(false);
-    this.input.enabled = false;
-    this.playSuccess();
-    runtimeGameBridge.emit({
-      type: "GAME_COMPLETED",
-      gameId: GAME_ID,
-      stage: 3,
-    });
-    this.time.delayedCall(400, () => this.showFinalCompleteScreen());
-  }
-
-  // ─── Flow Screens ────────────────────────────────────────────────────────────
-
-  private showLevelCompleteScreen(nextLevel: InvestigationLevelNumber) {
-    this.clearOverlay();
-    const bg = this.addOverlay(
-      this.add.rectangle(640, 360, 1280, 720, 0x1a0505, 0.7).setDepth(60),
-    );
-    bg.setInteractive();
-
-    const panel = this.addOverlay(
-      this.add.container(640, 360).setDepth(62),
-    );
-    const shadow = this.add.graphics();
-    shadow.fillStyle(0x000000, 0.22);
-    shadow.fillRoundedRect(-278, -178, 556, 356, 30);
-    const panelBg = this.add.graphics();
-    panelBg.fillStyle(0x111827, 0.97);
-    panelBg.fillRoundedRect(-290, -190, 580, 360, 30);
-    panelBg.lineStyle(5, COLORS.green, 0.9);
-    panelBg.strokeRoundedRect(-290, -190, 580, 360, 30);
-    const topBar = this.add.graphics();
-    topBar.fillStyle(COLORS.green, 1);
-    topBar.fillRoundedRect(-200, -206, 400, 28, 14);
-
-    const stars = this.addSharpText(0, -134, "⭐⭐", {
-      fontSize: "52px",
-      fontFamily: "Arial Black, Arial",
-    }).setOrigin(0.5);
-    const title = this.addSharpText(0, -72, "Parabéns!", {
-      fontSize: "42px",
-      fontFamily: "Arial Black, Arial",
-      color: "#22c55e",
-      stroke: "#000000",
-      strokeThickness: 6,
-    }).setOrigin(0.5);
-    const sub = this.addSharpText(
-      0,
-      -14,
-      `Nível ${this.levelConfig.level} concluído!`,
-      {
-        fontSize: "22px",
-        fontFamily: "Arial Black, Arial",
-        color: "#f1f5f9",
-        align: "center",
-      },
-    ).setOrigin(0.5);
-    const next = this.addSharpText(0, 36, `Preparando nível ${nextLevel}...`, {
-      fontSize: "20px",
-      fontFamily: "Arial Black, Arial",
-      color: "#f59e0b",
-      align: "center",
-    }).setOrigin(0.5);
-
-    const dots = [1, 2, 3].map((num, i) => {
-      const d = this.add.graphics();
-      d.fillStyle(
-        num <= this.levelConfig.level
-          ? COLORS.green
-          : num === nextLevel
-            ? COLORS.amber
-            : 0x374151,
-        1,
-      );
-      d.fillCircle(-28 + i * 28, 88, 9);
-      d.lineStyle(2, COLORS.amber, 0.5);
-      d.strokeCircle(-28 + i * 28, 88, 9);
-      return d;
-    });
-
-    panel.add([shadow, panelBg, topBar, stars, title, sub, next, ...dots]);
-    this.animateModal(panel);
-
-    // Confetti
-    for (let i = 0; i < 14; i++) {
-      const cx = Phaser.Math.Between(300, 980);
-      const cy = Phaser.Math.Between(120, 600);
-      const c = [COLORS.green, COLORS.amber, COLORS.red, COLORS.blue, 0xfbbf24][
-        i % 5
-      ];
-      const conf = this.addOverlay(this.add.graphics().setDepth(63));
-      conf.fillStyle(c, 0.85);
-      conf.fillRoundedRect(cx - 8, cy - 4, 16, 8, 4);
-      this.tweens.add({
-        targets: conf,
-        alpha: 0,
-        y: cy + 56,
-        duration: 1600,
-        delay: i * 90,
-      });
+        this.state = 'investigando'
     }
 
-    this.time.delayedCall(1800, () =>
-      this.scene.restart({
-        level: nextLevel,
-        hits: this.hits,
-        errors: this.errors,
-      }),
-    );
-  }
+    /* ─────────────────────────────────────────── montagem: achar */
 
-  private showFinalCompleteScreen() {
-    this.clearOverlay();
-    const bg = this.addOverlay(
-      this.add.rectangle(640, 360, 1280, 720, 0x1a0505, 0.76).setDepth(60),
-    );
-    bg.setInteractive();
+    private buildPost() {
+        const message = this.caso.message
+        if (!message) return
 
-    const panel = this.addOverlay(
-      this.add.container(640, 360).setDepth(62),
-    );
-    const shadow = this.add.graphics();
-    shadow.fillStyle(0x000000, 0.24);
-    shadow.fillRoundedRect(-308, -210, 616, 420, 34);
-    const panelBg = this.add.graphics();
-    panelBg.fillStyle(0x111827, 0.97);
-    panelBg.fillRoundedRect(-320, -222, 640, 424, 34);
-    panelBg.lineStyle(6, COLORS.amber, 0.9);
-    panelBg.strokeRoundedRect(-320, -222, 640, 424, 34);
-    const ribbon = this.add.graphics();
-    ribbon.fillStyle(COLORS.red, 1);
-    ribbon.fillRoundedRect(-220, -238, 440, 28, 14);
+        this.post = createPost(this, message, {
+            cx: MSG.cx, cy: MSG.cy, w: MSG.w, h: MSG.h,
+            wrap: MSG.wrap, lineH: MSG.lineH, textCY: MSG.textCY,
+            fromDY: MSG.fromDY, avatarX: MSG.avatarX, fromX: MSG.fromX,
+            avatarSize: MSG.avatarSize,
+            fontSize: SIZE.msg, tone: C.probe,
+            onTap: chunk => void this.onChunkTap(chunk),
+        })
 
-    const stars = this.addSharpText(0, -164, "⭐⭐⭐", {
-      fontSize: "54px",
-      fontFamily: "Arial Black, Arial",
-    }).setOrigin(0.5);
-    this.tweens.add({
-      targets: stars,
-      scale: { from: 0.9, to: 1.08 },
-      duration: 700,
-      yoyo: true,
-      repeat: -1,
-    });
-
-    const title = this.addSharpText(0, -92, "Parabéns, Detetive!", {
-      fontSize: "40px",
-      fontFamily: "Arial Black, Arial",
-      color: "#f59e0b",
-      stroke: "#1a0505",
-      strokeThickness: 7,
-    }).setOrigin(0.5);
-
-    const sub = this.addSharpText(
-      0,
-      -28,
-      "Você concluiu a Investigação:\nDados em Risco!",
-      {
-        fontSize: "23px",
-        fontFamily: "Arial Black, Arial",
-        color: "#f1f5f9",
-        align: "center",
-      },
-    ).setOrigin(0.5);
-
-    const desc = this.addSharpText(
-      0,
-      40,
-      `Pontuação: ${this.getScore()} · Acertos: ${this.hits} · Erros: ${this.errors}`,
-      {
-        fontSize: "18px",
-        fontFamily: "Arial Black, Arial",
-        color: "#94a3b8",
-        align: "center",
-      },
-    ).setOrigin(0.5);
-
-    const sparkles = Array.from({ length: 14 }, (_, i) => {
-      const sp = this.add.graphics();
-      sp.fillStyle(
-        [COLORS.amber, COLORS.red, COLORS.green, COLORS.blue, 0xfbbf24][i % 5],
-        0.88,
-      );
-      sp.fillCircle(
-        Phaser.Math.Between(-290, 290),
-        Phaser.Math.Between(-200, 190),
-        Phaser.Math.Between(4, 9),
-      );
-      this.tweens.add({
-        targets: sp,
-        alpha: { from: 0.3, to: 1 },
-        scale: { from: 0.7, to: 1.4 },
-        duration: 640 + i * 40,
-        yoyo: true,
-        repeat: -1,
-      });
-      return sp;
-    });
-
-    const exitBg = this.add.graphics();
-    exitBg.fillStyle(COLORS.red, 1);
-    exitBg.fillRoundedRect(-130, 86, 260, 52, 26);
-    exitBg.lineStyle(4, COLORS.amber, 1);
-    exitBg.strokeRoundedRect(-130, 86, 260, 52, 26);
-    const exitTxt = this.addSharpText(0, 112, "Voltar aos Jogos", {
-      fontSize: "21px",
-      fontFamily: "Arial Black, Arial",
-      color: "#ffffff",
-      stroke: "#7f1d1d",
-      strokeThickness: 3,
-    }).setOrigin(0.5);
-
-    panel.add([
-      shadow, panelBg, ribbon, ...sparkles, stars, title, sub, desc, exitBg,
-      exitTxt,
-    ]);
-    this.animateModal(panel);
-
-    const ez = this.addOverlay(
-      this.add
-        .zone(
-          640,
-          360 + 112 * MODAL_SCALE,
-          278 * MODAL_SCALE,
-          64 * MODAL_SCALE,
-        )
-        .setDepth(70),
-    );
-    ez.setInteractive({ useHandCursor: true });
-    ez.on("pointerover", () => this.input.setDefaultCursor("pointer"));
-    ez.on("pointerout", () => this.input.setDefaultCursor("default"));
-    ez.on("pointerdown", () => {
-      this.playClick();
-      EventBus.emit("exit-game");
-    });
-  }
-
-  private showGameOverScreen() {
-    this.input.enabled = true;
-    this.clearOverlay();
-    const bg = this.addOverlay(
-      this.add.rectangle(640, 360, 1280, 720, 0x1a0505, 1).setDepth(60),
-    );
-    bg.setInteractive();
-
-    const panel = this.addOverlay(
-      this.add.container(640, 360).setDepth(62),
-    );
-    const shadow = this.add.graphics();
-    shadow.fillStyle(0x000000, 0.24);
-    shadow.fillRoundedRect(-298, -196, 596, 392, 30);
-    const panelBg = this.add.graphics();
-    panelBg.fillStyle(0x111827, 0.97);
-    panelBg.fillRoundedRect(-310, -208, 620, 396, 30);
-    panelBg.lineStyle(5, COLORS.red, 0.85);
-    panelBg.strokeRoundedRect(-310, -208, 620, 396, 30);
-    const topBar = this.add.graphics();
-    topBar.fillStyle(COLORS.red, 1);
-    topBar.fillRoundedRect(-210, -224, 420, 28, 14);
-
-    const icon = this.addSharpText(0, -146, "⏰", {
-      fontSize: "54px",
-      fontFamily: "Arial Black, Arial",
-    }).setOrigin(0.5);
-    const title = this.addSharpText(0, -80, "GAME OVER", {
-      fontSize: "44px",
-      fontFamily: "Arial Black, Arial",
-      color: "#dc2626",
-      stroke: "#000000",
-      strokeThickness: 6,
-    }).setOrigin(0.5);
-    const reason = this.addSharpText(0, -24, "⏰ Tempo esgotado!", {
-      fontSize: "24px",
-      fontFamily: "Arial Black, Arial",
-      color: "#f1f5f9",
-      align: "center",
-    }).setOrigin(0.5);
-    const stats = this.addSharpText(
-      0,
-      26,
-      `Acertos: ${this.hits}  ·  Erros: ${this.errors}  ·  Pontos: ${this.getScore()}`,
-      {
-        fontSize: "18px",
-        fontFamily: "Arial Black, Arial",
-        color: "#94a3b8",
-      },
-    ).setOrigin(0.5);
-
-    const retryBg = this.add.graphics();
-    retryBg.fillStyle(COLORS.green, 1);
-    retryBg.fillRoundedRect(-262, 70, 240, 52, 26);
-    retryBg.lineStyle(4, COLORS.amber, 1);
-    retryBg.strokeRoundedRect(-262, 70, 240, 52, 26);
-    const retryTxt = this.addSharpText(-142, 96, "🔄 Tentar Novamente", {
-      fontSize: "16px",
-      fontFamily: "Arial Black, Arial",
-      color: "#ffffff",
-      stroke: "#14532d",
-      strokeThickness: 3,
-    }).setOrigin(0.5);
-
-    const exitBg = this.add.graphics();
-    exitBg.fillStyle(COLORS.amber, 1);
-    exitBg.fillRoundedRect(22, 70, 240, 52, 26);
-    exitBg.lineStyle(4, 0xffffff, 1);
-    exitBg.strokeRoundedRect(22, 70, 240, 52, 26);
-    const exitTxt = this.addSharpText(142, 96, "🚪 Sair", {
-      fontSize: "20px",
-      fontFamily: "Arial Black, Arial",
-      color: "#1a0505",
-      stroke: "#92400e",
-      strokeThickness: 3,
-    }).setOrigin(0.5);
-
-    panel.add([
-      shadow, panelBg, topBar, icon, title, reason, stats, retryBg, retryTxt,
-      exitBg, exitTxt,
-    ]);
-    this.animateModal(panel);
-
-    const rz = this.addOverlay(
-      this.add
-        .zone(
-          640 - 142 * MODAL_SCALE,
-          360 + 96 * MODAL_SCALE,
-          258 * MODAL_SCALE,
-          64 * MODAL_SCALE,
-        )
-        .setDepth(70),
-    );
-    rz.setInteractive({ useHandCursor: true });
-    rz.on("pointerover", () => this.input.setDefaultCursor("pointer"));
-    rz.on("pointerout", () => this.input.setDefaultCursor("default"));
-    rz.on("pointerdown", () => {
-      this.playClick();
-      this.scene.restart({
-        level: this.levelConfig.level,
-        hits: 0,
-        errors: 0,
-      });
-    });
-
-    const ez = this.addOverlay(
-      this.add
-        .zone(
-          640 + 142 * MODAL_SCALE,
-          360 + 96 * MODAL_SCALE,
-          258 * MODAL_SCALE,
-          64 * MODAL_SCALE,
-        )
-        .setDepth(70),
-    );
-    ez.setInteractive({ useHandCursor: true });
-    ez.on("pointerover", () => this.input.setDefaultCursor("pointer"));
-    ez.on("pointerout", () => this.input.setDefaultCursor("default"));
-    ez.on("pointerdown", () => {
-      this.playClick();
-      EventBus.emit("exit-game");
-    });
-  }
-
-  // ─── Overlay Helpers ─────────────────────────────────────────────────────────
-
-  private addOverlay<T extends Phaser.GameObjects.GameObject>(o: T) {
-    this.overlayObjects.push(o);
-    return o;
-  }
-  private clearOverlay() {
-    this.overlayObjects.forEach((o) => o.destroy());
-    this.overlayObjects = [];
-    this.input.setDefaultCursor("default");
-  }
-  private animateModal(m: Phaser.GameObjects.Container) {
-    m.setAlpha(0);
-    m.setScale(0.88);
-    this.tweens.add({
-      targets: m,
-      alpha: 1,
-      scale: MODAL_SCALE,
-      duration: 260,
-      ease: "Back.easeOut",
-    });
-  }
-
-  // ─── Utilities ───────────────────────────────────────────────────────────────
-
-  private getScore() {
-    return Math.max(0, this.hits * 20 - this.errors * 5);
-  }
-
-  private shuffle<T>(arr: T[]): T[] {
-    const a = [...arr];
-    for (let i = a.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [a[i], a[j]] = [a[j], a[i]];
+        FX.popIn(this, this.post.container, { from: 0.9, duration: 380 })
     }
-    return a;
-  }
 
-  private fitImage(
-    image: Phaser.GameObjects.Image,
-    maxW: number,
-    maxH: number,
-  ) {
-    const scale = Math.min(maxW / image.width, maxH / image.height);
-    image.setScale(scale);
-    return image;
-  }
+    /* ─────────────────────────────────────── montagem: escolher */
 
-  private addSharpText(
-    x: number,
-    y: number,
-    text: string,
-    style: Phaser.Types.GameObjects.Text.TextStyle,
-  ) {
-    const obj = this.add.text(x, y, text, style);
-    obj.setResolution(2);
-    return obj;
-  }
+    private buildOptions() {
+        const list = this.caso.options ?? []
+        const startX = 640 - ((list.length - 1) * (OPT.w + OPT.gap)) / 2
 
-  private showToast(message: string, color: number, duration = 2200) {
-    const container = this.add.container(640, 620).setDepth(200);
-    const bg = this.add.graphics();
-    bg.fillStyle(color, 0.96);
-    bg.fillRoundedRect(-500, -44, 1000, 88, 24);
-    bg.lineStyle(4, COLORS.amber, 0.8);
-    bg.strokeRoundedRect(-500, -44, 1000, 88, 24);
-    const txt = this.addSharpText(0, 0, message, {
-      fontSize: "20px",
-      fontFamily: "Arial Black, Arial",
-      color: "#ffffff",
-      align: "center",
-      wordWrap: { width: 900 },
-    }).setOrigin(0.5);
-    container.add([bg, txt]);
-    this.tweens.add({
-      targets: container,
-      y: 600,
-      alpha: 0,
-      duration: 300,
-      delay: duration,
-      onComplete: () => container.destroy(),
-    });
-  }
+        list.forEach((message, i) => {
+            const x = startX + i * (OPT.w + OPT.gap)
 
-  // ─── Audio ───────────────────────────────────────────────────────────────────
+            const view = createPost(this, message, {
+                cx: x, cy: OPT.cy, w: OPT.w, h: OPT.h,
+                wrap: OPT.wrap, lineH: OPT.lineH, textCY: OPT.textCY,
+                fromDY: OPT.fromDY, avatarX: OPT.avatarX, fromX: OPT.fromX,
+                avatarSize: OPT.avatarSize,
+                fontSize: SIZE.optMsg, tone: C.probe,
+            })
+            this.options.push(view)
 
-  private playClick() {
-    this.playTone(520, 0.05, "sine", 0.05);
-  }
-  private playSuccess() {
-    this.playTone(660, 0.1, "triangle", 0.06);
-    this.time.delayedCall(100, () => this.playTone(880, 0.1, "triangle", 0.06));
-    this.time.delayedCall(200, () =>
-      this.playTone(1100, 0.14, "triangle", 0.07),
-    );
-  }
-  private playWrong() {
-    this.playTone(200, 0.14, "sawtooth", 0.05);
-  }
-  private playTone(
-    frequency: number,
-    duration: number,
-    type: OscillatorType,
-    volume: number,
-  ) {
-    const AC =
-      window.AudioContext ||
-      (
-        window as typeof window & {
-          webkitAudioContext?: typeof AudioContext;
+            // No N3 quem se toca é o cartão inteiro, e não um pedaço: a
+            // pergunta é sobre a mensagem toda, não sobre uma palavra dela.
+            const zone = this.add.zone(x, OPT.cy, OPT.w, OPT.h).setOrigin(0.5).setDepth(32)
+            zone.setInteractive({ useHandCursor: true })
+            zone.on('pointerover', () => {
+                if (this.state !== 'investigando' || this.locked) return
+                FX.to(this, view.container, { scale: 1.03 }, { duration: 130 })
+            })
+            zone.on('pointerout', () => {
+                if (this.state !== 'investigando' || this.locked) return
+                FX.to(this, view.container, { scale: 1 }, { duration: 130 })
+            })
+            zone.on('pointerup', () => {
+                if (this.state !== 'investigando' || this.locked) return
+                FX.press(this, view.container)
+                void this.onOptionTap(i)
+            })
+            this.optionZones.push(zone)
+
+            const seal = this.add.container(x, OPT.cy + OPT.sealDY).setDepth(45).setVisible(false)
+            this.optionSeals.push(seal)
+
+            FX.popIn(this, view.container, { from: 0.88, delay: 120 + i * 110, duration: 400 })
+        })
+    }
+
+    /* ═══════════════════════════════════════════ tocar num pedaço */
+
+    private async onChunkTap(chunk: Chunk) {
+        if (this.state !== 'investigando' || this.locked || this.ended) return
+        if (this.found.has(chunk.id)) return
+
+        const gen = this.gen
+
+        // ── pedaço que pode ser postado ────────────────────────────────
+        if (!chunk.risky) {
+            this.errors += 1
+            this.points += POINTS.miss
+            this.playSoft()
+            runtimeGameBridge.emit({
+                type: 'WRONG_ANSWER', gameId: GAME_ID,
+                pointsEarned: POINTS.miss, stage: this.level.level,
+            })
+            this.emitCheckpoint()
+
+            void this.post?.nudge(chunk.id)
+            showToast(this, chunk.safe ?? 'Esse pedaço pode ser postado.', C.safe, 2400)
+            return
         }
-      ).webkitAudioContext;
-    if (!AC) return;
-    const ctx = new AC();
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.type = type;
-    osc.frequency.value = frequency;
-    gain.gain.value = volume;
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.start();
-    osc.stop(ctx.currentTime + duration);
-    osc.onended = () => ctx.close();
-  }
+
+        // ── dado exposto ───────────────────────────────────────────────
+        this.found.add(chunk.id)
+        this.hits += 1
+        this.points += POINTS.find
+        this.state = 'revelando'
+        this.locked = true
+        this.post?.setEnabled(false)
+        this.playFound()
+
+        runtimeGameBridge.emit({
+            type: 'CORRECT_ANSWER', gameId: GAME_ID,
+            pointsEarned: POINTS.find, stage: this.level.level,
+        })
+        this.emitCheckpoint()
+
+        await this.post?.markFound(chunk.id)
+        if (gen !== this.gen) return
+
+        FX.popText(this, MSG.cx + 420, MSG.cy - 100, `+${POINTS.find}`, {
+            color: hex(C.safe), size: '32px',
+        })
+
+        await this.impact.show(chunk.impact ?? '')
+        if (gen !== this.gen) return
+
+        // o impacto virado em quantidade: a criança não lê que foi grave,
+        // ela vê seis pessoas que não conhece aparecerem
+        await this.watchers.add(chunk.watchers ?? 4)
+        if (gen !== this.gen) return
+
+        const total = riskyOf(this.caso).length
+        if (this.found.size >= total) {
+            await FX.wait(this, 700)
+            if (gen !== this.gen) return
+            void this.solve()
+            return
+        }
+
+        showToast(this, `Achou ${this.found.size} de ${total}. Tem mais neste post.`,
+            C.probe, 2000)
+
+        this.state = 'investigando'
+        this.locked = false
+        this.post?.setEnabled(true)
+    }
+
+    /* ═══════════════════════════════════════════ escolher a versão */
+
+    private async onOptionTap(index: number) {
+        const caso = this.caso
+        const list = caso.options ?? []
+        const message = list[index]
+        if (!message) return
+
+        const gen = this.gen
+        const right = index === caso.safeIndex
+        this.locked = true
+
+        const seal = this.optionSeals[index]
+        seal.removeAll(true)
+        seal.add(createIcon(this, right ? 'chave' : 'alerta', OPT.sealSize))
+        seal.setVisible(true)
+        void FX.popIn(this, seal, { from: 0.3, duration: 320 })
+
+        if (right) {
+            this.hits += 1
+            this.points += POINTS.choose
+            this.playFound()
+            runtimeGameBridge.emit({
+                type: 'CORRECT_ANSWER', gameId: GAME_ID,
+                pointsEarned: POINTS.choose, stage: this.level.level,
+            })
+            this.emitCheckpoint()
+
+            this.state = 'revelando'
+            void FX.sparks(this, this.optionZones[index].x, OPT.cy, {
+                color: C.safe, count: 20, spread: 190,
+            })
+            showToast(this, message.why ?? '', C.safe, 2400)
+
+            await FX.wait(this, 1900)
+            if (gen !== this.gen) return
+            void this.solve()
+            return
+        }
+
+        this.errors += 1
+        this.points += POINTS.miss
+        this.playSoft()
+        FX.shakeCam(this, 'leve')
+        runtimeGameBridge.emit({
+            type: 'WRONG_ANSWER', gameId: GAME_ID,
+            pointsEarned: POINTS.miss, stage: this.level.level,
+        })
+        this.emitCheckpoint()
+
+        void FX.shake(this, this.options[index].container, { amount: 9, times: 3 })
+        showToast(this, message.why ?? '', C.risk, 2600)
+
+        // errar não repete o caso nem trava: o selo some e a criança tenta a
+        // outra versão, que é justamente a comparação que o nível pede
+        await FX.wait(this, 1700)
+        if (gen !== this.gen) return
+        await FX.to(this, seal, { alpha: 0, scale: 0.6 }, { duration: 220 })
+        if (gen !== this.gen) return
+        seal.setVisible(false).setAlpha(1).setScale(1)
+        this.locked = false
+    }
+
+    /* ═══════════════════════════════════════════════════ resolvido */
+
+    private async solve() {
+        const gen = this.gen
+        this.state = 'solved'
+        this.locked = true
+        this.playSolved()
+
+        showToast(this, this.caso.successLine, C.safe, 3000)
+        await FX.wait(this, 2600)
+        if (gen !== this.gen) return
+
+        this.caseIdx += 1
+        if (this.caseIdx >= this.level.cases.length) {
+            void this.endLevel()
+            return
+        }
+        void this.playCase(false)
+    }
+
+    /* ═══════════════════════════════════════════════ avanço de nível */
+
+    private async endLevel() {
+        this.ended = true
+        this.locked = true
+        this.gen += 1
+        this.hud.setProgress(this.level.cases.length, this.level.cases.length)
+        this.hud.setHelpEnabled(false)
+
+        runtimeGameBridge.emit({
+            type: 'GAME_COMPLETED', gameId: GAME_ID, stage: this.level.level,
+        })
+        this.emitCheckpoint(true)
+
+        // o selo de investigador digital, que é a recompensa que a ficha pede
+        const badge = this.add.container(640, 360).setDepth(430)
+        badge.add(createIcon(this, 'lupa', 190))
+        await FX.all(
+            FX.popIn(this, badge, { from: 0.2, duration: 460 }),
+            FX.sparks(this, 640, 360, { color: C.probe, count: 24, spread: 220 }),
+            FX.stars(this, 640, 360, { color: C.risk, count: 12, rise: 170 }),
+        )
+        await FX.wait(this, 500)
+        await FX.to(this, badge, { alpha: 0, scale: 0.7 }, { duration: 260 })
+        badge.destroy()
+
+        const lvl = this.level.level
+        const next = lvl < 3 ? (lvl + 1) as 2 | 3 : null
+
+        if (next) {
+            this.modal = showLevelComplete(this, {
+                title: 'Investigação concluída!',
+                subtitle: `Nível ${lvl} — selo de investigador`,
+                message: this.level.objective,
+                accent: C.probe,
+                panelColor: C.paper,
+                overlayColor: C.ink,
+                progress: { total: 3, current: lvl },
+                autoAdvance: {
+                    delay: 2300,
+                    label: 'Preparando o próximo caso...',
+                    onComplete: () => this.scene.restart({ level: next, points: this.points }),
+                },
+            })
+            return
+        }
+
+        FX.confetti(this, { colors: [C.probe, C.safe, C.risk, C.paper] })
+        this.modal = showLevelComplete(this, {
+            title: 'Investigador digital!',
+            subtitle: 'Você sabe reconhecer o que não se posta',
+            message: `Dados achados: ${this.hits}  ·  Enganos: ${this.errors}  ·  Pontos: ${Math.max(0, this.points)}`,
+            accent: C.safe,
+            panelColor: C.paper,
+            overlayColor: C.ink,
+            progress: { total: 3, current: 3 },
+            buttons: [
+                {
+                    label: 'Jogar de novo',
+                    color: C.safe,
+                    onClick: () => this.scene.restart({ level: 1, points: 0 }),
+                },
+                {
+                    label: 'Escolher jogo',
+                    color: C.probe,
+                    onClick: () => EventBus.emit('exit-game'),
+                },
+            ],
+        })
+    }
+
+    /* ═══════════════════════════════════════════════════════ tutorial */
+
+    /**
+     * Todo passo fixa `balloonY`. A heurística automática do `createTutorial`
+     * mede a altura do texto e escolhe acima/abaixo; com o holofote no post,
+     * que ocupa o meio da tela, a conta cai em cima dele.
+     */
+    private buildTutorialSteps(): TutorialStep[] {
+        const postSpot = { x: MSG.cx, y: MSG.cy, w: MSG.w + 28, h: MSG.h + 28 }
+        const watchSpot = { x: WATCH.cx, y: WATCH.y - 20, w: 1140, h: 150 }
+        const optSpot = { x: 640, y: OPT.cy, w: OPT.w * 2 + OPT.gap + 30, h: OPT.h + 28 }
+
+        if (this.level.level === 2) {
+            return [{
+                text: 'Agora são três pedaços expostos no mesmo post. Ache os três.',
+                shape: 'rect', ...postSpot, balloonY: 540,
+            }]
+        }
+
+        if (this.level.level === 3) {
+            return [{
+                text: 'Duas versões da mesma novidade. Toque na que pode ir para a internet.',
+                shape: 'rect', ...optSpot, balloonY: 540,
+            }]
+        }
+
+        return [
+            {
+                text: 'Este post já foi publicado. Toque no pedaço que conta demais.',
+                shape: 'rect', ...postSpot, balloonY: 540,
+            },
+            {
+                text: 'Aqui embaixo aparece quem passou a saber aquilo.',
+                shape: 'rect', ...watchSpot, balloonY: 300,
+            },
+        ]
+    }
+
+    private runTutorial(steps: TutorialStep[], force: boolean, onFinish: () => void) {
+        this.locked = true
+        this.hud.setHelpEnabled(false)
+
+        createTutorial(this, {
+            key: `ef03co09-l${this.level.level}`,
+            once: !force,
+            accent: C.probe,
+            safeTop: HUD.y + HUD.h + 12,
+            steps,
+            onFinish: () => {
+                this.locked = false
+                this.hud.setHelpEnabled(true)
+                onFinish()
+            },
+        })
+    }
+
+    private replayTutorial = () => {
+        if (this.ended || this.locked) return
+        if (this.state !== 'investigando') return
+
+        const gen = this.gen
+        const steps = this.buildTutorialSteps()
+        if (!steps.length) return
+
+        this.runTutorial(steps, true, () => {
+            if (gen !== this.gen || this.ended) return
+            this.state = 'investigando'
+        })
+    }
+
+    /* ═══════════════════════════════════════════════════════ plataforma */
+
+    private emitCheckpoint(forceComplete = false) {
+        const before = LEVELS.slice(0, this.levelIdx).reduce((s, l) => s + l.cases.length, 0)
+        const done = before + this.caseIdx + (forceComplete ? 1 : 0)
+
+        runtimeGameBridge.emit({
+            type: 'CHECKPOINT',
+            gameId: GAME_ID,
+            progress: Math.round((done / TOTAL_CASES) * 100),
+            score: Math.max(0, this.points),
+            stage: this.level.level,
+            hits: this.hits,
+            errors: this.errors,
+        })
+    }
+
+    private registerPlatformCommands() {
+        this.unsubPlatform = runtimeGameBridge.onCommand((cmd: PlatformCommand) => {
+            if (cmd.type !== 'START_GAME') return
+            this.points = cmd.points ?? this.points
+        })
+    }
+
+    private onMuteAudio = (muted: boolean) => { this.isMuted = muted }
+
+    /* ═══════════════════════════════════════════════════════════ áudio */
+
+    private getAudioCtx(): AudioContext | null {
+        if (this.isMuted) return null
+        try {
+            return (this.sound as Phaser.Sound.WebAudioSoundManager).context
+        } catch {
+            return null
+        }
+    }
+
+    private playTone(freq: number, dur: number, type: OscillatorType = 'sine', gain = 0.1) {
+        const ctx = this.getAudioCtx()
+        if (!ctx) return
+        const osc = ctx.createOscillator()
+        const g = ctx.createGain()
+        osc.connect(g)
+        g.connect(ctx.destination)
+        osc.type = type
+        osc.frequency.setValueAtTime(freq, ctx.currentTime)
+        g.gain.setValueAtTime(gain, ctx.currentTime)
+        g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur)
+        osc.start()
+        osc.stop(ctx.currentTime + dur)
+    }
+
+    /**
+     * O som do engano é MACIO, não é buzina.
+     *
+     * Tocar num pedaço que pode ser postado não é fazer coisa errada — é
+     * testar. Som de erro duro aqui ensinaria a criança a não tocar em nada,
+     * que é o oposto de investigar.
+     */
+    private playSoft() { this.playTone(300, 0.12, 'sine', 0.07) }
+    private playFound() {
+        this.playTone(620, 0.08, 'sine', 0.11)
+        this.time.delayedCall(85, () => this.playTone(820, 0.1, 'sine', 0.09))
+    }
+    private playSolved() {
+        [523, 659, 784, 1047].forEach((f, i) =>
+            this.time.delayedCall(i * 110, () => this.playTone(f, 0.18, 'sine', 0.13)))
+    }
 }

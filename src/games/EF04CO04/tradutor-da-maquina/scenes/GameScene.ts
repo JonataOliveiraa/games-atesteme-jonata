@@ -1,1266 +1,662 @@
-import Phaser from "phaser";
-import { EventBus } from "../../../../shared/EventBus";
-import { runtimeGameBridge } from "../../../../shared/bridge/runtimeGameBridge";
-import { LEVELS, LETTER_CODE } from "../data/levels";
-import type { TranslatorLevel, TranslatorLevelNumber, TranslatorLetter } from "../types";
+import Phaser from 'phaser'
+import { EventBus } from '../../../../shared/EventBus'
+import { runtimeGameBridge } from '../../../../shared/bridge/runtimeGameBridge'
+import type { PlatformCommand } from '../../../../shared/contracts/platformCommands'
+import { createTutorial, type TutorialStep } from '../../../../shared/tutorial/createTutorial'
+import { showLevelComplete } from '../../../../shared/level/showLevelComplete'
+import { FX } from '../../../../shared/effects/FX'
 
-const GAME_ID = "tradutor-da-maquina";
+import { LEVELS, TOTAL_CASES } from '../data/casos'
+import { codeOf, charOf, bitsOf, valueOf, wrongIndex } from '../data/tabela'
+import { C } from '../data/theme'
+import { HUD, MACHINE, PANEL, TABLE_UI } from '../data/layout'
+import { BITS, type Caso, type CaseState, type Level } from '../types'
 
-// ── Layout ────────────────────────────────────────────────────────────────────
-const TIMER_BAR_W = 980;
-const TIMER_BAR_Y = 30;
-const PANEL_X = 72;
-const PANEL_Y = 142;
-const PANEL_W = 1136;
-const PANEL_H = 486;
-const MODAL_SCALE = 1.12;
+import {
+    createRoom, createHud, createQuestionLine, createRobot, createScreen,
+    createWire, createReadout, createSwitchBank, createTableStrip,
+    createBigButton, showToast,
+    type BigButton, type Hud, type QuestionLine, type Robot, type Screen,
+    type Wire, type Readout, type SwitchBank, type TableStrip,
+} from './effects'
 
-const ZONE_DICT_X1 = PANEL_X + 16;
-const ZONE_DICT_X2 = PANEL_X + 620;
-const ZONE_VIS_X1  = PANEL_X + 640;
-const ZONE_VIS_X2  = PANEL_X + PANEL_W - 16;
+const GAME_ID = 'tradutor-da-maquina'
 
-const COLORS = {
-  purple:  0x4c1d95,
-  cyan:    0x06b6d4,
-  lime:    0x84cc16,
-  dark:    0x0d0528,
-  darker:  0x060316,
-  white:   0xffffff,
-  green:   0x16a34a,
-  red:     0xdc2626,
-  amber:   0xd97706,
-  gray:    0x64748b,
-  slate:   0x334155,
-  ink:     0x0a0a1a,
-  violet:  0x7c3aed,
-  teal:    0x0d9488,
-};
+const POINTS = {
+    solve: 25,
+    miss: -5,
+} as const
 
 export class GameScene extends Phaser.Scene {
-  private levelConfig!: TranslatorLevel;
-  private gameEnded = false;
-  private hits = 0;
-  private errors = 0;
 
-  private timerBar?: Phaser.GameObjects.Graphics;
-  private timerEvent?: Phaser.Time.TimerEvent;
-
-  private startScreenObjects: Phaser.GameObjects.GameObject[] = [];
-  private overlayObjects: Phaser.GameObjects.GameObject[] = [];
-  private contentObjects: Phaser.GameObjects.GameObject[] = [];
-
-  // N1 state
-  private n1RoundIndex = 0;
-
-  // N2 state
-  private n2WordIndex = 0;
-  private n2LetterIndex = 0;
-  private n2AccumulatedCode: string[] = [];
-
-  // N3 state
-  private n3WordIndex = 0;
-  private n3GroupIndex = 0;
-  private n3DecodedLetters: string[] = [];
-
-  // Selection / confirm state (reset per round)
-  private roundInProgress = false;
-  private selectedOption: string | null = null;
-  private selectedChipRedraw: (() => void) | null = null;
-  private confirmBtnBg: Phaser.GameObjects.Graphics | null = null;
-  private confirmBtnText: Phaser.GameObjects.Text | null = null;
-  private confirmBtnEnabled = false;
-  private confirmBtnDrawEnabled: (() => void) | null = null;
-  private confirmBtnDrawDisabled: (() => void) | null = null;
-  private visorCodeText: Phaser.GameObjects.Text | null = null;
-  // N2 per-slot code texts (one per letter)
-  private n2SlotTexts: Phaser.GameObjects.Text[] = [];
-
-  constructor() {
-    super({ key: "GameScene" });
-  }
-
-  init(data?: { level?: number; hits?: number; errors?: number }) {
-    const level = Phaser.Math.Clamp(data?.level ?? 1, 1, 3) as TranslatorLevelNumber;
-    this.levelConfig = LEVELS.find((l) => l.level === level) ?? LEVELS[0];
-    this.gameEnded = false;
-    this.hits = data?.hits ?? 0;
-    this.errors = data?.errors ?? 0;
-    this.n1RoundIndex = 0;
-    this.n2WordIndex = 0;
-    this.n2LetterIndex = 0;
-    this.n2AccumulatedCode = [];
-    this.n3WordIndex = 0;
-    this.n3GroupIndex = 0;
-    this.n3DecodedLetters = [];
-    this.startScreenObjects = [];
-    this.overlayObjects = [];
-    this.contentObjects = [];
-    this.roundInProgress = false;
-    this.selectedOption = null;
-    this.selectedChipRedraw = null;
-    this.confirmBtnBg = null;
-    this.confirmBtnText = null;
-    this.confirmBtnEnabled = false;
-    this.confirmBtnDrawEnabled = null;
-    this.confirmBtnDrawDisabled = null;
-    this.visorCodeText = null;
-    this.n2SlotTexts = [];
-  }
-
-  create() {
-    this.createBackground();
-    this.createTimerBar();
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.onShutdown());
-    this.showStartScreen();
-  }
-
-  update() {
-    if (!this.timerEvent || !this.timerBar) return;
-    const pct = Math.max(0, this.timerEvent.getRemaining() / (this.levelConfig.timeLimit * 1000));
-    const color = pct > 0.5 ? COLORS.lime : pct > 0.25 ? COLORS.amber : COLORS.red;
-    this.drawTimerFill(TIMER_BAR_W * pct, color);
-  }
-
-  private onShutdown() {
-    this.timerEvent?.destroy();
-    this.input.setDefaultCursor("default");
-    EventBus.removeAllListeners();
-  }
-
-  // ─── Background ──────────────────────────────────────────────────────────────
-
-  private createBackground() {
-    const bgKey =
-      this.levelConfig.level === 1 ? "bg-circuit-lab"
-      : this.levelConfig.level === 2 ? "bg-encoder-room"
-      : "bg-decoder-room";
-
-    const bg = this.add.image(640, 360, bgKey).setDepth(-100);
-    bg.texture.setFilter(Phaser.Textures.FilterMode.LINEAR);
-    const scale = Math.max(1280 / bg.width, 720 / bg.height);
-    bg.setScale(scale);
-    this.add.rectangle(640, 360, 1280, 720, COLORS.darker, 0.72).setDepth(-89);
-  }
-
-  // ─── Timer Bar ───────────────────────────────────────────────────────────────
-
-  private createTimerBar() {
-    const track = this.add.graphics().setDepth(45);
-    track.fillStyle(COLORS.slate, 0.2);
-    track.fillRoundedRect(640 - TIMER_BAR_W / 2, TIMER_BAR_Y - 16, TIMER_BAR_W, 32, 16);
-    this.timerBar = this.add.graphics().setDepth(46);
-    this.drawTimerFill(TIMER_BAR_W, COLORS.lime);
-  }
-
-  private drawTimerFill(width: number, color: number) {
-    if (!this.timerBar) return;
-    this.timerBar.clear();
-    if (width <= 0) return;
-    this.timerBar.fillStyle(color, 1);
-    this.timerBar.fillRoundedRect(640 - TIMER_BAR_W / 2, TIMER_BAR_Y - 16, Math.max(0, width), 32, 16);
-  }
-
-  private startTimer() {
-    this.timerEvent = this.time.delayedCall(this.levelConfig.timeLimit * 1000, () => this.onTimeUp());
-  }
-
-  private onTimeUp() {
-    if (this.gameEnded) return;
-    this.gameEnded = true;
-    this.input.enabled = false;
-    this.errors += 1;
-    this.playWrong();
-    runtimeGameBridge.emit({ type: "WRONG_ANSWER", gameId: GAME_ID, stage: this.levelConfig.level, pointsEarned: -5 });
-    this.time.delayedCall(300, () => this.showGameOverScreen());
-  }
-
-  // ─── Start Screen ─────────────────────────────────────────────────────────────
-
-  private showStartScreen() {
-    const overlay = this.add.rectangle(640, 360, 1280, 720, COLORS.ink, 0.68).setDepth(60);
-    overlay.setInteractive();
-    this.startScreenObjects.push(overlay);
-
-    const panel = this.add.container(640, 360).setDepth(62);
-    this.startScreenObjects.push(panel);
-
-    const shadow = this.add.graphics();
-    shadow.fillStyle(0x000000, 0.22);
-    shadow.fillRoundedRect(-308, -208, 616, 416, 34);
-
-    const bg = this.add.graphics();
-    bg.fillStyle(COLORS.dark, 0.97);
-    bg.fillRoundedRect(-320, -220, 640, 420, 34);
-    bg.lineStyle(6, COLORS.cyan, 0.9);
-    bg.strokeRoundedRect(-320, -220, 640, 420, 34);
-
-    const topBar = this.add.graphics();
-    topBar.fillStyle(COLORS.purple, 1);
-    topBar.fillRoundedRect(-240, -238, 480, 34, 17);
-
-    const lvlLabel = this.addSharpText(0, -221, `Nível ${this.levelConfig.level} / 3`, {
-      fontSize: "18px", fontFamily: "Arial Black, Arial", color: "#06b6d4",
-      stroke: "#4c1d95", strokeThickness: 3,
-    }).setOrigin(0.5);
-
-    const title = this.addSharpText(0, -148, this.levelConfig.title, {
-      fontSize: "38px", fontFamily: "Arial Black, Arial", color: "#06b6d4",
-      stroke: "#0d0528", strokeThickness: 6, align: "center",
-    }).setOrigin(0.5);
-
-    const obj = this.addSharpText(0, -76, this.levelConfig.objective, {
-      fontSize: "21px", fontFamily: "Arial Black, Arial", color: "#e2e8f0",
-      align: "center", wordWrap: { width: 560 },
-    }).setOrigin(0.5);
-
-    const detail = this.addSharpText(0, 0, this.levelConfig.detail, {
-      fontSize: "17px", fontFamily: "Arial Black, Arial", color: "#94a3b8",
-      align: "center", wordWrap: { width: 540 },
-    }).setOrigin(0.5);
-
-    const tipBg = this.add.graphics();
-    tipBg.fillStyle(COLORS.cyan, 0.12);
-    tipBg.fillRoundedRect(-250, 56, 500, 48, 14);
-
-    const tip = this.addSharpText(0, 80, `💡 ${this.levelConfig.tip}`, {
-      fontSize: "15px", fontFamily: "Arial Black, Arial", color: "#06b6d4",
-      align: "center", wordWrap: { width: 470 },
-    }).setOrigin(0.5);
-
-    const btnBg = this.add.graphics();
-    btnBg.fillStyle(COLORS.cyan, 1);
-    btnBg.fillRoundedRect(-120, 122, 240, 54, 27);
-    btnBg.lineStyle(4, COLORS.white, 1);
-    btnBg.strokeRoundedRect(-120, 122, 240, 54, 27);
-
-    const btnText = this.addSharpText(0, 149, "▶ Iniciar", {
-      fontSize: "24px", fontFamily: "Arial Black, Arial", color: "#0d0528",
-      stroke: "#06b6d4", strokeThickness: 3,
-    }).setOrigin(0.5);
-
-    panel.add([shadow, bg, topBar, lvlLabel, title, obj, detail, tipBg, tip, btnBg, btnText]);
-    panel.setAlpha(0);
-    panel.setScale(0.9);
-    this.tweens.add({ targets: panel, alpha: 1, scale: MODAL_SCALE, duration: 280, ease: "Back.easeOut" });
-
-    const hz = this.add.zone(640, 360 + 149 * MODAL_SCALE, 256 * MODAL_SCALE, 66 * MODAL_SCALE).setDepth(70);
-    hz.setInteractive({ useHandCursor: true });
-    this.startScreenObjects.push(hz);
-
-    hz.on("pointerover", () => {
-      this.input.setDefaultCursor("pointer");
-      this.tweens.add({ targets: panel, scale: MODAL_SCALE * 1.02, duration: 80 });
-    });
-    hz.on("pointerout", () => {
-      this.input.setDefaultCursor("default");
-      this.tweens.add({ targets: panel, scale: MODAL_SCALE, duration: 80 });
-    });
-    hz.on("pointerdown", () => {
-      this.playClick();
-      this.startScreenObjects.forEach((o) => o.destroy());
-      this.startScreenObjects = [];
-      this.input.setDefaultCursor("default");
-      runtimeGameBridge.emit({ type: "GAME_READY", gameId: GAME_ID });
-      this.startTimer();
-      this.buildLevelUI();
-    });
-  }
-
-  // ─── Level UI dispatcher ─────────────────────────────────────────────────────
-
-  private buildLevelUI() {
-    this.createHeader();
-    this.drawPanelBg();
-    this.createDictionary();
-    if (this.levelConfig.level === 1) {
-      this.showN1Round();
-    } else if (this.levelConfig.level === 2) {
-      this.showN2Word();
-    } else {
-      this.showN3Word();
-    }
-  }
-
-  // ─── Header ──────────────────────────────────────────────────────────────────
-
-  private createHeader() {
-    this.addSharpText(640, 68, this.levelConfig.title, {
-      fontSize: "40px", fontFamily: "Arial Black, Arial", color: "#06b6d4",
-      stroke: "#0d0528", strokeThickness: 6,
-    }).setOrigin(0.5).setDepth(5);
-
-    const card = this.add.graphics().setDepth(5);
-    card.fillStyle(COLORS.dark, 0.82);
-    card.fillRoundedRect(230, 96, 820, 44, 22);
-    card.fillStyle(COLORS.cyan, 0.12);
-    card.fillRoundedRect(242, 104, 796, 20, 10);
-    card.lineStyle(3, COLORS.cyan, 0.6);
-    card.strokeRoundedRect(230, 96, 820, 44, 22);
-
-    this.addSharpText(640, 119, this.levelConfig.objective, {
-      fontSize: "20px", fontFamily: "Arial Black, Arial", color: "#e2e8f0",
-      stroke: "#0d0528", strokeThickness: 3, align: "center", wordWrap: { width: 760 },
-    }).setOrigin(0.5).setDepth(6);
-
-    this.addSharpText(1146, 100, `Nível ${this.levelConfig.level}/3`, {
-      fontSize: "18px", fontFamily: "Arial Black, Arial", color: "#06b6d4",
-      backgroundColor: "rgba(13,5,40,0.82)", padding: { x: 14, y: 8 },
-    }).setOrigin(0.5).setDepth(6);
-  }
-
-  // ─── Panel Background ────────────────────────────────────────────────────────
-
-  private drawPanelBg() {
-    const shadow = this.add.graphics().setDepth(1);
-    shadow.fillStyle(COLORS.ink, 0.22);
-    shadow.fillRoundedRect(PANEL_X + 9, PANEL_Y + 12, PANEL_W, PANEL_H, 30);
-
-    const panel = this.add.graphics().setDepth(2);
-    panel.fillStyle(COLORS.dark, 0.78);
-    panel.fillRoundedRect(PANEL_X, PANEL_Y, PANEL_W, PANEL_H, 30);
-    panel.fillStyle(COLORS.cyan, 0.06);
-    panel.fillRoundedRect(PANEL_X + 20, PANEL_Y + 16, PANEL_W - 40, 44, 20);
-    panel.lineStyle(4, COLORS.cyan, 0.5);
-    panel.strokeRoundedRect(PANEL_X, PANEL_Y, PANEL_W, PANEL_H, 30);
-
-    panel.lineStyle(2, COLORS.cyan, 0.2);
-    panel.lineBetween(ZONE_DICT_X2 + 10, PANEL_Y + 20, ZONE_DICT_X2 + 10, PANEL_Y + PANEL_H - 20);
-
-    this.addSharpText((ZONE_DICT_X1 + ZONE_DICT_X2) / 2, PANEL_Y + 22, "DICIONÁRIO", {
-      fontSize: "13px", fontFamily: "Arial Black, Arial", color: "#06b6d4",
-    }).setOrigin(0.5).setDepth(4);
-    this.addSharpText((ZONE_VIS_X1 + ZONE_VIS_X2) / 2, PANEL_Y + 22, "TRADUÇÃO", {
-      fontSize: "13px", fontFamily: "Arial Black, Arial", color: "#06b6d4",
-    }).setOrigin(0.5).setDepth(4);
-  }
-
-  // ─── Dictionary Zone (static reference table — no dynamic highlight) ──────────
-
-  private createDictionary() {
-    const letters: TranslatorLetter[] = ["A", "B", "C", "D", "E", "F", "G", "H"];
-    const dictX = ZONE_DICT_X1;
-    const dictW = ZONE_DICT_X2 - ZONE_DICT_X1;
-    const rowH = 48;
-    const startY = PANEL_Y + 46;
-
-    const hdrBg = this.add.graphics().setDepth(10);
-    hdrBg.fillStyle(COLORS.cyan, 0.18);
-    hdrBg.fillRoundedRect(dictX, startY - 4, dictW, 34, 10);
-    this.addSharpText(dictX + dictW / 2, startY + 13, "LETRA  =  CÓDIGO BINÁRIO", {
-      fontSize: "14px", fontFamily: "Arial Black, Arial", color: "#06b6d4",
-    }).setOrigin(0.5).setDepth(12);
-
-    letters.forEach((letter, idx) => {
-      const ry = startY + 38 + idx * rowH;
-
-      const rowBg = this.add.graphics().setDepth(10);
-      rowBg.fillStyle(COLORS.dark, 0.5);
-      rowBg.fillRoundedRect(dictX, ry, dictW, rowH - 4, 8);
-      rowBg.lineStyle(1, COLORS.cyan, 0.18);
-      rowBg.strokeRoundedRect(dictX, ry, dictW, rowH - 4, 8);
-
-      const chipBg = this.add.graphics().setDepth(11);
-      chipBg.fillStyle(COLORS.purple, 0.82);
-      chipBg.fillRoundedRect(dictX + 8, ry + 4, 52, rowH - 12, 8);
-      chipBg.lineStyle(2, COLORS.violet, 0.7);
-      chipBg.strokeRoundedRect(dictX + 8, ry + 4, 52, rowH - 12, 8);
-
-      this.addSharpText(dictX + 34, ry + (rowH - 4) / 2, letter, {
-        fontSize: "26px", fontFamily: "Arial Black, Arial", color: "#e2e8f0",
-        stroke: "#4c1d95", strokeThickness: 4,
-      }).setOrigin(0.5).setDepth(12);
-
-      this.addSharpText(dictX + 84, ry + (rowH - 4) / 2, "=", {
-        fontSize: "18px", fontFamily: "Arial Black, Arial", color: "#64748b",
-      }).setOrigin(0.5).setDepth(12);
-
-      this.addSharpText(dictX + 240, ry + (rowH - 4) / 2, LETTER_CODE[letter], {
-        fontSize: "26px", fontFamily: "Courier New, monospace", color: "#84cc16",
-        stroke: "#0d0528", strokeThickness: 3,
-      }).setOrigin(0.5).setDepth(12);
-    });
-  }
-
-  // ─── N1 — Letra → Binário ────────────────────────────────────────────────────
-
-  private showN1Round() {
-    this.clearContent();
-    const rounds = this.levelConfig.n1Rounds!;
-    if (this.n1RoundIndex >= rounds.length) {
-      this.completeLevel();
-      return;
-    }
-    const round = rounds[this.n1RoundIndex];
-
-    this.drawProgressDots(rounds.length, this.n1RoundIndex);
-
-    const vx = ZONE_VIS_X1;
-    const vw = ZONE_VIS_X2 - ZONE_VIS_X1;
-    const visorTop = PANEL_Y + 46;
-    const visorH = 96;
-
-    // Visor background
-    const visorBg = this.addContent(this.add.graphics().setDepth(10));
-    visorBg.fillStyle(COLORS.darker, 1);
-    visorBg.fillRoundedRect(vx, visorTop, vw, visorH, 12);
-    visorBg.lineStyle(3, COLORS.lime, 0.8);
-    visorBg.strokeRoundedRect(vx, visorTop, vw, visorH, 12);
-    visorBg.fillStyle(COLORS.lime, 0.7);
-    [[vx + 14, visorTop + 14], [vx + vw - 14, visorTop + 14],
-     [vx + 14, visorTop + visorH - 14], [vx + vw - 14, visorTop + visorH - 14]].forEach(
-      ([cx, cy]) => visorBg.fillCircle(cx, cy, 5)
-    );
-
-    const visorCY = visorTop + visorH / 2;
-    // Large letter display
-    this.addContent(this.addSharpText(vx + 56, visorCY, round.letter, {
-      fontSize: "54px", fontFamily: "Arial Black, Arial", color: "#06b6d4",
-      stroke: "#0d0528", strokeThickness: 6,
-    }).setOrigin(0.5).setDepth(12));
-    this.addContent(this.addSharpText(vx + 116, visorCY, "=", {
-      fontSize: "28px", fontFamily: "Arial Black, Arial", color: "#64748b",
-    }).setOrigin(0.5).setDepth(12));
-    // Code placeholder (updates on chip selection)
-    const codeText = this.addContent(this.addSharpText(vx + 230, visorCY, "_ _ _", {
-      fontSize: "32px", fontFamily: "Courier New, monospace", color: "#475569",
-      stroke: "#060316", strokeThickness: 2,
-    }).setOrigin(0.5).setDepth(12));
-    this.visorCodeText = codeText;
-
-    // Question banner
-    const qBg = this.addContent(this.add.graphics().setDepth(10));
-    qBg.fillStyle(COLORS.purple, 0.7);
-    qBg.fillRoundedRect(vx, PANEL_Y + 156, vw, 44, 12);
-    this.addContent(this.addSharpText(vx + vw / 2, PANEL_Y + 179, `Qual é o código de "${round.letter}"?`, {
-      fontSize: "20px", fontFamily: "Arial Black, Arial", color: "#e2e8f0",
-      stroke: "#0d0528", strokeThickness: 3, align: "center",
-    }).setOrigin(0.5).setDepth(12));
-
-    // Selectable chips
-    const chipH = 54;
-    const chipGap = 10;
-    const chipsStartY = PANEL_Y + 216;
-    round.options.forEach((opt, i) => {
-      const cy = chipsStartY + i * (chipH + chipGap);
-      this.buildSelectableChip(vx, cy, vw, chipH, opt, () => {
-        if (this.gameEnded || this.roundInProgress) return;
-        this.selectedOption = opt;
-        if (this.visorCodeText) this.visorCodeText.setText(opt).setColor("#06b6d4");
-        this.enableConfirmButton();
-      });
-    });
-
-    // Confirm button
-    const confirmY = chipsStartY + round.options.length * (chipH + chipGap) + 4;
-    this.buildConfirmButton(vx, confirmY, vw, 46, () => this.onN1Confirm(round.correct, round.letter));
-  }
-
-  private onN1Confirm(correct: string, letter: TranslatorLetter) {
-    if (this.gameEnded || this.roundInProgress || !this.selectedOption) return;
-    this.roundInProgress = true;
-    const selected = this.selectedOption;
-    this.playClick();
-
-    if (selected === correct) {
-      this.hits += 1;
-      this.playSuccess();
-      runtimeGameBridge.emit({ type: "CORRECT_ANSWER", gameId: GAME_ID, stage: 1, pointsEarned: 20 });
-      if (this.visorCodeText) this.visorCodeText.setText(correct).setColor("#84cc16");
-      this.showCircuitAnimation(letter);
-      this.showToast(`✅ Correto! ${letter} = ${correct}`, COLORS.lime, 1600);
-      this.time.delayedCall(1700, () => {
-        if (this.gameEnded) return;
-        this.n1RoundIndex += 1;
-        this.roundInProgress = false;
-        this.showN1Round();
-      });
-    } else {
-      this.errors += 1;
-      this.playWrong();
-      runtimeGameBridge.emit({ type: "WRONG_ANSWER", gameId: GAME_ID, stage: 1, pointsEarned: -5 });
-      this.showToast("❌ Código errado! Consulte a tabela e tente novamente.", COLORS.red, 2200);
-      // Allow retry: reset selection
-      this.roundInProgress = false;
-      this.selectedOption = null;
-      this.selectedChipRedraw?.();
-      this.selectedChipRedraw = null;
-      if (this.visorCodeText) this.visorCodeText.setText("_ _ _").setColor("#475569");
-      this.disableConfirmButton();
-    }
-  }
-
-  // ─── Circuit Animation ───────────────────────────────────────────────────────
-
-  private showCircuitAnimation(letter: TranslatorLetter) {
-    const letters: TranslatorLetter[] = ["A", "B", "C", "D", "E", "F", "G", "H"];
-    const rowH = 48;
-    const startY = PANEL_Y + 46;
-
-    const idx = letters.indexOf(letter);
-    const ry = startY + 38 + idx * rowH;
-    const fromX = ZONE_DICT_X2;
-    const fromY = ry + (rowH - 4) / 2;
-    const toX = ZONE_VIS_X1 + 8;
-    const toY = PANEL_Y + 46 + 48;
-
-    const wire = this.add.graphics().setDepth(50);
-    this.tweens.addCounter({
-      from: 0, to: 1, duration: 600, ease: "Sine.easeIn",
-      onUpdate: (tween) => {
-        const t = tween.getValue();
-        wire.clear();
-        wire.lineStyle(4, COLORS.lime, t);
-        wire.beginPath();
-        wire.moveTo(fromX, fromY);
-        const mx = (fromX + toX) / 2;
-        wire.lineTo(mx, fromY);
-        wire.lineTo(mx, toY);
-        wire.lineTo(toX * t + fromX * (1 - t) + (toX - fromX) * t, toY);
-        wire.strokePath();
-      },
-      onComplete: () => {
-        this.tweens.add({ targets: wire, alpha: 0, duration: 400, delay: 200, onComplete: () => wire.destroy() });
-      },
-    });
-  }
-
-  // ─── N2 — Palavra → Binário ─────────────────────────────────────────────────
-
-  private showN2Word() {
-    this.clearContent();
-    const words = this.levelConfig.n2Words!;
-    if (this.n2WordIndex >= words.length) {
-      this.completeLevel();
-      return;
-    }
-    this.n2LetterIndex = 0;
-    this.n2AccumulatedCode = [];
-    this.renderN2State();
-  }
-
-  private renderN2State() {
-    this.clearContent();
-    const words = this.levelConfig.n2Words!;
-    const wordDef = words[this.n2WordIndex];
-    const currentLetter = wordDef.letters[this.n2LetterIndex];
-
-    this.drawProgressDots(words.length, this.n2WordIndex);
-
-    const vx = ZONE_VIS_X1;
-    const vw = ZONE_VIS_X2 - ZONE_VIS_X1;
-
-    // ── Word + all slots visor ──────────────────────────────────────────────
-    const visorTop = PANEL_Y + 46;
-    const visorH = 110;
-    const visorBg = this.addContent(this.add.graphics().setDepth(10));
-    visorBg.fillStyle(COLORS.darker, 1);
-    visorBg.fillRoundedRect(vx, visorTop, vw, visorH, 12);
-    visorBg.lineStyle(3, COLORS.lime, 0.8);
-    visorBg.strokeRoundedRect(vx, visorTop, vw, visorH, 12);
-    visorBg.fillStyle(COLORS.lime, 0.7);
-    [[vx + 14, visorTop + 14], [vx + vw - 14, visorTop + 14],
-     [vx + 14, visorTop + visorH - 14], [vx + vw - 14, visorTop + visorH - 14]].forEach(
-      ([cx, cy]) => visorBg.fillCircle(cx, cy, 5)
-    );
-
-    // Show each letter of the word as a column: letter on top, code slot below
-    const nLetters = wordDef.letters.length;
-    const colW = Math.min(120, (vw - 20) / nLetters);
-    const colStartX = vx + (vw - colW * nLetters) / 2;
-    this.n2SlotTexts = [];
-
-    wordDef.letters.forEach((ch, i) => {
-      const colCX = colStartX + i * colW + colW / 2;
-      const isDone = i < this.n2LetterIndex;
-      const isActive = i === this.n2LetterIndex;
-      const letterColor = isDone ? "#84cc16" : isActive ? "#06b6d4" : "#94a3b8";
-
-      // Letter
-      this.addContent(this.addSharpText(colCX, visorTop + 32, ch, {
-        fontSize: "26px", fontFamily: "Arial Black, Arial", color: letterColor,
-        stroke: "#0d0528", strokeThickness: 4,
-      }).setOrigin(0.5).setDepth(12));
-
-      // Divider line between letter and code
-      const divider = this.addContent(this.add.graphics().setDepth(11));
-      divider.lineStyle(1, isActive ? COLORS.cyan : COLORS.slate, 0.5);
-      divider.lineBetween(colStartX + i * colW + 6, visorTop + 54, colStartX + (i + 1) * colW - 6, visorTop + 54);
-
-      // Code slot
-      const codeStr = isDone ? this.n2AccumulatedCode[i] : (isActive ? "___" : "___");
-      const codeColor = isDone ? "#84cc16" : isActive ? "#475569" : "#1e293b";
-      const slotText = this.addContent(this.addSharpText(colCX, visorTop + 80, codeStr, {
-        fontSize: "20px", fontFamily: "Courier New, monospace", color: codeColor,
-        stroke: "#060316", strokeThickness: 2,
-      }).setOrigin(0.5).setDepth(12));
-
-      if (isActive) {
-        this.visorCodeText = slotText;
-        this.n2SlotTexts.push(slotText);
-      } else {
-        this.n2SlotTexts.push(slotText);
-      }
-    });
-
-    // ── Question banner ──────────────────────────────────────────────────────
-    const qBg = this.addContent(this.add.graphics().setDepth(10));
-    qBg.fillStyle(COLORS.purple, 0.7);
-    qBg.fillRoundedRect(vx, PANEL_Y + 172, vw, 42, 12);
-    this.addContent(this.addSharpText(vx + vw / 2, PANEL_Y + 194, `Código de "${currentLetter}"?`, {
-      fontSize: "20px", fontFamily: "Arial Black, Arial", color: "#e2e8f0",
-      stroke: "#0d0528", strokeThickness: 3,
-    }).setOrigin(0.5).setDepth(12));
-
-    // ── Selectable chips ─────────────────────────────────────────────────────
-    const correctCode = wordDef.codes[this.n2LetterIndex];
-    const wrongOptions = this.getN2WrongOptions(correctCode);
-    const options = Phaser.Utils.Array.Shuffle([correctCode, ...wrongOptions]) as string[];
-
-    const chipH = 52;
-    const chipGap = 10;
-    const chipsStartY = PANEL_Y + 226;
-    options.forEach((opt, i) => {
-      const cy = chipsStartY + i * (chipH + chipGap);
-      this.buildSelectableChip(vx, cy, vw, chipH, opt, () => {
-        if (this.gameEnded || this.roundInProgress) return;
-        this.selectedOption = opt;
-        // Update active slot preview
-        if (this.visorCodeText) this.visorCodeText.setText(opt).setColor("#06b6d4");
-        this.enableConfirmButton();
-      });
-    });
-
-    const confirmY = chipsStartY + options.length * (chipH + chipGap) + 4;
-    this.buildConfirmButton(vx, confirmY, vw, 44, () => this.onN2Confirm(correctCode, currentLetter));
-  }
-
-  private getN2WrongOptions(correct: string): string[] {
-    const all = ["000", "001", "010", "011", "100", "101", "110", "111"];
-    const wrong = all.filter((c) => c !== correct);
-    Phaser.Utils.Array.Shuffle(wrong);
-    return wrong.slice(0, 2);
-  }
-
-  private onN2Confirm(correct: string, letter: TranslatorLetter) {
-    if (this.gameEnded || this.roundInProgress || !this.selectedOption) return;
-    this.roundInProgress = true;
-    const selected = this.selectedOption;
-    this.playClick();
-
-    const words = this.levelConfig.n2Words!;
-    const wordDef = words[this.n2WordIndex];
-
-    if (selected === correct) {
-      this.hits += 1;
-      this.playSuccess();
-      runtimeGameBridge.emit({ type: "CORRECT_ANSWER", gameId: GAME_ID, stage: 2, pointsEarned: 20 });
-      // Confirm slot with green
-      if (this.visorCodeText) this.visorCodeText.setText(correct).setColor("#84cc16");
-      this.n2AccumulatedCode.push(correct);
-      this.showToast(`✅ ${letter} = ${correct}`, COLORS.lime, 1200);
-
-      if (this.n2LetterIndex >= wordDef.letters.length - 1) {
-        // Word complete
-        this.time.delayedCall(1400, () => {
-          if (this.gameEnded) return;
-          this.n2WordIndex += 1;
-          this.roundInProgress = false;
-          this.showN2Word();
-        });
-      } else {
-        this.time.delayedCall(1300, () => {
-          if (this.gameEnded) return;
-          this.n2LetterIndex += 1;
-          this.roundInProgress = false;
-          this.renderN2State();
-        });
-      }
-    } else {
-      this.errors += 1;
-      this.playWrong();
-      runtimeGameBridge.emit({ type: "WRONG_ANSWER", gameId: GAME_ID, stage: 2, pointsEarned: -5 });
-      this.showToast("❌ Código errado! Consulte a tabela e tente novamente.", COLORS.red, 2200);
-      this.roundInProgress = false;
-      this.selectedOption = null;
-      this.selectedChipRedraw?.();
-      this.selectedChipRedraw = null;
-      if (this.visorCodeText) this.visorCodeText.setText("___").setColor("#475569");
-      this.disableConfirmButton();
-    }
-  }
-
-  // ─── N3 — Binário → Letra ────────────────────────────────────────────────────
-
-  private showN3Word() {
-    this.clearContent();
-    const words = this.levelConfig.n3Words!;
-    if (this.n3WordIndex >= words.length) {
-      this.completeFinalLevel();
-      return;
-    }
-    this.n3GroupIndex = 0;
-    this.n3DecodedLetters = [];
-    this.renderN3State();
-  }
-
-  private renderN3State() {
-    this.clearContent();
-    const words = this.levelConfig.n3Words!;
-    const wordDef = words[this.n3WordIndex];
-    const currentGroup = wordDef.groups[this.n3GroupIndex];
-
-    this.drawProgressDots(words.length, this.n3WordIndex);
-
-    const vx = ZONE_VIS_X1;
-    const vw = ZONE_VIS_X2 - ZONE_VIS_X1;
-
-    // ── Visor: code groups with current highlighted ──────────────────────────
-    const visorTop = PANEL_Y + 46;
-    const visorH = 96;
-    const visorBg = this.addContent(this.add.graphics().setDepth(10));
-    visorBg.fillStyle(COLORS.darker, 1);
-    visorBg.fillRoundedRect(vx, visorTop, vw, visorH, 12);
-    visorBg.lineStyle(3, COLORS.lime, 0.8);
-    visorBg.strokeRoundedRect(vx, visorTop, vw, visorH, 12);
-    visorBg.fillStyle(COLORS.lime, 0.7);
-    [[vx + 14, visorTop + 14], [vx + vw - 14, visorTop + 14],
-     [vx + 14, visorTop + visorH - 14], [vx + vw - 14, visorTop + visorH - 14]].forEach(
-      ([cx, cy]) => visorBg.fillCircle(cx, cy, 5)
-    );
-
-    const groups = wordDef.groups;
-    const nGroups = groups.length;
-    const gColW = Math.min(110, (vw - 20) / nGroups);
-    const gStartX = vx + (vw - gColW * nGroups) / 2;
-
-    groups.forEach((g, i) => {
-      const colCX = gStartX + i * gColW + gColW / 2;
-      const isDone = i < this.n3GroupIndex;
-      const isActive = i === this.n3GroupIndex;
-
-      // Highlight active group with bracket box
-      if (isActive) {
-        const gBg = this.addContent(this.add.graphics().setDepth(11));
-        gBg.fillStyle(COLORS.cyan, 0.15);
-        gBg.fillRoundedRect(gStartX + i * gColW + 2, visorTop + 8, gColW - 4, 42, 6);
-        gBg.lineStyle(2, COLORS.cyan, 0.7);
-        gBg.strokeRoundedRect(gStartX + i * gColW + 2, visorTop + 8, gColW - 4, 42, 6);
-      }
-
-      const codeColor = isDone ? "#84cc16" : isActive ? "#06b6d4" : "#94a3b8";
-      this.addContent(this.addSharpText(colCX, visorTop + 30, g, {
-        fontSize: "20px", fontFamily: "Courier New, monospace", color: codeColor,
-        stroke: "#060316", strokeThickness: 2,
-      }).setOrigin(0.5).setDepth(12));
-
-      // Decoded letter slot below
-      const letterStr = isDone ? this.n3DecodedLetters[i] : (isActive ? "_" : "_");
-      const letterColor = isDone ? "#84cc16" : "#1e293b";
-      this.addContent(this.addSharpText(colCX, visorTop + 72, letterStr, {
-        fontSize: "22px", fontFamily: "Arial Black, Arial", color: letterColor,
-        stroke: "#0d0528", strokeThickness: 3,
-      }).setOrigin(0.5).setDepth(12));
-    });
-
-    // ── Question ──────────────────────────────────────────────────────────────
-    const qBg = this.addContent(this.add.graphics().setDepth(10));
-    qBg.fillStyle(COLORS.cyan, 0.15);
-    qBg.fillRoundedRect(vx, PANEL_Y + 158, vw, 40, 10);
-    this.addContent(this.addSharpText(vx + vw / 2, PANEL_Y + 179, `"${currentGroup}" → qual letra?`, {
-      fontSize: "20px", fontFamily: "Arial Black, Arial", color: "#e2e8f0",
-      stroke: "#0d0528", strokeThickness: 3,
-    }).setOrigin(0.5).setDepth(12));
-
-    // ── Selectable chips ─────────────────────────────────────────────────────
-    const options = wordDef.options[this.n3GroupIndex];
-    const chipH = 52;
-    const chipGap = 10;
-    const chipsStartY = PANEL_Y + 210;
-    options.forEach((opt, i) => {
-      const cy = chipsStartY + i * (chipH + chipGap);
-      this.buildSelectableChip(vx, cy, vw, chipH, opt, () => {
-        if (this.gameEnded || this.roundInProgress) return;
-        this.selectedOption = opt;
-        this.enableConfirmButton();
-      });
-    });
-
-    const targetLetter = wordDef.letters[this.n3GroupIndex];
-    const confirmY = chipsStartY + options.length * (chipH + chipGap) + 4;
-    this.buildConfirmButton(vx, confirmY, vw, 44, () => this.onN3Confirm(targetLetter, currentGroup));
-  }
-
-  private onN3Confirm(correct: TranslatorLetter, group: string) {
-    if (this.gameEnded || this.roundInProgress || !this.selectedOption) return;
-    this.roundInProgress = true;
-    const selected = this.selectedOption;
-    this.playClick();
-
-    const words = this.levelConfig.n3Words!;
-    const wordDef = words[this.n3WordIndex];
-
-    if (selected === correct) {
-      this.hits += 1;
-      this.playSuccess();
-      runtimeGameBridge.emit({ type: "CORRECT_ANSWER", gameId: GAME_ID, stage: 3, pointsEarned: 20 });
-      this.n3DecodedLetters.push(correct);
-      this.showToast(`✅ ${group} = ${correct}`, COLORS.lime, 1200);
-
-      if (this.n3GroupIndex >= wordDef.groups.length - 1) {
-        const decodedWord = wordDef.letters.join("");
-        this.time.delayedCall(400, () => {
-          if (this.gameEnded) return;
-          this.showToast(`🎉 Palavra: ${decodedWord}!`, COLORS.lime, 1800);
-          this.time.delayedCall(1800, () => {
-            if (this.gameEnded) return;
-            this.n3WordIndex += 1;
-            this.roundInProgress = false;
-            this.showN3Word();
-          });
-        });
-      } else {
-        this.time.delayedCall(1300, () => {
-          if (this.gameEnded) return;
-          this.n3GroupIndex += 1;
-          this.roundInProgress = false;
-          this.renderN3State();
-        });
-      }
-    } else {
-      this.errors += 1;
-      this.playWrong();
-      runtimeGameBridge.emit({ type: "WRONG_ANSWER", gameId: GAME_ID, stage: 3, pointsEarned: -5 });
-      this.showToast("❌ Letra errada! Consulte a tabela e tente novamente.", COLORS.red, 2200);
-      this.roundInProgress = false;
-      this.selectedOption = null;
-      this.selectedChipRedraw?.();
-      this.selectedChipRedraw = null;
-      this.disableConfirmButton();
-    }
-  }
-
-  // ─── Level Completion ────────────────────────────────────────────────────────
-
-  private completeLevel() {
-    if (this.gameEnded) return;
-    this.gameEnded = true;
-    this.timerEvent?.remove(false);
-    this.input.enabled = false;
-    this.playSuccess();
-    const nextLevel = (this.levelConfig.level + 1) as TranslatorLevelNumber;
-    runtimeGameBridge.emit({
-      type: "CHECKPOINT",
-      gameId: GAME_ID,
-      stage: nextLevel,
-      progress: this.levelConfig.level / 3,
-      score: this.getScore(),
-      hits: this.hits,
-      errors: this.errors,
-    });
-    this.time.delayedCall(400, () => this.showLevelCompleteScreen(nextLevel));
-  }
-
-  private completeFinalLevel() {
-    if (this.gameEnded) return;
-    this.gameEnded = true;
-    this.timerEvent?.remove(false);
-    this.input.enabled = false;
-    this.playSuccess();
-    runtimeGameBridge.emit({ type: "GAME_COMPLETED", gameId: GAME_ID, stage: 3 });
-    this.time.delayedCall(400, () => this.showFinalCompleteScreen());
-  }
-
-  // ─── Flow Screens ─────────────────────────────────────────────────────────────
-
-  private showLevelCompleteScreen(nextLevel: TranslatorLevelNumber) {
-    this.clearOverlay();
-    const bg = this.addOverlay(this.add.rectangle(640, 360, 1280, 720, COLORS.ink, 0.62).setDepth(60));
-    bg.setInteractive();
-
-    const panel = this.addOverlay(this.add.container(640, 360).setDepth(62));
-
-    const shadow = this.add.graphics();
-    shadow.fillStyle(0x000000, 0.18);
-    shadow.fillRoundedRect(-278, -178, 556, 356, 30);
-
-    const panelBg = this.add.graphics();
-    panelBg.fillStyle(COLORS.dark, 0.97);
-    panelBg.fillRoundedRect(-290, -190, 580, 360, 30);
-    panelBg.lineStyle(5, COLORS.cyan, 0.9);
-    panelBg.strokeRoundedRect(-290, -190, 580, 360, 30);
-
-    const topBar = this.add.graphics();
-    topBar.fillStyle(COLORS.purple, 1);
-    topBar.fillRoundedRect(-200, -206, 400, 28, 14);
-
-    const stars = this.addSharpText(0, -134, "⭐⭐", { fontSize: "52px", fontFamily: "Arial Black, Arial" }).setOrigin(0.5);
-    const title = this.addSharpText(0, -70, "Parabéns!", {
-      fontSize: "42px", fontFamily: "Arial Black, Arial", color: "#06b6d4",
-      stroke: "#0d0528", strokeThickness: 6,
-    }).setOrigin(0.5);
-    const sub = this.addSharpText(0, -14, `Nível ${this.levelConfig.level} concluído!`, {
-      fontSize: "22px", fontFamily: "Arial Black, Arial", color: "#e2e8f0", align: "center",
-    }).setOrigin(0.5);
-    const next = this.addSharpText(0, 38, `Preparando nível ${nextLevel}...`, {
-      fontSize: "20px", fontFamily: "Arial Black, Arial", color: "#84cc16", align: "center",
-    }).setOrigin(0.5);
-
-    const dots = [1, 2, 3].map((num, i) => {
-      const d = this.add.graphics();
-      d.fillStyle(num <= this.levelConfig.level ? COLORS.cyan : num === nextLevel ? COLORS.amber : COLORS.gray, 1);
-      d.fillCircle(-28 + i * 28, 88, 9);
-      d.lineStyle(2, COLORS.white, 0.8);
-      d.strokeCircle(-28 + i * 28, 88, 9);
-      return d;
-    });
-
-    panel.add([shadow, panelBg, topBar, stars, title, sub, next, ...dots]);
-    this.animateModal(panel);
-
-    for (let i = 0; i < 14; i++) {
-      const cx = Phaser.Math.Between(300, 980);
-      const cy = Phaser.Math.Between(120, 600);
-      const c = [COLORS.cyan, COLORS.purple, COLORS.lime, COLORS.violet, COLORS.teal][i % 5];
-      const conf = this.addOverlay(this.add.graphics().setDepth(63));
-      conf.fillStyle(c, 0.85);
-      conf.fillRoundedRect(cx - 8, cy - 4, 16, 8, 4);
-      this.tweens.add({ targets: conf, alpha: 0, y: cy + 56, duration: 1600, delay: i * 90 });
+    /* ── partida ───────────────────────────────────────────────────── */
+
+    private levelIdx = 0
+    private caseIdx = 0
+    private points = 0
+    private hits = 0
+    private errors = 0
+    private isMuted = false
+    private state: CaseState = 'briefing'
+    private locked = false
+    private ended = false
+
+    /** Todo callback atrasado captura este valor e desiste se ele mudou. */
+    private gen = 0
+
+    /* ── progresso dentro do caso ──────────────────────────────────── */
+
+    /** Níveis 1 e 2: quantas letras já chegaram na máquina. */
+    private sent = 0
+    /** Nível 3: qual fileira está aberta no painel. −1 = nenhuma. */
+    private picked = -1
+
+    /* ── interface fixa ────────────────────────────────────────────── */
+
+    private hud!: Hud
+    private question!: QuestionLine
+    private robot!: Robot
+    private screen!: Screen
+    private wire!: Wire
+    private readout!: Readout
+    private bank!: SwitchBank
+    private table!: TableStrip
+    private send!: BigButton
+
+    /** A última leitura das chaves, só para saber QUAL delas acabou de virar. */
+    private lastBits: boolean[] = BITS.map(() => false)
+
+    private unsubPlatform?: () => void
+
+    constructor() {
+        super({ key: 'GameScene' })
     }
 
-    this.time.delayedCall(1800, () =>
-      this.scene.restart({ level: nextLevel, hits: this.hits, errors: this.errors }),
-    );
-  }
-
-  private showFinalCompleteScreen() {
-    this.clearOverlay();
-    const bg = this.addOverlay(this.add.rectangle(640, 360, 1280, 720, COLORS.ink, 0.68).setDepth(60));
-    bg.setInteractive();
-
-    const panel = this.addOverlay(this.add.container(640, 360).setDepth(62));
-
-    const shadow = this.add.graphics();
-    shadow.fillStyle(0x000000, 0.22);
-    shadow.fillRoundedRect(-308, -210, 616, 420, 34);
-
-    const panelBg = this.add.graphics();
-    panelBg.fillStyle(COLORS.dark, 0.97);
-    panelBg.fillRoundedRect(-320, -222, 640, 424, 34);
-    panelBg.lineStyle(6, COLORS.lime, 0.9);
-    panelBg.strokeRoundedRect(-320, -222, 640, 424, 34);
-
-    const ribbon = this.add.graphics();
-    ribbon.fillStyle(COLORS.purple, 1);
-    ribbon.fillRoundedRect(-220, -238, 440, 28, 14);
-
-    const stars = this.addSharpText(0, -164, "⭐⭐⭐", { fontSize: "54px", fontFamily: "Arial Black, Arial" }).setOrigin(0.5);
-    this.tweens.add({ targets: stars, scale: { from: 0.9, to: 1.08 }, duration: 700, yoyo: true, repeat: -1 });
-
-    const title = this.addSharpText(0, -90, "Parabéns!", {
-      fontSize: "44px", fontFamily: "Arial Black, Arial", color: "#06b6d4",
-      stroke: "#0d0528", strokeThickness: 7,
-    }).setOrigin(0.5);
-    const sub = this.addSharpText(0, -30, "Você completou todos os níveis do\nTradutor da Máquina!", {
-      fontSize: "24px", fontFamily: "Arial Black, Arial", color: "#e2e8f0", align: "center",
-    }).setOrigin(0.5);
-    const desc = this.addSharpText(0, 38, `Pontuação: ${this.getScore()} · Acertos: ${this.hits} · Erros: ${this.errors}`, {
-      fontSize: "19px", fontFamily: "Arial Black, Arial", color: "#94a3b8", align: "center",
-    }).setOrigin(0.5);
-
-    const sparkles = Array.from({ length: 16 }, (_, i) => {
-      const sp = this.add.graphics();
-      sp.fillStyle([COLORS.cyan, COLORS.lime, COLORS.violet, COLORS.purple, COLORS.teal][i % 5], 0.9);
-      sp.fillCircle(Phaser.Math.Between(-290, 290), Phaser.Math.Between(-200, 190), Phaser.Math.Between(4, 9));
-      this.tweens.add({ targets: sp, alpha: { from: 0.3, to: 1 }, scale: { from: 0.7, to: 1.4 }, duration: 640 + i * 40, yoyo: true, repeat: -1 });
-      return sp;
-    });
-
-    const exitBg = this.add.graphics();
-    exitBg.fillStyle(COLORS.cyan, 1);
-    exitBg.fillRoundedRect(-130, 82, 260, 52, 26);
-    exitBg.lineStyle(4, COLORS.white, 1);
-    exitBg.strokeRoundedRect(-130, 82, 260, 52, 26);
-    const exitTxt = this.addSharpText(0, 108, "Voltar aos Jogos", {
-      fontSize: "21px", fontFamily: "Arial Black, Arial", color: "#0d0528",
-      stroke: "#06b6d4", strokeThickness: 3,
-    }).setOrigin(0.5);
-
-    panel.add([shadow, panelBg, ribbon, ...sparkles, stars, title, sub, desc, exitBg, exitTxt]);
-    this.animateModal(panel);
-
-    const ez = this.addOverlay(this.add.zone(640, 360 + 108 * MODAL_SCALE, 278 * MODAL_SCALE, 64 * MODAL_SCALE).setDepth(70));
-    ez.setInteractive({ useHandCursor: true });
-    ez.on("pointerover", () => this.input.setDefaultCursor("pointer"));
-    ez.on("pointerout", () => this.input.setDefaultCursor("default"));
-    ez.on("pointerdown", () => { this.playClick(); EventBus.emit("exit-game"); });
-  }
-
-  private showGameOverScreen() {
-    this.input.enabled = true;
-    this.clearOverlay();
-
-    const bg = this.addOverlay(this.add.rectangle(640, 360, 1280, 720, COLORS.ink, 0.72).setDepth(60));
-    bg.setInteractive();
-
-    const panel = this.addOverlay(this.add.container(640, 360).setDepth(62));
-
-    const shadow = this.add.graphics();
-    shadow.fillStyle(0x000000, 0.22);
-    shadow.fillRoundedRect(-298, -196, 596, 392, 30);
-
-    const panelBg = this.add.graphics();
-    panelBg.fillStyle(COLORS.dark, 0.97);
-    panelBg.fillRoundedRect(-310, -208, 620, 396, 30);
-    panelBg.lineStyle(5, COLORS.red, 0.8);
-    panelBg.strokeRoundedRect(-310, -208, 620, 396, 30);
-
-    const topBar = this.add.graphics();
-    topBar.fillStyle(COLORS.red, 1);
-    topBar.fillRoundedRect(-210, -224, 420, 28, 14);
-
-    const icon = this.addSharpText(0, -144, "⏰", { fontSize: "54px", fontFamily: "Arial Black, Arial" }).setOrigin(0.5);
-    const title = this.addSharpText(0, -78, "GAME OVER", {
-      fontSize: "42px", fontFamily: "Arial Black, Arial", color: "#dc2626",
-      stroke: "#0d0528", strokeThickness: 6,
-    }).setOrigin(0.5);
-    const reason = this.addSharpText(0, -22, "⏰ Tempo esgotado!", {
-      fontSize: "24px", fontFamily: "Arial Black, Arial", color: "#94a3b8", align: "center",
-    }).setOrigin(0.5);
-    const stats = this.addSharpText(0, 28, `Acertos: ${this.hits}  ·  Erros: ${this.errors}  ·  Pontos: ${this.getScore()}`, {
-      fontSize: "18px", fontFamily: "Arial Black, Arial", color: "#64748b",
-    }).setOrigin(0.5);
-
-    const retryBg = this.add.graphics();
-    retryBg.fillStyle(COLORS.green, 1);
-    retryBg.fillRoundedRect(-262, 68, 240, 52, 26);
-    retryBg.lineStyle(4, COLORS.white, 1);
-    retryBg.strokeRoundedRect(-262, 68, 240, 52, 26);
-    const retryTxt = this.addSharpText(-142, 94, "🔄 Tentar Novamente", {
-      fontSize: "17px", fontFamily: "Arial Black, Arial", color: "#ffffff",
-      stroke: "#14532d", strokeThickness: 3,
-    }).setOrigin(0.5);
-
-    const exitBg = this.add.graphics();
-    exitBg.fillStyle(COLORS.amber, 1);
-    exitBg.fillRoundedRect(22, 68, 240, 52, 26);
-    exitBg.lineStyle(4, COLORS.white, 1);
-    exitBg.strokeRoundedRect(22, 68, 240, 52, 26);
-    const exitTxt = this.addSharpText(142, 94, "🚪 Sair", {
-      fontSize: "20px", fontFamily: "Arial Black, Arial", color: "#0d0528",
-      stroke: "#78350f", strokeThickness: 3,
-    }).setOrigin(0.5);
-
-    panel.add([shadow, panelBg, topBar, icon, title, reason, stats, retryBg, retryTxt, exitBg, exitTxt]);
-    this.animateModal(panel);
-
-    const rz = this.addOverlay(
-      this.add.zone(640 - 142 * MODAL_SCALE, 360 + 94 * MODAL_SCALE, 258 * MODAL_SCALE, 64 * MODAL_SCALE).setDepth(70),
-    );
-    rz.setInteractive({ useHandCursor: true });
-    rz.on("pointerover", () => this.input.setDefaultCursor("pointer"));
-    rz.on("pointerout", () => this.input.setDefaultCursor("default"));
-    rz.on("pointerdown", () => {
-      this.playClick();
-      this.scene.restart({ level: this.levelConfig.level, hits: 0, errors: 0 });
-    });
-
-    const ez = this.addOverlay(
-      this.add.zone(640 + 142 * MODAL_SCALE, 360 + 94 * MODAL_SCALE, 258 * MODAL_SCALE, 64 * MODAL_SCALE).setDepth(70),
-    );
-    ez.setInteractive({ useHandCursor: true });
-    ez.on("pointerover", () => this.input.setDefaultCursor("pointer"));
-    ez.on("pointerout", () => this.input.setDefaultCursor("default"));
-    ez.on("pointerdown", () => { this.playClick(); EventBus.emit("exit-game"); });
-  }
-
-  // ─── Helpers ──────────────────────────────────────────────────────────────────
-
-  private drawProgressDots(total: number, current: number) {
-    const dotsCont = this.addContent(this.add.container(640, PANEL_Y + 22).setDepth(12));
-    const offset = -((total - 1) * 18) / 2;
-    for (let i = 0; i < total; i++) {
-      const d = this.add.graphics();
-      d.fillStyle(i < current ? COLORS.lime : i === current ? COLORS.cyan : COLORS.gray, 1);
-      d.fillCircle(offset + i * 18, 0, 7);
-      d.lineStyle(2, COLORS.white, 0.8);
-      d.strokeCircle(offset + i * 18, 0, 7);
-      dotsCont.add(d);
+    /**
+     * `level` é 1-based e `phase` é 0-based. Os dois são grampeados ao que
+     * existe de verdade: um `phase: 7` num nível de três casos faria
+     * `this.caso` devolver `undefined`, e o estouro apareceria três telas
+     * adiante sem nenhuma pista de que veio daqui.
+     */
+    init(data: { level?: number; phase?: number; points?: number }) {
+        this.levelIdx = Phaser.Math.Clamp(data?.level ?? 1, 1, LEVELS.length) - 1
+        this.caseIdx = Phaser.Math.Clamp(
+            data?.phase ?? 0, 0, LEVELS[this.levelIdx].cases.length - 1,
+        )
+        this.points = data?.points ?? 0
+        this.hits = 0
+        this.errors = 0
+        this.isMuted = false
+        this.state = 'briefing'
+        this.locked = false
+        this.ended = false
+        this.gen = 0
+        this.sent = 0
+        this.picked = -1
     }
-  }
 
-  // Selectable chip: neutral by default, turns highlighted on click; deselects previous
-  private buildSelectableChip(
-    x: number, y: number, w: number, h: number,
-    label: string,
-    onSelect: () => void,
-  ) {
-    const chipBg = this.addContent(this.add.graphics().setDepth(12));
+    create() {
+        this.events.once(Phaser.Scenes.Events.SHUTDOWN, this.shutdownScene, this)
 
-    const drawNeutral = () => {
-      chipBg.clear();
-      chipBg.fillStyle(COLORS.dark, 0.9);
-      chipBg.fillRoundedRect(x, y, w, h, h / 2);
-      chipBg.lineStyle(3, COLORS.violet, 0.7);
-      chipBg.strokeRoundedRect(x, y, w, h, h / 2);
-    };
-    const drawSelected = () => {
-      chipBg.clear();
-      chipBg.fillStyle(COLORS.cyan, 0.22);
-      chipBg.fillRoundedRect(x, y, w, h, h / 2);
-      chipBg.lineStyle(3, COLORS.cyan, 1);
-      chipBg.strokeRoundedRect(x, y, w, h, h / 2);
-    };
-    drawNeutral();
+        createRoom(this)
 
-    this.addContent(this.addSharpText(x + w / 2, y + h / 2, label, {
-      fontSize: "26px", fontFamily: "Courier New, monospace", color: "#84cc16",
-      stroke: "#0d0528", strokeThickness: 3, align: "center",
-    }).setOrigin(0.5).setDepth(14));
+        this.hud = createHud(this, { onHelp: () => this.replayTutorial() })
+        this.hud.setLevel(this.level.level)
+        this.hud.setTitle(this.level.title)
 
-    const zone = this.addContent(this.add.zone(x + w / 2, y + h / 2, w, h).setDepth(55));
-    zone.setInteractive({ useHandCursor: true });
-    zone.on("pointerover", () => this.input.setDefaultCursor("pointer"));
-    zone.on("pointerout", () => this.input.setDefaultCursor("default"));
-    zone.on("pointerdown", () => {
-      // Restore previous chip to neutral
-      this.selectedChipRedraw?.();
-      // Select this chip
-      drawSelected();
-      this.selectedChipRedraw = drawNeutral;
-      onSelect();
-    });
-  }
+        this.question = createQuestionLine(this)
 
-  // Confirm button: starts disabled, enabled by enableConfirmButton()
-  private buildConfirmButton(x: number, y: number, w: number, h: number, onConfirm: () => void) {
-    const btnBg = this.addContent(this.add.graphics().setDepth(12));
-    this.confirmBtnBg = btnBg;
+        /*
+         * A máquina, o painel e a tabela nascem UMA vez e vivem o nível
+         * inteiro. Só o conteúdo deles troca a cada caso: reconstruir sete
+         * chaves e doze fichas a cada letra seria piscar a tela inteira na
+         * cara da criança por nada.
+         */
+        this.robot = createRobot(this)
+        this.screen = createScreen(this)
+        this.wire = createWire(this)
+        this.readout = createReadout(this)
 
-    const drawDisabled = () => {
-      btnBg.clear();
-      btnBg.fillStyle(COLORS.gray, 0.25);
-      btnBg.fillRoundedRect(x, y, w, h, h / 2);
-      btnBg.lineStyle(2, COLORS.slate, 0.35);
-      btnBg.strokeRoundedRect(x, y, w, h, h / 2);
-    };
-    const drawEnabled = () => {
-      btnBg.clear();
-      btnBg.fillStyle(COLORS.teal, 1);
-      btnBg.fillRoundedRect(x, y, w, h, h / 2);
-      btnBg.lineStyle(3, COLORS.white, 1);
-      btnBg.strokeRoundedRect(x, y, w, h, h / 2);
-    };
-    drawDisabled();
-    this.confirmBtnDrawEnabled = drawEnabled;
-    this.confirmBtnDrawDisabled = drawDisabled;
-    this.confirmBtnEnabled = false;
+        this.bank = createSwitchBank(this, {
+            onChange: bits => this.onBits(bits),
+        })
 
-    const btnText = this.addContent(this.addSharpText(x + w / 2, y + h / 2, "✓ Confirmar", {
-      fontSize: "19px", fontFamily: "Arial Black, Arial", color: "#334155",
-      stroke: "#0d0528", strokeThickness: 2,
-    }).setOrigin(0.5).setDepth(14));
-    this.confirmBtnText = btnText;
+        this.table = createTableStrip(this, {
+            onPick: entry => this.onTablePick(entry.char),
+        })
 
-    const zone = this.addContent(this.add.zone(x + w / 2, y + h / 2, w, h).setDepth(56));
-    zone.setInteractive({ useHandCursor: false });
-    zone.on("pointerover", () => {
-      if (this.confirmBtnEnabled) this.input.setDefaultCursor("pointer");
-    });
-    zone.on("pointerout", () => this.input.setDefaultCursor("default"));
-    zone.on("pointerdown", () => {
-      if (!this.confirmBtnEnabled) return;
-      onConfirm();
-    });
-  }
+        this.send = createBigButton(this, {
+            x: PANEL.cx, y: PANEL.runY, w: PANEL.runW, h: PANEL.runH,
+            label: 'ENVIAR', tone: C.ok, onClick: () => void this.onSend(),
+        })
 
-  private enableConfirmButton() {
-    if (!this.confirmBtnBg || !this.confirmBtnText) return;
-    this.confirmBtnEnabled = true;
-    this.confirmBtnDrawEnabled?.();
-    this.confirmBtnText.setColor("#0d0528");
-  }
+        EventBus.on('mute-audio', this.onMuteAudio, this)
+        EventBus.on('show-tutorial', this.replayTutorial, this)
+        this.registerPlatformCommands()
 
-  private disableConfirmButton() {
-    if (!this.confirmBtnBg || !this.confirmBtnText) return;
-    this.confirmBtnEnabled = false;
-    this.confirmBtnDrawDisabled?.();
-    this.confirmBtnText.setColor("#334155");
-  }
+        runtimeGameBridge.emit({ type: 'GAME_READY', gameId: GAME_ID })
+        this.emitCheckpoint()
 
-  private addContent<T extends Phaser.GameObjects.GameObject>(o: T): T {
-    this.contentObjects.push(o);
-    return o;
-  }
+        // O tutorial é a abertura do NÍVEL, não de um caso qualquer.
+        void this.playCase(this.caseIdx === 0)
+    }
 
-  private clearContent() {
-    this.contentObjects.forEach((o) => o.destroy());
-    this.contentObjects = [];
-    // Reset per-round selection state
-    this.selectedOption = null;
-    this.selectedChipRedraw = null;
-    this.confirmBtnBg = null;
-    this.confirmBtnText = null;
-    this.confirmBtnEnabled = false;
-    this.confirmBtnDrawEnabled = null;
-    this.confirmBtnDrawDisabled = null;
-    this.visorCodeText = null;
-    this.n2SlotTexts = [];
-  }
+    private shutdownScene() {
+        this.gen += 1
+        EventBus.off('mute-audio', this.onMuteAudio, this)
+        EventBus.off('show-tutorial', this.replayTutorial, this)
+        this.unsubPlatform?.()
+        this.unsubPlatform = undefined
+        this.input.setDefaultCursor('default')
+    }
 
-  private addOverlay<T extends Phaser.GameObjects.GameObject>(o: T) { this.overlayObjects.push(o); return o; }
-  private clearOverlay() {
-    this.overlayObjects.forEach((o) => o.destroy());
-    this.overlayObjects = [];
-    this.input.setDefaultCursor("default");
-  }
+    /* ═══════════════════════════════════════════════ atalhos de estado */
 
-  private animateModal(m: Phaser.GameObjects.Container) {
-    m.setAlpha(0); m.setScale(0.88);
-    this.tweens.add({ targets: m, alpha: 1, scale: MODAL_SCALE, duration: 260, ease: "Back.easeOut" });
-  }
+    private get level(): Level { return LEVELS[this.levelIdx] }
+    private get caso(): Caso { return this.level.cases[this.caseIdx] }
 
-  private getScore() { return Math.max(0, this.hits * 20 - this.errors * 5); }
+    /** A letra que a máquina espera agora. */
+    private get target(): string {
+        const caso = this.caso
+        if (caso.mode === 'conserto') {
+            return this.picked >= 0 ? caso.word[this.picked] : ''
+        }
+        return caso.word[this.sent] ?? ''
+    }
 
-  private addSharpText(x: number, y: number, text: string, style: Phaser.Types.GameObjects.Text.TextStyle) {
-    const obj = this.add.text(x, y, text, style);
-    obj.setResolution(2);
-    return obj;
-  }
+    /**
+     * Se o botão ENVIAR aceita toque agora.
+     *
+     * Uma pergunta, uma resposta, um lugar. Quando isso morava espalhado pelos
+     * callbacks, bastava um caminho esquecer de reabilitar para o botão ficar
+     * morto até o fim da fase.
+     */
+    private canSend(): boolean {
+        if (this.state !== 'montando' || this.locked || this.ended) return false
+        if (this.caso.mode === 'conserto') return this.picked >= 0
+        return true
+    }
 
-  private showToast(message: string, color: number, duration = 2200) {
-    const container = this.add.container(640, 618).setDepth(200);
-    const bg = this.add.graphics();
-    bg.fillStyle(color, 0.96);
-    bg.fillRoundedRect(-500, -44, 1000, 88, 24);
-    bg.lineStyle(4, COLORS.white, 0.9);
-    bg.strokeRoundedRect(-500, -44, 1000, 88, 24);
-    const txt = this.addSharpText(0, 0, message, {
-      fontSize: "20px", fontFamily: "Arial Black, Arial", color: "#ffffff",
-      align: "center", wordWrap: { width: 900 },
-    }).setOrigin(0.5);
-    container.add([bg, txt]);
-    this.tweens.add({ targets: container, y: 600, alpha: 0, duration: 300, delay: duration, onComplete: () => container.destroy() });
-  }
+    private refreshSend() {
+        this.send.setEnabled(this.canSend())
+    }
 
-  // ─── Audio ────────────────────────────────────────────────────────────────────
+    /* ═══════════════════════════════════════════════════ ciclo do caso */
 
-  private playClick() { this.playTone(520, 0.05, "sine", 0.05); }
-  private playSuccess() {
-    this.playTone(660, 0.08, "triangle", 0.06);
-    this.time.delayedCall(100, () => this.playTone(880, 0.08, "triangle", 0.06));
-    this.time.delayedCall(200, () => this.playTone(1100, 0.12, "triangle", 0.07));
-  }
-  private playWrong() { this.playTone(200, 0.14, "sawtooth", 0.05); }
-  private playTone(frequency: number, duration: number, type: OscillatorType, volume: number) {
-    const AC = window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-    if (!AC) return;
-    const ctx = new AC();
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.type = type; osc.frequency.value = frequency; gain.gain.value = volume;
-    osc.connect(gain); gain.connect(ctx.destination);
-    osc.start(); osc.stop(ctx.currentTime + duration);
-    osc.onended = () => ctx.close();
-  }
+    private async playCase(withTutorial: boolean) {
+        const gen = ++this.gen
+        const caso = this.caso
+
+        this.state = 'briefing'
+        /*
+         * `locked` é estado de MOMENTO, não de caso. Sem zerar aqui, o caso que
+         * termina bem deixa a trava ligada e o seguinte monta a tela inteira
+         * sem aceitar um toque.
+         */
+        this.locked = false
+        this.sent = 0
+        this.picked = -1
+
+        this.hud.setProgress(this.caseIdx, this.level.cases.length)
+        this.hud.setHint(caso.hint)
+        this.emitCheckpoint()
+
+        this.bank.clear()
+        this.readout.setMade(0)
+        this.robot.setHappy(false)
+
+        if (caso.mode === 'conserto') {
+            this.screen.setLabel('A MÁQUINA LEU')
+            this.screen.openRows(caso.received ?? '', i => this.onPickRow(i))
+            this.readout.setTargetLabel('DEVERIA SER')
+            this.readout.setTarget('–')
+            this.table.highlight(null)
+        } else {
+            this.screen.setLabel('A MÁQUINA RECEBEU')
+            this.screen.openSlots(caso.word.length)
+            this.readout.setTargetLabel('ENVIE')
+            this.readout.setTarget(caso.word[0])
+            // No Nível 1 a tabela aponta sozinha; do Nível 2 em diante, não.
+            this.table.highlight(caso.mode === 'letra' ? caso.word[0] : null)
+        }
+
+        FX.popIn(this, this.screen.container, { from: 0.96, duration: 340 })
+
+        this.refreshSend()
+
+        await this.question.show(caso.question)
+        if (gen !== this.gen) return
+
+        if (withTutorial) {
+            const steps = this.buildTutorialSteps()
+            if (steps.length) {
+                this.runTutorial(steps, false, () => {
+                    if (gen !== this.gen) return
+                    this.state = 'montando'
+                    this.refreshSend()
+                })
+                return
+            }
+        }
+
+        this.state = 'montando'
+        this.refreshSend()
+    }
+
+    /* ═══════════════════════════════════════════════════════ interação */
+
+    private onBits(bits: boolean[]) {
+        this.readout.setMade(valueOf(bits))
+        this.playBlip(bits)
+    }
+
+    /**
+     * Tocar numa ficha da tabela é CONSULTAR, e nada mais.
+     *
+     * Ela acende e mostra o número — não preenche as chaves. Se preenchesse, a
+     * criança atravessaria o jogo inteiro sem somar uma vez, que é justamente
+     * o que ela veio fazer aqui.
+     */
+    private onTablePick(char: string) {
+        if (this.state !== 'montando' || this.locked) return
+        this.table.highlight(char)
+        this.playLookup()
+    }
+
+    private onPickRow(i: number) {
+        if (this.caso.mode !== 'conserto') return
+        if (this.state !== 'montando' || this.locked || this.ended) return
+
+        const caso = this.caso
+        const bad = wrongIndex(caso.word, caso.received ?? '')
+
+        if (i !== bad) {
+            const ch = (caso.received ?? '')[i] ?? ''
+            showToast(this, `Essa chegou certa: ${ch}. Procure a que não bate.`, C.numeroDark, 2200)
+            this.playLookup()
+            return
+        }
+
+        this.picked = i
+        this.screen.markRow(i, 'selected')
+        /*
+         * As chaves abrem COMO A MENSAGEM CHEGOU, não zeradas.
+         *
+         * É o que transforma o nível em conserto e não em "digite de novo": a
+         * criança vê a fileira errada de perto, mexe numa lâmpada só, e a
+         * letra muda na frente dela.
+         */
+        this.bank.set(bitsOf(codeOf((caso.received ?? '')[i])))
+        this.readout.setMade(this.bank.value())
+        this.readout.setTarget(caso.word[i])
+        this.table.highlight(null)
+        this.playLookup()
+        this.refreshSend()
+    }
+
+    /* ═══════════════════════════════════════════════════════════ envio */
+
+    private async onSend() {
+        if (!this.canSend()) return
+
+        const gen = this.gen
+        const caso = this.caso
+        const want = this.target
+        const wantCode = codeOf(want)
+        const made = this.bank.value()
+
+        this.state = 'enviando'
+        this.locked = true
+        this.bank.setEnabled(false)
+        this.table.setEnabled(false)
+        this.screen.setRowsEnabled(false)
+        this.refreshSend()
+
+        if (made !== wantCode) {
+            await this.wire.fail()
+            if (gen !== this.gen) return
+            await this.bank.shake()
+            if (gen !== this.gen) return
+
+            this.errors += 1
+            this.points += POINTS.miss
+            this.playError()
+            runtimeGameBridge.emit({
+                type: 'WRONG_ANSWER', gameId: GAME_ID,
+                pointsEarned: POINTS.miss, stage: this.level.level,
+            })
+            this.emitCheckpoint()
+
+            showToast(this, this.explain(made, want, wantCode), C.warn, 3200)
+
+            await FX.wait(this, 500)
+            if (gen !== this.gen) return
+
+            this.state = 'montando'
+            this.locked = false
+            this.bank.setEnabled(true)
+            this.table.setEnabled(true)
+            this.screen.setRowsEnabled(true)
+            this.refreshSend()
+            return
+        }
+
+        // ── acertou: o pulso percorre o fio e a letra aterrissa ────────
+        this.playSendTone()
+        await this.wire.send(C.ok)
+        if (gen !== this.gen) return
+
+        this.screen.flash(C.ok)
+        this.robot.react()
+        this.robot.setHappy(true)
+
+        if (caso.mode === 'conserto') {
+            this.screen.setRowChar(this.picked, want, bitsOf(wantCode))
+            this.screen.markRow(this.picked, 'fixed')
+        } else {
+            this.screen.fillSlot(this.sent, want, wantCode)
+            this.sent += 1
+        }
+
+        this.playLanded()
+        await FX.wait(this, 420)
+        if (gen !== this.gen) return
+
+        const done = caso.mode === 'conserto' || this.sent >= caso.word.length
+        if (!done) {
+            // próxima letra da palavra
+            this.bank.clear()
+            this.readout.setMade(0)
+            this.readout.setTarget(caso.word[this.sent])
+            this.table.highlight(caso.mode === 'letra' ? caso.word[this.sent] : null)
+            this.robot.setHappy(false)
+
+            this.state = 'montando'
+            this.locked = false
+            this.bank.setEnabled(true)
+            this.table.setEnabled(true)
+            this.refreshSend()
+            return
+        }
+
+        this.hits += 1
+        this.points += POINTS.solve
+        runtimeGameBridge.emit({
+            type: 'CORRECT_ANSWER', gameId: GAME_ID,
+            pointsEarned: POINTS.solve, stage: this.level.level,
+        })
+        this.emitCheckpoint()
+
+        this.playSolved()
+        void FX.sparks(this, MACHINE.screenCX, MACHINE.screenCY,
+            { color: C.ok, count: 24, spread: 260 })
+        void FX.flash(this, C.white, { duration: 260, peak: 0.2 })
+
+        this.state = 'solved'
+        void this.solve()
+    }
+
+    /**
+     * Por que não chegou.
+     *
+     * Diz o número que a soma deu e o número que a letra pede — "errou" seco
+     * obrigaria a criança a recomeçar no chute. E quando a soma cai fora da
+     * tabela, diz isso com todas as letras: nem todo número é caractere.
+     */
+    private explain(made: number, want: string, wantCode: number): string {
+        if (made === 0) {
+            return `Nenhuma chave acesa: a soma deu 0. ${want} é ${wantCode}.`
+        }
+        const got = charOf(made)
+        if (!got) {
+            return `Sua soma deu ${made}, e ${made} não é letra nenhuma da tabela. ${want} é ${wantCode}.`
+        }
+        const diff = made - wantCode
+        const side = diff > 0 ? `passou ${diff}` : `faltam ${-diff}`
+        return `Sua soma deu ${made} — isso é ${got}. ${want} é ${wantCode}: ${side}.`
+    }
+
+    /* ═══════════════════════════════════════════════════ resolvido */
+
+    private async solve() {
+        const gen = this.gen
+        this.locked = true
+        this.bank.setEnabled(false)
+        this.table.setEnabled(false)
+        this.screen.setRowsEnabled(false)
+        this.refreshSend()
+
+        showToast(this, this.caso.successLine, C.ok, 3000)
+        await FX.wait(this, 2700)
+        if (gen !== this.gen) return
+
+        this.caseIdx += 1
+        if (this.caseIdx >= this.level.cases.length) {
+            void this.endLevel()
+            return
+        }
+
+        this.bank.setEnabled(true)
+        this.table.setEnabled(true)
+        this.screen.setRowsEnabled(true)
+        void this.playCase(false)
+    }
+
+    /* ═══════════════════════════════════════════════ avanço de nível */
+
+    private async endLevel() {
+        this.ended = true
+        this.locked = true
+        this.gen += 1
+        this.hud.setProgress(this.level.cases.length, this.level.cases.length)
+        this.hud.setHelpEnabled(false)
+        this.refreshSend()
+
+        runtimeGameBridge.emit({
+            type: 'GAME_COMPLETED', gameId: GAME_ID, stage: this.level.level,
+        })
+        this.emitCheckpoint(true)
+
+        await FX.wait(this, 300)
+
+        const lvl = this.level.level
+        const next = lvl < 3 ? (lvl + 1) as 2 | 3 : null
+
+        if (next) {
+            showLevelComplete(this, {
+                title: 'Mensagem entregue!',
+                subtitle: `Nível ${lvl} concluído`,
+                message: this.level.objective,
+                accent: C.bit,
+                panelColor: C.paper,
+                overlayColor: C.ink,
+                progress: { total: 3, current: lvl },
+                autoAdvance: {
+                    delay: 2300,
+                    label: 'Ligando o próximo circuito...',
+                    onComplete: () => this.scene.restart({ level: next, points: this.points }),
+                },
+            })
+            return
+        }
+
+        FX.confetti(this, { colors: [C.bit, C.letra, C.numero, C.ok] })
+        showLevelComplete(this, {
+            title: 'Tradutor da máquina!',
+            subtitle: 'Letra, número e lâmpada: você já sabe atravessar os três',
+            message: `Mensagens: ${this.hits}  ·  Ajustes: ${this.errors}  ·  Pontos: ${Math.max(0, this.points)}`,
+            accent: C.ok,
+            panelColor: C.paper,
+            overlayColor: C.ink,
+            progress: { total: 3, current: 3 },
+            buttons: [
+                {
+                    label: 'Jogar de novo',
+                    color: C.ok,
+                    onClick: () => this.scene.restart({ level: 1, points: 0 }),
+                },
+                {
+                    label: 'Escolher jogo',
+                    color: C.bit,
+                    onClick: () => EventBus.emit('exit-game'),
+                },
+            ],
+        })
+    }
+
+    /* ═══════════════════════════════════════════════════════ tutorial */
+
+    /**
+     * Todo passo fixa `balloonY`, e nunca abaixo de 540: o botão "Próximo"
+     * nasce 46px ABAIXO do balão, e mais do que isso o joga para fora da tela.
+     */
+    private buildTutorialSteps(): TutorialStep[] {
+        const bank = {
+            x: PANEL.cx, y: PANEL.colCY,
+            w: PANEL.right - PANEL.left + 40, h: PANEL.colH + 40,
+        }
+        const strip = {
+            x: 640, y: TABLE_UI.cy,
+            w: TABLE_UI.barW, h: TABLE_UI.barH + 10,
+        }
+        const screen = {
+            x: MACHINE.screenCX, y: MACHINE.screenCY,
+            w: MACHINE.screenW + 30, h: MACHINE.screenH + 30,
+        }
+
+        if (this.level.level === 2) {
+            return [{
+                text: 'Agora é uma palavra inteira, uma letra de cada vez. A tabela parou de apontar: procure cada letra você mesmo.',
+                shape: 'rect', ...screen, balloonX: 940, balloonY: 470,
+            }]
+        }
+
+        if (this.level.level === 3) {
+            return [{
+                text: 'A mensagem chegou torta. Toque na fileira que não bate com a palavra — e conserte: falta ou sobra uma lâmpada só.',
+                shape: 'rect', ...screen, balloonX: 940, balloonY: 470,
+            }]
+        }
+
+        return [
+            {
+                text: 'Cada chave vale um número. Acenda as que somam o número da letra.',
+                shape: 'rect', ...bank, balloonX: 340, balloonY: 380,
+            },
+            {
+                text: 'A tabela diz qual número é cada letra. É o combinado entre você e a máquina.',
+                shape: 'rect', ...strip, balloonX: 640, balloonY: 380,
+            },
+        ]
+    }
+
+    private runTutorial(steps: TutorialStep[], force: boolean, onFinish: () => void) {
+        this.locked = true
+        this.hud.setHelpEnabled(false)
+        this.refreshSend()
+
+        createTutorial(this, {
+            key: `ef04co04-l${this.level.level}`,
+            once: !force,
+            accent: C.bit,
+            safeTop: HUD.y + HUD.h + 12,
+            steps,
+            onFinish: () => {
+                this.locked = false
+                this.hud.setHelpEnabled(true)
+                onFinish()
+            },
+        })
+    }
+
+    private replayTutorial = () => {
+        if (this.ended || this.locked) return
+        if (this.state !== 'montando') return
+
+        const gen = this.gen
+        const steps = this.buildTutorialSteps()
+        if (!steps.length) return
+
+        this.runTutorial(steps, true, () => {
+            if (gen !== this.gen || this.ended) return
+            this.state = 'montando'
+            this.refreshSend()
+        })
+    }
+
+    /* ═══════════════════════════════════════════════════════ plataforma */
+
+    private emitCheckpoint(forceComplete = false) {
+        const before = LEVELS.slice(0, this.levelIdx).reduce((s, l) => s + l.cases.length, 0)
+        const done = before + this.caseIdx + (forceComplete ? 1 : 0)
+
+        runtimeGameBridge.emit({
+            type: 'CHECKPOINT',
+            gameId: GAME_ID,
+            progress: Math.round((done / TOTAL_CASES) * 100),
+            score: Math.max(0, this.points),
+            stage: this.level.level,
+            hits: this.hits,
+            errors: this.errors,
+        })
+    }
+
+    private registerPlatformCommands() {
+        this.unsubPlatform = runtimeGameBridge.onCommand((cmd: PlatformCommand) => {
+            if (cmd.type !== 'START_GAME') return
+            this.points = cmd.points ?? this.points
+        })
+    }
+
+    private onMuteAudio = (muted: boolean) => { this.isMuted = muted }
+
+    /* ═══════════════════════════════════════════════════════════ áudio */
+
+    private getAudioCtx(): AudioContext | null {
+        if (this.isMuted) return null
+        try {
+            return (this.sound as Phaser.Sound.WebAudioSoundManager).context
+        } catch {
+            return null
+        }
+    }
+
+    private playTone(freq: number, dur: number, type: OscillatorType = 'sine', gain = 0.1) {
+        const ctx = this.getAudioCtx()
+        if (!ctx) return
+        const osc = ctx.createOscillator()
+        const g = ctx.createGain()
+        osc.connect(g)
+        g.connect(ctx.destination)
+        osc.type = type
+        osc.frequency.setValueAtTime(freq, ctx.currentTime)
+        g.gain.setValueAtTime(gain, ctx.currentTime)
+        g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur)
+        osc.start()
+        osc.stop(ctx.currentTime + dur)
+    }
+
+    /**
+     * A chave canta mais agudo quanto mais ela vale.
+     *
+     * O ouvido pega a ordem de grandeza antes dos olhos: a criança escuta que
+     * a chave do 64 é a mais grave e a do 1 a mais fina, e isso é a mesma
+     * informação que está escrita embaixo de cada uma.
+     */
+    private playBlip(bits: boolean[]) {
+        const i = bits.findIndex((on, k) => on !== this.lastBits[k])
+        this.lastBits = [...bits]
+        if (i < 0) return
+        const base = 280 + i * 78
+        this.playTone(bits[i] ? base : base * 0.62, 0.06, 'triangle', 0.06)
+    }
+
+    private playLookup() { this.playTone(660, 0.05, 'sine', 0.05) }
+    private playSendTone() { this.playTone(420, 0.1, 'sawtooth', 0.05) }
+    private playLanded() { this.playTone(880, 0.12, 'sine', 0.09) }
+    private playError() { this.playTone(200, 0.18, 'square', 0.07) }
+    private playSolved() {
+        [523, 659, 784, 1047].forEach((f, i) =>
+            this.time.delayedCall(i * 110, () => this.playTone(f, 0.18, 'sine', 0.13)))
+    }
 }

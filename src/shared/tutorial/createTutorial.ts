@@ -175,9 +175,9 @@ export function createTutorial(scene: Phaser.Scene, options: TutorialOptions) {
 
         let bx = step.balloonX ?? W / 2
         let by = step.balloonY ?? 0
+        const safeTop = options.safeTop ?? 0
 
         if (step.balloonY === undefined) {
-            const safeTop = options.safeTop ?? 0
             const sy = step.y ?? H / 2
             const sh = step.h ?? 0
             const below = sy + sh / 2 + 40 + bh / 2
@@ -194,8 +194,23 @@ export function createTutorial(scene: Phaser.Scene, options: TutorialOptions) {
             const sx = step.x ?? W / 2
             const overlapsY = Math.abs(by - (step.y ?? H / 2)) < (step.h ?? 0) / 2 + bh / 2
             if (overlapsY) bx = sx < W / 2 ? W / 2 + 220 : W / 2 - 220
-            bx = Phaser.Math.Clamp(bx, bw / 2 + 20, W - bw / 2 - 20)
         }
+
+        /*
+         * O GRAMPO VALE SEMPRE, inclusive quando o passo dá `balloonX`/`balloonY`.
+         *
+         * Antes ele morava dentro do `if (step.balloonY === undefined)`, então
+         * quem fixava a posição à mão saía sem rede — e o botão "Próximo", que
+         * nasce 46px ABAIXO do balão, ia parar fora da tela. O tutorial travava:
+         * o passo não avança sem esse toque, e ele não estava clicável em lugar
+         * nenhum.
+         *
+         * Os 110px reservados embaixo são a altura do botão mais o respiro.
+         */
+        const minY = safeTop + bh / 2 + 16
+        const maxY = H - bh / 2 - 110
+        by = maxY >= minY ? Phaser.Math.Clamp(by, minY, maxY) : minY
+        bx = Phaser.Math.Clamp(bx, bw / 2 + 20, W - bw / 2 - 20)
 
         balloon.setPosition(bx, by).setAlpha(0)
         button.setPosition(bx, by + bh / 2 + 46).setAlpha(0)

@@ -1,56 +1,96 @@
-import Phaser from "phaser";
+import Phaser from 'phaser'
+import { createLoadingScreen } from '../../../../shared/loading/createLoadingScreen'
+import { C } from '../data/theme'
 
-import coverUrl from "../../../../assets/games/EF04CO01/batalha-das-coordenadas/cover-batalha-coordenadas.png";
-import bgBattleGridUrl from "../../../../assets/games/EF04CO01/batalha-das-coordenadas/bg-battle-grid.png";
-import bgOceanGridUrl from "../../../../assets/games/EF04CO01/batalha-das-coordenadas/bg-ocean-grid.png";
-import bgTreasureMapUrl from "../../../../assets/games/EF04CO01/batalha-das-coordenadas/bg-treasure-map.png";
-import gridCellUrl from "../../../../assets/games/EF04CO01/batalha-das-coordenadas/grid-cell.png";
-import shipIconUrl from "../../../../assets/games/EF04CO01/batalha-das-coordenadas/ship-icon.png";
-import explosionIconUrl from "../../../../assets/games/EF04CO01/batalha-das-coordenadas/explosion-icon.png";
-import waterSplashUrl from "../../../../assets/games/EF04CO01/batalha-das-coordenadas/water-splash.png";
+/**
+ * As chaves que o jogo consome.
+ *
+ * A capa (`cover-batalha-coordenadas`) não entra: quem a usa é o catálogo, não
+ * a cena.
+ */
+const WANTED = [
+    'bg-praia',
+    'icone-bau',
+    'icone-anel',
+    'icone-mapa',
+    'icone-pirata-sorridente',
+    'icone-pirata-duvida',
+    'icone-pirata-feliz',
+] as const
 
-const ASSETS: Array<[string, string]> = [
-  ["cover", coverUrl],
-  ["bg-battle-grid", bgBattleGridUrl],
-  ["bg-ocean-grid", bgOceanGridUrl],
-  ["bg-treasure-map", bgTreasureMapUrl],
-  ["grid-cell", gridCellUrl],
-  ["ship-icon", shipIconUrl],
-  ["explosion-icon", explosionIconUrl],
-  ["water-splash", waterSplashUrl],
-];
+/**
+ * As texturas são varridas da pasta, não importadas uma a uma.
+ *
+ * Um `import` de arquivo que ainda não existe quebra o build inteiro. Com
+ * `import.meta.glob` o Vite registra só o que está lá, e um arquivo novo entra
+ * no jogo assim que for salvo na pasta, sem tocar em uma linha de código.
+ */
+const FILES = import.meta.glob(
+    '../../../../assets/games/EF04CO01/batalha-das-coordenadas/*.png',
+    { eager: true, import: 'default' },
+) as Record<string, string>
+
+function found(): Array<[string, string]> {
+    const byKey = new Map<string, string>()
+    Object.entries(FILES).forEach(([path, url]) => {
+        const key = path.split('/').pop()?.replace(/\.png$/i, '')
+        if (key) byKey.set(key, url)
+    })
+    return WANTED
+        .map(key => [key, byKey.get(key)] as [string, string | undefined])
+        .filter((pair): pair is [string, string] => !!pair[1])
+}
 
 export class BootScene extends Phaser.Scene {
-  constructor() {
-    super({ key: "BootScene" });
-  }
+    constructor() {
+        super({ key: 'BootScene' })
+    }
 
-  preload() {
-    this.createLoadingScreen();
-    ASSETS.forEach(([key, url]) => this.load.image(key, url));
-  }
+    preload() {
+        createLoadingScreen(this, {
+            title: 'Batalha das Coordenadas',
+            subtitle: 'Ilha do Tesouro',
+            description: 'Desenhando o mapa...',
+            theme: {
+                background: {
+                    kind: 'waves',
+                    base: C.waterDark,
+                    color: C.white,
+                    alpha: 0.1,
+                    amplitude: 22,
+                    length: 240,
+                    rows: 7,
+                },
 
-  create() {
-    this.scene.start("GameScene");
-  }
+                card: C.wood,
+                cardShadow: C.shadow,
+                cardHighlight: C.white,
+                cardBorder: C.gold,
 
-  private createLoadingScreen() {
-    this.add.rectangle(640, 360, 1280, 720, 0x0c1445);
-    this.add
-      .text(640, 296, "Batalha das Coordenadas", {
-        fontSize: "46px",
-        fontFamily: "Arial Black, Arial",
-        color: "#f59e0b",
-        stroke: "#0c1445",
-        strokeThickness: 8,
-      })
-      .setOrigin(0.5);
-    this.add
-      .text(640, 374, "Preparando o campo de batalha...", {
-        fontSize: "26px",
-        fontFamily: "Arial Black, Arial",
-        color: "#e2e8f0",
-      })
-      .setOrigin(0.5);
-  }
+                title: C.paper,
+                subtitle: C.gold,
+                description: C.sand,
+                titleStroke: C.ink,
+
+                progressTrack: C.ink,
+                progressBorder: C.sand,
+                progressFill: C.gold,
+                progressHighlight: C.goldSoft,
+            },
+        })
+
+        found().forEach(([key, url]) => this.load.image(key, url))
+    }
+
+    create() {
+        /*
+         * `level` é 1-based, `phase` é 0-based.
+         *
+         * Trocar estes números abre o jogo direto no caso que se quer testar —
+         * `{ level: 3, phase: 2 }` cai no último caso do Nível 3. Os dois são
+         * grampeados no `GameScene.init`, então número fora da faixa não quebra
+         * nada.
+         */
+        this.scene.start('GameScene', { level: 1, phase: 0, points: 0 })
+    }
 }

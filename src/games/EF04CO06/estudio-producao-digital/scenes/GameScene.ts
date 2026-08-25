@@ -1,1542 +1,799 @@
-import Phaser from "phaser";
-import { EventBus } from "../../../../shared/EventBus";
-import { runtimeGameBridge } from "../../../../shared/bridge/runtimeGameBridge";
-import { LEVELS } from "../data/levels";
-import type { StudioProductionLevel, StudioLevelNumber, FormatType } from "../types";
+import Phaser from 'phaser'
+import { EventBus } from '../../../../shared/EventBus'
+import { runtimeGameBridge } from '../../../../shared/bridge/runtimeGameBridge'
+import type { PlatformCommand } from '../../../../shared/contracts/platformCommands'
+import { createTutorial, type TutorialStep } from '../../../../shared/tutorial/createTutorial'
+import { showLevelComplete } from '../../../../shared/level/showLevelComplete'
+import { FX } from '../../../../shared/effects/FX'
 
-const GAME_ID = "estudio-de-producao-digital";
+import { LEVELS, TOTAL_CASES } from '../data/casos'
+import { NOME } from '../data/formatos'
+import { C } from '../data/theme'
+import {
+    HUD, PASSOS, PEDIDO, OPCOES, OBRA, PUBLICAR as PUB,
+} from '../data/layout'
+import type { Caso, CaseState, Formato, Level, Veredito as VereditoData } from '../types'
 
-// ── Layout constants ────────────────────────────────────────────────────────
-const TIMER_BAR_W = 980;
-const TIMER_BAR_Y = 30;
-const PANEL_X = 72;
-const PANEL_Y = 142;
-const PANEL_W = 1136;
-const PANEL_H = 486;
+import {
+    createRoom, createHud, createTrilha, createTitulo, createCartaoPedido,
+    createLembrete, createOpcoes, createObraMontada, createCarimbos,
+    createVeredito, createCards, createBigButton, showToast, ACCENT,
+    type BigButton, type Cards, type CartaoPedido, type Carimbos, type Hud,
+    type Lembrete, type ObraMontada, type Opcoes, type Titulo, type Trilha,
+    type Veredito,
+} from './effects'
 
-// Stage bar (inside panel, near top)
-const STAGE_BAR_Y = PANEL_Y + 6;   // 148
-const STAGE_BAR_H = 34;
-const STAGE_COUNT = 4;
-const STAGE_GAP = 10;
-// 4 stages + 3 gaps = PANEL_W - 38; w = (1098 - 30) / 4 = 267
-const STAGE_W = 267;
-const STAGE_START_X = PANEL_X + 19; // 91
+const GAME_ID = 'estudio-producao-digital'
 
-// Content starts below stage bar
-const CONTENT_Y = STAGE_BAR_Y + STAGE_BAR_H + 10; // 192
-
-const MODAL_SCALE = 1.12;
-
-// ── Colors ──────────────────────────────────────────────────────────────────
-const C = {
-  purple:      0x7c3aed,
-  lightPurple: 0xa78bfa,
-  darkPurple:  0x4c1d95,
-  deepPurple:  0x2e1065,
-  amber:       0xfbbf24,
-  darkAmber:   0xd97706,
-  warmAmber:   0xf59e0b,
-  green:       0x16a34a,
-  darkGreen:   0x14532d,
-  red:         0xdc2626,
-  blue:        0x2563eb,
-  darkBlue:    0x1e40af,
-  darkRed:     0x991b1b,
-  white:       0xffffff,
-  gray:        0x64748b,
-  lightGray:   0x94a3b8,
-  slate:       0x334155,
-  ink:         0x0f0820,
-  darkPanel:   0x1a0a40,
-  midPanel:    0x2d1b5e,
-  cream:       0xfaf5ff,
-  teal:        0x0d9488,
-  orange:      0xf97316,
-};
-
-// ── Format card data ─────────────────────────────────────────────────────────
-const FORMAT_DATA: Record<FormatType, { emoji: string; label: string; color: number; borderColor: number }> = {
-  text:   { emoji: "📄", label: "Texto",          color: 0x4c1d95, borderColor: 0xa78bfa },
-  slides: { emoji: "🎞️", label: "Apresentação",   color: 0x1e3a8a, borderColor: 0x60a5fa },
-  video:  { emoji: "🎬", label: "Vídeo",          color: 0x7f1d1d, borderColor: 0xf87171 },
-};
-
-const FORMAT_ORDER: FormatType[] = ["text", "slides", "video"];
-
-// ── Stage metadata ───────────────────────────────────────────────────────────
-const STAGE_META = [
-  { emoji: "📋", word: "Planejamento" },
-  { emoji: "✏️", word: "Produção" },
-  { emoji: "🔍", word: "Revisão" },
-  { emoji: "🚀", word: "Publicação" },
-];
+const POINTS = {
+    /** Os jurados aprovaram. */
+    publica: 25,
+    /** Bônus por ter feito também os passos opcionais. */
+    caprichou: 10,
+    /** Publicou e voltou para arrumar. */
+    revisao: -5,
+    /** Escolheu a mídia errada no Nível 3. */
+    midia: -5,
+} as const
 
 export class GameScene extends Phaser.Scene {
-  private levelConfig!: StudioProductionLevel;
-  private gameEnded = false;
-  private hits = 0;
-  private errors = 0;
 
-  private timerBar?: Phaser.GameObjects.Graphics;
-  private timerEvent?: Phaser.Time.TimerEvent;
-
-  private startScreenObjects: Phaser.GameObjects.GameObject[] = [];
-  private overlayObjects:     Phaser.GameObjects.GameObject[] = [];
-  private contentObjects:     Phaser.GameObjects.GameObject[] = [];
-  private stageBarObjects:    Phaser.GameObjects.GameObject[] = [];
-
-  // Stage completion state
-  private completedStages: boolean[] = [false, false, false, false];
-
-  // N1 state
-  private n1BriefingIndex = 0;
-  private n1CardBgGraphics: Phaser.GameObjects.Graphics[] = [];
-  private n1CardBounds: Array<{ x: number; y: number; w: number; h: number }> = [];
-
-  // N2 state
-  private n2TaskIndex = 0;
-  private n2NextExpectedIndex = 0;
-  private n2SelectedSet = new Set<number>();
-  private n2CardContainers: Phaser.GameObjects.Container[] = [];
-  private n2CardBgGraphics: Phaser.GameObjects.Graphics[] = [];
-  private n2CardBounds: Array<{ x: number; y: number; w: number; h: number }> = [];
-  private n2OrderTexts: Phaser.GameObjects.Text[] = [];
-
-  // N3 state
-  private n3ProductionIndex = 0;
-  private n3SelectedErrors = new Set<number>();
-  private n3ItemContainers: Phaser.GameObjects.Container[] = [];
-  private n3ItemBgGraphics: Phaser.GameObjects.Graphics[] = [];
-  private n3PublishObjects: Phaser.GameObjects.GameObject[] = [];
-  private n3ProductionCardContainer?: Phaser.GameObjects.Container;
-
-  constructor() {
-    super({ key: "GameScene" });
-  }
-
-  // ─────────────────────────────────────────────────────────────────────────
-  // Lifecycle
-  // ─────────────────────────────────────────────────────────────────────────
-
-  init(data?: { level?: number; hits?: number; errors?: number }) {
-    const level = Phaser.Math.Clamp(data?.level ?? 1, 1, 3) as StudioLevelNumber;
-    this.levelConfig = LEVELS.find((l) => l.level === level) ?? LEVELS[0];
-    this.gameEnded = false;
-    this.hits   = data?.hits   ?? 0;
-    this.errors = data?.errors ?? 0;
-
-    // Derive completed stages from current level
-    this.completedStages = [false, false, false, false];
-    if (level >= 2) this.completedStages[0] = true;
-    if (level >= 3) this.completedStages[1] = true;
-
-    // Reset all state arrays
-    this.startScreenObjects = [];
-    this.overlayObjects     = [];
-    this.contentObjects     = [];
-    this.stageBarObjects    = [];
-
-    this.n1BriefingIndex  = 0;
-    this.n1CardBgGraphics = [];
-    this.n1CardBounds     = [];
-
-    this.n2TaskIndex          = 0;
-    this.n2NextExpectedIndex  = 0;
-    this.n2SelectedSet        = new Set();
-    this.n2CardContainers     = [];
-    this.n2CardBgGraphics     = [];
-    this.n2CardBounds         = [];
-    this.n2OrderTexts         = [];
-
-    this.n3ProductionIndex       = 0;
-    this.n3SelectedErrors        = new Set();
-    this.n3ItemContainers        = [];
-    this.n3ItemBgGraphics        = [];
-    this.n3PublishObjects        = [];
-    this.n3ProductionCardContainer = undefined;
-  }
-
-  create() {
-    this.createBackground();
-    this.createTimerBar();
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.onShutdown());
-    this.showStartScreen();
-  }
-
-  update() {
-    if (!this.timerEvent || !this.timerBar) return;
-    const pct = Math.max(0, this.timerEvent.getRemaining() / (this.levelConfig.timeLimit * 1000));
-    const color = pct > 0.5 ? C.green : pct > 0.25 ? C.amber : C.red;
-    this.drawTimerFill(TIMER_BAR_W * pct, color);
-  }
-
-  private onShutdown() {
-    this.timerEvent?.destroy();
-    this.input.setDefaultCursor("default");
-    EventBus.removeAllListeners();
-  }
-
-  // ─────────────────────────────────────────────────────────────────────────
-  // Background
-  // ─────────────────────────────────────────────────────────────────────────
-
-  private createBackground() {
-    const bgKey =
-      this.levelConfig.level === 1 ? "bg-studio-planning"
-      : this.levelConfig.level === 2 ? "bg-studio-production"
-      : "bg-studio-review";
-
-    // If the texture is valid (> 1×1), display it; otherwise skip (placeholder 1×1 PNGs are fine to display)
-    const bg = this.add.image(640, 360, bgKey).setDepth(-100);
-    bg.texture.setFilter(Phaser.Textures.FilterMode.LINEAR);
-    const scale = Math.max(1280 / bg.width, 720 / bg.height);
-    bg.setScale(scale);
-
-    // Dark overlay for readability
-    this.add.rectangle(640, 360, 1280, 720, 0x0f0820, 0.72).setDepth(-89);
-
-    // Gradient-like tint strips
-    const tint = this.add.graphics().setDepth(-88);
-    tint.fillStyle(C.purple, 0.08);
-    tint.fillRect(0, 0, 1280, 360);
-    tint.fillStyle(C.deepPurple, 0.06);
-    tint.fillRect(0, 360, 1280, 360);
-  }
-
-  // ─────────────────────────────────────────────────────────────────────────
-  // Timer Bar
-  // ─────────────────────────────────────────────────────────────────────────
-
-  private createTimerBar() {
-    const track = this.add.graphics().setDepth(45);
-    track.fillStyle(C.slate, 0.25);
-    track.fillRoundedRect(640 - TIMER_BAR_W / 2, TIMER_BAR_Y - 16, TIMER_BAR_W, 32, 16);
-
-    this.timerBar = this.add.graphics().setDepth(46);
-    this.drawTimerFill(TIMER_BAR_W, C.green);
-  }
-
-  private drawTimerFill(width: number, color: number) {
-    if (!this.timerBar) return;
-    this.timerBar.clear();
-    if (width <= 0) return;
-    this.timerBar.fillStyle(color, 1);
-    this.timerBar.fillRoundedRect(640 - TIMER_BAR_W / 2, TIMER_BAR_Y - 16, Math.max(0, width), 32, 16);
-  }
-
-  private startTimer() {
-    this.timerEvent = this.time.delayedCall(
-      this.levelConfig.timeLimit * 1000,
-      () => this.onTimeUp(),
-    );
-  }
-
-  private onTimeUp() {
-    if (this.gameEnded) return;
-    this.gameEnded = true;
-    this.input.enabled = false;
-    this.errors += 1;
-    this.playWrong();
-    runtimeGameBridge.emit({
-      type: "WRONG_ANSWER",
-      gameId: GAME_ID,
-      stage: this.levelConfig.level,
-      pointsEarned: -5,
-    });
-    this.time.delayedCall(300, () => this.showGameOverScreen());
-  }
-
-  // ─────────────────────────────────────────────────────────────────────────
-  // Start Screen
-  // ─────────────────────────────────────────────────────────────────────────
-
-  private showStartScreen() {
-    const overlay = this.add.rectangle(640, 360, 1280, 720, C.ink, 0.72).setDepth(60);
-    overlay.setInteractive();
-    this.startScreenObjects.push(overlay);
-
-    const panel = this.add.container(640, 360).setDepth(62);
-    this.startScreenObjects.push(panel);
-
-    const shadow = this.add.graphics();
-    shadow.fillStyle(0x000000, 0.22);
-    shadow.fillRoundedRect(-308, -218, 616, 436, 34);
-
-    const bg = this.add.graphics();
-    bg.fillStyle(C.cream, 0.97);
-    bg.fillRoundedRect(-320, -230, 640, 440, 34);
-    bg.lineStyle(6, C.purple, 0.9);
-    bg.strokeRoundedRect(-320, -230, 640, 440, 34);
-
-    const topBar = this.add.graphics();
-    topBar.fillStyle(C.purple, 1);
-    topBar.fillRoundedRect(-240, -248, 480, 34, 17);
-
-    const lvlLabel = this.addSharpText(0, -231, `Nível ${this.levelConfig.level} / 3`, {
-      fontSize: "18px", fontFamily: "Arial Black, Arial", color: "#faf5ff",
-      stroke: "#4c1d95", strokeThickness: 3,
-    }).setOrigin(0.5);
-
-    const emojiMap: Record<StudioLevelNumber, string> = { 1: "📋", 2: "✏️", 3: "🔍" };
-    const titleEmoji = emojiMap[this.levelConfig.level];
-
-    const title = this.addSharpText(0, -158, `${titleEmoji} ${this.levelConfig.title}`, {
-      fontSize: "36px", fontFamily: "Arial Black, Arial", color: "#7c3aed",
-      stroke: "#faf5ff", strokeThickness: 6, align: "center",
-    }).setOrigin(0.5);
-
-    const obj = this.addSharpText(0, -84, this.levelConfig.objective, {
-      fontSize: "20px", fontFamily: "Arial Black, Arial", color: "#1e1b4b",
-      align: "center", wordWrap: { width: 564 },
-    }).setOrigin(0.5);
-
-    const detail = this.addSharpText(0, -12, this.levelConfig.detail, {
-      fontSize: "17px", fontFamily: "Arial Black, Arial", color: "#475569",
-      align: "center", wordWrap: { width: 548 },
-    }).setOrigin(0.5);
-
-    const tipBg = this.add.graphics();
-    tipBg.fillStyle(C.amber, 0.18);
-    tipBg.fillRoundedRect(-256, 48, 512, 52, 14);
-
-    const tip = this.addSharpText(0, 74, `💡 ${this.levelConfig.tip}`, {
-      fontSize: "14px", fontFamily: "Arial Black, Arial", color: "#78350f",
-      align: "center", wordWrap: { width: 484 },
-    }).setOrigin(0.5);
-
-    const btnBg = this.add.graphics();
-    btnBg.fillStyle(C.purple, 1);
-    btnBg.fillRoundedRect(-128, 122, 256, 56, 28);
-    btnBg.lineStyle(4, C.amber, 1);
-    btnBg.strokeRoundedRect(-128, 122, 256, 56, 28);
-
-    const btnText = this.addSharpText(0, 150, "▶ Iniciar", {
-      fontSize: "24px", fontFamily: "Arial Black, Arial", color: "#ffffff",
-      stroke: "#4c1d95", strokeThickness: 3,
-    }).setOrigin(0.5);
-
-    panel.add([shadow, bg, topBar, lvlLabel, title, obj, detail, tipBg, tip, btnBg, btnText]);
-    panel.setAlpha(0).setScale(0.9);
-    this.tweens.add({ targets: panel, alpha: 1, scale: MODAL_SCALE, duration: 280, ease: "Back.easeOut" });
-
-    const hz = this.add.zone(640, 360 + 150 * MODAL_SCALE, 272 * MODAL_SCALE, 68 * MODAL_SCALE).setDepth(70);
-    hz.setInteractive({ useHandCursor: true });
-    this.startScreenObjects.push(hz);
-
-    hz.on("pointerover", () => {
-      this.input.setDefaultCursor("pointer");
-      this.tweens.add({ targets: panel, scale: MODAL_SCALE * 1.03, duration: 80 });
-    });
-    hz.on("pointerout", () => {
-      this.input.setDefaultCursor("default");
-      this.tweens.add({ targets: panel, scale: MODAL_SCALE, duration: 80 });
-    });
-    hz.on("pointerdown", () => {
-      this.playClick();
-      this.startScreenObjects.forEach((o) => o.destroy());
-      this.startScreenObjects = [];
-      this.input.setDefaultCursor("default");
-      runtimeGameBridge.emit({ type: "GAME_READY", gameId: GAME_ID });
-      this.startTimer();
-      this.buildLevelUI();
-    });
-  }
-
-  // ─────────────────────────────────────────────────────────────────────────
-  // Level UI
-  // ─────────────────────────────────────────────────────────────────────────
-
-  private buildLevelUI() {
-    this.createHeader();
-    this.drawPanelBg();
-    this.createProductionStageBar();
-
-    if (this.levelConfig.level === 1) {
-      this.showN1Briefing();
-    } else if (this.levelConfig.level === 2) {
-      this.showN2Task();
-    } else {
-      this.showN3Production();
-    }
-  }
-
-  // ─── Header ───────────────────────────────────────────────────────────────
-
-  private createHeader() {
-    this.addSharpText(640, 68, this.levelConfig.title, {
-      fontSize: "38px", fontFamily: "Arial Black, Arial", color: "#c4b5fd",
-      stroke: "#4c1d95", strokeThickness: 6,
-    }).setOrigin(0.5).setDepth(5);
-
-    const card = this.add.graphics().setDepth(5);
-    card.fillStyle(C.white, 0.84);
-    card.fillRoundedRect(230, 96, 820, 44, 22);
-    card.fillStyle(C.purple, 0.1);
-    card.fillRoundedRect(242, 104, 796, 20, 10);
-    card.lineStyle(4, C.purple, 0.65);
-    card.strokeRoundedRect(230, 96, 820, 44, 22);
-
-    this.addSharpText(640, 119, this.levelConfig.objective, {
-      fontSize: "20px", fontFamily: "Arial Black, Arial", color: "#1e1b4b",
-      stroke: "#ffffff", strokeThickness: 3, align: "center",
-      wordWrap: { width: 760 },
-    }).setOrigin(0.5).setDepth(6);
-
-    this.addSharpText(1146, 100, `Nível ${this.levelConfig.level}/3`, {
-      fontSize: "18px", fontFamily: "Arial Black, Arial", color: "#1e1b4b",
-      backgroundColor: "rgba(250,245,255,0.88)", padding: { x: 14, y: 8 },
-    }).setOrigin(0.5).setDepth(6);
-  }
-
-  // ─── Panel background ─────────────────────────────────────────────────────
-
-  private drawPanelBg() {
-    const shadow = this.add.graphics().setDepth(1);
-    shadow.fillStyle(C.ink, 0.22);
-    shadow.fillRoundedRect(PANEL_X + 9, PANEL_Y + 12, PANEL_W, PANEL_H, 30);
-
-    const panel = this.add.graphics().setDepth(2);
-    panel.fillStyle(C.midPanel, 0.45);
-    panel.fillRoundedRect(PANEL_X, PANEL_Y, PANEL_W, PANEL_H, 30);
-    panel.fillStyle(C.white, 0.06);
-    panel.fillRoundedRect(PANEL_X + 20, PANEL_Y + 14, PANEL_W - 40, 48, 22);
-    panel.lineStyle(5, C.purple, 0.5);
-    panel.strokeRoundedRect(PANEL_X, PANEL_Y, PANEL_W, PANEL_H, 30);
-  }
-
-  // ─────────────────────────────────────────────────────────────────────────
-  // Production Stage Bar
-  // ─────────────────────────────────────────────────────────────────────────
-
-  private getStageStatus(i: number): "completed" | "active" | "inactive" {
-    if (this.completedStages[i]) return "completed";
-    const lv = this.levelConfig.level;
-    if (lv === 1 && i === 0) return "active";
-    if (lv === 2 && i === 1) return "active";
-    if (lv === 3 && (i === 2 || i === 3)) return "active";
-    return "inactive";
-  }
-
-  private createProductionStageBar() {
-    this.stageBarObjects.forEach((o) => o.destroy());
-    this.stageBarObjects = [];
-
-    for (let i = 0; i < STAGE_COUNT; i++) {
-      const stageX = STAGE_START_X + i * (STAGE_W + STAGE_GAP);
-      const status = this.getStageStatus(i);
-
-      const bg = this.add.graphics().setDepth(10);
-      this.stageBarObjects.push(bg);
-
-      if (status === "completed") {
-        bg.fillStyle(C.amber, 1);
-        bg.fillRoundedRect(stageX, STAGE_BAR_Y, STAGE_W, STAGE_BAR_H, 8);
-        bg.lineStyle(3, C.darkAmber, 1);
-        bg.strokeRoundedRect(stageX, STAGE_BAR_Y, STAGE_W, STAGE_BAR_H, 8);
-      } else if (status === "active") {
-        bg.fillStyle(C.purple, 0.85);
-        bg.fillRoundedRect(stageX, STAGE_BAR_Y, STAGE_W, STAGE_BAR_H, 8);
-        bg.lineStyle(3, C.lightPurple, 1);
-        bg.strokeRoundedRect(stageX, STAGE_BAR_Y, STAGE_W, STAGE_BAR_H, 8);
-      } else {
-        bg.fillStyle(C.slate, 0.4);
-        bg.fillRoundedRect(stageX, STAGE_BAR_Y, STAGE_W, STAGE_BAR_H, 8);
-      }
-
-      const textColor =
-        status === "completed" ? "#1a0a00"
-        : status === "active"  ? "#f0e6ff"
-        : "#64748b";
-
-      // Render emoji and word as SEPARATE objects so bounding-box differences between
-      // emoji characters don't shift the vertical center of each pill independently.
-      const textY = STAGE_BAR_Y + STAGE_BAR_H / 2;
-      const stageEmoji = this.addSharpText(stageX + 14, textY, STAGE_META[i].emoji, {
-        fontSize: "14px", fontFamily: "Arial Black, Arial",
-      }).setOrigin(0, 0.5).setDepth(11);
-      this.stageBarObjects.push(stageEmoji);
-
-      const stageTxt = this.addSharpText(stageX + 38, textY, STAGE_META[i].word, {
-        fontSize: "13px", fontFamily: "Arial Black, Arial", color: textColor,
-      }).setOrigin(0, 0.5).setDepth(11);
-      this.stageBarObjects.push(stageTxt);
-
-      // Arrow connector (except last)
-      if (i < STAGE_COUNT - 1) {
-        const arrowX = stageX + STAGE_W + 1;
-        const arrowG = this.add.graphics().setDepth(11);
-        this.stageBarObjects.push(arrowG);
-        const arrowColor = status === "completed" ? C.amber : C.slate;
-        arrowG.fillStyle(arrowColor, 0.7);
-        arrowG.fillTriangle(
-          arrowX, STAGE_BAR_Y + 5,
-          arrowX, STAGE_BAR_Y + STAGE_BAR_H - 5,
-          arrowX + 9, STAGE_BAR_Y + STAGE_BAR_H / 2,
-        );
-      }
-    }
-  }
-
-  private markStageComplete(stageIndex: number) {
-    if (this.completedStages[stageIndex]) return;
-    this.completedStages[stageIndex] = true;
-    this.createProductionStageBar();
-  }
-
-  // ─────────────────────────────────────────────────────────────────────────
-  // Content helpers
-  // ─────────────────────────────────────────────────────────────────────────
-
-  private addContent<T extends Phaser.GameObjects.GameObject>(o: T): T {
-    this.contentObjects.push(o);
-    return o;
-  }
-
-  private clearContent() {
-    this.contentObjects.forEach((o) => o.destroy());
-    this.contentObjects = [];
-    this.n1CardBgGraphics = [];
-    this.n1CardBounds     = [];
-    this.n2CardContainers = [];
-    this.n2CardBgGraphics = [];
-    this.n2CardBounds     = [];
-    this.n2OrderTexts     = [];
-    this.n3ItemContainers = [];
-    this.n3ItemBgGraphics = [];
-    this.n3PublishObjects = [];
-    this.n3ProductionCardContainer = undefined;
-  }
-
-  // ─────────────────────────────────────────────────────────────────────────
-  // N1 — Escolha o Formato
-  // ─────────────────────────────────────────────────────────────────────────
-
-  private showN1Briefing() {
-    this.clearContent();
-    this.n2SelectedSet = new Set();
-    this.n2NextExpectedIndex = 0;
-
-    const briefings = this.levelConfig.n1Briefings ?? [];
-    if (this.n1BriefingIndex >= briefings.length) {
-      this.completeLevel();
-      return;
+    /* ── partida ───────────────────────────────────────────────────── */
+
+    private levelIdx = 0
+    private caseIdx = 0
+    private points = 0
+    private hits = 0
+    private errors = 0
+    private isMuted = false
+    private state: CaseState = 'pedido'
+    private locked = false
+    private ended = false
+
+    /** Todo callback atrasado captura este valor e desiste se ele mudou. */
+    private gen = 0
+
+    /* ── o trabalho em andamento ───────────────────────────────────── */
+
+    /** Uma escolha por passo; −1 é passo ainda não feito ou pulado. */
+    private escolhas: number[] = []
+    /** Em qual espaço a criança está agora. */
+    private passo = 0
+    /**
+     * Voltou por ordem dos jurados.
+     *
+     * Sem isto, arrumar o passo 1 obrigaria a criança a reconfirmar o 2, o 3 e
+     * o 4 — que já estavam certos. Com ele, consertar uma coisa volta direto
+     * para a publicação.
+     */
+    private revisando = false
+    /** Os passos que o template já resolveu — a criança pula direto por eles. */
+    private prontos = new Set<number>()
+
+    /* ── interface fixa ────────────────────────────────────────────── */
+
+    private hud!: Hud
+    private trilha!: Trilha
+    private titulo!: Titulo
+    private lembrete!: Lembrete
+    private veredito!: Veredito
+    private carimbos!: Carimbos
+
+    /* ── o que nasce e morre a cada tela ───────────────────────────── */
+
+    private cartao?: CartaoPedido
+    private opcoes?: Opcoes
+    private obra?: ObraMontada
+    private cards?: Cards
+    private botao?: BigButton
+
+    private unsubPlatform?: () => void
+
+    constructor() {
+        super({ key: 'GameScene' })
     }
 
-    const briefing = briefings[this.n1BriefingIndex];
+    /**
+     * `level` é 1-based e `phase` é 0-based. Os dois são grampeados ao que
+     * existe de verdade: um `phase: 7` num nível de três casos faria
+     * `this.caso` devolver `undefined`, e o estouro apareceria três telas
+     * adiante sem nenhuma pista de que veio daqui.
+     */
+    init(data: { level?: number; phase?: number; points?: number }) {
+        this.levelIdx = Phaser.Math.Clamp(data?.level ?? 1, 1, LEVELS.length) - 1
+        this.caseIdx = Phaser.Math.Clamp(
+            data?.phase ?? 0, 0, LEVELS[this.levelIdx].cases.length - 1,
+        )
+        this.points = data?.points ?? 0
+        this.hits = 0
+        this.errors = 0
+        this.isMuted = false
+        this.state = 'pedido'
+        this.locked = false
+        this.ended = false
+        this.gen = 0
+        this.escolhas = []
+        this.passo = 0
+    }
 
-    // ── Progress dots ──────────────────────────────────────────────────────
-    const dotCont = this.addContent(this.add.container(640, CONTENT_Y + 16).setDepth(12));
-    const totalDots = briefings.length;
-    const dotSpacing = 24;
-    const dotsStartX = -(totalDots - 1) * dotSpacing / 2;
-    briefings.forEach((_, i) => {
-      const dot = this.add.graphics();
-      const color = i < this.n1BriefingIndex ? C.green
-        : i === this.n1BriefingIndex ? C.amber
-        : C.gray;
-      dot.fillStyle(color, 1);
-      dot.fillCircle(dotsStartX + i * dotSpacing, 0, 7);
-      dot.lineStyle(2, C.white, 0.6);
-      dot.strokeCircle(dotsStartX + i * dotSpacing, 0, 7);
-      dotCont.add(dot);
-    });
+    create() {
+        this.events.once(Phaser.Scenes.Events.SHUTDOWN, this.shutdownScene, this)
 
-    // ── Briefing card ──────────────────────────────────────────────────────
-    const cardX = PANEL_X + 20;
-    const cardY = CONTENT_Y + 36;
-    const cardW = PANEL_W - 40;
-    const cardH = 88;
+        createRoom(this)
 
-    const briefBg = this.addContent(this.add.graphics().setDepth(12));
-    briefBg.fillStyle(C.darkPurple, 0.95);
-    briefBg.fillRoundedRect(cardX, cardY, cardW, cardH, 18);
-    briefBg.lineStyle(4, C.amber, 0.9);
-    briefBg.strokeRoundedRect(cardX, cardY, cardW, cardH, 18);
+        this.hud = createHud(this, { onHelp: () => this.replayTutorial() })
+        this.hud.setLevel(this.level.level)
+        this.hud.setTitle(this.level.title)
+        this.hud.setHint(this.level.tip)
 
-    this.addContent(this.addSharpText(cardX + 14, cardY + 10, "📋 Projeto:", {
-      fontSize: "15px", fontFamily: "Arial Black, Arial", color: "#fbbf24",
-    }).setDepth(13));
+        this.trilha = createTrilha(this)
+        this.titulo = createTitulo(this)
+        this.lembrete = createLembrete(this)
+        this.veredito = createVeredito(this)
+        this.carimbos = createCarimbos(this)
 
-    this.addContent(this.addSharpText(cardX + cardW / 2, cardY + 52, briefing.text, {
-      fontSize: "22px", fontFamily: "Arial Black, Arial", color: "#f0e6ff",
-      align: "center", wordWrap: { width: cardW - 32 },
-      stroke: "#2e1065", strokeThickness: 2,
-    }).setOrigin(0.5).setDepth(13));
+        EventBus.on('mute-audio', this.onMuteAudio, this)
+        EventBus.on('show-tutorial', this.replayTutorial, this)
+        this.registerPlatformCommands()
 
-    // ── Question label ─────────────────────────────────────────────────────
-    this.addContent(this.addSharpText(640, cardY + cardH + 20, "Qual formato é mais adequado?", {
-      fontSize: "20px", fontFamily: "Arial Black, Arial", color: "#c4b5fd",
-      stroke: "#2e1065", strokeThickness: 3,
-    }).setOrigin(0.5).setDepth(12));
+        runtimeGameBridge.emit({ type: 'GAME_READY', gameId: GAME_ID })
+        this.emitCheckpoint()
 
-    // ── Format cards ───────────────────────────────────────────────────────
-    const CARD_W = 220;
-    const CARD_H = 220;
-    const CARD_GAP = 60;
-    const totalCardsW = 3 * CARD_W + 2 * CARD_GAP;
-    const cardsStartX = PANEL_X + (PANEL_W - totalCardsW) / 2;
-    const cardsY = cardY + cardH + 56;
+        // O tutorial é a abertura do NÍVEL, não de um trabalho qualquer.
+        void this.playCase(this.caseIdx === 0)
+    }
 
-    FORMAT_ORDER.forEach((format, i) => {
-      const meta = FORMAT_DATA[format];
-      const cx = cardsStartX + i * (CARD_W + CARD_GAP);
-      const cy = cardsY;
+    private shutdownScene() {
+        this.gen += 1
+        EventBus.off('mute-audio', this.onMuteAudio, this)
+        EventBus.off('show-tutorial', this.replayTutorial, this)
+        this.unsubPlatform?.()
+        this.unsubPlatform = undefined
+        this.input.setDefaultCursor('default')
+    }
 
-      const cardBg = this.addContent(this.add.graphics().setDepth(12));
-      this.n1CardBgGraphics.push(cardBg);
-      this.n1CardBounds.push({ x: cx, y: cy, w: CARD_W, h: CARD_H });
-      this.drawN1FormatCard(cardBg, cx, cy, CARD_W, CARD_H, meta.color, meta.borderColor, false);
+    /* ═══════════════════════════════════════════════ atalhos de estado */
 
-      this.addContent(this.addSharpText(cx + CARD_W / 2, cy + 62, meta.emoji, {
-        fontSize: "56px", fontFamily: "Arial Black, Arial",
-      }).setOrigin(0.5).setDepth(13));
+    private get level(): Level { return LEVELS[this.levelIdx] }
+    private get caso(): Caso { return this.level.cases[this.caseIdx] }
+    private get tom(): number { return ACCENT[this.caso.formato] }
 
-      this.addContent(this.addSharpText(cx + CARD_W / 2, cy + CARD_H - 44, meta.label, {
-        fontSize: "22px", fontFamily: "Arial Black, Arial", color: "#f0e6ff",
-        stroke: "#1e0b3e", strokeThickness: 3, align: "center",
-      }).setOrigin(0.5).setDepth(13));
-
-      const zone = this.addContent(
-        this.add.zone(cx + CARD_W / 2, cy + CARD_H / 2, CARD_W, CARD_H).setDepth(55),
-      );
-      zone.setInteractive({ useHandCursor: true });
-
-      const cardIndex = i;
-      zone.on("pointerover", () => {
-        this.input.setDefaultCursor("pointer");
-        if (!this.gameEnded) {
-          this.drawN1FormatCard(this.n1CardBgGraphics[cardIndex], cx, cy, CARD_W, CARD_H, meta.color, meta.borderColor, true);
+    /**
+     * Quantas bolinhas a trilha tem, e em qual delas a criança está.
+     *
+     * Uma pergunta, uma resposta, um lugar. A trilha, o título do passo e a
+     * decisão de "acabou?" leem todos daqui — se cada um contasse por conta
+     * própria, bastaria um deles somar errado para a trilha mentir.
+     *
+     *   [pedido] (+ [mídia], no Nível 3) + um por espaço + [publicar]
+     */
+    private get extras(): number { return this.level.escolhe ? 2 : 1 }
+    private get totalPassos(): number { return this.extras + this.caso.slots.length + 1 }
+    private get passoNaTrilha(): number {
+        if (this.state === 'pedido') return 0
+        if (this.state === 'midia') return 1
+        if (this.state === 'publicando' || this.state === 'jurados') {
+            return this.totalPassos - 1
         }
-      });
-      zone.on("pointerout", () => {
-        this.input.setDefaultCursor("default");
-        this.drawN1FormatCard(this.n1CardBgGraphics[cardIndex], cx, cy, CARD_W, CARD_H, meta.color, meta.borderColor, false);
-      });
-      zone.on("pointerdown", () => {
-        if (this.gameEnded) return;
-        this.handleN1FormatPick(format, briefing.correct, cardIndex, cx, cy, CARD_W, CARD_H, meta.color, meta.borderColor);
-      });
-    });
-  }
-
-  private drawN1FormatCard(
-    g: Phaser.GameObjects.Graphics,
-    x: number, y: number, w: number, h: number,
-    fillColor: number, borderColor: number, hovered: boolean,
-  ) {
-    g.clear();
-    g.fillStyle(fillColor, hovered ? 0.95 : 0.8);
-    g.fillRoundedRect(x, y, w, h, 18);
-    g.lineStyle(hovered ? 5 : 3, borderColor, 1);
-    g.strokeRoundedRect(x, y, w, h, 18);
-    if (hovered) {
-      g.fillStyle(C.white, 0.06);
-      g.fillRoundedRect(x + 4, y + 4, w - 8, h / 3, 14);
-    }
-  }
-
-  private handleN1FormatPick(
-    chosen: FormatType, correct: FormatType,
-    cardIndex: number, cx: number, cy: number, cw: number, ch: number,
-    fillColor: number, borderColor: number,
-  ) {
-    this.playClick();
-    if (chosen === correct) {
-      this.hits += 1;
-      this.playSuccess();
-      // Flash card green
-      const g = this.n1CardBgGraphics[cardIndex];
-      g.clear();
-      g.fillStyle(C.green, 0.9);
-      g.fillRoundedRect(cx, cy, cw, ch, 18);
-      g.lineStyle(5, 0x86efac, 1);
-      g.strokeRoundedRect(cx, cy, cw, ch, 18);
-
-      runtimeGameBridge.emit({
-        type: "CORRECT_ANSWER",
-        gameId: GAME_ID,
-        stage: 1,
-        pointsEarned: 20,
-      });
-      // Light "Planejamento" stage
-      this.markStageComplete(0);
-
-      this.showToast("✅ Formato correto! Muito bem!", C.green, 1200);
-      this.time.delayedCall(1300, () => {
-        if (this.gameEnded) return;
-        this.n1BriefingIndex += 1;
-        this.showN1Briefing();
-      });
-    } else {
-      this.errors += 1;
-      this.playWrong();
-      // Flash card red
-      const g = this.n1CardBgGraphics[cardIndex];
-      const originalFill = fillColor;
-      g.clear();
-      g.fillStyle(C.red, 0.85);
-      g.fillRoundedRect(cx, cy, cw, ch, 18);
-      g.lineStyle(5, 0xfca5a5, 1);
-      g.strokeRoundedRect(cx, cy, cw, ch, 18);
-      this.time.delayedCall(600, () => {
-        if (!g.active) return;
-        this.drawN1FormatCard(g, cx, cy, cw, ch, originalFill, borderColor, false);
-      });
-
-      runtimeGameBridge.emit({
-        type: "WRONG_ANSWER",
-        gameId: GAME_ID,
-        stage: 1,
-        pointsEarned: -5,
-      });
-      this.showToast("❌ Formato errado! Pense: que tipo de produção é mais adequado?", C.red, 2000);
-    }
-  }
-
-  // ─────────────────────────────────────────────────────────────────────────
-  // N2 — Produza o Conteúdo
-  // ─────────────────────────────────────────────────────────────────────────
-
-  private showN2Task() {
-    this.clearContent();
-    this.n2SelectedSet        = new Set();
-    this.n2NextExpectedIndex  = 0;
-    this.n2CardContainers     = [];
-    this.n2CardBgGraphics     = [];
-    this.n2CardBounds         = [];
-    this.n2OrderTexts         = [];
-
-    const tasks = this.levelConfig.n2Tasks ?? [];
-    if (this.n2TaskIndex >= tasks.length) {
-      this.completeLevel();
-      return;
+        return this.extras + this.passo
     }
 
-    const task = tasks[this.n2TaskIndex];
-    const meta = FORMAT_DATA[task.format];
+    /* ═══════════════════════════════════════════════════ ciclo do caso */
 
-    // ── Task header ────────────────────────────────────────────────────────
-    const headerBg = this.addContent(this.add.graphics().setDepth(12));
-    headerBg.fillStyle(C.darkPurple, 0.88);
-    headerBg.fillRoundedRect(PANEL_X + 20, CONTENT_Y, PANEL_W - 40, 50, 14);
-    headerBg.lineStyle(3, C.lightPurple, 0.6);
-    headerBg.strokeRoundedRect(PANEL_X + 20, CONTENT_Y, PANEL_W - 40, 50, 14);
+    private clearPalco() {
+        this.cartao?.destroy(); this.cartao = undefined
+        this.opcoes?.destroy(); this.opcoes = undefined
+        this.obra?.destroy(); this.obra = undefined
+        this.cards?.destroy(); this.cards = undefined
+        this.botao?.destroy(); this.botao = undefined
+    }
 
-    const taskLabel = this.getN2TaskLabel(task.format);
-    this.addContent(this.addSharpText(640, CONTENT_Y + 26, `${meta.emoji} ${taskLabel}`, {
-      fontSize: "22px", fontFamily: "Arial Black, Arial", color: "#f0e6ff",
-      align: "center", stroke: "#2e1065", strokeThickness: 3,
-    }).setOrigin(0.5).setDepth(13));
+    private async playCase(withTutorial: boolean) {
+        const gen = ++this.gen
+        const caso = this.caso
 
-    // Progress dots
-    const dotCont = this.addContent(this.add.container(640, CONTENT_Y + 72).setDepth(12));
-    tasks.forEach((_, i) => {
-      const dot = this.add.graphics();
-      const col = i < this.n2TaskIndex ? C.green : i === this.n2TaskIndex ? C.amber : C.gray;
-      dot.fillStyle(col, 1);
-      dot.fillCircle(-24 + i * 24, 0, 7);
-      dot.lineStyle(2, C.white, 0.6);
-      dot.strokeCircle(-24 + i * 24, 0, 7);
-      dotCont.add(dot);
-    });
+        /*
+         * `locked` é estado de MOMENTO, não de caso. Sem zerar aqui, o trabalho
+         * que termina bem deixa a trava ligada e o seguinte monta a tela
+         * inteira sem aceitar um toque.
+         */
+        this.locked = false
+        this.clearPalco()
+        this.veredito.setVisible(false)
+        this.carimbos.container.removeAll(true)
 
-    // Instruction
-    this.addContent(this.addSharpText(640, CONTENT_Y + 96, "Toque nos itens na ordem correta (1 → 2 → 3):", {
-      fontSize: "18px", fontFamily: "Arial Black, Arial", color: "#c4b5fd",
-    }).setOrigin(0.5).setDepth(12));
+        this.escolhas = caso.slots.map(() => -1)
+        this.passo = 0
+        this.revisando = false
+        this.state = 'pedido'
 
-    // ── Ordering cards ─────────────────────────────────────────────────────
-    const CARD_W = 1060;
-    const CARD_H = 92;
-    const CARD_GAP = 12;
-    const cardX = 640 - CARD_W / 2;
-    const cardsStartY = CONTENT_Y + 122;
+        /*
+         * O template do Nível 1.
+         *
+         * Ele preenche um passo antes de a criança começar, e esse passo já
+         * nasce VERDE na trilha. É o "template pronto" do briefing virando algo
+         * que se vê: o trabalho não parte do zero, parte de um exemplo — e ela
+         * encontra o exemplo montado quando chegar na publicação.
+         */
+        this.prontos = new Set((caso.pronto ?? []).map(p => p.slot))
+        caso.pronto?.forEach(({ slot, opcao }) => { this.escolhas[slot] = opcao })
 
-    task.items.forEach((itemText, i) => {
-      const cy = cardsStartY + i * (CARD_H + CARD_GAP);
-      const cx = cardX + CARD_W / 2;
+        this.hud.setHint(this.level.tip)
+        this.hud.setMidia(this.level.escolhe ? null : caso.formato)
+        this.trilha.setTom(this.level.escolhe ? C.edge : this.tom)
+        this.trilha.setTotal(this.totalPassos)
+        this.trilha.setAtual(0)
+        this.lembrete.set(caso.briefing, caso.publico)
+        this.lembrete.setVisible(false)
+        this.emitCheckpoint()
 
-      const container = this.addContent(
-        this.add.container(cx, cy + CARD_H / 2).setDepth(12),
-      ) as Phaser.GameObjects.Container;
-      this.n2CardContainers.push(container);
-      this.n2CardBounds.push({ x: cardX, y: cy, w: CARD_W, h: CARD_H });
+        /*
+         * O PALCO ENTRA ANTES DO TUTORIAL.
+         *
+         * O tutorial recorta a tela e aponta o balão para o recorte. Rodando
+         * primeiro, ele recortaria tela vazia e falaria de coisas que ainda não
+         * existem.
+         */
+        this.abrirPedido()
+        if (withTutorial) this.locked = true
 
-      const bg = this.add.graphics();
-      this.drawN2CardBg(bg, CARD_W, CARD_H, false, 0);
-      this.n2CardBgGraphics.push(bg);
+        await this.cartao?.show(caso.briefing, caso.publico)
+        if (gen !== this.gen) return
 
-      const txt = this.addSharpText(20 - CARD_W / 2, 0, itemText, {
-        fontSize: "18px", fontFamily: "Arial Black, Arial", color: "#e2d9f3",
-        wordWrap: { width: CARD_W - 80 },
-      }).setOrigin(0, 0.5).setDepth(1);
+        if (!withTutorial) return
 
-      const orderTxt = this.addSharpText(CARD_W / 2 - 28, 0, "", {
-        fontSize: "28px", fontFamily: "Arial Black, Arial", color: "#fbbf24",
-        stroke: "#1a0a00", strokeThickness: 3,
-      }).setOrigin(0.5).setDepth(2).setVisible(false);
-      this.n2OrderTexts.push(orderTxt);
+        const steps = this.buildTutorialSteps()
+        if (!steps.length) { this.locked = false; return }
 
-      container.add([bg, txt, orderTxt]);
+        this.runTutorial(steps, false, () => { })
+    }
 
-      const zone = this.addContent(
-        this.add.zone(cx, cy + CARD_H / 2, CARD_W, CARD_H).setDepth(55),
-      );
-      zone.setInteractive({ useHandCursor: true });
-      const cardIndex = i;
-      zone.on("pointerover", () => {
-        if (!this.gameEnded && !this.n2SelectedSet.has(cardIndex)) {
-          this.input.setDefaultCursor("pointer");
-          const bg2 = this.n2CardBgGraphics[cardIndex];
-          bg2.clear();
-          this.drawN2CardBg(bg2, CARD_W, CARD_H, false, 0, true);
+    private abrirPedido() {
+        this.state = 'pedido'
+        this.titulo.show('O PEDIDO', C.paper)
+        this.cartao = createCartaoPedido(this)
+        this.botao = createBigButton(this, {
+            x: PEDIDO.cx, y: PEDIDO.botaoY, w: PEDIDO.botaoW, h: PEDIDO.botaoH,
+            label: 'COMEÇAR', tone: C.ok,
+            onClick: () => this.doPedidoPronto(),
+        })
+    }
+
+    private doPedidoPronto() {
+        if (this.state !== 'pedido' || this.locked || this.ended) return
+        this.playPick()
+        this.clearPalco()
+        if (this.level.escolhe) this.abrirMidias()
+        else this.abrirPasso(0)
+    }
+
+    /* ═════════════════════════════════════════════════ passo: a mídia */
+
+    private abrirMidias() {
+        this.state = 'midia'
+        this.trilha.setAtual(this.passoNaTrilha)
+        this.titulo.show('QUAL MÍDIA SERVE PARA ESTE PEDIDO?', C.paper)
+        this.lembrete.setVisible(true)
+        this.cards = createCards(this, { onPick: f => void this.onPickMidia(f) })
+    }
+
+    private async onPickMidia(escolhida: Formato) {
+        if (this.state !== 'midia' || this.locked || this.ended) return
+
+        const gen = this.gen
+        const caso = this.caso
+
+        if (escolhida !== caso.formato) {
+            this.locked = true
+            this.cards?.setEnabled(false)
+            this.errors += 1
+            this.points += POINTS.midia
+            this.playError()
+            runtimeGameBridge.emit({
+                type: 'WRONG_ANSWER', gameId: GAME_ID,
+                pointsEarned: POINTS.midia, stage: this.level.level,
+            })
+            this.emitCheckpoint()
+
+            await this.cards?.reject(escolhida)
+            if (gen !== this.gen) return
+
+            showToast(this, caso.porque?.[escolhida] ?? 'Essa mídia não serve para este pedido.',
+                C.warn, 3400)
+
+            await FX.wait(this, 400)
+            if (gen !== this.gen) return
+
+            this.locked = false
+            this.cards?.setEnabled(true)
+            return
         }
-      });
-      zone.on("pointerout", () => {
-        this.input.setDefaultCursor("default");
-        if (!this.n2SelectedSet.has(cardIndex)) {
-          const bg2 = this.n2CardBgGraphics[cardIndex];
-          bg2.clear();
-          this.drawN2CardBg(bg2, CARD_W, CARD_H, false, 0, false);
+
+        this.locked = true
+        this.cards?.setEnabled(false)
+        this.playPick()
+
+        this.hud.setMidia(caso.formato)
+        this.trilha.setTom(this.tom)
+
+        const cards = this.cards
+        if (cards) {
+            FX.kill(this, cards.container)
+            await FX.to(this, cards.container, { alpha: 0, y: -50 }, { duration: 280 })
         }
-      });
-      zone.on("pointerdown", () => {
-        if (this.gameEnded) return;
-        if (this.n2SelectedSet.has(cardIndex)) return;
-        this.handleN2CardTap(cardIndex, task.correctOrder);
-      });
-    });
-  }
+        if (gen !== this.gen) return
 
-  private getN2TaskLabel(format: FormatType): string {
-    if (format === "text")   return "Ordene os parágrafos na sequência certa";
-    if (format === "slides") return "Coloque os slides na ordem da apresentação";
-    return "Ordene os clipes do roteiro";
-  }
-
-  private drawN2CardBg(
-    g: Phaser.GameObjects.Graphics,
-    w: number, h: number,
-    selected: boolean, orderNum: number,
-    hovered = false,
-  ) {
-    g.clear();
-    const hw = w / 2;
-    const hh = h / 2;
-    if (selected) {
-      g.fillStyle(C.green, 0.9);
-      g.fillRoundedRect(-hw, -hh, w, h, 14);
-      g.lineStyle(4, 0x86efac, 1);
-      g.strokeRoundedRect(-hw, -hh, w, h, 14);
-      // Order badge circle
-      g.fillStyle(C.amber, 1);
-      g.fillCircle(hw - 28, 0, 22);
-    } else if (hovered) {
-      g.fillStyle(C.midPanel, 0.95);
-      g.fillRoundedRect(-hw, -hh, w, h, 14);
-      g.lineStyle(4, C.lightPurple, 0.9);
-      g.strokeRoundedRect(-hw, -hh, w, h, 14);
-    } else {
-      g.fillStyle(C.darkPanel, 0.9);
-      g.fillRoundedRect(-hw, -hh, w, h, 14);
-      g.lineStyle(3, C.purple, 0.5);
-      g.strokeRoundedRect(-hw, -hh, w, h, 14);
+        this.locked = false
+        this.clearPalco()
+        this.abrirPasso(0)
     }
-    void orderNum; // used via n2OrderTexts
-  }
 
-  private handleN2CardTap(tappedIndex: number, correctOrder: number[]) {
-    this.playClick();
+    /* ═══════════════════════════════════════════ passo: uma escolha */
 
-    if (correctOrder[this.n2NextExpectedIndex] === tappedIndex) {
-      // Correct tap
-      this.n2SelectedSet.add(tappedIndex);
-      const order = this.n2NextExpectedIndex;
-      this.n2NextExpectedIndex += 1;
+    private abrirPasso(inicio: number) {
+        const caso = this.caso
 
-      // Update card visuals
-      const bg = this.n2CardBgGraphics[tappedIndex];
-      bg.clear();
-      this.drawN2CardBg(bg, 1060, 92, true, order + 1);
+        // pula o que o template já resolveu; na revisão, ninguém pula nada
+        let i = inicio
+        if (!this.revisando) {
+            while (i < caso.slots.length && this.prontos.has(i)) i += 1
+        }
+        if (i >= caso.slots.length) { void this.abrirPublicacao(); return }
 
-      // Show order number
-      const ot = this.n2OrderTexts[tappedIndex];
-      ot.setText(String(order + 1)).setVisible(true);
+        this.passo = i
+        this.state = 'passo'
+        this.clearPalco()
 
-      // Scale pop animation on container
-      const cont = this.n2CardContainers[tappedIndex];
-      this.tweens.add({ targets: cont, scaleX: 1.03, scaleY: 1.03, duration: 80, yoyo: true });
+        const slot = caso.slots[i]
+        this.trilha.setAtual(
+            this.passoNaTrilha,
+            this.revisando ? this.totalPassos - 1 : this.passoNaTrilha,
+        )
+        this.titulo.show(`ESCOLHA ${this.artigo(slot.papel)}`, this.tom)
+        this.lembrete.setVisible(true)
 
-      this.playTone(660 + order * 110, 0.08, "triangle", 0.06);
+        this.opcoes = createOpcoes(this, {
+            slot, tone: this.tom, escolhida: this.escolhas[i],
+            onPick: j => this.onPickOpcao(j),
+        })
 
-      if (this.n2NextExpectedIndex >= correctOrder.length) {
-        // Task complete
-        this.playSuccess();
+        /*
+         * O passo opcional ganha um botão de PULAR, e é ele que dá sentido ao
+         * carimbo CAPRICHO: sem uma saída visível, "opcional" seria só uma
+         * palavra escrita, e a criança nunca escolheria de verdade.
+         */
+        if (!slot.opcional) return
+        this.botao = createBigButton(this, {
+            x: 640, y: OPCOES.pularY, w: OPCOES.pularW, h: OPCOES.pularH,
+            label: 'PULAR', tone: C.edge, breathe: false,
+            onClick: () => this.onPular(),
+        })
+    }
+
+    /** "ESCOLHA O TÍTULO" / "ESCOLHA A IMAGEM" — sem artigo errado na tela. */
+    private artigo(papel: string): string {
+        const femininos = ['IMAGEM', 'CENA', 'CAPA', 'NARRAÇÃO', 'FRASE', 'TRILHA', 'LEGENDA']
+        return `${femininos.includes(papel) ? 'A' : 'O'} ${papel}`
+    }
+
+    private onPickOpcao(j: number) {
+        if (this.state !== 'passo' || this.locked || this.ended) return
+        this.escolhas[this.passo] = j
+        this.playPlace()
+        this.seguir()
+    }
+
+    private onPular() {
+        if (this.state !== 'passo' || this.locked || this.ended) return
+        if (!this.caso.slots[this.passo]?.opcional) return
+        this.escolhas[this.passo] = -1
+        this.playPick()
+        this.seguir()
+    }
+
+    /** Na produção normal vai para o próximo passo; na revisão, direto publicar. */
+    private seguir() {
+        if (this.revisando) {
+            this.revisando = false
+            void this.abrirPublicacao()
+            return
+        }
+        this.abrirPasso(this.passo + 1)
+    }
+
+    /* ═══════════════════════════════════════════ passo: a publicação */
+
+    private async abrirPublicacao() {
+        const gen = this.gen
+        this.state = 'publicando'
+        this.locked = true
+        this.clearPalco()
+
+        this.trilha.setAtual(this.passoNaTrilha)
+        this.titulo.show(`SEU TRABALHO · ${NOME[this.caso.formato]}`, this.tom)
+        this.lembrete.setVisible(true)
+
+        this.obra = createObraMontada(this, {
+            formato: this.caso.formato,
+            slots: this.caso.slots,
+            escolhas: this.escolhas,
+        })
+
+        // as peças escolhidas uma a uma se juntam aqui pela primeira vez
+        await this.obra.montar()
+        if (gen !== this.gen) return
+
+        this.botao = createBigButton(this, {
+            x: PUB.cx, y: PUB.cy, w: PUB.w, h: PUB.h,
+            label: 'PUBLICAR', tone: C.ok,
+            onClick: () => void this.onPublicar(),
+        })
+        this.locked = false
+    }
+
+    /* ═══════════════════════════════════════════════════ os jurados */
+
+    /**
+     * O veredito.
+     *
+     * Os três carimbos são os três critérios do briefing da habilidade, ditos
+     * em palavra de criança:
+     *
+     *   CLARO     → as escolhas de TEXTO dizem o que precisavam dizer
+     *   COMBINA   → as escolhas de IMAGEM têm a ver com o assunto
+     *   CAPRICHO  → os passos opcionais foram feitos
+     *
+     * Aprovar depende de CLARO e COMBINA. CAPRICHO não barra: vira bônus,
+     * porque passo opcional é escolha e não obrigação — e uma criança que
+     * entregou um trabalho correto merece ouvir o que faltou sem ser
+     * reprovada por isso.
+     */
+    private julgar(): VereditoData {
+        const caso = this.caso
+        let clareza = true
+        let adequacao = true
+        let recursos = true
+
+        /*
+         * Os jurados apontam UM passo — mandar rever quatro coisas de uma vez é
+         * o mesmo que não apontar nada. E o obrigatório vem SEMPRE antes do
+         * opcional: apontar o enfeite enquanto o título está ilegível mandaria
+         * a criança arrumar a coisa errada.
+         */
+        let revisar = -1
+        let critica = ''
+        let extraSlot = -1
+        let extraCritica = ''
+
+        caso.slots.forEach((slot, i) => {
+            const escolha = this.escolhas[i]
+
+            if (escolha < 0) {
+                if (slot.opcional) recursos = false
+                return
+            }
+
+            const opcao = slot.opcoes[escolha]
+            if (opcao.bom) return
+
+            if (slot.opcional) {
+                recursos = false
+                if (extraSlot < 0) { extraSlot = i; extraCritica = opcao.critica ?? '' }
+                return
+            }
+
+            if (slot.tipo === 'imagem') adequacao = false
+            else clareza = false
+
+            if (revisar < 0) { revisar = i; critica = opcao.critica ?? '' }
+        })
+
+        if (revisar < 0 && extraSlot >= 0) { revisar = extraSlot; critica = extraCritica }
+
+        const aprovado = clareza && adequacao
+        const linha = aprovado
+            ? recursos
+                ? caso.successLine
+                : `${caso.successLine}  ·  ${extraCritica || 'Dava para caprichar no passo opcional.'}`
+            : critica
+
+        return { clareza, recursos, adequacao, aprovado, revisar: aprovado ? -1 : revisar, linha }
+    }
+
+    private async onPublicar() {
+        if (this.state !== 'publicando' || this.locked || this.ended) return
+
+        const gen = this.gen
+        this.state = 'jurados'
+        this.locked = true
+        this.botao?.destroy()
+        this.botao = undefined
+        this.lembrete.setVisible(false)
+        this.titulo.show('OS JURADOS', C.paper)
+
+        // o clarão da publicação: a foto sendo batida
+        this.playObturador()
+        await this.obra?.flash()
+        if (gen !== this.gen) return
+
+        const v = this.julgar()
+
+        await this.carimbos.bater([
+            { nome: 'CLARO', verde: v.clareza },
+            { nome: 'COMBINA', verde: v.adequacao },
+            { nome: 'CAPRICHO', verde: v.recursos },
+        ], () => {
+            this.obra?.bater()
+            this.playCarimbo()
+        })
+        if (gen !== this.gen) return
+
+        this.veredito.show(v.linha, v.aprovado ? C.okSoft : C.warnSoft)
+
+        if (!v.aprovado) {
+            this.playError()
+            await FX.wait(this, 3400)
+            if (gen !== this.gen) return
+
+            this.errors += 1
+            this.points += POINTS.revisao
+            runtimeGameBridge.emit({
+                type: 'WRONG_ANSWER', gameId: GAME_ID,
+                pointsEarned: POINTS.revisao, stage: this.level.level,
+            })
+            this.emitCheckpoint()
+
+            // a trilha ANDA PARA TRÁS: a criança vê para onde está voltando
+            this.veredito.setVisible(false)
+            this.carimbos.container.removeAll(true)
+            this.locked = false
+            this.revisando = true
+            this.abrirPasso(Math.max(0, v.revisar))
+            return
+        }
+
+        this.playAprovado()
+        void FX.sparks(this, OBRA.cx, OBRA.cy, { color: C.ok, count: 30, spread: 320 })
+        void FX.flash(this, C.white, { duration: 280, peak: 0.2 })
+
+        this.hits += 1
+        this.points += POINTS.publica + (v.recursos ? POINTS.caprichou : 0)
         runtimeGameBridge.emit({
-          type: "CORRECT_ANSWER",
-          gameId: GAME_ID,
-          stage: 2,
-          pointsEarned: 20,
-        });
-        this.showToast("✅ Sequência correta! Ótimo trabalho!", C.green, 1200);
-        this.time.delayedCall(1300, () => {
-          if (this.gameEnded) return;
-          this.n2TaskIndex += 1;
-          this.showN2Task();
-        });
-      }
-    } else {
-      // Wrong order — shake container
-      const cont = this.n2CardContainers[tappedIndex];
-      const origX = cont.x;
-      this.tweens.add({
-        targets: cont,
-        x: [origX - 8, origX + 8, origX - 6, origX + 6, origX],
-        duration: 300,
-        ease: "Linear",
-        onComplete: () => { cont.x = origX; },
-      });
-      this.playTone(220, 0.05, "sine", 0.04);
-    }
-  }
+            type: 'CORRECT_ANSWER', gameId: GAME_ID,
+            pointsEarned: POINTS.publica + (v.recursos ? POINTS.caprichou : 0),
+            stage: this.level.level,
+        })
+        this.emitCheckpoint()
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // N3 — Revisão e Publicação
-  // ─────────────────────────────────────────────────────────────────────────
+        this.state = 'solved'
+        await FX.wait(this, 3000)
+        if (gen !== this.gen) return
 
-  private showN3Production() {
-    this.clearContent();
-    this.n3SelectedErrors = new Set();
-    this.n3ItemContainers = [];
-    this.n3ItemBgGraphics = [];
-    this.n3PublishObjects = [];
-
-    const productions = this.levelConfig.n3Productions ?? [];
-    if (this.n3ProductionIndex >= productions.length) {
-      this.completeFinalLevel();
-      return;
-    }
-
-    const prod = productions[this.n3ProductionIndex];
-
-    // ── Production header ──────────────────────────────────────────────────
-    const hdrBg = this.addContent(this.add.graphics().setDepth(12));
-    hdrBg.fillStyle(C.darkPurple, 0.92);
-    hdrBg.fillRoundedRect(PANEL_X + 20, CONTENT_Y, PANEL_W - 40, 54, 14);
-    hdrBg.lineStyle(3, C.amber, 0.7);
-    hdrBg.strokeRoundedRect(PANEL_X + 20, CONTENT_Y, PANEL_W - 40, 54, 14);
-
-    const prodMeta = FORMAT_DATA[prod.type];
-    const prodNum = this.n3ProductionIndex + 1;
-    this.addContent(this.addSharpText(640, CONTENT_Y + 28, `${prodMeta.emoji} Produção ${prodNum}/2 — ${prod.type === "text" ? "Texto" : "Slides"}`, {
-      fontSize: "22px", fontFamily: "Arial Black, Arial", color: "#fbbf24",
-      align: "center", stroke: "#1a0a00", strokeThickness: 2,
-    }).setOrigin(0.5).setDepth(13));
-
-    // ── Instruction ─────────────────────────────────────────────────────────
-    this.addContent(this.addSharpText(640, CONTENT_Y + 72, `🔍 Toque nos 2 itens marcados com ❌ para corrigi-los:`, {
-      fontSize: "19px", fontFamily: "Arial Black, Arial", color: "#c4b5fd",
-      stroke: "#0f0820", strokeThickness: 2,
-    }).setOrigin(0.5).setDepth(12));
-
-    // ── Production items ───────────────────────────────────────────────────
-    const ITEM_W = 1060;
-    const ITEM_H = 68;
-    const ITEM_GAP = 8;
-    const itemX = 640 - ITEM_W / 2;
-    const itemsStartY = CONTENT_Y + 100;
-
-    prod.items.forEach((itemText, i) => {
-      const iy = itemsStartY + i * (ITEM_H + ITEM_GAP);
-      const icx = 640;
-      const icy = iy + ITEM_H / 2;
-
-      const isError = prod.errors.includes(i);
-
-      const container = this.addContent(
-        this.add.container(icx, icy).setDepth(12),
-      ) as Phaser.GameObjects.Container;
-      this.n3ItemContainers.push(container);
-
-      const bg = this.add.graphics();
-      this.drawN3ItemBg(bg, ITEM_W, ITEM_H, "normal", isError);
-      this.n3ItemBgGraphics.push(bg);
-
-      const txt = this.addSharpText(-ITEM_W / 2 + 16, 0, itemText, {
-        fontSize: "17px", fontFamily: "Arial Black, Arial",
-        color: isError ? "#fde68a" : "#e2d9f3",
-        wordWrap: { width: ITEM_W - 40 },
-      }).setOrigin(0, 0.5).setDepth(1);
-
-      container.add([bg, txt]);
-
-      if (isError) {
-        // Make item interactive
-        const zone = this.addContent(
-          this.add.zone(icx, icy, ITEM_W, ITEM_H).setDepth(55),
-        );
-        zone.setInteractive({ useHandCursor: true });
-        const idx = i;
-        zone.on("pointerover", () => {
-          if (!this.gameEnded && !this.n3SelectedErrors.has(idx)) {
-            this.input.setDefaultCursor("pointer");
-          }
-        });
-        zone.on("pointerout", () => { this.input.setDefaultCursor("default"); });
-        zone.on("pointerdown", () => {
-          if (this.gameEnded) return;
-          if (this.n3SelectedErrors.has(idx)) return;
-          this.handleN3ItemTap(idx, prod.errors, ITEM_W, ITEM_H);
-        });
-      } else {
-        // Non-error items: tappable but give shake feedback
-        const zone = this.addContent(
-          this.add.zone(icx, icy, ITEM_W, ITEM_H).setDepth(55),
-        );
-        zone.setInteractive({ useHandCursor: true });
-        const idx = i;
-        zone.on("pointerover", () => {
-          if (!this.gameEnded) this.input.setDefaultCursor("pointer");
-        });
-        zone.on("pointerout", () => { this.input.setDefaultCursor("default"); });
-        zone.on("pointerdown", () => {
-          if (this.gameEnded) return;
-          // Wrong item — shake
-          const cont = this.n3ItemContainers[idx];
-          const origX = cont.x;
-          this.tweens.add({
-            targets: cont,
-            x: [origX - 6, origX + 6, origX - 4, origX + 4, origX],
-            duration: 280,
-            ease: "Linear",
-            onComplete: () => { cont.x = origX; },
-          });
-          this.playTone(200, 0.05, "square", 0.04);
-          this.showToast("💡 Este item está correto! Procure os marcados com ❌", C.amber, 1400);
-        });
-      }
-    });
-
-    // Selection counter
-    this.addContent(this.addSharpText(PANEL_X + 32, PANEL_Y + PANEL_H - 26, "", {
-      fontSize: "16px", fontFamily: "Arial Black, Arial", color: "#a78bfa",
-    }).setDepth(12).setName("n3Counter"));
-    this.updateN3Counter(prod.errors.length);
-  }
-
-  private drawN3ItemBg(
-    g: Phaser.GameObjects.Graphics,
-    w: number, h: number,
-    state: "normal" | "selected" | "correct",
-    isError: boolean,
-  ) {
-    g.clear();
-    const hw = w / 2;
-    const hh = h / 2;
-    if (state === "selected") {
-      g.fillStyle(C.warmAmber, 0.85);
-      g.fillRoundedRect(-hw, -hh, w, h, 12);
-      g.lineStyle(4, C.amber, 1);
-      g.strokeRoundedRect(-hw, -hh, w, h, 12);
-    } else if (state === "correct") {
-      g.fillStyle(C.green, 0.85);
-      g.fillRoundedRect(-hw, -hh, w, h, 12);
-      g.lineStyle(4, 0x86efac, 1);
-      g.strokeRoundedRect(-hw, -hh, w, h, 12);
-    } else {
-      if (isError) {
-        g.fillStyle(0x44101a, 0.92);
-        g.fillRoundedRect(-hw, -hh, w, h, 12);
-        g.lineStyle(3, 0xfca5a5, 0.6);
-        g.strokeRoundedRect(-hw, -hh, w, h, 12);
-      } else {
-        g.fillStyle(C.darkPanel, 0.88);
-        g.fillRoundedRect(-hw, -hh, w, h, 12);
-        g.lineStyle(3, C.purple, 0.35);
-        g.strokeRoundedRect(-hw, -hh, w, h, 12);
-      }
-    }
-  }
-
-  private updateN3Counter(totalErrors: number) {
-    const counter = this.children.getByName("n3Counter") as Phaser.GameObjects.Text | null;
-    if (counter) {
-      counter.setText(`Erros encontrados: ${this.n3SelectedErrors.size} / ${totalErrors}`);
-    }
-  }
-
-  private handleN3ItemTap(index: number, errorIndices: number[], itemW: number, itemH: number) {
-    this.playClick();
-    this.n3SelectedErrors.add(index);
-
-    // Animate: amber selection flash then green
-    const cont = this.n3ItemContainers[index];
-    const bg = this.n3ItemBgGraphics[index];
-    bg.clear();
-    this.drawN3ItemBg(bg, itemW, itemH, "selected", true);
-    this.tweens.add({
-      targets: cont, scaleX: 1.04, scaleY: 1.04, duration: 80, yoyo: true,
-      onComplete: () => {
-        if (!bg.active) return;
-        bg.clear();
-        this.drawN3ItemBg(bg, itemW, itemH, "correct", true);
-      },
-    });
-    this.playTone(550, 0.07, "triangle", 0.05);
-
-    this.updateN3Counter(errorIndices.length);
-
-    // Check if all errors found
-    const allFound = errorIndices.every((ei) => this.n3SelectedErrors.has(ei));
-    if (allFound) {
-      this.time.delayedCall(400, () => {
-        if (this.gameEnded) return;
-        this.showN3PublishButton(errorIndices);
-      });
-    }
-  }
-
-  private showN3PublishButton(errorIndices: number[]) {
-    const btnX = 640;
-    const btnY = PANEL_Y + PANEL_H - 50;
-    const btnW = 500;
-    const btnH = 60;
-
-    const btnBg = this.addContent(this.add.graphics().setDepth(14));
-    this.n3PublishObjects.push(btnBg);
-    btnBg.fillStyle(C.purple, 1);
-    btnBg.fillRoundedRect(btnX - btnW / 2, btnY - btnH / 2, btnW, btnH, 30);
-    btnBg.lineStyle(5, C.amber, 1);
-    btnBg.strokeRoundedRect(btnX - btnW / 2, btnY - btnH / 2, btnW, btnH, 30);
-
-    const btnTxt = this.addContent(this.addSharpText(btnX, btnY, "✓ Corrigir e Publicar", {
-      fontSize: "24px", fontFamily: "Arial Black, Arial", color: "#ffffff",
-      stroke: "#2e1065", strokeThickness: 4,
-    }).setOrigin(0.5).setDepth(15));
-    this.n3PublishObjects.push(btnTxt);
-
-    // Entrance animation
-    btnBg.setAlpha(0);
-    btnTxt.setAlpha(0);
-    this.tweens.add({ targets: [btnBg, btnTxt], alpha: 1, duration: 300, ease: "Power2" });
-
-    const zone = this.addContent(
-      this.add.zone(btnX, btnY, btnW, btnH).setDepth(65),
-    );
-    this.n3PublishObjects.push(zone);
-    zone.setInteractive({ useHandCursor: true });
-
-    zone.on("pointerover", () => {
-      this.input.setDefaultCursor("pointer");
-      this.tweens.add({ targets: [btnBg, btnTxt], scaleX: 1.04, scaleY: 1.04, duration: 80 });
-    });
-    zone.on("pointerout", () => {
-      this.input.setDefaultCursor("default");
-      this.tweens.add({ targets: [btnBg, btnTxt], scaleX: 1, scaleY: 1, duration: 80 });
-    });
-    zone.on("pointerdown", () => {
-      if (this.gameEnded) return;
-      this.playSuccess();
-      zone.destroy();
-
-      // Publish animation: error items fly up
-      const prod = (this.levelConfig.n3Productions ?? [])[this.n3ProductionIndex];
-      prod.errors.forEach((ei) => {
-        const cont = this.n3ItemContainers[ei];
-        if (cont) {
-          this.tweens.add({ targets: cont, y: cont.y - 200, alpha: 0, duration: 600, ease: "Power2" });
+        this.caseIdx += 1
+        if (this.caseIdx >= this.level.cases.length) {
+            void this.endLevel()
+            return
         }
-      });
-
-      // Confetti burst
-      for (let p = 0; p < 12; p++) {
-        const px = Phaser.Math.Between(300, 980);
-        const py = Phaser.Math.Between(200, 500);
-        const pc = [C.amber, C.purple, C.teal, C.green, 0xf9a8d4][p % 5];
-        const conf = this.add.graphics().setDepth(100);
-        conf.fillStyle(pc, 0.9);
-        conf.fillRoundedRect(px - 8, py - 4, 16, 8, 4);
-        this.tweens.add({ targets: conf, alpha: 0, y: py + 80, duration: 700, delay: p * 50, onComplete: () => conf.destroy() });
-      }
-
-      runtimeGameBridge.emit({
-        type: "CORRECT_ANSWER",
-        gameId: GAME_ID,
-        stage: 3,
-        pointsEarned: 25,
-      });
-
-      // Mark stages
-      this.markStageComplete(2); // Revisão
-      if (this.n3ProductionIndex === 1) {
-        this.markStageComplete(3); // Publicação
-      }
-
-      runtimeGameBridge.emit({
-        type: "CHECKPOINT",
-        gameId: GAME_ID,
-        stage: 3,
-        progress: (this.n3ProductionIndex + 1) / 2,
-        score: this.getScore(),
-        hits: this.hits,
-        errors: this.errors,
-      });
-
-      this.hits += 1;
-      this.showToast("🚀 Publicado com sucesso! Excelente revisão!", C.purple, 1400);
-
-      this.time.delayedCall(1500, () => {
-        if (this.gameEnded) return;
-        this.n3ProductionIndex += 1;
-        this.showN3Production();
-      });
-    });
-    void errorIndices;
-  }
-
-  // ─────────────────────────────────────────────────────────────────────────
-  // Level Completion
-  // ─────────────────────────────────────────────────────────────────────────
-
-  private completeLevel() {
-    if (this.gameEnded) return;
-    this.gameEnded = true;
-    this.timerEvent?.remove(false);
-    this.input.enabled = false;
-    this.playSuccess();
-
-    const nextLevel = (this.levelConfig.level + 1) as StudioLevelNumber;
-    runtimeGameBridge.emit({
-      type: "CHECKPOINT",
-      gameId: GAME_ID,
-      stage: nextLevel,
-      progress: this.levelConfig.level / 3,
-      score: this.getScore(),
-      hits: this.hits,
-      errors: this.errors,
-    });
-    this.time.delayedCall(400, () => this.showLevelCompleteScreen(nextLevel));
-  }
-
-  private completeFinalLevel() {
-    if (this.gameEnded) return;
-    this.gameEnded = true;
-    this.timerEvent?.remove(false);
-    this.input.enabled = false;
-    this.playSuccess();
-    runtimeGameBridge.emit({ type: "GAME_COMPLETED", gameId: GAME_ID, stage: 3 });
-    this.time.delayedCall(400, () => this.showFinalCompleteScreen());
-  }
-
-  // ─────────────────────────────────────────────────────────────────────────
-  // Flow Screens
-  // ─────────────────────────────────────────────────────────────────────────
-
-  private showLevelCompleteScreen(nextLevel: StudioLevelNumber) {
-    this.clearOverlay();
-    const bg = this.addOverlay(this.add.rectangle(640, 360, 1280, 720, C.ink, 0.66).setDepth(60));
-    bg.setInteractive();
-
-    const panel = this.addOverlay(this.add.container(640, 360).setDepth(62));
-
-    const shadow = this.add.graphics();
-    shadow.fillStyle(0x000000, 0.22);
-    shadow.fillRoundedRect(-286, -186, 572, 372, 32);
-
-    const panelBg = this.add.graphics();
-    panelBg.fillStyle(C.cream, 0.97);
-    panelBg.fillRoundedRect(-298, -198, 596, 376, 32);
-    panelBg.lineStyle(6, C.purple, 0.9);
-    panelBg.strokeRoundedRect(-298, -198, 596, 376, 32);
-
-    const topBar = this.add.graphics();
-    topBar.fillStyle(C.purple, 1);
-    topBar.fillRoundedRect(-210, -214, 420, 28, 14);
-
-    const stars = this.addSharpText(0, -140, "⭐⭐", {
-      fontSize: "52px", fontFamily: "Arial Black, Arial",
-    }).setOrigin(0.5);
-    this.tweens.add({ targets: stars, scale: { from: 0.9, to: 1.08 }, duration: 600, yoyo: true, repeat: 2 });
-
-    const title = this.addSharpText(0, -72, "Parabéns!", {
-      fontSize: "42px", fontFamily: "Arial Black, Arial", color: "#7c3aed",
-      stroke: "#faf5ff", strokeThickness: 6,
-    }).setOrigin(0.5);
-
-    const sub = this.addSharpText(0, -16, `Nível ${this.levelConfig.level} concluído! 🎉`, {
-      fontSize: "22px", fontFamily: "Arial Black, Arial", color: "#334155", align: "center",
-    }).setOrigin(0.5);
-
-    const next = this.addSharpText(0, 38, `Preparando o nível ${nextLevel}...`, {
-      fontSize: "20px", fontFamily: "Arial Black, Arial", color: "#7c3aed", align: "center",
-    }).setOrigin(0.5);
-
-    const dots = [1, 2, 3].map((num, i) => {
-      const d = this.add.graphics();
-      const col = num <= this.levelConfig.level ? C.amber : num === nextLevel ? C.purple : 0xd1d5db;
-      d.fillStyle(col, 1);
-      d.fillCircle(-28 + i * 28, 90, 9);
-      d.lineStyle(2, C.white, 0.8);
-      d.strokeCircle(-28 + i * 28, 90, 9);
-      return d;
-    });
-
-    panel.add([shadow, panelBg, topBar, stars, title, sub, next, ...dots]);
-    this.animateModal(panel);
-
-    // Confetti
-    for (let k = 0; k < 16; k++) {
-      const cx = Phaser.Math.Between(280, 1000);
-      const cy = Phaser.Math.Between(100, 620);
-      const col = [C.amber, C.purple, C.teal, C.green, C.orange][k % 5];
-      const conf = this.addOverlay(this.add.graphics().setDepth(63));
-      conf.fillStyle(col, 0.88);
-      conf.fillRoundedRect(cx - 8, cy - 4, 16, 8, 4);
-      this.tweens.add({ targets: conf, alpha: 0, y: cy + 64, duration: 1600, delay: k * 80 });
+        void this.playCase(false)
     }
 
-    this.time.delayedCall(1800, () => {
-      this.scene.restart({ level: nextLevel, hits: this.hits, errors: this.errors });
-    });
-  }
+    /* ═══════════════════════════════════════════════ avanço de nível */
 
-  private showFinalCompleteScreen() {
-    this.clearOverlay();
-    const bg = this.addOverlay(this.add.rectangle(640, 360, 1280, 720, C.ink, 0.70).setDepth(60));
-    bg.setInteractive();
+    private async endLevel() {
+        this.ended = true
+        this.locked = true
+        this.gen += 1
+        this.hud.setHelpEnabled(false)
 
-    const panel = this.addOverlay(this.add.container(640, 360).setDepth(62));
+        runtimeGameBridge.emit({
+            type: 'GAME_COMPLETED', gameId: GAME_ID, stage: this.level.level,
+        })
+        this.emitCheckpoint(true)
 
-    const shadow = this.add.graphics();
-    shadow.fillStyle(0x000000, 0.24);
-    shadow.fillRoundedRect(-316, -220, 632, 440, 36);
+        await FX.wait(this, 300)
 
-    const panelBg = this.add.graphics();
-    panelBg.fillStyle(C.cream, 0.97);
-    panelBg.fillRoundedRect(-328, -232, 656, 448, 36);
-    panelBg.lineStyle(7, C.purple, 0.9);
-    panelBg.strokeRoundedRect(-328, -232, 656, 448, 36);
+        const lvl = this.level.level
+        const next = lvl < 3 ? (lvl + 1) as 2 | 3 : null
 
-    const ribbon = this.add.graphics();
-    ribbon.fillStyle(C.amber, 1);
-    ribbon.fillRoundedRect(-230, -248, 460, 28, 14);
+        if (next) {
+            showLevelComplete(this, {
+                title: 'Publicado!',
+                subtitle: `Nível ${lvl} concluído`,
+                message: this.level.objective,
+                accent: ACCENT[this.level.cases[0].formato],
+                panelColor: C.paper,
+                overlayColor: C.ink,
+                progress: { total: 3, current: lvl },
+                autoAdvance: {
+                    delay: 2300,
+                    label: 'Abrindo a próxima oficina...',
+                    onComplete: () => this.scene.restart({ level: next, points: this.points }),
+                },
+            })
+            return
+        }
 
-    const ribbonTxt = this.addSharpText(0, -234, "🎬 Estúdio de Produção Digital", {
-      fontSize: "15px", fontFamily: "Arial Black, Arial", color: "#1a0a00",
-    }).setOrigin(0.5);
-
-    const stars = this.addSharpText(0, -168, "⭐⭐⭐", {
-      fontSize: "56px", fontFamily: "Arial Black, Arial",
-    }).setOrigin(0.5);
-    this.tweens.add({ targets: stars, scale: { from: 0.9, to: 1.1 }, duration: 700, yoyo: true, repeat: -1 });
-
-    const title = this.addSharpText(0, -94, "Parabéns!", {
-      fontSize: "46px", fontFamily: "Arial Black, Arial", color: "#7c3aed",
-      stroke: "#faf5ff", strokeThickness: 7,
-    }).setOrigin(0.5);
-
-    const sub = this.addSharpText(0, -34, "Você completou todos os níveis\ndo Estúdio de Produção Digital!", {
-      fontSize: "24px", fontFamily: "Arial Black, Arial", color: "#1e1b4b", align: "center",
-    }).setOrigin(0.5);
-
-    const desc = this.addSharpText(0, 38, `Pontuação: ${this.getScore()} · Acertos: ${this.hits} · Erros: ${this.errors}`, {
-      fontSize: "18px", fontFamily: "Arial Black, Arial", color: "#64748b", align: "center",
-    }).setOrigin(0.5);
-
-    const sparkles = Array.from({ length: 14 }, (_, i) => {
-      const sp = this.add.graphics();
-      sp.fillStyle([C.amber, C.purple, C.teal, 0xf9a8d4, 0x86efac][i % 5], 0.9);
-      sp.fillCircle(Phaser.Math.Between(-300, 300), Phaser.Math.Between(-210, 200), Phaser.Math.Between(4, 10));
-      this.tweens.add({ targets: sp, alpha: { from: 0.3, to: 1 }, scale: { from: 0.7, to: 1.4 }, duration: 600 + i * 50, yoyo: true, repeat: -1 });
-      return sp;
-    });
-
-    const exitBg = this.add.graphics();
-    exitBg.fillStyle(C.purple, 1);
-    exitBg.fillRoundedRect(-138, 86, 276, 54, 27);
-    exitBg.lineStyle(4, C.amber, 1);
-    exitBg.strokeRoundedRect(-138, 86, 276, 54, 27);
-
-    const exitTxt = this.addSharpText(0, 113, "Voltar aos Jogos", {
-      fontSize: "21px", fontFamily: "Arial Black, Arial", color: "#ffffff",
-      stroke: "#2e1065", strokeThickness: 3,
-    }).setOrigin(0.5);
-
-    panel.add([shadow, panelBg, ribbon, ribbonTxt, ...sparkles, stars, title, sub, desc, exitBg, exitTxt]);
-    this.animateModal(panel);
-
-    const ez = this.addOverlay(
-      this.add.zone(640, 360 + 113 * MODAL_SCALE, 292 * MODAL_SCALE, 66 * MODAL_SCALE).setDepth(70),
-    );
-    ez.setInteractive({ useHandCursor: true });
-    ez.on("pointerover", () => this.input.setDefaultCursor("pointer"));
-    ez.on("pointerout", () => this.input.setDefaultCursor("default"));
-    ez.on("pointerdown", () => { this.playClick(); EventBus.emit("exit-game"); });
-  }
-
-  private showGameOverScreen() {
-    this.input.enabled = true;
-    this.clearOverlay();
-
-    const bg = this.addOverlay(this.add.rectangle(640, 360, 1280, 720, C.ink, 0.74).setDepth(60));
-    bg.setInteractive();
-
-    const panel = this.addOverlay(this.add.container(640, 360).setDepth(62));
-
-    const shadow = this.add.graphics();
-    shadow.fillStyle(0x000000, 0.24);
-    shadow.fillRoundedRect(-306, -206, 612, 412, 32);
-
-    const panelBg = this.add.graphics();
-    panelBg.fillStyle(C.cream, 0.97);
-    panelBg.fillRoundedRect(-318, -218, 636, 416, 32);
-    panelBg.lineStyle(5, C.red, 0.8);
-    panelBg.strokeRoundedRect(-318, -218, 636, 416, 32);
-
-    const topBar = this.add.graphics();
-    topBar.fillStyle(C.red, 1);
-    topBar.fillRoundedRect(-216, -234, 432, 28, 14);
-
-    const icon  = this.addSharpText(0, -148, "⏰", { fontSize: "56px", fontFamily: "Arial Black, Arial" }).setOrigin(0.5);
-    const title = this.addSharpText(0, -82, "GAME OVER", {
-      fontSize: "42px", fontFamily: "Arial Black, Arial", color: "#dc2626",
-      stroke: "#faf5ff", strokeThickness: 6,
-    }).setOrigin(0.5);
-    const reason = this.addSharpText(0, -24, "⏰ O tempo esgotou!", {
-      fontSize: "24px", fontFamily: "Arial Black, Arial", color: "#475569", align: "center",
-    }).setOrigin(0.5);
-    const stats = this.addSharpText(0, 30, `Acertos: ${this.hits}  ·  Erros: ${this.errors}  ·  Pontos: ${this.getScore()}`, {
-      fontSize: "18px", fontFamily: "Arial Black, Arial", color: "#64748b",
-    }).setOrigin(0.5);
-
-    // Retry button
-    const retryBg = this.add.graphics();
-    retryBg.fillStyle(C.green, 1);
-    retryBg.fillRoundedRect(-268, 74, 244, 54, 27);
-    retryBg.lineStyle(4, C.white, 1);
-    retryBg.strokeRoundedRect(-268, 74, 244, 54, 27);
-    const retryTxt = this.addSharpText(-146, 101, "🔄 Tentar Novamente", {
-      fontSize: "16px", fontFamily: "Arial Black, Arial", color: "#ffffff",
-      stroke: "#14532d", strokeThickness: 3,
-    }).setOrigin(0.5);
-
-    // Exit button
-    const exitBg = this.add.graphics();
-    exitBg.fillStyle(C.orange, 1);
-    exitBg.fillRoundedRect(24, 74, 244, 54, 27);
-    exitBg.lineStyle(4, C.white, 1);
-    exitBg.strokeRoundedRect(24, 74, 244, 54, 27);
-    const exitTxt = this.addSharpText(146, 101, "🚪 Sair", {
-      fontSize: "20px", fontFamily: "Arial Black, Arial", color: "#ffffff",
-      stroke: "#78350f", strokeThickness: 3,
-    }).setOrigin(0.5);
-
-    panel.add([shadow, panelBg, topBar, icon, title, reason, stats, retryBg, retryTxt, exitBg, exitTxt]);
-    this.animateModal(panel);
-
-    // Retry zone
-    const rz = this.addOverlay(
-      this.add.zone(640 - 146 * MODAL_SCALE, 360 + 101 * MODAL_SCALE, 260 * MODAL_SCALE, 66 * MODAL_SCALE).setDepth(70),
-    );
-    rz.setInteractive({ useHandCursor: true });
-    rz.on("pointerover", () => this.input.setDefaultCursor("pointer"));
-    rz.on("pointerout", () => this.input.setDefaultCursor("default"));
-    rz.on("pointerdown", () => {
-      this.playClick();
-      this.scene.restart({ level: this.levelConfig.level, hits: 0, errors: 0 });
-    });
-
-    // Exit zone
-    const ez = this.addOverlay(
-      this.add.zone(640 + 146 * MODAL_SCALE, 360 + 101 * MODAL_SCALE, 260 * MODAL_SCALE, 66 * MODAL_SCALE).setDepth(70),
-    );
-    ez.setInteractive({ useHandCursor: true });
-    ez.on("pointerover", () => this.input.setDefaultCursor("pointer"));
-    ez.on("pointerout", () => this.input.setDefaultCursor("default"));
-    ez.on("pointerdown", () => { this.playClick(); EventBus.emit("exit-game"); });
-  }
-
-  // ─────────────────────────────────────────────────────────────────────────
-  // Overlay helpers
-  // ─────────────────────────────────────────────────────────────────────────
-
-  private addOverlay<T extends Phaser.GameObjects.GameObject>(o: T): T {
-    this.overlayObjects.push(o);
-    return o;
-  }
-
-  private clearOverlay() {
-    this.overlayObjects.forEach((o) => o.destroy());
-    this.overlayObjects = [];
-    this.input.setDefaultCursor("default");
-  }
-
-  private animateModal(m: Phaser.GameObjects.Container) {
-    m.setAlpha(0).setScale(0.88);
-    this.tweens.add({ targets: m, alpha: 1, scale: MODAL_SCALE, duration: 260, ease: "Back.easeOut" });
-  }
-
-  // ─────────────────────────────────────────────────────────────────────────
-  // Utilities
-  // ─────────────────────────────────────────────────────────────────────────
-
-  private getScore() {
-    return Math.max(0, this.hits * 20 - this.errors * 5);
-  }
-
-  private addSharpText(x: number, y: number, text: string, style: Phaser.Types.GameObjects.Text.TextStyle) {
-    const obj = this.add.text(x, y, text, style);
-    obj.setResolution(2);
-    return obj;
-  }
-
-  private showToast(message: string, color: number, duration = 2200) {
-    const container = this.add.container(640, 624).setDepth(200);
-    const bg = this.add.graphics();
-    bg.fillStyle(color, 0.96);
-    bg.fillRoundedRect(-500, -44, 1000, 88, 24);
-    bg.lineStyle(4, C.white, 0.85);
-    bg.strokeRoundedRect(-500, -44, 1000, 88, 24);
-    const txt = this.addSharpText(0, 0, message, {
-      fontSize: "20px", fontFamily: "Arial Black, Arial", color: "#ffffff",
-      align: "center", wordWrap: { width: 920 },
-    }).setOrigin(0.5);
-    container.add([bg, txt]);
-    this.tweens.add({
-      targets: container, y: 608, alpha: 0, duration: 320,
-      delay: duration, onComplete: () => container.destroy(),
-    });
-  }
-
-  // ─── Audio ────────────────────────────────────────────────────────────────
-
-  private playClick()   { this.playTone(520, 0.05, "sine",     0.05); }
-  private playSuccess() {
-    this.playTone(660,  0.1,  "triangle", 0.06);
-    this.time.delayedCall(100, () => this.playTone(880,  0.1,  "triangle", 0.07));
-    this.time.delayedCall(200, () => this.playTone(1100, 0.14, "triangle", 0.07));
-  }
-  private playWrong()   { this.playTone(200, 0.14, "sawtooth", 0.05); }
-
-  private playTone(frequency: number, duration: number, type: OscillatorType, volume: number) {
-    const AC = window.AudioContext ||
-      (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-    if (!AC) return;
-    try {
-      const ctx  = new AC();
-      const osc  = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = type;
-      osc.frequency.value = frequency;
-      gain.gain.value = volume;
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start();
-      osc.stop(ctx.currentTime + duration);
-      osc.onended = () => ctx.close();
-    } catch {
-      // Audio context not available — ignore
+        FX.confetti(this, { colors: [C.texto, C.apresentacao, C.video, C.ok] })
+        showLevelComplete(this, {
+            title: 'Portfólio completo!',
+            subtitle: 'Cartaz, apresentação e vídeo: cada pedido com a mídia que dá conta dele',
+            message: `Trabalhos: ${this.hits}  ·  Revisões: ${this.errors}  ·  Pontos: ${Math.max(0, this.points)}`,
+            accent: C.ok,
+            panelColor: C.paper,
+            overlayColor: C.ink,
+            progress: { total: 3, current: 3 },
+            buttons: [
+                {
+                    label: 'Jogar de novo',
+                    color: C.ok,
+                    onClick: () => this.scene.restart({ level: 1, points: 0 }),
+                },
+                {
+                    label: 'Escolher jogo',
+                    color: C.apresentacao,
+                    onClick: () => EventBus.emit('exit-game'),
+                },
+            ],
+        })
     }
-  }
+
+    /* ═══════════════════════════════════════════════════════ tutorial */
+
+    /**
+     * Todo passo fixa `balloonY`, e nunca abaixo de 540: o botão "Próximo"
+     * nasce 46px ABAIXO do balão, e mais do que isso o joga para fora da tela.
+     *
+     * E nenhuma palavra em inglês. "Briefing" e "banca" saíram: viraram
+     * O PEDIDO e OS JURADOS, que é o que uma criança de nove anos entende sem
+     * ninguém traduzir.
+     */
+    private buildTutorialSteps(): TutorialStep[] {
+        /*
+         * ── DUAS REGRAS, E AS DUAS VIERAM DE BUG ─────────────────────────
+         *
+         * 1. O tutorial roda na tela do PEDIDO. Então ele só pode apontar para
+         *    o que existe nessa tela: a trilha, o cartão e o botão COMEÇAR.
+         *    Antes ele recortava a barra do pedido e as cartas de mídia — que
+         *    só nascem depois do COMEÇAR — e a criança via um buraco iluminado
+         *    em cima de nada.
+         *
+         * 2. O balão NUNCA pode cair sobre o próprio recorte. Ele tem uns
+         *    120px, mais 46 de folga e mais o botão "Próximo": some 200px de
+         *    altura que precisam caber longe do que está sendo apontado. Por
+         *    isso o passo do cartão — que ocupa 300px no meio da tela — não
+         *    tem recorte nenhum: não existe lugar para o balão que não seja em
+         *    cima dele.
+         */
+        const larguraTrilha =
+            Math.min(PASSOS.gap, PASSOS.maxW / Math.max(1, this.totalPassos - 1))
+            * (this.totalPassos - 1) + PASSOS.rNow * 2 + 44
+
+        const trilhaSpot = {
+            x: 640, y: PASSOS.cy,
+            w: larguraTrilha, h: 68,
+        }
+        const comecarSpot = {
+            x: PEDIDO.cx, y: PEDIDO.botaoY,
+            w: PEDIDO.botaoW + 40, h: PEDIDO.botaoH + 30,
+        }
+
+        if (this.level.level === 2) {
+            return [{
+                text: 'Alguns passos vêm com o botão PULAR. Dá para entregar sem eles — mas os jurados percebem quando você caprichou.',
+                shape: 'rect', ...trilhaSpot, balloonX: 640, balloonY: 400,
+            }]
+        }
+
+        if (this.level.level === 3) {
+            return [{
+                text: 'Agora quem escolhe a mídia é você. Toque em COMEÇAR e três cartas vão aparecer: cartaz, slides ou vídeo. Olhe quem vai ver, e onde.',
+                shape: 'rect', ...comecarSpot, balloonX: 640, balloonY: 320,
+            }]
+        }
+
+        return [
+            {
+                text: 'Todo trabalho começa com um pedido: o que a escola quer, e para quem. Leia com calma — todas as suas escolhas saem daqui.',
+                shape: 'none', balloonX: 640, balloonY: 330,
+            },
+            {
+                text: 'Estas bolinhas são os passos do trabalho. Você faz um de cada vez, e a bolinha fica verde quando termina.',
+                shape: 'rect', ...trilhaSpot, balloonX: 640, balloonY: 400,
+            },
+            {
+                text: 'Em cada passo aparecem opções, e o pedido continua numa faixa embaixo para você conferir. Toque em COMEÇAR.',
+                shape: 'rect', ...comecarSpot, balloonX: 640, balloonY: 320,
+            },
+        ]
+    }
+
+    private runTutorial(steps: TutorialStep[], force: boolean, onFinish: () => void) {
+        this.locked = true
+        this.hud.setHelpEnabled(false)
+
+        createTutorial(this, {
+            key: `ef04co06-l${this.level.level}`,
+            once: !force,
+            accent: this.tom,
+            safeTop: HUD.y + HUD.h + 12,
+            steps,
+            onFinish: () => {
+                this.locked = false
+                this.hud.setHelpEnabled(true)
+                onFinish()
+            },
+        })
+    }
+
+    private replayTutorial = () => {
+        if (this.ended || this.locked) return
+        if (this.state === 'jurados' || this.state === 'solved') return
+
+        const steps = this.buildTutorialSteps()
+        if (!steps.length) return
+        this.runTutorial(steps, true, () => { })
+    }
+
+    /* ═══════════════════════════════════════════════════════ plataforma */
+
+    private emitCheckpoint(forceComplete = false) {
+        const before = LEVELS.slice(0, this.levelIdx).reduce((s, l) => s + l.cases.length, 0)
+        const done = before + this.caseIdx + (forceComplete ? 1 : 0)
+
+        runtimeGameBridge.emit({
+            type: 'CHECKPOINT',
+            gameId: GAME_ID,
+            progress: Math.round((done / TOTAL_CASES) * 100),
+            score: Math.max(0, this.points),
+            stage: this.level.level,
+            hits: this.hits,
+            errors: this.errors,
+        })
+    }
+
+    private registerPlatformCommands() {
+        this.unsubPlatform = runtimeGameBridge.onCommand((cmd: PlatformCommand) => {
+            if (cmd.type !== 'START_GAME') return
+            this.points = cmd.points ?? this.points
+        })
+    }
+
+    private onMuteAudio = (muted: boolean) => { this.isMuted = muted }
+
+    /* ═══════════════════════════════════════════════════════════ áudio */
+
+    private getAudioCtx(): AudioContext | null {
+        if (this.isMuted) return null
+        try {
+            return (this.sound as Phaser.Sound.WebAudioSoundManager).context
+        } catch {
+            return null
+        }
+    }
+
+    private playTone(freq: number, dur: number, type: OscillatorType = 'sine', gain = 0.1) {
+        const ctx = this.getAudioCtx()
+        if (!ctx) return
+        const osc = ctx.createOscillator()
+        const g = ctx.createGain()
+        osc.connect(g)
+        g.connect(ctx.destination)
+        osc.type = type
+        osc.frequency.setValueAtTime(freq, ctx.currentTime)
+        g.gain.setValueAtTime(gain, ctx.currentTime)
+        g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur)
+        osc.start()
+        osc.stop(ctx.currentTime + dur)
+    }
+
+    private playPick() { this.playTone(660, 0.05, 'sine', 0.05) }
+    private playPlace() { this.playTone(520, 0.08, 'triangle', 0.06) }
+    private playObturador() { this.playTone(1400, 0.05, 'square', 0.04) }
+    /** O baque do carimbo: grave e curto, como madeira na mesa. */
+    private playCarimbo() { this.playTone(120, 0.13, 'square', 0.09) }
+    private playError() { this.playTone(200, 0.2, 'square', 0.07) }
+    private playAprovado() {
+        [523, 659, 784, 1047].forEach((f, i) =>
+            this.time.delayedCall(i * 110, () => this.playTone(f, 0.18, 'sine', 0.13)))
+    }
 }
