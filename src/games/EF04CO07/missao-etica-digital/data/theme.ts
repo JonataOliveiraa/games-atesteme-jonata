@@ -3,14 +3,14 @@
  *
  * ── UMA COR POR PRINCÍPIO ────────────────────────────────────────────────
  *
- *   ÂMBAR   = AUTORIA
- *   CIANO   = PERMISSÃO
- *   ROXO    = PRIVACIDADE
+ *   ÂMBAR      = AUTORIA
+ *   CIANO      = PERMISSÃO
+ *   ROXO       = PRIVACIDADE
  *   VERDE-ÁGUA = GUARDA
  *
- * A lâmpada do painel, a borda da ficha e o título da missão usam a MESMA cor
- * ao mesmo tempo. A criança sabe qual princípio está em jogo antes de ler uma
- * palavra — e no painel ela vê, de relance, quais já acendeu.
+ * O selo no HUD, a borda da ficha e o ícone das ações usam a MESMA cor ao
+ * mesmo tempo. A criança sabe qual cuidado está em jogo antes de ler uma
+ * palavra — e no HUD ela vê, de relance, quais já acendeu.
  *
  * Verde é só "deu certo". Laranja é só "alerta". Vermelho não existe neste
  * jogo: uma escolha ruim aqui é uma consequência para entender, não uma falta
@@ -67,8 +67,9 @@ export const FONT = {
 /** Nada abaixo de 17px na área jogável — 4º ano, com Scale.FIT no celular. */
 export const SIZE = {
     hudLevel: '19px',
-    hudTitle: '24px',
-    hudHint: '18px',
+    hudTitle: '23px',
+    /** O selo do princípio. 13px é exceção: é rótulo de HUD, não área jogável. */
+    selo: '13px',
 
     situacao: '22px',
     situacaoLonga: '19px',
@@ -76,19 +77,19 @@ export const SIZE = {
 
     /** A ficha. */
     fichaNome: '18px',
-    fichaTipo: '15px',
-    fichaDica: '15px',
     etiquetaRotulo: '14px',
     etiquetaTexto: '18px',
     etiquetaAviso: '17px',
+    /** A seta dentro da orelha de papel. */
+    orelha: '26px',
 
-    acao: '20px',
+    /** O rótulo curto de uma ação. */
+    acao: '21px',
+    /** O nome do autor dentro do carimbo de crédito. */
+    carimbo: '19px',
 
     impactoTitulo: '24px',
     impactoTexto: '19px',
-
-    lampadaNome: '15px',
-    lampadaResumo: '13px',
 
     button: '23px',
     help: '30px',
@@ -97,7 +98,7 @@ export const SIZE = {
 export const TYPE_MS = { situacao: 14 } as const
 
 /** Acima disso a situação encolhe. */
-export const LONGA = 92
+export const LONGA = 82
 
 export const hex = (n: number) => `#${n.toString(16).padStart(6, '0')}`
 

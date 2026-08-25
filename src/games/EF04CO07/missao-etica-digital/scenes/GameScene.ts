@@ -9,14 +9,14 @@ import { FX } from '../../../../shared/effects/FX'
 import { LEVELS, TOTAL_CASES } from '../data/casos'
 import { PRINCIPIOS } from '../data/principios'
 import { C } from '../data/theme'
-import { HUD, SITUACAO, FICHA, ACOES, IMPACTO, PAINEL } from '../data/layout'
-import type { Caso, CaseState, Marca, Passo, Principio } from '../types'
+import { HUD, SELOS, SITUACAO, FICHA, ACOES, IMPACTO } from '../data/layout'
+import type { Caso, CaseState, Efeito, Marca, Passo, Principio } from '../types'
 
 import {
     createSala, createHud, createSituacao, createFicha, createAcoes,
-    createImpacto, createPainel, createBigButton, ACCENT,
+    createImpacto, createBigButton, showToast, ACCENT,
     type Acoes, type BigButton, type Ficha, type Hud, type Impacto,
-    type Painel, type Situacao,
+    type Situacao,
 } from './effects'
 
 const GAME_ID = 'missao-etica-digital'
@@ -58,7 +58,7 @@ export class GameScene extends Phaser.Scene {
      * O painel: o que cada princípio acumulou na partida inteira.
      *
      * Ele é o placar E o relatório final. Nada aparece no fim que a criança já
-     * não estivesse vendo crescer no rodapé o tempo todo.
+     * não estivesse vendo acender nos selos do HUD.
      */
     private marcas: Record<Principio, Marca> = {
         autoria: { respeitado: false, alertas: 0 },
@@ -71,7 +71,6 @@ export class GameScene extends Phaser.Scene {
 
     private hud!: Hud
     private situacao!: Situacao
-    private painel!: Painel
 
     /* ── o que nasce e morre a cada decisão ────────────────────────── */
 
@@ -123,12 +122,9 @@ export class GameScene extends Phaser.Scene {
         this.hud = createHud(this, { onHelp: () => this.replayTutorial() })
         this.hud.setLevel(this.level.level)
         this.hud.setTitle(this.level.title)
-        this.hud.setHint(this.level.tip)
+        this.hud.setSelos(this.marcas)
 
         this.situacao = createSituacao(this)
-
-        this.painel = createPainel(this)
-        this.painel.set(this.marcas)
 
         EventBus.on('mute-audio', this.onMuteAudio, this)
         EventBus.on('show-tutorial', this.replayTutorial, this)
@@ -179,7 +175,6 @@ export class GameScene extends Phaser.Scene {
         this.clearPalco()
 
         this.hud.setProgress(this.caseIdx, this.level.cases.length)
-        this.hud.setHint(this.level.tip)
         this.emitCheckpoint()
 
         /*
@@ -189,7 +184,7 @@ export class GameScene extends Phaser.Scene {
          * primeiro, ele recortaria tela vazia e falaria de uma ficha que ainda
          * não existe.
          */
-        this.abrirPasso(0)
+        this.abrirPasso(0, true)
         if (withTutorial) this.locked = true
 
         await this.situacao.show(this.passo.situacao)
@@ -206,12 +201,17 @@ export class GameScene extends Phaser.Scene {
     /**
      * Abre uma decisão.
      *
-     * A ficha é reconstruída a cada passo de propósito: no Nível 3 o segundo
-     * passo é sobre o MESMO arquivo, e a criança precisa poder virar a etiqueta
-     * de novo — quem já esqueceu que tem sete rostos naquela foto tem o direito
-     * de conferir outra vez antes de decidir para quem manda.
+     * A ficha é reconstruída a cada passo de propósito, e por dois motivos. No
+     * Nível 3 o segundo passo é sobre o MESMO arquivo, e quem já esqueceu que
+     * tem sete rostos naquela foto tem o direito de conferir outra vez antes de
+     * decidir para quem manda. E depois de um alerta, a ficha precisa voltar
+     * limpa: o carimbo torto, o cadeado quebrado e os olhos espiando são a
+     * consequência da tentativa anterior, não o novo estado do arquivo.
+     *
+     * `entrando` separa os dois casos: missão nova, a ficha desliza da direita;
+     * mesma missão, ela só reaparece no lugar.
      */
-    private abrirPasso(i: number) {
+    private abrirPasso(i: number, entrando: boolean) {
         this.passoIdx = i
         this.state = 'lendo'
         this.clearPalco()
@@ -222,6 +222,7 @@ export class GameScene extends Phaser.Scene {
         this.ficha = createFicha(this, {
             arquivo: this.caso.arquivo,
             tone: tom,
+            entrando,
             onVirar: () => this.playVirar(),
         })
 
@@ -235,6 +236,18 @@ export class GameScene extends Phaser.Scene {
 
     /* ═══════════════════════════════════════════════════ a decisão */
 
+    /**
+     * A ordem importa, e é ela que faz o jogo deixar de ser estático:
+     *
+     *   1. o cartão escolhido VOA da coluna até a ficha
+     *   2. a consequência ACONTECE com o arquivo
+     *   3. o selo do princípio carimba lá em cima
+     *   4. e só então a frase explica o que os olhos já viram
+     *
+     * Antes o passo 4 era o único que existia, e por isso "escolher" e "o que
+     * aconteceu" pareciam duas coisas sem relação: um cartão sumia aqui e um
+     * painel de texto aparecia acolá.
+     */
     private async onEscolher(j: number) {
         if (this.state !== 'lendo' || this.locked || this.ended) return
 
@@ -251,26 +264,20 @@ export class GameScene extends Phaser.Scene {
         this.acoes?.setEnabled(false)
         this.ficha?.setEnabled(false)
 
-        /*
-         * O texto do impacto muda quando a criança decidiu de olho fechado.
-         *
-         * É a frase mais importante do jogo: não basta ter errado, é preciso
-         * ver que a resposta estava escrita e que ela não olhou. Quando acerta
-         * sem conferir, o jogo também diz — foi sorte, e sorte não é método.
-         */
-        let texto = acao.impacto
-        if (!conferiu && !acao.certa) {
-            texto = `Você não virou a ficha. A etiqueta dizia: "${this.caso.arquivo.etiqueta.permissao}".  ${texto}`
-        } else if (!conferiu && acao.certa) {
-            texto = `${texto}  ·  Só que você decidiu sem virar a ficha: desta vez deu certo por sorte.`
-        }
-
+        // ── 1. o cartão voa ───────────────────────────────────────────
+        this.playVoo()
+        await this.acoes?.escolher(j)
+        if (gen !== this.gen) return
         this.acoes?.destroy()
         this.acoes = undefined
 
-        this.impacto = createImpacto(this, { certa: acao.certa, texto })
+        // ── 2. a consequência acontece com o arquivo ──────────────────
+        this.playEfeito(acao.efeito, acao.certa)
+        if (!acao.certa) void FX.flash(this, C.alerta, { duration: 420, peak: 0.16 })
+        await this.ficha?.reagir(acao.efeito, acao.certa)
+        if (gen !== this.gen) return
 
-        // ── o painel reage ────────────────────────────────────────────
+        // ── 3. o selo carimba ─────────────────────────────────────────
         const marca = this.marcas[passo.principio]
         if (acao.certa) {
             marca.respeitado = true
@@ -292,12 +299,29 @@ export class GameScene extends Phaser.Scene {
                 pointsEarned: POINTS.alerta, stage: this.level.level,
             })
         }
-        this.painel.set(this.marcas)
-        this.painel.destacar(passo.principio)
+        this.hud.setSelos(this.marcas)
+        void this.hud.carimbarSelo(passo.principio, acao.certa)
         this.emitCheckpoint()
 
-        await FX.wait(this, 400)
+        await FX.wait(this, 260)
         if (gen !== this.gen) return
+
+        /*
+         * ── 4. a frase ────────────────────────────────────────────────
+         *
+         * O texto muda quando a criança decidiu de olho fechado. É a linha
+         * mais importante do jogo: não basta ter errado, é preciso ver que a
+         * resposta estava escrita e que ela não olhou. Quando acerta sem
+         * conferir, o jogo também diz — foi sorte, e sorte não é método.
+         */
+        let texto = acao.impacto
+        if (!conferiu && !acao.certa) {
+            texto = `Você não virou a ficha. A etiqueta dizia: "${this.caso.arquivo.etiqueta.permissao}".  ${texto}`
+        } else if (!conferiu && acao.certa) {
+            texto = `${texto}  ·  Só que você decidiu sem virar a ficha: desta vez deu certo por sorte.`
+        }
+
+        this.impacto = createImpacto(this, { certa: acao.certa, texto })
 
         const ultimo = this.passoIdx >= this.caso.passos.length - 1
         this.continuar = createBigButton(this, {
@@ -319,17 +343,21 @@ export class GameScene extends Phaser.Scene {
          * Errar não empurra a missão para frente.
          *
          * A criança volta para a MESMA decisão, agora sabendo o que aconteceu —
-         * e com a ficha ali para virar. Avançar depois de um alerta ensinaria
-         * que a consequência não muda nada.
+         * e com a ficha limpa ali para virar. Avançar depois de um alerta
+         * ensinaria que a consequência não muda nada.
+         *
+         * E a situação volta SEM ser datilografada de novo: é a mesma frase, e
+         * dois segundos de máquina de escrever entre a criança e a segunda
+         * tentativa é tempo que ela não tem paciência de esperar.
          */
         if (!certa) {
-            this.abrirPasso(this.passoIdx)
-            void this.situacao.show(this.passo.situacao)
+            this.abrirPasso(this.passoIdx, false)
+            this.situacao.set(this.passo.situacao)
             return
         }
 
         if (!ultimo) {
-            this.abrirPasso(this.passoIdx + 1)
+            this.abrirPasso(this.passoIdx + 1, false)
             void this.situacao.show(this.passo.situacao)
             return
         }
@@ -343,15 +371,30 @@ export class GameScene extends Phaser.Scene {
         const gen = this.gen
         this.state = 'solved'
         this.locked = true
-        this.clearPalco()
+        this.impacto?.destroy(); this.impacto = undefined
+        this.continuar?.destroy(); this.continuar = undefined
 
         void FX.sparks(this, FICHA.cx, FICHA.cy, { color: C.ok, count: 26, spread: 280 })
         void FX.flash(this, C.white, { duration: 240, peak: 0.16 })
 
-        await this.situacao.show(this.caso.successLine)
-        if (gen !== this.gen) return
+        /*
+         * ── A FRASE DE FECHO NÃO ENTRA NA FAIXA DO ENUNCIADO ─────────────
+         *
+         * Ela entrava, e era esse o motivo de o enunciado "sumir rápido demais
+         * para a criança ler": na virada de missão a mesma faixa era reescrita
+         * TRÊS vezes em pouco mais de um segundo — o enunciado, a frase de
+         * fecho por cima dele, e o enunciado da missão seguinte por cima dos
+         * dois. Quem ainda estava lendo via a faixa piscando texto.
+         *
+         * Agora a faixa muda uma vez por missão, e só. O fecho é um recado que
+         * sobe no meio da tela, no espaço que a ficha acabou de deixar vago.
+         */
+        showToast(this, this.caso.successLine, C.ok, 2600)
 
-        await FX.wait(this, 1400)
+        // a ficha resolvida sai de cena, e a próxima entra pela direita
+        await this.ficha?.sair()
+        if (gen !== this.gen) return
+        await FX.wait(this, 2600)
         if (gen !== this.gen) return
 
         this.caseIdx += 1
@@ -364,16 +407,24 @@ export class GameScene extends Phaser.Scene {
 
     /* ═══════════════════════════════════════════════ avanço de nível */
 
-    /** O relatório: é só ler o painel, que a criança já estava vendo. */
+    /**
+     * O relatório.
+     *
+     * É aqui que os resumos dos quatro princípios aparecem — eles saíram do
+     * rodapé, onde ficavam parados o jogo inteiro, e voltam no único momento em
+     * que a criança tem tempo de lê-los. O briefing da habilidade pede um
+     * relatório final de princípios respeitados; é este.
+     */
     private relatorio(): string {
-        const partes = PRINCIPIOS.map(p => {
+        return PRINCIPIOS.map(p => {
             const m = this.marcas[p.key]
-            if (!m.respeitado) return `${p.nome}: ainda não`
-            return m.alertas > 0
-                ? `${p.nome}: ok, com ${m.alertas} alerta${m.alertas > 1 ? 's' : ''}`
-                : `${p.nome}: ok`
-        })
-        return partes.join('  ·  ')
+            const estado = !m.respeitado
+                ? 'ainda não'
+                : m.alertas > 0
+                    ? `ok, com ${m.alertas} alerta${m.alertas > 1 ? 's' : ''}`
+                    : 'ok'
+            return `${p.nome} — ${p.resumo}: ${estado}`
+        }).join('\n')
     }
 
     private async endLevel() {
@@ -414,10 +465,10 @@ export class GameScene extends Phaser.Scene {
         FX.confetti(this, { colors: [C.autoria, C.permissao, C.privacidade, C.guarda] })
         showLevelComplete(this, {
             title: 'Painel completo!',
-            subtitle: this.relatorio(),
-            message: this.noEscuro > 0
-                ? `Você decidiu ${this.noEscuro} vez${this.noEscuro > 1 ? 'es' : ''} sem virar a ficha. Conferir antes é o que separa acerto de sorte.`
-                : 'E você conferiu a etiqueta antes de todas as decisões. É exatamente isso.',
+            subtitle: this.noEscuro > 0
+                ? `Você decidiu ${this.noEscuro} vez${this.noEscuro > 1 ? 'es' : ''} sem virar a ficha`
+                : 'Você conferiu a etiqueta antes de todas as decisões',
+            message: this.relatorio(),
             accent: C.ok,
             panelColor: C.paper,
             overlayColor: C.ink,
@@ -440,24 +491,26 @@ export class GameScene extends Phaser.Scene {
     /* ═══════════════════════════════════════════════════════ tutorial */
 
     /**
-     * Todo passo fixa `balloonY`, e nunca abaixo de 540: o botão "Próximo"
-     * nasce 46px ABAIXO do balão, e mais do que isso o joga para fora da tela.
+     * Todo passo fixa `balloonX` e `balloonY`, e nunca abaixo de 545: o botão
+     * "Próximo" nasce 46px ABAIXO do balão, e mais do que isso o joga para fora
+     * da tela.
      *
-     * E o balão nunca cai sobre o próprio recorte — a ficha fica à esquerda,
-     * então o balão dela vai para a direita, e vice-versa.
+     * E o balão nunca cai sobre o próprio recorte. Por isso o passo das ações
+     * recorta só o PRIMEIRO cartão em vez dos três: a coluna inteira ocupa de
+     * 226 a 642, e não sobraria faixa nenhuma para o balão caber longe dela.
      */
     private buildTutorialSteps(): TutorialStep[] {
         const fichaSpot = {
             x: FICHA.cx, y: FICHA.cy,
-            w: FICHA.w + 40, h: FICHA.h + 60,
+            w: FICHA.w + 40, h: FICHA.h + 40,
         }
         const acoesSpot = {
-            x: ACOES.cx, y: ACOES.primeiroCY + ACOES.h + ACOES.gap,
-            w: ACOES.w + 40, h: 3 * ACOES.h + 2 * ACOES.gap + 40,
+            x: ACOES.cx, y: ACOES.primeiroCY,
+            w: ACOES.w + 40, h: ACOES.h + 40,
         }
-        const painelSpot = {
-            x: 640, y: PAINEL.y + PAINEL.h / 2,
-            w: PAINEL.w + 20, h: PAINEL.h + 20,
+        const selosSpot = {
+            x: SELOS.cx, y: SELOS.cy,
+            w: 4 * SELOS.w + 3 * SELOS.gap + 24, h: SELOS.h + 22,
         }
         const situacaoSpot = {
             x: 640, y: SITUACAO.y + SITUACAO.h / 2,
@@ -467,7 +520,7 @@ export class GameScene extends Phaser.Scene {
         if (this.level.level === 2) {
             return [{
                 text: 'Agora as etiquetas discordam entre si. Uma proíbe, outra libera tudo — e tem foto com o rosto de gente. Vire antes de escolher.',
-                shape: 'rect', ...fichaSpot, balloonX: 850, balloonY: 400,
+                shape: 'rect', ...fichaSpot, balloonX: 880, balloonY: 400,
             }]
         }
 
@@ -481,15 +534,15 @@ export class GameScene extends Phaser.Scene {
         return [
             {
                 text: 'Este é o arquivo. Toque nele e a ficha vira: atrás estão quem fez, o que a etiqueta libera e o aviso, quando tem.',
-                shape: 'rect', ...fichaSpot, balloonX: 850, balloonY: 400,
+                shape: 'rect', ...fichaSpot, balloonX: 880, balloonY: 400,
             },
             {
                 text: 'Depois escolha o que fazer. Dá para escolher sem virar a ficha — mas aí você está decidindo no escuro, e o jogo percebe.',
-                shape: 'rect', ...acoesSpot, balloonX: 300, balloonY: 400,
+                shape: 'rect', ...acoesSpot, balloonX: 872, balloonY: 540,
             },
             {
-                text: 'Aqui embaixo ficam os quatro cuidados. Cada escolha boa acende um deles; um deslize deixa uma marca laranja.',
-                shape: 'rect', ...painelSpot, balloonX: 640, balloonY: 330,
+                text: 'Aqui em cima ficam os quatro cuidados. Cada escolha boa acende um deles; um deslize deixa uma marca laranja.',
+                shape: 'rect', ...selosSpot, balloonX: 640, balloonY: 300,
             },
         ]
     }
@@ -576,9 +629,58 @@ export class GameScene extends Phaser.Scene {
     /** O som do papel virando: curto e seco. */
     private playVirar() { this.playTone(880, 0.05, 'triangle', 0.05) }
     private playToque() { this.playTone(620, 0.05, 'sine', 0.05) }
+    private playVoo() { this.playTone(440, 0.12, 'sine', 0.05) }
     private playAlerta() { this.playTone(210, 0.22, 'square', 0.07) }
     private playCerta() {
         [523, 784].forEach((f, i) =>
             this.time.delayedCall(i * 110, () => this.playTone(f, 0.16, 'sine', 0.11)))
+    }
+
+    /**
+     * O som do gesto, antes do som do resultado.
+     *
+     * Cada consequência soa como a coisa que ela é: o carimbo bate grave, o
+     * cadeado estala, as cópias escapam agudas, o arquivo apagado desce. É a
+     * mesma informação que está na tela, chegando pelo ouvido — que aos nove
+     * anos costuma chegar primeiro.
+     */
+    private playEfeito(efeito: Efeito, ok: boolean) {
+        switch (efeito) {
+            case 'credito':
+            case 'cofre':
+                // o baque do carimbo e o do cadeado: graves e curtos
+                this.playTone(140, 0.14, 'square', 0.08)
+                return
+            case 'semCredito':
+                this.playTone(300, 0.2, 'triangle', 0.06)
+                return
+            case 'pergunta':
+                this.playTone(ok ? 660 : 380, 0.12, 'sine', 0.06)
+                return
+            case 'trava':
+                this.playTone(180, 0.3, 'sine', 0.06)
+                return
+            case 'protege':
+            case 'libera':
+                this.playTone(700, 0.14, 'triangle', 0.07)
+                return
+            case 'vaza':
+                [900, 1100, 1300].forEach((f, i) =>
+                    this.time.delayedCall(i * 70, () => this.playTone(f, 0.07, 'sawtooth', 0.04)))
+                return
+            case 'link':
+                this.playTone(560, 0.16, 'sine', 0.06)
+                return
+            case 'copia':
+                this.playTone(420, 0.1, 'square', 0.05)
+                return
+            case 'solto':
+                this.playTone(240, 0.18, 'sawtooth', 0.05)
+                return
+            case 'apaga':
+                [700, 520, 360].forEach((f, i) =>
+                    this.time.delayedCall(i * 80, () => this.playTone(f, 0.1, 'triangle', 0.06)))
+                return
+        }
     }
 }

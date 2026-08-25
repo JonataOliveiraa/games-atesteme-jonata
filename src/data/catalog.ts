@@ -28,7 +28,7 @@ import buildingLoopsThumbnail from "../assets/games/EF04CO03/predio-dos-lacos/co
 import machineTranslatorThumbnail from "../assets/games/EF04CO04/tradutor-da-maquina/cover-tradutor-da-maquina.png";
 import digitalAtelierThumbnail from "../assets/games/EF04CO05/atelier-codigos-digitais/cover-atelier-codigos-digitais.png";
 import digitalStudioThumbnail from "../assets/games/EF04CO06/estudio-producao-digital/cover-estudio-producao-digital.png";
-import ethicMissionThumbnail from "../assets/games/EF04CO07/missao-etica-digital/bg-data-center.png";
+import coverMissaoEticaDigital from "../assets/games/EF04CO07/missao-etica-digital/cover-missao-etica-digital.png";
 import sourceHuntThumbnail from "../assets/games/EF04CO08/caca-fonte-confiavel/cover-caca-fonte-confiavel.png";
 import cardListThumbnail from "../assets/games/EF05CO01/baralho-das-listas/cover-baralho-das-listas.png";
 import networkMapsThumbnail from "../assets/games/EF05CO02/mapas-em-rede/cover-mapas-em-rede.png";
@@ -570,7 +570,7 @@ export const catalog: Game[] = [
     category: "Cultura Digital",
     points: 65,
     icon: "⚖️",
-    thumbnail: ethicMissionThumbnail,
+    thumbnail: coverMissaoEticaDigital,
   },
   {
     id: "030",

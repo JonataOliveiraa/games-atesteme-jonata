@@ -1,19 +1,17 @@
 import Phaser from 'phaser'
 import { FX, Ease } from '../../../../shared/effects/FX'
 import { C, A, FONT, SIZE, TYPE_MS, LONGA, hex, inkOn } from '../data/theme'
-import {
-    W, H, HUD, SITUACAO, FICHA, ACOES, IMPACTO, PAINEL, TOAST,
-} from '../data/layout'
+import { W, H, HUD, SELOS, SITUACAO, FICHA, ACOES, IMPACTO, TOAST } from '../data/layout'
 import { PRINCIPIOS } from '../data/principios'
-import type { Acao, Arquivo, Marca, Principio, TipoArquivo } from '../types'
+import type { Acao, Arquivo, Efeito, Marca, Principio, TipoArquivo } from '../types'
 
 /*
  * Painters puros e construtores. A GameScene não desenha nada: se ela precisar
  * de um `fillRoundedRect`, falta um painter aqui.
  *
- * Neste jogo as texturas são o CENÁRIO e as três fotos do acervo — que são
- * conteúdo, não interface. Ficha, etiqueta, ação, lâmpada e ícone de tipo têm
- * estado e saem todos de `Graphics`.
+ * Neste jogo as texturas são o CENÁRIO e as artes do acervo — que são conteúdo,
+ * não interface. Ficha, etiqueta, cartão de ação, selo, carimbo, cadeado e
+ * escudo têm estado e saem todos de `Graphics`.
  */
 
 /* ═══════════════════════════════════════════════════════════ texturas */
@@ -95,7 +93,7 @@ export interface RoundButton {
  *
  * O container cresce no hover e afunda no clique; se a área de toque fosse ele,
  * a borda mudaria de tamanho no meio do gesto e um `pointerup` perto da margem
- * cairia fora, comendo o clique. Vale para a ficha, as ações e os botões daqui.
+ * cairia fora, comendo o clique. Vale para todo botão, ficha e cartão daqui.
  */
 export function createRoundButton(
     scene: Phaser.Scene,
@@ -162,7 +160,7 @@ export function createBigButton(
 
     let enabled = true
     let pressed = false
-    const drop = 6
+    const drop = 7
     const deep = Phaser.Display.Color.ValueToColor(tone).darken(30).color
 
     const paint = () => {
@@ -170,12 +168,12 @@ export function createBigButton(
         bg.clear()
         bg.fillStyle(C.shadow, 0.3)
         bg.fillRoundedRect(-w / 2 + 4, -h / 2 + drop + 6, w, h, h / 2)
-        bg.fillStyle(enabled ? deep : 0x2c3b42, 1)
+        bg.fillStyle(enabled ? deep : 0x3a4a52, 1)
         bg.fillRoundedRect(-w / 2, -h / 2, w, h + drop, h / 2)
-        bg.fillStyle(enabled ? tone : 0x45565e, 1)
+        bg.fillStyle(enabled ? tone : 0x5b6d76, 1)
         bg.fillRoundedRect(-w / 2, -h / 2 + dy, w, h, h / 2)
-        bg.fillStyle(C.white, enabled ? 0.26 : 0.1)
-        bg.fillRoundedRect(-w / 2 + 14, -h / 2 + dy + 8, w - 28, h * 0.26, h / 4)
+        bg.fillStyle(C.white, enabled ? 0.28 : 0.1)
+        bg.fillRoundedRect(-w / 2 + 14, -h / 2 + dy + 9, w - 28, h * 0.26, h / 4)
         bg.lineStyle(4, C.white, enabled ? 0.9 : 0.28)
         bg.strokeRoundedRect(-w / 2, -h / 2 + dy, w, h, h / 2)
         text.setY(-3 + dy)
@@ -184,7 +182,7 @@ export function createBigButton(
     container.add([bg, text])
     paint()
 
-    const hit = scene.add.zone(x, y, w + 24, h + 22).setOrigin(0.5).setDepth(51)
+    const hit = scene.add.zone(x, y, w + 26, h + 24).setOrigin(0.5).setDepth(51)
     hit.setInteractive({ useHandCursor: true })
 
     hit.on('pointerover', () => { if (enabled) FX.to(scene, container, { scale: 1.05 }, { duration: 120 }) })
@@ -221,7 +219,7 @@ export function createBigButton(
 export function paintHudBar(g: Phaser.GameObjects.Graphics) {
     g.clear()
     g.fillStyle(C.shadow, 0.32)
-    g.fillRoundedRect(HUD.x + 4, HUD.y + 6, HUD.w, HUD.h, HUD.r)
+    g.fillRoundedRect(HUD.x + 4, HUD.y + 7, HUD.w, HUD.h, HUD.r)
     g.fillStyle(C.ink, 0.95)
     g.fillRoundedRect(HUD.x, HUD.y, HUD.w, HUD.h, HUD.r)
     g.fillStyle(C.white, 0.06)
@@ -230,12 +228,52 @@ export function paintHudBar(g: Phaser.GameObjects.Graphics) {
     g.strokeRoundedRect(HUD.x, HUD.y, HUD.w, HUD.h, HUD.r)
 }
 
+/**
+ * Um selo de princípio.
+ *
+ * Aceso é a pastilha cheia na cor do princípio; apagado é o contorno fino. As
+ * bolinhas de alerta ficam registradas mesmo depois de o selo acender: elas
+ * são parte do relatório, não uma punição que some quando a criança acerta.
+ */
+export function paintSelo(
+    g: Phaser.GameObjects.Graphics,
+    { tone, marca }: { tone: number; marca: Marca },
+) {
+    const hw = SELOS.w / 2
+    const hh = SELOS.h / 2
+    const acesa = marca.respeitado
+
+    g.clear()
+    g.fillStyle(acesa ? tone : C.white, acesa ? 1 : 0.05)
+    g.fillRoundedRect(-hw, -hh, SELOS.w, SELOS.h, SELOS.r)
+    if (acesa) {
+        g.fillStyle(C.white, 0.24)
+        g.fillRoundedRect(-hw + 6, -hh + 5, SELOS.w - 12, 9, 4)
+    }
+    g.lineStyle(acesa ? 3 : 2, tone, acesa ? 1 : 0.4)
+    g.strokeRoundedRect(-hw, -hh, SELOS.w, SELOS.h, SELOS.r)
+
+    for (let i = 0; i < Math.min(marca.alertas, 3); i += 1) {
+        g.fillStyle(C.alerta, 1)
+        g.fillCircle(hw + SELOS.alertaDX - i * 11, -hh + SELOS.alertaDY, SELOS.alertaR)
+    }
+}
+
 export interface Hud {
     container: Phaser.GameObjects.Container
     setLevel(level: number): void
     setTitle(text: string): void
-    setHint(text: string): void
     setProgress(done: number, total: number): void
+    /** Repinta os quatro selos a partir do estado da partida. */
+    setSelos(marcas: Record<Principio, Marca>): void
+    /**
+     * O gesto de carimbo sobre um selo.
+     *
+     * Ele cai grande e encolhe até o tamanho certo — é o mesmo movimento de um
+     * carimbo de mesa, e é o que faz o selo parecer conquistado em vez de
+     * aparecer do nada.
+     */
+    carimbarSelo(p: Principio, ok: boolean): Promise<void>
     setHelpEnabled(on: boolean): void
     destroy(): void
 }
@@ -259,31 +297,43 @@ export function createHud(scene: Phaser.Scene, { onHelp }: { onHelp: () => void 
     }).setOrigin(0.5).setResolution(2)
     container.add(levelLabel)
 
-    const title = scene.add.text(HUD.titleX, HUD.titleY, '', {
+    const title = scene.add.text(HUD.titleX, HUD.cy, '', {
         fontFamily: FONT.black, fontSize: SIZE.hudTitle, color: hex(C.paper),
         align: 'center', wordWrap: { width: HUD.titleW },
     }).setOrigin(0.5).setResolution(2)
     container.add(title)
 
-    const hint = scene.add.text(HUD.titleX, HUD.hintY, '', {
-        fontFamily: FONT.body, fontStyle: 'bold', fontSize: SIZE.hudHint,
-        color: hex(C.idle), align: 'center', wordWrap: { width: HUD.hintW },
-    }).setOrigin(0.5).setResolution(2)
-    container.add(hint)
-
     const dots = scene.add.container(0, 0)
     container.add(dots)
+
+    /* ── os quatro selos ────────────────────────────────────────────── */
+    const seloX = (i: number) => {
+        const n = PRINCIPIOS.length
+        const total = n * SELOS.w + (n - 1) * SELOS.gap
+        return SELOS.cx - total / 2 + SELOS.w / 2 + i * (SELOS.w + SELOS.gap)
+    }
+
+    const selos = PRINCIPIOS.map((p, i) => {
+        const node = scene.add.container(seloX(i), SELOS.cy)
+        const g = scene.add.graphics()
+        const t = scene.add.text(0, 0, p.selo, {
+            fontFamily: FONT.black, fontSize: SIZE.selo, color: hex(C.idle),
+        }).setOrigin(0.5).setResolution(2)
+        node.add([g, t])
+        container.add(node)
+        return { key: p.key, node, g, t }
+    })
 
     const help = createRoundButton(scene, HUD.helpX, HUD.cy, HUD.helpR, '?', onHelp, C.edge)
     container.add(help.container)
 
-    FX.slideIn(scene, container, { dy: 24, duration: 340 })
+    FX.slideIn(scene, container, { dy: 26, duration: 340 })
 
     return {
         container,
         setLevel: level => levelLabel.setText(`NÍVEL ${level}`),
         setTitle: text => title.setText(text),
-        setHint: text => hint.setText(text),
+
         setProgress: (done, total) => {
             dots.removeAll(true)
             if (total <= 0) return
@@ -306,6 +356,28 @@ export function createHud(scene: Phaser.Scene, { onHelp }: { onHelp: () => void 
                 dots.add(g)
             }
         },
+
+        setSelos: marcas => {
+            selos.forEach(s => {
+                const marca = marcas[s.key]
+                const tone = ACCENT[s.key]
+                paintSelo(s.g, { tone, marca })
+                s.t.setColor(hex(marca.respeitado ? inkOn(tone) : C.idle))
+            })
+        },
+
+        carimbarSelo: (p, ok) => {
+            const s = selos.find(x => x.key === p)
+            if (!s) return Promise.resolve()
+            FX.kill(scene, s.node)
+            s.node.setScale(ok ? 2.4 : 1)
+            if (!ok) {
+                return FX.shake(scene, s.node, { amount: 5, times: 2 })
+            }
+            return FX.to(scene, s.node, { scale: 1 },
+                { duration: 260, ease: 'Back.easeIn' })
+        },
+
         setHelpEnabled: help.setEnabled,
         destroy: () => { help.destroy(); container.destroy() },
     }
@@ -315,7 +387,17 @@ export function createHud(scene: Phaser.Scene, { onHelp }: { onHelp: () => void 
 
 export interface Situacao {
     container: Phaser.GameObjects.Container
+    /** Escreve letra a letra. Para quando a situação MUDA. */
     show(text: string): Promise<void>
+    /**
+     * Põe o texto na hora, sem digitar.
+     *
+     * É o que a volta depois de um alerta usa: a situação é a mesma de antes,
+     * e ver a mesma frase ser datilografada de novo a cada tentativa cansa
+     * rápido — e atrasa em dois segundos a única coisa que a criança quer
+     * naquele momento, que é tentar outra vez.
+     */
+    set(text: string): void
     destroy(): void
 }
 
@@ -353,13 +435,25 @@ export function createSituacao(scene: Phaser.Scene): Situacao {
             await tw
             typing = null
         },
+        set: text => {
+            typing?.skip()
+            typing = null
+            label.setFontSize(text.length > LONGA ? SIZE.situacaoLonga : SIZE.situacao)
+            label.setText(text)
+        },
         destroy: () => { typing?.skip(); container.destroy() },
     }
 }
 
-/* ═══════════════════════════════════════════════════════════ a ficha */
+/* ══════════════════════════════════════ ícones: o tipo do arquivo */
 
-/** O ícone do tipo, para os arquivos que não são imagem. */
+/**
+ * O ícone do tipo, quando a arte do arquivo ainda não está na pasta.
+ *
+ * É rede de segurança, não a primeira escolha: uma clave de sol diz "isto é
+ * música", e a capa do disco diz "isto é o forró da Banda Pé de Vento" — que é
+ * a informação de que a decisão precisa.
+ */
 export function paintTipoIcone(g: Phaser.GameObjects.Graphics, tipo: TipoArquivo, tone: number) {
     g.clear()
     g.fillStyle(tone, 1)
@@ -379,7 +473,6 @@ export function paintTipoIcone(g: Phaser.GameObjects.Graphics, tipo: TipoArquivo
         g.fillRoundedRect(-58, -38, 116, 76, 8)
         g.fillStyle(tone, 1)
         g.fillTriangle(-16, -22, -16, 22, 26, 0)
-        // as perfurações do filme
         for (let i = 0; i < 3; i += 1) {
             g.fillRoundedRect(-78, -34 + i * 32, 10, 20, 3)
             g.fillRoundedRect(68, -34 + i * 32, 10, 20, 3)
@@ -387,13 +480,169 @@ export function paintTipoIcone(g: Phaser.GameObjects.Graphics, tipo: TipoArquivo
         return
     }
 
-    // documento: uma folha com linhas e o canto dobrado
-    g.fillRoundedRect(-54, -70, 108, 140, 10)
+    if (tipo === 'documento') {
+        g.fillRoundedRect(-54, -70, 108, 140, 10)
+        g.fillStyle(C.verso, 1)
+        g.fillTriangle(24, -70, 54, -70, 54, -40)
+        g.fillStyle(C.verso, 0.55)
+        for (let i = 0; i < 5; i += 1) g.fillRoundedRect(-38, -26 + i * 20, 76, 8, 4)
+        return
+    }
+
+    // imagem: uma moldura com um morro e um sol
+    g.fillRoundedRect(-72, -56, 144, 112, 10)
     g.fillStyle(C.verso, 1)
-    g.fillTriangle(24, -70, 54, -70, 54, -40)
-    g.fillStyle(C.verso, 0.55)
-    for (let i = 0; i < 5; i += 1) g.fillRoundedRect(-38, -26 + i * 20, 76, 8, 4)
+    g.fillRoundedRect(-62, -46, 124, 92, 6)
+    g.fillStyle(tone, 0.9)
+    g.fillCircle(-28, -20, 12)
+    g.fillTriangle(-58, 40, -6, -14, 46, 40)
 }
+
+/* ═══════════════════════════════════ ícones: o gesto de cada ação */
+
+/**
+ * O desenho do que a ação FAZ.
+ *
+ * Ele existe pelo mesmo motivo que o rótulo encolheu: aos nove anos, comparar
+ * três frases custa caro e comparar três desenhos não custa quase nada. O
+ * ícone dá a leitura de relance, e o rótulo confirma.
+ */
+export function paintEfeitoIcone(g: Phaser.GameObjects.Graphics, efeito: Efeito, tone: number) {
+    g.clear()
+    g.lineStyle(4, tone, 1)
+    g.fillStyle(tone, 1)
+
+    switch (efeito) {
+        case 'credito': {
+            // uma etiqueta pendurada, com o furo e um risco de nome dentro
+            g.fillRoundedRect(-18, -16, 34, 32, 6)
+            g.fillTriangle(-18, -16, -18, 16, -34, 0)
+            g.fillStyle(C.verso, 1)
+            g.fillCircle(-14, 0, 4)
+            g.fillStyle(C.verso, 0.7)
+            g.fillRoundedRect(-6, -6, 18, 4, 2)
+            g.fillRoundedRect(-6, 2, 12, 4, 2)
+            return
+        }
+        case 'semCredito': {
+            // a mesma etiqueta, caindo, com um X no lugar do nome
+            g.fillRoundedRect(-16, -14, 32, 30, 6)
+            g.fillTriangle(-16, -14, -16, 16, -32, 1)
+            g.fillStyle(C.verso, 1)
+            g.fillCircle(-12, 1, 4)
+            g.lineStyle(4, C.verso, 1)
+            g.lineBetween(-4, -6, 12, 10)
+            g.lineBetween(12, -6, -4, 10)
+            return
+        }
+        case 'pergunta': {
+            // um balão de fala com uma interrogação
+            g.fillRoundedRect(-26, -22, 52, 38, 12)
+            g.fillTriangle(-8, 16, 6, 16, -14, 28)
+            g.lineStyle(5, C.verso, 1)
+            g.beginPath()
+            g.arc(0, -8, 9, Math.PI * 1.05, Math.PI * 0.35, false)
+            g.strokePath()
+            g.fillStyle(C.verso, 1)
+            g.fillRect(-2, 0, 5, 4)
+            g.fillCircle(0, 9, 3)
+            return
+        }
+        case 'trava': {
+            // uma ampulheta
+            g.fillRoundedRect(-20, -26, 40, 7, 3)
+            g.fillRoundedRect(-20, 19, 40, 7, 3)
+            g.fillTriangle(-15, -19, 15, -19, 0, 0)
+            g.fillTriangle(-15, 19, 15, 19, 0, 0)
+            return
+        }
+        case 'protege': {
+            // um escudo com um visto
+            g.fillRoundedRect(-22, -24, 44, 30, 8)
+            g.fillTriangle(-22, 4, 22, 4, 0, 28)
+            g.lineStyle(5, C.verso, 1)
+            g.beginPath()
+            g.moveTo(-9, -3)
+            g.lineTo(-2, 5)
+            g.lineTo(11, -11)
+            g.strokePath()
+            return
+        }
+        case 'libera': {
+            // um cadeado com o arco aberto para o lado
+            g.fillRoundedRect(-18, -4, 36, 30, 7)
+            g.lineStyle(6, tone, 1)
+            g.beginPath()
+            g.arc(2, -8, 13, Math.PI, Math.PI * 1.9, false)
+            g.strokePath()
+            g.fillStyle(C.verso, 1)
+            g.fillCircle(0, 10, 5)
+            return
+        }
+        case 'vaza': {
+            // três setas escapando de um ponto
+            g.fillCircle(-16, 0, 8)
+            for (let i = 0; i < 3; i += 1) {
+                const a = -0.7 + i * 0.7
+                const x = -4 + Math.cos(a) * 16
+                const y = Math.sin(a) * 16
+                g.fillTriangle(x, y - 7, x, y + 7, x + 16, y)
+            }
+            return
+        }
+        case 'link': {
+            // dois elos de corrente
+            g.lineStyle(6, tone, 1)
+            g.strokeRoundedRect(-26, -11, 30, 22, 11)
+            g.strokeRoundedRect(-2, -11, 30, 22, 11)
+            return
+        }
+        case 'copia': {
+            // dois retângulos sobrepostos
+            g.fillRoundedRect(-22, -22, 32, 38, 6)
+            g.fillStyle(C.verso, 1)
+            g.fillRoundedRect(-16, -16, 26, 32, 5)
+            g.fillStyle(tone, 1)
+            g.fillRoundedRect(-10, -10, 32, 38, 6)
+            return
+        }
+        case 'cofre': {
+            // uma pasta com um cadeado na frente
+            g.fillRoundedRect(-26, -18, 24, 8, 3)
+            g.fillRoundedRect(-26, -12, 52, 34, 6)
+            g.fillStyle(C.verso, 1)
+            g.fillRoundedRect(-8, 0, 17, 14, 3)
+            g.lineStyle(4, C.verso, 1)
+            g.beginPath()
+            g.arc(0, 0, 7, Math.PI, 0, false)
+            g.strokePath()
+            return
+        }
+        case 'solto': {
+            // uma folha largada, com um olho em cima
+            g.fillRoundedRect(-24, -20, 40, 30, 5)
+            g.fillStyle(C.verso, 1)
+            g.fillEllipse(4, 12, 40, 22)
+            g.fillStyle(tone, 1)
+            g.fillCircle(4, 12, 8)
+            g.fillStyle(C.verso, 1)
+            g.fillCircle(4, 12, 4)
+            return
+        }
+        case 'apaga': {
+            // uma lixeira
+            g.fillRoundedRect(-22, -24, 44, 8, 4)
+            g.fillRoundedRect(-8, -32, 16, 8, 3)
+            g.fillRoundedRect(-18, -13, 36, 38, 6)
+            g.fillStyle(C.verso, 0.8)
+            g.fillRoundedRect(-9, -6, 5, 24, 2)
+            g.fillRoundedRect(4, -6, 5, 24, 2)
+            return
+        }
+    }
+}
+
+/* ═══════════════════════════════════════════════════════════ a ficha */
 
 export function paintFichaFrente(g: Phaser.GameObjects.Graphics, tone: number) {
     const hw = FICHA.w / 2
@@ -407,7 +656,7 @@ export function paintFichaFrente(g: Phaser.GameObjects.Graphics, tone: number) {
     g.fillStyle(tone, 1)
     g.fillRoundedRect(-hw, -hh, FICHA.w, 12, FICHA.r)
     g.fillStyle(C.fichaEdge, 0.5)
-    g.fillRect(-hw + 20, FICHA.nomeY - 22, FICHA.w - 40, 2)
+    g.fillRect(-hw + 20, FICHA.nomeY - 24, FICHA.w - 40, 2)
     g.lineStyle(4, tone, 1)
     g.strokeRoundedRect(-hw, -hh, FICHA.w, FICHA.h, FICHA.r)
 }
@@ -433,21 +682,45 @@ export function paintFichaVerso(g: Phaser.GameObjects.Graphics, tone: number, te
     g.strokeRoundedRect(-hw, -hh, FICHA.w, FICHA.h, FICHA.r)
 }
 
+/** A dobra de papel do canto: o convite para virar, sem uma palavra. */
+export function paintOrelha(g: Phaser.GameObjects.Graphics, tone: number) {
+    const r = FICHA.orelhaR
+    g.clear()
+    g.fillStyle(C.shadow, 0.22)
+    g.fillTriangle(-r + 3, -r + 5, r + 3, -r + 5, r + 3, r + 5)
+    g.fillStyle(tone, 1)
+    g.fillTriangle(-r, -r, r, -r, r, r)
+    g.fillStyle(C.white, 0.28)
+    g.fillTriangle(-r + 8, -r + 6, r - 6, -r + 6, r - 6, r - 8)
+}
+
 export interface Ficha {
     container: Phaser.GameObjects.Container
     /** Gira a ficha. Resolve quando a outra cara já está à mostra. */
     virar(): Promise<void>
     /** Se a etiqueta já foi vista alguma vez nesta missão. */
     conferida(): boolean
+    /**
+     * O que acontece com o arquivo por causa da escolha.
+     *
+     * O `ok` não troca a animação: troca a COR dela e o final. Carimbar o
+     * crédito com o nome certo e com o nome errado é o mesmo gesto — só que no
+     * segundo o carimbo escorrega da ficha e cai.
+     */
+    reagir(efeito: Efeito, ok: boolean): Promise<void>
+    /** Sai de cena pela esquerda, no fim da missão. */
+    sair(): Promise<void>
     setEnabled(on: boolean): void
     destroy(): void
 }
 
 export function createFicha(
     scene: Phaser.Scene,
-    { arquivo, tone, onVirar }: {
+    { arquivo, tone, entrando, onVirar }: {
         arquivo: Arquivo
         tone: number
+        /** Primeira missão da tela: a ficha entra deslizando pela direita. */
+        entrando: boolean
         onVirar: () => void
     },
 ): Ficha {
@@ -462,20 +735,22 @@ export function createFicha(
      */
     const frente = scene.add.container(0, 0)
     const verso = scene.add.container(0, 0).setVisible(false)
-    container.add([frente, verso])
+    /** Onde as consequências acontecem: carimbos, escudos, cópias, pixels. */
+    const palco = scene.add.container(0, 0)
+    container.add([frente, verso, palco])
 
     /* ── frente ────────────────────────────────────────────────────── */
     const gf = scene.add.graphics()
     paintFichaFrente(gf, tone)
     frente.add(gf)
 
-    if (arquivo.tipo === 'imagem' && arquivo.arte && hasTex(scene, arquivo.arte)) {
+    if (arquivo.arte && hasTex(scene, arquivo.arte)) {
         const img = scene.add.image(0, FICHA.arteCY, arquivo.arte)
         fitImage(img, FICHA.arteW, FICHA.arteH)
         frente.add(img)
     } else {
-        // arte ainda não está na pasta, ou o arquivo não é imagem: o ícone do
-        // tipo entra no lugar e o jogo continua inteiro
+        // a arte ainda não está na pasta: o ícone do tipo entra no lugar e o
+        // jogo continua inteiro
         const icone = scene.add.graphics().setPosition(0, FICHA.arteCY)
         paintTipoIcone(icone, arquivo.tipo, tone)
         frente.add(icone)
@@ -484,10 +759,6 @@ export function createFicha(
     frente.add(scene.add.text(0, FICHA.nomeY, arquivo.nome, {
         fontFamily: FONT.mono, fontStyle: 'bold', fontSize: SIZE.fichaNome,
         color: hex(C.slate), align: 'center', wordWrap: { width: FICHA.nomeWrap },
-    }).setOrigin(0.5).setResolution(2))
-
-    frente.add(scene.add.text(0, FICHA.tipoY, arquivo.tipo.toUpperCase(), {
-        fontFamily: FONT.black, fontSize: SIZE.fichaTipo, color: hex(C.idle),
     }).setOrigin(0.5).setResolution(2))
 
     /* ── verso: a etiqueta ─────────────────────────────────────────── */
@@ -516,11 +787,26 @@ export function createFicha(
         verso.add(valor(FICHA.avisoY, arquivo.etiqueta.aviso, C.alertaSoft, SIZE.etiquetaAviso))
     }
 
-    /* ── o convite ─────────────────────────────────────────────────── */
-    const dica = scene.add.text(0, FICHA.dicaY, 'toque para virar  ↻', {
-        fontFamily: FONT.black, fontSize: SIZE.fichaDica, color: hex(tone),
+    /* ── a orelha ──────────────────────────────────────────────────── */
+    const orelha = scene.add.container(
+        FICHA.w / 2 + FICHA.orelhaDX, -FICHA.h / 2 + FICHA.orelhaDY,
+    )
+    const go = scene.add.graphics()
+    paintOrelha(go, tone)
+    /*
+     * A seta vai para CIMA e para a DIREITA dentro da dobra, e não para o
+     * centro dela.
+     *
+     * A dobra é um triângulo com a hipotenusa descendo da esquerda para a
+     * direita, então "o meio da caixa" fica FORA do papel: em (4, -4) a barriga
+     * do glifo cruzava a hipotenusa e a seta aparecia meio derramada para fora
+     * da orelha. Em (10, -10) ela fica inteira dentro, com folga.
+     */
+    const seta = scene.add.text(10, -10, '↻', {
+        fontFamily: FONT.black, fontSize: SIZE.orelha, color: hex(inkOn(tone)),
     }).setOrigin(0.5).setResolution(2)
-    container.add(dica)
+    orelha.add([go, seta])
+    container.add(orelha)
 
     let mostrandoVerso = false
     let jaConferiu = false
@@ -532,6 +818,15 @@ export function createFicha(
         .setOrigin(0.5).setDepth(60)
     hit.setInteractive({ useHandCursor: true })
 
+    /** A orelha chama enquanto a criança não virou. Depois cala a boca. */
+    let chama: Phaser.Tweens.Tween | null = FX.wiggle(scene, orelha, { deg: 7, duration: 900 })
+    const calarOrelha = () => {
+        if (!chama) return
+        chama.remove()
+        chama = null
+        orelha.setAngle(0)
+    }
+
     /**
      * O giro.
      *
@@ -542,6 +837,7 @@ export function createFicha(
     const virar = () => new Promise<void>(resolve => {
         if (girando) { resolve(); return }
         girando = true
+        calarOrelha()
         scene.tweens.add({
             targets: container, scaleX: 0, duration: 150, ease: 'Sine.easeIn',
             onComplete: () => {
@@ -549,7 +845,6 @@ export function createFicha(
                 if (mostrandoVerso) jaConferiu = true
                 frente.setVisible(!mostrandoVerso)
                 verso.setVisible(mostrandoVerso)
-                dica.setText(mostrandoVerso ? 'toque para voltar  ↻' : 'toque para virar  ↻')
                 scene.tweens.add({
                     targets: container, scaleX: 1, duration: 170, ease: 'Back.easeOut',
                     onComplete: () => { girando = false; resolve() },
@@ -558,28 +853,392 @@ export function createFicha(
         })
     })
 
-    hit.on('pointerover', () => { if (enabled && !girando) FX.to(scene, dica, { scale: 1.12 }, { duration: 120 }) })
-    hit.on('pointerout', () => { if (enabled) FX.to(scene, dica, { scale: 1 }, { duration: 120 }) })
+    hit.on('pointerover', () => {
+        if (enabled && !girando) FX.to(scene, orelha, { scale: 1.16 }, { duration: 120 })
+    })
+    hit.on('pointerout', () => {
+        if (enabled) FX.to(scene, orelha, { scale: 1 }, { duration: 120 })
+    })
     hit.on('pointerup', () => {
         if (!enabled || girando) return
         void virar()
         onVirar()
     })
 
-    // a dica respira até a criança virar a ficha pela primeira vez
-    const chama = FX.breathe(scene, dica, { grow: 1.1, duration: 1100 })
+    if (entrando) {
+        /*
+         * A zona de toque já nasce no lugar final, e a ficha ainda está lá
+         * fora. Sem desligar a ficha durante o trajeto, um toque apressado
+         * viraria um papel que ninguém está vendo.
+         */
+        enabled = false
+        container.setPosition(W + 320, FICHA.cy)
+        void FX.to(scene, container, { x: FICHA.cx },
+            { duration: 460, ease: Ease.back(1.2) })
+            .then(() => { enabled = true })
+    } else {
+        void FX.popIn(scene, container, { from: 0.94, duration: 300 })
+    }
+
+    /* ══════════════════════════════════════════ as consequências */
+
+    /** Uma miniatura da ficha, para as cópias que escapam ou ficam. */
+    const miniFicha = (x: number, y: number, escala: number) => {
+        const g = scene.add.graphics().setPosition(x, y).setScale(escala)
+        g.fillStyle(C.shadow, 0.3)
+        g.fillRoundedRect(-54 + 3, -66 + 4, 108, 132, 10)
+        g.fillStyle(C.ficha, 1)
+        g.fillRoundedRect(-54, -66, 108, 132, 10)
+        g.fillStyle(tone, 1)
+        g.fillRoundedRect(-54, -66, 108, 8, 4)
+        g.fillStyle(C.fichaEdge, 0.8)
+        g.fillRoundedRect(-40, -46, 80, 62, 6)
+        g.fillStyle(C.idle, 0.55)
+        g.fillRoundedRect(-40, 28, 80, 7, 3)
+        g.lineStyle(3, tone, 0.9)
+        g.strokeRoundedRect(-54, -66, 108, 132, 10)
+        palco.add(g)
+        return g
+    }
+
+    const cor = (ok: boolean) => (ok ? C.ok : C.alerta)
+
+    /** O carimbo de crédito: uma pastilha com o nome de quem fez. */
+    const carimboCredito = async (ok: boolean) => {
+        const tom = cor(ok)
+        const node = scene.add.container(0, 46)
+        const g = scene.add.graphics()
+        g.fillStyle(C.ficha, 1)
+        g.fillRoundedRect(-124, -32, 248, 64, 14)
+        g.fillStyle(tom, 0.2)
+        g.fillRoundedRect(-124, -32, 248, 64, 14)
+        g.lineStyle(6, tom, 1)
+        g.strokeRoundedRect(-124, -32, 248, 64, 14)
+        const t = scene.add.text(0, 0, arquivo.etiqueta.autor, {
+            fontFamily: FONT.black, fontSize: SIZE.carimbo, color: hex(tom),
+            align: 'center', wordWrap: { width: 224 },
+        }).setOrigin(0.5).setResolution(2)
+        node.add([g, t])
+        node.setScale(3).setAlpha(0).setAngle(-7)
+        palco.add(node)
+
+        await FX.to(scene, node, { scale: 1, alpha: 1 }, { duration: 260, ease: 'Back.easeIn' })
+        void FX.impact(scene, container, 0.07)
+        if (ok) {
+            void FX.sparks(scene, FICHA.cx, FICHA.cy + 46, { color: tom, count: 16, spread: 150 })
+            await FX.wait(scene, 320)
+            return
+        }
+        // o carimbo errado não cola: escorrega da ficha e cai
+        await FX.wait(scene, 260)
+        await FX.to(scene, node, { y: 320, angle: 26, alpha: 0 },
+            { duration: 520, ease: Ease.anticipate(0.5) })
+    }
+
+    /** A etiqueta de autoria se solta e cai. */
+    const soltarEtiqueta = async () => {
+        const node = scene.add.container(96, -150)
+        const g = scene.add.graphics()
+        g.fillStyle(C.alerta, 1)
+        g.fillRoundedRect(-34, -22, 68, 44, 8)
+        g.fillStyle(C.verso, 1)
+        g.fillCircle(-22, 0, 5)
+        g.fillStyle(C.verso, 0.75)
+        g.fillRoundedRect(-10, -9, 34, 6, 3)
+        g.fillRoundedRect(-10, 3, 22, 6, 3)
+        node.add(g)
+        palco.add(node)
+
+        node.setScale(0.6).setAlpha(0)
+        await FX.to(scene, node, { scale: 1, alpha: 1 }, { duration: 180 })
+        await FX.wait(scene, 180)
+        await FX.all(
+            FX.to(scene, node, { y: 360, x: 150, angle: 52, alpha: 0 },
+                { duration: 620, ease: Ease.anticipate(0.4) }),
+            FX.shake(scene, container, { amount: 7, times: 2 }),
+        )
+    }
+
+    /** Um balão sobe até o autor e volta com a resposta. */
+    const balaoPergunta = async (ok: boolean) => {
+        const tom = cor(ok)
+        const node = scene.add.container(120, -110)
+        const g = scene.add.graphics()
+        g.fillStyle(C.ficha, 1)
+        g.fillCircle(0, 0, 34)
+        g.lineStyle(5, tom, 1)
+        g.strokeCircle(0, 0, 34)
+        const t = scene.add.text(0, -2, '?', {
+            fontFamily: FONT.black, fontSize: '34px', color: hex(tom),
+        }).setOrigin(0.5).setResolution(2)
+        node.add([g, t])
+        node.setScale(0.3).setAlpha(0)
+        palco.add(node)
+
+        await FX.to(scene, node, { scale: 1, alpha: 1, y: -220 },
+            { duration: 380, ease: Ease.back(1.6) })
+        await FX.wait(scene, 340)
+        t.setText(ok ? '✓' : '!')
+        void FX.impact(scene, node, 0.2)
+        await FX.wait(scene, 260)
+        await FX.to(scene, node, { y: -110, alpha: 0 }, { duration: 320 })
+        if (ok) void FX.sparks(scene, FICHA.cx, FICHA.cy - 110, { color: tom, count: 14, spread: 130 })
+    }
+
+    /** Nada acontece: o arquivo esfria e uma ampulheta gira em cima. */
+    const travar = async () => {
+        const veu = scene.add.graphics()
+        veu.fillStyle(C.rackDark, 0.62)
+        veu.fillRoundedRect(-FICHA.w / 2, -FICHA.h / 2, FICHA.w, FICHA.h, FICHA.r)
+        veu.setAlpha(0)
+        palco.add(veu)
+
+        const amp = scene.add.graphics().setPosition(0, 0).setAlpha(0)
+        amp.fillStyle(C.alerta, 1)
+        amp.fillRoundedRect(-26, -36, 52, 9, 4)
+        amp.fillRoundedRect(-26, 27, 52, 9, 4)
+        amp.fillTriangle(-19, -27, 19, -27, 0, 0)
+        amp.fillTriangle(-19, 27, 19, 27, 0, 0)
+        palco.add(amp)
+
+        await FX.all(
+            FX.to(scene, veu, { alpha: 1 }, { duration: 280 }),
+            FX.to(scene, amp, { alpha: 1 }, { duration: 280 }),
+        )
+        await FX.to(scene, amp, { angle: 180 }, { duration: 620, ease: Ease.smooth })
+        await FX.to(scene, amp, { angle: 360 }, { duration: 620, ease: Ease.smooth })
+    }
+
+    /** Um escudo cresce e fecha sobre o arquivo. */
+    const escudar = async (ok: boolean) => {
+        const tom = cor(ok)
+        const g = scene.add.graphics()
+        g.fillStyle(tom, 0.22)
+        g.fillRoundedRect(-96, -112, 192, 132, 26)
+        g.fillTriangle(-96, 14, 96, 14, 0, 122)
+        g.lineStyle(8, tom, 1)
+        g.strokeRoundedRect(-96, -112, 192, 132, 26)
+        g.lineStyle(10, tom, 1)
+        g.beginPath()
+        g.moveTo(-36, -18)
+        g.lineTo(-8, 14)
+        g.lineTo(44, -50)
+        g.strokePath()
+        g.setScale(0.2).setAlpha(0)
+        palco.add(g)
+
+        await FX.to(scene, g, { scale: 1, alpha: 1 }, { duration: 380, ease: Ease.back(1.8) })
+        void FX.ping(scene, FICHA.cx, FICHA.cy, tom, { radius: 190 })
+        await FX.wait(scene, 300)
+    }
+
+    /** O cadeado da etiqueta abre. */
+    const abrirCadeado = async (ok: boolean) => {
+        const tom = cor(ok)
+        const node = scene.add.container(0, 20)
+        const corpo = scene.add.graphics()
+        corpo.fillStyle(C.ficha, 1)
+        corpo.fillRoundedRect(-46, -14, 92, 74, 12)
+        corpo.lineStyle(6, tom, 1)
+        corpo.strokeRoundedRect(-46, -14, 92, 74, 12)
+        corpo.fillStyle(tom, 1)
+        corpo.fillCircle(0, 22, 11)
+        const arco = scene.add.graphics().setPosition(0, -14)
+        arco.lineStyle(12, tom, 1)
+        arco.beginPath()
+        arco.arc(0, 0, 27, Math.PI, 0, false)
+        arco.strokePath()
+        node.add([arco, corpo])
+        node.setScale(0.4).setAlpha(0)
+        palco.add(node)
+
+        await FX.to(scene, node, { scale: 1, alpha: 1 }, { duration: 300, ease: Ease.back(1.7) })
+        // o arco levanta e gira para o lado: o cadeado abriu
+        await FX.to(scene, arco, { x: 24, y: -34, angle: 34 }, { duration: 340, ease: Ease.back(1.4) })
+        void FX.sparks(scene, FICHA.cx, FICHA.cy, { color: tom, count: 20, spread: 190 })
+        await FX.wait(scene, 300)
+    }
+
+    /** Cópias escapam pelas bordas da tela. */
+    const vazar = async () => {
+        const destinos: Array<[number, number]> = [
+            [-520, -300], [-460, 300], [700, -260],
+            [760, 220], [120, -420], [180, 340],
+        ]
+        await FX.all(
+            FX.shake(scene, container, { amount: 8, times: 2 }),
+            ...destinos.map(([dx, dy], i) => {
+                const m = miniFicha(0, 0, 0.55)
+                return FX.to(scene, m, {
+                    x: dx, y: dy, angle: (i % 2 === 0 ? 1 : -1) * 34, alpha: 0, scale: 0.3,
+                }, { duration: 760, delay: i * 60, ease: Ease.anticipate(0.35) })
+                    .then(() => m.destroy())
+            }),
+        )
+    }
+
+    /** Sai um elo de corrente em vez do arquivo. */
+    const mandarLink = async (ok: boolean) => {
+        const tom = cor(ok)
+        const g = scene.add.graphics().setPosition(0, 0)
+        g.lineStyle(11, tom, 1)
+        g.strokeRoundedRect(-46, -18, 52, 36, 18)
+        g.strokeRoundedRect(-6, -18, 52, 36, 18)
+        g.setScale(0.4).setAlpha(0)
+        palco.add(g)
+
+        await FX.to(scene, g, { scale: 1, alpha: 1 }, { duration: 260, ease: Ease.back(1.8) })
+        await FX.arcTo(scene, g, { x: 620, y: -160 }, { height: 120, duration: 620 })
+        await FX.to(scene, g, { alpha: 0, scale: 0.4 }, { duration: 220 })
+        if (ok) void FX.sparks(scene, FICHA.cx + 620, FICHA.cy - 160, { color: tom, count: 14, spread: 140 })
+    }
+
+    /** O arquivo se duplica e a cópia fica para trás. */
+    const duplicar = async () => {
+        const m = miniFicha(0, 0, 1)
+        m.setAlpha(0.001)
+        await FX.to(scene, m, { alpha: 1 }, { duration: 160 })
+        await FX.to(scene, m, { x: 74, y: 132, angle: 9, scale: 0.62 },
+            { duration: 520, ease: Ease.back(1.2) })
+        await FX.all(
+            FX.shake(scene, m, { amount: 5, times: 2 }),
+            FX.ping(scene, FICHA.cx + 74, FICHA.cy + 132, C.alerta, { radius: 110 }),
+        )
+        await FX.wait(scene, 220)
+    }
+
+    /** Uma pasta sobe, cobre o arquivo e o cadeado fecha. */
+    const guardar = async (ok: boolean) => {
+        const tom = cor(ok)
+        const pasta = scene.add.graphics().setPosition(0, FICHA.h)
+        pasta.fillStyle(C.shadow, 0.34)
+        pasta.fillRoundedRect(-152, -128, 304, 264, 20)
+        pasta.fillStyle(C.rackLight, 1)
+        pasta.fillRoundedRect(-158, -150, 130, 34, 10)
+        pasta.fillRoundedRect(-158, -134, 316, 270, 18)
+        pasta.fillStyle(C.white, 0.1)
+        pasta.fillRoundedRect(-144, -120, 288, 22, 10)
+        pasta.lineStyle(5, tom, 1)
+        pasta.strokeRoundedRect(-158, -134, 316, 270, 18)
+        palco.add(pasta)
+
+        await FX.to(scene, pasta, { y: 30 }, { duration: 460, ease: Ease.back(1.1) })
+
+        const cad = scene.add.container(0, 30)
+        const corpo = scene.add.graphics()
+        corpo.fillStyle(tom, 1)
+        corpo.fillRoundedRect(-38, -10, 76, 62, 10)
+        corpo.fillStyle(C.verso, 1)
+        corpo.fillCircle(0, 20, 9)
+        const arco = scene.add.graphics().setPosition(0, -46)
+        arco.lineStyle(11, tom, 1)
+        arco.beginPath()
+        arco.arc(0, 0, 23, Math.PI, 0, false)
+        arco.strokePath()
+        cad.add([arco, corpo])
+        palco.add(cad)
+
+        cad.setScale(0.5).setAlpha(0)
+        await FX.to(scene, cad, { scale: 1, alpha: 1 }, { duration: 240, ease: Ease.back(1.8) })
+        // o arco desce e tranca
+        await FX.to(scene, arco, { y: -10 }, { duration: 220, ease: Ease.back(2.4) })
+        void FX.impact(scene, cad, 0.16)
+        if (ok) void FX.sparks(scene, FICHA.cx, FICHA.cy + 30, { color: tom, count: 18, spread: 170 })
+        await FX.wait(scene, 300)
+    }
+
+    /** O arquivo fica largado, e olhos aparecem em volta. */
+    const largar = async () => {
+        const olho = (x: number, y: number) => {
+            const g = scene.add.graphics().setPosition(x, y).setScale(0.2).setAlpha(0)
+            g.fillStyle(C.ficha, 1)
+            g.fillEllipse(-22, 0, 42, 30)
+            g.fillEllipse(22, 0, 42, 30)
+            g.fillStyle(C.alerta, 1)
+            g.fillCircle(-22, 0, 9)
+            g.fillCircle(22, 0, 9)
+            g.fillStyle(C.verso, 1)
+            g.fillCircle(-22, 0, 4)
+            g.fillCircle(22, 0, 4)
+            palco.add(g)
+            return g
+        }
+
+        const olhos = [olho(-210, -130), olho(226, -46), olho(-186, 190)]
+        await FX.all(
+            FX.shake(scene, container, { amount: 6, times: 2 }),
+            ...olhos.map((g, i) => FX.to(scene, g, { scale: 1, alpha: 1 },
+                { duration: 300, delay: 140 * i, ease: Ease.back(2) })),
+        )
+        await FX.wait(scene, 420)
+    }
+
+    /** O arquivo se desfaz em pixels. */
+    const desfazer = async (ok: boolean) => {
+        const tom = cor(ok)
+        const cara = mostrandoVerso ? verso : frente
+        const quadros: Phaser.GameObjects.Graphics[] = []
+
+        for (let i = 0; i < 24; i += 1) {
+            const col = i % 6
+            const row = Math.floor(i / 6)
+            const g = scene.add.graphics()
+                .setPosition(-132 + col * 53, -150 + row * 74)
+            g.fillStyle(mostrandoVerso ? C.verso : C.ficha, 1)
+            g.fillRoundedRect(-24, -34, 48, 68, 5)
+            g.lineStyle(2, tom, 0.7)
+            g.strokeRoundedRect(-24, -34, 48, 68, 5)
+            palco.add(g)
+            quadros.push(g)
+        }
+
+        await FX.to(scene, cara, { alpha: 0 }, { duration: 200 })
+        orelha.setVisible(false)
+        await FX.all(
+            ...quadros.map((g, i) => FX.to(scene, g, {
+                x: g.x + Phaser.Math.Between(-160, 160),
+                y: g.y + Phaser.Math.Between(-40, 220),
+                angle: Phaser.Math.Between(-70, 70),
+                alpha: 0, scale: 0.3,
+            }, { duration: 620, delay: i * 16, ease: Ease.anticipate(0.4) })
+                .then(() => g.destroy())),
+        )
+        if (ok) void FX.sparks(scene, FICHA.cx, FICHA.cy, { color: tom, count: 20, spread: 220 })
+    }
+
+    const reagir = async (efeito: Efeito, ok: boolean): Promise<void> => {
+        calarOrelha()
+        switch (efeito) {
+            case 'credito': return carimboCredito(ok)
+            case 'semCredito': return soltarEtiqueta()
+            case 'pergunta': return balaoPergunta(ok)
+            case 'trava': return travar()
+            case 'protege': return escudar(ok)
+            case 'libera': return abrirCadeado(ok)
+            case 'vaza': return vazar()
+            case 'link': return mandarLink(ok)
+            case 'copia': return duplicar()
+            case 'cofre': return guardar(ok)
+            case 'solto': return largar()
+            case 'apaga': return desfazer(ok)
+        }
+    }
 
     return {
         container,
         virar,
         conferida: () => jaConferiu,
+        reagir,
+        sair: () => FX.to(scene, container,
+            { x: -FICHA.w, angle: -12, alpha: 0 },
+            { duration: 420, ease: Ease.anticipate(0.4) }),
         setEnabled: on => {
             enabled = on
-            if (!on) { chama?.remove(); dica.setScale(1) }
-            dica.setAlpha(on ? 1 : 0.4)
+            if (!on) calarOrelha()
+            orelha.setAlpha(on ? 1 : 0.35)
             if (hit.input) hit.input.cursor = on ? 'pointer' : 'default'
         },
-        destroy: () => { chama?.remove(); hit.destroy(); container.destroy() },
+        destroy: () => { calarOrelha(); hit.destroy(); container.destroy() },
     }
 }
 
@@ -597,8 +1256,11 @@ export function paintAcao(
     g.fillRoundedRect(-hw + 4, -hh + 7, ACOES.w, ACOES.h, ACOES.r)
     g.fillStyle(C.painel, 1)
     g.fillRoundedRect(-hw, -hh, ACOES.w, ACOES.h, ACOES.r)
+    // a lombada colorida, e o disco onde o ícone mora
     g.fillStyle(tone, 1)
     g.fillRoundedRect(-hw, -hh, 12, ACOES.h, 6)
+    g.fillStyle(tone, 0.14)
+    g.fillCircle(ACOES.iconeDX, 0, ACOES.iconeR + 12)
     g.fillStyle(C.white, A.gloss)
     g.fillRoundedRect(-hw + 24, -hh + 10, ACOES.w - 44, 12, 6)
     g.lineStyle(3, tone, 0.8)
@@ -607,6 +1269,15 @@ export function paintAcao(
 
 export interface Acoes {
     container: Phaser.GameObjects.Container
+    /**
+     * A escolha vira movimento.
+     *
+     * As duas não escolhidas encolhem e somem; a escolhida VOA em arco até a
+     * ficha. É o que liga a decisão à consequência: sem esse trajeto, o cartão
+     * sumia aqui e um painel de texto aparecia acolá, e nada dizia que um
+     * tinha causado o outro.
+     */
+    escolher(i: number): Promise<void>
     setEnabled(on: boolean): void
     destroy(): void
 }
@@ -622,11 +1293,12 @@ export function createAcoes(
 ): Acoes {
     const container = scene.add.container(0, 0).setDepth(40)
 
-    container.add(scene.add.text(ACOES.cx, ACOES.perguntaY, pergunta, {
+    const titulo = scene.add.text(ACOES.cx, ACOES.perguntaY, pergunta, {
         fontFamily: FONT.black, fontSize: SIZE.pergunta, color: hex(C.paper),
         align: 'center', wordWrap: { width: ACOES.perguntaWrap },
         stroke: hex(C.ink), strokeThickness: 4,
-    }).setOrigin(0.5).setResolution(2))
+    }).setOrigin(0.5).setResolution(2)
+    container.add(titulo)
 
     /*
      * As zonas de toque são objetos de CENA, fora do container que anima — e é
@@ -635,6 +1307,7 @@ export function createAcoes(
      * invisíveis por cima das opções novas.
      */
     const zones: Phaser.GameObjects.Zone[] = []
+    const nodes: Phaser.GameObjects.Container[] = []
     let enabled = true
 
     acoes.forEach((acao, i) => {
@@ -645,16 +1318,20 @@ export function createAcoes(
         paintAcao(g, { tone })
         node.add(g)
 
-        node.add(scene.add.text(10, 0, acao.rotulo, {
-            fontFamily: FONT.body, fontStyle: 'bold', fontSize: SIZE.acao,
+        const icone = scene.add.graphics().setPosition(ACOES.iconeDX, 0)
+        paintEfeitoIcone(icone, acao.efeito, tone)
+        node.add(icone)
+
+        node.add(scene.add.text(ACOES.textoDX, 0, acao.rotulo, {
+            fontFamily: FONT.black, fontSize: SIZE.acao,
             color: hex(C.paper), align: 'center', wordWrap: { width: ACOES.textoWrap },
         }).setOrigin(0.5).setResolution(2))
 
         container.add(node)
+        nodes.push(node)
 
         node.setAlpha(0)
-        FX.to(scene, node, { alpha: 1 }, { duration: 260, delay: i * 90 })
-        FX.slideIn(scene, node, { dx: 30, duration: 300, delay: i * 90 })
+        void FX.slideIn(scene, node, { dx: 44, dy: 0, duration: 320, delay: i * 90 })
 
         const hit = scene.add
             .zone(ACOES.cx, y, ACOES.w + ACOES.hitPad, ACOES.h + ACOES.hitPad)
@@ -672,6 +1349,29 @@ export function createAcoes(
 
     return {
         container,
+
+        escolher: async i => {
+            const escolhido = nodes[i]
+            if (!escolhido) return
+
+            const outros = nodes.filter((_, k) => k !== i)
+            await FX.all(
+                FX.to(scene, titulo, { alpha: 0 }, { duration: 200 }),
+                ...outros.map(n => FX.to(scene, n, { alpha: 0, scale: 0.9 }, { duration: 220 })),
+            )
+            /*
+             * O cartão passa POR CIMA da ficha sem precisar de profundidade
+             * própria: ele é filho do container das ações, que está em 40, e a
+             * ficha inteira está em 35. `setDepth` num filho de container seria
+             * inútil aqui — o Phaser só ordena por profundidade dentro do pai
+             * quando alguém chama `sort`, e ninguém chama.
+             */
+            await FX.arcTo(scene, escolhido,
+                { x: FICHA.cx, y: FICHA.cy },
+                { height: 150, duration: 560 })
+            await FX.to(scene, escolhido, { scale: 0.2, alpha: 0 }, { duration: 220 })
+        },
+
         setEnabled: on => {
             enabled = on
             zones.forEach(z => { if (z.input) z.input.cursor = on ? 'pointer' : 'default' })
@@ -703,7 +1403,7 @@ export function createImpacto(
         IMPACTO.w, IMPACTO.h, IMPACTO.r)
     g.fillStyle(tone, 0.18)
     g.fillRoundedRect(IMPACTO.cx - IMPACTO.w / 2, IMPACTO.cy - IMPACTO.h / 2,
-        IMPACTO.w, 64, IMPACTO.r)
+        IMPACTO.w, 62, IMPACTO.r)
     g.lineStyle(4, tone, 1)
     g.strokeRoundedRect(IMPACTO.cx - IMPACTO.w / 2, IMPACTO.cy - IMPACTO.h / 2,
         IMPACTO.w, IMPACTO.h, IMPACTO.r)
@@ -714,130 +1414,16 @@ export function createImpacto(
         fontFamily: FONT.black, fontSize: SIZE.impactoTitulo, color: hex(tone),
     }).setOrigin(0.5).setResolution(2))
 
+    // origem 0.5/0.5: o texto se centra sozinho no vão abaixo da faixa, tenha
+    // ele duas linhas ou cinco
     container.add(scene.add.text(IMPACTO.cx, IMPACTO.textoY, texto, {
         fontFamily: FONT.body, fontStyle: 'bold', fontSize: SIZE.impactoTexto,
         color: hex(C.paper), align: 'center', wordWrap: { width: IMPACTO.textoWrap },
-    }).setOrigin(0.5, 0).setResolution(2))
+    }).setOrigin(0.5).setResolution(2))
 
     FX.popIn(scene, container, { from: 0.92, duration: 300 })
 
     return { container, destroy: () => container.destroy() }
-}
-
-/* ═══════════════════════════════════════════════════════════ o painel */
-
-export function paintLampada(
-    g: Phaser.GameObjects.Graphics,
-    { tone, marca }: { tone: number; marca: Marca },
-) {
-    const hw = PAINEL.lampW / 2
-    const hh = PAINEL.lampH / 2
-    const acesa = marca.respeitado
-    const cor = marca.alertas > 0 && !acesa ? C.alerta : tone
-
-    g.clear()
-    g.fillStyle(acesa ? cor : C.white, acesa ? 0.16 : 0.04)
-    g.fillRoundedRect(-hw, -hh, PAINEL.lampW, PAINEL.lampH, PAINEL.lampR)
-    g.lineStyle(acesa ? 3 : 2, cor, acesa ? 1 : 0.35)
-    g.strokeRoundedRect(-hw, -hh, PAINEL.lampW, PAINEL.lampH, PAINEL.lampR)
-
-    // a bolinha: apagada, acesa, ou acesa com a marca de quem tropeçou no caminho
-    const bx = PAINEL.bolaDX
-    if (acesa) {
-        g.fillStyle(cor, 0.3)
-        g.fillCircle(bx, 0, PAINEL.bolaR + 6)
-        g.fillStyle(cor, 1)
-        g.fillCircle(bx, 0, PAINEL.bolaR)
-        g.lineStyle(4, inkOn(cor), 1)
-        g.beginPath()
-        g.moveTo(bx - 6, 0)
-        g.lineTo(bx - 1, 5)
-        g.lineTo(bx + 7, -6)
-        g.strokePath()
-    } else {
-        g.fillStyle(C.verso, 1)
-        g.fillCircle(bx, 0, PAINEL.bolaR)
-        g.lineStyle(2, cor, 0.5)
-        g.strokeCircle(bx, 0, PAINEL.bolaR)
-    }
-
-    if (marca.alertas <= 0) return
-    // os alertas ficam registrados mesmo depois de a lâmpada acender: eles são
-    // parte do relatório, não uma punição que some quando a criança acerta
-    for (let i = 0; i < Math.min(marca.alertas, 3); i += 1) {
-        g.fillStyle(C.alerta, 1)
-        g.fillCircle(hw - 18 - i * 15, -hh + 14, 5)
-    }
-}
-
-export interface Painel {
-    container: Phaser.GameObjects.Container
-    set(marcas: Record<Principio, Marca>): void
-    /** Chama a atenção para a lâmpada que acabou de mudar. */
-    destacar(p: Principio): void
-    destroy(): void
-}
-
-export function createPainel(scene: Phaser.Scene): Painel {
-    const container = scene.add.container(0, 0).setDepth(33)
-
-    const bar = scene.add.graphics()
-    bar.fillStyle(C.shadow, 0.3)
-    bar.fillRoundedRect(PAINEL.x + 4, PAINEL.y + 6, PAINEL.w, PAINEL.h, PAINEL.r)
-    bar.fillStyle(C.ink, 0.93)
-    bar.fillRoundedRect(PAINEL.x, PAINEL.y, PAINEL.w, PAINEL.h, PAINEL.r)
-    bar.lineStyle(3, C.edge, 0.85)
-    bar.strokeRoundedRect(PAINEL.x, PAINEL.y, PAINEL.w, PAINEL.h, PAINEL.r)
-    container.add(bar)
-
-    const n = PRINCIPIOS.length
-    const total = n * PAINEL.lampW + (n - 1) * PAINEL.lampGap
-    const startX = W / 2 - total / 2 + PAINEL.lampW / 2
-
-    const nodes = new Map<Principio, {
-        node: Phaser.GameObjects.Container
-        g: Phaser.GameObjects.Graphics
-    }>()
-
-    PRINCIPIOS.forEach((p, i) => {
-        const x = startX + i * (PAINEL.lampW + PAINEL.lampGap)
-        const node = scene.add.container(x, PAINEL.cy)
-
-        const g = scene.add.graphics()
-        node.add(g)
-
-        node.add(scene.add.text(PAINEL.bolaDX + 34, PAINEL.nomeDY, p.nome, {
-            fontFamily: FONT.black, fontSize: SIZE.lampadaNome, color: hex(ACCENT[p.key]),
-        }).setOrigin(0, 0.5).setResolution(2))
-
-        node.add(scene.add.text(PAINEL.bolaDX + 34, PAINEL.resumoDY, p.resumo, {
-            fontFamily: FONT.body, fontStyle: 'bold', fontSize: SIZE.lampadaResumo,
-            color: hex(C.idle), wordWrap: { width: PAINEL.lampW - 60 },
-        }).setOrigin(0, 0.5).setResolution(2))
-
-        container.add(node)
-        nodes.set(p.key, { node, g })
-    })
-
-    return {
-        container,
-        set: marcas => {
-            PRINCIPIOS.forEach(p => {
-                const item = nodes.get(p.key)
-                if (!item) return
-                paintLampada(item.g, { tone: ACCENT[p.key], marca: marcas[p.key] })
-            })
-        },
-        destacar: p => {
-            const item = nodes.get(p)
-            if (!item) return
-            FX.kill(scene, item.node)
-            item.node.setScale(1)
-            FX.to(scene, item.node, { scale: 1.08 },
-                { duration: 240, yoyo: true, ease: Ease.back(2.4) })
-        },
-        destroy: () => container.destroy(),
-    }
 }
 
 /* ═════════════════════════════════════════════════════════════ toast */
@@ -846,7 +1432,7 @@ export function showToast(
     scene: Phaser.Scene,
     message: string,
     tone: number,
-    life = 2800,
+    life = 2600,
 ) {
     const container = scene.add.container(TOAST.cx, TOAST.hiddenY).setDepth(400)
 
