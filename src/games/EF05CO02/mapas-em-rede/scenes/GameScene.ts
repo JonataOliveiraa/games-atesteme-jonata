@@ -5,6 +5,8 @@ import { createTutorial, type TutorialStep } from '../../../../shared/tutorial/c
 import { showLevelComplete } from '../../../../shared/level/showLevelComplete'
 import { LEVELS } from '../data/levels'
 import { HUD, SUB, BANDA, RODAPE } from '../data/layout'
+import { C, BARRA, hex, STROKE } from '../data/theme'
+import { createTimeBar, type TimeBar } from '../../../../shared/hud/createTimeBar'
 import type {
     GraphEdge,
     GraphNode,
@@ -20,24 +22,32 @@ const GAME_ID = 'mapas-em-rede'
 
 const W = 1280
 const H = 720
-const NODE_R = 42
-const LABEL_DY = 64
-const HIT_R = 54
+/**
+ * ── A PEÇA FICA SOLTA NA GRAMA, E O ANEL PASSA POR FORA ──────────────────
+ *
+ * O defeito original era um só: o ícone era desenhado a 120x120 e o anel de
+ * destaque tinha raio 48 — 96 de diâmetro. Ao acender um nó, o anel nascia POR
+ * DENTRO da arte e o desenho escapava 12px de cada lado.
+ *
+ * Eu consertei do jeito errado: pus um disco de madeira atrás de cada peça
+ * para "conter" a arte. Isso resolveu o anel e criou outra coisa — uma moldura
+ * marrom em volta de casas e pessoas que já são recortadas e já foram feitas
+ * para pousar direto no cenário. O usuário devolveu na hora: *"elas devem
+ * ficar sem background, pois elas ficam em cima da grama"*.
+ *
+ * O conserto certo era mexer só no ANEL. `PECA_R` é a metade da arte — a
+ * pegada que todo o resto do layout usa para se afastar — e o anel vive em
+ * `PECA_R + 8`, sempre por fora. Nenhum fundo, nenhuma moldura.
+ */
+const ICON_D = 112
+const PECA_R = ICON_D / 2
+/** O anel de destaque, sempre POR FORA da arte. */
+const HALO_R = PECA_R + 8
+const LABEL_DY = 76
+const HIT_R = 62
 
 const BAR_Y = 664
 const BAR_TOP = RODAPE.top
-
-const C = {
-    blue: 0x3b82f6,
-    blueDark: 0x1e3a8a,
-    purple: 0x8b5cf6,
-    white: 0xffffff,
-    ink: 0x0f172a,
-    green: 0x22c55e,
-    red: 0xef4444,
-    amber: 0xf59e0b,
-    slate: 0x94a3b8,
-}
 
 const edgeKey = (a: string, b: string) => [a, b].sort().join('|')
 
@@ -83,6 +93,15 @@ export class GameScene extends Phaser.Scene {
 
     private confirmBtn?: Phaser.GameObjects.Container
     private hudSub: string | any = ''
+
+    /* ── o HUD, que era da UIScene e agora mora aqui ─────────────────── */
+    private hudLayer!: Phaser.GameObjects.Container
+    private instructionText!: Phaser.GameObjects.Text
+    private subText!: Phaser.GameObjects.Text
+    private levelText!: Phaser.GameObjects.Text
+    private dots!: Phaser.GameObjects.Graphics
+    private tempo!: TimeBar
+    private helpBtn?: Phaser.GameObjects.Container
     constructor() {
         super({ key: 'GameScene' })
     }
@@ -115,24 +134,23 @@ export class GameScene extends Phaser.Scene {
 
     create() {
         this.drawBackground()
+        this.buildHud()
         this.buildPhase()
         this.registerPointerHandlers()
         this.publishHud()
 
-        EventBus.on('timer-end', () => this.onTimeUp(), this)
+        // `timer-end` sumiu: a barra é desta cena e avisa direto pelo `onEmpty`
         EventBus.on('show-tutorial', () => this.runTutorials(() => { }, true), this)
 
         this.events.once('shutdown', () => {
-            EventBus.off('timer-end', undefined, this)
             EventBus.off('show-tutorial', undefined, this)
-            EventBus.emit('timer-stop')
         })
 
         // `GAME_READY` não leva `stage` no contrato — leva só o `gameId`
         runtimeGameBridge.emit({ type: 'GAME_READY', gameId: GAME_ID })
         this.emitCheckpoint()
 
-        if (this.phaseIdx > 0) EventBus.emit('tutorial-ready')
+        if (this.phaseIdx > 0) this.showHelpButton()
 
         if (this.phaseIdx === 0) {
             this.showLevelIntro(() => this.runTutorials(() => this.startPhase()))
@@ -147,18 +165,27 @@ export class GameScene extends Phaser.Scene {
     }
 
     private drawBackground() {
-        const key = this.phase.context === 'mapa' ? 'bg-bairro' : 'bg-rede'
-        this.add.image(W / 2, H / 2, key).setDisplaySize(W, H).setDepth(-2)
+        /*
+         * ── UM CENÁRIO SÓ, DO COMEÇO AO FIM ──────────────────────────────
+         *
+         * O Nível 3 trocava para `bg-rede` — um fundo escuro de "rede" — nas
+         * três fases de contexto `rede`. O jogo mudava de mundo no meio: dois
+         * níveis num bairro ilustrado e o terceiro num painel abstrato, com a
+         * mesma moldura de madeira em volta. O `context` continua nos dados
+         * (ele diz se as bolinhas são lugares ou pessoas), mas não escolhe mais
+         * a arte: a floresta do Nível 1 vale para os três.
+         *
+         * `bg-rede` segue carregada na BootScene e sem uso — é o único asset
+         * órfão do jogo, e fica de reserva.
+         */
+        this.add.image(W / 2, H / 2, 'bg-bairro').setDisplaySize(W, H).setDepth(-2)
 
         const veil = this.add.graphics().setDepth(-1)
-        veil.fillStyle(0x0f2547, this.phase.context === 'mapa' ? 0.05 : 0.28)
+        veil.fillStyle(C.ink, 0.08)
         veil.fillRect(0, 0, W, H)
 
         const bar = this.add.graphics().setDepth(1)
-        bar.fillStyle(C.ink, 0.82)
-        bar.fillRect(0, BAR_TOP, W, H - BAR_TOP)
-        bar.fillStyle(C.blue, 0.9)
-        bar.fillRect(0, BAR_TOP, W, 4)
+        this.paintTabua(bar, -10, BAR_TOP, W + 20, H - BAR_TOP + 10, { sombra: false })
 
         this.edgeLayer = this.add.graphics().setDepth(8)
         this.elasticLayer = this.add.graphics().setDepth(9)
@@ -198,103 +225,103 @@ export class GameScene extends Phaser.Scene {
     }
 
     /**
-     * A LISTA DE PARES A LIGAR.
+     * A LISTA DE RUAS A LIGAR — um trilho vertical na margem esquerda.
      *
-     * ── O BUG QUE ELA TINHA ──────────────────────────────────────────────
+     * ── DOIS BUGS, UM DEPOIS DO OUTRO ────────────────────────────────────
      *
-     * A largura de cada ficha era um CHUTE: `texto.length * 9.5 + 62`. Na fase
-     * de seis ruas do Nível 1 a conta dava 1362px contra 1200 disponíveis, e o
-     * empacotamento era guloso — enchia a primeira linha até estourar e jogava
-     * o que sobrou para baixo. Resultado: cinco fichas em cima e uma sozinha
-     * embaixo, "Biblioteca — Praça", pousada em cima do mapa.
+     * 1. A largura de cada ficha era um CHUTE (`texto.length * 9.5 + 62`). Na
+     *    fase de seis ruas a conta errava, o empacotamento era guloso, e
+     *    "Biblioteca — Praça" caía sozinha numa segunda linha em cima do mapa.
      *
-     * Três consertos, nesta ordem:
+     * 2. Consertada a medida, a lista virou uma placa horizontal centrada — e
+     *    aí seis pares em duas linhas eram uma tábua de 870x110 atravessando o
+     *    meio da tela. Ler passou a funcionar; VER o bairro, não. Crescer para
+     *    baixo, no centro, é crescer em cima do jogo.
      *
-     *   1. medir o texto de verdade (`medir`), e não adivinhar;
-     *   2. EQUILIBRAR as linhas — seis pares viram 3+3, e não 5+1;
-     *   3. encolher a letra antes de aceitar mais uma linha, e só então
-     *      desistir — e o resultado é conferido contra `BANDA.teto`, que é
-     *      onde o mapa começa.
+     * A forma certa é vertical, encostada na margem: uma lista de itens a
+     * marcar é uma prancheta, não um letreiro. O sexto par agora deixa o
+     * trilho mais ALTO, numa faixa de tela onde não existe mais nada — e o
+     * mapa fica inteiro à vista.
+     *
+     * A letra encolhe (17 → 15) antes de o trilho passar do piso. Se nem assim
+     * couber, é bug de dados — uma fase com pares demais — e não de layout.
      */
     private buildChecklist() {
         const p = this.phase
         if (p.kind !== 'representar') return
 
         const pairs = p.edges
-        const textos = pairs.map(e => `${this.labelOf(e.a)} — ${this.labelOf(e.b)}`)
-        const gap = BANDA.chipGap
-        const chipH = BANDA.chipH
-
-        /* ── qual corpo de letra e quantas linhas cabem ────────────────── */
-        let size = BANDA.chipSizes[BANDA.chipSizes.length - 1]
-        let widths: number[] = []
-        let rows: number[][] = []
-
-        const alturaDe = (n: number) =>
-            BANDA.tituloH + n * chipH + (n - 1) * gap
-
-        busca:
-        for (const s of BANDA.chipSizes) {
-            const w = textos.map(t =>
-                Math.max(BANDA.chipMin, this.medir(t, s) + BANDA.chipPadX * 2 + BANDA.chipMarcaDX))
-
-            for (let linhas = 1; linhas <= BANDA.chipMaxLinhas; linhas += 1) {
-                if (this.bandaTop + alturaDe(linhas) > BANDA.teto) break
-                const fatias = this.fatiar(pairs.length, linhas)
-                const cabe = fatias.every(f =>
-                    f.reduce((acc, i) => acc + w[i], 0) + (f.length - 1) * gap <= BANDA.maxLargura)
-                if (!cabe) continue
-                size = s; widths = w; rows = fatias
-                break busca
-            }
-        }
-
-        // rede: nenhum tamanho serviu. Fica no menor, na quantidade máxima de
-        // linhas — feio, mas dentro do teto, e nunca em cima do mapa
-        if (!rows.length) {
-            size = BANDA.chipSizes[BANDA.chipSizes.length - 1]
-            widths = textos.map(t =>
-                Math.max(BANDA.chipMin, this.medir(t, size) + BANDA.chipPadX * 2 + BANDA.chipMarcaDX))
-            rows = this.fatiar(pairs.length, BANDA.chipMaxLinhas)
-        }
-
         const top = this.bandaTop
+        const x = BANDA.trilhoX
+        const w = BANDA.trilhoW
+        const pad = BANDA.trilhoPad
+        const fichaH = BANDA.fichaListaH
+        const gap = BANDA.fichaListaGap
+
+        const alturaTotal = pad * 2 + BANDA.trilhoTituloH
+            + pairs.length * fichaH + (pairs.length - 1) * gap
+
+        /* o corpo da letra é o único grau de liberdade: o trilho não pode
+           passar do piso, e a coluna de texto é estreita por natureza */
+        const textoW = w - BANDA.textoDX - pad
+        let size = BANDA.textoSizes[BANDA.textoSizes.length - 1]
+        for (const s2 of BANDA.textoSizes) {
+            const maior = Math.max(...pairs.flatMap(e =>
+                [this.medir(this.labelOf(e.a), s2), this.medir(this.labelOf(e.b), s2)]))
+            if (maior <= textoW) { size = s2; break }
+        }
+
+        const tabua = this.add.graphics()
+        this.paintTabua(tabua, x, top, w, alturaTotal, { r: BANDA.trilhoR })
+        this.taskLayer.add(tabua)
 
         this.taskLayer.add(
-            this.add.text(W / 2, top, 'RUAS PARA LIGAR', {
-                fontFamily: 'Arial Black, Arial', fontSize: '14px',
-                color: '#93c5fd', stroke: '#0f2547', strokeThickness: 4,
-            }).setOrigin(0.5, 0).setResolution(2),
+            this.add.text(x + w / 2, top + pad + BANDA.trilhoTituloH / 2 - 2, 'RUAS PARA LIGAR', {
+                fontFamily: 'Arial Black, Arial', fontSize: `${BANDA.trilhoTituloSize}px`,
+                color: hex(C.latao), stroke: STROKE, strokeThickness: 4,
+            }).setOrigin(0.5).setResolution(2),
         )
 
-        rows.forEach((row, ri) => {
-            const total = row.reduce((s2, i) => s2 + widths[i], 0) + (row.length - 1) * gap
-            let x = W / 2 - total / 2
-            const y = top + BANDA.tituloH + ri * (chipH + gap)
+        pairs.forEach((e, i) => {
+            const y = top + pad + BANDA.trilhoTituloH + i * (fichaH + gap)
+            const cy = y + fichaH / 2
 
-            row.forEach(i => {
-                const e = pairs[i]
-                const w = widths[i]
+            const g = this.add.graphics()
+            const check = this.add.graphics()
 
-                const g = this.add.graphics()
-                const check = this.add.graphics()
+            /*
+             * O COLCHETE, e não um travessão.
+             *
+             * "Biblioteca —" a 17px pede 126px e a coluna tem 114: o traço era
+             * exatamente o que estourava. Desenhado, ele custa zero caractere e
+             * ainda diz melhor o que quer dizer — estes dois, juntos.
+             */
+            const colchete = this.add.graphics()
+            const bx = x + BANDA.colcheteDX
+            colchete.lineStyle(3, C.latao, 0.85)
+            colchete.beginPath()
+            colchete.moveTo(bx + 5, cy - BANDA.linhaDY)
+            colchete.lineTo(bx, cy - BANDA.linhaDY)
+            colchete.lineTo(bx, cy + BANDA.linhaDY)
+            colchete.lineTo(bx + 5, cy + BANDA.linhaDY)
+            colchete.strokePath()
 
-                const label = this.add.text(
-                    x + BANDA.chipPadX + BANDA.chipMarcaDX, y + chipH / 2,
-                    textos[i], {
+            const linha = (texto: string, dy: number) =>
+                this.add.text(x + BANDA.textoDX, cy + dy, texto, {
                     fontFamily: 'Arial Black, Arial', fontSize: `${size}px`,
-                    color: '#ffffff', stroke: '#0f2547', strokeThickness: 4,
+                    color: hex(C.creme), stroke: STROKE, strokeThickness: 4,
                 }).setOrigin(0, 0.5).setResolution(2)
 
-                g.setData('rect', { x, y, w, h: chipH })
-                check.setData('cx', x + BANDA.chipPadX + 3)
-                check.setData('cy', y + chipH / 2)
+            g.setData('rect', { x, y, w, h: fichaH })
+            check.setData('cx', x + BANDA.marcaDX)
+            check.setData('cy', cy)
 
-                this.taskLayer.add([g, check, label])
-                this.taskChips.push({ key: edgeKey(e.a, e.b), g, check })
-
-                x += w + gap
-            })
+            this.taskLayer.add([
+                g, check, colchete,
+                linha(this.labelOf(e.a), -BANDA.linhaDY),
+                linha(this.labelOf(e.b), BANDA.linhaDY),
+            ])
+            this.taskChips.push({ key: edgeKey(e.a, e.b), g, check })
         })
 
         this.refreshChecklist()
@@ -310,25 +337,34 @@ export class GameScene extends Phaser.Scene {
 
             const done = current.has(chip.key)
 
+            const rr = BANDA.fichaListaR
             chip.g.clear()
-            chip.g.fillStyle(C.ink, 0.7)
-            chip.g.fillRoundedRect(r.x, r.y, r.w, r.h, r.h / 2)
-            chip.g.lineStyle(3, done ? C.green : C.slate, done ? 1 : 0.7)
-            chip.g.strokeRoundedRect(r.x, r.y, r.w, r.h, r.h / 2)
+            chip.g.fillStyle(C.madeiraEscura, 1)
+            chip.g.fillRoundedRect(r.x, r.y + 3, r.w, r.h, rr)
+            chip.g.fillStyle(done ? C.green : C.madeiraMedia, 1)
+            chip.g.fillRoundedRect(r.x, r.y, r.w, r.h, rr)
+            chip.g.fillStyle(C.white, 0.15)
+            chip.g.fillRoundedRect(r.x + 7, r.y + 5, r.w - 14, r.h * 0.24, rr / 2)
+            chip.g.lineStyle(3, done ? C.greenSoft : C.latao, done ? 1 : 0.7)
+            chip.g.strokeRoundedRect(r.x, r.y, r.w, r.h, rr)
 
             const cx = chip.check.getData('cx') as number
             const cy = chip.check.getData('cy') as number
+            const mr = BANDA.marcaR
 
             chip.check.clear()
-            chip.check.fillStyle(done ? C.green : C.slate, done ? 1 : 0.35)
-            chip.check.fillCircle(cx, cy, 11)
+            chip.check.fillStyle(done ? C.creme : C.ink, done ? 1 : 0.34)
+            chip.check.fillCircle(cx, cy, mr)
             if (done) {
-                chip.check.lineStyle(4, C.white, 1)
+                chip.check.lineStyle(4, C.green, 1)
                 chip.check.beginPath()
                 chip.check.moveTo(cx - 5, cy)
                 chip.check.lineTo(cx - 1, cy + 4)
                 chip.check.lineTo(cx + 6, cy - 5)
                 chip.check.strokePath()
+            } else {
+                chip.check.lineStyle(2, C.latao, 0.55)
+                chip.check.strokeCircle(cx, cy, mr)
             }
         })
     }
@@ -395,7 +431,7 @@ export class GameScene extends Phaser.Scene {
             fontFamily: 'Arial',
             fontStyle: 'bold',
             fontSize: '18px',
-            color: '#cbd5e1',
+            color: hex(C.cremeSoft),
         }).setOrigin(0.5).setDepth(12).setResolution(2)
     }
 
@@ -406,17 +442,17 @@ export class GameScene extends Phaser.Scene {
             const ring = this.add.graphics()
             this.paintNode(ring, 'idle')
 
-            const icon = this.add.image(0, 0, def.textureKey).setDisplaySize(120, 120)
+            const icon = this.add.image(0, 0, def.textureKey).setDisplaySize(ICON_D, ICON_D)
 
             const label = this.add.text(0, LABEL_DY, def.label, {
                 fontFamily: 'Arial Black, Arial',
                 fontSize: '16px',
-                color: '#ffffff',
-                stroke: '#0f2547',
+                color: hex(C.creme),
+                stroke: STROKE,
                 strokeThickness: 5,
             }).setOrigin(0.5).setResolution(2)
 
-            const hit = this.add.rectangle(0, 0, HIT_R * 2, HIT_R * 2, 0xffffff, 0.01)
+            const hit = this.add.rectangle(0, 0, HIT_R * 2, HIT_R * 2, C.white, 0.01)
                 .setInteractive({ useHandCursor: true })
 
             container.add([ring, icon, label, hit])
@@ -442,11 +478,18 @@ export class GameScene extends Phaser.Scene {
 
         if (state === 'idle') return
 
-        const color = state === 'active' ? C.amber : state === 'route' ? C.purple : C.red
-        g.fillStyle(color, 0.24)
-        g.fillCircle(0, 0, NODE_R + 6)
+        /*
+         * POR FORA da arte, e por baixo dela.
+         *
+         * O anel é o halo que acende, não uma moldura: ele mora em `HALO_R`
+         * (oito pixels além da borda do desenho) e entra no container ANTES do
+         * ícone, então a casa continua inteira por cima dele.
+         */
+        const color = state === 'active' ? C.amber : state === 'route' ? C.greenSoft : C.red
+        g.fillStyle(color, 0.22)
+        g.fillCircle(0, 0, HALO_R)
         g.lineStyle(6, color, 1)
-        g.strokeCircle(0, 0, NODE_R + 6)
+        g.strokeCircle(0, 0, HALO_R)
     }
 
     private allViews() {
@@ -475,17 +518,17 @@ export class GameScene extends Phaser.Scene {
         }
 
         this.edges.forEach(e => {
-            let color = C.blue
+            let color = C.madeira
             if (this.reviewMode && p.kind === 'representar') {
                 color = expectedKeys.has(edgeKey(e.a, e.b)) ? C.green : C.red
             }
-            if (this.isEdgeInRoute(e)) color = C.purple
+            if (this.isEdgeInRoute(e)) color = C.madeiraMedia
             this.strokeEdge(e, 'main', color, this.isEdgeInRoute(e) ? 11 : 8, 1)
             this.buildEdgeMarker(e)
         })
 
         if (p.kind === 'isomorfismo') {
-            p.altEdges.forEach(e => this.strokeEdge(e, 'alt', C.blue, 8, 1))
+            p.altEdges.forEach(e => this.strokeEdge(e, 'alt', C.madeira, 8, 1))
         }
 
         this.refreshChecklist()
@@ -519,7 +562,7 @@ export class GameScene extends Phaser.Scene {
         const bg = this.add.graphics()
         bg.fillStyle(C.white, 1)
         bg.fillCircle(0, 0, r)
-        bg.lineStyle(3, C.blueDark, 1)
+        bg.lineStyle(3, C.madeiraEscura, 1)
         bg.strokeCircle(0, 0, r)
         marker.add(bg)
 
@@ -527,13 +570,13 @@ export class GameScene extends Phaser.Scene {
             marker.add(this.add.text(0, 0, String(e.weight), {
                 fontFamily: 'Arial Black, Arial',
                 fontSize: '17px',
-                color: '#1e3a8a',
+                color: hex(C.madeiraEscura),
             }).setOrigin(0.5).setResolution(2))
         }
 
         if (this.phase.kind === 'representar' && !this.reviewMode) {
             const touch = Math.max(r + 12, 26)
-            const hit = this.add.rectangle(0, 0, touch * 2, touch * 2, 0xffffff, 0.01)
+            const hit = this.add.rectangle(0, 0, touch * 2, touch * 2, C.white, 0.01)
                 .setInteractive({ useHandCursor: true })
             marker.add(hit)
 
@@ -726,8 +769,17 @@ export class GameScene extends Phaser.Scene {
     private placeMarker(view: NodeView | undefined, key: string, label: string) {
         if (!view) return
 
-        const size = 72
-        const y = view.y - 88
+        /*
+         * O marcador encostou no nó e PERDEU a legenda.
+         *
+         * Ele ficava em `y - 88` com 72px e um rótulo por cima, ou seja o
+         * conjunto subia até `y - 145`: com a fileira de cima em 310, isso
+         * batia na faixa PERCURSO, que termina em 172. E o texto era repetição
+         * pura — a mesma faixa já mostra "🚩 Casa" e "🏁 Escola", com estes
+         * mesmos ícones.
+         */
+        const size = 64
+        const y = view.y - PECA_R - 34
 
         const glow = this.add.image(view.x, y, key)
             .setDisplaySize(size * 1.32, size * 1.32)
@@ -739,13 +791,10 @@ export class GameScene extends Phaser.Scene {
             .setDisplaySize(size, size)
             .setDepth(16)
 
-        const tag = this.add.text(view.x, y - size / 2 - 12, label, {
-            fontFamily: 'Arial Black, Arial', fontSize: '14px',
-            color: '#ffffff', stroke: '#0f2547', strokeThickness: 5,
-        }).setOrigin(0.5).setDepth(16).setResolution(2)
+        void label
 
         this.tweens.add({
-            targets: [glow, icon, tag],
+            targets: [glow, icon],
             y: '-=10',
             duration: 1100,
             yoyo: true,
@@ -789,7 +838,7 @@ export class GameScene extends Phaser.Scene {
          * ele repetia em texto corrido o que estas fichas já mostram, e era a
          * linha que faltava para tudo caber acima do mapa.
          */
-        const roleColor: Record<string, number> = { start: 0x16a34a, pass: 0xd97706, end: 0xdc2626 }
+        const roleColor: Record<string, number> = { start: C.green, pass: C.amber, end: C.red }
         const roleIcon: Record<string, string> = { start: '🚩', pass: '📍', end: '🏁' }
 
         const textos = stops.map(st => `${roleIcon[st.role]} ${this.labelOf(st.id)}`)
@@ -800,9 +849,9 @@ export class GameScene extends Phaser.Scene {
 
         for (const s2 of BANDA.stripSizes) {
             const w = textos.map(t => Math.max(BANDA.fichaMin, this.medir(t, s2) + BANDA.fichaPadX * 2))
-            const total = BANDA.rotuloW + w.reduce((a, b) => a + b, 0)
+            const total = BANDA.rotuloColW + w.reduce((a, b) => a + b, 0)
                 + (stops.length - 1) * BANDA.setaW
-            if (total + BANDA.stripPad * 2 <= BANDA.maxLargura) {
+            if (total + BANDA.placaPad * 2 <= BANDA.maxLargura) {
                 size = s2; widths = w; innerW = total
                 break
             }
@@ -811,35 +860,39 @@ export class GameScene extends Phaser.Scene {
 
         const CHIP_H = BANDA.fichaH
         const STRIP_Y = this.bandaTop
-        const STRIP_H = CHIP_H + 8
-        const stripX = W / 2 - (innerW + BANDA.stripPad * 2) / 2
+        const pad = BANDA.placaPad
+        const STRIP_H = CHIP_H + pad * 2
+        const stripX = W / 2 - (innerW + pad * 2) / 2
 
         const bg = this.add.graphics().setDepth(12)
-        bg.fillStyle(C.ink, 0.88)
-        bg.fillRoundedRect(stripX, STRIP_Y, innerW + BANDA.stripPad * 2, STRIP_H, STRIP_H / 2)
-        bg.lineStyle(3, C.blue, 0.72)
-        bg.strokeRoundedRect(stripX, STRIP_Y, innerW + BANDA.stripPad * 2, STRIP_H, STRIP_H / 2)
+        this.paintTabua(bg, stripX, STRIP_Y, innerW + pad * 2, STRIP_H, { r: BANDA.placaR })
 
-        this.add.text(stripX + BANDA.stripPad + 6, STRIP_Y + STRIP_H / 2, 'PERCURSO:', {
-            fontFamily: 'Arial Black, Arial', fontSize: '14px',
-            color: '#93c5fd', stroke: '#0f2547', strokeThickness: 3,
+        this.add.text(stripX + pad + 6, STRIP_Y + STRIP_H / 2, 'SEU\nPERCURSO', {
+            fontFamily: 'Arial Black, Arial', fontSize: `${BANDA.rotuloSize}px`,
+            color: hex(C.latao), stroke: STROKE, strokeThickness: 4,
+            align: 'left', lineSpacing: 2,
         }).setOrigin(0, 0.5).setDepth(13).setResolution(2)
 
-        let cx = stripX + BANDA.stripPad + BANDA.rotuloW
+        let cx = stripX + pad + BANDA.rotuloColW
 
         stops.forEach((stop, i) => {
             const color = roleColor[stop.role]
             const cw = widths[i]
 
             const chipBg = this.add.graphics().setDepth(13)
-            chipBg.fillStyle(color, 0.86)
-            chipBg.fillRoundedRect(cx, STRIP_Y + 4, cw, CHIP_H, CHIP_H / 2)
-            chipBg.lineStyle(2, 0xffffff, 0.82)
-            chipBg.strokeRoundedRect(cx, STRIP_Y + 4, cw, CHIP_H, CHIP_H / 2)
+            const fundo = Phaser.Display.Color.ValueToColor(color).darken(34).color
+            chipBg.fillStyle(fundo, 1)
+            chipBg.fillRoundedRect(cx, STRIP_Y + pad + 3, cw, CHIP_H, CHIP_H / 2)
+            chipBg.fillStyle(color, 1)
+            chipBg.fillRoundedRect(cx, STRIP_Y + pad, cw, CHIP_H, CHIP_H / 2)
+            chipBg.fillStyle(C.white, 0.18)
+            chipBg.fillRoundedRect(cx + 8, STRIP_Y + pad + 5, cw - 16, CHIP_H * 0.28, CHIP_H / 4)
+            chipBg.lineStyle(2, C.creme, 0.85)
+            chipBg.strokeRoundedRect(cx, STRIP_Y + pad, cw, CHIP_H, CHIP_H / 2)
 
             this.add.text(cx + cw / 2, STRIP_Y + STRIP_H / 2, textos[i], {
                 fontFamily: 'Arial Black, Arial', fontSize: `${size}px`,
-                color: '#ffffff', stroke: '#0f2547', strokeThickness: 4,
+                color: hex(C.creme), stroke: STROKE, strokeThickness: 4,
             }).setOrigin(0.5).setDepth(14).setResolution(2)
 
             cx += cw
@@ -847,7 +900,7 @@ export class GameScene extends Phaser.Scene {
             if (i < stops.length - 1) {
                 this.add.text(cx + BANDA.setaW / 2, STRIP_Y + STRIP_H / 2, '→', {
                     fontFamily: 'Arial Black, Arial', fontSize: '20px',
-                    color: '#94a3b8', stroke: '#0f2547', strokeThickness: 4,
+                    color: hex(C.cremeSoft), stroke: STROKE, strokeThickness: 4,
                 }).setOrigin(0.5).setDepth(13).setResolution(2)
                 cx += BANDA.setaW
             }
@@ -864,17 +917,14 @@ export class GameScene extends Phaser.Scene {
             // Pulsing amber ring (separate from view.ring used by paintNode)
             const ring = this.add.graphics().setPosition(view.x, view.y).setDepth(13)
             ring.lineStyle(6, C.amber, 1)
-            ring.strokeCircle(0, 0, NODE_R + 12)
+            ring.strokeCircle(0, 0, HALO_R + 6)
             this.tweens.add({
                 targets: ring, alpha: { from: 0.4, to: 1 },
                 duration: 700, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
             })
 
-            // Badge above the node
-            this.add.text(view.x, view.y - 92, '📍 PARADA', {
-                fontFamily: 'Arial Black, Arial', fontSize: '13px',
-                color: '#fbbf24', stroke: '#0f2547', strokeThickness: 4,
-            }).setOrigin(0.5).setDepth(16).setResolution(2)
+            // sem legenda: a faixa PERCURSO já mostra "📍 Praça" em ficha
+            // âmbar, e o anel pulsante aqui é da mesma cor
         })
     }
 
@@ -882,8 +932,8 @@ export class GameScene extends Phaser.Scene {
         this.costText = this.add.text(RODAPE.custoX, RODAPE.cy, '0 quadras', {
             fontFamily: 'Arial Black, Arial',
             fontSize: '24px',
-            color: '#ffffff',
-            stroke: '#0f2547',
+            color: hex(C.creme),
+            stroke: STROKE,
             strokeThickness: 5,
         }).setOrigin(0.5).setDepth(12).setResolution(2)
 
@@ -912,13 +962,13 @@ export class GameScene extends Phaser.Scene {
         const startX = RODAPE.opcoesCX - total / 2 + bw / 2
 
         p.options.forEach((opt, i) => {
-            const btn = this.makeButton(startX + i * (bw + gap), RODAPE.cy, bw, bh, opt, C.blueDark, () => {
+            const btn = this.makeButton(startX + i * (bw + gap), RODAPE.cy, bw, bh, opt, C.madeiraEscura, () => {
                 if (this.locked) return
                 this.selectedOption = i
                 this.playTone(620, 0.05, 'sine', 0.1)
                 this.optionButtons.forEach((b, bi) => {
                     const g = b.getData('bg') as Phaser.GameObjects.Graphics
-                    this.paintButton(g, bw, bh, bi === i ? C.amber : C.blueDark)
+                    this.paintButton(g, bw, bh, bi === i ? C.amber : C.madeiraEscura)
                 })
                 this.confirmBtn?.setAlpha(1)
             })
@@ -927,25 +977,27 @@ export class GameScene extends Phaser.Scene {
     }
 
     private buildIsoLabels() {
+        // 130..600, e não 150..620: em 620 a linha entrava na barra de baixo,
+        // e em 150 ela nascia dentro do rótulo
         const divider = this.add.graphics().setDepth(3)
-        divider.lineStyle(3, C.white, 0.25)
-        divider.lineBetween(W / 2, 150, W / 2, 620)
+        divider.lineStyle(3, C.latao, 0.4)
+        divider.lineBetween(W / 2, 130, W / 2, 600)
 
-        this.add.text(370, 150, 'DESENHO A', {
-            fontFamily: 'Arial Black, Arial', fontSize: '17px', color: '#93c5fd',
+        this.add.text(370, 145, 'DESENHO A', {
+            fontFamily: 'Arial Black, Arial', fontSize: '17px', color: hex(C.latao),
         }).setOrigin(0.5).setDepth(6).setResolution(2)
 
-        this.add.text(930, 150, 'DESENHO B', {
-            fontFamily: 'Arial Black, Arial', fontSize: '17px', color: '#c4b5fd',
+        this.add.text(930, 145, 'DESENHO B', {
+            fontFamily: 'Arial Black, Arial', fontSize: '17px', color: hex(C.cremeSoft),
         }).setOrigin(0.5).setDepth(6).setResolution(2)
     }
 
     private buildIsoButtons(p: IsomorphismPhase) {
-        this.makeButton(400, RODAPE.cy, 300, 56, 'São o mesmo grafo', C.blue, () => {
+        this.makeButton(400, RODAPE.cy, 300, 56, 'São o mesmo grafo', C.madeira, () => {
             if (this.locked) return
             this.resolveIsomorphism(p, true)
         })
-        this.makeButton(760, RODAPE.cy, 300, 56, 'São diferentes', C.purple, () => {
+        this.makeButton(760, RODAPE.cy, 300, 56, 'São diferentes', C.madeiraMedia, () => {
             if (this.locked) return
             this.resolveIsomorphism(p, false)
         })
@@ -1048,7 +1100,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     private showFeedback(correct: boolean, message: string) {
-        const overlay = this.add.rectangle(W / 2, H / 2, W, H, 0x0f2547, 0.7)
+        const overlay = this.add.rectangle(W / 2, H / 2, W, H, C.ink, 0.7)
             .setDepth(300).setInteractive()
         const panel = this.add.container(W / 2, H / 2).setDepth(301)
 
@@ -1056,7 +1108,7 @@ export class GameScene extends Phaser.Scene {
             fontFamily: 'Arial',
             fontStyle: 'bold',
             fontSize: '19px',
-            color: '#1e293b',
+            color: hex(C.ink),
             align: 'center',
             wordWrap: { width: 520 },
         }).setOrigin(0.5).setResolution(2)
@@ -1064,7 +1116,7 @@ export class GameScene extends Phaser.Scene {
         const title = this.add.text(0, 0, correct ? 'Muito bem!' : 'Quase lá!', {
             fontFamily: 'Arial Black, Arial',
             fontSize: '32px',
-            color: correct ? '#15803d' : '#b91c1c',
+            color: correct ? hex(C.green) : hex(C.red),
         }).setOrigin(0.5).setResolution(2)
 
         const PH = 200 + text.height
@@ -1072,16 +1124,16 @@ export class GameScene extends Phaser.Scene {
         text.setY(-PH / 2 + 58 + 34 + text.height / 2)
 
         const bg = this.add.graphics()
-        bg.fillStyle(0x000000, 0.22)
+        bg.fillStyle(C.ink, 0.22)
         bg.fillRoundedRect(-286, -PH / 2 + 8, 572, PH, 26)
-        bg.fillStyle(0xf8fafc, 0.99)
+        bg.fillStyle(C.creme, 0.99)
         bg.fillRoundedRect(-292, -PH / 2, 572, PH, 26)
         bg.fillStyle(correct ? C.green : C.red, 1)
         bg.fillRoundedRect(-292, -PH / 2, 572, 12, { tl: 26, tr: 26, bl: 0, br: 0 })
 
         const btn = this.makeButton(0, PH / 2 - 48, 260, 52,
             correct ? 'Continuar' : 'Tentar de novo',
-            correct ? C.green : C.blue,
+            correct ? C.green : C.madeira,
             () => {
                 overlay.destroy()
                 panel.destroy()
@@ -1112,10 +1164,10 @@ export class GameScene extends Phaser.Scene {
             showLevelComplete(this, {
                 subtitle: `Nível ${this.level.level} concluído`,
                 message: LEVELS[this.levelIdx + 1].objective,
-                accent: C.blue,
-                overlayColor: 0x0f2547,
-                titleColor: '#1e3a8a',
-                subtitleColor: '#3b82f6',
+                accent: C.madeira,
+                overlayColor: C.ink,
+                titleColor: hex(C.madeiraEscura),
+                subtitleColor: hex(C.madeira),
                 progress: { total: LEVELS.length, current: this.level.level },
                 autoAdvance: {
                     delay: 2300,
@@ -1140,14 +1192,14 @@ export class GameScene extends Phaser.Scene {
         showLevelComplete(this, {
             title: 'Jogo concluído!',
             subtitle: 'Você já sabe ler e montar grafos',
-            accent: C.blue,
-            overlayColor: 0x0f2547,
-            titleColor: '#1e3a8a',
-            subtitleColor: '#3b82f6',
+            accent: C.madeira,
+            overlayColor: C.ink,
+            titleColor: hex(C.madeiraEscura),
+            subtitleColor: hex(C.madeira),
             progress: { total: LEVELS.length, current: LEVELS.length },
             buttons: [
                 { label: 'Jogar novamente', color: C.green, onClick: () => this.scene.restart({ level: 1, phase: 0, points: 0 }) },
-                { label: 'Outros jogos', color: C.purple, onClick: () => EventBus.emit('exit-game') },
+                { label: 'Outros jogos', color: C.madeiraMedia, onClick: () => EventBus.emit('exit-game') },
             ],
         })
     }
@@ -1179,7 +1231,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     private showLevelIntro(onStart: () => void) {
-        const overlay = this.add.rectangle(W / 2, H / 2, W, H, 0x0f2547, 0.86)
+        const overlay = this.add.rectangle(W / 2, H / 2, W, H, C.ink, 0.86)
             .setDepth(500).setInteractive()
         const panel = this.add.container(W / 2, H / 2).setDepth(501)
 
@@ -1187,40 +1239,40 @@ export class GameScene extends Phaser.Scene {
         const PH = 400
 
         const bg = this.add.graphics()
-        bg.fillStyle(0x000000, 0.25)
+        bg.fillStyle(C.ink, 0.25)
         bg.fillRoundedRect(-PW / 2 + 6, -PH / 2 + 8, PW, PH, 28)
-        bg.fillStyle(0xf8fafc, 0.99)
+        bg.fillStyle(C.creme, 0.99)
         bg.fillRoundedRect(-PW / 2, -PH / 2, PW, PH, 28)
-        bg.fillStyle(C.blue, 1)
+        bg.fillStyle(C.madeira, 1)
         bg.fillRoundedRect(-PW / 2, -PH / 2, PW, 72, { tl: 28, tr: 28, bl: 0, br: 0 })
 
         const badge = this.add.text(0, -PH / 2 + 36, `NÍVEL ${this.level.level} DE ${LEVELS.length}`, {
-            fontFamily: 'Arial Black, Arial', fontSize: '23px', color: '#ffffff',
+            fontFamily: 'Arial Black, Arial', fontSize: '23px', color: hex(C.creme),
         }).setOrigin(0.5).setResolution(2)
 
         const title = this.add.text(0, -PH / 2 + 120, this.level.title, {
-            fontFamily: 'Arial Black, Arial', fontSize: '31px', color: '#0f172a',
+            fontFamily: 'Arial Black, Arial', fontSize: '31px', color: hex(C.ink),
             align: 'center', wordWrap: { width: PW - 90 },
         }).setOrigin(0.5).setResolution(2)
 
         const objective = this.add.text(0, -PH / 2 + 190, this.level.objective, {
-            fontFamily: 'Arial', fontStyle: 'bold', fontSize: '19px', color: '#334155',
+            fontFamily: 'Arial', fontStyle: 'bold', fontSize: '19px', color: hex(C.ink),
             align: 'center', wordWrap: { width: PW - 110 },
         }).setOrigin(0.5).setResolution(2)
 
         const phaseLabel = this.add.text(0, 56, `${this.level.phases.length} fases neste nível`, {
-            fontFamily: 'Arial', fontStyle: 'bold', fontSize: '15px', color: '#64748b',
+            fontFamily: 'Arial', fontStyle: 'bold', fontSize: '15px', color: hex(C.dim),
         }).setOrigin(0.5).setResolution(2)
 
         const dots = this.add.graphics()
         const gap = 30
         const startX = -((this.level.phases.length - 1) * gap) / 2
         this.level.phases.forEach((_, i) => {
-            dots.fillStyle(i === 0 ? C.blue : 0xcbd5e1, 1)
+            dots.fillStyle(i === 0 ? C.madeira : C.cremeSoft, 1)
             dots.fillCircle(startX + i * gap, 90, 9)
         })
 
-        const btn = this.makeButton(0, 152, 280, 56, 'Começar', C.blue, () => {
+        const btn = this.makeButton(0, 152, 280, 56, 'Começar', C.madeira, () => {
             this.tweens.add({
                 targets: [overlay, panel], alpha: 0, duration: 250,
                 onComplete: () => { overlay.destroy(); panel.destroy(); onStart() },
@@ -1250,7 +1302,9 @@ export class GameScene extends Phaser.Scene {
                     },
                     {
                         text: 'Esta lista diz quais lugares têm rua direta entre eles. É o seu roteiro.',
-                        shape: 'rect', x: W / 2, y: BANDA.semSub + 60, w: 1180, h: 150, balloonY: 430,
+                        shape: 'rect',
+                        x: BANDA.trilhoX + BANDA.trilhoW / 2, y: BANDA.comSub + 170,
+                        w: BANDA.trilhoW + 40, h: 380, balloonX: 640, balloonY: 430,
                     },
                     {
                         text: 'Encoste o dedo numa bolinha e arraste até a outra sem soltar. A linha aparece quando você chega.',
@@ -1266,7 +1320,9 @@ export class GameScene extends Phaser.Scene {
                     },
                     {
                         text: 'Cada rua desenhada marca um item da lista com um sinal verde.',
-                        shape: 'rect', x: W / 2, y: BANDA.semSub + 60, w: 1180, h: 150, balloonY: 430,
+                        shape: 'rect',
+                        x: BANDA.trilhoX + BANDA.trilhoW / 2, y: BANDA.comSub + 170,
+                        w: BANDA.trilhoW + 40, h: 380, balloonX: 640, balloonY: 430,
                     },
                     {
                         text: 'Desenhou errado? Toque na bolinha branca no meio da linha para apagá-la.',
@@ -1398,14 +1454,14 @@ export class GameScene extends Phaser.Scene {
                 this.locked = wasLocked
                 if (!this.tutorialSeen) {
                     this.tutorialSeen = true
-                    EventBus.emit('tutorial-ready')
+                    this.showHelpButton()
                 }
                 onDone()
                 return
             }
             createTutorial(this, {
                 key: queue[i].key,
-                accent: C.blue,
+                accent: C.madeira,
                 safeTop: 130,
                 once: false,
                 onFinish: () => next(i + 1),
@@ -1416,24 +1472,221 @@ export class GameScene extends Phaser.Scene {
         next(0)
     }
 
+    /**
+     * A TÁBUA — o único desenho de fundo deste jogo.
+     *
+     * Header, faixa de tarefa e rodapé são a mesma peça em tamanhos
+     * diferentes: madeira escura, veio mais claro em cima, e uma linha de
+     * latão fechando por baixo. Ter um painter só é o que faz as três coisas
+     * parecerem o mesmo móvel em vez de três caixas que por acaso são marrons.
+     */
+    private paintTabua(
+        g: Phaser.GameObjects.Graphics,
+        x: number, y: number, w: number, h: number,
+        { r = 0, sombra = true } = {},
+    ) {
+        if (sombra) {
+            g.fillStyle(C.ink, 0.3)
+            g.fillRoundedRect(x + 3, y + 5, w, h, r)
+        }
+        g.fillStyle(C.painel, 0.96)
+        g.fillRoundedRect(x, y, w, h, r)
+        // o veio de cima: uma tábua tem luz na quina superior
+        g.fillStyle(C.madeiraMedia, 0.5)
+        g.fillRoundedRect(x + 4, y + 4, w - 8, Math.min(14, h * 0.22), r ? r / 2 : 0)
+        g.lineStyle(3, C.latao, 0.8)
+        g.strokeRoundedRect(x, y, w, h, r)
+    }
+
     private paintButton(g: Phaser.GameObjects.Graphics, w: number, h: number, color: number) {
+        const fundo = Phaser.Display.Color.ValueToColor(color).darken(34).color
         g.clear()
+        // a base escura que aparece por baixo dá o volume de peça entalhada
+        g.fillStyle(fundo, 1)
+        g.fillRoundedRect(-w / 2, -h / 2 + 4, w, h, h / 2)
         g.fillStyle(color, 1)
         g.fillRoundedRect(-w / 2, -h / 2, w, h, h / 2)
-        g.fillStyle(C.white, 0.18)
-        g.fillRoundedRect(-w / 2 + 6, -h / 2 + 6, w - 12, h * 0.3, h / 4)
-        g.lineStyle(3, C.white, 0.9)
+        g.fillStyle(C.white, 0.2)
+        g.fillRoundedRect(-w / 2 + 8, -h / 2 + 6, w - 16, h * 0.28, h / 4)
+        g.lineStyle(3, C.creme, 0.85)
         g.strokeRoundedRect(-w / 2, -h / 2, w, h, h / 2)
     }
 
-    private publishHud() {
-        this.registry.set('hud', {
-            instruction: this.phase.instruction,
-            sub: this.hudSub,
-            level: this.level.level,
-            phase: this.phaseIdx + 1,
-            totalPhases: this.level.phases.length,
+    /* ═══════════════════════════════════════════════════════════ o HUD */
+
+    /**
+     * TUDO QUE É INTERFACE DESENHADA MORA AQUI.
+     *
+     * Havia uma `UIScene` separada só para o topo: ela desenhava a faixa, o
+     * nível, o enunciado e o relógio, e conversava com esta cena por
+     * `registry.set('hud', ...)` e por três eventos de `EventBus`
+     * (`timer-start`, `timer-stop`, `timer-end`). Três canais de mensagem para
+     * mover números entre duas cenas que sempre viveram juntas — e um bug de
+     * posição no topo obrigava a abrir dois arquivos para entender uma tela.
+     *
+     * Agora é uma cena só, como nos outros jogos recriados: o HUD é um
+     * container desta cena, o relógio é um objeto desta cena, e `publishHud`
+     * escreve direto nos textos em vez de despachar um evento.
+     */
+    private buildHud() {
+        this.hudLayer = this.add.container(0, 0).setDepth(60)
+
+        const tabua = this.add.graphics()
+        this.paintTabua(tabua, -10, -10, W + 20, HUD.h + 10, { sombra: false })
+        this.hudLayer.add(tabua)
+
+        // a pílula do nível: uma plaquinha de madeira clara parafusada na faixa
+        const pill = this.add.graphics()
+        pill.fillStyle(C.madeiraEscura, 1)
+        pill.fillRoundedRect(HUD.pillX, HUD.pillY + 3, HUD.pillW, HUD.pillH, HUD.pillH / 2)
+        pill.fillStyle(C.madeira, 1)
+        pill.fillRoundedRect(HUD.pillX, HUD.pillY, HUD.pillW, HUD.pillH, HUD.pillH / 2)
+        pill.fillStyle(C.white, 0.2)
+        pill.fillRoundedRect(HUD.pillX + 9, HUD.pillY + 5, HUD.pillW - 18, 11, 6)
+        this.hudLayer.add(pill)
+
+        this.levelText = this.add.text(
+            HUD.pillX + HUD.pillW / 2, HUD.pillY + HUD.pillH / 2, '', {
+            fontFamily: 'Arial Black, Arial', fontSize: '16px',
+            color: hex(C.creme), stroke: STROKE, strokeThickness: 3,
+        }).setOrigin(0.5).setResolution(2)
+        this.hudLayer.add(this.levelText)
+
+        this.dots = this.add.graphics()
+        this.hudLayer.add(this.dots)
+
+        this.instructionText = this.add.text(HUD.instrCX, HUD.cy, '', {
+            fontFamily: 'Arial Black, Arial',
+            fontSize: `${HUD.instrSizes[0]}px`,
+            color: hex(C.creme), stroke: STROKE, strokeThickness: 5,
+            align: 'center', wordWrap: { width: HUD.instrW },
+        }).setOrigin(0.5).setResolution(2)
+        this.hudLayer.add(this.instructionText)
+
+        this.subText = this.add.text(W / 2, SUB.y, '', {
+            fontFamily: 'Arial', fontStyle: 'bold',
+            fontSize: `${SUB.sizes[0]}px`,
+            color: hex(C.creme), stroke: STROKE, strokeThickness: 5,
+            align: 'center', wordWrap: { width: SUB.w },
+        }).setOrigin(0.5).setDepth(19).setResolution(2)
+
+        /*
+         * ── A BARRA DE TEMPO, COM AS TRÊS CORES ──────────────────────────
+         *
+         * Verde cheia, amarela na metade, vermelha e PISCANDO abaixo de um
+         * quarto. As fronteiras (`warnAt: 0.5`, `dangerAt: 0.25`) e as cores
+         * vivem em `data/theme.ts`, junto do resto da paleta; o pulso é do
+         * próprio componente e liga sozinho ao entrar na faixa vermelha.
+         */
+        this.tempo = createTimeBar(this, {
+            cx: HUD.barCX, cy: HUD.cy, w: HUD.barW, h: HUD.barH,
+            duration: 60_000,
+            iconDX: HUD.barIconDX,
+            iconR: HUD.barIconR,
+            warnAt: BARRA.warnAt,
+            dangerAt: BARRA.dangerAt,
+            theme: BARRA.theme,
+            onEmpty: () => this.onTimeUp(),
         })
+        this.tempo.setRunning(false)
+        this.tempo.container.setVisible(false)
+        this.hudLayer.add(this.tempo.container)
+
+        this.helpBtn = this.buildHelpButton(HUD.helpX, HUD.cy)
+        this.helpBtn.setVisible(false)
+        this.hudLayer.add(this.helpBtn)
+    }
+
+    private showHelpButton() {
+        if (!this.helpBtn || this.helpBtn.visible) return
+        this.helpBtn.setVisible(true).setAlpha(0)
+        this.tweens.add({ targets: this.helpBtn, alpha: 1, duration: 260 })
+    }
+
+    /** Encolhe o texto até caber em `maxLinhas`, em vez de quebrar linha. */
+    private caberEm(
+        t: Phaser.GameObjects.Text, str: string,
+        sizes: number[], maxLinhas: number,
+    ) {
+        for (let i = 0; i < sizes.length; i += 1) {
+            t.setFontSize(sizes[i])
+            t.setText(str)
+            if (t.getWrappedText(str).length <= maxLinhas) return
+        }
+    }
+
+    /**
+     * As fases são BOLINHAS, e não "Fase 2 de 4".
+     *
+     * Quatro pontinhos dizem a mesma coisa que sete palavras e liberam a linha
+     * onde o texto do nível ficava espremido contra o enunciado.
+     */
+    private paintDots(phase: number, total: number) {
+        this.dots.clear()
+        for (let i = 0; i < total; i += 1) {
+            const x = HUD.dotsX + i * HUD.dotGap
+            const feito = i < phase - 1
+            const atual = i === phase - 1
+            if (atual) {
+                this.dots.fillStyle(C.latao, 1)
+                this.dots.fillRoundedRect(x - 10, HUD.cy - HUD.dotR, 20, HUD.dotR * 2, HUD.dotR)
+            } else {
+                this.dots.fillStyle(feito ? C.green : C.creme, feito ? 1 : 0.24)
+                this.dots.fillCircle(x, HUD.cy, HUD.dotR)
+            }
+        }
+    }
+
+    private buildHelpButton(x: number, y: number) {
+        const s = HUD.helpS
+        const box = this.add.container(0, 0)
+        const g = this.add.graphics()
+
+        const paint = (hover: boolean) => {
+            g.clear()
+            g.fillStyle(C.madeiraEscura, 1)
+            g.fillRoundedRect(x - s / 2, y - s / 2 + 4, s, s, 16)
+            g.fillStyle(hover ? C.madeira : C.madeiraMedia, 1)
+            g.fillRoundedRect(x - s / 2, y - s / 2, s, s, 16)
+            g.fillStyle(C.white, 0.18)
+            g.fillRoundedRect(x - s / 2 + 5, y - s / 2 + 4, s - 10, s * 0.3, 9)
+            g.lineStyle(3, C.latao, 0.95)
+            g.strokeRoundedRect(x - s / 2, y - s / 2, s, s, 16)
+        }
+        paint(false)
+
+        const text = this.add.text(x, y, '?', {
+            fontFamily: 'Arial Black, Arial', fontSize: '26px',
+            color: hex(C.creme), stroke: STROKE, strokeThickness: 5,
+        }).setOrigin(0.5).setResolution(2)
+
+        const zone = this.add.zone(x, y, s + 10, s + 10)
+            .setInteractive({ useHandCursor: true })
+
+        zone.on('pointerover', () => paint(true))
+        zone.on('pointerout', () => paint(false))
+        zone.on('pointerdown', () => {
+            paint(true)
+            this.tweens.add({ targets: text, scale: 0.88, duration: 70, yoyo: true })
+            this.runTutorials(() => { }, true)
+        })
+        zone.on('pointerup', () => paint(false))
+
+        box.add([g, text, zone])
+        return box
+    }
+
+    private publishHud() {
+        this.caberEm(this.instructionText, this.phase.instruction,
+            HUD.instrSizes, HUD.instrMaxLinhas)
+        this.caberEm(this.subText, this.hudSub ?? '', SUB.sizes, SUB.maxLinhas)
+        this.levelText.setText(`NÍVEL ${this.level.level}`)
+        this.paintDots(this.phaseIdx + 1, this.level.phases.length)
+    }
+
+    /** O relógio anda sozinho enquanto a fase está de pé. */
+    update(_time: number, delta: number) {
+        this.tempo?.tick(delta)
     }
 
     /**
@@ -1446,11 +1699,13 @@ export class GameScene extends Phaser.Scene {
      */
     private startTimer() {
         if (!this.level.timeLimit) return
-        EventBus.emit('timer-start', this.level.timeLimit)
+        this.tempo.container.setVisible(true)
+        this.tempo.reset(this.level.timeLimit * 1000)
+        this.tempo.setRunning(true)
     }
 
     private stopTimer() {
-        EventBus.emit('timer-stop')
+        this.tempo?.setRunning(false)
     }
 
     private makeButton(
@@ -1464,7 +1719,7 @@ export class GameScene extends Phaser.Scene {
         const text = this.add.text(0, 0, label, {
             fontFamily: 'Arial Black, Arial',
             fontSize: '18px',
-            color: '#ffffff',
+            color: hex(C.creme),
             align: 'center',
             wordWrap: { width: w - 24 },
         }).setOrigin(0.5).setResolution(2)

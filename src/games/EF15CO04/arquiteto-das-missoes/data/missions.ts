@@ -6,7 +6,7 @@ export const MISSIONS: Record<string, MissionDef> = {
         name: 'Café da Manhã',
         brief: [
             'A cozinha está vazia e a família acorda em pouco tempo.',
-            'Preparar o café da manhã inteiro de uma vez é grande demais.',
+            'Preparar o café da manhã inteiro de uma vez é trabalhoso demais.',
             'Vamos partir esse pedido em partes menores.',
         ],
         before: 'missao-cafe-antes',

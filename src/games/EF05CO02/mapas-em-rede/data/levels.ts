@@ -3,18 +3,22 @@ import type { LevelConfig } from '../types'
 /**
  * Os oito lugares onde um nó pode morar, num tabuleiro de 4x2.
  *
- * A fileira de cima desceu de 268 para 302. Com raio 42, o mapa passa a
- * começar em 260 — e é isso que dá à faixa de tarefa do topo espaço para duas
- * linhas de fichas sem pousar em cima do bairro (ver `BANDA.teto` em
- * `data/layout.ts`, que declara 252 como limite).
+ * Os números saem de três limites, e não de gosto:
  *
- * A de baixo desceu 5px junto, para o conjunto continuar centrado: com o
- * rótulo 64px abaixo do nó, a última letra fica em ~593, contra o rodapé em
- * 618.
+ *   · a peça de um nó tem raio 56 (`PECA_R`, metade da arte), então a fileira
+ *     de cima em y=310 começa em 254 — logo abaixo de `BANDA.teto` (252);
+ *   · a coluna da esquerda foi para 290: o trilho de ruas ocupa x 10..182, e
+ *     uma peça em 290 começa em 234. Em 250 a folga era de doze pixels e o
+ *     usuário viu como "quase colados" — agora são 52;
+ *   · a fileira de baixo em y=505 termina em 561, e o rótulo dela em ~587,
+ *     contra o rodapé em 618.
+ *
+ * O espaçamento virou 250px parelho entre as quatro colunas, e a última em
+ * 1040 termina em 1096.
  */
 const LOT = {
-  a1: { x: 230, y: 302 }, a2: { x: 500, y: 302 }, a3: { x: 780, y: 302 }, a4: { x: 1050, y: 302 },
-  b1: { x: 230, y: 505 }, b2: { x: 500, y: 505 }, b3: { x: 780, y: 505 }, b4: { x: 1050, y: 505 },
+  a1: { x: 290, y: 310 }, a2: { x: 540, y: 310 }, a3: { x: 790, y: 310 }, a4: { x: 1040, y: 310 },
+  b1: { x: 290, y: 505 }, b2: { x: 540, y: 505 }, b3: { x: 790, y: 505 }, b4: { x: 1040, y: 505 },
 }
 
 const on = (base: { id: string; label: string; textureKey: string }, lot: { x: number; y: number }) =>
@@ -308,13 +312,19 @@ export const LEVELS: LevelConfig[] = [
         options: ['Bruno', 'Caio', 'Duda', 'Nico'],
         correctIndex: 0,
         explanation: 'Ana é amiga de Bruno e Duda. Elis é amiga de Bruno e Nico. O nome que aparece nas duas listas é o Bruno.',
+        /*
+         * A Elis estava em y=570: com a base de raio 56 ela terminava em 626 e
+         * o rótulo dela em 634 — dentro da barra de botões, que começa em 618.
+         * O hexágono inteiro subiu e encolheu para caber entre a pergunta (que
+         * acaba em ~120) e o rodapé.
+         */
         nodes: [
-          at(P.ana, 340, 250),
+          at(P.ana, 330, 240),
           at(P.bruno, 640, 190),
-          at(P.caio, 940, 260),
-          at(P.duda, 340, 510),
-          at(P.elis, 640, 570),
-          at(P.nico, 940, 510),
+          at(P.caio, 950, 240),
+          at(P.duda, 330, 470),
+          at(P.elis, 640, 520),
+          at(P.nico, 950, 470),
         ],
         edges: [
           { a: 'ana', b: 'bruno' },
@@ -336,13 +346,14 @@ export const LEVELS: LevelConfig[] = [
         options: ['1', '2', '3', '4'],
         correctIndex: 2,
         explanation: 'O caminho mais curto é Duda, Elis, Caio, Nico: são 3 ligações.',
+        /* Mesmo caso do Bruno em y=570: descia para dentro do rodapé. */
         nodes: [
-          at(P.duda, 280, 330),
-          at(P.elis, 540, 220),
-          at(P.ana, 540, 520),
-          at(P.caio, 830, 330),
-          at(P.bruno, 830, 570),
-          at(P.nico, 1060, 430),
+          at(P.duda, 250, 360),
+          at(P.elis, 530, 220),
+          at(P.ana, 530, 500),
+          at(P.caio, 820, 360),
+          at(P.bruno, 820, 520),
+          at(P.nico, 1090, 430),
         ],
         edges: [
           { a: 'duda', b: 'elis' },
@@ -374,10 +385,15 @@ export const LEVELS: LevelConfig[] = [
           { a: 'caio', b: 'duda' },
           { a: 'duda', b: 'ana' },
         ],
+        /*
+         * O desenho B desceu 30px (as rotulagens "DESENHO A/B" ficam em y=145)
+         * e o Bruno e o Caio se afastaram: a 130px de distância as bases de 112
+         * quase se encostavam.
+         */
         altNodes: [
-          at(P.ana, 800, 200),
-          at(P.caio, 1060, 360),
-          at(P.bruno, 930, 360),
+          at(P.ana, 800, 230),
+          at(P.caio, 1075, 380),
+          at(P.bruno, 910, 380),
           at(P.duda, 800, 520),
         ],
         altEdges: [

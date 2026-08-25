@@ -141,13 +141,23 @@ export function resolveGameId(input: string): string | undefined {
    chunk — o import continua preguiçoso. Isso aposenta o
    GAME_CONFIG_LOADERS escrito à mão com 45 linhas.                  */
 
+/* A convenção é `index.ts`, e é o que os 45 jogos usam.
+
+   O `.tsx` está no glob como REDE, não como alternativa: a Arena da Lógica
+   nasceu com os sete arquivos em `.tsx` (sem uma linha de JSX em nenhum
+   deles), o glob não a encontrava, e o resultado era a página inteira
+   quebrando com um stack trace do React — um erro de extensão derrubando a
+   tela toda. Aceitar as duas evita que um deslize desses volte a custar isso.
+   Arquivo novo continua nascendo `.ts`.                                    */
+
 const gameModules = import.meta.glob<{
   default: Phaser.Types.Core.GameConfig;
-}>("../games/*/*/index.ts");
+}>("../games/*/*/index.{ts,tsx}");
 
 export function loadGameConfig(game: Game) {
-  const key = `../games/${game.module}/index.ts`;
-  const loader = gameModules[key];
+  const loader =
+    gameModules[`../games/${game.module}/index.ts`] ??
+    gameModules[`../games/${game.module}/index.tsx`];
 
   if (!loader) {
     throw new Error(

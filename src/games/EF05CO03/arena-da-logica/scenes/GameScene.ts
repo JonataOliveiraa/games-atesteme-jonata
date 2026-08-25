@@ -32,6 +32,40 @@ const H = 720
 const LEAF_X = 270
 const LEAF_W = 440
 const LEAF_H = 112
+
+/**
+ * ── O TEXTO FICA NO CENTRO DA PLACA. PONTO. ──────────────────────────────
+ *
+ * Duas tentativas erradas antes desta, e as duas pelo mesmo motivo: eu tratava
+ * a direita da placa como território do carimbo e centrava a frase no que
+ * SOBRAVA.
+ *
+ *   1ª  um `-34` mágico no meio do `add.text`, que não batia com nada: 31px da
+ *       borda esquerda, 14px do selo.
+ *   2ª  a área livre calculada de verdade — matematicamente correta, e ainda
+ *       assim visivelmente torta, porque a placa É simétrica e o olho compara
+ *       a frase com a MOLDURA, não com uma área invisível dentro dela.
+ *
+ * E o agravante: o selo só aparece DEPOIS de a criança responder. Na maior
+ * parte do tempo a placa era um retângulo simétrico com a frase enfiada para a
+ * esquerda e um vazio à direita, sem nada que explicasse o porquê.
+ *
+ * A conta certa era outra: quem tem que sair da frente é o CARIMBO. Ele virou
+ * um selo de canto, encavalado na borda de cima à direita — que é onde carimbo
+ * mora em documento de verdade — e o texto ficou com a placa inteira e o centro
+ * dela. Com 388px de coluna, todas as 27 frases do jogo cabem numa linha só.
+ *
+ * Os números do selo saem de três folgas: 3px abaixo da placa de cima (que fica
+ * a 140 de distância), 5px acima do topo de um texto de duas linhas, e 3px
+ * dentro da borda direita.
+ */
+const SELO_D = 46
+const SELO_DX = LEAF_W / 2 - 26
+const SELO_DY = -LEAF_H / 2 - 2
+const LEAF_PAD = 26
+/** O texto usa a placa inteira, e se centra nela. */
+const TEXT_DX = 0
+const TEXT_W = LEAF_W - LEAF_PAD * 2
 const BTN_V_X = 548
 const BTN_F_X = 640
 const BTN_SIZE = 76
@@ -71,6 +105,8 @@ interface LeafView {
     pos: Pos
     placa: Phaser.GameObjects.NineSlice
     selo?: Phaser.GameObjects.Image
+    /** O círculo vazio onde o carimbo vai pousar. Some quando ele pousa. */
+    encaixe?: Phaser.GameObjects.Graphics
     btnV?: Phaser.GameObjects.Image
     btnF?: Phaser.GameObjects.Image
 }
@@ -258,17 +294,33 @@ export class GameScene extends Phaser.Scene {
                 this.add.image(pos.x, pos.y, 'icone-interrogacao')
                     .setDisplaySize(70, 70).setDepth(11)
             } else {
-                this.add.text(pos.x - 34, pos.y, node.text, {
+                /*
+                 * O ENCAIXE do carimbo, no canto de cima à direita.
+                 *
+                 * Ele é um disco de papel um pouco mais escuro que a placa, com
+                 * aro azul: lê como "falta carimbar aqui" e, por estar FORA da
+                 * linha do texto, não empurra a frase para lado nenhum.
+                 */
+                const encaixe = this.add.graphics().setDepth(11)
+                const ex = pos.x + SELO_DX
+                const ey = pos.y + SELO_DY
+                encaixe.fillStyle(0x1e3a8a, 0.1)
+                encaixe.fillCircle(ex, ey, SELO_D / 2)
+                encaixe.lineStyle(3, 0x1e3a8a, 0.55)
+                encaixe.strokeCircle(ex, ey, SELO_D / 2 - 1)
+                view.encaixe = encaixe
+
+                this.add.text(pos.x + TEXT_DX, pos.y, node.text, {
                     fontFamily: 'Arial',
                     fontStyle: 'bold',
                     fontSize: '22px',
                     color: '#1e293b',
                     align: 'center',
-                    wordWrap: { width: LEAF_W - 130 },
+                    wordWrap: { width: TEXT_W },
                 }).setOrigin(0.5).setDepth(11).setResolution(2)
 
-                view.selo = this.add.image(pos.x + LEAF_W / 2 - 52, pos.y, 'selo-verdadeiro')
-                    .setDisplaySize(66, 66).setDepth(12).setVisible(false)
+                view.selo = this.add.image(pos.x + SELO_DX, pos.y + SELO_DY, 'selo-verdadeiro')
+                    .setDisplaySize(SELO_D, SELO_D).setDepth(12).setVisible(false)
 
                 view.btnV = this.makeIconButton(BTN_V_X, pos.y, 'btn-v', () => this.markLeaf(node, true))
                 view.btnF = this.makeIconButton(BTN_F_X, pos.y, 'btn-f', () => this.markLeaf(node, false))
@@ -443,8 +495,10 @@ export class GameScene extends Phaser.Scene {
                 const ok = mark === v.node.value
                 v.placa.setTexture(ok ? 'bloco-placa-v' : 'bloco-placa-f')
                 v.selo?.setTexture(v.node.value ? 'selo-verdadeiro' : 'selo-falso').setVisible(true)
+                v.encaixe?.setVisible(false)
             } else if (mark !== undefined) {
                 v.selo?.setTexture(mark ? 'selo-verdadeiro' : 'selo-falso').setVisible(true)
+                v.encaixe?.setVisible(false)
             }
 
             const chosen = this.reviewMode ? v.node.value : mark

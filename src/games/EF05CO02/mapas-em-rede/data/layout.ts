@@ -9,8 +9,8 @@
  * media a própria largura por CHUTE (`texto.length * 9.5`) e, quando a conta
  * errava, o último par caía sozinho numa segunda linha em cima do mapa.
  *
- * Agora as duas cenas leem daqui, e as faixas do topo são três blocos com
- * limites declarados:
+ * Agora QUEM DESENHA É A GAME SCENE — a `UIScene` foi aposentada — e as faixas
+ * do topo são três blocos com limites declarados:
  *
  *   0..88     O HEADER, de ponta a ponta: nível, fases, enunciado, tempo, `?`
  *   ~108      O SUBTÍTULO, uma linha só (a regra da fase, ou a pergunta)
@@ -101,26 +101,80 @@ export const BANDA = {
     /** O teto dos nós. Se a conta estourar isto, é bug de layout, não de dados. */
     teto: 252,
 
-    /** A lista de pares do Nível 1. */
-    chipH: 36,
-    chipGap: 10,
-    chipPadX: 20,
-    /** O espaço do sinalzinho de "já liguei", à esquerda do texto. */
-    chipMarcaDX: 26,
-    chipMin: 140,
-    /** O texto do par encolhe antes de a lista quebrar em mais uma linha. */
-    chipSizes: [16, 15, 14],
-    chipMaxLinhas: 2,
-    tituloH: 22,
+    /**
+     * ── A LISTA DE RUAS É UM TRILHO VERTICAL, NA MARGEM ──────────────────
+     *
+     * Ela já foi um textinho solto sobre a grama, e depois uma placa
+     * horizontal centrada. A placa resolvia a leitura e criava outro problema:
+     * quando a lista tinha seis pares ela quebrava em duas linhas, e uma tábua
+     * de 870x110 atravessava o meio da tela tapando o bairro inteiro. Crescer
+     * PARA BAIXO, no centro, é crescer em cima do jogo.
+     *
+     * Agora ela mora na FAIXA DA ESQUERDA, de pé, como a prancheta que ela
+     * sempre foi. Os nós mais à esquerda ficam em x=230 com raio 42, ou seja o
+     * mapa começa em 188: um trilho de 10 a 182 está fora do caminho de tudo.
+     * E o mais importante — acrescentar um par agora faz o trilho ficar mais
+     * ALTO, num pedaço de tela onde não há nada, em vez de mais largo em cima
+     * do bairro.
+     *
+     * Cada ficha mostra os dois lugares em duas linhas, ligados por um colchete
+     * desenhado. O colchete custa zero caractere, e era o "—" que estourava a
+     * largura: "Biblioteca —" a 17px pede 126px, e a coluna tem 114.
+     *
+     *     ( ) ┌ Biblioteca
+     *         └ Praça
+     */
+    trilhoX: 10,
+    trilhoW: 172,
+    trilhoPad: 12,
+    trilhoR: 18,
+    /** O rótulo "RUAS PARA LIGAR", no alto do trilho. */
+    trilhoTituloH: 26,
+    trilhoTituloSize: 14,
 
-    /** A ficha de percurso do Nível 2. */
+    fichaListaH: 52,
+    fichaListaGap: 8,
+    fichaListaR: 14,
+    /** O centro da marca de "já liguei", a partir da esquerda da ficha. */
+    marcaDX: 20,
+    marcaR: 10,
+    /** O colchete que junta as duas linhas. */
+    colcheteDX: 38,
+    /** Onde o texto começa, e quanto ele tem. */
+    textoDX: 46,
+    textoSizes: [17, 16, 15],
+    /** A distância entre as duas linhas de uma ficha, do centro dela. */
+    linhaDY: 11,
+
+    /**
+     * O piso do trilho.
+     *
+     * Ele pode descer à vontade — não há nada nesta coluna — mas não pode
+     * entrar no rodapé, e nem no rótulo do nó de baixo à esquerda, que ocupa
+     * x 175..285 lá pelos 569.
+     */
+    trilhoPiso: 552,
+
+    /**
+     * A ficha de percurso do Nível 2 — essa CONTINUA horizontal.
+     *
+     * E deve continuar: percurso é uma sequência, e sequência se lê da
+     * esquerda para a direita com setas. Ela também nunca quebra linha — são
+     * no máximo três paradas. O problema de crescer para baixo era da LISTA,
+     * que é outra coisa: uma lista de itens a marcar, que é vertical por
+     * natureza. Formas diferentes porque os conteúdos são diferentes.
+     */
+    /** A placa de madeira que envolve a faixa de percurso. */
+    placaPad: 14,
+    placaR: 18,
+    rotuloColW: 132,
+    rotuloSize: 15,
+
     fichaH: 38,
     fichaPadX: 18,
     fichaMin: 132,
     fichaGap: 0,
     setaW: 38,
-    rotuloW: 104,
-    stripPad: 12,
     stripSizes: [15, 14, 13],
 }
 

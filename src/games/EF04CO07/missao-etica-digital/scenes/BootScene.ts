@@ -67,7 +67,7 @@ export class BootScene extends Phaser.Scene {
     preload() {
         createLoadingScreen(this, {
             title: 'Missão Ética Digital',
-            subtitle: 'Vire a ficha antes de decidir',
+            subtitle: 'Cuidado ao decidir',
             description: 'Ligando os servidores...',
             theme: {
                 background: {

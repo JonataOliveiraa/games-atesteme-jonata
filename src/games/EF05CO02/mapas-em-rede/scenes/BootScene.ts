@@ -1,5 +1,6 @@
 import Phaser from 'phaser'
 import { createLoadingScreen } from '../../../../shared/loading/createLoadingScreen'
+import { C } from '../data/theme'
 
 import bgBairroUrl from '../../../../assets/games/EF05CO02/mapas-em-rede/bg-bairro.png'
 import bgRedeUrl from '../../../../assets/games/EF05CO02/mapas-em-rede/bg-rede.png'
@@ -54,18 +55,21 @@ export class BootScene extends Phaser.Scene {
       title: 'Mapas em',
       subtitle: 'REDE',
       description: 'Desenhando as ligações...',
+      // a tela de carregamento é a primeira coisa que a criança vê: se ela
+      // continuasse azul-marinho, o jogo mudaria de identidade no meio do
+      // caminho
       theme: {
-        background: { kind: 'dots', base: 0x0f2547, color: 0x3b82f6, size: 54, radius: 5, alpha: 0.18 },
-        card: 0x14213d,
-        cardShadow: 0x000000,
-        cardBorder: 0x3b82f6,
-        title: 0xf8fafc,
-        subtitle: 0x93c5fd,
-        description: 0xcbd5e1,
-        titleStroke: 0x0f2547,
-        progressTrack: 0x0f2547,
-        progressBorder: 0x93c5fd,
-        progressFill: 0x3b82f6,
+        background: { kind: 'dots', base: C.painel, color: C.madeira, size: 54, radius: 5, alpha: 0.2 },
+        card: C.madeiraEscura,
+        cardShadow: C.ink,
+        cardBorder: C.latao,
+        title: C.creme,
+        subtitle: C.latao,
+        description: C.cremeSoft,
+        titleStroke: C.ink,
+        progressTrack: C.ink,
+        progressBorder: C.latao,
+        progressFill: C.madeira,
       },
     })
 

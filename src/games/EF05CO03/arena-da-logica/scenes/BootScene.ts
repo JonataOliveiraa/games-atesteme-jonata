@@ -48,12 +48,36 @@ const ASSETS: Array<[string, string]> = [
   ['icone-ajuda', iconeAjudaUrl],
 ]
 
-/** Placa gerada por código. Desenhada em 2x e usada como nine-slice. */
+/**
+ * A PLACA, gerada por código e usada como nine-slice.
+ *
+ * ── O ENQUADRAMENTO ESTAVA TORTO NA PRÓPRIA TEXTURA ─────────────────────
+ *
+ * O desenho antigo era "cartão colado no canto de cima, sombra transbordando
+ * para baixo e para a direita": o corpo ocupava 0..232 x 0..128 dentro de uma
+ * imagem de 240x140. Ou seja, o centro VISÍVEL do cartão ficava em (116, 64) e
+ * o centro da IMAGEM em (120, 70). Como a placa é colocada com `origin(0.5)`, o
+ * retângulo azul aparecia 4px à esquerda e 6px acima de onde o código achava
+ * que ele estava — e o nine-slice, ao esticar o miolo, espalhava esse desconto
+ * de forma desigual entre as bordas.
+ *
+ * Agora o cartão é desenhado com MARGEM UNIFORME (`margem`) nos quatro lados, e
+ * a sombra cabe dentro dessa margem. Centro visível = centro da imagem, e o
+ * enquadramento passa a ser o mesmo em cima, embaixo, à esquerda e à direita.
+ *
+ * `slice` (44) precisa ser maior que `margem + radius + borda` (8+26+3 = 37),
+ * senão o canto arredondado entra na faixa esticada e derrete.
+ */
 export const PLACA = {
   w: 240,
   h: 140,
   radius: 26,
   slice: 44,
+  /** Margem igual nos quatro lados. É ela que centra o cartão na imagem. */
+  margem: 8,
+  /** O quanto a sombra desce. Tem que caber na margem. */
+  sombraDY: 3,
+  borda: 6,
 }
 
 const PLACA_VARIANTS: Array<[string, number]> = [
@@ -98,24 +122,35 @@ export class BootScene extends Phaser.Scene {
   }
 
   private buildPlacaTextures() {
-    const { w, h, radius } = PLACA
+    const { w, h, radius, margem: m, sombraDY, borda, slice } = PLACA
+    const cw = w - m * 2
+    const ch = h - m * 2
 
     PLACA_VARIANTS.forEach(([key, border]) => {
       if (this.textures.exists(key)) return
 
       const g = this.make.graphics({ x: 0, y: 0 }, false)
 
-      g.fillStyle(0x0f2547, 0.28)
-      g.fillRoundedRect(4, 8, w - 8, h - 8, radius)
+      // a sombra é o MESMO retângulo, só descido — assim ela não puxa o
+      // cartão para um lado, e cabe inteira dentro da margem
+      g.fillStyle(0x0f2547, 0.3)
+      g.fillRoundedRect(m, m + sombraDY, cw, ch, radius)
 
       g.fillStyle(0xf8fafc, 1)
-      g.fillRoundedRect(0, 0, w - 8, h - 12, radius)
+      g.fillRoundedRect(m, m, cw, ch, radius)
 
+      /*
+       * O brilho de cima fica INTEIRO dentro da fatia superior do nine-slice.
+       * Se ele cruzasse a linha de `slice`, a parte de baixo dele seria
+       * esticada junto com o miolo e o reflexo apareceria deformado nas placas
+       * mais largas.
+       */
+      const brilhoH = slice - m - 10
       g.fillStyle(0xffffff, 0.9)
-      g.fillRoundedRect(10, 10, w - 28, (h - 12) * 0.32, radius / 2)
+      g.fillRoundedRect(m + 10, m + 6, cw - 20, brilhoH, radius / 2)
 
-      g.lineStyle(6, border, 1)
-      g.strokeRoundedRect(3, 3, w - 14, h - 18, radius)
+      g.lineStyle(borda, border, 1)
+      g.strokeRoundedRect(m, m, cw, ch, radius)
 
       g.generateTexture(key, w, h)
       g.destroy()

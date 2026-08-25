@@ -1006,7 +1006,7 @@ export class GameScene extends Phaser.Scene {
 
     const subtitle = this.addOverlayObject(
       this.add
-        .text(640, 310, "Você perdeu uma vida.\nDeseja tentar novamente?", {
+        .text(640, 310, "-1 ponto de vida.\nDeseja tentar novamente?", {
           fontSize: "30px",
           fontFamily: "Arial",
           color: "#ffffff",
