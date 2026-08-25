@@ -77,7 +77,7 @@ export default function ResourcesPage() {
       case "BOUGHT_EXTRA_LIFE":
         return "Vida comprada";
       case "LOST_LIFE":
-        return "Perdeu vida";
+        return "Perdeu ponto de vida";
       default:
         return eventType;
     }
@@ -135,14 +135,14 @@ export default function ResourcesPage() {
 
     if (!success) {
       setFeedbackMessage(
-        "Você não possui pontos suficientes para comprar uma vida extra."
+        "Você não possui pontos suficientes para comprar um ponto de vida extra."
       );
       setLifeTarget(null);
       return;
     }
 
     setFeedbackMessage(
-      `Você comprou +1 vida para o jogo "${lifeTarget.title}".`
+      `Você comprou +1 ponto de vida para o jogo "${lifeTarget.title}".`
     );
     setLifeTarget(null);
   };
@@ -333,7 +333,7 @@ export default function ResourcesPage() {
                   onClick={() => openLifeModal(game.id, game.title)}
                   disabled={points < extraLifeCost}
                 >
-                  Comprar vida
+                  Comprar ponto de vida
                 </button>
               </div>
             </div>
@@ -371,10 +371,10 @@ export default function ResourcesPage() {
 
       <ConfirmModal
         isOpen={!!lifeTarget}
-        title="Comprar vida"
+        title="Comprar ponto de vida"
         message={
           lifeTarget
-            ? `Deseja comprar +1 vida para o jogo "${lifeTarget.title}" por ${extraLifeCost} pontos?`
+            ? `Deseja comprar +1 ponto de vida para o jogo "${lifeTarget.title}" por ${extraLifeCost} pontos?`
             : ""
         }
         confirmText="Confirmar"

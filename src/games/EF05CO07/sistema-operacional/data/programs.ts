@@ -1,51 +1,16 @@
-import type { ProgramDef, ProgramId } from '../types'
-
-export const PROGRAM_ORDER: ProgramId[] = [
-    'navegador',
-    'editor',
-    'jogo',
-    'player',
-    'fotos',
-    'impressao',
-]
-
-export const PROGRAMS: Record<ProgramId, ProgramDef> = {
-    navegador: {
-        id: 'navegador',
-        name: 'Navegador',
-        texture: 'programa-navegador',
-        memoryBlocks: 2,
-    },
-    editor: {
-        id: 'editor',
-        name: 'Editor de texto',
-        texture: 'programa-editor',
-        memoryBlocks: 2,
-    },
-    jogo: {
-        id: 'jogo',
-        name: 'Jogo',
-        texture: 'programa-jogo',
-        memoryBlocks: 3,
-    },
-    player: {
-        id: 'player',
-        name: 'Player de música',
-        texture: 'programa-player',
-        memoryBlocks: 2,
-    },
-    fotos: {
-        id: 'fotos',
-        name: 'Visualizador de fotos',
-        texture: 'programa-fotos',
-        memoryBlocks: 2,
-    },
-    impressao: {
-        id: 'impressao',
-        name: 'Programa de impressão',
-        texture: 'programa-impressao',
-        memoryBlocks: 1,
-    },
-}
-
-export const getProgram = (id: ProgramId): ProgramDef => PROGRAMS[id]
+/**
+ * ═══════════════════════════════════════════════════════════════════════
+ *  APOSENTADO — substituído por data/casos.ts e data/maquina.ts
+ * ═══════════════════════════════════════════════════════════════════════
+ *
+ * Este arquivo pertencia à versão de múltipla escolha, em que cada pedido
+ * carregava um campo com a resposta certa. O jogo agora DEDUZ o que dá para
+ * fazer a partir do estado da máquina (`avaliarPedido`, em `data/maquina.ts`),
+ * e por isso não existe mais gabarito para guardar em lugar nenhum.
+ *
+ * O catálogo de peças e programas está em `data/maquina.ts`; as fases estão em
+ * `data/casos.ts`.
+ *
+ * **Pode ser deletado** — ninguém o importa.
+ */
+export {}

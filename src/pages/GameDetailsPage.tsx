@@ -35,6 +35,7 @@ const GAMES_WITH_IN_GAME_COMPLETION_SCREEN = new Set([
   "baralho-das-listas",
   "mapas-em-rede",
   "arena-da-logica",
+  "sistema-operacional",
   "cidade-das-decisoes",
   "monte-seu-computador",
   "missao-arquivo-seguro",
@@ -381,7 +382,7 @@ export default function GameDetailsPage() {
       lifePurchasePendingRef.current = false;
     }, 2000);
 
-    showToast("+1 ponto de vida adquirido ❤️", "success");
+    showToast("+1 vida adquirida ❤️", "success");
     setShowNoLivesModal(false);
     setShowPostUnlockLifeModal(false);
     resumePixelSecreto();
@@ -694,13 +695,13 @@ export default function GameDetailsPage() {
                 </div>
 
                 <div className="reward-action">
-                  <span>Comprar ponto de vida: {extraLifeCost} pontos</span>
+                  <span>Comprar vida: {extraLifeCost} pontos</span>
                   <button
                     type="button"
                     onClick={handleBuyLife}
                     disabled={points < extraLifeCost}
                   >
-                    Obter ponto de vida
+                    Comprar vida
                   </button>
                 </div>
               </div>
@@ -711,8 +712,8 @@ export default function GameDetailsPage() {
         <ConfirmModal
           isOpen={showPostUnlockLifeModal}
           title="Jogo desbloqueado"
-          message={`O jogo "${game.title}" foi desbloqueado e está com 0 vidas. Deseja comprar +1 ponto de vida por ${extraLifeCost} pontos agora?`}
-          confirmText="Comprar pontos de vida"
+          message={`O jogo "${game.title}" foi desbloqueado e está com 0 vidas. Deseja comprar +1 vida por ${extraLifeCost} pontos agora?`}
+          confirmText="Comprar vida"
           cancelText="Depois"
           onConfirm={handleBuyLife}
           onCancel={() => setShowPostUnlockLifeModal(false)}
@@ -890,9 +891,9 @@ export default function GameDetailsPage() {
             <h1 className="game-over-title error">Você cometeu um erro!</h1>
 
             <p className="game-over-text">
-              Você perdeu um ponto de vida.
+              Você perdeu uma vida.
               <br />
-              Deseja comprar um ponto de vida ou continuar com 0 pontos?
+              Deseja comprar uma vida ou continuar com 0 vidas?
             </p>
 
             <p className="game-over-warning">

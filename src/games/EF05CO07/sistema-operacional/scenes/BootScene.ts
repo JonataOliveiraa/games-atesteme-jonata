@@ -1,174 +1,119 @@
 import Phaser from 'phaser'
-
-import bgCentralUrl from '../../../../assets/games/EF05CO07/sistema-operacional/bg-central.png'
-import bgSistemasUrl from '../../../../assets/games/EF05CO07/sistema-operacional/bg-sistemas.png'
-import iconeAppUrl from '../../../../assets/games/EF05CO07/sistema-operacional/icone-app.png'
-
-import programaEditorUrl from '../../../../assets/games/EF05CO07/sistema-operacional/programa-editor.png'
-import programaFotosUrl from '../../../../assets/games/EF05CO07/sistema-operacional/programa-fotos.png'
-import programaImpressaoUrl from '../../../../assets/games/EF05CO07/sistema-operacional/programa-impressao.png'
-import programaJogoUrl from '../../../../assets/games/EF05CO07/sistema-operacional/programa-jogo.png'
-import programaNavegadorUrl from '../../../../assets/games/EF05CO07/sistema-operacional/programa-navegador.png'
-import programaPlayerUrl from '../../../../assets/games/EF05CO07/sistema-operacional/programa-player.png'
-
-import recursoArquivosUrl from '../../../../assets/games/EF05CO07/sistema-operacional/recurso-arquivos.png'
-import recursoImpressoraUrl from '../../../../assets/games/EF05CO07/sistema-operacional/recurso-impressora.png'
-import recursoMemoriaUrl from '../../../../assets/games/EF05CO07/sistema-operacional/recurso-memoria.png'
-import recursoMonitorUrl from '../../../../assets/games/EF05CO07/sistema-operacional/recurso-monitor.png'
-import recursoMouseUrl from '../../../../assets/games/EF05CO07/sistema-operacional/recurso-mouse.png'
-import recursoTecladoUrl from '../../../../assets/games/EF05CO07/sistema-operacional/recurso-teclado.png'
-
 import { createLoadingScreen } from '../../../../shared/loading/createLoadingScreen'
 import { C } from '../data/theme'
 
-type AssetEntry = readonly [key: string, url: string]
+/**
+ * As chaves que o jogo consome.
+ *
+ * Aqui a arte é ILUSTRAÇÃO, e não conteúdo: quem diz que o teclado está livre é
+ * o aro verde desenhado em `Graphics`, não o PNG do teclado. Por isso a falta de
+ * qualquer uma destas texturas deixa o jogo feio e continua jogável — o soquete
+ * fica vazio, o nome embaixo continua lá, e o estado continua legível.
+ *
+ * A lista é uma AUTORIZAÇÃO, não uma lista de importações: só entra no jogo o
+ * que estiver aqui E na pasta.
+ */
+const WANTED = [
+    'bg-central',
+    'bg-sistemas',
+    'icone-app',
+
+    'programa-navegador',
+    'programa-editor',
+    'programa-jogo',
+    'programa-player',
+    'programa-fotos',
+    'programa-impressao',
+
+    'recurso-memoria',
+    'recurso-arquivos',
+    'recurso-teclado',
+    'recurso-mouse',
+    'recurso-monitor',
+    'recurso-impressora',
+] as const
 
 /**
- * As chaves deste catálogo são as mesmas usadas em programs.ts,
- * resources.ts e levels.ts.
+ * As texturas são VARRIDAS da pasta, não importadas uma a uma.
+ *
+ * A versão anterior tinha quinze `import ... from '.../recurso-x.png'` no topo
+ * deste arquivo. Um `import` de arquivo que não existe quebra o build INTEIRO —
+ * não este jogo, o site — e é assim que uma arte renomeada derruba o catálogo
+ * de quarenta e cinco jogos. Com `import.meta.glob` o Vite registra o que está
+ * na pasta, e o que faltar simplesmente não é carregado.
  */
-const ASSETS = [
-    ['icone-app', iconeAppUrl],
-    ['bg-central', bgCentralUrl],
-    ['bg-sistemas', bgSistemasUrl],
+const FILES = import.meta.glob(
+    '../../../../assets/games/EF05CO07/sistema-operacional/*.png',
+    { eager: true, import: 'default' },
+) as Record<string, string>
 
-    ['programa-navegador', programaNavegadorUrl],
-    ['programa-editor', programaEditorUrl],
-    ['programa-jogo', programaJogoUrl],
-    ['programa-player', programaPlayerUrl],
-    ['programa-fotos', programaFotosUrl],
-    ['programa-impressao', programaImpressaoUrl],
+const keyOf = (path: string) =>
+    path.split('/').pop()?.replace(/(\.png)+$/i, '') ?? ''
 
-    ['recurso-memoria', recursoMemoriaUrl],
-    ['recurso-arquivos', recursoArquivosUrl],
-    ['recurso-teclado', recursoTecladoUrl],
-    ['recurso-mouse', recursoMouseUrl],
-    ['recurso-monitor', recursoMonitorUrl],
-    ['recurso-impressora', recursoImpressoraUrl],
-] as const satisfies readonly AssetEntry[]
+function found(): Array<[string, string]> {
+    const byKey = new Map<string, string>()
+    Object.entries(FILES).forEach(([path, url]) => {
+        const key = keyOf(path)
+        if (key) byKey.set(key, url)
+    })
+    return WANTED
+        .map(key => [key, byKey.get(key)] as [string, string | undefined])
+        .filter((pair): pair is [string, string] => !!pair[1])
+}
 
 export class BootScene extends Phaser.Scene {
     constructor() {
         super({ key: 'BootScene' })
     }
 
-    preload(): void {
+    preload() {
         createLoadingScreen(this, {
             title: 'Controlador do Sistema',
-            subtitle: 'CENTRAL DE CONTROLE',
+            subtitle: 'Você é o sistema operacional desta máquina',
             description: 'Ligando os sistemas...',
             theme: {
                 background: {
                     kind: 'stripes',
-                    base: C.background,
-                    color: C.cyan,
-                    angle: 'diagonal',
+                    base: C.ink,
+                    color: C.ciano,
                     alpha: 0.06,
+                    size: 28,
+                    gap: 32,
+                    angle: 'diagonal',
                 },
-                card: C.surface,
+
+                card: C.painel,
                 cardShadow: C.shadow,
-                cardBorder: C.border,
-                title: C.text,
-                subtitle: C.cyan,
-                description: C.textMuted,
-                titleStroke: C.shadow,
-                progressTrack: C.background,
-                progressBorder: C.border,
-                progressFill: C.cyan,
+                cardHighlight: C.white,
+                cardBorder: C.edge,
+
+                title: C.creme,
+                subtitle: C.ciano,
+                description: C.idle,
+                titleStroke: C.ink,
+
+                progressTrack: C.soquete,
+                progressBorder: C.edge,
+                progressFill: C.ciano,
+                progressHighlight: C.cianoSoft,
             },
         })
 
-        ASSETS.forEach(([key, url]) => this.load.image(key, url))
+        found().forEach(([key, url]) => this.load.image(key, url))
     }
 
-    create(): void {
-        this.buildGlowTexture()
-        this.buildShadowTexture()
-        this.buildParticleTexture()
-
-        this.scene.launch('UIScene')
-        this.time.delayedCall(0, () => {
-            this.scene.start('GameScene', {
-                level: 1,
-                phase: 0,
-                score: 0,
-            })
-        })
-    }
-
-    /** Brilho suave usado em seleção, acerto e conexão entre elementos. */
-    private buildGlowTexture(): void {
-        const key = 'fx-brilho'
-        if (this.textures.exists(key)) return
-
-        const size = 256
-        const texture = this.textures.createCanvas(key, size, size)
-        if (!texture) return
-
-        const context = texture.getContext()
-        const gradient = context.createRadialGradient(
-            size / 2,
-            size / 2,
-            0,
-            size / 2,
-            size / 2,
-            size / 2,
-        )
-
-        gradient.addColorStop(0, 'rgba(34, 211, 238, 0.92)')
-        gradient.addColorStop(0.42, 'rgba(34, 211, 238, 0.30)')
-        gradient.addColorStop(1, 'rgba(34, 211, 238, 0)')
-
-        context.fillStyle = gradient
-        context.fillRect(0, 0, size, size)
-        texture.refresh()
-    }
-
-    /** Sombra elíptica leve para cards e ilustrações flutuantes. */
-    private buildShadowTexture(): void {
-        const key = 'fx-sombra'
-        if (this.textures.exists(key)) return
-
-        const width = 192
-        const height = 96
-        const texture = this.textures.createCanvas(key, width, height)
-        if (!texture) return
-
-        const context = texture.getContext()
-        const gradient = context.createRadialGradient(
-            width / 2,
-            height / 2,
-            0,
-            width / 2,
-            height / 2,
-            width / 2,
-        )
-
-        gradient.addColorStop(0, 'rgba(2, 6, 23, 0.58)')
-        gradient.addColorStop(0.62, 'rgba(2, 6, 23, 0.22)')
-        gradient.addColorStop(1, 'rgba(2, 6, 23, 0)')
-
-        context.save()
-        context.translate(width / 2, height / 2)
-        context.scale(1, 0.5)
-        context.translate(-width / 2, -height / 2)
-        context.fillStyle = gradient
-        context.fillRect(0, 0, width, height)
-        context.restore()
-        texture.refresh()
-    }
-
-    /** Partícula simples para pulsos de confirmação e transições. */
-    private buildParticleTexture(): void {
-        const key = 'fx-particula'
-        if (this.textures.exists(key)) return
-
-        const graphics = this.make.graphics({ x: 0, y: 0 }, false)
-        graphics.fillStyle(C.text, 1)
-        graphics.fillCircle(16, 16, 7)
-        graphics.fillStyle(C.cyan, 0.38)
-        graphics.fillCircle(16, 16, 14)
-        graphics.generateTexture(key, 32, 32)
-        graphics.destroy()
+    create() {
+        /*
+         * `level` é 1-based, `phase` é 0-based.
+         *
+         * Trocar estes números abre o jogo direto na fase que se quer ver —
+         * `{ level: 2, phase: 1 }` cai na fase de fechar programa e
+         * `{ level: 3, phase: 2 }` no turno cheio. Os dois são grampeados no
+         * `GameScene.init`, então número fora da faixa não quebra nada.
+         *
+         * E a `UIScene` NÃO é lançada aqui: ela foi aposentada, como nos outros
+         * remakes. Todo o desenho mora na cena que conhece o estado.
+         */
+        this.scene.start('GameScene', { level: 1, phase: 0, points: 0 })
     }
 }

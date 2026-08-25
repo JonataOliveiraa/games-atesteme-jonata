@@ -98,7 +98,7 @@ export const LEVELS: LevelConfig[] = [
         id: 'l3-m3',
         question: 'Monte o kit para IMPRIMIR UMA FOTO',
         hint: 'Precisa do monitor, da impressora e do driver',
-        itemIds: ['monitor', 'printer', 'printerDriver', 'game', 'mouse'],
+        itemIds: ['monitor', 'printer', 'printerDriver', 'game', 'hd'],
         zones: [
           { id: 'z-machine', label: 'MÁQUINA DE IMPRIMIR FOTO', kind: 'maquina',
             acceptIds: ['monitor', 'printer', 'printerDriver'] },

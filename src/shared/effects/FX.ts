@@ -7,6 +7,68 @@ const FX_SETTINGS = '__fxSettings'
 const TEX_DOT = '__fx_dot'
 const TEX_STAR = '__fx_star'
 
+/**
+ * ══════════════════════════════════════════════════════════════════════════
+ *  A ANIMAÇÃO QUE ACONTECIA EM 3 MILÉSIMOS EM ALGUNS PCs
+ * ══════════════════════════════════════════════════════════════════════════
+ *
+ * ── O QUE ACONTECIA ──────────────────────────────────────────────────────
+ *
+ * `getTimeScale` lia `prefers-reduced-motion: reduce` e, se estivesse ligado,
+ * devolvia **zero**. Zero é multiplicador: `duration * 0` é `0`. Então TODA
+ * animação do kit — estrelinhas do Tribunal, o "Testar plano" do Chef, o
+ * `popText`, o `flash`, a máquina de escrever — terminava no primeiro frame. E
+ * `FX.wait` devolvia `Promise.resolve()` na hora, o que derrubava junto a PAUSA
+ * de leitura: o `await FX.wait(this, 2600)` que existe para a criança ler a
+ * frase de acerto passava a durar um microtask.
+ *
+ * O jogo não parecia travado porque `float`/`breathe`/`wiggle` (laços infinitos)
+ * nunca foram escalados — o cenário continuava respirando enquanto só o
+ * FEEDBACK sumia. Foi por isso que o bug parecia aleatório.
+ *
+ * ── POR QUE SÓ EM ALGUNS PCs ─────────────────────────────────────────────
+ *
+ * `prefers-reduced-motion: reduce` não é um ajuste do jogo nem do navegador: é
+ * uma configuração do SISTEMA. No Windows ele liga sozinho em situações muito
+ * comuns no público desta plataforma:
+ *
+ *   · Configurações → Acessibilidade → Efeitos visuais → **Efeitos de animação**
+ *     desligado (é o padrão em muita máquina de escola e de laboratório)
+ *   · "Ajustar para melhor desempenho" nas Opções de Desempenho do Windows
+ *   · sessões de Área de Trabalho Remota e várias máquinas virtuais
+ *   · políticas de economia de energia em notebooks corporativos
+ *
+ * Ou seja: a maioria das crianças que caíam nisso NUNCA pediu menos movimento.
+ * Elas só estavam num PC configurado para desempenho.
+ *
+ * ── A REGRA NOVA ─────────────────────────────────────────────────────────
+ *
+ * **`prefers-reduced-motion` não mexe mais em DURAÇÃO NENHUMA.** A duração de
+ * cada animação é idêntica em todo computador — é isso que faz o bug ser
+ * impossível de voltar.
+ *
+ * E isso também é o certo do ponto de vista de acessibilidade: a preferência é
+ * por menos MOVIMENTO, não por menos tempo. Encurtar a duração deixa a mesma
+ * coisa atravessar a tela mais rápido, que é exatamente o oposto do pedido.
+ * Quem sofre com movimento não quer que a estrela voe em 100ms em vez de 700 —
+ * quer menos estrelas voando. Então o que a preferência faz agora é reduzir
+ * QUANTIDADE e AMPLITUDE: menos partículas, tremida menor, sem zoom de câmera.
+ *
+ * `setTimeScale` continua existindo para um futuro botão "pular animações" — e
+ * ali `0` continua valendo corte seco, porque aí é uma escolha explícita de
+ * quem está jogando, e não um palpite do sistema operacional.
+ */
+
+/**
+ * O PISO de qualquer animação escalada.
+ *
+ * Rede de segurança: mesmo que alguém volte a mexer na escala de tempo, uma
+ * animação nunca fica curta a ponto de sumir. Uma tremida de 55ms continua com
+ * 55ms (o piso é o menor entre a duração original e este valor); uma explosão
+ * de 700ms nunca cai abaixo de 150ms.
+ */
+const MIN_MS = 150
+
 const sceneTimers = new WeakMap<Phaser.Scene, Set<Phaser.Time.TimerEvent>>()
 const sceneCleanup = new WeakMap<Phaser.Scene, Set<() => void>>()
 
@@ -133,21 +195,75 @@ export class FX {
 
     // ───────────────────────────────────────────────── núcleo
 
-    /** Escala global de tempo. 1 = normal, 0.25 = 4x mais rápido, 0 = corte seco.
-     *  Vale para o jogo inteiro — use num botão "pular animações". */
+    /**
+     * Escala global de tempo. 1 = normal, 0.25 = 4x mais rápido, 0 = corte seco.
+     *
+     * **Só chame isto a partir de uma ESCOLHA da pessoa** (um botão "pular
+     * animações"). Nada automático pode mexer aqui — foi um palpite automático
+     * (`prefers-reduced-motion` virando `0`) que fez o feedback dos jogos sumir
+     * em máquina configurada para desempenho. Ver o bloco no topo do arquivo.
+     */
     static setTimeScale(scene: Phaser.Scene, value: number) {
         scene.registry.set(FX_SETTINGS, { timeScale: Math.max(0, value) })
     }
 
+    /**
+     * A escala de tempo em vigor. **Sempre 1**, a não ser que alguém tenha
+     * chamado `setTimeScale` de propósito.
+     */
     static getTimeScale(scene: Phaser.Scene): number {
         const s = scene.registry.get(FX_SETTINGS) as { timeScale: number } | undefined
-        if (s) return s.timeScale
-        const reduced =
-            typeof window !== 'undefined' &&
-            window.matchMedia('(prefers-reduced-motion: reduce)').matches === true
-        const timeScale = reduced ? 0 : 1
-        scene.registry.set(FX_SETTINGS, { timeScale })
-        return timeScale
+        return s ? s.timeScale : 1
+    }
+
+    /**
+     * O sistema pediu menos movimento?
+     *
+     * Note o que esta função NÃO faz: ela não encurta nada. Quem a consulta são
+     * os efeitos que jogam coisa pela tela, e o que eles cortam é QUANTIDADE e
+     * AMPLITUDE — menos partículas, tremida menor, sem zoom de câmera.
+     *
+     * O `try` não é decoração: `matchMedia` não existe em ambiente sem DOM
+     * (teste, render de servidor) e alguns navegadores antigos jogam exceção com
+     * uma media query que não conhecem. Uma preferência de conforto não pode
+     * derrubar o jogo.
+     */
+    static reducedMotion(scene?: Phaser.Scene): boolean {
+        void scene
+        try {
+            return typeof window !== 'undefined'
+                && typeof window.matchMedia === 'function'
+                && window.matchMedia('(prefers-reduced-motion: reduce)').matches === true
+        } catch {
+            return false
+        }
+    }
+
+    /**
+     * Aplica a escala de tempo a uma duração, COM PISO.
+     *
+     * Toda duração do kit passa por aqui. `0` só sai daqui quando alguém pediu
+     * corte seco de propósito (`setTimeScale(0)`) ou quando a duração já era
+     * zero — nunca por acidente de multiplicação.
+     */
+    static ms(scene: Phaser.Scene, duration: number): number {
+        const ts = FX.getTimeScale(scene)
+        if (ts <= 0 || duration <= 0) return 0
+        if (ts >= 1) return duration
+        return Math.max(Math.min(duration, MIN_MS), duration * ts)
+    }
+
+    /**
+     * O que o kit está fazendo nesta máquina, para conferir no console:
+     * `FX.debug(scene)` — ou, sem cena à mão, direto no console do jogo:
+     * `matchMedia('(prefers-reduced-motion: reduce)').matches`.
+     */
+    static debug(scene: Phaser.Scene) {
+        return {
+            timeScale: FX.getTimeScale(scene),
+            reducedMotion: FX.reducedMotion(),
+            exemploDuracao700: FX.ms(scene, 700),
+        }
     }
 
     /** Tween que devolve Promise. Base de tudo abaixo. */
@@ -160,15 +276,14 @@ export class FX {
         const list = (Array.isArray(target) ? target : [target]).filter(alive)
         if (!list.length) return Promise.resolve()
 
-        const ts = FX.getTimeScale(scene)
         list.forEach(t => FX.own(scene, t))
 
         return new Promise(resolve => {
             scene.tweens.add({
                 targets: list,
                 ...props,
-                duration: (o.duration ?? 300) * ts,
-                delay: (o.delay ?? 0) * ts,
+                duration: FX.ms(scene, o.duration ?? 300),
+                delay: FX.ms(scene, o.delay ?? 0),
                 ease: o.ease ?? Ease.smooth,
                 yoyo: o.yoyo,
                 repeat: o.repeat,
@@ -187,11 +302,19 @@ export class FX {
         return Promise.all(jobs).then(() => undefined)
     }
 
+    /**
+     * A pausa.
+     *
+     * Esta é a função que mais doeu no bug: metade dos `FX.wait` do projeto não
+     * é animação, é TEMPO DE LEITURA — `await FX.wait(this, 2600)` existe para a
+     * criança ler a frase de acerto antes de a tela seguir. Com a escala em
+     * zero ela virava um microtask, e a frase era substituída antes de aparecer.
+     */
     static wait(scene: Phaser.Scene, ms: number): Promise<void> {
-        const ts = FX.getTimeScale(scene)
-        if (ts === 0) return Promise.resolve()
+        const espera = FX.ms(scene, ms)
+        if (espera <= 0) return Promise.resolve()
         return new Promise(resolve => {
-            const t = addTimer(scene, scene.time.delayedCall(ms * ts, () => {
+            const t = addTimer(scene, scene.time.delayedCall(espera, () => {
                 sceneTimers.get(scene).delete(t)
                 resolve()
             }))
@@ -302,7 +425,10 @@ export class FX {
         if (!alive(t)) return
         const bx = t.x, by = t.y
         const base = axis === 'x' ? bx : by
-        await FX.to(scene, t, { [axis]: base + amount }, { duration: 55, yoyo: true, repeat: times })
+        // tremida menor quando o sistema pede menos movimento; mesmo número de
+        // idas e vindas, para o "não" continuar legível
+        const amp = FX.reducedMotion() ? amount * 0.45 : amount
+        await FX.to(scene, t, { [axis]: base + amp }, { duration: 55, yoyo: true, repeat: times })
         if (alive(t)) t.setPosition(bx, by)
     }
 
@@ -374,12 +500,14 @@ export class FX {
         FX.own(scene, t)
         const from = { x: t.x, y: t.y }
         const s = { v: 0 }
-        const ts = FX.getTimeScale(scene)
+        // o arco é o movimento mais longo do kit (uma carta atravessando a
+        // mesa): com menos movimento pedido, ele achata em direção à linha reta
+        if (FX.reducedMotion()) height = height * 0.35
 
         return new Promise(resolve => {
             scene.tweens.add({
                 targets: s, v: 1,
-                duration: duration * ts,
+                duration: FX.ms(scene, duration),
                 ease,
                 onUpdate: () => {
                     if (!alive(t)) return
@@ -551,14 +679,14 @@ export class FX {
         }
 
         label.setText('')
-        const ts = FX.getTimeScale(scene)
+        const passo = FX.ms(scene, delay)
 
-        if (ts === 0 || !text.length) {
+        if (passo <= 0 || !text.length) {
             skip()
         } else {
             let i = 0
             timer = addTimer(scene, scene.time.addEvent({
-                delay: delay * ts,
+                delay: passo,
                 repeat: text.length - 1,
                 callback: () => {
                     if (!label.active) { skip(); return }
@@ -580,12 +708,11 @@ export class FX {
         { from = 0, duration = 620, delay = 0, format = (v: number) => `${v}` } = {},
     ): Promise<void> {
         const s = { v: from }
-        const ts = FX.getTimeScale(scene)
         return new Promise(resolve => {
             scene.tweens.add({
                 targets: s, v: to,
-                duration: duration * ts,
-                delay: delay * ts,
+                duration: FX.ms(scene, duration),
+                delay: FX.ms(scene, delay),
                 ease: Ease.smooth,
                 onUpdate: () => { if (label.active) label.setText(format(Math.round(s.v))) },
                 onComplete: () => { if (label.active) label.setText(format(to)); resolve() },
@@ -641,6 +768,19 @@ export class FX {
         ensureTextures(scene)
         const jobs: Array<Promise<void>> = []
 
+        /*
+         * AQUI é onde `prefers-reduced-motion` pega — e só aqui.
+         *
+         * Menos pontinhos e voando menos longe. A explosão continua durando os
+         * mesmos 700ms, continua sendo vista e continua dizendo "acertou". O
+         * que ela deixa de ser é uma nuvem de vinte e dois objetos cruzando a
+         * tela, que é a parte que incomoda quem pediu menos movimento.
+         */
+        if (FX.reducedMotion()) {
+            count = Math.max(6, Math.round(count * 0.45))
+            spread = spread * 0.55
+        }
+
         for (let i = 0; i < count; i++) {
             const a = (Math.PI * 2 * i) / count + Phaser.Math.FloatBetween(-0.25, 0.25)
             const dist = spread * Phaser.Math.FloatBetween(0.45, 1)
@@ -668,7 +808,9 @@ export class FX {
         { colors = [0xf9ce5d, 0x85b47e, 0xea6f67, 0x5882ac], count = 60, duration = 2200, depth = 9400 } = {},
     ): Promise<void> {
         const jobs: Array<Promise<void>> = []
-        const ts = FX.getTimeScale(scene)
+
+        // menos papelzinho caindo, mesma festa e mesma duração
+        if (FX.reducedMotion()) count = Math.max(16, Math.round(count * 0.4))
 
         for (let i = 0; i < count; i++) {
             const x = Phaser.Math.Between(0, W)
@@ -686,7 +828,9 @@ export class FX {
                 targets: piece,
                 angle: piece.angle + Phaser.Math.Between(360, 900),
                 scaleX: { from: 1, to: -1 },
-                duration: dur * ts * 0.4,
+                // piso próprio: `repeat: -1` com duração zero é um tween que
+                // reinicia todo frame sem nunca mostrar nada
+                duration: Math.max(120, FX.ms(scene, dur * 0.4)),
                 repeat: -1, yoyo: true,
             })
 
@@ -708,6 +852,12 @@ export class FX {
     ): Promise<void> {
         ensureTextures(scene)
         const jobs: Array<Promise<void>> = []
+
+        // menos estrelas, subindo menos alto — mesma duração
+        if (FX.reducedMotion()) {
+            count = Math.max(4, Math.round(count * 0.5))
+            rise = rise * 0.6
+        }
 
         for (let i = 0; i < count; i++) {
             const star = scene.add.image(x + Phaser.Math.Between(-40, 40), y, TEX_STAR)
@@ -764,6 +914,10 @@ export class FX {
         { x = W / 2, y = H / 2, zoom = 1.15, hold = 400, duration = 320 } = {},
     ) {
         const cam = scene.cameras.main
+        // o zoom aproxima a tela inteira; com menos movimento pedido ele quase
+        // não sai do lugar, mas a PAUSA (`hold`) continua a mesma — é ela que
+        // dá o peso do momento
+        if (FX.reducedMotion()) zoom = 1 + (zoom - 1) * 0.3
         cam.pan(x, y, duration, 'Sine.easeInOut')
         cam.zoomTo(zoom, duration, 'Sine.easeInOut')
         await FX.wait(scene, duration + hold)
@@ -776,16 +930,22 @@ export class FX {
     static shakeCam(scene: Phaser.Scene, force: 'leve' | 'medio' | 'forte' = 'medio') {
         const map = { leve: [110, 0.0015], medio: [160, 0.004], forte: [260, 0.009] } as const
         const [dur, amp] = map[force]
-        scene.cameras.main.shake(dur, amp)
+        // a tela inteira tremendo é o efeito mais hostil da lista para quem
+        // pediu menos movimento: fica, mas de leve
+        scene.cameras.main.shake(dur, FX.reducedMotion() ? amp * 0.3 : amp)
     }
 
     /** Câmera-lenta temporária. Bom para o momento do acerto decisivo. */
     static async slowMo(scene: Phaser.Scene, { factor = 0.35, duration = 700 } = {}) {
-        const before = scene.time.timeScale
+        const antesTime = scene.time.timeScale
+        const antesTweens = scene.tweens.timeScale
         scene.time.timeScale = factor
         scene.tweens.timeScale = factor
         await new Promise<void>(r => setTimeout(r, duration))
-        scene.time.timeScale = before
-        scene.tweens.timeScale = 1
+        // restaura os DOIS para o que estavam. Antes o de tweens voltava fixo
+        // para 1: duas chamadas encavaladas deixavam o relógio de tempo lento e
+        // o de tweens normal, e a cena ficava fora de compasso consigo mesma
+        scene.time.timeScale = antesTime
+        scene.tweens.timeScale = antesTweens
     }
 }
