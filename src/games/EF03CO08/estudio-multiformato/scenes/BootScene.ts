@@ -40,14 +40,14 @@ export class BootScene extends Phaser.Scene {
     this.add.rectangle(640, 360, 1280, 720, 0x4c1d95);
     this.add.text(640, 296, "Estúdio Multiformato", {
       fontSize: "46px",
-      fontFamily: "Arial Black, Arial",
+      fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif",
       color: "#fbbf24",
       stroke: "#1e1b4b",
       strokeThickness: 8,
     }).setOrigin(0.5);
     this.add.text(640, 374, "Preparando o estúdio...", {
       fontSize: "26px",
-      fontFamily: "Arial Black, Arial",
+      fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif",
       color: "#e2e8f0",
     }).setOrigin(0.5);
   }

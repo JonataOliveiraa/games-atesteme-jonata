@@ -61,7 +61,7 @@ export class UIScene extends Phaser.Scene {
             .setDepth(1)
 
         this.levelText = this.add.text(84, 46, 'NÍVEL 1', {
-            fontFamily: 'Arial Black, Arial',
+            fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif',
             fontSize: '21px',
             color: CSS.ouro,
             stroke: CSS.preto,
@@ -69,7 +69,7 @@ export class UIScene extends Phaser.Scene {
         }).setOrigin(0, 0.5).setDepth(1).setResolution(2)
 
         this.instructionText = this.add.text(W / 2, 34, '', {
-            fontFamily: 'Arial Black, Arial',
+            fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif',
             fontSize: '21px',
             color: CSS.creme,
             stroke: CSS.preto,
@@ -79,7 +79,7 @@ export class UIScene extends Phaser.Scene {
         }).setOrigin(0.5).setDepth(1).setResolution(2)
 
         this.subText = this.add.text(W / 2, 66, '', {
-            fontFamily: 'Arial',
+            fontFamily: 'DynaPuff, Arial, sans-serif',
             fontStyle: 'bold',
             fontSize: '18px',
             color: CSS.ouro,
@@ -139,7 +139,7 @@ export class UIScene extends Phaser.Scene {
         paint(false)
 
         const text = this.add.text(x, y, label, {
-            fontFamily: 'Arial Black, Arial', fontSize: '26px',
+            fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif', fontSize: '26px',
             color: CSS.creme, stroke: CSS.preto, strokeThickness: 5,
         }).setOrigin(0.5).setResolution(2)
 

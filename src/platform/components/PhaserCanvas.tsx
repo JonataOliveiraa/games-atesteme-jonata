@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import Phaser from "phaser";
 import { EventBus } from "../../shared/EventBus";
+import { carregarFonteDoJogo } from "../../shared/fonts/gameFont";
 import { useFullscreen } from "../../hooks/useFullscreen";
 
 interface PhaserCanvasProps {
@@ -29,12 +30,29 @@ export default function PhaserCanvas({ config, gameId }: PhaserCanvasProps) {
 
     GAME_CHANNELS.forEach((c) => EventBus.removeAllListeners(c));
 
-    gameRef.current = new Phaser.Game({
-      ...config,
-      parent: containerRef.current,
+    let cancelado = false;
+
+    /*
+     * A FONTE ANTES DO PHASER.
+     *
+     * O Phaser mede cada texto no instante em que o cria, e desenha no canvas —
+     * que não pede fonte para o navegador nem redesenha quando ela chega. Um
+     * jogo criado antes de a fonte estar pronta fica em Arial para sempre, sem
+     * erro nenhum no console. Meio segundo de espera aqui é o que evita isso.
+     *
+     * `finally` e não `then`: se a fonte falhar, o jogo abre do mesmo jeito.
+     * Acabamento nunca pode ser motivo de tela preta.
+     */
+    void carregarFonteDoJogo().finally(() => {
+      if (cancelado || !containerRef.current) return;
+      gameRef.current = new Phaser.Game({
+        ...config,
+        parent: containerRef.current,
+      });
     });
 
     return () => {
+      cancelado = true;
       if (gameRef.current) {
         gameRef.current.destroy(true);
         gameRef.current = null;

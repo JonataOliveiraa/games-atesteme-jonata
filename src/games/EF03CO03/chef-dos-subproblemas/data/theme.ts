@@ -38,8 +38,8 @@ export const A = {
 } as const
 
 export const FONT = {
-    black: 'Arial Black, Arial',
-    body: 'Arial',
+    black: '"DynaPuff Black", "Arial Black", Arial, sans-serif',
+    body: 'DynaPuff, Arial, sans-serif',
 } as const
 
 /** Corpo de texto legível para 3º ano. Nada abaixo de 17px na tela de jogo. */

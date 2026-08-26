@@ -3,52 +3,46 @@ import { createLoadingScreen } from '../../../../shared/loading/createLoadingScr
 import { C } from '../data/theme'
 
 /**
- * As chaves que o jogo consome.
+ * As texturas que os três níveis usam.
  *
- * Aqui a arte é ILUSTRAÇÃO, e não conteúdo: quem diz que o teclado está livre é
- * o aro verde desenhado em `Graphics`, não o PNG do teclado. Por isso a falta de
- * qualquer uma destas texturas deixa o jogo feio e continua jogável — o soquete
- * fica vazio, o nome embaixo continua lá, e o estado continua legível.
+ * `bg-sistemas`, `icone-app` e `programa-jogo` estão na pasta mas NÃO entram:
+ * nenhuma tela os mostra. Carregar arte que o jogo não usa é peso de download
+ * por nada.
  *
- * A lista é uma AUTORIZAÇÃO, não uma lista de importações: só entra no jogo o
- * que estiver aqui E na pasta.
+ * A falta de qualquer uma destas deixa o jogo feio e jogável: o lugar da peça
+ * fica vazio, o nome embaixo continua lá, e o estado continua legível — porque
+ * quem desenha estado aqui é `Graphics`, nunca a textura.
  */
 const WANTED = [
     'bg-central',
-    'bg-sistemas',
-    'icone-app',
 
-    'programa-navegador',
-    'programa-editor',
-    'programa-jogo',
-    'programa-player',
-    'programa-fotos',
-    'programa-impressao',
-
-    'recurso-memoria',
-    'recurso-arquivos',
     'recurso-teclado',
     'recurso-mouse',
     'recurso-monitor',
+    'recurso-arquivos',
     'recurso-impressora',
+    'recurso-memoria',
+
+    'programa-editor',
+    'programa-navegador',
+    'programa-player',
+    'programa-fotos',
+    'programa-impressao',
 ] as const
 
 /**
  * As texturas são VARRIDAS da pasta, não importadas uma a uma.
  *
- * A versão anterior tinha quinze `import ... from '.../recurso-x.png'` no topo
- * deste arquivo. Um `import` de arquivo que não existe quebra o build INTEIRO —
- * não este jogo, o site — e é assim que uma arte renomeada derruba o catálogo
- * de quarenta e cinco jogos. Com `import.meta.glob` o Vite registra o que está
- * na pasta, e o que faltar simplesmente não é carregado.
+ * Um `import` de arquivo que não existe quebra o build INTEIRO — não este jogo,
+ * o site — e é assim que uma arte renomeada derruba o catálogo de quarenta e
+ * cinco jogos. Com `import.meta.glob` o Vite registra o que está lá.
  */
 const FILES = import.meta.glob(
     '../../../../assets/games/EF05CO07/sistema-operacional/*.png',
     { eager: true, import: 'default' },
 ) as Record<string, string>
 
-const keyOf = (path: string) =>
-    path.split('/').pop()?.replace(/(\.png)+$/i, '') ?? ''
+const keyOf = (path: string) => path.split('/').pop()?.replace(/(\.png)+$/i, '') ?? ''
 
 function found(): Array<[string, string]> {
     const byKey = new Map<string, string>()
@@ -68,34 +62,26 @@ export class BootScene extends Phaser.Scene {
 
     preload() {
         createLoadingScreen(this, {
-            title: 'Controlador do Sistema',
-            subtitle: 'Você é o sistema operacional desta máquina',
-            description: 'Ligando os sistemas...',
+            title: 'Sistema Operacional',
+            subtitle: 'Tecnologia é o futuro!',
+            description: 'Ligando a máquina...',
             theme: {
                 background: {
-                    kind: 'stripes',
-                    base: C.ink,
-                    color: C.ciano,
-                    alpha: 0.06,
-                    size: 28,
-                    gap: 32,
-                    angle: 'diagonal',
+                    kind: 'stripes', base: C.ink, color: C.ciano,
+                    alpha: 0.06, size: 28, gap: 32, angle: 'diagonal',
                 },
-
-                card: C.painel,
-                cardShadow: C.shadow,
-                cardHighlight: C.white,
-                cardBorder: C.edge,
-
+                card: C.vidro,
+                cardShadow: C.sombra,
+                cardHighlight: C.branco,
+                cardBorder: C.ciano,
                 title: C.creme,
                 subtitle: C.ciano,
-                description: C.idle,
+                description: C.dim,
                 titleStroke: C.ink,
-
-                progressTrack: C.soquete,
-                progressBorder: C.edge,
+                progressTrack: C.fosco,
+                progressBorder: C.ciano,
                 progressFill: C.ciano,
-                progressHighlight: C.cianoSoft,
+                progressHighlight: C.creme,
             },
         })
 
@@ -103,17 +89,6 @@ export class BootScene extends Phaser.Scene {
     }
 
     create() {
-        /*
-         * `level` é 1-based, `phase` é 0-based.
-         *
-         * Trocar estes números abre o jogo direto na fase que se quer ver —
-         * `{ level: 2, phase: 1 }` cai na fase de fechar programa e
-         * `{ level: 3, phase: 2 }` no turno cheio. Os dois são grampeados no
-         * `GameScene.init`, então número fora da faixa não quebra nada.
-         *
-         * E a `UIScene` NÃO é lançada aqui: ela foi aposentada, como nos outros
-         * remakes. Todo o desenho mora na cena que conhece o estado.
-         */
-        this.scene.start('GameScene', { level: 1, phase: 0, points: 0 })
+        this.scene.start('GameScene', { nivel: 3, points: 0 })
     }
 }

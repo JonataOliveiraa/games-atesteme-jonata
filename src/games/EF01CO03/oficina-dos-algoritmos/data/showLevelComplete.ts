@@ -60,7 +60,7 @@ export function showLevelComplete(
         .setScrollFactor(0)
 
     const title = scene.add.text(0, 0, options.title ?? 'Parabéns!', {
-        fontFamily: 'Arial',
+        fontFamily: 'DynaPuff, Arial, sans-serif',
         fontSize: '40px',
         fontStyle: 'bold',
         color: options.titleColor ?? '#25327a',
@@ -72,7 +72,7 @@ export function showLevelComplete(
 
     const subtitle = options.subtitle
         ? scene.add.text(0, 0, options.subtitle, {
-            fontFamily: 'Arial',
+            fontFamily: 'DynaPuff, Arial, sans-serif',
             fontSize: '26px',
             fontStyle: 'bold',
             color: options.subtitleColor ?? '#f57c00',
@@ -83,7 +83,7 @@ export function showLevelComplete(
 
     const message = options.message
         ? scene.add.text(0, 0, options.message, {
-            fontFamily: 'Arial',
+            fontFamily: 'DynaPuff, Arial, sans-serif',
             fontSize: '17px',
             fontStyle: 'bold',
             color: options.messageColor ?? '#3b3b3b',
@@ -96,7 +96,7 @@ export function showLevelComplete(
 
     const waitText = options.autoAdvance
         ? scene.add.text(0, 0, options.autoAdvance.label ?? 'Preparando o próximo nível...', {
-            fontFamily: 'Arial',
+            fontFamily: 'DynaPuff, Arial, sans-serif',
             fontSize: '15px',
             fontStyle: 'bold',
             color: '#25327a',
@@ -215,7 +215,7 @@ function makeButton(scene: Phaser.Scene, def: LevelCompleteButton, accent: numbe
     bg.strokeRoundedRect(-w / 2, -25, w, 50, 25)
 
     const label = scene.add.text(0, 0, def.label, {
-        fontFamily: 'Arial',
+        fontFamily: 'DynaPuff, Arial, sans-serif',
         fontSize: '18px',
         fontStyle: 'bold',
         color: '#ffffff',

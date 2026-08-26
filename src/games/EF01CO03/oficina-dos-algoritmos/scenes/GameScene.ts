@@ -303,7 +303,7 @@ export class GameScene extends Phaser.Scene {
 
     this.add
       .text(480, isLevelOne ? 80 : 58, this.currentLevel.title, {
-        fontFamily: 'Arial',
+        fontFamily: 'DynaPuff, Arial, sans-serif',
         fontSize: '30px',
         fontStyle: 'bold',
         color: '#ffffff',
@@ -323,7 +323,7 @@ export class GameScene extends Phaser.Scene {
 
     this.add
       .text(480, isLevelOne ? 112 : 84, this.currentLevel.objective, {
-        fontFamily: 'Arial',
+        fontFamily: 'DynaPuff, Arial, sans-serif',
         fontSize: '15px',
         fontStyle: 'bold',
         color: '#ffffff',
@@ -373,7 +373,7 @@ export class GameScene extends Phaser.Scene {
 
   this.add
     .text(480, labelY, 'Sequência', {
-      fontFamily: 'Arial',
+      fontFamily: 'DynaPuff, Arial, sans-serif',
       fontSize: '17px',
       fontStyle: 'bold',
       color: '#25327a',
@@ -417,7 +417,7 @@ export class GameScene extends Phaser.Scene {
 
     const number = this.add
       .text(0, 0, label, {
-        fontFamily: 'Arial',
+        fontFamily: 'DynaPuff, Arial, sans-serif',
         fontSize: '42px',
         fontStyle: 'bold',
         color: '#ffffff',
@@ -516,7 +516,7 @@ export class GameScene extends Phaser.Scene {
 
     const text = this.add
       .text(0, 35, step.label, {
-        fontFamily: 'Arial',
+        fontFamily: 'DynaPuff, Arial, sans-serif',
         fontSize: '11px',
         fontStyle: 'bold',
         color: '#3b3b3b',
@@ -563,7 +563,7 @@ export class GameScene extends Phaser.Scene {
 
     const text = this.add
       .text(0, 0, 'Testar algoritmo', {
-        fontFamily: 'Arial',
+        fontFamily: 'DynaPuff, Arial, sans-serif',
         fontSize: '21px',
         fontStyle: 'bold',
         color: '#ffffff',
@@ -838,7 +838,7 @@ export class GameScene extends Phaser.Scene {
 
     const title = this.add
       .text(0, -102, `Nível ${this.currentLevel.level}`, {
-        fontFamily: 'Arial',
+        fontFamily: 'DynaPuff, Arial, sans-serif',
         fontSize: '38px',
         fontStyle: 'bold',
         color: '#25327a',
@@ -850,7 +850,7 @@ export class GameScene extends Phaser.Scene {
 
     const objective = this.add
       .text(0, -42, this.currentLevel.title, {
-        fontFamily: 'Arial',
+        fontFamily: 'DynaPuff, Arial, sans-serif',
         fontSize: '24px',
         fontStyle: 'bold',
         color: '#f57c00',
@@ -862,7 +862,7 @@ export class GameScene extends Phaser.Scene {
 
     const detail = this.add
       .text(0, 12, this.currentLevel.objective, {
-        fontFamily: 'Arial',
+        fontFamily: 'DynaPuff, Arial, sans-serif',
         fontSize: '16px',
         fontStyle: 'bold',
         color: '#3b3b3b',
@@ -883,7 +883,7 @@ export class GameScene extends Phaser.Scene {
     buttonBg.strokeRoundedRect(-140, -26, 280, 52, 26);
     const buttonText = this.add
       .text(0, 0, 'Iniciar nível', {
-        fontFamily: 'Arial',
+        fontFamily: 'DynaPuff, Arial, sans-serif',
         fontSize: '22px',
         fontStyle: 'bold',
         color: '#ffffff',
@@ -957,7 +957,7 @@ export class GameScene extends Phaser.Scene {
 
     const title = this.add
       .text(0, -110, 'Parabéns!', {
-        fontFamily: 'Arial',
+        fontFamily: 'DynaPuff, Arial, sans-serif',
         fontSize: '40px',
         fontStyle: 'bold',
         color: '#25327a',
@@ -969,7 +969,7 @@ export class GameScene extends Phaser.Scene {
 
     const completed = this.add
       .text(0, -50, 'Nível concluído', {
-        fontFamily: 'Arial',
+        fontFamily: 'DynaPuff, Arial, sans-serif',
         fontSize: '26px',
         fontStyle: 'bold',
         color: '#f57c00',
@@ -979,7 +979,7 @@ export class GameScene extends Phaser.Scene {
 
     const message = this.add
       .text(0, 8, this.currentLevel.successMessage, {
-        fontFamily: 'Arial',
+        fontFamily: 'DynaPuff, Arial, sans-serif',
         fontSize: '17px',
         fontStyle: 'bold',
         color: '#3b3b3b',
@@ -991,7 +991,7 @@ export class GameScene extends Phaser.Scene {
 
     const waitText = this.add
       .text(0, 116, 'Preparando a finalização...', {
-        fontFamily: 'Arial',
+        fontFamily: 'DynaPuff, Arial, sans-serif',
         fontSize: '15px',
         fontStyle: 'bold',
         color: '#25327a',
@@ -1051,7 +1051,7 @@ export class GameScene extends Phaser.Scene {
 
     const title = this.add
       .text(0, -128, 'Jogo concluído!', {
-        fontFamily: 'Arial',
+        fontFamily: 'DynaPuff, Arial, sans-serif',
         fontSize: '38px',
         fontStyle: 'bold',
         color: '#25327a',
@@ -1063,7 +1063,7 @@ export class GameScene extends Phaser.Scene {
 
     const subtitle = this.add
       .text(0, -74, 'Você organizou todos os algoritmos.', {
-        fontFamily: 'Arial',
+        fontFamily: 'DynaPuff, Arial, sans-serif',
         fontSize: '20px',
         fontStyle: 'bold',
         color: '#3b3b3b',
@@ -1084,7 +1084,7 @@ export class GameScene extends Phaser.Scene {
 
       const number = this.add
         .text(0, -13, String(level.level), {
-          fontFamily: 'Arial',
+          fontFamily: 'DynaPuff, Arial, sans-serif',
           fontSize: '30px',
           fontStyle: 'bold',
           color: '#ffffff',
@@ -1096,7 +1096,7 @@ export class GameScene extends Phaser.Scene {
 
       const label = this.add
         .text(0, 23, 'concluído', {
-          fontFamily: 'Arial',
+          fontFamily: 'DynaPuff, Arial, sans-serif',
           fontSize: '12px',
           fontStyle: 'bold',
           color: '#ffffff',
@@ -1126,7 +1126,7 @@ export class GameScene extends Phaser.Scene {
       buttonBg.strokeRoundedRect(-132, -26, 264, 52, 26);
       const buttonText = this.add
         .text(0, 0, label, {
-          fontFamily: 'Arial',
+          fontFamily: 'DynaPuff, Arial, sans-serif',
           fontSize: '20px',
           fontStyle: 'bold',
           color: '#ffffff',
@@ -1342,7 +1342,7 @@ export class GameScene extends Phaser.Scene {
   private showFeedback(message: string, success: boolean) {
     const text = this.add
       .text(480, 310, message, {
-        fontFamily: 'Arial',
+        fontFamily: 'DynaPuff, Arial, sans-serif',
         fontSize: '23px',
         fontStyle: 'bold',
         color: success ? '#22c55e' : '#ef4444',

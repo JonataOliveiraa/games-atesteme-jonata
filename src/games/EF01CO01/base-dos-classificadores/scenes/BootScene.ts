@@ -113,7 +113,7 @@ export class BootScene extends Phaser.Scene {
     this.add.text(cx, cy - 36, '🎮 Preparando o jogo...', {
       fontSize: '24px',
       color: '#2C3E50',
-      fontFamily: 'Arial Black, Arial',
+      fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif',
       stroke: '#FFFFFF',
       strokeThickness: 4,
     }).setOrigin(0.5)

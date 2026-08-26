@@ -28,7 +28,7 @@ export class UIScene extends Phaser.Scene {
 
     create() {
         this.instructionText = this.add.text(W / 2, 40, '', {
-            fontFamily: 'Arial Black, Arial',
+            fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif',
             fontSize: '30px',
             color: '#ffffff',
             stroke: '#0f2547',
@@ -38,7 +38,7 @@ export class UIScene extends Phaser.Scene {
         }).setOrigin(0.5).setResolution(2)
 
         this.subText = this.add.text(W / 2, 82, '', {
-            fontFamily: 'Arial',
+            fontFamily: 'DynaPuff, Arial, sans-serif',
             fontStyle: 'bold',
             fontSize: '21px',
             color: '#e9d5ff',
@@ -49,7 +49,7 @@ export class UIScene extends Phaser.Scene {
         }).setOrigin(0.5).setResolution(2)
 
         this.levelText = this.add.text(28, 28, '', {
-            fontFamily: 'Arial Black, Arial',
+            fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif',
             fontSize: '18px',
             color: '#ffffff',
             stroke: '#0f2547',
@@ -57,7 +57,7 @@ export class UIScene extends Phaser.Scene {
         }).setOrigin(0, 0.5).setResolution(2)
 
         this.phaseText = this.add.text(28, 56, '', {
-            fontFamily: 'Arial',
+            fontFamily: 'DynaPuff, Arial, sans-serif',
             fontStyle: 'bold',
             fontSize: '16px',
             color: '#e2e8f0',

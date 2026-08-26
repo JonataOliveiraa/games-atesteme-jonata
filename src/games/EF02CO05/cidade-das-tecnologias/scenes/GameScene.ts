@@ -81,7 +81,7 @@ export class GameScene extends Phaser.Scene {
     paint(false)
 
     const text = this.add.text(0, 0, label, {
-      fontSize: '26px', fontFamily: 'Arial Black, Arial', color: '#E8F5E9',
+      fontSize: '26px', fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif', color: '#E8F5E9',
       stroke: '#07251c', strokeThickness: 4,
     }).setOrigin(0.5)
     const hit = this.add.rectangle(0, 0, 56, 56, 0xffffff, 0.01).setInteractive({ useHandCursor: true })
@@ -112,22 +112,22 @@ export class GameScene extends Phaser.Scene {
     introPanel.strokeRoundedRect(243, 144, 800, 392, 30)
 
     const title = this.add.text(640, 220, this.levelConfig.title, {
-      fontSize: '46px', fontFamily: 'Arial Black, Arial', color: '#E8F5E9',
+      fontSize: '46px', fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif', color: '#E8F5E9',
       stroke: '#07251c', strokeThickness: 7,
     }).setOrigin(0.5).setY(192)
 
     const objective = this.add.text(640, 300, this.levelConfig.objective, {
-      fontSize: '35px', fontFamily: 'Arial', color: '#C8E6C9',
+      fontSize: '35px', fontFamily: 'DynaPuff, Arial, sans-serif', color: '#C8E6C9',
       align: 'center', wordWrap: { width: 760 },
     }).setOrigin(0.5)
 
     const tip = this.add.text(640, 400, this.levelConfig.tip, {
-      fontSize: '24px', fontFamily: 'Arial', color: '#A5D6A7',
+      fontSize: '24px', fontFamily: 'DynaPuff, Arial, sans-serif', color: '#A5D6A7',
     }).setOrigin(0.5)
 
     const timerNote = this.levelConfig.perSituationTimer
       ? this.add.text(640, 445, `Tempo: ${this.levelConfig.perSituationTimer}s para cada resposta`, {
-        fontSize: '24px', fontFamily: 'Arial Black', color: '#FFD54F',
+        fontSize: '24px', fontFamily: '"DynaPuff Black", "Arial Black", sans-serif', color: '#FFD54F',
       }).setOrigin(0.5)
       : null
 
@@ -197,7 +197,7 @@ export class GameScene extends Phaser.Scene {
     this.makeLocationInteractive(entry)
 
     this.add.text(640, LAYOUT.streetY + LAYOUT.streetY / 2 + 18, 'Rua', {
-      fontSize: '18px', fontFamily: 'Arial Black', color: '#E8F5E9',
+      fontSize: '18px', fontFamily: '"DynaPuff Black", "Arial Black", sans-serif', color: '#E8F5E9',
       stroke: '#07251c', strokeThickness: 4,
     }).setOrigin(0.5).setDepth(4)
   }
@@ -217,7 +217,7 @@ export class GameScene extends Phaser.Scene {
         .setDisplaySize(LAYOUT.buildingW, LAYOUT.buildingH).setDepth(4).setAlpha(0)
 
       this.add.text(cx, LAYOUT.buildingBottomY - LAYOUT.buildingH - LAYOUT.labelOffsetY, loc.label, {
-        fontSize: '20px', fontFamily: 'Arial Black', color: '#E8F5E9',
+        fontSize: '20px', fontFamily: '"DynaPuff Black", "Arial Black", sans-serif', color: '#E8F5E9',
         stroke: '#07251c', strokeThickness: 4,
       }).setOrigin(0.5).setDepth(4)
 
@@ -272,7 +272,7 @@ export class GameScene extends Phaser.Scene {
     panel.lineStyle(2, 0xC8E6C9, 0.28)
 
     const prompt = this.add.text(640, 165, situation.prompt, {
-      fontSize: '25px', fontFamily: 'Arial Black, Arial', color: '#E8F5E9',
+      fontSize: '25px', fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif', color: '#E8F5E9',
       stroke: '#07251c', strokeThickness: 4,
       align: 'center', wordWrap: { width: PW - 120 },
     }).setOrigin(0.5)
@@ -318,7 +318,7 @@ export class GameScene extends Phaser.Scene {
 
       const img = this.add.image(cx, cardY - 28, tech.textureKey).setDisplaySize(IMG, IMG)
       const label = this.add.text(cx, cardY + 76, tech.label, {
-        fontSize: '18px', fontFamily: 'Arial Black, Arial', color: '#1B5E20',
+        fontSize: '18px', fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif', color: '#1B5E20',
         align: 'center', wordWrap: { width: CARD_W - 24 },
       }).setOrigin(0.5)
 
@@ -408,7 +408,7 @@ export class GameScene extends Phaser.Scene {
 
     const feedback = this.add.text(640, 529,
       (correct ? 'Muito bem! ' : chosenId === null ? 'O tempo acabou! ' : 'Tente outra vez. ') + situation.justification, {
-      fontSize: '20px', fontFamily: 'Arial', color: correct ? '#A5D6A7' : '#FFCDD2',
+      fontSize: '20px', fontFamily: 'DynaPuff, Arial, sans-serif', color: correct ? '#A5D6A7' : '#FFCDD2',
       align: 'center', wordWrap: { width: 860 },
     }).setOrigin(0.5)
 
@@ -446,10 +446,10 @@ export class GameScene extends Phaser.Scene {
     bg.strokeRoundedRect(-80, -34, 152, 60, 18)
 
     const caption = this.add.text(-4, -14, 'Missões', {
-      fontSize: '13px', fontFamily: 'Arial Black, Arial', color: '#A5D6A7',
+      fontSize: '13px', fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif', color: '#A5D6A7',
     }).setOrigin(0.5)
     const text = this.add.text(-4, 12, label, {
-      fontSize: '24px', fontFamily: 'Arial Black, Arial', color: '#E8F5E9',
+      fontSize: '24px', fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif', color: '#E8F5E9',
       stroke: '#0c3b2e', strokeThickness: 4,
     }).setOrigin(0.5)
 
@@ -470,7 +470,7 @@ export class GameScene extends Phaser.Scene {
     const overlay = this.add.rectangle(640, 360, 1280, 720, 0x0c3b2e, 0.9).setInteractive()
 
     const title = this.add.text(640, 250, isLast ? 'Cidade Completa!' : 'Nível Concluído!', {
-      fontSize: '46px', fontFamily: 'Arial Black', color: '#E8F5E9',
+      fontSize: '46px', fontFamily: '"DynaPuff Black", "Arial Black", sans-serif', color: '#E8F5E9',
       stroke: '#07251c', strokeThickness: 7,
     }).setOrigin(0.5)
 
@@ -479,7 +479,7 @@ export class GameScene extends Phaser.Scene {
       runtimeGameBridge.emit({ type: 'GAME_COMPLETED', gameId: GAME_ID, stage: this.levelConfig.level })
 
       const subtitle = this.add.text(640, 330, 'Você explorou toda a cidade!', {
-        fontSize: '24px', fontFamily: 'Arial', color: '#C8E6C9',
+        fontSize: '24px', fontFamily: 'DynaPuff, Arial, sans-serif', color: '#C8E6C9',
       }).setOrigin(0.5)
 
       const againBtn = this.makeButton(640, 440, 340, 66, 'Jogar de novo', 0x2E7D32, () => {
@@ -515,7 +515,7 @@ export class GameScene extends Phaser.Scene {
     bg.strokeRoundedRect(-w / 2, -h / 2, w, h, 16)
 
     const text = this.add.text(0, 0, label, {
-      fontSize: '22px', fontFamily: 'Arial Black, Arial', color: '#ffffff',
+      fontSize: '22px', fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif', color: '#ffffff',
     }).setOrigin(0.5)
 
     const hit = this.add.rectangle(0, 0, w, h, 0xffffff, 0.01).setInteractive({ useHandCursor: true })

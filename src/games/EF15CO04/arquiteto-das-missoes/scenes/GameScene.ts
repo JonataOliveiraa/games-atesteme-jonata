@@ -296,7 +296,7 @@ export class GameScene extends Phaser.Scene {
         pill.fillRoundedRect(HEADER.pillX + 7, HEADER.pillY - HEADER.pillH / 2 + 6, HEADER.pillW - 14, 11, 6)
 
         this.add.text(HEADER.pillX + HEADER.pillW / 2, HEADER.pillY, `NÍVEL ${this.level.level}`, {
-            fontFamily: 'Arial Black, Arial',
+            fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif',
             fontSize: '20px',
             color: '#ffffff',
         }).setOrigin(0.5).setResolution(2).setDepth(42)
@@ -312,7 +312,7 @@ export class GameScene extends Phaser.Scene {
         })
 
         this.add.text(HEADER.missionX, HEADER.missionY, `MISSÃO: ${this.mission.name.toUpperCase()}`, {
-            fontFamily: 'Arial Black, Arial',
+            fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif',
             fontSize: '18px',
             color: hex(C.gold),
         }).setOrigin(0, 0.5).setResolution(2).setDepth(41)
@@ -332,7 +332,7 @@ export class GameScene extends Phaser.Scene {
         g.fillEllipse(0, -9, 28, 12)
 
         const t = this.add.text(0, 0, '?', {
-            fontFamily: 'Arial Black, Arial',
+            fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif',
             fontSize: '26px',
             color: hex(C.night),
         }).setOrigin(0.5).setResolution(2)
@@ -363,7 +363,7 @@ export class GameScene extends Phaser.Scene {
         this.paintPanelIcon(C.teal)
 
         this.panelText = this.add.text(PANEL.iconX + PANEL.iconR + 26, PANEL.y + PANEL.h / 2, '', {
-            fontFamily: 'Arial Black, Arial',
+            fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif',
             fontSize: PANEL.fontSize,
             color: hex(C.paper),
             align: 'left',
@@ -436,7 +436,7 @@ export class GameScene extends Phaser.Scene {
         g.fillRoundedRect(-STAGE.cardW / 2 + 18, -STAGE.cardH / 2 + 18, 8, STAGE.cardH - 36, 4)
 
         const text = this.add.text(0, 0, '', {
-            fontFamily: 'Arial Black, Arial',
+            fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif',
             fontSize: STAGE.fontSize,
             color: hex(C.paper),
             align: 'center',
@@ -628,13 +628,13 @@ export class GameScene extends Phaser.Scene {
         paintEmpty()
 
         const num = this.add.text(-SLOT.w / 2 + 24, -SLOT.h / 2 + 22, `${index + 1}`, {
-            fontFamily: 'Arial Black, Arial',
+            fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif',
             fontSize: '20px',
             color: hex(C.paperEdge),
         }).setOrigin(0.5).setResolution(2)
 
         const label = this.add.text(0, SLOT.labelDY, '', {
-            fontFamily: 'Arial Black, Arial',
+            fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif',
             fontSize: '22px',
             color: hex(C.ink),
             align: 'center',
@@ -642,7 +642,7 @@ export class GameScene extends Phaser.Scene {
         }).setOrigin(0.5).setResolution(2)
 
         const detail = this.add.text(0, SLOT.detailDY, '', {
-            fontFamily: 'Arial',
+            fontFamily: 'DynaPuff, Arial, sans-serif',
             fontStyle: 'bold',
             fontSize: '17px',
             color: hex(C.inkSoft),
@@ -651,7 +651,7 @@ export class GameScene extends Phaser.Scene {
         }).setOrigin(0.5).setResolution(2)
 
         const minutes = this.add.text(0, SLOT.minutesDY, '', {
-            fontFamily: 'Arial Black, Arial',
+            fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif',
             fontSize: '17px',
             color: hex(C.coralDark),
         }).setOrigin(0.5).setResolution(2)
@@ -728,7 +728,7 @@ export class GameScene extends Phaser.Scene {
         g.strokeRoundedRect(-TRAY.cardW / 2, -TRAY.cardH / 2, TRAY.cardW, TRAY.cardH, TRAY.r)
 
         const label = this.add.text(0, TRAY.labelDY, cand.label, {
-            fontFamily: 'Arial Black, Arial',
+            fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif',
             fontSize: TRAY.labelSize,
             color: hex(C.ink),
             align: 'center',
@@ -736,7 +736,7 @@ export class GameScene extends Phaser.Scene {
         }).setOrigin(0.5).setResolution(2)
 
         const detail = this.add.text(0, TRAY.detailDY, cand.detail, {
-            fontFamily: 'Arial',
+            fontFamily: 'DynaPuff, Arial, sans-serif',
             fontStyle: 'bold',
             fontSize: TRAY.detailSize,
             color: hex(C.inkSoft),
@@ -856,7 +856,7 @@ export class GameScene extends Phaser.Scene {
         this.add.existing(this.add.graphics())
 
         const title = this.add.text(W / 2, BOARD.y + 46, task.title.toUpperCase(), {
-            fontFamily: 'Arial Black, Arial',
+            fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif',
             fontSize: '26px',
             color: hex(C.nightDeep),
         }).setOrigin(0.5).setResolution(2)
@@ -870,7 +870,7 @@ export class GameScene extends Phaser.Scene {
             this.stepSlots.push(g)
 
             const t = this.add.text(STEPS.listX + STEPS.numR * 2 + 30, y, '', {
-                fontFamily: 'Arial Black, Arial',
+                fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif',
                 fontSize: STEPS.fontSize,
                 color: hex(C.ink),
                 wordWrap: { width: STEPS.slotW - 110 },
@@ -878,7 +878,7 @@ export class GameScene extends Phaser.Scene {
             this.workLayer!.add(t)
             this.stepTexts.push(t)
             const num = this.add.text(STEPS.listX + 20 + STEPS.numR, y, '', {
-                fontFamily: 'Arial Black, Arial',
+                fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif',
                 fontSize: '20px',
                 color: '#ffffff',
             }).setOrigin(0.5).setResolution(2)
@@ -942,7 +942,7 @@ export class GameScene extends Phaser.Scene {
         g.strokeRoundedRect(-STEPS.trayW / 2, -STEPS.trayH / 2, STEPS.trayW, STEPS.trayH, STEPS.r)
 
         const t = this.add.text(0, 0, text, {
-            fontFamily: 'Arial Black, Arial',
+            fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif',
             fontSize: '18px',
             color: hex(C.ink),
             align: 'center',
@@ -1050,7 +1050,7 @@ export class GameScene extends Phaser.Scene {
         this.clockLayer = this.add.graphics()
 
         this.clockText = this.add.text(CLOCK.x, CLOCK.y + CLOCK.labelDY, '0 min', {
-            fontFamily: 'Arial Black, Arial',
+            fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif',
             fontSize: CLOCK.fontSize,
             color: hex(C.paper),
             stroke: hex(C.nightDeep),
@@ -1114,7 +1114,7 @@ export class GameScene extends Phaser.Scene {
             tracks.forEach((track, i) => {
                 const y = top + i * (TIMELINE.laneH + TIMELINE.laneGap)
                 const label = this.add.text(TIMELINE.x - TIMELINE.labelW / 2, y + TIMELINE.laneH / 2, TRACK_LABEL[track], {
-                    fontFamily: 'Arial Black, Arial',
+                    fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif',
                     fontSize: '18px',
                     color: '#ffffff',
                 }).setOrigin(0.5).setResolution(2)
@@ -1140,7 +1140,7 @@ export class GameScene extends Phaser.Scene {
         g.strokeRoundedRect(-SHELF.cardW / 2, -SHELF.cardH / 2, SHELF.cardW, SHELF.cardH, SHELF.r)
 
         const label = this.add.text(0, -8, part?.label ?? id, {
-            fontFamily: 'Arial Black, Arial',
+            fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif',
             fontSize: SHELF.fontSize,
             color: '#ffffff',
             align: 'center',
@@ -1150,7 +1150,7 @@ export class GameScene extends Phaser.Scene {
         const minutes = this.add.text(0, SHELF.cardH / 2 - 18, reused
             ? `${minutesLabel(Math.max(1, Math.round((part?.minutes ?? 0) / 2)))} · pronto`
             : minutesLabel(part?.minutes ?? 0), {
-            fontFamily: 'Arial Black, Arial',
+            fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif',
             fontSize: '14px',
             color: reused ? hex(C.gold) : hex(C.paperSoft),
         }).setOrigin(0.5).setResolution(2)
@@ -1240,7 +1240,7 @@ export class GameScene extends Phaser.Scene {
             g.strokeRoundedRect(-w / 2, -TIMELINE.laneH / 2 + 12, w, TIMELINE.laneH - 26, TIMELINE.blockR)
 
             const label = this.add.text(0, -6, block.label, {
-                fontFamily: 'Arial Black, Arial',
+                fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif',
                 fontSize: TIMELINE.blockFont,
                 color: '#ffffff',
                 align: 'center',
@@ -1248,7 +1248,7 @@ export class GameScene extends Phaser.Scene {
             }).setOrigin(0.5).setResolution(2)
 
             const mins = this.add.text(0, 20, minutesLabel(block.minutes), {
-                fontFamily: 'Arial Black, Arial',
+                fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif',
                 fontSize: TIMELINE.minutesFont,
                 color: hex(C.paperSoft),
             }).setOrigin(0.5).setResolution(2)
@@ -1376,13 +1376,13 @@ export class GameScene extends Phaser.Scene {
         bg.fillRoundedRect(-170, -REPORT.h / 2 - 13, 340, 26, 13)
 
         const title = this.add.text(0, -REPORT.h / 2 + 56, 'Ficha do Arquiteto', {
-            fontFamily: 'Arial Black, Arial',
+            fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif',
             fontSize: '34px',
             color: hex(C.ink),
         }).setOrigin(0.5).setResolution(2)
 
         const sub = this.add.text(0, -REPORT.h / 2 + 98, this.mission.name, {
-            fontFamily: 'Arial',
+            fontFamily: 'DynaPuff, Arial, sans-serif',
             fontStyle: 'bold',
             fontSize: '21px',
             color: hex(C.inkSoft),
@@ -1399,7 +1399,7 @@ export class GameScene extends Phaser.Scene {
             const ratio = card[key] as number
 
             const label = this.add.text(-REPORT.w / 2 + 56, y, SCORE_LABEL[key], {
-                fontFamily: 'Arial Black, Arial',
+                fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif',
                 fontSize: REPORT.labelSize,
                 color: hex(C.ink),
             }).setOrigin(0, 0.5).setResolution(2)
@@ -1447,7 +1447,7 @@ export class GameScene extends Phaser.Scene {
         }
 
         const summary = this.add.text(0, REPORT.h / 2 - 116, card.summary, {
-            fontFamily: 'Arial',
+            fontFamily: 'DynaPuff, Arial, sans-serif',
             fontStyle: 'bold',
             fontSize: '20px',
             color: hex(C.ink),
@@ -1532,7 +1532,7 @@ export class GameScene extends Phaser.Scene {
         const modal = this.add.container(W / 2, H / 2).setDepth(401)
 
         const body = this.add.text(0, 0, message, {
-            fontFamily: 'Arial',
+            fontFamily: 'DynaPuff, Arial, sans-serif',
             fontStyle: 'bold',
             fontSize: '24px',
             color: hex(C.ink),
@@ -1566,7 +1566,7 @@ export class GameScene extends Phaser.Scene {
         mark.lineBetween(-4, top + 77, 17, top + 49)
 
         const title = this.add.text(0, top + 132, clean ? 'Parte resolvida!' : 'Boa, resolvido!', {
-            fontFamily: 'Arial Black, Arial',
+            fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif',
             fontSize: '34px',
             color: hex(C.ink),
         }).setOrigin(0.5).setResolution(2)
@@ -1574,7 +1574,7 @@ export class GameScene extends Phaser.Scene {
         body.setY(top + 176 + body.height / 2)
 
         const pointsText = this.add.text(0, top + 188 + body.height + 16, '', {
-            fontFamily: 'Arial Black, Arial',
+            fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif',
             fontSize: '22px',
             color: hex(C.tealDark),
         }).setOrigin(0.5).setResolution(2)
@@ -1612,7 +1612,7 @@ export class GameScene extends Phaser.Scene {
         const panel = this.add.container(W / 2, H / 2).setDepth(501)
 
         const objective = this.add.text(0, 0, this.level.objective, {
-            fontFamily: 'Arial',
+            fontFamily: 'DynaPuff, Arial, sans-serif',
             fontStyle: 'bold',
             fontSize: '24px',
             color: hex(C.ink),
@@ -1634,13 +1634,13 @@ export class GameScene extends Phaser.Scene {
         bg.fillRoundedRect(-150, top - 13, 300, 26, 13)
 
         const badge = this.add.text(0, top + 58, `NÍVEL ${this.level.level}`, {
-            fontFamily: 'Arial Black, Arial',
+            fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif',
             fontSize: '22px',
             color: hex(C.tealDark),
         }).setOrigin(0.5).setResolution(2)
 
         const title = this.add.text(0, top + 112, this.level.title, {
-            fontFamily: 'Arial Black, Arial',
+            fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif',
             fontSize: '38px',
             color: hex(C.ink),
             align: 'center',
@@ -1664,7 +1664,7 @@ export class GameScene extends Phaser.Scene {
 
         const container = this.add.container(W / 2, TOAST.y).setDepth(60)
         const t = this.add.text(0, 0, message, {
-            fontFamily: 'Arial Black, Arial',
+            fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif',
             fontSize: TOAST.fontSize,
             color: '#ffffff',
             align: 'center',
@@ -1850,7 +1850,7 @@ export class GameScene extends Phaser.Scene {
         paint(color)
 
         const t = this.add.text(0, 0, label, {
-            fontFamily: 'Arial Black, Arial',
+            fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif',
             fontSize,
             color: '#ffffff',
             align: 'center',

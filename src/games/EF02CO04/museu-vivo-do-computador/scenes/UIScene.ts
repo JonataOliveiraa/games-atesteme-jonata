@@ -43,18 +43,18 @@ export class UIScene extends Phaser.Scene {
     bar.fillRect(0, BAR_H - 3, 1280, 3)
 
     this.add.text(26, 26, 'MUSEU VIVO', {
-      fontSize: '18px', fontFamily: 'Arial Black, Arial',
+      fontSize: '18px', fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif',
       color: '#FFFFFF', stroke: '#0D1B2A', strokeThickness: 4,
     }).setOrigin(0, 0.5).setDepth(1).setResolution(2)
 
     this.levelText = this.add.text(26, 50, 'Nível 1', {
-      fontSize: '14px', fontFamily: 'Arial', fontStyle: 'bold',
+      fontSize: '14px', fontFamily: 'DynaPuff, Arial, sans-serif', fontStyle: 'bold',
       color: '#4FC3F7',
     }).setOrigin(0, 0.5).setDepth(1).setResolution(2)
 
     this.instructionText = this.add.text(640, BAR_H / 2 - 2, 'Carregando...', {
       fontSize: '22px',
-      fontFamily: 'Arial Black, Arial',
+      fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif',
       color: '#FFFFFF',
       stroke: '#0D1B2A',
       strokeThickness: 5,
@@ -79,7 +79,7 @@ export class UIScene extends Phaser.Scene {
     paint(false)
 
     const icon = this.add.text(x, y, label, {
-      fontSize: '22px', fontFamily: 'Arial Black, Arial', color: '#4FC3F7',
+      fontSize: '22px', fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif', color: '#4FC3F7',
     }).setOrigin(0.5).setDepth(2).setResolution(2)
 
     const zone = this.add.zone(x, y, s + 8, s + 8)

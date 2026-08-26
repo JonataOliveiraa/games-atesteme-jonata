@@ -16,11 +16,6 @@ import { C } from '../data/theme'
 const ASSETS: Array<[string, string]> = [
   ['bg-tribunal', bgTribunalUrl],
   ['character-judge', characterJudgeUrl],
-  ['character-witness', characterWitnessUrl],
-  ['card-sentence', cardSentenceUrl],
-  ['effect-star', effectStarUrl],
-  ['effect-wrong', effectWrongUrl],
-  ['badge-level', badgeLevelUrl],
   ['hammer', hammerUrl],
 ]
 
@@ -30,10 +25,6 @@ export class BootScene extends Phaser.Scene {
   }
 
   preload() {
-    this.load.image('bg-loading', bgLoadingUrl)
-
-    // A tela de carregamento puxa do mesmo `theme` que o jogo: trocar a
-    // paleta em um lugar repinta as duas, sem hexadecimal duplicado aqui.
     createLoadingScreen(this, {
       title: 'Tribunal do Verdadeiro ou Falso',
       subtitle: 'Eureka!',

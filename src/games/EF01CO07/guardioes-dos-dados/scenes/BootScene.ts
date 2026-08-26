@@ -55,7 +55,7 @@ export class BootScene extends Phaser.Scene {
     this.add
       .text(640, 300, "Guardiões dos Dados", {
         fontSize: "54px",
-        fontFamily: "Arial Black, Arial",
+        fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif",
         color: "#1d4ed8",
         stroke: "#ffffff",
         strokeThickness: 6,
@@ -65,7 +65,7 @@ export class BootScene extends Phaser.Scene {
     this.add
       .text(640, 380, "Preparando missões de segurança...", {
         fontSize: "28px",
-        fontFamily: "Arial",
+        fontFamily: "DynaPuff, Arial, sans-serif",
         color: "#334155",
       })
       .setOrigin(0.5);

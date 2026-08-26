@@ -728,7 +728,7 @@ export class FX {
         { color = '#ffd166', size = '30px', rise = 70, duration = 900 } = {},
     ): Promise<void> {
         const label = scene.add.text(x, y, text, {
-            fontFamily: 'Arial Black, Arial',
+            fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif',
             fontSize: size,
             color,
             stroke: '#071827',

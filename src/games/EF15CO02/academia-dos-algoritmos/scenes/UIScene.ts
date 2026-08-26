@@ -66,13 +66,13 @@ export class UIScene extends Phaser.Scene {
     bar.fillRoundedRect(34, 24, 28, 12, 6)
 
     this.add.text(48, 38, '{}', {
-      fontFamily: 'Arial Black, Arial',
+      fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif',
       fontSize: '17px',
       color: hex(C.bgDeep),
     }).setOrigin(0.5).setDepth(1).setResolution(2)
 
     this.levelText = this.add.text(82, 17, 'NIVEL 1', {
-      fontFamily: 'Arial Black, Arial',
+      fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif',
       fontSize: '15px',
       color: hex(C.accent),
       stroke: hex(C.shadow),
@@ -80,7 +80,7 @@ export class UIScene extends Phaser.Scene {
     }).setDepth(1).setResolution(2)
 
     this.titleText = this.add.text(82, 43, 'Academia dos Algoritmos', {
-      fontFamily: 'Arial Black, Arial',
+      fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif',
       fontSize: '18px',
       color: hex(C.white),
       stroke: hex(C.shadow),
@@ -88,7 +88,7 @@ export class UIScene extends Phaser.Scene {
     }).setDepth(1).setResolution(2)
 
     this.instructionText = this.add.text(W / 2, 29, 'Monte, execute e melhore o algoritmo.', {
-      fontFamily: 'Arial Black, Arial',
+      fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif',
       fontSize: '20px',
       color: hex(C.white),
       stroke: hex(C.shadow),
@@ -98,7 +98,7 @@ export class UIScene extends Phaser.Scene {
     }).setOrigin(0.5).setDepth(1).setResolution(2)
 
     this.metaText = this.add.text(W / 2, 56, 'Sequencia', {
-      fontFamily: 'Arial',
+      fontFamily: 'DynaPuff, Arial, sans-serif',
       fontStyle: 'bold',
       fontSize: '14px',
       color: hex(C.accent),
@@ -108,7 +108,7 @@ export class UIScene extends Phaser.Scene {
     }).setOrigin(0.5).setDepth(1).setResolution(2)
 
     this.versionText = this.add.text(930, 26, 'Versoes: 0', {
-      fontFamily: 'Arial Black, Arial',
+      fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif',
       fontSize: '16px',
       color: hex(C.panel),
       stroke: hex(C.shadow),
@@ -116,7 +116,7 @@ export class UIScene extends Phaser.Scene {
     }).setOrigin(0, 0.5).setDepth(1).setResolution(2)
 
     this.timerText = this.add.text(930, 52, '', {
-      fontFamily: 'Arial Black, Arial',
+      fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif',
       fontSize: '16px',
       color: hex(C.warning),
       stroke: hex(C.shadow),
@@ -137,7 +137,7 @@ export class UIScene extends Phaser.Scene {
     const btn = this.add.container(x, y).setDepth(3)
     const bg = this.add.graphics()
     const label = this.add.text(0, -1, '?', {
-      fontFamily: 'Arial Black, Arial',
+      fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif',
       fontSize: '24px',
       color: hex(C.white),
       stroke: hex(C.shadow),

@@ -650,7 +650,7 @@ Content-Security-Policy: frame-ancestors 'self' https://app.exemplo.com
 | EF05CO05 | Dentro da Máquina | R2 | Plataforma |
 | EF05CO06 | Missão Arquivo Seguro | R1 | Gestão de armazenamento |
 | EF05CO06 | Arremesso na Nuvem | R2 | Esporte |
-| EF05CO07 | Controlador do Sistema | R1 | Simulação de gerenciamento de recursos |
+| EF05CO07 | Sistema Operacional | R1 | Simulação de gerenciamento de recursos |
 | EF05CO07 | Maestro do Sistema | R2 | Simulador de vida |
 | EF05CO08 | Radar de Confiabilidade | R1 | Avaliação crítica de conteúdo |
 | EF05CO08 | Caça-Boatos | R2 | FPS adaptado (mira, sem violência) |

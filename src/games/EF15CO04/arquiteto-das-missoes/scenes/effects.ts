@@ -196,13 +196,13 @@ export function buildProblemCard(
     paintSheet(sheet, w, h)
 
     const titleText = scene.add.text(0, CARD.titleDY, title, {
-        fontFamily: 'Arial Black, Arial',
+        fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif',
         fontSize: CARD.titleSize,
         color: hex(C.inkSoft),
     }).setOrigin(0.5).setResolution(2)
 
     const bodyText = scene.add.text(0, CARD.textDY, text, {
-        fontFamily: 'Arial Black, Arial',
+        fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif',
         fontSize: CARD.textSize,
         color: hex(C.ink),
         align: 'center',
@@ -465,7 +465,7 @@ export function popFromBox(
     g.fillRoundedRect(-88, -23, 176, 16, 8)
 
     const t = scene.add.text(0, 0, label, {
-        fontFamily: 'Arial Black, Arial',
+        fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif',
         fontSize: '19px',
         color: '#ffffff',
         align: 'center',

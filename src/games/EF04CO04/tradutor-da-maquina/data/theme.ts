@@ -67,8 +67,8 @@ export const A = {
 } as const
 
 export const FONT = {
-    black: 'Arial Black, Arial',
-    body: 'Arial',
+    black: '"DynaPuff Black", "Arial Black", Arial, sans-serif',
+    body: 'DynaPuff, Arial, sans-serif',
     /** O visor da máquina: fonte de largura fixa, como um painel de verdade. */
     mono: 'Consolas, Courier New, monospace',
 } as const

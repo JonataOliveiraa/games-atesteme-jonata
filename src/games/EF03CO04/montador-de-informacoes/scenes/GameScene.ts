@@ -324,7 +324,7 @@ export class GameScene extends Phaser.Scene {
   private createHeader() {
     this.addSharpText(640, 104, this.levelConfig.title, {
       fontSize: "40px",
-      fontFamily: "Arial Black, Arial",
+      fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif",
       color: "#ffffff",
       stroke: "#1e3a8a",
       strokeThickness: 6,
@@ -332,7 +332,7 @@ export class GameScene extends Phaser.Scene {
 
     this.addSharpText(640, 150, this.levelConfig.instruction, {
       fontSize: "20px",
-      fontFamily: "Arial Black, Arial",
+      fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif",
       color: "#ffffff",
       stroke: "#1e3a8a",
       strokeThickness: 4,
@@ -342,7 +342,7 @@ export class GameScene extends Phaser.Scene {
 
     this.addSharpText(1086, 104, `Nível ${this.levelConfig.level}/3`, {
       fontSize: "18px",
-      fontFamily: "Arial Black, Arial",
+      fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif",
       color: "#1e3a8a",
       backgroundColor: "rgba(255,255,255,0.76)",
       padding: { x: 14, y: 8 },
@@ -373,7 +373,7 @@ export class GameScene extends Phaser.Scene {
 
       this.addSharpText(x, y - 30, field.label, {
         fontSize: count > 5 ? "15px" : "17px",
-        fontFamily: "Arial Black, Arial",
+        fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif",
         color: "#1e3a8a",
         stroke: "#ffffff",
         strokeThickness: 3,
@@ -428,7 +428,7 @@ export class GameScene extends Phaser.Scene {
       ? this.fitImage(this.add.image(0, -28, assetKey), 112, 92)
       : this.addSharpText(0, -28, this.getPieceSymbol(piece), {
           fontSize: "28px",
-          fontFamily: "Arial Black, Arial",
+          fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif",
           color: "#ffffff",
           stroke: "#0f172a",
           strokeThickness: 3,
@@ -436,7 +436,7 @@ export class GameScene extends Phaser.Scene {
 
     const label = this.addSharpText(0, 54, piece.shortLabel, {
       fontSize: piece.shortLabel.length > 12 ? "13px" : "16px",
-      fontFamily: "Arial, sans-serif",
+      fontFamily: "DynaPuff, Arial, sans-serif",
       color: "#3b3b3b",
       stroke: "#ffffff",
       strokeThickness: 2,
@@ -603,7 +603,7 @@ export class GameScene extends Phaser.Scene {
     const icon = this.createResultIcon(isComplete).setDepth(12);
     const label = this.addSharpText(468, 658, isComplete ? this.levelConfig.resultText : "Dados aguardando combinação", {
       fontSize: isComplete ? "17px" : "19px",
-      fontFamily: "Arial Black, Arial",
+      fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif",
       color: "#1e3a8a",
       stroke: "#ffffff",
       strokeThickness: 3,
@@ -622,7 +622,7 @@ export class GameScene extends Phaser.Scene {
     bg.strokeRoundedRect(-34, -28, 68, 56, 16);
     const text = this.addSharpText(0, 0, isComplete ? this.getResultSymbol() : "?", {
       fontSize: isComplete ? "25px" : "28px",
-      fontFamily: "Arial Black, Arial",
+      fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif",
       color: "#ffffff",
       stroke: "#0f172a",
       strokeThickness: 3,
@@ -642,21 +642,21 @@ export class GameScene extends Phaser.Scene {
       panel.strokeRoundedRect(390, 212, 500, 296, 34);
       const title = this.addSharpText(640, 280, this.levelConfig.resultTitle, {
         fontSize: "30px",
-        fontFamily: "Arial Black, Arial",
+        fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif",
         color: "#25327a",
         stroke: "#ffffff",
         strokeThickness: 5,
       }).setOrigin(0.5).setDepth(302);
       const text = this.addSharpText(640, 366, this.levelConfig.resultText, {
         fontSize: "22px",
-        fontFamily: "Arial Black, Arial",
+        fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif",
         color: "#334155",
         align: "center",
         wordWrap: { width: 430 },
       }).setOrigin(0.5).setDepth(302);
       const hint = this.addSharpText(640, 452, "Dados juntos viraram informação.", {
         fontSize: "18px",
-        fontFamily: "Arial Black, Arial",
+        fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif",
         color: "#7c3aed",
         align: "center",
       }).setOrigin(0.5).setDepth(302);
@@ -712,14 +712,14 @@ export class GameScene extends Phaser.Scene {
     const title = this.addSharpText(0, -102, `Nível ${nextLevel}`, this.modalTitleStyle()).setOrigin(0.5);
     const objective = this.addSharpText(0, -42, nextConfig?.title ?? "Nova informação", {
       fontSize: "24px",
-      fontFamily: "Arial Black, Arial",
+      fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif",
       color: "#7c3aed",
       align: "center",
       wordWrap: { width: 430 },
     }).setOrigin(0.5);
     const detail = this.addSharpText(0, 14, nextConfig?.instruction ?? "Combine os dados.", {
       fontSize: "16px",
-      fontFamily: "Arial Black, Arial",
+      fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif",
       color: "#334155",
       align: "center",
       wordWrap: { width: 420 },
@@ -748,19 +748,19 @@ export class GameScene extends Phaser.Scene {
     const title = this.addSharpText(0, -58, "Parabéns!", this.modalTitleStyle()).setOrigin(0.5);
     const score = this.addSharpText(0, -5, `Nível ${this.levelConfig.level} concluído`, {
       fontSize: "26px",
-      fontFamily: "Arial Black, Arial",
+      fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif",
       color: "#7c3aed",
     }).setOrigin(0.5);
     const detail = this.addSharpText(0, 48, this.levelConfig.successMessage, {
       fontSize: "20px",
-      fontFamily: "Arial Black, Arial",
+      fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif",
       color: "#334155",
       align: "center",
       wordWrap: { width: 430 },
     }).setOrigin(0.5);
     const waitText = this.addSharpText(0, 122, "Preparando a próxima informação...", {
       fontSize: "15px",
-      fontFamily: "Arial Black, Arial",
+      fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif",
       color: "#25327a",
     }).setOrigin(0.5);
 
@@ -789,21 +789,21 @@ export class GameScene extends Phaser.Scene {
     ribbon.strokeRoundedRect(-214, -208, 428, 34, 17);
     const title = this.addSharpText(0, -128, "Informações montadas!", {
       fontSize: "38px",
-      fontFamily: "Arial Black, Arial",
+      fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif",
       color: "#25327a",
       stroke: "#ffffff",
       strokeThickness: 6,
     }).setOrigin(0.5);
     const subtitle = this.addSharpText(0, -78, `Pontuação final: ${this.getScore()} • Acertos: ${this.hits} • Erros: ${this.errors}`, {
       fontSize: "18px",
-      fontFamily: "Arial Black, Arial",
+      fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif",
       color: "#334155",
       align: "center",
       wordWrap: { width: 500 },
     }).setOrigin(0.5);
     const message = this.addSharpText(0, -28, "Você descobriu que dados juntos podem formar uma informação útil.", {
       fontSize: "19px",
-      fontFamily: "Arial Black, Arial",
+      fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif",
       color: "#7c3aed",
       align: "center",
       wordWrap: { width: 470 },
@@ -834,14 +834,14 @@ export class GameScene extends Phaser.Scene {
       badgeBg.strokeRoundedRect(-54, -42, 108, 84, 18);
       const number = this.addSharpText(0, -13, String(level), {
         fontSize: "30px",
-        fontFamily: "Arial Black, Arial",
+        fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif",
         color: "#ffffff",
         stroke: "#25327a",
         strokeThickness: 4,
       }).setOrigin(0.5);
       const label = this.addSharpText(0, 23, "concluído", {
         fontSize: "12px",
-        fontFamily: "Arial Black, Arial",
+        fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif",
         color: "#ffffff",
       }).setOrigin(0.5);
       item.add([badgeBg, number, label]);
@@ -884,7 +884,7 @@ export class GameScene extends Phaser.Scene {
     bg.strokeRoundedRect(-140, -26, 280, 52, 26);
     const text = this.addSharpText(0, 0, label, {
       fontSize: "22px",
-      fontFamily: "Arial Black, Arial",
+      fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif",
       color: "#ffffff",
       stroke: "#9a3f00",
       strokeThickness: 3,
@@ -902,7 +902,7 @@ export class GameScene extends Phaser.Scene {
   private modalTitleStyle(): Phaser.Types.GameObjects.Text.TextStyle {
     return {
       fontSize: "38px",
-      fontFamily: "Arial Black, Arial",
+      fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif",
       color: "#25327a",
       stroke: "#ffffff",
       strokeThickness: 5,
@@ -918,7 +918,7 @@ export class GameScene extends Phaser.Scene {
     bg.strokeRoundedRect(-132, -26, 264, 52, 26);
     const text = this.addSharpText(0, 0, label, {
       fontSize: "19px",
-      fontFamily: "Arial Black, Arial",
+      fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif",
       color: "#ffffff",
       stroke: "#0f172a",
       strokeThickness: 3,
@@ -949,7 +949,7 @@ export class GameScene extends Phaser.Scene {
     bg.strokeRoundedRect(-width / 2, -height / 2, width, height, height / 2);
     const text = this.addSharpText(0, 0, label, {
       fontSize: width > 260 ? "22px" : "16px",
-      fontFamily: "Arial Black, Arial",
+      fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif",
       color: "#ffffff",
       stroke: "#0f172a",
       strokeThickness: 3,
@@ -984,7 +984,7 @@ export class GameScene extends Phaser.Scene {
   private drawPanelHeader(x: number, y: number, _width: number, label: string, _color: number) {
     const text = this.addSharpText(x, y + 16, label, {
       fontSize: "21px",
-      fontFamily: "Arial Black, Arial",
+      fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif",
       color: "#1e3a8a",
       stroke: "#ffffff",
       strokeThickness: 4,
@@ -1001,7 +1001,7 @@ export class GameScene extends Phaser.Scene {
     bg.strokeRoundedRect(-420, -36, 840, 72, 22);
     const text = this.addSharpText(0, 0, message, {
       fontSize: "18px",
-      fontFamily: "Arial Black, Arial",
+      fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif",
       color: "#ffffff",
       align: "center",
       wordWrap: { width: 760 },

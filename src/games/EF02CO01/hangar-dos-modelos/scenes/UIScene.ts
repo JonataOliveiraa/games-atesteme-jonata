@@ -42,7 +42,7 @@ export class UIScene extends Phaser.Scene {
     g.fillStyle(C.white, 0.22)
     g.fillEllipse(0, -11, 36, 16)
     const t = this.add.text(0, -1, '?', {
-      fontFamily: 'Arial Black, Arial',
+      fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif',
       fontSize: '29px',
       color: '#ffffff',
     }).setOrigin(0.5).setResolution(2)

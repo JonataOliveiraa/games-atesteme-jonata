@@ -222,7 +222,7 @@ export function createLoadingScreen(
     const stroke = color(theme.titleStroke)
 
     const title = scene.add.text(W / 2, midY - 86, options.title ?? 'Carregando', {
-        fontFamily: 'Arial Black',
+        fontFamily: '"DynaPuff Black", "Arial Black", sans-serif',
         fontSize: '34px',
         color: color(theme.title),
         stroke,
@@ -230,7 +230,7 @@ export function createLoadingScreen(
     }).setOrigin(0.5).setResolution(2)
 
     const subtitle = scene.add.text(W / 2, midY - 30, options.subtitle ?? '', {
-        fontFamily: 'Arial Black',
+        fontFamily: '"DynaPuff Black", "Arial Black", sans-serif',
         fontSize: '48px',
         color: color(theme.subtitle),
         stroke,
@@ -238,7 +238,7 @@ export function createLoadingScreen(
     }).setOrigin(0.5).setResolution(2)
 
     const description = scene.add.text(W / 2, midY + 28, options.description ?? 'Preparando...', {
-        fontFamily: 'Arial',
+        fontFamily: 'DynaPuff, Arial, sans-serif',
         fontStyle: 'bold',
         fontSize: '20px',
         color: color(theme.description),

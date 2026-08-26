@@ -67,7 +67,7 @@ export class BootScene extends Phaser.Scene {
 
     this.add.text(640, 296, "Fábrica de Máquinas", {
       fontSize: "50px",
-      fontFamily: "Arial Black, Arial",
+      fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif",
       color: "#25327a",
       stroke: "#ffffff",
       strokeThickness: 7,
@@ -75,7 +75,7 @@ export class BootScene extends Phaser.Scene {
 
     this.add.text(640, 374, "Ligando as estações...", {
       fontSize: "26px",
-      fontFamily: "Arial Black, Arial",
+      fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif",
       color: "#334155",
     }).setOrigin(0.5);
   }

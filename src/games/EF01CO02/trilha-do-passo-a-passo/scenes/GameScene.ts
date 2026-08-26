@@ -122,7 +122,7 @@ export class GameScene extends Phaser.Scene {
         });
 
         const sub = this.add.text(width / 2, height * 0.27, 'Monte o robô na ordem certa!', {
-            fontSize: '24px', fontFamily: 'Arial Black, Arial', color: '#fff7c2',
+            fontSize: '24px', fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif', color: '#fff7c2',
             stroke: '#1f2937', strokeThickness: 4,
         }).setOrigin(0.5);
 
@@ -251,7 +251,7 @@ export class GameScene extends Phaser.Scene {
         const y = ORDER_PANEL_Y;
 
         this.add.text(width / 2, y - 70, 'Monte nesta ordem:', {
-            fontSize: '20px', fontFamily: 'Arial Black, Arial', color: '#ffffff',
+            fontSize: '20px', fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif', color: '#ffffff',
             stroke: '#1f2937', strokeThickness: 4,
         }).setOrigin(0.5).setDepth(20);
 
@@ -269,7 +269,7 @@ export class GameScene extends Phaser.Scene {
                 .setDisplaySize(ICON, ICON).setDepth(20)
                 .setFlipX(this.isMirroredPart(partId));
             this.add.text(x, y + ICON / 2 + 14, `${i + 1}`, {
-                fontSize: '14px', fontFamily: 'Arial Black', color: '#ffffff',
+                fontSize: '14px', fontFamily: '"DynaPuff Black", "Arial Black", sans-serif', color: '#ffffff',
                 stroke: '#1f2937', strokeThickness: 3,
             }).setOrigin(0.5).setDepth(20);
 
@@ -278,7 +278,7 @@ export class GameScene extends Phaser.Scene {
 
             if (i < n - 1) {
                 this.add.text(x + ICON / 2 + GAP / 2, y, '→', {
-                    fontSize: '22px', color: '#ffffff', fontFamily: 'Arial Black',
+                    fontSize: '22px', color: '#ffffff', fontFamily: '"DynaPuff Black", "Arial Black", sans-serif',
                 }).setOrigin(0.5).setDepth(20);
             }
         });
@@ -295,17 +295,17 @@ export class GameScene extends Phaser.Scene {
         bg.setScale(Math.max(width / bg.width, height / bg.height));
 
         const badge = this.add.text(width / 2, 78, `NÍVEL ${level.level} DE ${LEVELS.length}`, {
-            fontSize: '22px', fontFamily: 'Arial Black, Arial', color: '#fff7c2',
+            fontSize: '22px', fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif', color: '#fff7c2',
             stroke: '#1f2937', strokeThickness: 5,
         }).setOrigin(0.5);
 
         const title = this.add.text(width / 2, 130, level.title, {
-            fontSize: '44px', fontFamily: 'Arial Black, Arial', color: '#ffffff',
+            fontSize: '44px', fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif', color: '#ffffff',
             stroke: '#1f2937', strokeThickness: 7,
         }).setOrigin(0.5);
 
         const objective = this.add.text(width / 2, 180, level.objective, {
-            fontSize: '21px', fontFamily: 'Arial Black, Arial', color: '#fff7c2',
+            fontSize: '21px', fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif', color: '#fff7c2',
             stroke: '#1f2937', strokeThickness: 4,
             align: 'center', wordWrap: { width: width - 260 },
         }).setOrigin(0.5);
@@ -318,7 +318,7 @@ export class GameScene extends Phaser.Scene {
         });
 
         const phaseLabel = this.add.text(width / 2, 538, `${level.phases.length} fases neste nível`, {
-            fontSize: '16px', fontFamily: 'Arial Black, Arial', color: '#ffffff',
+            fontSize: '16px', fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif', color: '#ffffff',
             stroke: '#1f2937', strokeThickness: 3,
         }).setOrigin(0.5);
 
@@ -445,7 +445,7 @@ export class GameScene extends Phaser.Scene {
             .setDisplaySize(134, 134)
             .setFlipX(this.isMirroredPart(partId));
         const label = this.add.text(0, 52, def.label, {
-            fontSize: '17px', fontFamily: 'Arial Black, Arial', color: '#1a73e8',
+            fontSize: '17px', fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif', color: '#1a73e8',
             align: 'center', wordWrap: { width: 168 },
             stroke: '#ffffff', strokeThickness: 5,
         }).setOrigin(0.5);
@@ -553,7 +553,7 @@ export class GameScene extends Phaser.Scene {
 
         this.add.text(width / 2 + 210, 50,
             `Fase ${this.currentPhaseIdx + 1} de ${this.level.phases.length}`, {
-            fontSize: '17px', fontFamily: 'Arial Black, Arial', color: '#ffffff',
+            fontSize: '17px', fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif', color: '#ffffff',
             stroke: '#1f2937', strokeThickness: 4,
         }).setOrigin(0, 0.5).setDepth(21);
     }
@@ -669,13 +669,13 @@ export class GameScene extends Phaser.Scene {
             opts.won ? 0x7dd3fc : 0x312e81, opts.won ? 0.92 : 0.88);
 
         const title = this.add.text(width / 2, height * 0.18, opts.title, {
-            fontSize: '42px', fontFamily: 'Arial Black', color: '#ffffff',
+            fontSize: '42px', fontFamily: '"DynaPuff Black", "Arial Black", sans-serif', color: '#ffffff',
             stroke: opts.won ? '#4f46e5' : '#ff6fb1', strokeThickness: 7,
             align: 'center', wordWrap: { width: width - 160 },
         }).setOrigin(0.5);
 
         const subtitle = this.add.text(width / 2, height * 0.27, opts.subtitle, {
-            fontSize: '22px', fontFamily: 'Arial Black, Arial', color: '#fff7c2',
+            fontSize: '22px', fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif', color: '#fff7c2',
             stroke: '#1f2937', strokeThickness: 4,
         }).setOrigin(0.5);
 
@@ -708,7 +708,7 @@ export class GameScene extends Phaser.Scene {
             won ? 0x7dd3fc : 0x312e81, won ? 0.92 : 0.88);
 
         const title = this.add.text(width / 2, height * 0.20, won ? 'Robô montado!' : 'Ops, tente de novo!', {
-            fontSize: '44px', fontFamily: 'Arial Black', color: '#ffffff',
+            fontSize: '44px', fontFamily: '"DynaPuff Black", "Arial Black", sans-serif', color: '#ffffff',
             stroke: won ? '#4f46e5' : '#ff6fb1', strokeThickness: 7,
         }).setOrigin(0.5);
 
@@ -722,7 +722,7 @@ export class GameScene extends Phaser.Scene {
             this.emitPlatformEvent('FINISH_GAME');
 
             const subtitle = this.add.text(width / 2, height * 0.30, 'Você montou todos os robôs!', {
-                fontSize: '24px', fontFamily: 'Arial Black, Arial', color: '#fff7c2',
+                fontSize: '24px', fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif', color: '#fff7c2',
                 stroke: '#1f2937', strokeThickness: 4,
             }).setOrigin(0.5);
 
@@ -761,7 +761,7 @@ export class GameScene extends Phaser.Scene {
         bg.strokeRoundedRect(-w / 2, -h / 2, w, h, 20);
 
         const text = this.add.text(0, 0, label, {
-            fontSize: '22px', fontFamily: 'Arial Black, Arial', color: '#ffffff',
+            fontSize: '22px', fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif', color: '#ffffff',
         }).setOrigin(0.5);
 
         const hit = this.add.rectangle(0, 0, w, h, 0xffffff, 0.01).setInteractive({ useHandCursor: true });

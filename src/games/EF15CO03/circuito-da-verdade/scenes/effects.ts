@@ -71,7 +71,7 @@ export function createRide(
     shadow.fillEllipse(0, halfH + RIDE.shadowGap, off.width * quizScale * 0.7, 28)
 
     const name = scene.add.text(0, halfH + RIDE.nameGap, def.name, {
-        fontFamily: 'Arial Black, Arial',
+        fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif',
         fontSize: '20px',
         color: '#fbf49e',
         stroke: '#001a33',

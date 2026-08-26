@@ -30,7 +30,7 @@ export class UIScene extends Phaser.Scene {
 
   create() {
     this.instructionText = this.add.text(W / 2, 42, '', {
-      fontFamily: 'Arial Black, Arial',
+      fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif',
       fontSize: '30px',
       color: hex(C.blueDark),
       stroke: '#ffffff',
@@ -40,7 +40,7 @@ export class UIScene extends Phaser.Scene {
     }).setOrigin(0.5).setResolution(2)
 
     this.subText = this.add.text(W / 2, 90, '', {
-      fontFamily: 'Arial',
+      fontFamily: 'DynaPuff, Arial, sans-serif',
       fontStyle: 'bold',
       fontSize: '22px',
       color: hex(C.inkSoft),
@@ -51,7 +51,7 @@ export class UIScene extends Phaser.Scene {
     }).setOrigin(0.5).setResolution(2)
 
     this.levelText = this.add.text(26, 32, '', {
-      fontFamily: 'Arial Black, Arial',
+      fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif',
       fontSize: '20px',
       color: hex(C.blueDark),
       stroke: '#ffffff',
@@ -59,7 +59,7 @@ export class UIScene extends Phaser.Scene {
     }).setOrigin(0, 0.5).setResolution(2)
 
     this.phaseText = this.add.text(26, 62, '', {
-      fontFamily: 'Arial',
+      fontFamily: 'DynaPuff, Arial, sans-serif',
       fontStyle: 'bold',
       fontSize: '18px',
       color: hex(C.inkSoft),
@@ -105,7 +105,7 @@ export class UIScene extends Phaser.Scene {
     g.fillStyle(C.white, 0.22)
     g.fillEllipse(0, -12, 38, 18)
     const t = this.add.text(0, 0, '?', {
-      fontFamily: 'Arial Black, Arial',
+      fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif',
       fontSize: '32px',
       color: '#ffffff',
     }).setOrigin(0.5).setResolution(2)

@@ -46,20 +46,20 @@ export class UIScene extends Phaser.Scene {
         this.drawPlate()
 
         this.levelText = this.add.text(56, 34, '', {
-            fontFamily: 'Arial Black, Arial',
+            fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif',
             fontSize: '17px',
             color: hex(C.paper),
         }).setOrigin(0, 0.5).setResolution(2)
 
         this.phaseText = this.add.text(56, 60, '', {
-            fontFamily: 'Arial',
+            fontFamily: 'DynaPuff, Arial, sans-serif',
             fontStyle: 'bold',
             fontSize: '15px',
             color: hex(C.paper),
         }).setOrigin(0, 0.5).setResolution(2)
 
         this.instructionText = this.add.text(W / 2 - 120, 44, '', {
-            fontFamily: 'Arial Black, Arial',
+            fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif',
             fontSize: '28px',
             color: hex(C.blueDark),
             stroke: '#ffffff',
@@ -69,7 +69,7 @@ export class UIScene extends Phaser.Scene {
         }).setOrigin(0.5).setResolution(2)
 
         this.subText = this.add.text(W / 2 - 70, 88, '', {
-            fontFamily: 'Arial',
+            fontFamily: 'DynaPuff, Arial, sans-serif',
             fontStyle: 'bold',
             fontSize: '22px',
             color: hex(C.inkSoft),
@@ -145,7 +145,7 @@ export class UIScene extends Phaser.Scene {
         labels.forEach((id, i) => {
             const x = startX + i * 74
             const t = this.add.text(x + 16, 45, '0', {
-                fontFamily: 'Arial Black, Arial',
+                fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif',
                 fontSize: '20px',
                 color: hex(C.ink),
             }).setOrigin(0, 0.5).setResolution(2)
@@ -208,7 +208,7 @@ export class UIScene extends Phaser.Scene {
         g.fillStyle(C.white, 0.24)
         g.fillEllipse(0, -9, 30, 14)
         const t = this.add.text(0, 0, '?', {
-            fontFamily: 'Arial Black, Arial',
+            fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif',
             fontSize: '25px',
             color: '#ffffff',
         }).setOrigin(0.5).setResolution(2)

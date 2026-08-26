@@ -207,7 +207,7 @@ export class BootScene extends Phaser.Scene {
 
         this.add.text(W / 2, midY - 72, 'Cidade das', {
             fontSize: '42px',
-            fontFamily: 'Arial Black, Arial',
+            fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif',
             color: CSS.creme,
             stroke: CSS.borda,
             strokeThickness: 8,
@@ -215,7 +215,7 @@ export class BootScene extends Phaser.Scene {
 
         this.add.text(W / 2, midY - 16, 'DECISÕES', {
             fontSize: '54px',
-            fontFamily: 'Arial Black, Arial',
+            fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif',
             color: CSS.amarelo,
             stroke: CSS.borda,
             strokeThickness: 9,
@@ -223,7 +223,7 @@ export class BootScene extends Phaser.Scene {
 
         this.add.text(W / 2, midY + 42, 'Acendendo os semáforos...', {
             fontSize: '21px',
-            fontFamily: 'Arial',
+            fontFamily: 'DynaPuff, Arial, sans-serif',
             fontStyle: 'bold',
             color: CSS.claro,
         }).setOrigin(0.5).setDepth(3).setResolution(2)

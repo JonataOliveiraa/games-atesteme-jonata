@@ -52,7 +52,7 @@ export function showLevelComplete(
   // Arial Black no título; sem stroke branco, que sobre painel claro só
   // engorda a letra e suja a forma.
   const title = scene.add.text(0, 0, options.title ?? 'Parabéns!', {
-    fontFamily: 'Arial Black, Arial',
+    fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif',
     fontSize: '46px',
     color: options.titleColor ?? '#25327a',
     align: 'center',
@@ -62,7 +62,7 @@ export function showLevelComplete(
 
   const subtitle = options.subtitle
     ? scene.add.text(0, 0, options.subtitle, {
-      fontFamily: 'Arial Black, Arial',
+      fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif',
       fontSize: '28px',
       color: options.subtitleColor ?? '#f57c00',
       align: 'center',
@@ -73,7 +73,7 @@ export function showLevelComplete(
 
   const message = options.message
     ? scene.add.text(0, 0, options.message, {
-      fontFamily: 'Arial',
+      fontFamily: 'DynaPuff, Arial, sans-serif',
       fontStyle: 'bold',
       fontSize: '21px',
       color: options.messageColor ?? '#3b3b3b',
@@ -87,7 +87,7 @@ export function showLevelComplete(
 
   const waitText = options.autoAdvance
     ? scene.add.text(0, 0, options.autoAdvance.label ?? 'Preparando o próximo nível...', {
-      fontFamily: 'Arial',
+      fontFamily: 'DynaPuff, Arial, sans-serif',
       fontStyle: 'bold',
       fontSize: '18px',
       color: '#7a8ba3',
@@ -233,7 +233,7 @@ function makeButton(scene: Phaser.Scene, def: LevelCompleteButton, accent: numbe
   const button = scene.add.container(0, 0)
   const bg = scene.add.graphics()
   const label = scene.add.text(0, -drop / 2, def.label, {
-    fontFamily: 'Arial Black, Arial',
+    fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif',
     fontSize: '22px',
     color: '#ffffff',
   }).setOrigin(0.5).setResolution(2)

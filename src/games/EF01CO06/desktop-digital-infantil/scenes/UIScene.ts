@@ -49,7 +49,7 @@ export class UIScene extends Phaser.Scene {
     // Texto da missão — centralizado, fonte grande
     this.missionText = this.add.text(640, 34, 'Carregando...', {
       fontSize: '26px',
-      fontFamily: 'Arial Black, Arial',
+      fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif',
       color: '#FFFFFF',
       stroke: '#0A1628',
       strokeThickness: 4,
@@ -66,7 +66,7 @@ export class UIScene extends Phaser.Scene {
     // Dica do passo atual — centralizada, cor amarela
     this.stepHint = this.add.text(640, 82, '', {
       fontSize: '17px',
-      fontFamily: 'Arial, sans-serif',
+      fontFamily: 'DynaPuff, Arial, sans-serif',
       color: '#F9E79F',
       stroke: '#0A1628',
       strokeThickness: 3,
@@ -79,7 +79,7 @@ export class UIScene extends Phaser.Scene {
 
     // Estrelas de nível (canto direito)
     this.add.text(1095, 24, 'Nível', {
-      fontSize: '11px', color: '#7F8C8D', fontFamily: 'Arial',
+      fontSize: '11px', color: '#7F8C8D', fontFamily: 'DynaPuff, Arial, sans-serif',
     }).setOrigin(0.5)
     this.levelStars = this.add.text(1095, 48, '★☆☆', {
       fontSize: '20px', color: '#F1C40F',

@@ -71,7 +71,7 @@ export class BootScene extends Phaser.Scene {
 
     this.add.text(640, 310, 'Cidade das Tecnologias', {
       fontSize: '40px',
-      fontFamily: 'Arial Black, Arial',
+      fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif',
       color: '#E8F5E9',
       stroke: '#000000',
       strokeThickness: 6,
@@ -81,7 +81,7 @@ export class BootScene extends Phaser.Scene {
 
     this.add.text(640, 390, 'Montando o mapa da cidade...', {
       fontSize: '22px',
-      fontFamily: 'Arial',
+      fontFamily: 'DynaPuff, Arial, sans-serif',
       color: '#A5D6A7',
     }).setOrigin(0.5).setDepth(1)
 

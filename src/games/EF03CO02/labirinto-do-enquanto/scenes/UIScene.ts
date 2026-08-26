@@ -48,7 +48,7 @@ export class UIScene extends Phaser.Scene {
             .setDepth(1)
 
         this.add.text(68, mid, 'Labirinto do Enquanto', {
-            fontFamily: 'Arial Black, Arial',
+            fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif',
             fontSize: '25px',
             color: CSS.creme,
             stroke: CSS.borda,
@@ -57,7 +57,7 @@ export class UIScene extends Phaser.Scene {
 
         // ── Instrução do momento, no centro ──
         this.instructionText = this.add.text(W / 2, mid - 10, '', {
-            fontFamily: 'Arial Black, Arial',
+            fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif',
             fontSize: '24px',
             color: CSS.amarelo,
             stroke: CSS.borda,
@@ -68,7 +68,7 @@ export class UIScene extends Phaser.Scene {
 
         // ── Nível e ajuda, à direita ──
         this.levelText = this.add.text(1120, mid, 'Nível 1 de 3', {
-            fontFamily: 'Arial Black, Arial',
+            fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif',
             fontSize: '20px',
             color: CSS.claro,
             stroke: CSS.borda,
@@ -90,7 +90,7 @@ export class UIScene extends Phaser.Scene {
         paint(false)
 
         const text = this.add.text(x, y, label, {
-            fontFamily: 'Arial Black, Arial',
+            fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif',
             fontSize: '28px',
             color: CSS.creme,
         }).setOrigin(0.5).setDepth(2).setResolution(2)

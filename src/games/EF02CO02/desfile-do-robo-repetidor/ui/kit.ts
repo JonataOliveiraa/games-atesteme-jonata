@@ -38,7 +38,7 @@ export function label(
     { size = 20, color = C.ink, weight = "black" as Weight, wrap = 0, align = "center" as const } = {},
 ) {
     return scene.add.text(x, y, text, {
-        fontFamily: weight === "black" ? "Arial Black, Arial" : "Arial",
+        fontFamily: weight === "black" ? "'DynaPuff Black', 'Arial Black', Arial, sans-serif" : "DynaPuff, Arial, sans-serif",
         fontStyle: weight === "bold" ? "bold" : undefined,
         fontSize: `${size}px`,
         color: hex(color),

@@ -77,14 +77,14 @@ export class BootScene extends Phaser.Scene {
     bg.strokeRoundedRect(210, 158, 860, 382, 36)
 
     this.add.text(640, 282, 'Central de Entrada e Saída', {
-      fontFamily: 'Arial Black, Arial',
+      fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif',
       fontSize: '48px',
       color: '#f4f7fb',
       align: 'center',
     }).setOrigin(0.5).setDepth(1).setResolution(2)
 
     this.add.text(640, 344, 'Ligando a central...', {
-      fontFamily: 'Arial',
+      fontFamily: 'DynaPuff, Arial, sans-serif',
       fontStyle: 'bold',
       fontSize: '24px',
       color: '#7fd4ff',

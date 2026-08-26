@@ -168,23 +168,23 @@ export class GameScene extends Phaser.Scene {
     }).setOrigin(0.5)
 
     const title = this.add.text(0, -90, `Nível ${lvl}`, {
-      fontFamily: 'Arial', fontSize: '38px', fontStyle: 'bold',
+      fontFamily: 'DynaPuff, Arial, sans-serif', fontSize: '38px', fontStyle: 'bold',
       color: '#1B5E20', stroke: '#FFFFFF', strokeThickness: 4,
     }).setOrigin(0.5).setResolution(2)
 
     const objective = this.add.text(0, -36, info.objective, {
-      fontFamily: 'Arial', fontSize: '18px', fontStyle: 'bold',
+      fontFamily: 'DynaPuff, Arial, sans-serif', fontSize: '18px', fontStyle: 'bold',
       color: '#2E7D32', align: 'center', wordWrap: { width: 520 },
     }).setOrigin(0.5).setResolution(2)
 
     const detail = this.add.text(0, 20, info.detail, {
-      fontFamily: 'Arial', fontSize: '15px',
+      fontFamily: 'DynaPuff, Arial, sans-serif', fontSize: '15px',
       color: '#4E342E', align: 'center', wordWrap: { width: 520 },
     }).setOrigin(0.5).setResolution(2)
 
     const timerText = this.levelConfig.timeLimit
       ? this.add.text(0, 64, `⏱  ${this.levelConfig.timeLimit} segundos`, {
-        fontFamily: 'Arial', fontSize: '13px', color: '#8D6E63',
+        fontFamily: 'DynaPuff, Arial, sans-serif', fontSize: '13px', color: '#8D6E63',
       }).setOrigin(0.5)
       : null
 
@@ -198,7 +198,7 @@ export class GameScene extends Phaser.Scene {
     btnBg.lineStyle(4, 0xFFFFFF, 1)
     btnBg.strokeRoundedRect(-130, -24, 260, 50, 25)
     const btnText = this.add.text(0, 0, 'Iniciar nível', {
-      fontFamily: 'Arial', fontSize: '22px', fontStyle: 'bold',
+      fontFamily: 'DynaPuff, Arial, sans-serif', fontSize: '22px', fontStyle: 'bold',
       color: '#FFFFFF', stroke: '#1B5E20', strokeThickness: 3,
     }).setOrigin(0.5).setResolution(2)
     btnCont.add([btnShadow, btnBg, btnText])
@@ -343,12 +343,12 @@ export class GameScene extends Phaser.Scene {
     ribbon.strokeRoundedRect(-196, -194, 392, 28, 14)
 
     const title = this.add.text(0, -110, 'Parabéns!', {
-      fontFamily: 'Arial', fontSize: '40px', fontStyle: 'bold',
+      fontFamily: 'DynaPuff, Arial, sans-serif', fontSize: '40px', fontStyle: 'bold',
       color: '#1B5E20', stroke: '#FFFFFF', strokeThickness: 5,
     }).setOrigin(0.5).setResolution(2)
 
     const sub = this.add.text(0, -56, `Nível ${this.levelConfig.level} concluído`, {
-      fontFamily: 'Arial', fontSize: '26px', fontStyle: 'bold', color: '#2E7D32',
+      fontFamily: 'DynaPuff, Arial, sans-serif', fontSize: '26px', fontStyle: 'bold', color: '#2E7D32',
     }).setOrigin(0.5).setResolution(2)
 
     const dots = [1, 2, 3].map((level, index) => {
@@ -361,7 +361,7 @@ export class GameScene extends Phaser.Scene {
     })
 
     const waitText = this.add.text(0, 94, 'Preparando o próximo nível...', {
-      fontFamily: 'Arial', fontSize: '15px', fontStyle: 'bold', color: '#1B5E20',
+      fontFamily: 'DynaPuff, Arial, sans-serif', fontSize: '15px', fontStyle: 'bold', color: '#1B5E20',
     }).setOrigin(0.5).setResolution(2)
 
     modal.add([shadow, bg, ribbon, title, sub, ...dots, waitText])
@@ -403,12 +403,12 @@ export class GameScene extends Phaser.Scene {
     ribbon.strokeRoundedRect(-196, -194, 392, 28, 14)
 
     const title = this.add.text(0, -110, 'Parabéns!', {
-      fontFamily: 'Arial', fontSize: '40px', fontStyle: 'bold',
+      fontFamily: 'DynaPuff, Arial, sans-serif', fontSize: '40px', fontStyle: 'bold',
       color: '#1B5E20', stroke: '#FFFFFF', strokeThickness: 5,
     }).setOrigin(0.5).setResolution(2)
 
     const sub = this.add.text(0, -56, 'Nível 3 concluído', {
-      fontFamily: 'Arial', fontSize: '26px', fontStyle: 'bold', color: '#2E7D32',
+      fontFamily: 'DynaPuff, Arial, sans-serif', fontSize: '26px', fontStyle: 'bold', color: '#2E7D32',
     }).setOrigin(0.5).setResolution(2)
 
     const dots = [1, 2, 3].map((_, index) => {
@@ -421,7 +421,7 @@ export class GameScene extends Phaser.Scene {
     })
 
     const waitText = this.add.text(0, 94, 'Preparando a finalização...', {
-      fontFamily: 'Arial', fontSize: '15px', fontStyle: 'bold', color: '#1B5E20',
+      fontFamily: 'DynaPuff, Arial, sans-serif', fontSize: '15px', fontStyle: 'bold', color: '#1B5E20',
     }).setOrigin(0.5).setResolution(2)
 
     modal.add([shadow, bg, ribbon, title, sub, ...dots, waitText])
@@ -462,12 +462,12 @@ export class GameScene extends Phaser.Scene {
     ribbon.strokeRoundedRect(-220, -218, 440, 34, 17)
 
     const title = this.add.text(0, -138, 'Jogo concluído!', {
-      fontFamily: 'Arial', fontSize: '38px', fontStyle: 'bold',
+      fontFamily: 'DynaPuff, Arial, sans-serif', fontSize: '38px', fontStyle: 'bold',
       color: '#1B5E20', stroke: '#FFFFFF', strokeThickness: 6,
     }).setOrigin(0.5).setResolution(2)
 
     const subtitle = this.add.text(0, -80, 'Você classificou todos os itens!', {
-      fontFamily: 'Arial', fontSize: '20px', fontStyle: 'bold',
+      fontFamily: 'DynaPuff, Arial, sans-serif', fontSize: '20px', fontStyle: 'bold',
       color: '#4E342E', align: 'center', wordWrap: { width: 520 },
     }).setOrigin(0.5).setResolution(2)
 
@@ -480,11 +480,11 @@ export class GameScene extends Phaser.Scene {
       badge.lineStyle(4, 0xFFFFFF, 0.95)
       badge.strokeRoundedRect(-54, -42, 108, 84, 18)
       const num = this.add.text(0, -13, String(lvl), {
-        fontFamily: 'Arial', fontSize: '30px', fontStyle: 'bold',
+        fontFamily: 'DynaPuff, Arial, sans-serif', fontSize: '30px', fontStyle: 'bold',
         color: '#FFFFFF', stroke: '#1B5E20', strokeThickness: 4,
       }).setOrigin(0.5).setResolution(2)
       const label = this.add.text(0, 23, 'concluído', {
-        fontFamily: 'Arial', fontSize: '13px', fontStyle: 'bold', color: '#FFFFFF',
+        fontFamily: 'DynaPuff, Arial, sans-serif', fontSize: '13px', fontStyle: 'bold', color: '#FFFFFF',
       }).setOrigin(0.5).setResolution(2)
       item.add([badge, num, label])
       return item
@@ -525,12 +525,12 @@ export class GameScene extends Phaser.Scene {
     ribbon.strokeRoundedRect(-196, -194, 392, 28, 14)
 
     const title = this.add.text(0, -110, 'Tempo Esgotado!', {
-      fontFamily: 'Arial', fontSize: '36px', fontStyle: 'bold',
+      fontFamily: 'DynaPuff, Arial, sans-serif', fontSize: '36px', fontStyle: 'bold',
       color: '#B71C1C', stroke: '#FFFFFF', strokeThickness: 5,
     }).setOrigin(0.5).setResolution(2)
 
     const sub = this.add.text(0, -58, `⏰  O tempo acabou no Nível ${this.levelConfig.level}`, {
-      fontFamily: 'Arial', fontSize: '18px', color: '#4E342E',
+      fontFamily: 'DynaPuff, Arial, sans-serif', fontSize: '18px', color: '#4E342E',
       align: 'center', wordWrap: { width: 480 },
     }).setOrigin(0.5).setResolution(2)
 
@@ -542,7 +542,7 @@ export class GameScene extends Phaser.Scene {
     retryBg.lineStyle(3, 0xFFFFFF, 1)
     retryBg.strokeRoundedRect(-100, -22, 200, 44, 22)
     const retryText = this.add.text(0, 0, 'Tentar Novamente', {
-      fontFamily: 'Arial', fontSize: '16px', fontStyle: 'bold', color: '#FFFFFF',
+      fontFamily: 'DynaPuff, Arial, sans-serif', fontSize: '16px', fontStyle: 'bold', color: '#FFFFFF',
     }).setOrigin(0.5).setResolution(2)
     retryBtn.add([retryBg, retryText])
 
@@ -554,7 +554,7 @@ export class GameScene extends Phaser.Scene {
     exitBg.lineStyle(3, 0xFFFFFF, 1)
     exitBg.strokeRoundedRect(-80, -22, 160, 44, 22)
     const exitText = this.add.text(0, 0, 'Sair', {
-      fontFamily: 'Arial', fontSize: '16px', fontStyle: 'bold', color: '#FFFFFF',
+      fontFamily: 'DynaPuff, Arial, sans-serif', fontSize: '16px', fontStyle: 'bold', color: '#FFFFFF',
     }).setOrigin(0.5).setResolution(2)
     exitBtn.add([exitBg, exitText])
 
@@ -780,7 +780,7 @@ export class GameScene extends Phaser.Scene {
       swatch.strokeRoundedRect(flX - 14, flY - 10, 28, 20, 5)
 
       const label = this.add.text(flX + 28, panelY + 1, baseData.labelKey, {
-        fontSize: '22px', fontFamily: 'Arial Black, Arial', color: '#3E2723',
+        fontSize: '22px', fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif', color: '#3E2723',
       }).setOrigin(0, 0.5)
 
       const leafGfx = this.add.graphics()

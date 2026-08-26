@@ -74,8 +74,8 @@ export const A = {
 } as const
 
 export const FONT = {
-    black: 'Arial Black, Arial',
-    body: 'Arial',
+    black: '"DynaPuff Black", "Arial Black", Arial, sans-serif',
+    body: 'DynaPuff, Arial, sans-serif',
     /** O endereço do site: largura fixa, cara de barra de navegador. */
     mono: 'Consolas, Courier New, monospace',
 } as const

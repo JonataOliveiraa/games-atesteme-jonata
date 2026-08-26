@@ -73,7 +73,7 @@ export class BootScene extends Phaser.Scene {
 
     const title = this.add
       .text(width / 2, height / 2 - 58, 'Oficina dos Algoritmos', {
-        fontFamily: 'Arial',
+        fontFamily: 'DynaPuff, Arial, sans-serif',
         fontSize: '30px',
         fontStyle: 'bold',
         color: '#25327a',
@@ -85,7 +85,7 @@ export class BootScene extends Phaser.Scene {
 
     const label = this.add
       .text(width / 2, height / 2 - 14, 'Carregando...', {
-        fontFamily: 'Arial',
+        fontFamily: 'DynaPuff, Arial, sans-serif',
         fontSize: '18px',
         fontStyle: 'bold',
         color: '#f57c00',

@@ -280,7 +280,7 @@ export class BootScene extends Phaser.Scene {
 
         this.add.text(W / 2, midY - 88, 'Monte seu', {
             fontSize: '36px',
-            fontFamily: 'Arial Black, Arial',
+            fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif',
             color: CSS.creme,
             stroke: CSS.preto,
             strokeThickness: 8,
@@ -288,7 +288,7 @@ export class BootScene extends Phaser.Scene {
 
         this.add.text(W / 2, midY - 32, 'COMPUTADOR', {
             fontSize: '50px',
-            fontFamily: 'Arial Black, Arial',
+            fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif',
             color: CSS.ouro,
             stroke: CSS.preto,
             strokeThickness: 9,
@@ -296,7 +296,7 @@ export class BootScene extends Phaser.Scene {
 
         this.add.text(W / 2, midY + 26, 'Preparando a bancada...', {
             fontSize: '20px',
-            fontFamily: 'Arial',
+            fontFamily: 'DynaPuff, Arial, sans-serif',
             fontStyle: 'bold',
             color: CSS.claro,
         }).setOrigin(0.5).setDepth(3).setResolution(2)

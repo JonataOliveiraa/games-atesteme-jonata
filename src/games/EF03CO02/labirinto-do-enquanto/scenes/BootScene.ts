@@ -119,7 +119,7 @@ export class BootScene extends Phaser.Scene {
 
         this.add.text(640, 292, 'Labirinto do Enquanto', {
             fontSize: '52px',
-            fontFamily: 'Arial Black, Arial',
+            fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif',
             color: '#f3e7d3',
             stroke: '#2d2319',
             strokeThickness: 7,
@@ -128,7 +128,7 @@ export class BootScene extends Phaser.Scene {
 
         this.add.text(640, 366, 'Ligando o robô...', {
             fontSize: '26px',
-            fontFamily: 'Arial',
+            fontFamily: 'DynaPuff, Arial, sans-serif',
             color: '#dda21c',
         }).setOrigin(0.5).setDepth(2).setResolution(2)
 

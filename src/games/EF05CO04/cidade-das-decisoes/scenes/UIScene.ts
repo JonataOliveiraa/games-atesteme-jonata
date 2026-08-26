@@ -48,7 +48,7 @@ export class UIScene extends Phaser.Scene {
       .setDepth(1)
 
     this.add.text(74, mid, 'Cidade das Decisões', {
-      fontFamily: 'Arial Black, Arial',
+      fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif',
       fontSize: '23px',
       color: CSS.creme,
       stroke: CSS.borda,
@@ -56,7 +56,7 @@ export class UIScene extends Phaser.Scene {
     }).setOrigin(0, 0.5).setDepth(1).setResolution(2)
 
     this.instructionText = this.add.text(W / 2, mid, '', {
-      fontFamily: 'Arial Black, Arial',
+      fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif',
       fontSize: '20px',
       color: CSS.amarelo,
       stroke: CSS.borda,
@@ -66,7 +66,7 @@ export class UIScene extends Phaser.Scene {
     }).setOrigin(0.5).setDepth(1).setResolution(2)
 
     this.levelText = this.add.text(1108, mid - 13, 'Nível 1 de 3', {
-      fontFamily: 'Arial Black, Arial',
+      fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif',
       fontSize: '17px',
       color: CSS.claro,
       stroke: CSS.borda,
@@ -118,7 +118,7 @@ export class UIScene extends Phaser.Scene {
     paint(false)
 
     const text = this.add.text(x, y, label, {
-      fontFamily: 'Arial Black, Arial',
+      fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif',
       fontSize: '26px',
       color: CSS.creme,
       stroke: CSS.borda,

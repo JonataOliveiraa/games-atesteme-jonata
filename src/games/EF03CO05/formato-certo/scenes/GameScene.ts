@@ -167,7 +167,7 @@ export class GameScene extends Phaser.Scene {
         this.readButton.setEnabled(false)
 
         this.add.text(READER.cx, READER.noteY, 'testa se dá para recuperar', {
-            fontFamily: 'Arial', fontStyle: 'bold', fontSize: '15px',
+            fontFamily: 'DynaPuff, Arial, sans-serif', fontStyle: 'bold', fontSize: '15px',
             color: '#8ea3bd', align: 'center', wordWrap: { width: READER.w },
         }).setOrigin(0.5).setResolution(2).setDepth(30)
 

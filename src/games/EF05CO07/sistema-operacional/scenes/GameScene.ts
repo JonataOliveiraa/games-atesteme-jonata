@@ -3,953 +3,851 @@ import { EventBus } from '../../../../shared/EventBus'
 import { runtimeGameBridge } from '../../../../shared/bridge/runtimeGameBridge'
 import type { PlatformCommand } from '../../../../shared/contracts/platformCommands'
 import { createTutorial, type TutorialStep } from '../../../../shared/tutorial/createTutorial'
-import { showLevelComplete, type LevelCompleteHandle } from '../../../../shared/level/showLevelComplete'
+import { showLevelComplete } from '../../../../shared/level/showLevelComplete'
+import { createTimeBar, type TimeBar } from '../../../../shared/hud/createTimeBar'
 import { FX } from '../../../../shared/effects/FX'
-import { formatTime } from '../../../../shared/hud/createTimeBar'
 
-import { NIVEIS, TOTAL_FASES, tempoDaFase } from '../data/casos'
 import {
-    DISPOSITIVOS, PROGRAMAS, avaliarPedido, blocosLivres, criarMaquina,
-    fecharPrograma, abrirPrograma, inicioDe, ocupar, porQueNao,
-    tickMaquina, usandoQual, type MaquinaEstado,
-} from '../data/maquina'
-import { C, TINTA } from '../data/theme'
-import { HUD, ESTAB, MEM, FILA, RODAPE, PECAS } from '../data/layout'
-import type {
-    DispositivoId, EstadoCena, FaseDef, NivelDef, PedidoDef, ProgramaId,
-} from '../types'
+    NIVEIS, PROGRAMAS, USO_MS, ENTRE_PEDIDOS_MS, LUZES_INICIAIS, AJUDA_MS,
+} from '../data/niveis'
+import { C, TEMPO_TEMA } from '../data/theme'
+import { AJUDA, PECAS, PEDIDO, BOTAO, TEMPO } from '../data/layout'
+import type { EstadoCena, NivelDef, PecaId, Pedido, ProgramaId } from '../types'
 import {
-    createCenario, createChapa, createHud, createEstabilidade, createHardware,
-    createMemoria, createFicha, createMensagem, createBigButton, createPausa,
-    type Estabilidade, type Ficha, type Hardware, type Hud, type Memoria,
-    type Mensagem, type BigButton, type Pausa, type PecaVista,
+    createCenario, createLuzes, createPedido, createPecas, createFila,
+    createEncaixes, createRedondo, createBotaoNaoDa, ondinha, travar,
+    type Botao, type Encaixes, type FilaView, type Fileira, type ItemFila,
+    type Luzes, type PainelPedido,
 } from './effects'
 
 const GAME_ID = 'sistema-operacional'
 
 /**
  * ══════════════════════════════════════════════════════════════════════════
- *  A CENA É UM RELÓGIO, NÃO UM QUESTIONÁRIO
+ *  A TELA NÃO ANDA SEM VOCÊ
  * ══════════════════════════════════════════════════════════════════════════
  *
- * A versão anterior era um laço de perguntas: mostrava um pedido, esperava um
- * toque, comparava com o campo `answer`, mostrava o próximo. Nada acontecia
- * entre um toque e outro — e é justamente ENTRE os toques que mora tudo o que a
- * habilidade pede: a impressora terminando, a paciência de quem espera
- * escorrendo, o terceiro pedido chegando enquanto o segundo ainda não foi
- * resolvido.
+ * Os TRÊS níveis usam esta mesma cena e este mesmo layout. Cada um acrescenta
+ * exatamente uma ideia:
  *
- * Por isso o coração desta cena é o `update`, e não um `async` de perguntas. Ele
- * faz quatro coisas, sempre nesta ordem:
+ *   N1  um programa pede uma peça e espera para sempre
+ *   N2  entra a MEMÓRIA: abrir ocupa lugar, e o lugar acaba
+ *   N3  entram DOIS pedidos ao mesmo tempo, e você escolhe a ordem
  *
- *   1. o relógio da fase anda, e pedidos ENTRAM quando chega a hora deles
- *   2. a paciência de cada ficha na fila escorre — e quem zera, desiste
- *   3. os dispositivos contam o tempo de uso, e quem termina VAGA
- *   4. quem vagou serve o primeiro da fila daquela peça, sozinho
+ * ── AS DUAS FORMAS DE PERDER UMA LUZ ─────────────────────────────────────
  *
- * O passo 4 é o que faz "esperar" ser uma resposta e não um castigo. A criança
- * encaixa um pedido numa peça ocupada, a peça se vira, e o pedido é atendido
- * sem ela precisar voltar lá. Isso É um sistema operacional.
+ *   · tocar numa peça que NÃO é a pedida
+ *   · dizer NÃO DÁ quando dava
+ *
+ * As duas são coisas que a criança FEZ. Existia uma terceira — deixar um
+ * programa esperando até a paciência acabar — e ela saiu junto com o relógio do
+ * Nível 3: perder por demorar não ensina nada sobre sistema operacional, e os
+ * três relógios daquele nível estouravam todos no mesmo segundo.
+ *
+ * Todo o resto é de graça, e de propósito:
+ *
+ *   · tocar na peça certa enquanto outro programa a usa → "ainda não"
+ *   · tocar na peça certa que está sem energia → o botão NÃO DÁ pulsa
+ *   · tocar na memória cheia → os encaixes pulsam
+ *   · fechar um programa, ou trocar de quem atender → sempre grátis
+ *
+ * Os casos "de graça" são justamente os que a criança precisa DESCOBRIR.
+ * Cobrar por explorar é a forma mais rápida de fazer alguém parar de explorar.
  */
 
-const PONTOS = {
-    atendido: 20,
-    /** Negar certo vale mais: exige perceber que NÃO tem jeito. */
-    negado: 25,
-    erro: -5,
-    desistiu: -8,
-}
-
-/**
- * A ESTABILIDADE, em pontos.
- *
- * Perder é mais rápido que ganhar, de propósito — senão dava para errar à
- * vontade e repor errando menos. Mas a recuperação existe: uma fase não fica
- * perdida por causa de dois erros no começo, o que importa é o saldo do turno.
- */
-const ESTABILIDADE = {
-    ganhoAtender: 6,
-    ganhoNegar: 8,
-    /** Toque no lugar errado: leu o pedido com pressa. */
-    perdaLeve: 7,
-    /** Negou o que dava para atender: decisão errada, não distração. */
-    perdaGrave: 14,
-    /** Deixou alguém desistir: o pior, porque ninguém foi atendido. */
-    perdaDesistiu: 16,
-}
-
-/** Um pedido que está na fila da mesa, agora. */
-interface Ticket {
-    def: PedidoDef
-    ficha: Ficha
-    restaMs: number
-    /** Em que peça ele está esperando vaga, se estiver. */
-    esperandoEm?: DispositivoId
-}
+const PONTOS = { acerto: 20, erro: -5 }
 
 export class GameScene extends Phaser.Scene {
 
     /* ── partida ───────────────────────────────────────────────────── */
 
-    private levelIdx = 0
-    private faseIdx = 0
-    private points = 0
-    private hits = 0
-    private errors = 0
-    private isMuted = false
-    private ended = false
-    private estado: EstadoCena = 'rodando'
+    private nivelIdx = 0
+    private pontos = 0
+    private acertos = 0
+    private erros = 0
+    private luzesRestantes = LUZES_INICIAIS
+    private mudo = false
+    private estado: EstadoCena = 'pedindo'
 
     /** Todo callback atrasado captura este valor e desiste se ele mudou. */
     private gen = 0
 
-    /* ── a fase em andamento ───────────────────────────────────────── */
-
-    private maquina!: MaquinaEstado
-    /** Quanto tempo DE JOGO já passou nesta fase. */
-    private relogioFase = 0
-    private porChegar: PedidoDef[] = []
-    private fila: Ticket[] = []
-    private selecionado: string | null = null
-    private estabilidade = 100
-    private resolvidos = 0
-    private atendidos = 0
-    private tempoTotal = 0
-    private relogioLigado = false
+    /**
+     * Os pedidos que ainda não foram resolvidos, na ordem.
+     *
+     * Os `ativos` primeiros estão VIVOS: aceitam toque. Um deles é o
+     * `selecionado`, que está no balcão com a frase na tela; o outro espera no
+     * trilho, aceso e com halo. O resto da lista ainda nem chegou.
+     */
+    private restantes: number[] = []
+    private selecionado: number | null = null
+    /** Quanto falta para cada peça em uso ficar livre. */
+    private ocupacao = new Map<PecaId, number>()
+    /** Quem está aberto em cada encaixe da memória. Vazio no Nível 1. */
+    private abertos: Array<ProgramaId | null> = []
+    /** Há quanto tempo a criança está parada olhando o mesmo pedido. */
+    private ocioso = 0
+    private ajudou = { releia: false, mostra: false }
 
     /* ── interface ─────────────────────────────────────────────────── */
 
-    private hud!: Hud
-    private estab!: Estabilidade
-    private mensagem!: Mensagem
-    private pausa!: Pausa
-    private btPausa!: BigButton
-    private btNegar!: BigButton
+    private luzes!: Luzes
+    private painel!: PainelPedido
+    private fileira!: Fileira
+    private fila!: FilaView
+    private botao!: Botao
+    private ajuda!: Botao
+    private tempo!: TimeBar
+    private encaixes?: Encaixes
 
-    /** Estes dois nascem e morrem a cada fase: a fase troca o hardware. */
-    private hardware?: Hardware
-    private memoria?: Memoria
-
-    private telaPerdeu?: LevelCompleteHandle
     private unsubPlatform?: () => void
 
     constructor() {
         super({ key: 'GameScene' })
     }
 
-    /**
-     * `level` é 1-based e `phase` é 0-based, como nos outros jogos do conjunto.
-     * Os dois são grampeados ao que existe: um `phase: 7` numa etapa de três
-     * fases faria `this.fase` devolver `undefined`, e o estouro apareceria três
-     * telas adiante sem pista nenhuma de que veio daqui.
-     */
-    init(data: { level?: number; phase?: number; points?: number }) {
-        this.levelIdx = Phaser.Math.Clamp(data?.level ?? 1, 1, NIVEIS.length) - 1
-        this.faseIdx = Phaser.Math.Clamp(
-            data?.phase ?? 0, 0, NIVEIS[this.levelIdx].fases.length - 1,
-        )
-        this.points = data?.points ?? 0
-        this.hits = 0
-        this.errors = 0
-        this.isMuted = false
-        this.ended = false
-        this.estado = 'rodando'
+    init(data: { nivel?: number; points?: number }) {
+        this.nivelIdx = Phaser.Math.Clamp(data?.nivel ?? 1, 1, NIVEIS.length) - 1
+        this.pontos = data?.points ?? 0
+        this.acertos = 0
+        this.erros = 0
+        this.luzesRestantes = LUZES_INICIAIS
+        this.mudo = false
+        this.estado = 'pedindo'
         this.gen = 0
-        this.relogioFase = 0
-        this.porChegar = []
-        this.fila = []
+        this.restantes = []
         this.selecionado = null
-        this.estabilidade = 100
-        this.resolvidos = 0
-        this.atendidos = 0
-        this.tempoTotal = 0
-        this.relogioLigado = false
+        this.ocupacao = new Map()
+        this.abertos = []
+        this.ocioso = 0
+        this.ajudou = { releia: false, mostra: false }
     }
 
     create() {
         this.events.once(Phaser.Scenes.Events.SHUTDOWN, this.shutdownScene, this)
+        const nivel = this.nivel
 
-        // o Nível 3 troca de sala: a mesa vira o corredor dos servidores
-        createCenario(this, this.nivel.nivel >= 3 ? 'bg-sistemas' : 'bg-central')
-        createChapa(this)
+        this.restantes = nivel.pedidos.map((_, i) => i)
+        this.selecionado = this.restantes[0] ?? null
 
-        this.hud = createHud(this, {
-            onHelp: () => this.replayTutorial(),
-            onDanger: () => this.playTempoCurto(),
-            onEmpty: () => this.perderPorTempo(),
+        createCenario(this, nivel.cenario)
+
+        this.luzes = createLuzes(this, LUZES_INICIAIS)
+        this.painel = createPedido(this)
+        this.fileira = createPecas(this, {
+            pecas: nivel.pecas,
+            semEnergia: nivel.semEnergia,
+            onPeca: id => this.onPeca(id),
         })
-        this.hud.setLevel(this.nivel.nivel)
-        this.hud.tempo.setRunning(false)
-
-        this.estab = createEstabilidade(this)
-        this.mensagem = createMensagem(this)
-        this.pausa = createPausa(this, () => this.despausar())
-
-        this.btPausa = createBigButton(this, {
-            x: RODAPE.pausaX, y: RODAPE.cy,
-            w: RODAPE.pausaW, h: RODAPE.pausaH,
-            label: 'PAUSA', tone: C.edge,
-            onClick: () => this.alternarPausa(),
-        })
+        this.fila = createFila(this, j => this.onTocarFila(j))
+        this.botao = createBotaoNaoDa(this, () => this.onNaoDa())
+        this.ajuda = createRedondo(this, AJUDA.x, AJUDA.cy, AJUDA.r, '?', () => this.replayTutorial())
 
         /*
-         * NEGAR é vermelho, e isso não é enfeite.
+         * A BARRA DE TEMPO.
          *
-         * Vermelho, nesta tela, quer dizer "não vai dar" — é a cor do aro da
-         * peça desligada e do último pedaço da estabilidade. O botão que
-         * responde "não vai dar" tem que ser da mesma cor da coisa que ele
-         * responde, senão a criança precisa aprender duas linguagens.
+         * Ela não sabe perder: conta, pinta e avisa. O que zerar SIGNIFICA é
+         * decisão desta cena, e chega por `onEmpty` — que aqui é perder o
+         * NÍVEL, com a barra cheia de novo em "Tentar de novo". Perder o jogo
+         * inteiro por ritmo transformaria um erro de velocidade em castigo.
          */
-        this.btNegar = createBigButton(this, {
-            x: RODAPE.negarX, y: RODAPE.cy,
-            w: RODAPE.negarW, h: RODAPE.negarH,
-            label: 'NEGAR', tone: C.parado,
-            onClick: () => this.onNegar(),
+        this.tempo = createTimeBar(this, {
+            cx: TEMPO.cx, cy: TEMPO.cy, w: TEMPO.w, h: TEMPO.h,
+            duration: nivel.tempo,
+            theme: TEMPO_TEMA,
+            warnAt: TEMPO.warnAt,
+            dangerAt: TEMPO.dangerAt,
+            iconR: TEMPO.iconR,
+            iconDX: TEMPO.iconDX,
+            depth: 80,
+            onDanger: () => this.playTicTac(),
+            onEmpty: () => void this.tempoEsgotado(),
         })
 
-        EventBus.on('mute-audio', this.onMuteAudio, this)
+        if (nivel.memoria) {
+            this.abertos = new Array(nivel.memoria.encaixes).fill(null)
+            nivel.memoria.jaAbertos.slice(0, nivel.memoria.encaixes)
+                .forEach((p, i) => { this.abertos[i] = p })
+
+            this.encaixes = createEncaixes(this, {
+                cx: this.fileira.posDe('memoria').x,
+                total: nivel.memoria.encaixes,
+                onEncaixe: (i, quem) => this.onEncaixe(i, quem),
+            })
+            this.encaixes.set(this.abertos)
+        }
+
+        /*
+         * A ENTRADA DA CENA.
+         *
+         * As peças caem em sequência, as luzes acendem, o trilho e o botão
+         * deslizam. Custa meio segundo e resolve a pergunta "o jogo já começou?"
+         * — que numa tela estática a criança faz o tempo todo.
+         */
+        this.fileira.entrar()
+        this.luzes.entrar()
+        this.fila.entrar()
+        this.encaixes?.entrar()
+        this.botao.entrar(700)
+        this.ajuda.entrar(820)
+        this.tempo.container.setAlpha(0)
+        void FX.to(this, this.tempo.container, { alpha: 1 }, { duration: 320, delay: 240 })
+
+        /*
+         * A ONDINHA EM QUALQUER TOQUE.
+         *
+         * Mesmo um toque que não acerta nada produz alguma coisa. Sem isso, errar
+         * o alvo por dez pixels é indistinguível de o jogo ter travado.
+         */
+        this.input.on('pointerdown', (p: Phaser.Input.Pointer) => {
+            if (this.estado === 'travado' || this.estado === 'fim') return
+            ondinha(this, p.worldX, p.worldY)
+        })
+
+        EventBus.on('mute-audio', this.onMute, this)
         EventBus.on('show-tutorial', this.replayTutorial, this)
         this.registerPlatformCommands()
 
         runtimeGameBridge.emit({ type: 'GAME_READY', gameId: GAME_ID })
         this.emitCheckpoint()
 
-        // o tutorial é a abertura do NÍVEL, não de uma fase qualquer
-        this.montarFase(this.faseIdx === 0)
+        /*
+         * O TABULEIRO ENTRA ANTES DO TUTORIAL — senão o recorte iluminaria uma
+         * tela vazia e falaria de peças que ainda não existem.
+         */
+        this.time.delayedCall(900, () => void this.mostrarPedido(true))
+    }
+
+    /* ═══════════════════════════════════════════════ o que está vivo */
+
+    private get nivel(): NivelDef { return NIVEIS[this.nivelIdx] }
+    private get quantosAtivos(): number { return this.nivel.ativos ?? 1 }
+    private pedidoDe(i: number): Pedido { return this.nivel.pedidos[i] }
+    private get pedido(): Pedido { return this.pedidoDe(this.selecionado ?? 0) }
+
+    /** Os pedidos VIVOS: os primeiros da lista, incluindo o do balcão. */
+    private get ativos(): number[] {
+        return this.restantes.slice(0, this.quantosAtivos)
+    }
+
+    /** Quem aparece no trilho: todos os restantes, menos o que está no balcão. */
+    private get noTrilho(): number[] {
+        return this.restantes.filter(i => i !== this.selecionado)
+    }
+
+    /**
+     * O que o trilho mostra.
+     *
+     * `esperando` separa os dois estados sem legenda nenhuma: quem está entre os
+     * `ativos` fica aceso, com halo e tocável; o resto é quem ainda nem chegou.
+     *
+     * `buraco` deixa a vaga vazia enquanto um ícone voa de volta para ela — sem
+     * isso, o mesmo programa aparece duas vezes, pousado e no ar.
+     */
+    private itensDoTrilho(buraco?: number): ItemFila[] {
+        return this.noTrilho.map(i => (
+            i === buraco
+                ? { textura: '', esperando: false }
+                : {
+                    textura: PROGRAMAS[this.pedidoDe(i).programa].textura,
+                    esperando: this.ativos.includes(i),
+                }
+        ))
+    }
+
+    private redesenharFila(buraco?: number) {
+        this.fila.set(this.itensDoTrilho(buraco))
     }
 
     /* ═══════════════════════════════════════════════════ o relógio */
 
     /**
-     * O CORAÇÃO DA CENA.
+     * DUAS coisas andam sozinhas nesta tela, e NENHUMA delas apressa a criança:
+     * a peça em uso, que se libera quando o tempo dela acaba, e o contador de
+     * inatividade, que decide quando ajudar quem travou.
      *
-     * Repare que não há nenhuma checagem de "qual é a resposta certa" aqui: o
-     * `update` só faz o mundo andar. Quem decide o que é certo é
-     * `avaliarPedido`, chamado no instante do toque — e é por isso que o mundo
-     * pode andar sozinho sem nunca discordar do gabarito: não há gabarito.
+     * Havia uma terceira — a paciência de quem esperava, no Nível 3 — e era a
+     * única que podia CUSTAR alguma coisa. Ela saiu. Nada nesta tela tira uma
+     * luz por causa do relógio; o relógio só devolve peças.
+     *
+     * E a MEMÓRIA nunca teve relógio: um programa aberto fica aberto até alguém
+     * fechar. É a diferença entre usar um dispositivo e ocupar memória, e ela
+     * aparece sozinha, sem ninguém explicar.
      */
     update(_time: number, delta: number) {
-        if (!this.hud) return
+        /*
+         * A BARRA SÓ ANDA EM `pedindo`.
+         *
+         * Antes de qualquer outra coisa, e fora do `return` de baixo: a barra
+         * precisa ser ESMAECIDA e congelada também no fim de jogo, senão ela
+         * fica acesa e cheia por trás da tela de derrota, como se ainda desse
+         * para jogar. `tick` é ignorado enquanto ela está parada, então chamar
+         * sempre é de graça.
+         */
+        this.tempo.setRunning(this.estado === 'pedindo')
+        this.tempo.tick(delta)
 
-        const deveContar = this.estado === 'rodando' && !this.ended
-        if (deveContar !== this.relogioLigado) {
-            this.relogioLigado = deveContar
-            this.hud.tempo.setRunning(deveContar)
+        if (this.estado === 'travado' || this.estado === 'fim') return
+
+        this.ocupacao.forEach((resta, id) => {
+            const falta = resta - delta
+            if (falta > 0) { this.ocupacao.set(id, falta); return }
+            this.ocupacao.delete(id)
+            this.fileira.liberar(id)
+            this.playLivre()
+        })
+
+        if (this.estado !== 'pedindo') return
+
+        this.ocioso += delta
+        if (!this.ajudou.releia && this.ocioso >= AJUDA_MS.releia) {
+            this.ajudou.releia = true
+            this.painel.releia()
         }
-        this.hud.tempo.tick(delta)
-
-        if (!deveContar) return
-
-        this.relogioFase += delta
-        this.receberChegadas()
-        this.escorrerPaciencia(delta)
-
-        const vagaram = tickMaquina(this.maquina, delta)
-        vagaram.forEach(id => this.servirEspera(id))
-
-        this.syncHardware()
-    }
-
-    /** Quem chegou a hora de entrar, e tem vaga na bandeja. */
-    private receberChegadas() {
-        while (
-            this.porChegar.length > 0 &&
-            this.porChegar[0].entraMs <= this.relogioFase &&
-            this.fila.length < FILA.max
-        ) {
-            this.entrar(this.porChegar.shift() as PedidoDef)
-        }
-    }
-
-    private escorrerPaciencia(delta: number) {
-        // cópia: `desistiu` mexe em `this.fila` no meio do laço
-        for (const t of [...this.fila]) {
-            /*
-             * E a saída no meio do laço não é paranoia: a primeira desistência
-             * pode zerar a estabilidade, e aí o turno acabou. Sem esta linha, os
-             * outros dois pedidos da bandeja desistiriam em seguida, no mesmo
-             * frame, jogando três mensagens de derrota em cima de uma tela que
-             * já está mostrando a tela de fim.
-             */
-            if (this.estado !== 'rodando') return
-            t.restaMs -= delta
-            t.ficha.setPaciencia(t.restaMs / t.def.pacienciaMs)
-            if (t.restaMs <= 0) void this.desistiu(t)
+        if (!this.ajudou.mostra && this.ocioso >= AJUDA_MS.mostra) {
+            this.ajudou.mostra = true
+            this.mostrarCaminho()
         }
     }
 
     private shutdownScene() {
         this.gen += 1
-        EventBus.off('mute-audio', this.onMuteAudio, this)
+        EventBus.off('mute-audio', this.onMute, this)
         EventBus.off('show-tutorial', this.replayTutorial, this)
         this.unsubPlatform?.()
         this.unsubPlatform = undefined
         this.input.setDefaultCursor('default')
     }
 
-    /* ═══════════════════════════════════════════════ atalhos de estado */
-
-    private get nivel(): NivelDef { return NIVEIS[this.levelIdx] }
-    private get fase(): FaseDef { return this.nivel.fases[this.faseIdx] }
-
-    private get totalPedidos(): number { return this.fase.pedidos.length }
-
-    private podeAgir(): boolean {
-        return this.estado === 'rodando' && !this.ended
-    }
-
-    private ticketSelecionado(): Ticket | null {
-        return this.fila.find(t => t.def.id === this.selecionado) ?? null
-    }
-
-    /** Quem está na fila de espera de uma peça, na ordem em que pediu. */
-    private esperandoPor(id: DispositivoId): Ticket[] {
-        return this.fila.filter(t => t.esperandoEm === id)
-    }
-
-    /* ═══════════════════════════════════════════════════ montar a fase */
-
-    private montarFase(comTutorial: boolean) {
-        /*
-         * Sobe a geração ANTES de tocar em qualquer coisa: é o que mata o
-         * `delayedCall` da fase anterior, o `await` do `encerrar` e o botão da
-         * tela de derrota, todos capazes de mexer numa mesa que já não existe.
-         */
-        this.gen += 1
-
-        this.hardware?.destroy(); this.hardware = undefined
-        this.memoria?.destroy(); this.memoria = undefined
-        this.telaPerdeu?.destroy(); this.telaPerdeu = undefined
-        this.fila.forEach(t => t.ficha.destroy())
-        this.fila = []
-
-        const fase = this.fase
-        this.maquina = criarMaquina(fase)
-        this.relogioFase = 0
-        this.resolvidos = 0
-        this.atendidos = 0
-        this.selecionado = null
-        this.estabilidade = this.nivel.estabilidade
-        this.estado = 'rodando'
-
-        this.porChegar = [...fase.pedidos].sort((a, b) => a.entraMs - b.entraMs)
-
-        this.hud.setInstr(fase.objetivo)
-        this.hud.setProgress(this.faseIdx, this.nivel.fases.length)
-        this.hud.tempo.reset(tempoDaFase(fase))
-        this.hud.tempo.setRunning(false)
-        this.relogioLigado = false
-        this.estab.set(this.estabilidade, false)
-
-        this.hardware = createHardware(this, {
-            pecas: fase.hardware.map(h => h.id),
-            compacto: fase.blocos > 0,
-            onPeca: id => this.onPeca(id),
-        })
-
-        if (fase.blocos > 0) {
-            this.memoria = createMemoria(this, {
-                blocos: fase.blocos,
-                onBloco: (i, prog) => this.onBloco(i, prog),
-            })
-            this.syncMemoria()
-        }
-
-        this.syncHardware()
-        this.mensagem.dizer(fase.dica, TINTA.fala, 'neutro')
-        this.emitCheckpoint()
-
-        if (!comTutorial) return
-
-        const steps = this.buildTutorialSteps()
-        if (steps.length) this.runTutorial(steps, false)
-    }
-
-    /* ═══════════════════════════════════════════════════ desenhar estado */
-
-    private syncHardware() {
-        if (!this.hardware) return
-        const vistas: PecaVista[] = this.fase.hardware.map(h => {
-            const d = this.maquina.dispositivos.get(h.id)
-            return {
-                id: h.id,
-                ligado: d?.ligado !== false,
-                usadoPor: d?.usadoPor,
-                frac: d && d.duracaoMs > 0 ? d.restaMs / d.duracaoMs : 0,
-                esperando: this.esperandoPor(h.id).map(t => t.def.programa),
-            }
-        })
-        this.hardware.sync(vistas)
-    }
-
-    private syncMemoria() {
-        if (!this.memoria) return
-        this.memoria.sync({
-            blocos: this.maquina.blocos,
-            abertos: this.maquina.abertos.map(id => ({
-                id,
-                inicio: inicioDe(this.maquina, id),
-                tam: PROGRAMAS[id].blocos,
-            })),
-        })
-    }
-
-    /* ═══════════════════════════════════════════════════ a fila */
-
-    private entrar(def: PedidoDef) {
-        const t: Ticket = {
-            def,
-            ficha: createFicha(this, {
-                pedido: def,
-                slot: this.fila.length,
-                onTap: () => this.selecionar(def.id),
-            }),
-            restaMs: def.pacienciaMs,
-        }
-        this.fila.push(t)
-        this.playChegou()
-
-        // a bandeja nunca fica com um pedido sem ninguém escolhido: no Nível 1,
-        // onde só há um por vez, isso transforma dois toques em um
-        if (!this.selecionado) this.selecionar(def.id)
-    }
-
-    private selecionar(id: string | null) {
-        if (!this.podeAgir()) return
-        this.selecionado = id
-        this.fila.forEach(t => t.ficha.setSelecionada(t.def.id === id))
-        if (id) this.playSelecionar()
-    }
-
-    private reordenar() {
-        this.fila.forEach((t, i) => t.ficha.setSlot(i, true))
-        if (!this.ticketSelecionado()) {
-            this.selecionado = null
-            if (this.fila.length) this.selecionar(this.fila[0].def.id)
-        }
-    }
+    /* ═══════════════════════════════════════════════════ o laço */
 
     /**
-     * Tira uma ficha da bandeja e vê se a fase acabou.
+     * O PEDIDO SOBE PARA O BALCÃO — E A TELA VOLTA A ACEITAR TOQUE AQUI.
      *
-     * `ok` só decide a animação de saída (sobe e brilha, ou afunda). Pontos e
-     * estabilidade são de quem chamou: quem sabe o que aconteceu é o handler,
-     * não este método.
+     * `trancar(false)` mora NESTE método, e não em quem chama, porque este é o
+     * único lugar do jogo onde a tela volta a ficar jogável depois de uma
+     * animação. Enquanto o destravamento estava espalhado pelos chamadores,
+     * `onTocarFila` trancava a tela para o programa descer voando e ninguém
+     * destrancava: depois de trocar de atendido, a criança tocava numa peça e
+     * nada acontecia — nem as peças, nem os encaixes, nem o NÃO DÁ, nem o `?`.
+     * O estado dizia `pedindo` e todas as zonas estavam mortas.
+     *
+     * A regra que sobrou: quem TRANCA não precisa lembrar de destrancar; quem
+     * põe um pedido no balcão destranca sempre.
      */
-    private async encerrar(t: Ticket, ok: boolean) {
-        const gen = this.gen
-        const i = this.fila.indexOf(t)
-        if (i < 0) return
-        this.fila.splice(i, 1)
-        this.resolvidos += 1
-        void t.ficha.sair(ok)
-        this.reordenar()
-        this.receberChegadas()
-        this.emitCheckpoint()
+    private async mostrarPedido(comTutorial: boolean, origem?: { x: number; y: number }) {
+        const gen = ++this.gen
+        this.estado = 'servindo'
+        this.ocioso = 0
+        this.ajudou = { releia: false, mostra: false }
 
-        if (this.resolvidos >= this.totalPedidos) {
-            await FX.wait(this, 700)
-            if (gen !== this.gen) return
-            this.terminarFase()
-        }
-    }
-
-    /* ═══════════════════════════════════════════════════ ações */
-
-    /**
-     * TOQUE NUMA PEÇA DE HARDWARE.
-     *
-     * O mesmo gesto faz três coisas diferentes, e é o ESTADO da peça que decide
-     * qual — nunca um botão separado:
-     *
-     *   peça livre    → entrega agora
-     *   peça ocupada  → entra na fila dela, e é servido sozinho quando vagar
-     *   peça desligada→ recusa, e explica que este é caso de NEGAR
-     *
-     * Um toque só, com significados diferentes conforme o que está desenhado no
-     * aro. É o contrário do jogo antigo, em que o toque tinha um significado só
-     * ("esta é minha resposta") e o estado da máquina não existia.
-     */
-    private onPeca(id: DispositivoId) {
-        if (!this.podeAgir()) return
-
-        const t = this.ticketSelecionado()
-        if (!t) {
-            this.mensagem.dizer('Toque num pedido primeiro.', TINTA.atencao)
-            return
-        }
-        if (t.esperandoEm) {
-            this.mensagem.dizer('Este já está na fila. Deixe ele esperar.', TINTA.atencao)
-            return
-        }
-
-        const quer = t.def.quer
-        const nomePrograma = PROGRAMAS[t.def.programa].nome
-
-        if (quer.o !== 'usar') {
-            this.errar(
-                `${nomePrograma} quer MEMÓRIA, não uma peça.`,
-                ESTABILIDADE.perdaLeve,
-            )
-            this.memoria?.pulsar(C.ciano)
-            return
-        }
-
-        if (quer.dispositivo !== id) {
-            this.errar(
-                `${nomePrograma} pediu o ${DISPOSITIVOS[quer.dispositivo].nome}.`,
-                ESTABILIDADE.perdaLeve,
-            )
-            this.hardware?.pulsar(id, C.parado)
-            return
-        }
-
-        const d = this.maquina.dispositivos.get(id)
-        if (!d || !d.ligado) {
-            this.errar(porQueNao(t.def, this.maquina), ESTABILIDADE.perdaLeve)
-            this.hardware?.pulsar(id, C.parado)
-            return
-        }
-
-        if (d.usadoPor) {
-            /*
-             * A FILA DE ESPERA — e ela NÃO é um erro.
-             *
-             * Este é o momento em que o jogo deixa de ser múltipla escolha. A
-             * peça existe, está boa e está ocupada: a resposta certa não é
-             * "sim" nem "não", é "agora não, mas guarde a vez". A criança
-             * encaixa, vê o disquinho do programa aparecer no canto do soquete,
-             * e o atendimento acontece sozinho quando a peça vagar.
-             */
-            t.esperandoEm = id
-            t.ficha.setEspera(DISPOSITIVOS[id].nome)
-            this.hardware?.pulsar(id, C.ocupado)
-            this.syncHardware()
-            this.mensagem.dizer(
-                `Na fila do ${DISPOSITIVOS[id].nome}. Ele entra quando vagar.`,
-                TINTA.atencao, 'neutro',
-            )
-            this.playEsperar()
-            return
-        }
-
-        this.atender(t, id)
-    }
-
-    /** Entrega a peça, agora. */
-    private atender(t: Ticket, id: DispositivoId) {
-        const uso = t.def.usoMs ?? 6_000
-        ocupar(this.maquina, id, t.def.programa, uso)
-        t.esperandoEm = undefined
-        t.ficha.setEspera(null)
-
-        this.acertar(
-            `${DISPOSITIVOS[id].nome} para o ${PROGRAMAS[t.def.programa].nome}.`,
-            PONTOS.atendido, ESTABILIDADE.ganhoAtender,
-        )
-        this.atendidos += 1
-        this.hardware?.pulsar(id, C.livre)
-        this.syncHardware()
-        this.playAtender()
-        void this.encerrar(t, true)
-    }
-
-    /** Uma peça vagou: quem estava na fila dela entra sem ninguém pedir. */
-    private servirEspera(id: DispositivoId) {
-        this.syncHardware()
-        const fila = this.esperandoPor(id)
-        if (!fila.length) return
-        this.atender(fila[0], id)
-    }
-
-    /**
-     * TOQUE NA RÉGUA DA MEMÓRIA.
-     *
-     * Bloco com programa → fecha aquele programa.
-     * Bloco vazio        → tenta abrir o pedido que está na mão.
-     *
-     * Fechar é de graça: não ganha ponto nem perde estabilidade. É a
-     * FERRAMENTA da criança, não uma resposta — e ferramenta que cobra pedágio
-     * ninguém usa.
-     */
-    private onBloco(_indice: number, programa: ProgramaId | null) {
-        if (!this.podeAgir()) return
-
-        if (programa) { this.fechar(programa); return }
-
-        const t = this.ticketSelecionado()
-        if (!t) {
-            this.mensagem.dizer('Toque num pedido primeiro.', TINTA.atencao)
-            return
-        }
-        if (t.def.quer.o !== 'abrir') {
-            this.errar(
-                `${PROGRAMAS[t.def.programa].nome} quer uma PEÇA, não memória.`,
-                ESTABILIDADE.perdaLeve,
-            )
-            return
-        }
-
-        if (avaliarPedido(t.def, this.maquina) !== 'liberar') {
-            this.errar(porQueNao(t.def, this.maquina), ESTABILIDADE.perdaLeve)
-            this.memoria?.pulsar(C.parado)
-            return
-        }
-
-        abrirPrograma(this.maquina, t.def.programa)
-        this.syncMemoria()
-        this.memoria?.pulsar(C.livre)
-        this.acertar(
-            `${PROGRAMAS[t.def.programa].nome} aberto. Sobram ${blocosLivres(this.maquina)} blocos.`,
-            PONTOS.atendido, ESTABILIDADE.ganhoAtender,
-        )
-        this.atendidos += 1
-        this.playAtender()
-        void this.encerrar(t, true)
-    }
-
-    private fechar(programa: ProgramaId) {
-        const usando = usandoQual(this.maquina, programa)
-        if (usando) {
-            /*
-             * Fechar um programa no meio do uso não é proibido por capricho: se
-             * o editor está com a impressora, matar o editor deixa a impressora
-             * num estado que ninguém consegue explicar para uma criança
-             * ("imprimiu meio papel?"). A recusa é informativa e não custa nada.
-             */
-            this.mensagem.dizer(
-                `${PROGRAMAS[programa].nome} está usando a ${DISPOSITIVOS[usando].nome}.`,
-                TINTA.atencao, 'neutro',
-            )
-            this.hardware?.pulsar(usando, C.ocupado)
-            return
-        }
-
-        fecharPrograma(this.maquina, programa)
-        this.syncMemoria()
-        this.mensagem.dizer(
-            `Fechei o ${PROGRAMAS[programa].nome}. Sobram ${blocosLivres(this.maquina)} blocos.`,
-            TINTA.fala, 'neutro',
-        )
-        this.playFechar()
-    }
-
-    /**
-     * NEGAR.
-     *
-     * Só está certo quando `avaliarPedido` diz `negar` — ou seja, quando é
-     * impossível AGORA e vai continuar impossível. Negar o que dá para esperar
-     * é o erro grave do jogo, e a mensagem sempre diz o que dava para fazer no
-     * lugar: a criança tem que sair do erro sabendo a alternativa.
-     */
-    private onNegar() {
-        if (!this.podeAgir()) return
-
-        const t = this.ticketSelecionado()
-        if (!t) {
-            this.mensagem.dizer('Toque num pedido primeiro.', TINTA.atencao)
-            return
-        }
+        if (this.selecionado === null) { void this.terminar(); return }
 
         /*
-         * Quem já está na fila de uma peça NÃO leva bronca por isso.
+         * A fila solta o ícone ANTES do voo.
          *
-         * A criança encaixou, o pedido está esperando vaga — que é a resposta
-         * certa — e então ela aperta NEGAR. Cobrar aqui seria punir alguém por
-         * ter acertado e depois duvidado. A mesa só lembra o que já está feito.
+         * `posDe` é uma coordenada fixa do trilho, então dá para ler o ponto de
+         * partida e só então tirar o ícone de lá. Na ordem contrária apareceriam
+         * duas cópias do mesmo programa — uma voando e outra parada no trilho.
          */
-        if (t.esperandoEm) {
-            this.mensagem.dizer(
-                `Ele já está na fila do ${DISPOSITIVOS[t.esperandoEm].nome}.`,
-                TINTA.atencao, 'neutro',
-            )
+        const daFila = origem ?? this.fila.posDe(0)
+        this.redesenharFila()
+        this.emitCheckpoint()
+
+        await this.painel.mostrar(this.pedido, daFila)
+        if (gen !== this.gen) return
+
+        // o tutorial destranca sozinho, no `onFinish` do `runTutorial`
+        if (comTutorial) {
+            this.runTutorial(this.buildTutorialSteps(), false, () => {
+                if (gen !== this.gen) return
+                this.estado = 'pedindo'
+                this.ocioso = 0
+            })
             return
         }
 
-        const v = avaliarPedido(t.def, this.maquina)
-        if (v === 'negar') {
-            this.acertar(porQueNao(t.def, this.maquina), PONTOS.negado, ESTABILIDADE.ganhoNegar)
-            this.playNegar()
-            void this.encerrar(t, true)
-            return
-        }
-
-        const saida =
-            v === 'esperar' ? 'Dá para encaixar e esperar.'
-                : v === 'fechar' ? 'Dá para fechar um programa e abrir.'
-                    : 'Dá para atender agora.'
-        this.errar(`${porQueNao(t.def, this.maquina)} ${saida}`, ESTABILIDADE.perdaGrave)
+        this.trancar(false)
+        this.estado = 'pedindo'
+        this.ocioso = 0
     }
 
-    /** A paciência zerou: ninguém foi atendido, e a culpa é da mesa. */
-    private async desistiu(t: Ticket) {
-        if (this.fila.indexOf(t) < 0) return
+    /**
+     * Tira o pedido resolvido da lista e chama o próximo.
+     *
+     * A tela fica TRANCADA durante a pausa entre um pedido e outro. Não é
+     * capricho: destrancar aqui deixava as peças reagindo ao dedo por um
+     * segundo e pouco enquanto o balcão estava vazio — o toque respondia com
+     * uma animação e não fazia nada, que é o pior tipo de resposta.
+     */
+    private async proximo(resolvido: number) {
+        const gen = this.gen
+        this.restantes = this.restantes.filter(i => i !== resolvido)
+        this.selecionado = this.restantes[0] ?? null
 
-        this.errors += 1
-        this.points += PONTOS.desistiu
-        this.mudarEstabilidade(-ESTABILIDADE.perdaDesistiu)
-        this.mensagem.dizer(
-            `${PROGRAMAS[t.def.programa].nome} cansou de esperar.`,
-            TINTA.alerta, 'alerta',
+        if (this.selecionado === null) { void this.terminar(); return }
+
+        await FX.wait(this, ENTRE_PEDIDOS_MS)
+        if (gen !== this.gen) return
+        void this.mostrarPedido(false)
+    }
+
+    /**
+     * TROCAR DE ATENDIDO.
+     *
+     * O programa que estava no balcão desce voando de volta para a vaga dele, e
+     * o escolhido sobe. É esse par de voos que faz "escolher a ordem" ser uma
+     * coisa que se VÊ — sem ele, a troca seria um estado interno e a criança
+     * teria que confiar que alguma coisa aconteceu.
+     *
+     * Trocar é DE GRAÇA. É a ferramenta do nível, não uma resposta.
+     */
+    private async onTocarFila(j: number) {
+        if (this.estado !== 'pedindo') return
+        const trilho = this.noTrilho
+        const novo = trilho[j]
+        if (novo === undefined || !this.ativos.includes(novo)) return
+
+        const antigo = this.selecionado
+        if (antigo === null || antigo === novo) return
+
+        const gen = ++this.gen
+        this.estado = 'servindo'
+        this.trancar(true)
+        this.playTrocar()
+
+        const origem = this.fila.posDe(j)
+        const novoTrilho = this.restantes.filter(i => i !== novo)
+        const destino = this.fila.posDe(Math.max(0, novoTrilho.indexOf(antigo)))
+
+        // a vaga do que está voltando fica VAZIA durante o voo, senão ele
+        // aparece duas vezes: pousado no trilho e ainda no ar
+        this.selecionado = novo
+        this.redesenharFila(antigo)
+
+        await this.painel.devolver(destino)
+        if (gen !== this.gen) return
+
+        // `mostrarPedido` sobe a geração sozinho, e é isso que invalida qualquer
+        // callback atrasado deste voo
+        void this.mostrarPedido(false, origem)
+    }
+
+    /* ═══════════════════════════════════════════════════ as ações */
+
+    /**
+     * TOQUE NUMA PEÇA.
+     *
+     * O ESTADO da peça decide o que acontece — nunca um botão separado. É o
+     * mesmo gesto o tempo todo, e é o tabuleiro que muda de significado.
+     */
+    private onPeca(id: PecaId) {
+        if (this.estado !== 'pedindo' || this.selecionado === null) return
+        this.ocioso = 0
+        const p = this.pedido
+
+        // peça errada: é o erro de verdade — não leu o pedido
+        if (id !== p.peca) {
+            this.fileira.erro(id)
+            this.painel.negar()
+            this.errar()
+            return
+        }
+
+        // a peça certa, mas sem energia: a resposta está no botão, e o botão
+        // pulsa para dizer isso. Não custa luz: descobrir isto é a lição
+        if (this.nivel.semEnergia.includes(id)) {
+            this.fileira.erro(id)
+            this.botao.chamar()
+            this.playAviso()
+            return
+        }
+
+        if (id === 'memoria') { this.abrirNaMemoria(); return }
+
+        /*
+         * A peça certa, mas EM USO por outro programa.
+         *
+         * Não custa luz, e no Nível 3 é a coisa mais importante da tela: é aqui
+         * que a criança descobre que a saída não é insistir, é atender outro da
+         * fila e voltar depois.
+         */
+        if (this.ocupacao.has(id)) {
+            this.fileira.aguarde(id)
+            this.playAguarde()
+            /*
+             * E o trilho CHAMA: "a saída está aqui embaixo".
+             *
+             * É a coisa mais importante do Nível 3, e ela não gasta uma palavra:
+             * a criança insiste na peça ocupada, a peça responde "ainda não" e o
+             * outro programa pula no trilho. Insistir não leva a lugar nenhum;
+             * atender o outro leva.
+             */
+            if (this.quantosAtivos > 1) this.fila.chamar()
+            return
+        }
+
+        void this.entregar(id)
+    }
+
+    /** O programa sai do painel, VOA até a peça e pousa nela. */
+    private async entregar(id: PecaId) {
+        const gen = this.gen
+        const qual = this.selecionado as number
+        this.estado = 'servindo'
+        this.trancar(true)
+
+        const icone = this.painel.soltarIcone()
+        this.fileira.acerto(id)
+        this.playAcerto()
+        this.marcarAcerto()
+
+        await FX.all(
+            this.painel.esconder(true),
+            icone ? this.fileira.ocupar(id, icone) : Promise.resolve(),
         )
-        this.playDesistiu()
-        runtimeGameBridge.emit({
-            type: 'WRONG_ANSWER', gameId: GAME_ID,
-            pointsEarned: PONTOS.desistiu, stage: this.nivel.nivel,
-        })
+        if (gen !== this.gen) return
 
-        void this.encerrar(t, false)
-        this.syncHardware()
+        this.ocupacao.set(id, USO_MS)
+        void this.proximo(qual)
+    }
+
+    /* ═══════════════════════════════════════════════════ a memória */
+
+    /**
+     * ABRIR: pôr o programa num encaixe livre.
+     *
+     * Se não houver encaixe livre, isto NÃO é erro e NÃO custa luz — os quatro
+     * encaixes pulsam em vermelho, que é o jogo dizendo "o problema está aqui".
+     * A saída é fechar alguém, e fechar é sempre de graça.
+     */
+    private abrirNaMemoria() {
+        const livre = this.abertos.indexOf(null)
+        if (livre < 0) {
+            this.encaixes?.cheia()
+            this.fileira.erro('memoria')
+            this.playAviso()
+            return
+        }
+        void this.abrir(livre)
+    }
+
+    private async abrir(i: number) {
+        const gen = this.gen
+        const qual = this.selecionado as number
+        this.estado = 'servindo'
+        this.trancar(true)
+
+        const quem = this.pedido.programa
+        const icone = this.painel.soltarIcone()
+        this.playAcerto()
+        this.marcarAcerto()
+
+        await FX.all(
+            this.painel.esconder(true),
+            icone && this.encaixes
+                ? this.encaixes.guardar(i, quem, icone)
+                : Promise.resolve(),
+        )
+        if (gen !== this.gen) return
+
+        this.abertos[i] = quem
+        void this.proximo(qual)
+    }
+
+    /**
+     * TOQUE NUM ENCAIXE.
+     *
+     * Com programa dentro → fecha. Vazio → é a mesma coisa que tocar na peça de
+     * memória, porque é isso que a criança quer dizer com aquele toque.
+     *
+     * Fechar não dá ponto e não tira luz: é a FERRAMENTA da criança, não uma
+     * resposta. E não existe escolha errada de quem fechar — de propósito.
+     */
+    private onEncaixe(i: number, quem: ProgramaId | null) {
+        if (this.estado !== 'pedindo') return
+        this.ocioso = 0
+        if (!quem) { this.onPeca('memoria'); return }
+        void this.fechar(i)
+    }
+
+    private async fechar(i: number) {
+        const gen = this.gen
+        this.estado = 'servindo'
+        this.trancar(true)
+        this.playFechar()
+
+        await this.encaixes?.soltar(i)
+        if (gen !== this.gen) return
+
+        this.abertos[i] = null
+        this.trancar(false)
+        this.estado = 'pedindo'
+        this.ocioso = 0
+    }
+
+    /* ═══════════════════════════════════════════════════ o NÃO DÁ */
+
+    private onNaoDa() {
+        if (this.estado !== 'pedindo' || this.selecionado === null) return
+        this.ocioso = 0
+
+        if (!this.nivel.semEnergia.includes(this.pedido.peca)) {
+            /*
+             * Disse que não dava, e dava.
+             *
+             * O erro aponta para a PEÇA que resolvia — não para uma frase. A
+             * criança vê a resposta piscando no lugar onde ela mora, que é a
+             * forma mais curta de explicar que existia saída.
+             */
+            this.fileira.apontar(this.pedido.peca)
+            if (this.pedido.peca === 'memoria' && this.abertos.indexOf(null) < 0) {
+                this.encaixes?.cheia()
+            }
+            this.errar()
+            return
+        }
+
+        void this.recusar()
+    }
+
+    private async recusar() {
+        const gen = this.gen
+        const qual = this.selecionado as number
+        this.estado = 'servindo'
+        this.trancar(true)
+
+        this.playAcerto()
+        this.marcarAcerto()
+        void FX.sparks(this, PEDIDO.cx, PEDIDO.fraseCY, {
+            color: C.verde, count: 18, spread: 200, depth: 25,
+        })
+        void FX.ping(this, BOTAO.cx, BOTAO.cy, C.verde, { radius: 120 })
+
+        await this.painel.esconder(true)
+        if (gen !== this.gen) return
+
+        void this.proximo(qual)
     }
 
     /* ═══════════════════════════════════════════════ acerto e erro */
 
-    private acertar(texto: string, pontos: number, ganho: number) {
-        this.hits += 1
-        this.points += pontos
-        this.mudarEstabilidade(ganho)
-        this.mensagem.dizer(texto, TINTA.ok, 'ok')
+    private marcarAcerto() {
+        this.acertos += 1
+        this.pontos += PONTOS.acerto
         runtimeGameBridge.emit({
             type: 'CORRECT_ANSWER', gameId: GAME_ID,
-            pointsEarned: pontos, stage: this.nivel.nivel,
+            pointsEarned: PONTOS.acerto, stage: this.nivel.numero,
         })
     }
 
-    private errar(texto: string, perda: number) {
-        this.errors += 1
-        this.points += PONTOS.erro
-        this.mudarEstabilidade(-perda)
-        this.mensagem.dizer(texto, TINTA.alerta, 'alerta')
+    private errar() {
+        /*
+         * DEPOIS QUE A ÚLTIMA LUZ APAGA, NADA MAIS CUSTA LUZ.
+         *
+         * Sem esta linha, dois erros disparados no mesmo punhado de quadros
+         * chamavam `travou()` duas vezes: dois véus por cima da sala, dois
+         * `showLevelComplete` empilhados, o som de derrota em cima do som de
+         * derrota e a tela parada por baixo de tudo. Era exatamente o que
+         * acontecia quando os anéis de paciência do Nível 3 estouravam juntos.
+         *
+         * O relógio já saiu, mas a guarda fica: ela é uma linha, e o custo de
+         * não ter é o jogo travado na cara da criança.
+         */
+        if (this.estado === 'travado' || this.estado === 'fim') return
+        this.erros += 1
+        this.pontos += PONTOS.erro
+        this.luzesRestantes -= 1
+        this.luzes.set(this.luzesRestantes)
         this.playErro()
+        FX.shakeCam(this, 'leve')
+        void FX.flash(this, C.vermelho, { duration: 260, peak: 0.12 })
+
         runtimeGameBridge.emit({
             type: 'WRONG_ANSWER', gameId: GAME_ID,
-            pointsEarned: PONTOS.erro, stage: this.nivel.nivel,
+            pointsEarned: PONTOS.erro, stage: this.nivel.numero,
         })
         this.emitCheckpoint()
+
+        if (this.luzesRestantes <= 0) void this.travou()
     }
 
-    private mudarEstabilidade(delta: number) {
-        const antes = this.estabilidade
-        this.estabilidade = Phaser.Math.Clamp(this.estabilidade + delta, 0, 100)
-        if (this.estabilidade === antes) return
-
-        this.estab.set(this.estabilidade)
-        if (this.estabilidade <= 30 && antes > 30) this.playInstavel()
-        if (this.estabilidade <= 0) this.perderPorTravamento()
+    /** A ajuda de quem travou: a peça certa pisca. Sem frase, sem bronca. */
+    private mostrarCaminho() {
+        if (this.selecionado === null) return
+        const alvo = this.pedido.peca
+        if (this.nivel.semEnergia.includes(alvo)) { this.botao.chamar(); return }
+        if (alvo === 'memoria' && this.abertos.indexOf(null) < 0) {
+            this.encaixes?.cheia()
+            return
+        }
+        /*
+         * No Nível 3, quando a peça pedida está OCUPADA, apontar para ela seria
+         * mandar a criança insistir no que não dá. A ajuda certa ali é mostrar a
+         * FILA: existe outro que dá para atender agora.
+         */
+        if (this.ocupacao.has(alvo) && this.noTrilho.length) {
+            this.fileira.aguarde(alvo)
+            this.fila.chamar()
+            return
+        }
+        this.fileira.apontar(alvo)
     }
 
-    /* ═══════════════════════════════════════════════════ pausa */
-
-    private alternarPausa() {
-        if (this.ended) return
-        if (this.estado === 'pausado') { this.despausar(); return }
-        if (this.estado !== 'rodando') return
-
-        this.estado = 'pausado'
-        this.hardware?.setAtivo(false)
-        this.memoria?.setAtivo(false)
-        this.btNegar.setEnabled(false)
-        this.btPausa.setLabel('CONTINUAR')
-        this.pausa.mostrar()
-        this.playPausa()
+    private trancar(on: boolean) {
+        this.fileira.setAtivo(!on)
+        this.encaixes?.setAtivo(!on)
+        this.fila.setAtivo(!on)
+        this.botao.setAtivo(!on)
+        this.ajuda.setAtivo(!on)
     }
 
-    private despausar() {
-        if (this.estado !== 'pausado') return
-        this.estado = 'rodando'
-        this.hardware?.setAtivo(true)
-        this.memoria?.setAtivo(true)
-        this.btNegar.setEnabled(true)
-        this.btPausa.setLabel('PAUSA')
-        this.pausa.esconder()
-    }
-
-    /* ═══════════════════════════════════════════════════ derrotas */
+    /* ═══════════════════════════════════════════════ fim */
 
     /**
-     * AS DUAS FORMAS DE PERDER, E O QUE ELAS TÊM EM COMUM.
+     * AS TRÊS LUZES APAGARAM.
      *
-     * ── O QUE A PLATAFORMA FAZ, E O QUE ELA NÃO FAZ ──────────────────────
+     * A plataforma tem o evento `GAME_OVER`, mas ele só NOTIFICA: nada do lado
+     * de fora reinicia nada. Quem faz a derrota acontecer é esta cena.
      *
-     * O contrato tem um evento `GAME_OVER`, mas ele só NOTIFICA: nada do lado de
-     * fora reinicia fase, desconta vida ou fecha o jogo. Quem faz a derrota
-     * acontecer é esta cena. O evento é o aviso; o mecanismo é este método.
-     *
-     * ── PERDER A FASE, NUNCA O NÍVEL ─────────────────────────────────────
-     *
-     * A derrota devolve a criança à MESMA fase, com a máquina zerada e a
-     * estabilidade cheia. Perder o nível inteiro transformaria um problema de
-     * ritmo em castigo, e brigaria com a regra da casa: errar trava até
-     * entender, sem empurrar ninguém para a frente. Não há limite de
-     * tentativas, e os pontos já ganhos ficam.
+     * E a derrota devolve a criança ao começo do MESMO nível, com a tela limpa
+     * e sem limite de tentativas. Não existe punição além de recomeçar.
      */
-    private perderPorTravamento() {
-        this.perder(
-            'O sistema travou!',
-            'A estabilidade chegou a zero. Cada pedido sem resposta derruba um pedaço dela.',
-        )
-    }
-
-    private perderPorTempo() {
-        if (this.resolvidos >= this.totalPedidos) return
-        this.perder(
-            'O turno acabou!',
-            'O expediente terminou com pedidos na fila. Responder rápido é parte do trabalho.',
-        )
-    }
-
-    private perder(titulo: string, recado: string) {
-        if (this.ended || this.estado === 'perdido') return
-
-        // mata tudo que estava no ar: animação pendente, `await` de fase,
-        // qualquer callback atrasado que fosse mexer numa mesa que já era
+    private async travou() {
         const gen = ++this.gen
-        this.estado = 'perdido'
-        this.relogioLigado = false
+        this.estado = 'travado'
+        this.trancar(true)
+        this.playTravou()
 
-        this.hud.tempo.setRunning(false)
-        this.hud.setHelpEnabled(false)
-        this.tempoTotal += this.hud.tempo.elapsed()
-
-        this.hardware?.setAtivo(false)
-        this.memoria?.setAtivo(false)
-        this.btNegar.setEnabled(false)
-        this.btPausa.setEnabled(false)
-        this.fila.forEach(t => t.ficha.setSelecionada(false))
-
-        this.mensagem.dizer('Vamos recomeçar este turno.', TINTA.alerta, 'alerta')
-        this.playPerdeu()
-
-        runtimeGameBridge.emit({
-            type: 'GAME_OVER', gameId: GAME_ID, stage: this.nivel.nivel,
-        })
+        runtimeGameBridge.emit({ type: 'GAME_OVER', gameId: GAME_ID, stage: this.nivel.numero })
         this.emitCheckpoint()
 
-        void FX.flash(this, C.parado, { duration: 360, peak: 0.16 })
+        await travar(this)
+        if (gen !== this.gen) return
 
-        this.telaPerdeu = showLevelComplete(this, {
-            title: titulo,
-            subtitle: `Fase ${this.faseIdx + 1} de ${this.nivel.fases.length}  ·  Nível ${this.nivel.nivel}`,
-            // a dica do nível, e não uma bronca: a criança volta sabendo mais
-            // do que quando entrou
-            message: `${recado}\n\n${this.nivel.dica}`,
-            accent: C.parado,
+        showLevelComplete(this, {
+            title: 'O computador travou!',
+            subtitle: 'As três luzes apagaram',
+            message: this.nivel.numero === 3
+                ? 'Peça ocupada não fica ocupada para sempre. Atenda o outro e volte depois.'
+                : 'Cada programa precisa da peça certa. Leia o que ele pede e entregue só ela.',
+            accent: C.vermelho,
             panelColor: C.creme,
             overlayColor: C.ink,
-            progress: { total: this.nivel.fases.length, current: this.faseIdx },
             buttons: [
                 {
                     label: 'Tentar de novo',
-                    color: C.livre,
-                    onClick: () => {
-                        if (gen !== this.gen) return
-                        this.telaPerdeu?.destroy()
-                        this.telaPerdeu = undefined
-                        this.hud.setHelpEnabled(true)
-                        this.btNegar.setEnabled(true)
-                        this.btPausa.setEnabled(true)
-                        this.montarFase(false)
-                    },
+                    color: C.verde,
+                    onClick: () => this.scene.restart({ nivel: this.nivel.numero, points: this.pontos }),
                 },
-                {
-                    label: 'Escolher jogo',
-                    color: C.edge,
-                    onClick: () => EventBus.emit('exit-game'),
-                },
+                { label: 'Escolher jogo', color: C.fosco, onClick: () => EventBus.emit('exit-game') },
             ],
         })
     }
 
-    /* ═══════════════════════════════════════════════ avanço */
+    /**
+     * O TEMPO ACABOU.
+     *
+     * Não é a mesma coisa que travar o computador, e a tela diz isso: sem
+     * vermelho, sem "você errou", e sem tirar luz nenhuma. Perder o NÍVEL — e
+     * não o jogo — é o que o `createTimeBar` recomenda para fundamental 1, e é
+     * coerente com a casa: recomeçar não é punição, é a segunda tentativa.
+     *
+     * A guarda do começo é a mesma do `errar()`: depois que a partida acabou,
+     * ela não pode acabar de novo. `onEmpty` dispara uma vez por `reset`, mas
+     * um `tick` atrasado de um frame já bastaria para empilhar duas telas.
+     */
+    private async tempoEsgotado() {
+        if (this.estado === 'travado' || this.estado === 'fim') return
+        const gen = ++this.gen
+        this.estado = 'travado'
+        this.trancar(true)
+        this.playTravou()
 
-    private terminarFase() {
-        if (this.estado !== 'rodando' || this.ended) return
-
-        this.estado = 'fim'
-        this.relogioLigado = false
-        this.hud.tempo.setRunning(false)
-        this.tempoTotal += this.hud.tempo.elapsed()
-        this.hardware?.setAtivo(false)
-        this.memoria?.setAtivo(false)
-
-        void FX.sparks(this, 640, MEM.cy, { color: C.livre, count: 26, spread: 320 })
-
-        this.faseIdx += 1
-        if (this.faseIdx >= this.nivel.fases.length) {
-            this.encerrarNivel()
-            return
-        }
-
-        this.hud.setProgress(this.faseIdx, this.nivel.fases.length)
-        this.mensagem.dizer('Turno fechado. Próxima fase!', TINTA.ok, 'ok')
-        this.playFase()
+        runtimeGameBridge.emit({ type: 'GAME_OVER', gameId: GAME_ID, stage: this.nivel.numero })
         this.emitCheckpoint()
 
-        const gen = this.gen
-        this.time.delayedCall(1200, () => {
-            if (gen !== this.gen || this.ended) return
-            this.montarFase(false)
+        await travar(this)
+        if (gen !== this.gen) return
+
+        showLevelComplete(this, {
+            title: 'O tempo acabou!',
+            subtitle: `${this.acertos} de ${this.nivel.pedidos.length} pedidos atendidos`,
+            message: 'O relógio zerou. Comece de novo — a barra volta cheia.',
+            accent: C.ciano,
+            panelColor: C.creme,
+            overlayColor: C.ink,
+            buttons: [
+                {
+                    label: 'Tentar de novo',
+                    color: C.verde,
+                    onClick: () => this.scene.restart({ nivel: this.nivel.numero, points: this.pontos }),
+                },
+                { label: 'Escolher jogo', color: C.fosco, onClick: () => EventBus.emit('exit-game') },
+            ],
         })
     }
 
-    private encerrarNivel() {
-        this.ended = true
+    private async terminar() {
+        this.estado = 'fim'
         this.gen += 1
-        this.hud.setProgress(this.nivel.fases.length, this.nivel.fases.length)
-        this.hud.setHelpEnabled(false)
-        this.hud.tempo.setRunning(false)
-        this.btNegar.setEnabled(false)
-        this.btPausa.setEnabled(false)
+        this.trancar(true)
+        this.fila.set([])
 
-        runtimeGameBridge.emit({
-            type: 'GAME_COMPLETED', gameId: GAME_ID, stage: this.nivel.nivel,
-        })
+        const ultimo = this.nivelIdx >= NIVEIS.length - 1
+        if (ultimo) {
+            runtimeGameBridge.emit({
+                type: 'GAME_COMPLETED', gameId: GAME_ID, stage: this.nivel.numero,
+            })
+        }
         this.emitCheckpoint(true)
 
-        const lvl = this.nivel.nivel
-        const next = lvl < 3 ? (lvl + 1) as 2 | 3 : null
+        await FX.wait(this, 400)
 
-        if (next) {
+        const total = this.nivel.pedidos.length
+        if (!ultimo) {
+            const proximo = NIVEIS[this.nivelIdx + 1]
             showLevelComplete(this, {
-                title: 'Sistema estável!',
-                subtitle: `Nível ${lvl} concluído  ·  ${formatTime(this.tempoTotal)}`,
-                message: NIVEIS[lvl].objetivo,
+                title: `Nível ${this.nivel.numero} completo!`,
+                subtitle: `${this.acertos} de ${total} pedidos atendidos`,
+                message: proximo.numero === 2
+                    ? 'Agora entra a MEMÓRIA: o lugar onde os programas ficam abertos.'
+                    : 'Agora DOIS programas pedem ao mesmo tempo. Você escolhe a ordem.',
                 accent: C.ciano,
                 panelColor: C.creme,
                 overlayColor: C.ink,
-                progress: { total: 3, current: lvl },
+                progress: { total: NIVEIS.length, current: this.nivel.numero },
                 autoAdvance: {
-                    delay: 2300,
-                    label: 'Ligando a próxima máquina...',
-                    onComplete: () => this.scene.restart({ level: next, points: this.points }),
+                    delay: 2400,
+                    label: proximo.numero === 2 ? 'Ligando a memória...' : 'Abrindo a fila...',
+                    onComplete: () => this.scene.restart({
+                        nivel: this.nivel.numero + 1, points: this.pontos,
+                    }),
                 },
             })
             return
         }
 
-        FX.confetti(this, { colors: [C.ciano, C.livre, C.ocupado, C.creme] })
+        FX.confetti(this, { colors: [C.ciano, C.verde, C.creme] })
         showLevelComplete(this, {
-            title: 'Controlador do Sistema!',
-            subtitle: `${this.hits} decisões certas  ·  ${formatTime(this.tempoTotal)}`,
+            title: 'A máquina rodou!',
+            subtitle: `${this.acertos} de ${total} pedidos atendidos`,
             message:
-                'Um sistema operacional não escolhe entre sim e não: ele escolhe entre '
-                + 'agora, daqui a pouco e nunca. Você distribuiu teclado, memória e '
-                + 'impressora sem deixar a máquina travar.',
-            accent: C.livre,
+                'Nenhum programa liga o teclado sozinho, nenhum abre sem lugar na '
+                + 'memória, e nenhum sabe esperar a vez. Quem entrega as peças, guarda '
+                + 'o espaço e decide a ordem é o sistema operacional — e nesta rodada o '
+                + 'sistema operacional foi você.',
+            accent: C.verde,
             panelColor: C.creme,
             overlayColor: C.ink,
-            progress: { total: 3, current: 3 },
+            progress: { total: NIVEIS.length, current: NIVEIS.length },
             buttons: [
                 {
                     label: 'Jogar de novo',
-                    color: C.livre,
-                    onClick: () => this.scene.restart({ level: 1, points: 0 }),
+                    color: C.verde,
+                    onClick: () => this.scene.restart({ nivel: 1, points: this.pontos }),
                 },
-                {
-                    label: 'Escolher jogo',
-                    color: C.edge,
-                    onClick: () => EventBus.emit('exit-game'),
-                },
+                { label: 'Escolher jogo', color: C.fosco, onClick: () => EventBus.emit('exit-game') },
             ],
         })
     }
@@ -957,186 +855,174 @@ export class GameScene extends Phaser.Scene {
     /* ═══════════════════════════════════════════════════ tutorial */
 
     /**
-     * O TUTORIAL MOSTRA O TOQUE — e toque é bater no lugar, não arrastar.
+     * QUATRO FALAS, UMA LINHA CADA.
      *
-     * Todo ponteiro é `tap`: fica parado em cima de um alvo e bate, com uma
-     * ondinha saindo dali. Foi a correção que o Baralho das Listas precisou —
-     * lá o dedo viajava setecentos pixels até a fenda, que é o desenho
-     * universal de arrastar, e a criança tentava arrastar num jogo que só
-     * aceita toque.
+     * As FRASES moram em `data/niveis.ts` — é lá que o verificador as mede. A
+     * GEOMETRIA mora aqui, porque só a cena sabe onde as peças pousaram.
      *
-     * E ele é CURTO. Três a cinco falas de uma linha, cada uma apontando para
-     * uma coisa desenhada. Uma tela com máquina, memória e fila tem muito o que
-     * explicar, e é exatamente por isso que o tutorial não pode explicar tudo:
-     * o que sobra a criança descobre errando barato, com a mensagem do rodapé
-     * dizendo o motivo.
+     * Todo ponteiro é `tap`: o dedo fica parado em cima do alvo e bate. Sem
+     * `tap` ele viaja de um ponto a outro, que é o desenho universal de
+     * ARRASTAR — e este jogo só aceita toques.
      */
     private buildTutorialSteps(): TutorialStep[] {
-        const cfg = this.fase.blocos > 0 ? PECAS.comMemoria : PECAS.semMemoria
-        const banda = {
-            x: 640, y: cfg.cy, w: 1180, h: cfg.tile + 40,
-        }
-        const filaSpot = {
-            x: 640, y: FILA.cy, w: 1230, h: FILA.h + 26,
-        }
-        const estabSpot = {
-            x: ESTAB.x + ESTAB.w / 2, y: ESTAB.cy, w: ESTAB.w + 40, h: 54,
-        }
+        const tocar = (x: number, y: number) => ({ fromX: x, fromY: y, toX: x, toY: y, tap: true })
+        const falas = this.nivel.tutorial
+        const desligada = this.fileira.posDe(this.nivel.semEnergia[0])
 
-        /** O dedo parado em cima de UMA coisa, batendo nela. */
-        const tocar = (x: number, y: number) => ({
-            fromX: x, fromY: y, toX: x, toY: y, tap: true,
-        })
-
-        if (this.nivel.nivel === 2) {
-            const m = this.memoria?.pos() ?? { x: 640, y: MEM.cy, w: MEM.w }
+        if (this.nivel.numero === 3) {
+            /*
+             * QUATRO FALAS, E CADA UMA ILUMINA UM LUGAR SÓ.
+             *
+             * A versão anterior abria o tutorial iluminando o trilho inteiro
+             * para falar de três pedidos simultâneos — um retângulo largo, com
+             * ícones acesos e apagados dentro, para explicar uma coisa que a
+             * criança ainda não tinha visto acontecer. Agora a sequência segue o
+             * olho: quem está pedindo AGORA (o balcão), quem está esperando (um
+             * ícone, um círculo), como trazer ele (o dedo bate nele), e o que
+             * fazer quando a peça está ocupada (a fileira).
+             */
+            const naFila = this.fila.posDe(0)
+            const noBalcao = {
+                shape: 'rect' as const,
+                x: PEDIDO.cx, y: PEDIDO.y + PEDIDO.h / 2,
+                w: PEDIDO.w + 26, h: PEDIDO.h + 26,
+            }
+            const naVez = {
+                shape: 'circle' as const,
+                x: naFila.x, y: naFila.y, w: 112, h: 112,
+            }
             return [
+                { text: falas[0], ...noBalcao, balloonX: 640, balloonY: 470 },
+                { text: falas[1], ...naVez, balloonX: 580, balloonY: 420 },
                 {
-                    text: 'Isto é a MEMÓRIA. Cada quadradinho é um bloco.',
-                    shape: 'rect' as const, x: m.x, y: m.y, w: m.w + 40, h: MEM.h + 20,
-                    balloonX: 640, balloonY: 200,
+                    text: falas[2], ...naVez,
+                    balloonX: 580, balloonY: 420,
+                    pointer: tocar(naFila.x, naFila.y),
                 },
                 {
-                    text: 'Para ABRIR um programa, toque na régua da memória.',
-                    shape: 'rect' as const, x: m.x, y: m.y, w: m.w + 40, h: MEM.h + 20,
-                    balloonX: 640, balloonY: 200,
-                    pointer: tocar(m.x, m.y),
-                },
-                {
-                    text: 'Sem espaço? Toque num programa aberto para fechar.',
-                    shape: 'rect' as const, x: m.x, y: m.y, w: m.w + 40, h: MEM.h + 20,
-                    balloonX: 640, balloonY: 200,
+                    text: falas[3],
+                    shape: 'rect' as const, x: 640, y: PECAS.cy, w: 1180, h: PECAS.alt + 150,
+                    balloonX: 640, balloonY: 250,
                 },
             ]
         }
 
-        if (this.nivel.nivel === 3) {
+        if (this.nivel.numero === 2) {
+            const mem = this.fileira.posDe('memoria')
+            const encaixe = this.encaixes?.posDe(0) ?? { x: mem.x, y: mem.y - 110 }
             return [
                 {
-                    text: 'Agora chegam três pedidos ao mesmo tempo.',
-                    shape: 'rect' as const, ...filaSpot,
-                    balloonX: 640, balloonY: 300,
+                    text: falas[0],
+                    shape: 'rect' as const,
+                    x: mem.x, y: (mem.y + encaixe.y) / 2,
+                    w: 320, h: (mem.y - encaixe.y) + PECAS.alt + 60,
+                    balloonX: 470, balloonY: 250,
                 },
                 {
-                    text: 'Comece por quem tem menos paciência na barrinha.',
-                    shape: 'rect' as const, ...filaSpot,
-                    balloonX: 640, balloonY: 300,
+                    text: falas[1],
+                    shape: 'rect' as const, x: mem.x, y: mem.y, w: 230, h: PECAS.alt + 90,
+                    balloonX: 470, balloonY: 250,
+                    pointer: tocar(mem.x, mem.y),
+                },
+                {
+                    text: falas[2],
+                    shape: 'rect' as const, x: encaixe.x, y: encaixe.y, w: 96, h: 96,
+                    balloonX: 560, balloonY: 560,
+                    pointer: tocar(encaixe.x, encaixe.y),
+                },
+                {
+                    text: falas[3],
+                    shape: 'rect' as const, x: desligada.x, y: PECAS.cy, w: 220, h: PECAS.alt + 90,
+                    balloonX: 520, balloonY: 250,
                 },
             ]
         }
 
-        /* ── Nível 1 ─────────────────────────────────────────────────── */
-        const primeiro = this.fase.pedidos[0]
-        const alvo = primeiro && primeiro.quer.o === 'usar'
-            ? this.hardware?.posDe(primeiro.quer.dispositivo)
-            : undefined
-
+        const primeira = this.fileira.posDe(this.nivel.pedidos[0].peca)
         return [
             {
-                text: 'Aqui chegam os PEDIDOS. Toque num para escolher.',
-                shape: 'rect' as const, ...filaSpot,
-                balloonX: 640, balloonY: 300,
-                pointer: tocar(FILA.x0 + FILA.w / 2, FILA.cy),
-            },
-            {
-                text: 'Estas são as PEÇAS. Aro verde quer dizer livre.',
-                shape: 'rect' as const, ...banda,
-                balloonX: 640, balloonY: 520,
-                ...(alvo ? { pointer: tocar(alvo.x, alvo.y) } : {}),
-            },
-            {
-                text: 'A barrinha da ficha é a paciência de quem pediu.',
-                shape: 'rect' as const, ...filaSpot,
-                balloonX: 640, balloonY: 300,
-            },
-            {
-                text: 'Aqui em cima: a estabilidade. Não deixe ela cair.',
-                shape: 'rect' as const, ...estabSpot,
-                balloonX: 640, balloonY: 330,
-            },
-            {
-                text: 'Precisa pensar? Toque em PAUSA e o tempo para.',
+                text: falas[0],
                 shape: 'rect' as const,
-                x: RODAPE.pausaX, y: RODAPE.cy,
-                w: RODAPE.pausaW + 40, h: RODAPE.pausaH + 34,
-                balloonX: 560, balloonY: 440,
-                pointer: tocar(RODAPE.pausaX, RODAPE.cy),
+                x: PEDIDO.cx, y: PEDIDO.y + PEDIDO.h / 2,
+                w: PEDIDO.w + 26, h: PEDIDO.h + 26,
+                balloonX: 640, balloonY: 470,
+            },
+            {
+                text: falas[1],
+                shape: 'rect' as const, x: 640, y: PECAS.cy, w: 1180, h: PECAS.alt + 150,
+                balloonX: 640, balloonY: 250,
+                pointer: tocar(primeira.x, primeira.y),
+            },
+            {
+                text: falas[2],
+                shape: 'rect' as const, x: desligada.x, y: PECAS.cy, w: 220, h: PECAS.alt + 90,
+                balloonX: 520, balloonY: 250,
+            },
+            {
+                text: falas[3],
+                shape: 'rect' as const, x: BOTAO.cx, y: BOTAO.cy, w: BOTAO.w + 40, h: BOTAO.h + 40,
+                balloonX: 620, balloonY: 430,
+                pointer: tocar(BOTAO.cx, BOTAO.cy),
             },
         ]
     }
 
-    /**
-     * O tutorial PAUSA o jogo, e não só trava o toque.
-     *
-     * Nos outros jogos bastava `locked = true`: nada andava sozinho, então
-     * travar o toque congelava o mundo. Aqui o mundo anda — se o tutorial só
-     * travasse o toque, a criança sairia dele com dois pedidos já desistidos e
-     * a estabilidade no chão, sem ter feito nada. Entrar no tutorial é entrar
-     * em `pausado`, com o mesmo mecanismo do botão PAUSA.
-     */
-    private runTutorial(steps: TutorialStep[], force: boolean) {
-        const voltarPara = this.estado
-        this.estado = 'pausado'
-        this.hardware?.setAtivo(false)
-        this.memoria?.setAtivo(false)
-        this.btNegar.setEnabled(false)
-        this.btPausa.setEnabled(false)
-        this.hud.setHelpEnabled(false)
-
+    private runTutorial(steps: TutorialStep[], force: boolean, onFinish: () => void) {
+        this.estado = 'servindo'
+        this.trancar(true)
         createTutorial(this, {
-            key: `ef05co07-l${this.nivel.nivel}`,
+            key: `ef05co07-n${this.nivel.numero}`,
             once: !force,
             accent: C.ciano,
-            safeTop: HUD.h + 12,
+            safeTop: 96,
             steps,
             onFinish: () => {
-                this.estado = voltarPara === 'pausado' ? 'rodando' : voltarPara
-                this.hardware?.setAtivo(true)
-                this.memoria?.setAtivo(true)
-                this.btNegar.setEnabled(true)
-                this.btPausa.setEnabled(true)
-                this.hud.setHelpEnabled(true)
+                this.trancar(false)
+                onFinish()
             },
         })
     }
 
     private replayTutorial = () => {
-        if (this.ended || this.estado !== 'rodando') return
-        const steps = this.buildTutorialSteps()
-        if (!steps.length) return
-        this.runTutorial(steps, true)
+        if (this.estado !== 'pedindo') return
+        this.runTutorial(this.buildTutorialSteps(), true, () => {
+            this.estado = 'pedindo'
+            this.ocioso = 0
+        })
     }
 
     /* ═══════════════════════════════════════════════════ plataforma */
 
-    private emitCheckpoint(forceComplete = false) {
-        const antes = NIVEIS.slice(0, this.levelIdx).reduce((s, n) => s + n.fases.length, 0)
-        const done = antes + this.faseIdx + (forceComplete ? 1 : 0)
+    private emitCheckpoint(completo = false) {
+        const antes = NIVEIS.slice(0, this.nivelIdx).reduce((s, n) => s + n.pedidos.length, 0)
+        const totalGeral = NIVEIS.reduce((s, n) => s + n.pedidos.length, 0)
+        const feitosNoNivel = this.nivel.pedidos.length - this.restantes.length
+        const feitos = antes + (completo ? this.nivel.pedidos.length : feitosNoNivel)
 
         runtimeGameBridge.emit({
             type: 'CHECKPOINT',
             gameId: GAME_ID,
-            progress: Math.round((done / TOTAL_FASES) * 100),
-            score: Math.max(0, this.points),
-            stage: this.nivel.nivel,
-            hits: this.hits,
-            errors: this.errors,
+            progress: Math.round((feitos / totalGeral) * 100),
+            score: Math.max(0, this.pontos),
+            stage: this.nivel.numero,
+            hits: this.acertos,
+            errors: this.erros,
         })
     }
 
     private registerPlatformCommands() {
         this.unsubPlatform = runtimeGameBridge.onCommand((cmd: PlatformCommand) => {
             if (cmd.type !== 'START_GAME') return
-            this.points = cmd.points ?? this.points
+            this.pontos = cmd.points ?? this.pontos
         })
     }
 
-    private onMuteAudio = (muted: boolean) => { this.isMuted = muted }
+    private onMute = (muted: boolean) => { this.mudo = muted }
 
-    /* ═══════════════════════════════════════════════════════════ áudio */
+    /* ═══════════════════════════════════════════════════════ áudio */
 
     private getAudioCtx(): AudioContext | null {
-        if (this.isMuted) return null
+        if (this.mudo) return null
         try {
             return (this.sound as Phaser.Sound.WebAudioSoundManager).context
         } catch {
@@ -1149,49 +1035,44 @@ export class GameScene extends Phaser.Scene {
         if (!ctx) return
         const osc = ctx.createOscillator()
         const g = ctx.createGain()
-        osc.connect(g)
-        g.connect(ctx.destination)
+        osc.connect(g); g.connect(ctx.destination)
         osc.type = type
         osc.frequency.setValueAtTime(freq, ctx.currentTime)
         g.gain.setValueAtTime(gain, ctx.currentTime)
         g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur)
-        osc.start()
-        osc.stop(ctx.currentTime + dur)
+        osc.start(); osc.stop(ctx.currentTime + dur)
     }
 
-    /** Um pedido chegou na bandeja. */
-    private playChegou() { this.playTone(520, 0.09, 'triangle', 0.06) }
-    private playSelecionar() { this.playTone(660, 0.05, 'sine', 0.04) }
-    /** Entregou o recurso: o clique de encaixe. */
-    private playAtender() { this.playTone(784, 0.13, 'triangle', 0.08) }
-    /** Entrou na fila: dois tiques iguais, de "guardei sua vez". */
-    private playEsperar() {
+    private playAcerto() {
+        [660, 880].forEach((f, i) =>
+            this.time.delayedCall(i * 90, () => this.playTone(f, 0.14, 'triangle', 0.08)))
+    }
+    private playErro() { this.playTone(180, 0.22, 'square', 0.07) }
+    /** "Ainda não" — dois tiques iguais, nada de bronca. */
+    private playAguarde() {
         [600, 600].forEach((f, i) =>
-            this.time.delayedCall(i * 130, () => this.playTone(f, 0.07, 'sine', 0.05)))
+            this.time.delayedCall(i * 130, () => this.playTone(f, 0.06, 'sine', 0.05)))
     }
-    private playNegar() { this.playTone(330, 0.18, 'triangle', 0.07) }
-    private playFechar() { this.playTone(300, 0.12, 'sine', 0.06) }
-    private playErro() { this.playTone(180, 0.2, 'square', 0.07) }
-    private playInstavel() { this.playTone(150, 0.34, 'sawtooth', 0.06) }
-    private playDesistiu() {
-        [420, 300].forEach((f, i) =>
-            this.time.delayedCall(i * 140, () => this.playTone(f, 0.22, 'triangle', 0.07)))
-    }
-    private playPausa() { this.playTone(440, 0.1, 'sine', 0.05) }
-    private playTempoCurto() { this.playTone(700, 0.07, 'sine', 0.05) }
-    private playFase() {
-        [523, 659, 784].forEach((f, i) =>
-            this.time.delayedCall(i * 110, () => this.playTone(f, 0.16, 'sine', 0.1)))
-    }
+    private playAviso() { this.playTone(420, 0.16, 'triangle', 0.06) }
     /**
-     * O sistema travou.
+     * A barra entrou na faixa crítica.
      *
-     * Dois tons descendo, e nada de sirene. Perder uma fase aqui não é
-     * fracasso: é o jogo dizendo "vamos recomeçar este turno com a cabeça
-     * fresca".
+     * Um tique curto, e SÓ UM: a barra já pulsa sozinha, e o som aqui é
+     * reforço, não alarme. Um alarme repetido em cima de uma criança que está
+     * pensando é a forma mais rápida de fazer ela parar de pensar.
      */
-    private playPerdeu() {
-        [392, 294].forEach((f, i) =>
-            this.time.delayedCall(i * 170, () => this.playTone(f, 0.3, 'sine', 0.08)))
+    private playTicTac() { this.playTone(880, 0.06, 'sine', 0.05) }
+    /** A peça vagou. */
+    private playLivre() { this.playTone(760, 0.09, 'sine', 0.05) }
+    /** Um programa fechou: um tom que desce, como uma tela apagando. */
+    private playFechar() {
+        [520, 330].forEach((f, i) =>
+            this.time.delayedCall(i * 80, () => this.playTone(f, 0.12, 'sine', 0.06)))
+    }
+    /** A troca de atendido: um deslize curto, sem peso — trocar é de graça. */
+    private playTrocar() { this.playTone(520, 0.08, 'sine', 0.05) }
+    private playTravou() {
+        [392, 294, 196].forEach((f, i) =>
+            this.time.delayedCall(i * 160, () => this.playTone(f, 0.32, 'sine', 0.08)))
     }
 }

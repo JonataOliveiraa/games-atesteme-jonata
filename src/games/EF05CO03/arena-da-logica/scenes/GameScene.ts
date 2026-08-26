@@ -311,7 +311,7 @@ export class GameScene extends Phaser.Scene {
                 view.encaixe = encaixe
 
                 this.add.text(pos.x + TEXT_DX, pos.y, node.text, {
-                    fontFamily: 'Arial',
+                    fontFamily: 'DynaPuff, Arial, sans-serif',
                     fontStyle: 'bold',
                     fontSize: '22px',
                     color: '#1e293b',
@@ -402,7 +402,7 @@ export class GameScene extends Phaser.Scene {
 
     private hint(text: string) {
         this.add.text(W / 2, 706, text, {
-            fontFamily: 'Arial',
+            fontFamily: 'DynaPuff, Arial, sans-serif',
             fontStyle: 'bold',
             fontSize: '17px',
             color: '#cbd5e1',
@@ -716,7 +716,7 @@ export class GameScene extends Phaser.Scene {
         bg.fillRoundedRect(-PW / 2, -PH / 2, PW, 12, { tl: 26, tr: 26, bl: 0, br: 0 })
 
         const title = this.add.text(0, -PH / 2 + 52, 'Por que deu esse resultado?', {
-            fontFamily: 'Arial Black, Arial', fontSize: '30px', color: '#0f172a',
+            fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif', fontSize: '30px', color: '#0f172a',
         }).setOrigin(0.5).setResolution(2)
 
         panel.add([bg, title])
@@ -770,11 +770,11 @@ export class GameScene extends Phaser.Scene {
         bg.fillRoundedRect(-PW / 2, -PH / 2, PW, 12, { tl: 24, tr: 24, bl: 0, br: 0 })
 
         const title = this.add.text(0, -PH / 2 + 48, `Tabela do ${label}`, {
-            fontFamily: 'Arial Black, Arial', fontSize: '30px', color: '#0f172a',
+            fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif', fontSize: '30px', color: '#0f172a',
         }).setOrigin(0.5).setResolution(2)
 
         const rule = this.add.text(0, -PH / 2 + 86, OPERATOR_RULE[node.kind], {
-            fontFamily: 'Arial', fontStyle: 'bold', fontSize: '19px', color: '#334155',
+            fontFamily: 'DynaPuff, Arial, sans-serif', fontStyle: 'bold', fontSize: '19px', color: '#334155',
             align: 'center', wordWrap: { width: PW - 70 },
         }).setOrigin(0.5).setResolution(2)
 
@@ -788,15 +788,15 @@ export class GameScene extends Phaser.Scene {
                 : inputs.map(v => (v ? 'V' : 'F')).join(`  ${word}  `)
 
             panel.add(this.add.text(-PW / 2 + 70, y, left, {
-                fontFamily: 'Arial Black, Arial', fontSize: '23px', color: '#334155',
+                fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif', fontSize: '23px', color: '#334155',
             }).setOrigin(0, 0.5).setResolution(2))
 
             panel.add(this.add.text(40, y, '→', {
-                fontFamily: 'Arial Black, Arial', fontSize: '26px', color: '#94a3b8',
+                fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif', fontSize: '26px', color: '#94a3b8',
             }).setOrigin(0.5).setResolution(2))
 
             panel.add(this.add.text(PW / 2 - 80, y, out ? 'V' : 'F', {
-                fontFamily: 'Arial Black, Arial', fontSize: '27px',
+                fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif', fontSize: '27px',
                 color: out ? '#15803d' : '#b91c1c',
             }).setOrigin(0.5).setResolution(2))
         })
@@ -817,7 +817,7 @@ export class GameScene extends Phaser.Scene {
         const panel = this.add.container(W / 2, H / 2).setDepth(301)
 
         const text = this.add.text(0, 0, message, {
-            fontFamily: 'Arial',
+            fontFamily: 'DynaPuff, Arial, sans-serif',
             fontStyle: 'bold',
             fontSize: '22px',
             color: '#1e293b',
@@ -826,7 +826,7 @@ export class GameScene extends Phaser.Scene {
         }).setOrigin(0.5).setResolution(2)
 
         const title = this.add.text(0, 0, correct ? 'Mecanismo ativado!' : 'Quase lá!', {
-            fontFamily: 'Arial Black, Arial',
+            fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif',
             fontSize: '38px',
             color: correct ? '#15803d' : '#b91c1c',
         }).setOrigin(0.5).setResolution(2)
@@ -875,21 +875,21 @@ export class GameScene extends Phaser.Scene {
         bg.fillRoundedRect(-PW / 2, -PH / 2, PW, 72, { tl: 28, tr: 28, bl: 0, br: 0 })
 
         const badge = this.add.text(0, -PH / 2 + 36, `NÍVEL ${this.level.level} DE ${LEVELS.length}`, {
-            fontFamily: 'Arial Black, Arial', fontSize: '23px', color: '#ffffff',
+            fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif', fontSize: '23px', color: '#ffffff',
         }).setOrigin(0.5).setResolution(2)
 
         const title = this.add.text(0, -PH / 2 + 120, this.level.title, {
-            fontFamily: 'Arial Black, Arial', fontSize: '34px', color: '#0f172a',
+            fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif', fontSize: '34px', color: '#0f172a',
             align: 'center', wordWrap: { width: PW - 90 },
         }).setOrigin(0.5).setResolution(2)
 
         const objective = this.add.text(0, -PH / 2 + 190, this.level.objective, {
-            fontFamily: 'Arial', fontStyle: 'bold', fontSize: '21px', color: '#334155',
+            fontFamily: 'DynaPuff, Arial, sans-serif', fontStyle: 'bold', fontSize: '21px', color: '#334155',
             align: 'center', wordWrap: { width: PW - 110 },
         }).setOrigin(0.5).setResolution(2)
 
         const phaseLabel = this.add.text(0, 56, `${this.level.phases.length} portões neste nível`, {
-            fontFamily: 'Arial', fontStyle: 'bold', fontSize: '15px', color: '#64748b',
+            fontFamily: 'DynaPuff, Arial, sans-serif', fontStyle: 'bold', fontSize: '15px', color: '#64748b',
         }).setOrigin(0.5).setResolution(2)
 
         const dots = this.add.graphics()
@@ -1174,7 +1174,7 @@ export class GameScene extends Phaser.Scene {
         this.paintButton(g, w, h, color)
 
         const text = this.add.text(0, 0, label, {
-            fontFamily: 'Arial Black, Arial',
+            fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif',
             fontSize: label.length > 40 ? '17px' : '21px',
             color: '#ffffff',
             align: 'center',

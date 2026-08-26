@@ -117,14 +117,14 @@ export class BootScene extends Phaser.Scene {
     bg.strokeRoundedRect(210, 158, 860, 382, 36)
 
     this.add.text(640, 282, 'Chef dos Subproblemas', {
-      fontFamily: 'Arial Black, Arial',
+      fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif',
       fontSize: '48px',
       color: '#f7f6f2',
       align: 'center',
     }).setOrigin(0.5).setDepth(1).setResolution(2)
 
     this.add.text(640, 344, 'Preparando a bancada...', {
-      fontFamily: 'Arial',
+      fontFamily: 'DynaPuff, Arial, sans-serif',
       fontStyle: 'bold',
       fontSize: '24px',
       color: '#f0bc59',

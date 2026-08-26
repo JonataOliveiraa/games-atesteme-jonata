@@ -204,7 +204,7 @@ export class GameScene extends Phaser.Scene {
     // Segundos à esquerda da barra, na mesma linha — sem rótulo "Tempo".
     const timerLabel = this.addSharpText(TIMER_BAR_X - TIMER_BAR_W / 2 - 14, TIMER_BAR_Y, `${this.levelConfig.timeLimit}s`, {
       fontSize: "22px",
-      fontFamily: "Arial Black, Arial",
+      fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif",
       color: "#1e1b4b",
       stroke: "#ffffff",
       strokeThickness: 4,
@@ -278,13 +278,13 @@ export class GameScene extends Phaser.Scene {
     topBar.fillStyle(COLORS.purple, 1);
     topBar.fillRoundedRect(-110, -PH / 2 - 17, 220, 34, 17);
     const lvlLabel = this.addSharpText(0, -PH / 2, `Nível ${this.levelConfig.level} / 3`, {
-      fontSize: "20px", fontFamily: "Arial Black, Arial", color: "#ffffff", stroke: "#3b0764", strokeThickness: 3,
+      fontSize: "20px", fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif", color: "#ffffff", stroke: "#3b0764", strokeThickness: 3,
     }).setOrigin(0.5);
     const title = this.addSharpText(0, -104, this.levelConfig.title, {
-      fontSize: "40px", fontFamily: "Arial Black, Arial", color: "#7c3aed", stroke: "#ffffff", strokeThickness: 6, align: "center",
+      fontSize: "40px", fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif", color: "#7c3aed", stroke: "#ffffff", strokeThickness: 6, align: "center",
     }).setOrigin(0.5);
     const obj = this.addSharpText(0, -38, this.levelConfig.objective, {
-      fontSize: "23px", fontFamily: "Arial Black, Arial", color: "#1e1b4b", align: "center", wordWrap: { width: 508 },
+      fontSize: "23px", fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif", color: "#1e1b4b", align: "center", wordWrap: { width: 508 },
     }).setOrigin(0.5);
 
     const parts: Phaser.GameObjects.GameObject[] = [shadow, bg, topBar, lvlLabel, title, obj];
@@ -294,7 +294,7 @@ export class GameScene extends Phaser.Scene {
       tipBg.fillStyle(COLORS.amber, 0.2);
       tipBg.fillRoundedRect(-244, 16, 488, 50, 16);
       const tip = this.addSharpText(0, 41, this.levelConfig.tip, {
-        fontSize: "18px", fontFamily: "Arial Black, Arial", color: "#92400e", align: "center", wordWrap: { width: 456 },
+        fontSize: "18px", fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif", color: "#92400e", align: "center", wordWrap: { width: 456 },
       }).setOrigin(0.5);
       parts.push(tipBg, tip);
     }
@@ -305,7 +305,7 @@ export class GameScene extends Phaser.Scene {
     btnBg.lineStyle(4, 0xffffff, 1);
     btnBg.strokeRoundedRect(-120, 92, 240, 56, 28);
     const btnText = this.addSharpText(0, 120, "Iniciar", {
-      fontSize: "24px", fontFamily: "Arial Black, Arial", color: "#ffffff", stroke: "#3b0764", strokeThickness: 3,
+      fontSize: "24px", fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif", color: "#ffffff", stroke: "#3b0764", strokeThickness: 3,
     }).setOrigin(0.5);
     parts.push(btnBg, btnText);
 
@@ -471,7 +471,7 @@ export class GameScene extends Phaser.Scene {
 
     const badgeText = this.addSharpText(128, 56, `Nível ${this.levelConfig.level}/3`, {
       fontSize: "19px",
-      fontFamily: "Arial Black, Arial",
+      fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif",
       color: "#ffffff",
       stroke: "#3b0764",
       strokeThickness: 3,
@@ -479,7 +479,7 @@ export class GameScene extends Phaser.Scene {
 
     const title = this.addSharpText(204, 56, this.levelConfig.title, {
       fontSize: "29px",
-      fontFamily: "Arial Black, Arial",
+      fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif",
       color: "#1e1b4b",
       stroke: "#ffffff",
       strokeThickness: 5,
@@ -487,7 +487,7 @@ export class GameScene extends Phaser.Scene {
 
     const progressLabel = this.addSharpText(HUD_PROGRESS_X, 44, "", {
       fontSize: "18px",
-      fontFamily: "Arial Black, Arial",
+      fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif",
       color: "#7c3aed",
       align: "center",
     }).setOrigin(0.5);
@@ -517,7 +517,7 @@ export class GameScene extends Phaser.Scene {
 
     const mark = this.addSharpText(0, -1, "?", {
       fontSize: "27px",
-      fontFamily: "Arial Black, Arial",
+      fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif",
       color: "#1e1b4b",
     }).setOrigin(0.5);
 
@@ -662,7 +662,7 @@ export class GameScene extends Phaser.Scene {
     div.lineBetween(SPLIT_X - 6, PANEL_Y + 24, SPLIT_X - 6, PANEL_Y + PANEL_H - 24);
 
     this.addSharpText(RIGHT_CX, iy + 32, "Mural", {
-      fontSize: "22px", fontFamily: "Arial Black, Arial", color: "#ffffff", stroke: "#3b0764", strokeThickness: 4,
+      fontSize: "22px", fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif", color: "#ffffff", stroke: "#3b0764", strokeThickness: 4,
     }).setOrigin(0.5).setDepth(10);
 
     this.muralContainer = this.add.container(0, 0).setDepth(10);
@@ -742,7 +742,7 @@ export class GameScene extends Phaser.Scene {
     tcBg.strokeRoundedRect(-430, -52, 860, 104, 22);
     const tcIcon = this.createTargetIcon(-378, 0, 42, COLORS.purple);
     const tcText = this.addSharpText(26, 0, task.goal, {
-      fontSize: "27px", fontFamily: "Arial Black, Arial", color: "#1e1b4b", align: "center", wordWrap: { width: 720 },
+      fontSize: "27px", fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif", color: "#1e1b4b", align: "center", wordWrap: { width: 720 },
     }).setOrigin(0.5);
     taskCard.add([tcBg, tcIcon, tcText]);
     taskCard.setAlpha(0);
@@ -779,7 +779,7 @@ export class GameScene extends Phaser.Scene {
     cBg.lineStyle(4, 0xffffff, 1);
     cBg.strokeRoundedRect(-134, -29, 268, 58, 29);
     const cTxt = this.addSharpText(0, 0, "Confirmar", {
-      fontSize: "23px", fontFamily: "Arial Black, Arial", color: "#ffffff", stroke: "#3b0764", strokeThickness: 3,
+      fontSize: "23px", fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif", color: "#ffffff", stroke: "#3b0764", strokeThickness: 3,
     }).setOrigin(0.5);
     confirmBtn.add([cBg, cTxt]);
     confirmBtn.setAlpha(0.35);
@@ -863,7 +863,7 @@ export class GameScene extends Phaser.Scene {
     lblPill.lineStyle(2, 0xffffff, 0.9);
     lblPill.strokeRoundedRect(-hitW / 2 + 10, hitH / 2 - 52, hitW - 20, 42, 21);
     const lblTxt = this.addSharpText(0, hitH / 2 - 31, label, {
-      fontSize: "20px", fontFamily: "Arial Black, Arial", color: "#ffffff", stroke: "#1e1b4b", strokeThickness: 3,
+      fontSize: "20px", fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif", color: "#ffffff", stroke: "#1e1b4b", strokeThickness: 3,
     }).setOrigin(0.5);
 
     const ring = this.add.graphics();
@@ -974,7 +974,7 @@ export class GameScene extends Phaser.Scene {
     // "Fase 1 de 2" saiu: o HUD já mostra o progresso com pontinhos.
     this.showEditorLabel(`Desenho · ${ch.theme}`, COLORS.pink);
     this.addPhase(this.addSharpText(LEFT_CX, EDITOR_INSTRUCTION_CY, ch.instruction, {
-      fontSize: "21px", fontFamily: "Arial Black, Arial", color: "#5b21b6", stroke: "#ffffff", strokeThickness: 4, align: "center",
+      fontSize: "21px", fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif", color: "#5b21b6", stroke: "#ffffff", strokeThickness: 4, align: "center",
       wordWrap: { width: 720 },
     }).setOrigin(0.5).setDepth(15));
 
@@ -993,7 +993,7 @@ export class GameScene extends Phaser.Scene {
 
     // Counter
     this.addPhase(this.addSharpText(EDITOR_CANVAS_LEFT + EDITOR_CANVAS_W - 20, EDITOR_PALETTE_CY, `0/${ch.minStrokes}`, {
-      fontSize: "26px", fontFamily: "Arial Black, Arial", color: "#1e1b4b", stroke: "#ffffff", strokeThickness: 5,
+      fontSize: "26px", fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif", color: "#1e1b4b", stroke: "#ffffff", strokeThickness: 5,
     }).setOrigin(1, 0.5).setDepth(20)).setName("drawCounter");
 
     // Publish button (dimmed until threshold)
@@ -1106,7 +1106,7 @@ export class GameScene extends Phaser.Scene {
     this.updateHeaderProgress("Criação 2 de 2", 2, 2);
     this.showEditorLabel(`Texto · ${ch.theme}`, COLORS.blue);
     this.addPhase(this.addSharpText(LEFT_CX, EDITOR_INSTRUCTION_CY, ch.instruction, {
-      fontSize: "21px", fontFamily: "Arial Black, Arial", color: "#1e3a8a", stroke: "#ffffff", strokeThickness: 4, align: "center",
+      fontSize: "21px", fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif", color: "#1e3a8a", stroke: "#ffffff", strokeThickness: 4, align: "center",
       wordWrap: { width: 720 },
     }).setOrigin(0.5).setDepth(15));
 
@@ -1170,7 +1170,7 @@ export class GameScene extends Phaser.Scene {
     this.showEditorLabel("Toque no cartão certo", COLORS.purple);
     const guideBg = this.add.graphics();
     const guideText = this.addSharpText(0, 0, "", {
-      fontSize: "20px", fontFamily: "Arial Black, Arial", color: "#1e1b4b", align: "center",
+      fontSize: "20px", fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif", color: "#1e1b4b", align: "center",
     }).setOrigin(0.5);
     const guide = this.addCycle(this.add.container(LEFT_CX, N3_GOAL_CY + 80).setDepth(18));
     const paintGuide = (color: number, message: string) => {
@@ -1194,7 +1194,7 @@ export class GameScene extends Phaser.Scene {
     gcBg.strokeRoundedRect(-376, -52, 752, 104, 22);
     const gcIcon = this.createTargetIcon(-326, 0, 42, COLORS.purple);
     const gcText = this.addSharpText(30, 0, cycle.goal, {
-      fontSize: "25px", fontFamily: "Arial Black, Arial", color: "#1e1b4b", align: "center", wordWrap: { width: 616 },
+      fontSize: "25px", fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif", color: "#1e1b4b", align: "center", wordWrap: { width: 616 },
     }).setOrigin(0.5);
     goalCard.add([gcBg, gcIcon, gcText]);
     goalCard.setAlpha(0);
@@ -1240,7 +1240,7 @@ export class GameScene extends Phaser.Scene {
       lblPill.lineStyle(2, 0xffffff, 0.9);
       lblPill.strokeRoundedRect(-btnW / 2 + 10, btnH / 2 - 50, btnW - 20, 40, 20);
       const lblTxt = this.addSharpText(0, btnH / 2 - 30, fmt.label, {
-        fontSize: "20px", fontFamily: "Arial Black, Arial", color: "#ffffff", stroke: "#1e1b4b", strokeThickness: 3,
+        fontSize: "20px", fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif", color: "#ffffff", stroke: "#1e1b4b", strokeThickness: 3,
       }).setOrigin(0.5);
       btn.add(lblPill);
       const ring = this.add.graphics();
@@ -1328,7 +1328,7 @@ export class GameScene extends Phaser.Scene {
 
     this.showEditorLabel(`Crie: ${ch.theme}`, COLORS.pink);
     this.addPhase(this.addSharpText(LEFT_CX, EDITOR_INSTRUCTION_CY, ch.instruction, {
-      fontSize: "21px", fontFamily: "Arial Black, Arial", color: "#5b21b6", stroke: "#ffffff", strokeThickness: 4, align: "center",
+      fontSize: "21px", fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif", color: "#5b21b6", stroke: "#ffffff", strokeThickness: 4, align: "center",
       wordWrap: { width: 720 },
     }).setOrigin(0.5).setDepth(15));
 
@@ -1344,7 +1344,7 @@ export class GameScene extends Phaser.Scene {
     this.buildPalette(ch.colors, EDITOR_PALETTE_CY);
 
     this.addPhase(this.addSharpText(EDITOR_CANVAS_LEFT + EDITOR_CANVAS_W - 20, EDITOR_PALETTE_CY, `0/${ch.minStrokes}`, {
-      fontSize: "26px", fontFamily: "Arial Black, Arial", color: "#1e1b4b", stroke: "#ffffff", strokeThickness: 5,
+      fontSize: "26px", fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif", color: "#1e1b4b", stroke: "#ffffff", strokeThickness: 5,
     }).setOrigin(1, 0.5).setDepth(20)).setName("drawCounter");
 
     const pubBtn = this.addPhase(this.createPublishButton(LEFT_CX, EDITOR_PUBLISH_CY, () => {
@@ -1402,7 +1402,7 @@ export class GameScene extends Phaser.Scene {
 
     this.showEditorLabel(`Crie: ${ch.theme}`, COLORS.blue);
     this.addPhase(this.addSharpText(LEFT_CX, EDITOR_INSTRUCTION_CY, ch.instruction, {
-      fontSize: "21px", fontFamily: "Arial Black, Arial", color: "#1e3a8a", stroke: "#ffffff", strokeThickness: 4, align: "center",
+      fontSize: "21px", fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif", color: "#1e3a8a", stroke: "#ffffff", strokeThickness: 4, align: "center",
       wordWrap: { width: 720 },
     }).setOrigin(0.5).setDepth(15));
 
@@ -1441,7 +1441,7 @@ export class GameScene extends Phaser.Scene {
       chipBg.lineStyle(3, COLORS.blue, 0.8);
       chipBg.strokeRoundedRect(-chipW / 2, -chipH / 2, chipW, chipH, chipH / 2);
       const chipText = this.addSharpText(0, 0, word, {
-        fontSize: "22px", fontFamily: "Arial Black, Arial",
+        fontSize: "22px", fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif",
         color: isSelected ? "#ffffff" : "#1e3a8a",
         stroke: "#ffffff", strokeThickness: isSelected ? 0 : 3,
       }).setOrigin(0.5);
@@ -1470,7 +1470,7 @@ export class GameScene extends Phaser.Scene {
           newBg.lineStyle(3, COLORS.blue, 0.8);
           newBg.strokeRoundedRect(-chipW / 2, -chipH / 2, chipW, chipH, chipH / 2);
           const newText = this.addSharpText(0, 0, word, {
-            fontSize: "22px", fontFamily: "Arial Black, Arial",
+            fontSize: "22px", fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif",
             color: nowSelected ? "#ffffff" : "#1e3a8a",
             stroke: "#ffffff", strokeThickness: nowSelected ? 0 : 3,
           }).setOrigin(0.5);
@@ -1494,7 +1494,7 @@ export class GameScene extends Phaser.Scene {
     postBg.strokeRoundedRect(cx - 360, y, 720, 88, 18);
     // Sem rótulo "Mensagem": o campo com as palavras dentro já se explica.
     const preview = this.addPhase(this.addSharpText(cx, y + 44, "...", {
-      fontSize: "26px", fontFamily: "Arial Black, Arial", color: "#1e1b4b", stroke: "#ffffff", strokeThickness: 3,
+      fontSize: "26px", fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif", color: "#1e1b4b", stroke: "#ffffff", strokeThickness: 3,
       align: "center", wordWrap: { width: 660 },
     }).setOrigin(0.5).setDepth(14));
     preview.setName("postPreview");
@@ -1508,7 +1508,7 @@ export class GameScene extends Phaser.Scene {
     // Pílula do tamanho do texto, não da largura toda do editor —
     // uma faixa de 648 px com 3 palavras dentro parecia desalinhada.
     const label = this.addSharpText(0, EDITOR_LABEL_CY, title, {
-      fontSize: "21px", fontFamily: "Arial Black, Arial", color: "#ffffff", stroke: "#0f172a", strokeThickness: 3,
+      fontSize: "21px", fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif", color: "#ffffff", stroke: "#0f172a", strokeThickness: 3,
     }).setOrigin(0, 0.5).setDepth(12);
     const pillW = Math.min(label.width + 44, EDITOR_CANVAS_W);
     label.setX(EDITOR_CANVAS_LEFT + 22);
@@ -1537,7 +1537,7 @@ export class GameScene extends Phaser.Scene {
     bg.lineStyle(4, 0xffffff, 1);
     bg.strokeRoundedRect(-134, -29, 268, 58, 29);
     const txt = this.addSharpText(0, 0, "Publicar", {
-      fontSize: "23px", fontFamily: "Arial Black, Arial", color: "#ffffff", stroke: "#3b0764", strokeThickness: 3,
+      fontSize: "23px", fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif", color: "#ffffff", stroke: "#3b0764", strokeThickness: 3,
     }).setOrigin(0.5);
     btn.add([bg, txt]);
     const zone = this.addPhase(this.add.zone(x, y, 282, 70).setDepth(55));
@@ -1682,14 +1682,14 @@ export class GameScene extends Phaser.Scene {
     topBar.fillRoundedRect(-210, -224, 420, 28, 14);
     const icon = this.createClockIcon(0, -138, 58);
     const title = this.addSharpText(0, -62, "Tempo esgotado!", {
-      fontSize: "40px", fontFamily: "Arial Black, Arial", color: "#dc2626", stroke: "#ffffff", strokeThickness: 6,
+      fontSize: "40px", fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif", color: "#dc2626", stroke: "#ffffff", strokeThickness: 6,
       align: "center", wordWrap: { width: 540 },
     }).setOrigin(0.5);
     const reason = this.addSharpText(0, 2, `${this.getScore()} pontos`, {
-      fontSize: "26px", fontFamily: "Arial Black, Arial", color: "#334155", align: "center",
+      fontSize: "26px", fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif", color: "#334155", align: "center",
     }).setOrigin(0.5);
     const stats = this.addSharpText(0, 40, `${this.hits} acertos · ${this.errors} erros`, {
-      fontSize: "19px", fontFamily: "Arial Black, Arial", color: "#64748b",
+      fontSize: "19px", fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif", color: "#64748b",
     }).setOrigin(0.5);
     const retryBg = this.add.graphics();
     retryBg.fillStyle(COLORS.green, 1);
@@ -1697,7 +1697,7 @@ export class GameScene extends Phaser.Scene {
     retryBg.lineStyle(4, 0xffffff, 1);
     retryBg.strokeRoundedRect(-262, 68, 240, 52, 26);
     const retryTxt = this.addSharpText(-142, 94, "Jogar de novo", {
-      fontSize: "21px", fontFamily: "Arial Black, Arial", color: "#ffffff", stroke: "#14532d", strokeThickness: 3,
+      fontSize: "21px", fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif", color: "#ffffff", stroke: "#14532d", strokeThickness: 3,
     }).setOrigin(0.5);
     const exitBg = this.add.graphics();
     exitBg.fillStyle(COLORS.orange, 1);
@@ -1705,7 +1705,7 @@ export class GameScene extends Phaser.Scene {
     exitBg.lineStyle(4, 0xffffff, 1);
     exitBg.strokeRoundedRect(22, 68, 240, 52, 26);
     const exitTxt = this.addSharpText(142, 94, "Sair", {
-      fontSize: "20px", fontFamily: "Arial Black, Arial", color: "#ffffff", stroke: "#78350f", strokeThickness: 3,
+      fontSize: "20px", fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif", color: "#ffffff", stroke: "#78350f", strokeThickness: 3,
     }).setOrigin(0.5);
     panel.add([shadow, panelBg, topBar, icon, title, reason, stats, retryBg, retryTxt, exitBg, exitTxt]);
     this.animateModal(panel);
@@ -1837,7 +1837,7 @@ export class GameScene extends Phaser.Scene {
     bg.lineStyle(4, 0xffffff, 0.9);
     bg.strokeRoundedRect(-500, -44, 1000, 88, 24);
     const txt = this.addSharpText(0, 0, message, {
-      fontSize: "23px", fontFamily: "Arial Black, Arial", color: "#ffffff",
+      fontSize: "23px", fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif", color: "#ffffff",
       stroke: "#0f172a", strokeThickness: 3, align: "center", wordWrap: { width: 900 },
     }).setOrigin(0.5);
     container.add([bg, txt]);

@@ -47,7 +47,7 @@ export class BootScene extends Phaser.Scene {
     this.add
       .text(640, 300, "Pixel Secreto", {
         fontSize: "56px",
-        fontFamily: "Arial Black, Arial",
+        fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif",
         color: "#86198f",
         stroke: "#ffffff",
         strokeThickness: 6,
@@ -57,7 +57,7 @@ export class BootScene extends Phaser.Scene {
     this.add
       .text(640, 380, "Preparando os códigos...", {
         fontSize: "28px",
-        fontFamily: "Arial",
+        fontFamily: "DynaPuff, Arial, sans-serif",
         color: "#334155",
       })
       .setOrigin(0.5);

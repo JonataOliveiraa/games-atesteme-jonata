@@ -108,7 +108,7 @@ export function createTutorial(scene: Phaser.Scene, options: TutorialOptions) {
     const balloon = keep(scene.add.container(W / 2, 0).setDepth(9010))
     const balloonBg = scene.add.graphics()
     const balloonTxt = scene.add.text(0, 0, '', {
-        fontFamily: 'Arial Black, Arial',
+        fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif',
         fontSize: '21px',
         color: '#0f172a',
         align: 'center',
@@ -123,7 +123,7 @@ export function createTutorial(scene: Phaser.Scene, options: TutorialOptions) {
     buttonBg.fillStyle(0xffffff, 0.18)
     buttonBg.fillRoundedRect(-134, -21, 268, 20, 10)
     const buttonTxt = scene.add.text(0, 0, 'Próximo', {
-        fontFamily: 'Arial Black, Arial',
+        fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif',
         fontSize: '19px',
         color: '#ffffff',
     }).setOrigin(0.5).setResolution(2)

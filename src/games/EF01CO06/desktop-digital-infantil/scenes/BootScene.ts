@@ -80,7 +80,7 @@ export class BootScene extends Phaser.Scene {
     header.fillRoundedRect(cx - 300, cy - 210, 600, 54, { tl: 20, tr: 20, bl: 0, br: 0 })
 
     this.add.text(cx, cy - 183, 'Desktop Digital Infantil', {
-      fontSize: '22px', color: '#AED6F1', fontFamily: 'Arial Black',
+      fontSize: '22px', color: '#AED6F1', fontFamily: '"DynaPuff Black", "Arial Black", sans-serif',
     }).setOrigin(0.5)
 
     // Monitor ilustrado
@@ -88,7 +88,7 @@ export class BootScene extends Phaser.Scene {
 
     // Título
     this.add.text(cx, cy + 52, 'Preparando o Desktop...', {
-      fontSize: '20px', color: '#85C1E9', fontFamily: 'Arial',
+      fontSize: '20px', color: '#85C1E9', fontFamily: 'DynaPuff, Arial, sans-serif',
     }).setOrigin(0.5)
 
     // App icons preview (pequenos, como se fosse carregar)
@@ -120,7 +120,7 @@ const barFill = this.add.graphics()
 const barShine = this.add.graphics()
 
 const pctText = this.add.text(cx, BAR_Y + BAR_H + 14, '0%', {
-  fontSize: '13px', color: '#7FB3D3', fontFamily: 'Arial',
+  fontSize: '13px', color: '#7FB3D3', fontFamily: 'DynaPuff, Arial, sans-serif',
 }).setOrigin(0.5)
 
 this.load.on('progress', (v: number) => {

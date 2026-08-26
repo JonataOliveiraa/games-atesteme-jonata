@@ -329,7 +329,7 @@ export class GameScene extends Phaser.Scene {
     card.fillRoundedRect(-cardW / 2 + 14, -cardH / 2 + headerH + 14, cardW - 28, cardH - headerH - 28, 16)
 
     const label = this.add.text(0, -cardH / 2 + 5 + headerH / 2, 'QUER RECEBER POR', {
-      fontFamily: 'Arial Black, Arial',
+      fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif',
       fontSize: '17px',
       color: '#ffffff',
       stroke: TEXT_STROKE,
@@ -424,7 +424,7 @@ export class GameScene extends Phaser.Scene {
 
     // ── selo "NÍVEL X DE Y": texto claro sobre pílula escura ──
     const badgeTxt = this.add.text(0, -168, `NÍVEL ${level.level} DE ${LEVELS.length}`, {
-      fontFamily: 'Arial Black, Arial', fontSize: '20px', color: '#ffffff'
+      fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif', fontSize: '20px', color: '#ffffff'
     }).setOrigin(0.5).setResolution(2)
 
     const bw = badgeTxt.width + 46
@@ -436,17 +436,17 @@ export class GameScene extends Phaser.Scene {
 
     // ── textos escuros sobre o azul claro ──
     const title = this.add.text(0, -100, level.title, {
-      fontFamily: 'Arial Black, Arial', fontSize: '32px', color: '#123b5e',
+      fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif', fontSize: '32px', color: '#123b5e',
       align: 'center', wordWrap: { width: 500 }
     }).setOrigin(0.5).setResolution(2)
 
     const objective = this.add.text(0, -20, level.objective, {
-      fontFamily: 'Arial', fontStyle: 'bold', fontSize: '19px', color: '#24506f',
+      fontFamily: 'DynaPuff, Arial, sans-serif', fontStyle: 'bold', fontSize: '19px', color: '#24506f',
       align: 'center', wordWrap: { width: 480 }
     }).setOrigin(0.5).setResolution(2)
 
     const phaseLabel = this.add.text(0, 56, `${level.missions.length} fases neste nível`, {
-      fontFamily: 'Arial', fontStyle: 'bold', fontSize: '15px', color: '#365b80'
+      fontFamily: 'DynaPuff, Arial, sans-serif', fontStyle: 'bold', fontSize: '15px', color: '#365b80'
     }).setOrigin(0.5).setResolution(2)
 
     // ── bolinhas de progresso com contorno, pra lerem sobre o azul ──
@@ -486,7 +486,7 @@ export class GameScene extends Phaser.Scene {
     const balloon = this.tut(this.add.container(640, 0).setDepth(320))
     const balloonBg = this.add.graphics()
     const balloonTxt = this.add.text(0, 0, '', {
-      fontFamily: 'Arial Black, Arial',
+      fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif',
       fontSize: '21px',
       color: '#1a3b1a',
       align: 'center',
@@ -759,7 +759,7 @@ export class GameScene extends Phaser.Scene {
     })
 
     const hint = this.add.text(0, ringsY + 100, 'Toque em cada som para ouvir', {
-      fontFamily: 'Arial, sans-serif', fontSize: '22px', color: '#ffffff',
+      fontFamily: 'DynaPuff, Arial, sans-serif', fontSize: '22px', color: '#ffffff',
       fontStyle: 'bold', stroke: TEXT_STROKE, strokeThickness: 4
     }).setOrigin(0.5).setResolution(2)
 
@@ -1167,7 +1167,7 @@ export class GameScene extends Phaser.Scene {
     panel.add(this.createModalBackground(620, 380))
 
     const title = this.add.text(0, -110, 'Jogo concluído!', {
-      fontFamily: 'Arial Black, Arial',
+      fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif',
       fontSize: '36px',
       color: '#ffffff',
       stroke: '#1a3b1a',
@@ -1175,7 +1175,7 @@ export class GameScene extends Phaser.Scene {
     }).setOrigin(0.5).setResolution(2)
 
     const subtitle = this.add.text(0, -50, 'Você entregou todas as mensagens!', {
-      fontFamily: 'Arial, sans-serif',
+      fontFamily: 'DynaPuff, Arial, sans-serif',
       fontSize: '20px',
       color: '#ffffff',
       fontStyle: 'bold',
@@ -1210,7 +1210,7 @@ export class GameScene extends Phaser.Scene {
     const w = width
 
     const label = this.add.text(0, 0, text, {
-      fontFamily: 'Arial Black, Arial',
+      fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif',
       fontSize: '22px',
       color: '#ffffff',
       stroke: '#1e3category',
@@ -1242,7 +1242,7 @@ export class GameScene extends Phaser.Scene {
 
   private createHighlightChip(word: string, maxW: number) {
     const label = this.add.text(0, 0, word.toUpperCase(), {
-      fontFamily: 'Arial Black, Arial',
+      fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif',
       fontSize: '27px',
       color: '#4a3400'
     }).setOrigin(0.5).setResolution(2)
@@ -1302,7 +1302,7 @@ export class GameScene extends Phaser.Scene {
     this.redrawThemedButtonBg(bg, width, height, palette)
 
     const label = this.add.text(0, 0, text, {
-      fontFamily: 'Arial Black, Arial',
+      fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif',
       fontSize: '18px',
       color: '#ffffff',
       fontStyle: 'bold',

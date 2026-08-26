@@ -213,7 +213,7 @@ export function createTimeBar(
         warnAt = 0.34, dangerAt = 0.15,
         icon = true, iconDX = -(w / 2 + 22), iconR = 13,
         label = false, labelSize = '17px',
-        fontFamily = 'Arial Black, Arial',
+        fontFamily = '"DynaPuff Black", "Arial Black", Arial, sans-serif',
         depth = 0,
     } = opts
     const T = { ...TIME_BAR_THEME, ...(opts.theme ?? {}) }

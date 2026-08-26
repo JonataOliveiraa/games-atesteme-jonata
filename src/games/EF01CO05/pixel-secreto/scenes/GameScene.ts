@@ -267,7 +267,7 @@ export class GameScene extends Phaser.Scene {
       this.add
         .text(640, 175, `Nível ${this.levelConfig.level} - ${this.levelConfig.title}`, {
           fontSize: "38px",
-          fontFamily: "Arial Black, Arial",
+          fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif",
           color: "#86198f",
           stroke: "#ffffff",
           strokeThickness: 5,
@@ -289,7 +289,7 @@ export class GameScene extends Phaser.Scene {
       this.add
         .text(640, 275, `🎯 ${info.objective}`, {
           fontSize: "26px",
-          fontFamily: "Arial Black, Arial",
+          fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif",
           color: "#334155",
           align: "center",
           wordWrap: { width: 780 },
@@ -302,7 +302,7 @@ export class GameScene extends Phaser.Scene {
       this.add
         .text(640, 365, `🖱️ ${info.controls}`, {
           fontSize: "24px",
-          fontFamily: "Arial",
+          fontFamily: "DynaPuff, Arial, sans-serif",
           color: "#475569",
           align: "center",
           wordWrap: { width: 760 },
@@ -315,7 +315,7 @@ export class GameScene extends Phaser.Scene {
       this.add
         .text(640, 455, `💡 ${info.tip}`, {
           fontSize: "23px",
-          fontFamily: "Arial Black, Arial",
+          fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif",
           color: "#7e22ce",
           align: "center",
           wordWrap: { width: 760 },
@@ -336,7 +336,7 @@ export class GameScene extends Phaser.Scene {
       this.add
         .text(640, 585, "Iniciar", {
           fontSize: "30px",
-          fontFamily: "Arial Black, Arial",
+          fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif",
           color: "#ffffff",
         })
         .setOrigin(0.5)
@@ -431,7 +431,7 @@ export class GameScene extends Phaser.Scene {
     const numberText = this.add
       .text(300, 195, String(this.tutorialStep + 1), {
         fontSize: "24px",
-        fontFamily: "Arial Black, Arial",
+        fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif",
         color: "#ffffff",
       })
       .setOrigin(0.5)
@@ -440,7 +440,7 @@ export class GameScene extends Phaser.Scene {
     const text = this.add
       .text(640, 160, step.text, {
         fontSize: "26px",
-        fontFamily: "Arial Black, Arial",
+        fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif",
         color: "#7e22ce",
         align: "center",
         wordWrap: { width: 620 },
@@ -456,7 +456,7 @@ export class GameScene extends Phaser.Scene {
     const label = this.add
       .text(640, 230, step.label, {
         fontSize: "32px",
-        fontFamily: "Arial Black, Arial",
+        fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif",
         color: "#111827",
       })
       .setOrigin(0.5)
@@ -485,7 +485,7 @@ export class GameScene extends Phaser.Scene {
     const arrow = this.add
       .text(1035, 210, "➜", {
         fontSize: "34px",
-        fontFamily: "Arial Black, Arial",
+        fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif",
         color: "#ffffff",
       })
       .setOrigin(0.5)
@@ -554,7 +554,7 @@ export class GameScene extends Phaser.Scene {
     this.add
       .text(640, 128, this.levelConfig.title, {
         fontSize: "44px",
-        fontFamily: "Arial Black, Arial",
+        fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif",
         color: "#4c1d95",
         stroke: "#ffffff",
         strokeThickness: 7,
@@ -565,7 +565,7 @@ export class GameScene extends Phaser.Scene {
     this.add
       .text(640, 180, "Escolha o código, pinte a matriz e revele a imagem.", {
         fontSize: "22px",
-        fontFamily: "Arial Black, Arial",
+        fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif",
         color: "#155e75",
         align: "center",
       })
@@ -587,7 +587,7 @@ export class GameScene extends Phaser.Scene {
     this.add
       .text(640, TIMER_BAR_Y - 25, "Tempo", {
         fontSize: "16px",
-        fontFamily: "Arial Black, Arial",
+        fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif",
         color: "#334155",
         stroke: "#ffffff",
         strokeThickness: 3,
@@ -623,7 +623,7 @@ export class GameScene extends Phaser.Scene {
       this.add
         .text(1024, titlePillY + 24, "Código de cores", {
           fontSize: "20px",
-          fontFamily: "Arial Black, Arial",
+          fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif",
           color: "#ffffff",
         })
         .setOrigin(0.5)
@@ -653,7 +653,7 @@ export class GameScene extends Phaser.Scene {
       const code = this.add
         .text(-86, -2, item.code, {
           fontSize: "22px",
-          fontFamily: "Arial Black, Arial",
+          fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif",
           color: item.textColor ?? "#ffffff",
           stroke: item.textColor ? "#ffffff" : "#25327a",
           strokeThickness: item.textColor ? 2 : 4,
@@ -663,7 +663,7 @@ export class GameScene extends Phaser.Scene {
       const label = this.add
         .text(-38, 0, item.label, {
           fontSize: "21px",
-          fontFamily: "Arial Black, Arial",
+          fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif",
           color: "#25327a",
           stroke: "#ffffff",
           strokeThickness: 4,
@@ -731,7 +731,7 @@ export class GameScene extends Phaser.Scene {
     const code = this.add
       .text(-59, 5, this.selectedCode, {
         fontSize: "18px",
-        fontFamily: "Arial Black, Arial",
+        fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif",
         color: textColor,
         stroke: textColor === "#ffffff" ? "#334155" : "#ffffff",
         strokeThickness: 3,
@@ -741,7 +741,7 @@ export class GameScene extends Phaser.Scene {
     const label = this.add
       .text(-12, 1, "Pinte com", {
         fontSize: "15px",
-        fontFamily: "Arial Black, Arial",
+        fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif",
         color: "#64748b",
       })
       .setOrigin(0, 0.5);
@@ -749,7 +749,7 @@ export class GameScene extends Phaser.Scene {
     const colorName = this.add
       .text(68, 1, selected?.label ?? "", {
         fontSize: "17px",
-        fontFamily: "Arial Black, Arial",
+        fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif",
         color: "#334155",
       })
       .setOrigin(0.5);
@@ -912,7 +912,7 @@ export class GameScene extends Phaser.Scene {
           this.add
             .text(x, y, code, {
               fontSize: `${Math.round(cellSize * 0.4)}px`,
-              fontFamily: "Arial Black, Arial",
+              fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif",
               color: "#7c2d12",
             })
             .setOrigin(0.5)
@@ -995,7 +995,7 @@ export class GameScene extends Phaser.Scene {
       this.add
         .text(640, 175, "Você cometeu um erro!", {
           fontSize: "52px",
-          fontFamily: "Arial Black, Arial",
+          fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif",
           color: "#ffffff",
           stroke: "#ef4444",
           strokeThickness: 6,
@@ -1008,7 +1008,7 @@ export class GameScene extends Phaser.Scene {
       this.add
         .text(640, 310, "-1 ponto de vida.\nDeseja tentar novamente?", {
           fontSize: "30px",
-          fontFamily: "Arial",
+          fontFamily: "DynaPuff, Arial, sans-serif",
           color: "#ffffff",
           align: "center",
           wordWrap: { width: 820 },
@@ -1029,7 +1029,7 @@ export class GameScene extends Phaser.Scene {
       this.add
         .text(500, 500, "Tentar novamente", {
           fontSize: "24px",
-          fontFamily: "Arial Black, Arial",
+          fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif",
           color: "#ffffff",
         })
         .setOrigin(0.5)
@@ -1048,7 +1048,7 @@ export class GameScene extends Phaser.Scene {
       this.add
         .text(790, 500, "Sair", {
           fontSize: "24px",
-          fontFamily: "Arial Black, Arial",
+          fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif",
           color: "#ffffff",
         })
         .setOrigin(0.5)
@@ -1108,7 +1108,7 @@ export class GameScene extends Phaser.Scene {
       this.add
         .text(640, 120, "GAME OVER", {
           fontSize: "64px",
-          fontFamily: "Arial Black, Arial",
+          fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif",
           color: "#ffffff",
           stroke: "#ef4444",
           strokeThickness: 8,
@@ -1125,7 +1125,7 @@ export class GameScene extends Phaser.Scene {
           `Você ficou sem vidas.\n\nO jogo foi bloqueado até:\n${formattedDate}`,
           {
             fontSize: "30px",
-            fontFamily: "Arial",
+            fontFamily: "DynaPuff, Arial, sans-serif",
             color: "#ffffff",
             align: "center",
             wordWrap: { width: 900 },
@@ -1139,7 +1139,7 @@ export class GameScene extends Phaser.Scene {
       this.add
         .text(640, 430, `Você pode desbloquear agora usando ${unlockCost} pontos.`, {
           fontSize: "26px",
-          fontFamily: "Arial Black, Arial",
+          fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif",
           color: "#facc15",
           align: "center",
           wordWrap: { width: 900 },
@@ -1161,7 +1161,7 @@ export class GameScene extends Phaser.Scene {
       this.add
         .text(470, 560, "Desbloquear jogo", {
           fontSize: "24px",
-          fontFamily: "Arial Black, Arial",
+          fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif",
           color: "#ffffff",
         })
         .setOrigin(0.5)
@@ -1181,7 +1181,7 @@ export class GameScene extends Phaser.Scene {
       this.add
         .text(820, 560, "Voltar aos jogos", {
           fontSize: "24px",
-          fontFamily: "Arial Black, Arial",
+          fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif",
           color: "#ffffff",
         })
         .setOrigin(0.5)
@@ -1311,7 +1311,7 @@ export class GameScene extends Phaser.Scene {
     const title = this.add
       .text(0, -110, "Parabéns!", {
         fontSize: "40px",
-        fontFamily: "Arial Black, Arial",
+        fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif",
         color: "#25327a",
         stroke: "#ffffff",
         strokeThickness: 5,
@@ -1321,7 +1321,7 @@ export class GameScene extends Phaser.Scene {
     const completed = this.add
       .text(0, -50, `Nível ${this.levelConfig.level} concluído`, {
         fontSize: "26px",
-        fontFamily: "Arial Black, Arial",
+        fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif",
         color: "#7c3aed",
         align: "center",
       })
@@ -1330,7 +1330,7 @@ export class GameScene extends Phaser.Scene {
     const message = this.add
       .text(0, 8, `Imagem revelada: ${this.levelConfig.imageName}.`, {
         fontSize: "17px",
-        fontFamily: "Arial Black, Arial",
+        fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif",
         color: "#334155",
         align: "center",
         wordWrap: { width: 430 },
@@ -1340,7 +1340,7 @@ export class GameScene extends Phaser.Scene {
     const waitText = this.add
       .text(0, 116, "Preparando o próximo nível...", {
         fontSize: "15px",
-        fontFamily: "Arial Black, Arial",
+        fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif",
         color: "#25327a",
       })
       .setOrigin(0.5);
@@ -1401,7 +1401,7 @@ export class GameScene extends Phaser.Scene {
     const title = this.add
       .text(0, -102, `Nível ${nextLevel}`, {
         fontSize: "38px",
-        fontFamily: "Arial Black, Arial",
+        fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif",
         color: "#25327a",
         stroke: "#ffffff",
         strokeThickness: 5,
@@ -1411,7 +1411,7 @@ export class GameScene extends Phaser.Scene {
     const objective = this.add
       .text(0, -42, nextConfig?.title ?? "Novo desafio", {
         fontSize: "24px",
-        fontFamily: "Arial Black, Arial",
+        fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif",
         color: "#7c3aed",
         align: "center",
         wordWrap: { width: 430 },
@@ -1421,7 +1421,7 @@ export class GameScene extends Phaser.Scene {
     const detail = this.add
       .text(0, 12, nextConfig?.objective ?? "Decodifique a matriz para revelar a imagem.", {
         fontSize: "16px",
-        fontFamily: "Arial Black, Arial",
+        fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif",
         color: "#334155",
         align: "center",
         wordWrap: { width: 420 },
@@ -1440,7 +1440,7 @@ export class GameScene extends Phaser.Scene {
     const buttonText = this.add
       .text(0, 0, "Iniciar nível", {
         fontSize: "22px",
-        fontFamily: "Arial Black, Arial",
+        fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif",
         color: "#ffffff",
         stroke: "#9a3f00",
         strokeThickness: 3,
@@ -1505,7 +1505,7 @@ export class GameScene extends Phaser.Scene {
     const title = this.add
       .text(0, -110, "Parabéns!", {
         fontSize: "40px",
-        fontFamily: "Arial Black, Arial",
+        fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif",
         color: "#25327a",
         stroke: "#ffffff",
         strokeThickness: 5,
@@ -1515,7 +1515,7 @@ export class GameScene extends Phaser.Scene {
     const completed = this.add
       .text(0, -50, "Nível concluído", {
         fontSize: "26px",
-        fontFamily: "Arial Black, Arial",
+        fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif",
         color: "#7c3aed",
       })
       .setOrigin(0.5);
@@ -1523,7 +1523,7 @@ export class GameScene extends Phaser.Scene {
     const message = this.add
       .text(0, 8, `Imagem revelada: ${this.levelConfig.imageName}.`, {
         fontSize: "17px",
-        fontFamily: "Arial Black, Arial",
+        fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif",
         color: "#334155",
         align: "center",
         wordWrap: { width: 430 },
@@ -1533,7 +1533,7 @@ export class GameScene extends Phaser.Scene {
     const waitText = this.add
       .text(0, 116, "Preparando a finalização...", {
         fontSize: "15px",
-        fontFamily: "Arial Black, Arial",
+        fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif",
         color: "#25327a",
       })
       .setOrigin(0.5);
@@ -1586,7 +1586,7 @@ export class GameScene extends Phaser.Scene {
     const title = this.add
       .text(0, -128, "Jogo concluído!", {
         fontSize: "38px",
-        fontFamily: "Arial Black, Arial",
+        fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif",
         color: "#25327a",
         stroke: "#ffffff",
         strokeThickness: 6,
@@ -1596,7 +1596,7 @@ export class GameScene extends Phaser.Scene {
     const subtitle = this.add
       .text(0, -74, "Você decodificou todas as imagens secretas.", {
         fontSize: "20px",
-        fontFamily: "Arial Black, Arial",
+        fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif",
         color: "#334155",
         align: "center",
         wordWrap: { width: 500 },
@@ -1614,7 +1614,7 @@ export class GameScene extends Phaser.Scene {
       const number = this.add
         .text(0, -13, String(level), {
           fontSize: "30px",
-          fontFamily: "Arial Black, Arial",
+          fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif",
           color: "#ffffff",
           stroke: "#25327a",
           strokeThickness: 4,
@@ -1624,7 +1624,7 @@ export class GameScene extends Phaser.Scene {
       const label = this.add
         .text(0, 23, "concluído", {
           fontSize: "12px",
-          fontFamily: "Arial Black, Arial",
+          fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif",
           color: "#ffffff",
         })
         .setOrigin(0.5);
@@ -1652,7 +1652,7 @@ export class GameScene extends Phaser.Scene {
       const buttonText = this.add
         .text(0, 0, label, {
           fontSize: "20px",
-          fontFamily: "Arial Black, Arial",
+          fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif",
           color: "#ffffff",
           stroke,
           strokeThickness: 3,
@@ -1741,7 +1741,7 @@ export class GameScene extends Phaser.Scene {
       this.add
         .text(640, 260, `Parabéns!\nVocê concluiu o nível ${this.levelConfig.level}!`, {
           fontSize: "42px",
-          fontFamily: "Arial Black, Arial",
+          fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif",
           color: "#16a34a",
           stroke: "#ffffff",
           strokeThickness: 5,
@@ -1756,7 +1756,7 @@ export class GameScene extends Phaser.Scene {
       this.add
         .text(640, 410, "Prepare-se para o próximo desafio.", {
           fontSize: "28px",
-          fontFamily: "Arial",
+          fontFamily: "DynaPuff, Arial, sans-serif",
           color: "#334155",
         })
         .setOrigin(0.5)
@@ -1795,7 +1795,7 @@ export class GameScene extends Phaser.Scene {
       this.add
         .text(640, 240, `Próximo nível: ${nextLevel}`, {
           fontSize: "42px",
-          fontFamily: "Arial Black, Arial",
+          fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif",
           color: "#86198f",
           stroke: "#ffffff",
           strokeThickness: 5,
@@ -1808,7 +1808,7 @@ export class GameScene extends Phaser.Scene {
       this.add
         .text(640, 325, nextConfig?.title ?? "Novo desafio", {
           fontSize: "32px",
-          fontFamily: "Arial Black, Arial",
+          fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif",
           color: "#334155",
           align: "center",
           wordWrap: { width: 850 },
@@ -1829,7 +1829,7 @@ export class GameScene extends Phaser.Scene {
       this.add
         .text(640, 510, "Avançar", {
           fontSize: "30px",
-          fontFamily: "Arial Black, Arial",
+          fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif",
           color: "#ffffff",
         })
         .setOrigin(0.5)
@@ -1986,7 +1986,7 @@ export class GameScene extends Phaser.Scene {
     const check = this.add
       .text(x, y, "✓", {
         fontSize: "32px",
-        fontFamily: "Arial Black, Arial",
+        fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif",
         color: "#22c55e",
         stroke: "#ffffff",
         strokeThickness: 4,
@@ -2014,7 +2014,7 @@ export class GameScene extends Phaser.Scene {
     const check = this.add
       .text(0, -1, "✓", {
         fontSize: "34px",
-        fontFamily: "Arial Black, Arial",
+        fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif",
         color: "#16a34a",
         stroke: "#ffffff",
         strokeThickness: 5,
@@ -2074,7 +2074,7 @@ export class GameScene extends Phaser.Scene {
     const message = this.add
       .text(centerX, 208, `Imagem revelada: ${this.levelConfig.imageName}!`, {
         fontSize: "28px",
-        fontFamily: "Arial Black, Arial",
+        fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif",
         color: "#ffffff",
         stroke: "#166534",
         strokeThickness: 4,
@@ -2179,7 +2179,7 @@ export class GameScene extends Phaser.Scene {
     const text = this.add
       .text(500, 210, message, {
         fontSize: "30px",
-        fontFamily: "Arial Black, Arial",
+        fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif",
         color: "#ffffff",
         backgroundColor: bgColor,
         padding: { x: 18, y: 10 },

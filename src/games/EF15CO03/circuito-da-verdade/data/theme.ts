@@ -53,8 +53,8 @@ export const A = {
 } as const
 
 export const FONT = {
-    black: 'Arial Black, Arial',
-    body: 'Arial',
+    black: '"DynaPuff Black", "Arial Black", Arial, sans-serif',
+    body: 'DynaPuff, Arial, sans-serif',
 } as const
 
 export const TEX = {

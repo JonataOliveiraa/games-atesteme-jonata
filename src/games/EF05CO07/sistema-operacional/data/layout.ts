@@ -1,281 +1,290 @@
 /**
- * Layout do Controlador do Sistema — 1280x720.
+ * Layout do jogo — 1280x720, IGUAL NOS TRÊS NÍVEIS.
  *
- * ── O QUE ESTAVA ERRADO NA VERSÃO ANTERIOR ───────────────────────────────
+ * ── QUATRO REGIÕES. NÃO EXISTE UMA QUINTA. ───────────────────────────────
  *
- * A tela tinha um pedido no meio e uma fileira de ícones embaixo, e mais nada.
- * Não havia o que enquadrar porque não havia máquina nenhuma: o "computador"
- * era um enunciado de texto. Ajustar o enquadramento daquilo seria centralizar
- * melhor um quiz.
+ *   0..90      as 3 LUZES (à esquerda), a BARRA DE TEMPO e o `?` (à direita)
+ *   118..324   o PEDIDO — a placa de vidro com o programa e a frase
+ *   349..403   os 4 ENCAIXES da memória (só no Nível 2)
+ *   411..610   as 4 PEÇAS, em fileira, com o nome embaixo
+ *   638..706   a FILA de quem espera, e o botão NÃO DÁ
  *
- * ── A TELA AGORA É UMA MESA DE CONTROLE, E ELA TEM ANDARES ───────────────
+ * Nenhum nível acrescenta uma região: o Nível 2 preenche os encaixes, o Nível 3
+ * deixa a faixa deles vazia e dá vida ao trilho que já existia. Foi essa a
+ * condição para os três caberem nos mesmos sete blocos de texto.
  *
- * De cima para baixo, e cada faixa responde uma pergunta diferente:
+ * ── OS ALVOS SÃO DE CELULAR ──────────────────────────────────────────────
  *
- *   0..84     O HEADER            — em que nível estou, o que é para fazer
- *   90..142   A ESTABILIDADE      — como está a máquina no geral
- *   152..364  O HARDWARE          — o que existe, e o que está livre AGORA
- *   354..410  A MEMÓRIA           — quanto cabe, e quem está lá dentro
- *   418..588  A FILA DE PEDIDOS   — quem está pedindo, e há quanto tempo
- *   600..720  OS CONTROLES        — pausar, negar, e a voz do sistema
+ * Este jogo é jogado no telefone. Nenhuma área de toque tem menos de 60px de
+ * lado, os dois botões cresceram e nenhuma delas encosta na do vizinho — a
+ * conta está em `scripts/check-so.mjs`, que reprova quem encostar.
  *
- * A ordem não é decorativa: ela é a ordem em que a criança precisa olhar. O
- * pedido chega embaixo, o recurso está no meio, e a consequência aparece em
- * cima. O olho sobe.
+ * O miolo entre 324 e 349 fica VAZIO de propósito: é o respiro que separa
+ * "o que estão me pedindo" de "o que eu tenho para dar". Sem ele, as duas
+ * coisas viram um bloco só e a criança não sabe qual olhar primeiro.
  *
- * ── A MEMÓRIA APARECE E SOME ─────────────────────────────────────────────
+ * ── ESTES NÚMEROS FORAM OLHADOS, NÃO CHUTADOS ────────────────────────────
  *
- * No Nível 1 não existe memória: os pedidos são todos de hardware, e uma barra
- * de blocos vazia ali embaixo seria um painel que não faz nada — a criança
- * tentaria tocar nele. Quando `fase.blocos` é zero a faixa não nasce, e o
- * hardware usa as duas faixas: peças MAIORES, mais no centro. São os dois
- * conjuntos de números abaixo (`PECAS.comMemoria` e `PECAS.semMemoria`), e não
- * um ajuste no olho na hora de desenhar.
+ * Eles saíram de uma maquete montada em cima da arte de verdade (`bg-central`)
+ * antes de qualquer linha de cena — a única forma de conferir enquadramento
+ * sem abrir o navegador. Mexer num deles pede refazer a maquete.
  */
 export const W = 1280
 export const H = 720
 
 /**
- * O header ocupa a largura inteira, como nos outros remakes.
+ * AS TRÊS LUZES — quantas vezes ainda dá para errar.
  *
- * Os três blocos NÃO se sobrepõem — é o que faz o enunciado ter largura própria
- * em vez de "a tela toda": à esquerda o nível e as fases (24..282), à direita a
- * barra de tempo e o `?` (944..1258), e o enunciado no vão livre entre os dois.
+ * Não é barra, não é porcentagem, não tem rótulo. Três luzes se contam de
+ * relance, do outro lado da sala, sem saber ler. Uma barra de estabilidade com
+ * a palavra "ESTABILIDADE" em cima (o que este jogo tinha) informa a mesma
+ * coisa cobrando uma leitura.
+ *
+ * Elas são CIANO, a cor da sala, e não verde: verde aqui quer dizer "deu
+ * certo", e uma luz verde permanente no canto diria isso o tempo todo.
  */
-export const HUD = {
-    w: W,
-    h: 84,
-    /** A linha de acento que fecha a faixa por baixo. */
-    linha: 3,
-    cy: 42,
+export const LUZES = {
+    x: 46,
+    cy: 44,
+    r: 13,
+    gap: 40,
+    /** O halo por trás da luz acesa. */
+    halo: 26,
+}
 
-    pillX: 24,
-    pillY: 22,
-    pillW: 118,
-    pillH: 40,
-
-    /** As bolinhas de fase, logo à direita da pílula. */
-    dotsX: 162,
-    dotsMaxW: 120,
-    dotR: 6,
-
-    /** O enunciado, centrado no vão livre entre os dois blocos laterais. */
-    instrCX: 606,
-    instrW: 560,
-    instrMaxLinhas: 2,
-
-    /** A barra de tempo (shared/hud/createTimeBar). */
-    barCX: 1080,
-    barW: 210,
-    barH: 18,
-    barIconDX: -124,
-    barIconR: 12,
-
-    helpX: 1232,
-    helpR: 26,
+export const AJUDA = {
+    x: 1228,
+    cy: 46,
+    r: 30,
 }
 
 /**
- * A ESTABILIDADE — o indicador que a ficha da habilidade pede.
+ * A BARRA DE TEMPO — o plantão inteiro numa barra que baixa.
  *
- * ── POR QUE SEGMENTOS, E NÃO UMA BARRA LISA ──────────────────────────────
+ * Ela mora na MESMA faixa das luzes e do `?`, entre as duas: as luzes dizem
+ * quantas vezes ainda dá para errar, a barra diz quanto tempo ainda há, e o `?`
+ * traz o tutorial de volta. Três informações de estado no mesmo lugar, nenhuma
+ * delas escrita.
  *
- * Uma barra lisa que encolhe responde "quanto sobra". Dez segmentos que apagam
- * respondem "quantos erros ainda cabem", que é a pergunta que a criança faz de
- * verdade. E dá para CONTAR: perdi dois, sobraram oito. Uma barra contínua não
- * dá para contar, e o que não dá para contar não dá para planejar.
+ * ── UMA BARRA, E NÃO UM `m:ss` ───────────────────────────────────────────
  *
- * Ela mora numa faixa própria, larga, no alto — porque é a única coisa da tela
- * que fala do sistema INTEIRO. Tudo abaixo dela fala de uma peça só.
+ * `createTimeBar` sabe escrever o tempo restante dentro dela (`label: true`) e
+ * este jogo não usa: a barra JÁ é o mostrador, e o número em cima seria o
+ * oitavo bloco de texto de uma tela com teto de sete. "Está acabando" se lê de
+ * relance; "faltam 40 segundos" precisa ser lido, convertido e comparado com um
+ * limite que a criança não conhece.
+ *
+ * ── AS MEDIDAS ───────────────────────────────────────────────────────────
+ *
+ * A barra vai de 937 a 1167, e o relógio dela fica em 896. As luzes acabam em
+ * 139 e o `?` começa em 1198 — ninguém encosta em ninguém. A altura de 24px é
+ * de celular: a barra de 20 do exemplo do componente some numa tela de telefone.
  */
-export const ESTAB = {
-    top: 90,
-    h: 52,
-    cy: 116,
-
-    rotuloX: 28,
-    /** A barra começa depois do rótulo e vai até a margem direita. */
-    x: 156,
-    w: 1096,
-    barraH: 26,
-    segmentos: 10,
-    segGap: 6,
-    r: 8,
+export const TEMPO = {
+    cx: 1052,
+    cy: 46,
+    w: 230,
+    h: 24,
+    /** O relógio desenhado à esquerda da barra. */
+    iconR: 15,
+    iconDX: -141,
+    /** As frações em que ela troca de tom, e em que começa a pulsar. */
+    warnAt: 0.34,
+    dangerAt: 0.15,
 }
 
 /**
- * O HARDWARE — a fileira de peças.
+ * O PEDIDO.
  *
- * Cada peça é um SOQUETE quadrado com a arte dentro, um aro de estado em volta
- * e o nome embaixo. O aro é o que muda: verde livre, âmbar ocupado (e ele
- * esvazia, mostrando quanto falta), vermelho desligado.
+ * Uma placa de vidro translúcida — o cenário continua aparecendo por trás dela,
+ * que é o pedido do usuário de deixar o fundo visível. Ela existe só para o
+ * texto ter contraste garantido; se fosse opaca, seria um painel tapando a arte.
  *
- * ── A ARTE CABE DENTRO DA FORMA ──────────────────────────────────────────
+ * Dentro dela: o ícone do programa e a frase. Nessa ordem porque é a ordem em
+ * que a criança precisa — QUEM está pedindo, e O QUE quer.
  *
- * `arte` é a fração do soquete que a imagem pode ocupar, e ela é menor que 1 de
- * propósito. O erro que já apareceu duas vezes neste projeto é desenhar a forma
- * pelo raio do aro e a imagem pelo tamanho natural dela: a imagem escapa da
- * forma, e nenhum ajuste de posição conserta isso. A imagem é encaixada por
- * `fitImage` na caixa `tile * arte`, sempre.
+ * O NOME do programa ("EDITOR") existia aqui e foi cortado. Contando os blocos
+ * de texto da tela ele era o oitavo, num limite de sete que a memória do
+ * projeto estabelece — e era o mais fraco de todos, porque o ícone logo acima
+ * já diz quem está pedindo. O vocabulário que a habilidade cobra é o das PEÇAS
+ * (teclado, mouse, monitor, impressora), e esse continua na tela.
+ */
+export const PEDIDO = {
+    x: 340,
+    y: 118,
+    w: 600,
+    h: 206,
+    r: 18,
+    cx: 640,
+
+    /** O ícone do programa, medido pelo CONTEÚDO da textura. */
+    iconeCY: 194,
+    iconeAlt: 118,
+
+    /**
+     * A frase mora numa linha só, sempre.
+     *
+     * É o que permite realçar o nome da peça em outra cor: a frase é montada
+     * com três textos lado a lado, e alinhar três textos em duas linhas com
+     * quebra automática é um problema que não vale a pena existir. O teto de
+     * 30 caracteres em `nivel1.ts` é o que garante a linha única, e o
+     * verificador reprova se alguém passar dele.
+     */
+    fraseCY: 296,
+    fraseMaxW: 560,
+}
+
+/**
+ * AS QUATRO PEÇAS.
+ *
+ * ── SEM PLACA ATRÁS ──────────────────────────────────────────────────────
+ *
+ * Elas ficam direto no chão da sala, com sombra. Foi a mesma correção que o
+ * Mapas em Rede precisou: pôr um disco arredondado atrás de uma peça que mora
+ * sobre um cenário ilustrado faz a peça parecer um adesivo. Quem dá apoio é a
+ * SOMBRA; quem dá contorno é a própria arte.
+ *
+ * ── TODAS DO MESMO TAMANHO ÓPTICO ────────────────────────────────────────
+ *
+ * `alt` é a altura do CONTEÚDO da textura, não da imagem. Os PNGs têm margem
+ * transparente diferente em cada arquivo — o teclado usa 62% da altura e a
+ * impressora 94%. Encaixar pela imagem (o `fitImage` de sempre) deixaria o
+ * teclado visivelmente menor que a impressora sem nenhum motivo. Ver `RECORTE`
+ * em `nivel1.ts`.
  */
 export const PECAS = {
-    gapMin: 22,
+    /** O centro ÓPTICO da peça — o meio do conteúdo, não da imagem. */
+    cy: 495,
+    /**
+     * A caixa em que o conteúdo da arte tem que caber.
+     *
+     * São DOIS limites, e o segundo não é preciosismo: o pente de memória é
+     * largo e baixo (344x191 de conteúdo). Encaixando só pela altura ele sairia
+     * com 238px de largura e encostaria na peça vizinha, que está a 208px de
+     * distância. Escalar pelo menor dos dois é o que mantém a fileira inteira
+     * dentro das próprias raias.
+     */
+    alt: 132,
+    maxW: 168,
+    /** Os quatro centros. Espaçados o bastante para o dedo não errar. */
+    xs: [328, 536, 744, 952],
+    nomeCY: 592,
 
-    /** Com a faixa de memória embaixo: peças menores, mais no alto. */
-    comMemoria: {
-        cy: 230,
-        tile: 146,
-        gap: 26,
-    },
-    /** Sem memória: as peças herdam a faixa vazia e crescem. */
-    semMemoria: {
-        cy: 250,
-        tile: 178,
-        gap: 30,
-    },
+    /** A sombra no chão, logo abaixo do conteúdo. */
+    sombraDY: 76,
+    sombraRX: 0.46,
+    sombraRY: 15,
 
-    r: 22,
-    /** Quanto do soquete a imagem pode ocupar. */
-    arte: 0.62,
-    /** A espessura do aro de estado. */
-    aro: 7,
-    /** O nome, medido a partir da borda de baixo do soquete. */
-    nomeDY: 22,
-    /** O selo do programa que está usando a peça, no canto de cima. */
-    seloR: 26,
-    seloDX: 0.42,
-    seloDY: 0.42,
+    /**
+     * A ÁREA DE TOQUE — generosa na largura, contida na altura.
+     *
+     * 176x210 subia até y=390 e invadia a faixa dos encaixes da memória. Como
+     * os encaixes ficam por CIMA (depth 17 contra 15), um dedo mirado no canto
+     * de cima da IMPRESSORA caía num encaixe vazio; encaixe vazio chama
+     * `onPeca('memoria')`, memória não era a peça pedida, e a criança perdia
+     * uma luz por acertar a peça que queria.
+     *
+     * 168 de altura para em y=411, três pixels abaixo do encaixe mais baixo. A
+     * arte tem 132 de altura: a área continua sobrando por todos os lados.
+     */
+    toqueW: 176,
+    toqueH: 168,
+
+    /** O selo de "sem energia", no canto de cima da peça. */
+    seloR: 22,
+    seloDX: 0.5,
+    seloDY: 0.5,
+
+    /** O ícone do programa que está usando a peça, pousado em cima dela. */
+    ocupanteAlt: 62,
+    ocupanteDY: -92,
 }
 
 /**
- * A MEMÓRIA — blocos, não porcentagem.
+ * OS ENCAIXES DA MEMÓRIA — só no Nível 2.
  *
- * O mesmo argumento dos segmentos da estabilidade, e aqui ele é ainda mais
- * forte: a memória é literalmente contável. "Cabem 6, o navegador ocupa 2,
- * sobram 4" é uma frase que uma criança de 5º ano resolve de cabeça. "62% de
- * uso" não é.
+ * Quatro quadradinhos logo acima da peça de memória, porque o pente de RAM
+ * desenhado tem QUATRO CHIPS. A mecânica não pode contradizer os olhos.
  *
- * Um programa aberto ocupa blocos VIZINHOS, com o ícone dele no meio do pedaço.
- * Tocar nesse pedaço fecha o programa — é a única forma de abrir espaço.
+ * Eles não têm rótulo e não têm número: um encaixe vazio é um lugar livre, um
+ * encaixe com ícone é um programa aberto, e dá para contar. Foi assim que a
+ * memória entrou no jogo sem gastar nenhum dos sete blocos de texto — a régua
+ * com a palavra "MEMÓRIA" em cima, que a versão anterior tinha, gastava um.
+ *
+ * `depth` maior que a zona das peças: os encaixes ficam por cima da área de
+ * toque da peça de memória, e o Phaser entrega o toque ao objeto mais alto.
+ * Tocar num encaixe fecha o programa; tocar na peça, abaixo, abre.
  */
-export const MEM = {
-    top: 348,
-    h: 54,
-    cy: 375,
-
-    rotuloX: 28,
-    x: 156,
-    w: 1096,
-    blocoH: 44,
-    gap: 8,
-    r: 8,
+export const SLOTS = {
+    /**
+     * Eles moram acima da peça de memória, acompanham o X dela — e param ANTES
+     * de a área de toque das peças começar.
+     *
+     * A 386 eles se sobrepunham a ela por 28px de altura, e a sobreposição
+     * custava uma luz (ver `PECAS.toqueH`). A 376 as duas faixas não se tocam:
+     * encaixe vai até 408, peça começa em 411. O toque não precisa mais de
+     * desempate por `depth` — precisa de espaço.
+     */
+    cy: 376,
+    lado: 54,
+    gap: 12,
+    r: 12,
+    /** O ícone do programa dentro do encaixe. */
+    iconeAlt: 38,
 }
 
 /**
- * A CHAPA DA MÁQUINA e a BANDEJA DOS PEDIDOS.
+ * A FILA de quem ainda vai pedir.
  *
- * ── POR QUE DUAS FORMAS, E NÃO UM FUNDO SÓ ───────────────────────────────
+ * É o indicador de progresso E o conceito de "fila de processos" da planilha,
+ * sem escrever nenhum dos dois. Ela encolhe a cada pedido resolvido, então a
+ * criança vê quanto falta sem nenhum número.
  *
- * Estabilidade, hardware e memória são A MÁQUINA: coisas que existem o tempo
- * todo, que têm estado e que a criança administra. Os pedidos são o que CHEGA
- * de fora: eles nascem, gritam e somem. Duas naturezas diferentes pedem duas
- * superfícies diferentes, e é isso que faz a tela ser lida em dois blocos em
- * vez de uma parede de widgets.
- *
- * A chapa é o enquadramento que faltava na versão anterior: sem ela, ícones
- * soltos sobre um render de sala de servidores não formavam objeto nenhum — e
- * era por isso que "ajustar o enquadramento" não tinha onde pegar.
- */
-export const CHAPA = {
-    x: 16,
-    y: 88,
-    w: 1248,
-    h: 320,
-    r: 26,
-}
-
-export const BANDEJA = {
-    x: 16,
-    y: 414,
-    w: 1248,
-    h: 182,
-    r: 22,
-}
-
-/**
- * A FILA DE PEDIDOS — até três fichas, lado a lado.
- *
- * Três é o teto do Nível 3 ("equilibrar múltiplos pedidos simultâneos"), e é
- * também o que cabe legível numa tela de 1280 com letra de 19px. A fila NÃO
- * rola e NÃO empilha: um quarto pedido simplesmente não entra até uma vaga
- * abrir. Uma fila que cresce para fora da tela é uma fila que a criança não
- * consegue planejar.
- *
- * As fichas moram numa posição FIXA cada uma. Quando uma sai, as outras
- * deslizam para a esquerda — e o deslize é visível, com tween, porque é ele que
- * conta que uma vaga abriu.
+ * O trilho por trás existe para os ícones lerem como UMA coisa — soltos, cinco
+ * ícones pequenos no canto parecem sujeira de tela.
  */
 export const FILA = {
-    top: 418,
-    max: 3,
+    x: 36,
+    cy: 672,
+    alt: 46,
+    gap: 70,
+    padX: 32,
+    h: 64,
+    r: 32,
 
-    w: 396,
-    h: 170,
-    gap: 14,
-    /** A primeira ficha começa aqui; as outras somam `w + gap`. */
-    x0: 32,
-    cy: 503,
-    r: 20,
-
-    iconDX: -138,
-    iconDY: -12,
-    iconMax: 88,
-
-    textoDX: -80,
-    textoW: 244,
-    nomeDY: -54,
-    falaDY: -8,
-    falaSizes: [19, 17, 16],
-    falaMaxLinhas: 2,
-
-    /** A paciência: a barrinha no pé da ficha. */
-    barraDY: 58,
-    barraW: 336,
-    barraH: 12,
-
-    /** Quanto a ficha selecionada sobe. */
-    liftDY: -12,
-    aro: 6,
+    /**
+     * A ÁREA DE TOQUE do trilho, e o halo de quem está esperando.
+     *
+     * No Nível 3 o trilho deixa de ser um enfeite de progresso e vira a FILA
+     * VIVA: quem está esperando fica aceso, ganha um halo e aceita toque —
+     * tocar nele o traz para o balcão. É o mesmo objeto de sempre, com uma
+     * coisa a mais e nenhuma palavra a mais.
+     *
+     * O halo entrou no lugar do anel de paciência, e a diferença é o que ele
+     * NÃO diz: o anel encolhia, então era um relógio, e relógio no canto da
+     * tela vira pressa. O halo só diz "este aqui aceita toque".
+     *
+     * 66px de alvo num passo de 70: dedo de criança em celular, com folga entre
+     * um alvo e o vizinho.
+     */
+    toque: 66,
+    haloR: 30,
 }
 
 /**
- * OS CONTROLES.
+ * O botão NÃO DÁ.
  *
- * Duas ações e uma voz:
+ * Ele é vermelho porque vermelho, nesta tela, quer dizer exatamente uma coisa:
+ * não vai dar. É a cor do selo da peça sem energia. O botão que responde "não
+ * vai dar" tem que ser da cor da coisa que ele responde.
  *
- *   PAUSA     congela tudo — o tempo, a paciência, os dispositivos. De graça,
- *             quantas vezes quiser, e sem poder agir enquanto está pausado.
- *   NEGAR     a resposta que não é um recurso. Ela precisa de um botão porque
- *             não existe lugar na tela para "tocar em nada".
- *   MENSAGEM  a plaquinha do meio, onde o sistema explica o que acabou de
- *             acontecer. É o balão da personagem dos outros jogos, sem
- *             personagem: aqui quem fala é a máquina.
+ * E o rótulo é "NÃO DÁ" e não "NEGAR": negar é vocabulário de sistema
+ * operacional, e a criança ainda vai chegar nele. Aos dez anos, "não dá" é a
+ * frase que ela já usa para esta situação exata.
  */
-export const RODAPE = {
-    top: 600,
-    cy: 660,
-
-    pausaX: 152,
-    pausaW: 208,
-    pausaH: 58,
-
-    negarX: 1110,
-    negarW: 236,
-    negarH: 62,
-
-    msgCX: 650,
-    msgW: 524,
-    msgH: 66,
-    msgR: 16,
-    msgIconR: 21,
+export const BOTAO = {
+    cx: 1134,
+    cy: 670,
+    w: 224,
+    h: 68,
 }

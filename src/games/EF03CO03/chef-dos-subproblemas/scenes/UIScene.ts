@@ -35,7 +35,7 @@ export class UIScene extends Phaser.Scene {
 
     this.instructionText = this.add.text(640, 32, 'Carregando...', {
       fontSize: '29px',
-      fontFamily: 'Arial Black, Arial',
+      fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif',
       color: '#FFF3E0',
       stroke: '#1c100a',
       strokeThickness: 5,
@@ -47,7 +47,7 @@ export class UIScene extends Phaser.Scene {
 
     this.hintText = this.add.text(640, 70, '', {
       fontSize: '20px',
-      fontFamily: 'Arial, sans-serif',
+      fontFamily: 'DynaPuff, Arial, sans-serif',
       color: '#FFE0B2',
       stroke: '#1c100a',
       strokeThickness: 4,
@@ -56,7 +56,7 @@ export class UIScene extends Phaser.Scene {
     }).setOrigin(0.5).setDepth(3)
 
     this.add.text(1092, 18, 'Nível', {
-      fontSize: '13px', color: '#D7CCC8', fontFamily: 'Arial',
+      fontSize: '13px', color: '#D7CCC8', fontFamily: 'DynaPuff, Arial, sans-serif',
     }).setOrigin(0.5).setDepth(3)
     this.levelStars = this.add.text(1092, 44, '★☆☆', {
       fontSize: '26px', color: '#FFD700',
