@@ -13,9 +13,22 @@
 
 name: Deploy
 
+# ── DISPARO MANUAL, ATÉ A AWS EXISTIR ────────────────────────────────────
+#
+# Este workflow assume uma role da AWS e sincroniza um bucket. Nenhum dos dois
+# foi provisionado ainda, e as variáveis listadas acima não estão preenchidas —
+# então rodar a cada push só produz uma falha garantida.
+#
+# E workflow que sempre falha é pior que workflow nenhum: em duas semanas todo
+# mundo aprende a ignorar o X vermelho, e a falha de verdade passa junto.
+#
+# Quando o bucket, a distribuição e a role existirem, é só devolver o gatilho:
+#
+#   on:
+#     push:
+#       branches: [main]
+#     workflow_dispatch:
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 concurrency:
