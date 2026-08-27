@@ -12,6 +12,7 @@ import feiraAntesUrl from '../../../../assets/games/EF15CO04/arquiteto-das-misso
 import feiraDepoisUrl from '../../../../assets/games/EF15CO04/arquiteto-das-missoes/missao-feira-depois.png'
 import acampamentoAntesUrl from '../../../../assets/games/EF15CO04/arquiteto-das-missoes/missao-acampamento-antes.png'
 import acampamentoDepoisUrl from '../../../../assets/games/EF15CO04/arquiteto-das-missoes/missao-acampamento-depois.png'
+import { faseInicial } from '../../../../shared/level/faseInicial'
 
 const ASSETS: Array<[string, string]> = [
     ['bg-central-missoes', bgCentralUrl],
@@ -59,6 +60,6 @@ export class BootScene extends Phaser.Scene {
 
     create() {
         this.scene.launch('UIScene')
-        this.scene.start('GameScene', { level: 1, phase: 0, points: 0 })
+        this.scene.start('GameScene', { level: faseInicial(this, 1), phase: 0, points: 0 })
     }
 }

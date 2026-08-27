@@ -13,6 +13,7 @@ import personagemAdultoUrl from '../../../../assets/games/EF05CO10/futuro-em-cen
 import personagemIdosoUrl from '../../../../assets/games/EF05CO10/futuro-em-cena/personagem-idoso.png'
 import personagemRoboUrl from '../../../../assets/games/EF05CO10/futuro-em-cena/personagem-robo.png'
 import propDroneUrl from '../../../../assets/games/EF05CO10/futuro-em-cena/prop-drone.png'
+import { faseInicial } from '../../../../shared/level/faseInicial'
 
 const ASSETS: Array<[string, string]> = [
   ['bg-studio', bgStudioUrl],
@@ -61,6 +62,6 @@ export class BootScene extends Phaser.Scene {
 
   create() {
     this.scene.launch('UIScene')
-    this.scene.start('GameScene', { level: 1, phase: 0 })
+    this.scene.start('GameScene', { level: faseInicial(this, 1), phase: 0 })
   }
 }

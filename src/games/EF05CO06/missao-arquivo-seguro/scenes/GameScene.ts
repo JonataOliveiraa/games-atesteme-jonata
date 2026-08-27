@@ -123,7 +123,8 @@ export class GameScene extends Phaser.Scene {
             this.unsubPlatform?.()
         })
 
-        runtimeGameBridge.emit({ type: 'GAME_READY', gameId: GAME_ID, stage: this.level.level })
+        // GAME_READY não carrega fase: quando ele sai, a partida ainda não começou
+        runtimeGameBridge.emit({ type: 'GAME_READY', gameId: GAME_ID })
         this.emitCheckpoint()
         this.broadcastMission()
 
@@ -1042,8 +1043,17 @@ export class GameScene extends Phaser.Scene {
             return
         }
 
+        /*
+         * Este evento sai a CADA nível concluído, e é `isFinalStage` que separa
+         * "acabou o nível 1" de "acabou o jogo". Sem ele, quem está de fora
+         * aprovaria o aluno na primeira fase.
+         */
         runtimeGameBridge.emit({
-            type: 'GAME_COMPLETED', gameId: GAME_ID, stage: this.level.level,
+            type: 'GAME_COMPLETED',
+            gameId: GAME_ID,
+            stage: this.level.level,
+            totalStages: LEVELS.length,
+            isFinalStage: lastLevel,
         })
         this.emitCheckpoint()
 
@@ -1067,8 +1077,9 @@ export class GameScene extends Phaser.Scene {
             return
         }
 
+        // o GAME_COMPLETED com isFinalStage já saiu acima; `FINISH_GAME` era um
+        // tipo que não existe no contrato e ninguém do lado de fora reconhecia
         this.ended = true
-        runtimeGameBridge.emit({ type: 'FINISH_GAME', gameId: GAME_ID, stage: this.level.level })
 
         showLevelComplete(this, {
             title: 'Jogo concluído!',

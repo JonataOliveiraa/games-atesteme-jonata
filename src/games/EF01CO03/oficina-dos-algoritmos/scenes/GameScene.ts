@@ -290,7 +290,7 @@ export class GameScene extends Phaser.Scene {
       onComplete: () => {
         this.drawTimeBar(0);
         this.errors += 1;
-        this.currentLives = Math.max(0, this.currentLives - 1);
+        this.perderVida();
         this.emitWrongAnswer();
         this.emitCheckpoint();
         this.showFeedback('Tempo esgotado!', false);
@@ -764,7 +764,7 @@ export class GameScene extends Phaser.Scene {
 
     this.errors += 1;
     this.currentPoints = Math.max(0, this.currentPoints - 5);
-    this.currentLives = Math.max(0, this.currentLives - 1);
+    this.perderVida();
     this.emitWrongAnswer();
     this.emitCheckpoint();
     this.showFeedback('Tente novamente!', false);
@@ -1280,6 +1280,34 @@ export class GameScene extends Phaser.Scene {
       pointsEarned: 5,
       stage: this.currentLevel.level,
     });
+  }
+
+  /**
+   * A VIDA ACABOU — e este jogo nunca contava isso a ninguém.
+   *
+   * `currentLives` já era descontado em dois lugares (o tempo esgotado e a
+   * ordem errada), sempre com `Math.max(0, ...)`, e nunca era LIDO. A criança
+   * chegava a zero e o jogo seguia como se nada tivesse acontecido; de fora,
+   * a partida parecia perfeita até o fim.
+   *
+   * ── POR QUE A TRANSIÇÃO, E NÃO O VALOR ───────────────────────────────
+   *
+   * `currentLives` nasce em 0 e só vira outra coisa se alguém mandar
+   * `lives` na abertura da cena. Emitir "acabou" sempre que ele for zero
+   * reprovaria a criança no primeiro erro de toda partida que não recebeu
+   * vidas. Então o que conta é a BORDA: tinha vida, ficou sem.
+   */
+  private perderVida() {
+    const antes = this.currentLives;
+    this.currentLives = Math.max(0, antes - 1);
+
+    if (antes > 0 && this.currentLives === 0) {
+      gameBridge.emit({
+        type: 'GAME_OVER',
+        gameId: GAME_ID,
+        stage: this.currentLevel.level,
+      });
+    }
   }
 
   private emitWrongAnswer() {

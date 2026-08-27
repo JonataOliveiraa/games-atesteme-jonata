@@ -7,9 +7,11 @@ import { useFullscreen } from "../../hooks/useFullscreen";
 interface PhaserCanvasProps {
   config: Phaser.Types.Core.GameConfig;
   gameId: string;
+  /** A fase em que a partida deve começar. Chega ao jogo antes do boot. */
+  stage?: 1 | 2 | 3;
 }
 
-export default function PhaserCanvas({ config, gameId }: PhaserCanvasProps) {
+export default function PhaserCanvas({ config, gameId, stage }: PhaserCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const gameRef = useRef<Phaser.Game | null>(null);
   const { isFullscreen, toggle } = useFullscreen();
@@ -48,6 +50,22 @@ export default function PhaserCanvas({ config, gameId }: PhaserCanvasProps) {
       gameRef.current = new Phaser.Game({
         ...config,
         parent: containerRef.current,
+
+        /*
+         * A FASE INICIAL ENTRA ANTES DE QUALQUER CENA EXISTIR.
+         *
+         * `preBoot` roda antes do `BootScene`, então quando ele for decidir
+         * com que dados abrir a `GameScene`, o valor já está no registry (ver
+         * `shared/level/faseInicial.ts`). Pelo `START_GAME` seria tarde: o
+         * comando chega com o jogo já montado na fase 1.
+         */
+        callbacks: {
+          ...config.callbacks,
+          preBoot: (game) => {
+            if (stage) game.registry.set("faseInicial", stage);
+            config.callbacks?.preBoot?.(game);
+          },
+        },
       });
     });
 
@@ -59,7 +77,7 @@ export default function PhaserCanvas({ config, gameId }: PhaserCanvasProps) {
       }
       EventBus.removeAllListeners();
     };
-  }, [config]);
+  }, [config, stage]);
 
   useEffect(() => {
     const el = containerRef.current;
@@ -89,11 +107,27 @@ export default function PhaserCanvas({ config, gameId }: PhaserCanvasProps) {
 
   useEffect(() => {
     const onResize = () => gameRef.current?.scale.refresh();
+
     window.addEventListener("resize", onResize);
     window.addEventListener("orientationchange", onResize);
+
+    /*
+     * O CONTAINER PODE MUDAR DE TAMANHO SEM A JANELA MUDAR.
+     *
+     * Acontece quando o palco muda sem a janela mudar — o painel lateral do
+     * harness, uma barra que some, o modo embed entrando. Sem observar o
+     * Phaser continua desenhando na medida antiga — o jogo fica menor que a
+     * área, ou sobrando para fora dela, e só volta ao normal se alguém
+     * redimensionar a janela na mão.
+     */
+    const alvo = containerRef.current;
+    const observador = alvo ? new ResizeObserver(onResize) : null;
+    if (alvo && observador) observador.observe(alvo);
+
     return () => {
       window.removeEventListener("resize", onResize);
       window.removeEventListener("orientationchange", onResize);
+      observador?.disconnect();
     };
   }, []);
 

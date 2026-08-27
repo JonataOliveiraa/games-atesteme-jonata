@@ -1,0 +1,336 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<title>Harness de embed — jogos Atesteme</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0; background: #0b1220; color: #e8f4ff;
+    font: 14px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+    display: grid;
+    grid-template-columns: 1fr 420px;
+    /* a linha é explícita: sem ela a altura do iframe fica por conta de uma
+       cadeia de "auto" e ele acaba com o tamanho intrínseco de 300x150 */
+    grid-template-rows: 100%;
+    height: 100vh;
+    /* sem isto a página inteira ganha barra de rolagem quando o log enche */
+    overflow: hidden;
+  }
+
+  /* GRID, e não flex, para a coluna do palco.
+     `iframe` é elemento substituído: com `flex: 1` ele até cresce, mas basta
+     um elo da cadeia de alturas ficar em `auto` para ele voltar ao tamanho
+     intrínseco. `grid-template-rows: auto 1fr` dá uma altura definida à
+     segunda linha, e o iframe com `height: 100%` não tem para onde fugir. */
+  #palco {
+    display: grid;
+    grid-template-rows: auto 1fr;
+    min-width: 0; min-height: 0;
+  }
+  #barra { padding: 10px 12px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center;
+           background: #111c2e; border-bottom: 1px solid #1f2f47; }
+  #barra label { opacity: .65; }
+  #barra input { background: #0b1220; color: #e8f4ff; border: 1px solid #29405f;
+                 border-radius: 6px; padding: 4px 7px; font: inherit; }
+  #barra input[size="6"] { width: 62px; }
+  button { background: #1d4ed8; color: #fff; border: 0; border-radius: 6px;
+           padding: 6px 12px; font: inherit; cursor: pointer; }
+  button.sec { background: #29405f; }
+  iframe {
+    display: block;
+    width: 100%; height: 100%;
+    min-width: 0; min-height: 0;
+    border: 0; background: #000;
+  }
+  /* `min-height: 0` é o que faz o #log rolar de verdade: um filho flex tem
+     altura mínima automática igual ao conteúdo, e sem zerar isso o overflow
+     nunca entra em ação — o painel só cresce. */
+  #lado { border-left: 1px solid #1f2f47; display: flex; flex-direction: column;
+          min-width: 0; min-height: 0; }
+  #lado h2 { margin: 0; padding: 10px 12px; font-size: 12px; letter-spacing: .08em;
+             text-transform: uppercase; opacity: .6; border-bottom: 1px solid #1f2f47; }
+  #log { flex: 1 1 0; min-height: 0; overflow-y: auto; overscroll-behavior: contain;
+         padding: 8px 12px; margin: 0; }
+  #lado h2 span { float: right; opacity: .5; font-weight: 400; }
+  .ev { border-left: 3px solid #29405f; padding: 5px 9px; margin-bottom: 6px;
+        background: #0f1a2c; border-radius: 0 6px 6px 0; white-space: pre-wrap;
+        word-break: break-word; }
+  .ev b { color: #6ee7f9; }
+  .ev.ok    { border-left-color: #51cf66; }
+  .ev.ruim  { border-left-color: #ff6b6b; }
+  .ev.aviso { border-left-color: #fbbf24; }
+  .ev.pronto { border-left-color: #6ee7f9; background: #10233a; }
+
+  /* ── MODO FOCO (tecla Y) ───────────────────────────────────────────────
+     Some tudo que é do harness e o iframe fica com a janela inteira. É a
+     única forma de conferir de verdade se o jogo preenche a tela: enquanto
+     houver barra e painel do lado, o que se está medindo é a célula do grid,
+     não a tela. */
+  /* O palco SAI DO FLUXO e cobre a janela.
+     Tentar isto mexendo no grid (`grid-template-columns: 1fr` e esconder os
+     irmãos) depende de a cadeia de alturas inteira continuar de pé — e basta
+     um elo em `auto` para o iframe encolher. `position: fixed` não depende de
+     ancestral nenhum: é a janela, e ponto. */
+  body.foco #barra,
+  body.foco #lado { display: none; }
+  body.foco #palco {
+    position: fixed;
+    inset: 0;
+    display: block;
+  }
+  body.foco #jogo { width: 100vw; height: 100vh; }
+
+  #dica {
+    position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%);
+    background: rgba(11,18,32,.92); border: 1px solid #29405f; border-radius: 8px;
+    padding: 6px 14px; font-size: 12px; opacity: 0; pointer-events: none;
+    transition: opacity 240ms ease;
+  }
+  #dica.aparece { opacity: 1; }
+  .ev small { opacity: .55; }
+</style>
+</head>
+<body>
+
+<div id="palco">
+  <div id="barra">
+    <label>slug</label><input id="slug" value="sistema-operacional" size="24" />
+    <label>attempt</label><input id="attempt" size="16" />
+    <label>stage</label><input id="stage" value="1" size="6" />
+    <label>points</label><input id="points" value="0" size="6" />
+    <label>lives</label><input id="lives" value="3" size="6" />
+    <button id="abrir">Abrir</button>
+    <button id="start" class="sec">START_GAME</button>
+    <button id="pause" class="sec">PAUSE</button>
+    <button id="resume" class="sec">RESUME</button>
+    <button id="limpar" class="sec">Limpar log</button>
+    <button id="puro" class="sec" title="abre a mesma URL numa aba, sem harness e sem iframe">Abrir sozinho ↗</button>
+    <label title="mostra também mensagens que não são eventos da plataforma"><input type="checkbox" id="tudo" /> tudo</label>
+  </div>
+  <iframe id="jogo" allow="autoplay; fullscreen"></iframe>
+</div>
+
+<div id="dica">Y volta o painel</div>
+
+<div id="lado">
+  <h2>Eventos recebidos</h2>
+  <div id="log"></div>
+</div>
+
+<script>
+/*
+ * HARNESS DE EMBED — a referência viva do contrato.
+ *
+ * Ele faz exatamente o que a plataforma Atesteme precisa fazer: monta a URL
+ * com o contexto, embute o iframe, manda comandos e escuta os eventos da
+ * partida. Se algo funciona aqui e não funciona lá, a diferença está do outro
+ * lado — e é para isso que este arquivo existe.
+ *
+ * Ele é servido pelo próprio site (mesma origem), então:
+ *   · a origem dele precisa estar em VITE_EMBED_ALLOWED_ORIGINS, senão o
+ *     jogo não manda nada e este painel fica vazio — o que também é um teste;
+ *   · o `returnBase` aponta para cá, e as rotas /approve e /reprove são
+ *     simuladas: o iframe navega para elas e mostra a query que chegou.
+ */
+const $ = (id) => document.getElementById(id);
+const ORIGEM = window.location.origin;
+
+const uuidFake = () =>
+  "att-" + Math.random().toString(16).slice(2) + "-" + Date.now().toString(16);
+
+$("attempt").value = uuidFake();
+
+function log(titulo, dado, classe) {
+  const div = document.createElement("div");
+  div.className = "ev " + (classe || "");
+  const hora = new Date().toLocaleTimeString("pt-BR");
+  div.innerHTML =
+    "<b>" + titulo + "</b> <small>" + hora + "</small>\n" +
+    (dado === undefined ? "" : JSON.stringify(dado, null, 2));
+  const painel = $("log");
+  painel.prepend(div);
+  // o mais novo entra em cima, então o topo é onde se olha
+  painel.scrollTop = 0;
+
+  // 200 é mais que suficiente para uma partida, e evita o painel virar um
+  // documento de milhares de nós depois de meia hora de teste
+  while (painel.children.length > 200) painel.lastElementChild.remove();
+}
+
+function montarUrl() {
+  const q = new URLSearchParams({
+    embed: "1",
+    attempt: $("attempt").value.trim(),
+    stage: $("stage").value.trim(),
+    points: $("points").value.trim(),
+    lives: $("lives").value.trim(),
+    returnBase: ORIGEM,
+  });
+  return "/jogos/" + encodeURIComponent($("slug").value.trim()) + "?" + q;
+}
+
+function abrir() {
+  const url = montarUrl();
+  const frame = $("jogo");
+  frame.src = url;
+  log("iframe.src", url, "aviso");
+
+  /*
+   * O FOCO VAI PARA DENTRO DO IFRAME.
+   *
+   * Sem isto, o teclado continua respondendo a esta página e não ao jogo — e
+   * jogo que usa seta ou barra de espaço parece não responder.
+   */
+  frame.addEventListener("load", () => {
+    try {
+      frame.contentWindow.focus();
+      // a mesma tecla precisa funcionar com o foco dentro do jogo
+      ouvirTecla(frame.contentDocument);
+    } catch (e) { /* origem diferente */ }
+  }, { once: true });
+}
+
+function mandar(payload) {
+  const janela = $("jogo").contentWindow;
+  if (!janela) return log("sem iframe", null, "ruim");
+  // targetOrigin EXPLÍCITO — é a mesma regra que o site segue de volta
+  janela.postMessage({ channel: "platform-command", payload }, ORIGEM);
+  log("→ comando " + payload.type, payload);
+}
+
+/*
+ * O JOGO SOZINHO, SEM HARNESS.
+ *
+ * O iframe daqui existe para simular a plataforma — é o caso real, e é por
+ * isso que o teste padrão passa por ele. Mas para conferir enquadramento vale
+ * abrir a MESMA URL numa aba limpa: aí não há grid, painel nem iframe entre a
+ * janela e o jogo, e o que se vê é exatamente o que a Atesteme vai embutir.
+ */
+$("puro").onclick = () => window.open(montarUrl(), "_blank");
+
+$("abrir").onclick = abrir;
+$("limpar").onclick = () => ($("log").innerHTML = "");
+
+/* ══════════════════════════════════════════════════════════════════════════
+   MODO FOCO — Y esconde o harness e deixa só o jogo
+   ══════════════════════════════════════════════════════════════════════════
+
+   Isto é do HARNESS, não do site de jogos. O site não tem atalho nenhum: o
+   modo embed dele é ligado só pela URL. Aqui a tecla serve para uma coisa
+   específica — enquanto a barra e o painel de log estiverem na tela, o que se
+   está olhando é o iframe dentro de uma célula de grid. Para saber se o jogo
+   preenche A TELA, o harness precisa sair da frente.
+
+   O ouvinte é registrado DUAS vezes: neste documento e no documento de dentro
+   do iframe. Sem o segundo, a tecla para de funcionar assim que alguém clica
+   no jogo — que é o primeiro que qualquer pessoa faz. Os dois são possíveis
+   porque iframe e harness são da mesma origem. */
+function alternarFoco() {
+  const ligado = document.body.classList.toggle("foco");
+
+  const dica = $("dica");
+  dica.textContent = ligado ? "Y volta o painel" : "Y esconde o painel";
+  dica.classList.add("aparece");
+  clearTimeout(alternarFoco.t);
+  alternarFoco.t = setTimeout(() => dica.classList.remove("aparece"), 1600);
+
+  // o palco mudou de tamanho; o Phaser lá dentro precisa saber
+  window.dispatchEvent(new Event("resize"));
+  try { $("jogo").contentWindow.dispatchEvent(new Event("resize")); } catch (e) {}
+}
+
+function ouvirTecla(alvo) {
+  alvo.addEventListener("keydown", (e) => {
+    if (e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;
+    if (e.key.toLowerCase() !== "y") return;
+    const em = e.target;
+    if (em && (em.tagName === "INPUT" || em.tagName === "TEXTAREA")) return;
+    e.preventDefault();
+    alternarFoco();
+  }, true);
+}
+
+ouvirTecla(document);
+
+$("start").onclick = () =>
+  mandar({
+    type: "START_GAME",
+    gameId: "",
+    points: Number($("points").value) || 0,
+    stage: Number($("stage").value) || 1,
+    lives: Number($("lives").value) || 3,
+  });
+
+$("pause").onclick = () => mandar({ type: "PAUSE_GAME" });
+$("resume").onclick = () => mandar({ type: "RESUME_GAME" });
+
+/*
+ * NADA É DESCARTADO EM SILÊNCIO.
+ *
+ * A versão anterior fazia `return` em tudo que não reconhecia — e aí uma
+ * mensagem que chega e é jogada fora fica idêntica a uma mensagem que nunca
+ * foi enviada. São problemas opostos: um é do lado de cá, outro do lado de lá.
+ *
+ * Um harness que existe para depurar integração não pode ter esse ponto cego.
+ * O que não é evento da plataforma aparece marcado, e o ruído normal do
+ * ecossistema (React DevTools, HMR do Vite) fica escondido atrás de um filtro
+ * que dá para desligar no `#tudo`.
+ */
+const RUIDO_CONHECIDO = /^(react-devtools|vite|webpack)/i;
+
+window.addEventListener("message", (e) => {
+  const dados = e.data;
+
+  // a plataforma de verdade também precisa desta linha
+  if (e.origin !== ORIGEM) {
+    log("⚠ origem recusada: " + e.origin, dados, "ruim");
+    return;
+  }
+
+  if (!dados || dados.channel !== "platform-event") {
+    if (!$("tudo").checked) return;
+    const marca =
+      typeof dados === "string" ? dados :
+      dados && (dados.source || dados.type || dados.channel) || "";
+    if (RUIDO_CONHECIDO.test(String(marca))) return;
+    log("· mensagem ignorada (não é platform-event)", dados, "aviso");
+    return;
+  }
+
+  const p = dados.payload || {};
+  let classe = "";
+  if (p.type === "GAME_READY") classe = "pronto";
+  else if (p.type === "GAME_COMPLETED" && p.isFinalStage) classe = "ok";
+  else if (p.type === "GAME_OVER") classe = "ruim";
+  else if (p.type === "WRONG_ANSWER") classe = "aviso";
+
+  log("← " + p.type, p, classe);
+
+  if (p.type === "GAME_COMPLETED" && p.isFinalStage) {
+    log("APROVARIA a tentativa " + (p.meta && p.meta.attempt), null, "ok");
+  }
+  if (p.type === "GAME_OVER") {
+    log("REPROVARIA a tentativa " + (p.meta && p.meta.attempt), null, "ruim");
+  }
+});
+
+/*
+ * /approve e /reprove NÃO são simulados aqui.
+ *
+ * Havia neste lugar um bloco que trocava o `document.body` quando
+ * `location.pathname` fosse `/approve` — e ele nunca rodou uma vez sequer.
+ * Este arquivo é servido em `/embed-harness.html`; quando o iframe navega para
+ * `/approve`, quem o servidor entrega é o `index.html` do app, e o script
+ * daqui nem chega a ser carregado.
+ *
+ * A simulação virou rota de verdade, em `src/pages/EmbedReturnPage.tsx`. Assim
+ * ela funciona para o harness E para o `embed-sandbox.html`, que não tinha
+ * simulação nenhuma e terminava a partida em tela branca.
+ */
+abrir();
+</script>
+</body>
+</html>

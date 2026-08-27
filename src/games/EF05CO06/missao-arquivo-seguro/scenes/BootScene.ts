@@ -38,6 +38,7 @@ import eventoInternetUrl from '../../../../assets/games/EF05CO06/missao-arquivo-
 
 import contextoUrl from '../../../../assets/games/EF05CO06/missao-arquivo-seguro/contexto.png'
 import { createLoadingScreen } from '../../../../shared/loading/createLoadingScreen'
+import { faseInicial } from '../../../../shared/level/faseInicial'
 
 
 const ASSETS: Array<[string, string]> = [
@@ -104,7 +105,7 @@ export class BootScene extends Phaser.Scene {
         this.buildShadowTexture()
 
         this.scene.launch('UIScene')
-        this.time.delayedCall(0, () => this.scene.start('GameScene', { level: 1, phase: 0 }))
+        this.time.delayedCall(0, () => this.scene.start('GameScene', { level: faseInicial(this, 1), phase: 0 }))
     }
 
     private buildGlowTexture() {

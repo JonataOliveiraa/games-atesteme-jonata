@@ -1,6 +1,7 @@
 import Phaser from 'phaser'
 import { createLoadingScreen } from '../../../../shared/loading/createLoadingScreen'
 import { C } from '../data/theme'
+import { faseInicial } from '../../../../shared/level/faseInicial'
 
 /**
  * As texturas que os três níveis usam.
@@ -89,6 +90,14 @@ export class BootScene extends Phaser.Scene {
     }
 
     create() {
-        this.scene.start('GameScene', { nivel: 3, points: 0 })
+        /*
+         * O PADRÃO É 3 DE PROPÓSITO — é onde o usuário está testando.
+         *
+         * Isto só vale FORA da plataforma. Em modo embed a fase vem sempre na
+         * query (`?stage=`), e o `embedParams` já usa 1 como padrão dela, então
+         * um aluno de verdade nunca cai aqui. Quando o Nível 3 estiver fechado,
+         * este 3 vira 1.
+         */
+        this.scene.start('GameScene', { nivel: faseInicial(this, 3), points: 0 })
     }
 }

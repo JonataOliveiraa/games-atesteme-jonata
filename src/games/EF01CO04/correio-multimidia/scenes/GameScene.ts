@@ -91,6 +91,19 @@ export class GameScene extends Phaser.Scene {
       }
     })
 
+    /*
+     * O APERTO DE MÃO: "estou pronto, pode mandar o contexto".
+     *
+     * Este era o único dos 45 jogos que não emitia GAME_READY — e ele é
+     * justamente um que ESPERA um START_GAME para saber a fase e os pontos.
+     * Sem o aviso, quem manda o comando não tem como saber quando o ouvinte
+     * acima passou a existir, e mandava cedo demais, no vazio.
+     *
+     * O evento sai depois de o ouvinte estar registrado, nunca antes: um
+     * START_GAME respondido na mesma batida encontraria a cena ainda surda.
+     */
+    runtimeGameBridge.emit({ type: 'GAME_READY', gameId: GAME_ID })
+
     this.startGame(1, 0)
   }
 

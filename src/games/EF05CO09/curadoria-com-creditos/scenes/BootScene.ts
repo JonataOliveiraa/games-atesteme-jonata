@@ -13,6 +13,7 @@ import thumbVideoEscolarUrl from '../../../../assets/games/EF05CO09/curadoria-co
 import thumbQuadrinhoDigitalUrl from '../../../../assets/games/EF05CO09/curadoria-com-creditos/thumb-quadrinho-digital.png'
 import thumbFotoSemAutorUrl from '../../../../assets/games/EF05CO09/curadoria-com-creditos/thumb-foto-sem-autor.png'
 import thumbPersonagemFamosoUrl from '../../../../assets/games/EF05CO09/curadoria-com-creditos/thumb-personagem-famoso-alerta.png'
+import { faseInicial } from '../../../../shared/level/faseInicial'
 
 const ASSETS: Array<[string, string]> = [
   ['bg-portfolio', bgPortfolioUrl],
@@ -61,6 +62,6 @@ export class BootScene extends Phaser.Scene {
 
   create() {
     this.scene.launch('UIScene')
-    this.scene.start('GameScene', { level: 1, phase: 0 })
+    this.scene.start('GameScene', { level: faseInicial(this, 1), phase: 0 })
   }
 }

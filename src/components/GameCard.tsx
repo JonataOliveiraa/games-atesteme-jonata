@@ -57,7 +57,10 @@ export default function GameCard(props: Props) {
   return (
     <>
       <Link
-        to={`/jogos/${game.slug}`}
+        /* `/iframe/`, e não `/jogos/`: o card leva à página DA PLATAFORMA,
+           que tem pontos, vidas e modais, e que desenha o jogo num iframe.
+           `/jogos/<slug>` é o canvas puro, e existe para ser embutido. */
+        to={`/iframe/${game.slug}`}
         className="game-card-link"
         onMouseEnter={playBeep}
         onClick={handleClick}

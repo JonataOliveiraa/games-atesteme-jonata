@@ -1,6 +1,7 @@
 import Phaser from 'phaser'
 import { createLoadingScreen } from '../../../../shared/loading/createLoadingScreen'
 import { C } from '../data/theme'
+import { faseInicial } from '../../../../shared/level/faseInicial'
 
 /**
  * As chaves que o jogo consome. Ver TEXTURAS.md.
@@ -102,6 +103,6 @@ export class BootScene extends Phaser.Scene {
          * `stage` do START_GAME, e a troca acontece no `scene.restart` do fim
          * de fase.
          */
-        this.scene.start('GameScene', { level: 1, phase: 0, points: 0 })
+        this.scene.start('GameScene', { level: faseInicial(this, 1), phase: 0, points: 0 })
     }
 }

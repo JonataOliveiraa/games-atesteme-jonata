@@ -104,7 +104,8 @@ export class GameScene extends Phaser.Scene {
         this.publishHud()
         this.time.delayedCall(0, () => this.publishHud())
         EventBus.once('ui-ready', () => this.publishHud())
-        runtimeGameBridge.emit({ type: 'GAME_READY', gameId: GAME_ID, stage: this.level.level })
+        // GAME_READY não carrega fase: quando ele sai, a partida ainda não começou
+        runtimeGameBridge.emit({ type: 'GAME_READY', gameId: GAME_ID })
 
         EventBus.on('spool-end', this.onTimeUp, this)
         EventBus.on('show-tutorial', this.replayTutorial, this)
@@ -1087,8 +1088,15 @@ export class GameScene extends Phaser.Scene {
         }
 
         this.ended = true
-        runtimeGameBridge.emit({ type: 'GAME_COMPLETED', gameId: GAME_ID, stage: this.level.level })
-        runtimeGameBridge.emit({ type: 'FINISH_GAME', gameId: GAME_ID, stage: this.level.level })
+        // um evento só, e ele diz que é o fim. `FINISH_GAME` não existe no
+        // contrato — saía junto e ninguém do lado de fora reconhecia
+        runtimeGameBridge.emit({
+            type: 'GAME_COMPLETED',
+            gameId: GAME_ID,
+            stage: this.level.level,
+            totalStages: LEVELS.length,
+            isFinalStage: true,
+        })
 
         showLevelComplete(this, {
             title: 'Curadoria concluída!',

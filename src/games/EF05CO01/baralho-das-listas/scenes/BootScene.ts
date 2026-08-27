@@ -1,6 +1,7 @@
 import Phaser from 'phaser'
 import { createLoadingScreen } from '../../../../shared/loading/createLoadingScreen'
 import { C } from '../data/theme'
+import { faseInicial } from '../../../../shared/level/faseInicial'
 
 /**
  * As chaves que o jogo consome.
@@ -120,6 +121,6 @@ export class BootScene extends Phaser.Scene {
          * grampeados no `GameScene.init`, então número fora da faixa não
          * quebra nada.
          */
-        this.scene.start('GameScene', { level: 1, phase: 0, points: 0 })
+        this.scene.start('GameScene', { level: faseInicial(this, 1), phase: 0, points: 0 })
     }
 }

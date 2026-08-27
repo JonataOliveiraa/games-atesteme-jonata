@@ -24,6 +24,7 @@ import faiscaUrl from '../../../../assets/games/EF05CO03/arena-da-logica/faisca.
 import brilhoRadialUrl from '../../../../assets/games/EF05CO03/arena-da-logica/brilho-radial.png'
 import { createLoadingScreen } from '../../../../shared/loading/createLoadingScreen'
 import iconeAjudaUrl from '../../../../assets/games/EF05CO03/arena-da-logica/icone-ajuda.png'
+import { faseInicial } from '../../../../shared/level/faseInicial'
 
 const ASSETS: Array<[string, string]> = [
   ['bg-arena', bgArenaUrl],
@@ -118,7 +119,7 @@ export class BootScene extends Phaser.Scene {
     this.buildPlacaTextures()
 
     this.scene.launch('UIScene')
-    this.scene.start('GameScene', { level: 1, phase: 0 })
+    this.scene.start('GameScene', { level: faseInicial(this, 1), phase: 0 })
   }
 
   private buildPlacaTextures() {

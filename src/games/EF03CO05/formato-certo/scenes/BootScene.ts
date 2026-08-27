@@ -18,6 +18,7 @@ import seloPixelsUrl from '../../../../assets/games/EF03CO05/formato-certo/selo-
  * só esta linha de import.
  */
 import seloTextoUrl from '../../../../assets/games/EF03CO05/formato-certo/selo-texto.png'
+import { faseInicial } from '../../../../shared/level/faseInicial'
 
 /**
  * Textura é opcional aqui, por decisão de projeto.
@@ -97,6 +98,6 @@ export class BootScene extends Phaser.Scene {
          * `stage` do START_GAME, e a troca de nível acontece no
          * `scene.restart` do fim de fase.
          */
-        this.scene.start('GameScene', { level: 1, phase: 0, points: 0 })
+        this.scene.start('GameScene', { level: faseInicial(this, 1), phase: 0, points: 0 })
     }
 }

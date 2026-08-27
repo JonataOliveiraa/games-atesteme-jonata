@@ -29,6 +29,7 @@ import iconCondPassosUrl from '../../../../assets/games/EF03CO02/labirinto-do-en
 
 import marcaRastroUrl from '../../../../assets/games/EF03CO02/labirinto-do-enquanto/marca-rastro.png'
 import marcaPalpiteUrl from '../../../../assets/games/EF03CO02/labirinto-do-enquanto/marca-palpite.png'
+import { faseInicial } from '../../../../shared/level/faseInicial'
 
 const ASSETS: Array<[string, string]> = [
     ['bg-oficina', bgOficinaUrl],
@@ -72,7 +73,7 @@ export class BootScene extends Phaser.Scene {
         this.buildSparkTexture()
 
         this.scene.launch('UIScene')
-        this.scene.start('GameScene', { level: 1 })
+        this.scene.start('GameScene', { level: faseInicial(this, 1) })
     }
 
     /**

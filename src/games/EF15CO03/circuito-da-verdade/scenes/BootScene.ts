@@ -14,6 +14,7 @@ import quedaApagadaUrl from '../../../../assets/games/EF15CO03/circuito-da-verda
 import quedaAcesaUrl from '../../../../assets/games/EF15CO03/circuito-da-verdade/atracao-queda-acesa.png'
 import posteDesligadoUrl from '../../../../assets/games/EF15CO03/circuito-da-verdade/poste-apagado.png'
 import posteAcesoUrl from '../../../../assets/games/EF15CO03/circuito-da-verdade/poste-aceso.png'
+import { faseInicial } from '../../../../shared/level/faseInicial'
 
 const ASSETS: Array<[string, string]> = [
     ['bg-parque-apagado', bgParqueApagadoUrl],
@@ -63,6 +64,6 @@ export class BootScene extends Phaser.Scene {
 
     create() {
         this.scene.launch('UIScene')
-        this.scene.start('GameScene', { level: 1, phase: 0, points: 0 })
+        this.scene.start('GameScene', { level: faseInicial(this, 1), phase: 0, points: 0 })
     }
 }

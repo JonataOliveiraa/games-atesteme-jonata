@@ -26,6 +26,7 @@ import itemRegadorUrl from '../../../../assets/games/EF15CO02/academia-dos-algor
 import personagemCaioUrl from '../../../../assets/games/EF15CO02/academia-dos-algoritmos/personagem-caio.png'
 import personagemLiaUrl from '../../../../assets/games/EF15CO02/academia-dos-algoritmos/personagem-lia.png'
 import personagemNinaUrl from '../../../../assets/games/EF15CO02/academia-dos-algoritmos/personagem-nina.png'
+import { faseInicial } from '../../../../shared/level/faseInicial'
 
 const ASSETS: Array<[TextureKey, string]> = [
   ['bg-academia-hub', bgAcademiaHubUrl],
@@ -84,7 +85,7 @@ export class BootScene extends Phaser.Scene {
     EventBus.emit('ef15co02-assets-ready')
 
     this.scene.launch('UIScene')
-    this.time.delayedCall(0, () => this.scene.start('GameScene', { level: 1, phase: 0 }))
+    this.time.delayedCall(0, () => this.scene.start('GameScene', { level: faseInicial(this, 1), phase: 0 }))
   }
 
   private createGeneratedTextures() {

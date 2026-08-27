@@ -14,6 +14,7 @@ import thumbImagemForaContextoUrl from '../../../../assets/games/EF05CO08/radar-
 import thumbLanchePublicidadeUrl from '../../../../assets/games/EF05CO08/radar-de-confiabilidade/thumb-lanche-publicidade.png'
 import thumbProdutoMilagrosoUrl from '../../../../assets/games/EF05CO08/radar-de-confiabilidade/thumb-produto-milagroso.png'
 import thumbRecreioEscolarUrl from '../../../../assets/games/EF05CO08/radar-de-confiabilidade/thumb-recreio-escolar.png'
+import { faseInicial } from '../../../../shared/level/faseInicial'
 
 const ASSETS: Array<[string, string]> = [
   ['bg-feed', bgFeedUrl],
@@ -63,6 +64,6 @@ export class BootScene extends Phaser.Scene {
 
   create() {
     this.scene.launch('UIScene')
-    this.scene.start('GameScene', { level: 1, phase: 0 })
+    this.scene.start('GameScene', { level: faseInicial(this, 1), phase: 0 })
   }
 }

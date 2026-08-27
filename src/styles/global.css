@@ -1685,12 +1685,26 @@ button {
   }
 }
 
+/* ── O JOGO EMBUTIDO NA PÁGINA DE DETALHES ────────────────────────────────
+ *
+ * `aspect-ratio: 16 / 9` em vez da altura fixa de 720px que estava aqui. Os 45
+ * jogos são desenhados em 1280x720 e escalados por `Phaser.Scale.FIT`: numa
+ * caixa 16:9 a faixa preta é ZERO, e em qualquer outro formato ela aparece do
+ * tamanho que sobrar. Altura fixa acertava o formato só quando a coluna
+ * tivesse exatamente 1280px de largura — em qualquer tela menor sobrava faixa
+ * em cima e embaixo sem motivo.
+ *
+ * É a mesma regra recomendada para a Atesteme no README. Aqui ela não é
+ * conselho, é o que esta página faz. */
 .game-iframe {
+  display: block;
   width: 100%;
-  height: 720px;
+  aspect-ratio: 16 / 9;
   border: 0;
   border-radius: 16px;
-  background: #fff;
+  /* preto, e não branco: o que sobra da caixa é faixa do jogo, e faixa branca
+     lê como área que não carregou */
+  background: #000;
 }
 
 .game-frame-placeholder {
@@ -2701,3 +2715,277 @@ body.game-fullscreen-active {
     padding: 7px 12px;
   }
 }
+/* ══════════════════════════════════════════════════════════════════════════
+   MODO EMBED — o site inteiro é o jogo
+
+   Ligado por ?embed=1, e só por isso (ver platform/embed/embedMode.ts).
+   Aqui só existe geometria: quem decide QUANDO isto vale é o React.
+
+   `position: fixed` em vez de `height: 100%` porque a cadeia de alturas até o
+   canvas passa por seis elementos, e basta um deles não ter altura declarada
+   para o jogo virar uma tira no topo. Fixo na viewport não depende de nenhum
+   ancestral.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+body.embed-active {
+  overflow: hidden;
+  margin: 0;
+  padding: 0;
+  background: #000;
+}
+
+.embed-shell {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* O palco do jogo embutido.
+ *
+ * `position: fixed` e nao `height: 100%` pelo mesmo motivo do `.embed-shell`
+ * logo acima: a cadeia de alturas ate o canvas passa por varios elementos, e
+ * basta um sem altura declarada para o jogo virar uma tira no topo. Fixo na
+ * viewport nao depende de ancestral nenhum — e a rota `/jogos/:slug` nao tem
+ * mais ancestral, porque ela saiu de dentro do `Layout` para nao herdar o
+ * cabecalho.
+ *
+ * O `fixed` tambem serve de bloco de contencao para a tela de "acabaram as
+ * vidas", que e `position: absolute; inset: 0` aqui dentro. */
+.embed-stage {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* O `.phaser-stage` é só o embrulho do canvas (base: `position: relative`).
+   Ele precisa da altura toda, senão o container lá dentro mede contra um pai
+   de altura automática. */
+.embed-stage .phaser-stage {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ── O JOGO EM TELA CHEIA, PELA MESMA RECEITA DO BOTÃO DE TELA CHEIA ───
+ *
+ * Esta é a receita que `.phaser-stage.is-fullscreen` já usava no site — e ela
+ * resolve o problema pelo lado certo, que não é o que eu tinha feito antes.
+ *
+ * A tentação é dar ao container a proporção 16:9 e mandar o canvas preencher
+ * 100% dele. Funciona, mas duplica uma conta que o Phaser JÁ FAZ: com
+ * `Scale.FIT` ele calcula o tamanho certo e escreve no style do canvas. O que
+ * atrapalhava era a regra base `.phaser-container canvas { width: 100%
+ * !important }`, que passava por cima desse cálculo.
+ *
+ * Então: o container ocupa a JANELA INTEIRA e centraliza; o canvas é
+ * LIBERADO (`width: auto`) e limitado por `max-width/max-height`. Quem decide
+ * o tamanho volta a ser o Phaser, e as faixas pretas aparecem sozinhas, do
+ * tamanho exato que sobrar.
+ *
+ * `dvw`/`dvh` depois de `vw`/`vh`: em celular a barra do navegador entra e sai,
+ * e `100vh` conta a tela como se ela não existisse — o rodapé do jogo fica
+ * escondido atrás dela. Navegador que não conhece `dvh` ignora a segunda linha
+ * e fica com a primeira.
+ */
+body.embed-active .embed-stage .phaser-container,
+body.embed-active .embed-stage .game-screen {
+  width: 100vw;
+  height: 100vh;
+  width: 100dvw;
+  height: 100dvh;
+  max-width: none !important;
+  min-height: 0 !important;
+  aspect-ratio: auto !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  margin: 0 !important;
+  background: #000;
+}
+
+body.embed-active .embed-stage .phaser-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+body.embed-active .embed-stage .phaser-container canvas {
+  width: auto !important;
+  height: auto !important;
+  max-width: 100% !important;
+  max-height: 100% !important;
+  aspect-ratio: auto !important;
+  margin: 0 !important;
+}
+
+body.embed-active .embed-stage .game-screen {
+  /* a capa é imagem, e imagem preenche: aqui `cover` é o certo */
+  aspect-ratio: auto !important;
+  background-size: cover;
+  background-position: center;
+  padding: 0 !important;
+}
+
+/* O botão de tela cheia é do site, não da atividade: dentro da plataforma
+   quem controla a janela é ela.
+
+   Duas âncoras de propósito — a classe do palco E a do body. O palco cobre o
+   caso normal; o body cobre o instante em que a página ainda está montando e
+   o botão apareceria piscando no rodapé. */
+.embed-stage .game-fullscreen-btn,
+body.embed-active .game-fullscreen-btn {
+  display: none !important;
+}
+
+.embed-aviso {
+  padding: 24px;
+  color: #e8f4ff;
+  font-family: "DynaPuff", Arial, sans-serif;
+}
+
+.embed-aviso-caixa {
+  max-width: 460px;
+  text-align: center;
+}
+
+.embed-aviso-caixa h1 {
+  font-size: 24px;
+  margin-bottom: 12px;
+}
+
+.embed-aviso-dica {
+  margin-top: 16px;
+  font-size: 14px;
+  opacity: 0.7;
+}
+
+/* ── O RETORNO SIMULADO (`/approve` e `/reprove`) ─────────────────────────
+ *
+ * Esta tela roda FORA do `Layout`, então ela não herda o `.embed-shell` — que
+ * é quem normalmente cobre a janela e pinta o fundo preto. Sem `position:
+ * fixed` aqui, o `height: 100%` do `.embed-stage` mediria contra um `body` de
+ * altura automática e a caixa ficaria encolhida num canto de fundo branco.
+ * O fundo branco era, aliás, exatamente o sintoma que estas rotas vieram
+ * consertar; não faz sentido reintroduzi-lo por baixo.
+ *
+ * As DUAS classes no seletor não são enfeite: mais adiante neste arquivo há um
+ * `.embed-stage { position: relative }` que, sendo posterior e de mesma
+ * especificidade, ganhava de um `.embed-retorno` sozinho — e a caixa voltava a
+ * medir 347px de altura no meio de um fundo branco. */
+.embed-stage.embed-retorno {
+  position: fixed;
+  inset: 0;
+  background: #0b1220;
+}
+
+.embed-retorno-marca {
+  display: inline-block;
+  margin-bottom: 18px;
+  padding: 3px 10px;
+  border: 1px solid rgba(232, 244, 255, 0.28);
+  border-radius: 999px;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.65;
+}
+
+.embed-retorno-selo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.embed-retorno-selo span[aria-hidden] {
+  font-size: 56px;
+  line-height: 1;
+}
+
+.embed-retorno-selo strong {
+  font-size: 28px;
+  letter-spacing: 0.04em;
+}
+
+.embed-retorno-selo.is-aprovado strong {
+  color: #51cf66;
+}
+
+.embed-retorno-selo.is-reprovado strong {
+  color: #ff6b6b;
+}
+
+/* Rótulo à esquerda, valor à direita, uma linha por dado — a mesma leitura do
+   painel do harness, para quem vai dos dois lados não precisar reaprender. */
+.embed-retorno-dados {
+  margin: 22px 0 0;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 6px 14px;
+  text-align: left;
+  font-size: 14px;
+}
+
+.embed-retorno-dados dt {
+  opacity: 0.55;
+}
+
+.embed-retorno-dados dd {
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.embed-retorno code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 13px;
+  background: rgba(232, 244, 255, 0.08);
+  border-radius: 4px;
+  padding: 1px 5px;
+}
+
+/* A tela de "acabaram as vidas", por cima do canvas.
+   Ela vive meio segundo: o suficiente para a criança entender por que o jogo
+   sumiu, e curto o bastante para não parecer que travou. */
+.embed-derrota {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(8, 19, 31, 0.82);
+  animation: embed-derrota-entra 180ms ease-out;
+}
+
+.embed-derrota-caixa {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  text-align: center;
+  color: #e8f4ff;
+  font-family: "DynaPuff", Arial, sans-serif;
+}
+
+.embed-derrota-caixa span[aria-hidden] { font-size: 52px; line-height: 1; }
+.embed-derrota-caixa strong { font-size: 26px; }
+.embed-derrota-caixa span:last-child { font-size: 15px; opacity: 0.72; }
+
+@keyframes embed-derrota-entra {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* O palco precisa ser o referencial do overlay acima — e ele já é, pelo
+   `position: fixed` da própria regra do `.embed-stage`. Havia aqui um
+   `position: relative` que, sendo posterior, desfazia aquele `fixed` e
+   devolvia o palco a uma altura automática: o jogo virava uma tira no topo
+   da página. Um referencial fixo serve de bloco de contenção igual. */

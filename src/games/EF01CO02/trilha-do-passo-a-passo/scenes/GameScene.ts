@@ -3,6 +3,7 @@ import { LEVELS } from '../data/levels';
 import { ROBOT_PARTS } from '../data/parts';
 import type { RobotPartId } from '../types';
 import { runtimeGameBridge } from '../../../../shared/bridge/runtimeGameBridge';
+import type { PlatformEvent } from '../../../../shared/contracts/platformEvents';
 import { EventBus } from '../../../../shared/EventBus';
 import { createTutorial } from '../../../../shared/tutorial/createTutorial';
 import { showLevelComplete } from '../../../../shared/level/showLevelComplete';
@@ -23,9 +24,14 @@ const COLORS = {
     cardBg: 0xffffff,
 };
 
+/**
+ * Os tipos que este jogo emite. Sai `FINISH_GAME`, que era invenção local e
+ * não existe no contrato; entra `GAME_COMPLETED`, que é o nome que a
+ * plataforma reconhece.
+ */
 type PlatformEventType =
     | 'GAME_READY' | 'CHECKPOINT' | 'CORRECT_ANSWER'
-    | 'WRONG_ANSWER' | 'GAME_OVER' | 'FINISH_GAME';
+    | 'WRONG_ANSWER' | 'GAME_OVER' | 'GAME_COMPLETED';
 
 interface TrayCard {
     container: Phaser.GameObjects.Container;
@@ -103,8 +109,41 @@ export class GameScene extends Phaser.Scene {
         this.timerBar.setFillStyle(pct > 0.5 ? COLORS.green : pct > 0.25 ? COLORS.lemon : COLORS.pink);
     }
 
-    private emitPlatformEvent(type: PlatformEventType, extra: Record<string, any> = {}) {
-        runtimeGameBridge.emit({ type, gameId: GAME_ID, stage: this.currentLevelIdx + 1, ...extra });
+    /**
+     * O `as PlatformEvent` é deliberado.
+     *
+     * Este atalho monta o evento com um tipo dinâmico e um saco de extras, e
+     * o TypeScript não tem como provar que a combinação fecha com a união
+     * discriminada do contrato — ele acusava erro aqui desde antes. Quem
+     * garante a forma é a lista `PlatformEventType` logo acima, que só tem
+     * nomes que existem no contrato.
+     */
+    private emitPlatformEvent(type: PlatformEventType, extra: Record<string, unknown> = {}) {
+        runtimeGameBridge.emit({
+            type,
+            gameId: GAME_ID,
+            stage: this.currentLevelIdx + 1,
+            ...extra,
+        } as PlatformEvent);
+    }
+
+    /**
+     * O JOGO ACABOU DE VERDADE.
+     *
+     * Este jogo emitia `FINISH_GAME`, que não existe no contrato da plataforma
+     * (`shared/contracts/platformEvents.ts`) — o evento saía, ninguém do lado
+     * de fora reconhecia, e era o único dos 45 que nunca reportava conclusão.
+     * Quem depende disso é a aprovação do aluno.
+     *
+     * `isFinalStage` é dito aqui, e não deduzido lá fora, porque este jogo tem
+     * NÍVEIS com FASES dentro: a última fase do último nível é o fim, e só ele
+     * sabe disso.
+     */
+    private emitirConclusaoFinal() {
+        this.emitPlatformEvent('GAME_COMPLETED', {
+            totalStages: LEVELS.length,
+            isFinalStage: true,
+        });
     }
 
     private showStartScreen() {
@@ -613,7 +652,7 @@ export class GameScene extends Phaser.Scene {
                 return;
             }
 
-            this.emitPlatformEvent('FINISH_GAME');
+            this.emitirConclusaoFinal();
             showLevelComplete(this, {
                 title: 'Você montou todos os robôs!',
                 subtitle: 'Os três níveis estão completos',
@@ -719,7 +758,7 @@ export class GameScene extends Phaser.Scene {
             .setDisplaySize(isFinished ? 230 : 280, isFinished ? 330 : 400);
 
         if (isFinished) {
-            this.emitPlatformEvent('FINISH_GAME');
+            this.emitirConclusaoFinal();
 
             const subtitle = this.add.text(width / 2, height * 0.30, 'Você montou todos os robôs!', {
                 fontSize: '24px', fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif', color: '#fff7c2',

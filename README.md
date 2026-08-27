@@ -305,6 +305,435 @@ import bgUrl from "../../../../assets/games/EF03CO08/estudio-multiformato/bg-for
 this.load.image("bg-format-workshop", bgUrl)
 ```
 
+# O jogo roda dentro de um iframe — inclusive para nos
+
+Desde ago/2026 sao DUAS rotas, com um comportamento cada:
+
+| Rota | O que e |
+| --- | --- |
+| `/jogos/<slug>` | **so o canvas.** Sem cabecalho, menu, titulo, capa ou botao. Existe para ser o `src` de um iframe. |
+| `/iframe/<slug>` | **a plataforma de jogos:** pontos, vidas, modais, "Iniciar" e "Instrucoes" — e o jogo desenhado num iframe apontado para a rota de cima. |
+
+A lista de jogos leva para `/iframe/<slug>`. A Atesteme aponta o iframe dela
+para `/jogos/<slug>`.
+
+Antes `/jogos/:slug` era uma rota com DOIS rostos, escolhidos por `?embed=1`.
+Um endereco com dois comportamentos e facil de escrever e dificil de confiar:
+"abri o link e veio diferente" vira investigacao toda vez, e quem integra nunca
+sabe se esta vendo o que o outro lado vai ver. A query agora traz o CONTEXTO da
+partida — ela ajusta a partida, nao troca a pagina.
+
+E a MESMA montagem dos dois lados. A diferenca e o parametro:
+
+| Quem embute | Query | Fim da partida |
+| --- | --- | --- |
+| A Atesteme | `?embed=1&id=<tentativa>&returnBase=<origem>` | navega para `<returnBase>/approve` ou `/reprove` |
+| `/iframe/<slug>` | `?embed=1&inline=1` | nao navega: os pontos e modais sao da pagina hospedeira, e o resultado chega por evento |
+
+**Por que fizemos isso.** Enquanto o Phaser era montado ao lado da pagina, o
+caminho do iframe so era percorrido pelas paginas de teste — e caminho que
+ninguem percorre no dia a dia quebra em silencio. Agora ele e o caminho normal:
+se o embed quebrar, quebra primeiro aqui, para nos, e nao na apresentacao.
+
+## As tres pecas
+
+| Arquivo | Papel |
+| --- | --- |
+| `platform/components/IframeGameFrame.tsx` | monta o iframe, valida a origem, espera `GAME_READY` e so entao manda `START_GAME` |
+| `platform/embed/embedParams.ts` | le `inline` junto com o resto da query, num lugar so |
+| `shared/bridge/uiTunnel.ts` | faz o `EventBus` atravessar a parede do iframe |
+
+## O tunel de interface, e por que ele precisou existir
+
+Os eventos da partida (`GAME_READY`, `CHECKPOINT`, `GAME_COMPLETED`…) ja
+atravessavam: e o contrato `platform-event`. O que NAO atravessava eram os
+sinais de interface que o jogo e a pagina trocavam pelo `EventBus` — `exit-game`,
+`close-game-modals`, o modal de vida extra do Pixel Secreto. `EventBus` e um
+emissor em memoria, e memoria nao passa de uma janela para outra.
+
+O tunel espelha os dois `EventBus` por um terceiro canal (`game-ui`). O ganho
+esta no que NAO mudou: a `GameDetailsPage` continua com o `EventBus.on("exit-game")`
+dela intacto, e os 45 jogos continuam com o `EventBus.emit("exit-game")` deles.
+Nenhum dos dois sabe que ha uma parede no meio — foi o que permitiu mover o jogo
+para dentro do iframe sem encostar em nenhum jogo.
+
+A lista de sinais que atravessam e FECHADA. A maior parte do trafego do
+`EventBus` e conversa interna do jogo (`timer-tick`, `mission-update`, `sparks` —
+mais de trinta nomes), com as duas pontas dentro do mesmo Phaser; esses
+continuam funcionando sozinhos e nao tem por que virar `postMessage`.
+
+`game-ui` nao faz parte do contrato da plataforma. Quem embute de fora pode
+ignora-lo inteiro sem perder nada.
+
+## O depurador de eventos — tecla `Y`
+
+**Desligado por padrao.** `Y` liga e desliga, e avisa qual dos dois aconteceu
+("🔔 ATIVADO" / "🔕 DESATIVADO"). Ligado, `platform/components/EventMonitor.tsx`
+da um `alert()` quando o jogo anuncia que ficou **pronto**, que **venceu** ou
+que **perdeu**:
+
+```
+🏆 GAME_COMPLETED — VENCEU O JOGO (ultima fase)
+fase 3 de 3
+pontos: 120
+tentativa: inline-abc
+jogo: 035
+```
+
+Existe porque esse trafego e invisivel: quando um evento nao sai, a tela
+simplesmente nao reage, e "nao reagiu" tem uma duzia de causas. Foi assim com o
+jogo travando ao errar — a plataforma nunca recebia o `GAME_OVER`, e nada na
+tela dizia isso. Um alerta que NAO aparece responde a pergunta na hora.
+
+- Alertam so `GAME_READY`, `GAME_COMPLETED` e `GAME_OVER`. `CHECKPOINT`,
+  `CORRECT_ANSWER` e `WRONG_ANSWER` ficam de fora porque disparam a cada
+  jogada — um `alert()` por acerto tornaria o jogo injogavel. **Todos** os
+  eventos saem no console como `[evento local|iframe]`.
+- Escuta os dois caminhos: o evento local (quando `/jogos/<slug>` e aberto
+  direto) e o `postMessage` (quando o jogo esta no iframe de `/iframe/<slug>`).
+- **So na janela de cima.** O site se embute a si mesmo, entao o mesmo `App`
+  roda duas vezes; sem esse corte cada evento daria dois alertas — e o `Y`
+  alternaria duas vezes, voltando ao ponto de partida (ou seja: "nao acontece
+  nada").
+- **A tecla vale dentro do jogo tambem.** Assim que alguem clica no canvas, o
+  `keydown` passa a ser entregue a janela DE DENTRO do iframe, e um ouvinte so
+  aqui fora para de ver a tecla — o motivo mais provavel de o `Y` ter falhado
+  na primeira versao. O ouvinte e registrado na fase de CAPTURA da `window` de
+  cada documento (a primeirissima etapa do trajeto, antes de o Phaser ver a
+  tecla), e uma varredura a cada 700ms religa quando o iframe e trocado.
+- O `alert()` sai num `setTimeout(0)`: congelar dentro do tratamento da
+  mensagem seguraria o `postMessage` no meio do caminho.
+
+Em desenvolvimento a tecla vale sempre. Em producao, so com `?debug=1` na URL —
+um `alert()` na cara de uma crianca no meio da atividade seria pior que o
+problema que ele veio investigar.
+
+Houve aqui um painel lateral com historico e contagem por tipo. Saiu: era mais
+maquina do que a pergunta pedia.
+
+## O caminho de volta
+
+`MODO_DO_JOGO` no topo de `GameDetailsPage.tsx` aceita `"iframe"` ou `"local"`.
+Trocar para `"local"` devolve a montagem antiga inteira, sem tocar em mais nada.
+Esta ali de proposito: e uma linha de recuo se o iframe der problema perto de uma
+data de entrega.
+
+## A propria origem entra na allowlist sozinha
+
+`getAllowedOrigins()` sempre inclui `window.location.origin`, alem do que vier
+em `VITE_EMBED_ALLOWED_ORIGINS`. Nao e frouxidao: paginas de mesma origem ja
+podem ler e escrever uma na outra sem `postMessage` nenhum, entao exigir
+configuracao para o site falar consigo mesmo nao protege de nada.
+
+E cobrava caro. O `.env.local` fixa `http://localhost:5173`; num dia em que a
+5173 estava ocupada o Vite subiu na **5174**, e o navegador passou a descartar
+TODO evento da partida com "target origin does not match the recipient window's
+origin". O sintoma nao parecia em nada com a causa: **o jogo travava ao errar e
+a tela de derrota nunca aparecia** — porque a plataforma jamais recebia o
+`WRONG_ANSWER` nem o `GAME_OVER`. Trocar de porta nao pode quebrar o jogo.
+
+A variavel continua obrigatoria para quem embute de FORA (a Atesteme): sem a
+origem dela na lista, nenhum evento sai e nenhum comando entra.
+
+## Uma mensagem so, quando da para saber o destino
+
+`postMessage` exige um `targetOrigin` que bata com a origem real da janela de
+destino. Como nao da para perguntar a origem de uma janela de outro dominio, a
+saida era mandar uma mensagem por origem permitida — a certa e entregue, as
+outras sao descartadas com um erro no console.
+
+Quando a janela e da mesma origem da para saber: `janela.location.origin` e
+legivel nesse caso e lanca `SecurityError` em qualquer outro. `origensDeDestino()`
+usa isso para mandar UMA mensagem. Nao muda o que chega do outro lado; muda o
+console, que antes virava uma parede de "Failed to execute 'postMessage'" a cada
+evento da partida, varrendo para longe qualquer erro de verdade.
+
+# Modo Embed — como a Atesteme abre um jogo
+
+Esta secao descreve o que esta IMPLEMENTADO no repositorio. A secao seguinte,
+sobre Flutter, e uma proposta anterior e mais ampla; onde as duas divergirem,
+vale esta.
+
+A plataforma Atesteme abre um jogo dentro de um `iframe`, passa o contexto por
+query string e recebe o resultado de volta. **A Atesteme e dona de aluno,
+competencia, tentativa, pontuacao oficial, estrelas e bloqueios. Este site e
+dono de renderizar o jogo e relatar o que aconteceu.**
+
+```html
+<iframe
+  src="https://jogos.atesteme.com/jogos/sistema-operacional?embed=1&attempt=6f1c…&stage=1&points=120&lives=3&returnBase=https%3A%2F%2Fedu.atesteme.com"
+  width="100%" height="100%" frameborder="0"
+  allow="autoplay; fullscreen"
+></iframe>
+```
+
+Sem `embed=1`, a mesma URL continua abrindo a pagina normal do jogo, com
+pontuacao, vidas e ranking. Nada do site atual muda.
+
+## Parametros da query
+
+| Parametro | Tipo | Obrigatorio | Uso |
+|---|---|---|---|
+| `embed` | `1` | sim, para o modo embed | Liga o modo embed. |
+| `attempt` | string opaca | **sim** | ID da tentativa na Atesteme. Volta como eco em `meta.attempt`; o site nao interpreta. |
+| `returnBase` | URL absoluta | **sim** | Origem que recebe o resultado. Precisa estar em `VITE_EMBED_ALLOWED_ORIGINS`. |
+| `stage` | `1 \| 2 \| 3` | nao (1) | Fase inicial. Fora do intervalo cai para 1. |
+| `points` | inteiro >= 0 | nao (0) | Pontuacao inicial exibida. So display. |
+| `lives` | inteiro >= 1 | nao (3) | Tolerancia a erro da partida. |
+| `locale` | BCP-47 | nao (`pt-BR`) | Idioma. |
+
+`id` e aceito como sinonimo legado de `attempt`; se os dois vierem, `attempt`
+vence.
+
+**Duas classes de parametro, duas reacoes.** `stage`, `points`, `lives` e
+`locale` sao ajustes: valor invalido vira o padrao e a partida comeca.
+`attempt` e `returnBase` sao o contexto: sem eles a tela mostra um erro
+legivel e **nao inicia** — jogar uma partida que ninguem consegue creditar e
+pior que uma mensagem de erro.
+
+Tudo isso e lido e validado em `src/platform/embed/embedParams.ts`, num lugar
+so. Nenhum jogo le a query.
+
+## O que o modo embed muda na tela
+
+- So o jogo: sem cabecalho, menu, rodape, breadcrumb, ranking ou lista.
+- Sem a economia do site: pontos globais, compra de vida e modais que levam
+  para fora nao aparecem. Quem da recompensa e a Atesteme.
+- **"Iniciar" e "Instrucoes" continuam.** Nao sao enfeite: sao a porta de
+  entrada da crianca no jogo.
+- Ocupa a viewport inteira, sem rolagem. A proporcao 16:9 quem preserva e o
+  `Phaser.Scale.FIT` que os 45 jogos ja usam.
+
+Para ver a pagina normal do mesmo jogo, tire o `embed=1` da URL. Nao ha
+atalho de teclado: um segundo jeito de a tela estar, ligado por uma tecla, e o
+tipo de estado que ninguem lembra na hora de investigar um problema.
+
+## Contrato de saida
+
+Envelope `{ channel: "platform-event", payload }`, como antes. Todo evento que
+sai em modo embed carrega `meta`:
+
+```ts
+type EventMeta = {
+  attempt: string;       // eco exato do parametro recebido
+  gameId: string;        // game.id do catalogo (ex.: "037"), nunca o slug
+  sentAt: number;
+  protocolVersion: 1;
+};
+```
+
+`GAME_COMPLETED` ganhou dois campos:
+
+```ts
+{
+  type: "GAME_COMPLETED";
+  gameId: string;
+  stage: number;
+  totalStages?: number;   // quantas fases o jogo tem
+  isFinalStage?: boolean; // true so na ultima
+  score?: number; errors?: number; durationMs?: number;
+}
+```
+
+**Por que:** `GAME_COMPLETED` e emitido a cada fase, e sempre foi. Sem
+`isFinalStage`, quem esta de fora nao distingue "terminou a fase 1" de
+"terminou o jogo" — e aprovaria o aluno na primeira fase.
+
+Os campos sao opcionais no tipo porque sao **opcionais para quem emite e
+garantidos para quem recebe**: os 45 jogos continuam emitindo o que sabem, e
+`src/shared/bridge/outgoingEvent.ts` completa `meta`, `totalStages` e
+`isFinalStage` num lugar so, antes de o evento sair.
+
+Ordem esperada numa partida:
+
+```
+GAME_READY → (CORRECT_ANSWER | WRONG_ANSWER | CHECKPOINT)* → GAME_COMPLETED(isFinalStage) | GAME_OVER
+```
+
+Comandos aceitos continuam `START_GAME`, `PAUSE_GAME`, `RESUME_GAME` e
+`UNLOCK_GAME`, no envelope `{ channel: "platform-command", payload }`.
+
+## Aprovado e reprovado
+
+Alem do evento, o fim da partida navega o proprio iframe:
+
+```
+aprovado:  <returnBase>/approve?id=<attempt>
+reprovado: <returnBase>/reprove?id=<attempt>
+```
+
+- **Quem navega e a camada de embed, nunca o jogo.** Os 45 jogos so emitem
+  eventos; nenhum conhece a URL da Atesteme.
+- `GAME_COMPLETED` com `isFinalStage: true` → `/approve`.
+- `GAME_OVER`, **ou o esgotamento das `lives` recebidas na query**, →
+  `/reprove`. Só 14 dos 45 jogos emitem `GAME_OVER` — o resto nao tem condicao
+  de derrota, e inventar uma seria mexer na jogabilidade deles. Por isso a
+  tolerancia a erro vem de fora, contada pelos `WRONG_ANSWER`.
+- O evento sai antes; a navegacao acontece ~150ms depois e e a rede de
+  seguranca para quando o listener da plataforma falhou.
+- `window.location.assign`, nunca `window.top`.
+- **Uma navegacao por partida.** Eventos de fim posteriores sao ignorados.
+- `returnBase` fora da allowlist nao navega para lugar nenhum — sem essa
+  checagem a query vira um redirecionamento aberto.
+
+## Seguranca do canal
+
+`VITE_EMBED_ALLOWED_ORIGINS` (lista separada por virgula) vale para as duas
+pontas:
+
+- os eventos sao enviados uma vez **por origem permitida**, com `targetOrigin`
+  explicito. Nunca `"*"` — com `"*"`, qualquer pagina que embutisse este site
+  receberia o desempenho do aluno;
+- os comandos recebidos sao conferidos contra `event.origin` **antes** de o
+  payload ser olhado, e so entao passam pelos type guards.
+
+**Lista vazia nao e "liberado": e "nada entra e nada sai".** Um deploy que
+esqueceu a variavel falha visivel, em vez de falhar aberto.
+
+Copie o `.env.example` para `.env.local` antes de rodar local.
+
+## Como o jogo se encaixa na caixa do iframe
+
+Os 45 jogos sao desenhados numa tela **fixa de 1280x720**: cada `layout.ts` tem
+coordenadas absolutas (o botao em x=1134, a peca em y=495). O Phaser roda em
+`Scale.FIT`, que mantem essa tela e a ESCALA para caber no container,
+preservando a proporcao 16:9.
+
+**Consequencia: caixa que nao e 16:9 ganha faixa preta.** Isso nao e bug, e o
+preco de o jogo ter formato proprio — e o preco de nao ter e alto:
+
+| Modo do Phaser | O que faz | Serve aqui? |
+|---|---|---|
+| `FIT` (atual) | Escala mantendo 16:9, sobra faixa | **Sim.** Coordenadas fixas continuam validas. |
+| `RESIZE` | O canvas vira o tamanho do container e o jogo recebe o novo tamanho | **Nao.** Exigiria reposicionar tudo a cada resize nos 45 jogos, que hoje escrevem posicao em numero absoluto. |
+| `ENVELOP` | Preenche a caixa mantendo a proporcao, CORTANDO o que sobra | **Nao.** Corta as bordas — e e nelas que moram o botao (y=670) e os nomes das pecas (y=592). |
+
+**Entao a alavanca nao e o modo de escala, e o formato da caixa.** Numa caixa
+16:9 a faixa e zero. Recomendacao para quem embute:
+
+```css
+/* do lado da Atesteme */
+.iframe-do-jogo {
+  width: 100%;
+  aspect-ratio: 16 / 9;   /* faixa preta = zero */
+  border: 0;
+}
+```
+
+Se a caixa precisar ter outro formato, o jogo continua jogavel e inteiro — so
+aparece faixa. O que **nao** acontece em nenhum caso e o jogo cortar ou
+deformar.
+
+Para ver isso acontecendo com numero na mao, abra
+**`/embed-sandbox.html`**: ele mostra o mesmo jogo numa caixa que voce
+redimensiona (com presets de 16:9, 4:3, celular em pe, ultrawide) e le, de
+dentro do iframe, o tamanho real do canvas, a escala aplicada, a faixa preta em
+pixels e o aproveitamento da area.
+
+## Rodando o embed localmente
+
+```bash
+cp .env.example .env.local   # ja vem com http://localhost:5173
+npm run dev
+```
+
+Duas paginas de teste, com propositos diferentes:
+
+- **`/embed-harness.html`** — o CONTRATO. Embute o iframe, monta a query, manda
+  `START_GAME` e loga tudo que chega. Se funciona ali e nao funciona na
+  plataforma, a diferenca esta do outro lado. A tecla `Y` esconde o painel e
+  deixa so o jogo; o botao "Abrir sozinho" abre a mesma URL numa aba limpa,
+  sem harness e sem iframe.
+- **`/embed-sandbox.html`** — o ENQUADRAMENTO. A mesma URL numa caixa que voce
+  redimensiona, com a medida do canvas lida de dentro do iframe.
+
+As duas passam `returnBase = window.location.origin`, porque e a unica origem
+que elas tem e a unica que esta na allowlist local. Entao, no fim da partida, o
+iframe navega para o `/approve` ou `/reprove` **deste site** — e por isso as
+duas rotas existem no `App.tsx`, em `src/pages/EmbedReturnPage.tsx`. Elas se
+anunciam como "retorno simulado": as de verdade sao da Atesteme, e e para la
+que o iframe vai em producao.
+
+Sem essas rotas o React Router nao casava nada, renderizava `null`, e vencer ou
+perder terminava em **tela branca** — o jogo certo, o contrato certo, e o fim
+da partida com cara de crash.
+
+# Deploy na AWS
+
+Site estatico proprio, em dominio proprio, consumido por iframe.
+
+| Peca | Configuracao |
+|---|---|
+| S3 | Bucket **privado**. Sem website hosting, sem ACL publica. |
+| CloudFront | Origin Access Control apontando para o bucket. |
+| ACM | Certificado em **us-east-1** (exigencia do CloudFront). |
+| SPA | Custom error responses **403 e 404 → `/index.html` com status 200**. Sem isso, recarregar `/jogos/<slug>` dentro do iframe da 404. |
+| Cache | `assets/*` com `public, max-age=31536000, immutable`; `index.html` com `no-cache`. |
+| Vite | `base: '/'` — o site fica na raiz do dominio de jogos. |
+
+**Header obrigatorio na resposta:**
+
+```
+Content-Security-Policy: frame-ancestors https://edu.atesteme.com https://*.atesteme.com;
+```
+
+Ele **restringe** quem pode embutir; nao e o que permite o embed. Um servidor
+que nao manda header nenhum ja aceita ser embutido — o header existe para que
+so a Atesteme consiga. **Nao usar `X-Frame-Options: DENY/SAMEORIGIN`** — ele
+nao aceita lista de origens e derruba a integracao. Configure via CloudFront
+Response Headers Policy.
+
+Na AWS ele e obrigatorio por outro motivo: a Response Headers Policy padrao do
+CloudFront pode injetar `X-Frame-Options`, e ai o iframe fica em branco de
+verdade.
+
+HTTPS e obrigatorio dos dois lados: iframe `http` dentro de pagina `https` e
+bloqueado como conteudo misto.
+
+O pipeline esta em `.github/workflows/deploy.yml`: `npm ci` → `npm run lint` →
+`npm run build` → `s3 sync` → invalidacao do `index.html`. Credenciais por
+**OIDC**, nao por chave estatica. Os assets sobem antes do `index.html` de
+propósito: assim todo HTML publicado ja encontra o que ele pede.
+
+A Vercel pode seguir como preview; a AWS passa a ser o endereco oficial.
+
+# Deploy na Vercel
+
+A Vercel e o endereco de preview, e e de la que a plataforma vai puxar o jogo
+enquanto a AWS nao estiver de pe. O `vercel.json` na raiz tem uma linha so, e
+ela resolve o unico problema que impede o embed de abrir:
+
+```json
+{ "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }] }
+```
+
+**Por que isso e obrigatorio.** A plataforma nao navega pela home: ela poe
+`https://<projeto>.vercel.app/jogos/<slug>?embed=1&…` direto no `src` do
+iframe. Isso e um deep link frio, e `dist/jogos/<slug>/index.html` nao existe —
+quem resolve `jogos/:slug` e o React Router, no cliente (`src/App.tsx`). Sem o
+rewrite a Vercel devolve 404 e o iframe mostra a pagina de erro dela. E o mesmo
+problema que a AWS resolve com "403 e 404 → `/index.html`", na tabela acima.
+
+O rewrite nao engole os arquivos estaticos: na Vercel o sistema de arquivos e
+consultado antes, entao `/embed-harness.html`, `/embed-sandbox.html`,
+`/assets/*` e `/games/*` continuam sendo servidos como sempre.
+
+**A segunda peca e uma variavel de ambiente, nao um arquivo.**
+`VITE_EMBED_ALLOWED_ORIGINS` precisa conter a origem da plataforma nas
+Environment Variables do projeto na Vercel. Isso nao e endurecimento opcional:
+`validarEmbed` confere o `returnBase` contra essa lista antes de montar o jogo,
+e lista vazia significa "nada entra e nada sai" por decisao explicita — sem a
+variavel, a crianca ve "Endereco de retorno nao autorizado" no lugar do jogo.
+
+E como o prefixo e `VITE_`, ela e lida **no build**: o valor vira texto dentro
+do pacote. Mudar a lista exige um redeploy; trocar a variavel no painel e
+recarregar nao muda nada.
+
+Opcional, e so quando alguem pedir: o `frame-ancestors` da secao anterior vale
+aqui tambem, como bloco `headers` no mesmo `vercel.json`. A Vercel nao manda
+`X-Frame-Options` por conta propria, entao o embed funciona sem ele — o header
+serve para impedir que qualquer outro site embuta os jogos.
+
 # Integracao em Ambiente Flutter via Iframe
 
 Uma solucao tecnica viavel e hospedar a plataforma de jogos como web build separado e integra-la ao Flutter por iframe. O Flutter fica dono de autenticacao, turma, usuario, sincronizacao remota e persistencia principal. O jogo web fica responsavel por renderizar e emitir eventos.
@@ -680,6 +1109,7 @@ Anos por prefixo da tag: `EF01` = 1º ano · `EF02` = 2º · `EF03` = 3º · `EF
 | EF05CO07 | A planilha R1 traz "Controlador do Sistema"; `catalog.ts` (id 037) usa "Sistema Operacional". |
 | EF05CO11 | As planilhas grafam o código como `EF05CO011` (3 dígitos). O correto é `EF05CO11`, como está em `catalog.ts`. |
 | `arena-da-logica` | `GameDetailsPage.tsx` lista o slug com acento (`arena-da-lógica`) em `GAMES_WITH_IN_GAME_COMPLETION_SCREEN`; o catálogo usa `arena-da-logica`. Não casa. |
+| `mapas-em-rede` | `BootScene.create()` chama `this.scene.launch('UIScene')`, mas o `index.ts` registra só `[BootScene, GameScene]` — a UIScene foi aposentada e o arquivo `scenes/UIScene.ts` ficou morto. O Phaser ignora a chamada, então não quebra; é lixo a remover. |
 
 ---
 

@@ -1,7 +1,33 @@
-import { Link, Outlet, useLocation } from "react-router-dom";
+import { useEffect } from "react";
+import { Link, Outlet, useLocation, useSearchParams } from "react-router-dom";
+import { parseEmbedParams } from "../platform/embed/embedParams";
+import { useEmbedAtivo } from "../platform/embed/embedMode";
 
 export default function Layout() {
   const location = useLocation();
+  const [query] = useSearchParams();
+
+  const embed = useEmbedAtivo(parseEmbedParams(query).embed);
+
+  /*
+   * A PÁGINA NÃO ROLA EM MODO EMBED.
+   *
+   * O iframe já tem o tamanho que a plataforma deu. Se o documento aqui
+   * dentro tiver barra de rolagem, a criança arrasta a tela em vez de arrastar
+   * a peça do jogo — e num celular isso acontece no primeiro toque.
+   */
+  useEffect(() => {
+    document.body.classList.toggle("embed-active", embed);
+    return () => document.body.classList.remove("embed-active");
+  }, [embed]);
+
+  if (embed) {
+    return (
+      <div className="embed-shell">
+        <Outlet />
+      </div>
+    );
+  }
 
   return (
     <div className="app">

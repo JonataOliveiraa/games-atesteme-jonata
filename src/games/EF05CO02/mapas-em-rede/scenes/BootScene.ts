@@ -23,6 +23,7 @@ import avatarNicoUrl from '../../../../assets/games/EF05CO02/mapas-em-rede/avata
 
 import marcadorPartidaUrl from '../../../../assets/games/EF05CO02/mapas-em-rede/marcador-partida.png'
 import marcadorChegadaUrl from '../../../../assets/games/EF05CO02/mapas-em-rede/marcador-chegada.png'
+import { faseInicial } from '../../../../shared/level/faseInicial'
 
 const ASSETS: Array<[string, string]> = [
   ['bg-bairro', bgBairroUrl],
@@ -79,6 +80,6 @@ export class BootScene extends Phaser.Scene {
 
   create() {
     this.scene.launch('UIScene')
-    this.scene.start('GameScene', { level: 1, phase: 0 })
+    this.scene.start('GameScene', { level: faseInicial(this, 1), phase: 0 })
   }
 }

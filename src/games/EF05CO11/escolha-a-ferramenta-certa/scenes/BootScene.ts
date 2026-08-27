@@ -26,6 +26,7 @@ import casoExcursaoUrl from '../../../../assets/games/EF05CO11/escolha-a-ferrame
 import casoSecretariaUrl from '../../../../assets/games/EF05CO11/escolha-a-ferramenta-certa/caso-secretaria.png'
 import casoFeiraCienciasUrl from '../../../../assets/games/EF05CO11/escolha-a-ferramenta-certa/caso-feira-ciencias.png'
 import casoSalaInformaticaUrl from '../../../../assets/games/EF05CO11/escolha-a-ferramenta-certa/caso-sala-informatica.png'
+import { faseInicial } from '../../../../shared/level/faseInicial'
 
 const ASSETS: Array<[string, string]> = [
   ['bg-oficina', bgOficinaUrl],
@@ -87,6 +88,6 @@ export class BootScene extends Phaser.Scene {
 
   create() {
     this.scene.launch('UIScene')
-    this.scene.start('GameScene', { level: 1, phase: 0, points: 0 })
+    this.scene.start('GameScene', { level: faseInicial(this, 1), phase: 0, points: 0 })
   }
 }

@@ -18,6 +18,7 @@ import tilesetUrl from '../../../../assets/games/EF05CO04/cidade-das-decisoes/ti
 import personagemUrl from '../../../../assets/games/EF05CO04/cidade-das-decisoes/personagem.png'
 import itensUrl from '../../../../assets/games/EF05CO04/cidade-das-decisoes/itens.png'
 import { createLoadingScreen } from '../../../../shared/loading/createLoadingScreen'
+import { faseInicial } from '../../../../shared/level/faseInicial'
 
 const IMAGES: Array<[string, string]> = [
     ['bg-cidade', bgCidadeUrl],
@@ -102,7 +103,7 @@ export class BootScene extends Phaser.Scene {
         })
 
         this.scene.launch('UIScene')
-        this.scene.start('GameScene', { level: 1 })
+        this.scene.start('GameScene', { level: faseInicial(this, 1) })
     }
 
     /** Halo radial branco — tingido de verde, vermelho ou amarelo pelas cenas. */

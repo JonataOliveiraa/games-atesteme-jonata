@@ -14,6 +14,14 @@ import {
 } from '../ui/kit'
 import { APP_BUILDERS, type AppView, type Area } from '../apps/apps'
 
+/**
+ * Quantos desvios até o jogo contar um erro para a plataforma.
+ *
+ * Dois são exploração — a criança está descobrindo o que cada app faz, e é
+ * isso que a habilidade pede. Do terceiro em diante é outra coisa.
+ */
+const DESVIOS_ATE_CONTAR = 3
+
 const GAME_ID = 'desktop-digital-infantil'
 
 const WIN_W = 640, WIN_H = 520
@@ -442,13 +450,37 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
-  /** Agiu num app que não é o da tarefa: redireciona sem punir. */
+  /**
+   * Agiu num app que não é o da tarefa: redireciona sem punir.
+   *
+   * ── E, A PARTIR DO TERCEIRO, TAMBÉM AVISA LÁ FORA ────────────────────
+   *
+   * Este jogo era o ÚNICO dos 45 que não emitia erro nenhum — e, sem erro,
+   * a plataforma não tinha como reprovar ninguém: ele só podia ser aprovado.
+   *
+   * Emitir no primeiro desvio quebraria o que este método é: os dois
+   * primeiros continuam sendo um empurrãozinho, com o bilhete gentil e a
+   * dica aparecendo. Do terceiro em diante a criança não está explorando,
+   * está perdida — e aí vale contar, porque é o sinal de que a atividade não
+   * está funcionando para ela.
+   *
+   * Quem decide o que fazer com esse sinal é a plataforma, pelas `lives` que
+   * ela mandou. Aqui dentro nada muda: o jogo continua sem tela de derrota,
+   * e continua sendo possível terminar.
+   */
   private nudgeOffTask() {
     this.errors++
+
     floatingNote(this, W / 2, 240, 'Legal! Mas agora precisamos de outra coisa',
       { tone: C.sky, deep: C.skyDeep })
     FX.shake(this, this.taskCard, { amount: 9, times: 2 })
     this.revealHint()
+
+    if (this.errors < DESVIOS_ATE_CONTAR) return
+
+    runtimeGameBridge.emit({
+      type: 'WRONG_ANSWER', gameId: GAME_ID, pointsEarned: 0, stage: this.cfg.level,
+    })
   }
 
   // ═══════════════════════════════════════════════ progressão

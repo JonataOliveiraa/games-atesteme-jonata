@@ -14,6 +14,7 @@ import navioUrl from '../../../../assets/games/EF02CO01/hangar-dos-modelos/navio
 import onibusUrl from '../../../../assets/games/EF02CO01/hangar-dos-modelos/onibus.png'
 import patineteUrl from '../../../../assets/games/EF02CO01/hangar-dos-modelos/patinete.png'
 import tremUrl from '../../../../assets/games/EF02CO01/hangar-dos-modelos/trem.png'
+import { faseInicial } from '../../../../shared/level/faseInicial'
 
 const ASSETS: Array<[string, string]> = [
   ['hangar-bg', hangarBgUrl],
@@ -63,6 +64,6 @@ export class BootScene extends Phaser.Scene {
 
   create() {
     this.scene.launch('UIScene')
-    this.scene.start('GameScene', { level: 1, mission: 0, points: 0 })
+    this.scene.start('GameScene', { level: faseInicial(this, 1), mission: 0, points: 0 })
   }
 }

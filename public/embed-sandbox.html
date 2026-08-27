@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<title>Sandbox de embed — como o jogo se encaixa</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: #0b1220; color: #e8f4ff; overflow: hidden;
+    font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+    display: grid; grid-template-columns: 300px 1fr; grid-template-rows: 100%;
+  }
+
+  aside { border-right: 1px solid #1f2f47; padding: 14px; overflow: auto; min-height: 0; }
+  aside h1 { font-size: 13px; letter-spacing: .08em; text-transform: uppercase;
+             opacity: .6; margin: 0 0 10px; }
+  aside h2 { font-size: 11px; letter-spacing: .08em; text-transform: uppercase;
+             opacity: .45; margin: 18px 0 8px; }
+
+  .presets { display: grid; gap: 6px; }
+  .presets button {
+    text-align: left; background: #16233a; color: #e8f4ff; border: 1px solid #26364f;
+    border-radius: 7px; padding: 7px 10px; font: inherit; cursor: pointer;
+  }
+  .presets button:hover { background: #1d2d49; }
+  .presets button.ativo { border-color: #6ee7f9; background: #17304a; }
+  .presets button small { display: block; opacity: .5; }
+
+  label.campo { display: block; margin-bottom: 7px; opacity: .75; }
+  label.campo input { width: 100%; background: #0b1220; color: #e8f4ff;
+    border: 1px solid #29405f; border-radius: 6px; padding: 4px 7px; font: inherit; }
+
+  #leitura { margin-top: 6px; }
+  #leitura div { display: flex; justify-content: space-between; gap: 8px;
+                 padding: 3px 0; border-bottom: 1px dashed #1c2a40; }
+  #leitura b { color: #6ee7f9; font-weight: 400; }
+  .bom { color: #51cf66 !important; }
+  .atencao { color: #fbbf24 !important; }
+
+  main { display: grid; place-items: center; min-width: 0; min-height: 0;
+         padding: 24px; overflow: auto;
+         background:
+           linear-gradient(45deg, #0d1626 25%, transparent 25%) -10px 0/20px 20px,
+           linear-gradient(-45deg, #0d1626 25%, transparent 25%) -10px 0/20px 20px,
+           linear-gradient(45deg, transparent 75%, #0d1626 75%) -10px 0/20px 20px,
+           linear-gradient(-45deg, transparent 75%, #0d1626 75%) -10px 0/20px 20px; }
+
+  /* A CAIXA é o que a plataforma vai dar ao iframe. É ela que se redimensiona,
+     e é por isso que ela tem a alça no canto. */
+  #caixa {
+    position: relative; resize: both; overflow: hidden;
+    border: 2px solid #6ee7f9; border-radius: 4px;
+    width: 960px; height: 540px; min-width: 240px; min-height: 180px;
+    background: #000;
+  }
+  #caixa iframe { display: block; width: 100%; height: 100%; border: 0; }
+  #rotulo {
+    position: absolute; top: -24px; left: 0; font-size: 11px; color: #6ee7f9;
+    white-space: nowrap;
+  }
+  .nota { opacity: .55; font-size: 11px; margin-top: 10px; line-height: 1.5; }
+  code { background: #16233a; padding: 1px 4px; border-radius: 4px; }
+</style>
+</head>
+<body>
+
+<aside>
+  <h1>Sandbox de embed</h1>
+
+  <label class="campo">slug
+    <input id="slug" value="sistema-operacional" />
+  </label>
+  <label class="campo">stage
+    <input id="stage" value="1" />
+  </label>
+
+  <h2>Formatos da caixa</h2>
+  <div class="presets" id="presets"></div>
+
+  <h2>O que está acontecendo</h2>
+  <div id="leitura"></div>
+
+  <p class="nota">
+    A caixa tem alça no canto de baixo à direita: arraste para simular qualquer
+    tamanho. O quadriculado atrás é o fundo da página — o preto dentro da caixa
+    é faixa do jogo.
+  </p>
+</aside>
+
+<main>
+  <div id="caixa">
+    <div id="rotulo"></div>
+    <iframe id="jogo" allow="autoplay; fullscreen"></iframe>
+  </div>
+</main>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const ORIGEM = window.location.origin;
+
+const FORMATOS = [
+  { nome: "16:9 — o formato do jogo", w: 960, h: 540, ideal: true },
+  { nome: "16:10 — notebook", w: 960, h: 600 },
+  { nome: "4:3 — tablet deitado", w: 800, h: 600 },
+  { nome: "3:4 — tablet em pé", w: 600, h: 800 },
+  { nome: "9:16 — celular em pé", w: 380, h: 676 },
+  { nome: "21:9 — ultrawide", w: 1050, h: 450 },
+  { nome: "quadrado", w: 640, h: 640 },
+];
+
+function montarUrl() {
+  const q = new URLSearchParams({
+    embed: "1",
+    attempt: "sandbox-" + Date.now().toString(16),
+    stage: $("stage").value.trim() || "1",
+    points: "0",
+    lives: "3",
+    returnBase: ORIGEM,
+  });
+  return "/jogos/" + encodeURIComponent($("slug").value.trim()) + "?" + q;
+}
+
+function abrir() {
+  $("jogo").src = montarUrl();
+}
+
+FORMATOS.forEach((f, i) => {
+  const b = document.createElement("button");
+  b.innerHTML = f.nome + "<small>" + f.w + " × " + f.h + "</small>";
+  b.onclick = () => {
+    $("caixa").style.width = f.w + "px";
+    $("caixa").style.height = f.h + "px";
+    document.querySelectorAll("#presets button").forEach((o) => o.classList.remove("ativo"));
+    b.classList.add("ativo");
+  };
+  if (i === 0) b.classList.add("ativo");
+  $("presets").appendChild(b);
+});
+
+$("slug").onchange = abrir;
+$("stage").onchange = abrir;
+
+const linha = (rotulo, valor, classe) =>
+  "<div><span>" + rotulo + "</span><b class='" + (classe || "") + "'>" + valor + "</b></div>";
+
+/*
+ * A LEITURA É FEITA DE DENTRO DO IFRAME.
+ *
+ * O canvas é medido no documento do jogo (mesma origem, então dá), e não
+ * estimado daqui. Estimativa é justamente o que este arquivo veio substituir.
+ */
+function medir() {
+  const caixa = $("caixa").getBoundingClientRect();
+  const razao = caixa.width / caixa.height;
+
+  let html = "";
+  html += linha("caixa (iframe)", Math.round(caixa.width) + " × " + Math.round(caixa.height));
+  html += linha("proporção da caixa", razao.toFixed(3));
+
+  let canvas = null;
+  try { canvas = $("jogo").contentDocument.querySelector("canvas"); } catch (e) {}
+
+  if (!canvas) {
+    html += linha("jogo", "ainda não começou", "atencao");
+    $("leitura").innerHTML = html;
+    $("rotulo").textContent =
+      Math.round(caixa.width) + " × " + Math.round(caixa.height) + "  ·  " + razao.toFixed(2) + ":1";
+    return;
+  }
+
+  const c = canvas.getBoundingClientRect();
+  const faixaH = Math.max(0, Math.round(caixa.width - c.width));
+  const faixaV = Math.max(0, Math.round(caixa.height - c.height));
+  const aproveitamento = ((c.width * c.height) / (caixa.width * caixa.height)) * 100;
+
+  html += linha("canvas desenhado", Math.round(c.width) + " × " + Math.round(c.height));
+  html += linha("resolução interna", canvas.width + " × " + canvas.height);
+  html += linha("escala aplicada", (c.width / canvas.width).toFixed(3) + "×");
+  html += linha(
+    "faixa preta",
+    faixaH || faixaV ? faixaH + "px lateral · " + faixaV + "px topo/base" : "nenhuma",
+    faixaH || faixaV ? "atencao" : "bom"
+  );
+  html += linha("aproveitamento", aproveitamento.toFixed(1) + "%",
+    aproveitamento > 99 ? "bom" : aproveitamento > 80 ? "" : "atencao");
+
+  $("leitura").innerHTML = html;
+  $("rotulo").textContent =
+    Math.round(caixa.width) + " × " + Math.round(caixa.height) +
+    "  ·  " + razao.toFixed(2) + ":1" +
+    (faixaH || faixaV ? "  ·  faixa " + (faixaH || faixaV) + "px" : "  ·  sem faixa");
+}
+
+new ResizeObserver(medir).observe($("caixa"));
+setInterval(medir, 400);
+
+abrir();
+</script>
+</body>
+</html>
