@@ -153,7 +153,6 @@ export default function GameDetailsPage() {
 
   const game = slug ? getGameBySlug(slug) : undefined;
   const isPixelSecreto = game?.slug === "pixel-secreto";
-  const startsInsidePhaser = game?.module === "EF01CO02/trilha-do-passo-a-passo";
 
   useEffect(() => {
     let cancelled = false;
@@ -706,7 +705,20 @@ export default function GameDetailsPage() {
 
         <div className="game-area">
           {game && gameConfig ? (
-            hasStartedGame || startsInsidePhaser ? (
+            /*
+             * TODOS os jogos passam pela capa.
+             *
+             * Havia aqui uma exceção para a `trilha-do-passo-a-passo`, que
+             * pulava a capa porque tinha uma tela de início DENTRO do Phaser.
+             * Essa tela virou código morto em algum momento — o método existia
+             * e ninguém mais o chamava —, e a exceção continuou de pé. O
+             * resultado era o pior dos dois mundos: o jogo abria direto no
+             * tabuleiro, sem a capa da plataforma e sem a dele.
+             *
+             * Exceção por nome de jogo é uma dívida com juros: ela sobrevive à
+             * razão que a criou, porque nada no código a liga ao motivo.
+             */
+            hasStartedGame ? (
               <GameFrame
                 gameId={game.id}
                 level={currentLevel}

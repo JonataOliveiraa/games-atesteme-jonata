@@ -146,36 +146,6 @@ export class GameScene extends Phaser.Scene {
         });
     }
 
-    private showStartScreen() {
-        const { width, height } = this.scale;
-        const container = this.add.container(0, 0).setDepth(500);
-
-        const bg = this.add.image(width / 2, height / 2, 'menu_screen');
-        bg.setScale(Math.max(width / bg.width, height / bg.height));
-
-        const thinkingBot = this.add.image(width / 2, height * 0.53, 'robot_thinking')
-            .setDisplaySize(260, 340);
-        this.tweens.add({
-            targets: thinkingBot, y: '-=14', duration: 1600,
-            yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
-        });
-
-        const sub = this.add.text(width / 2, height * 0.27, 'Monte o robô na ordem certa!', {
-            fontSize: '24px', fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif', color: '#fff7c2',
-            stroke: '#1f2937', strokeThickness: 4,
-        }).setOrigin(0.5);
-
-        const startBtn = this.createButton(width / 2, height * 0.84, 260, 68, '▶  Montar!', COLORS.green, () => {
-            this.playClick();
-            this.tweens.add({
-                targets: container, alpha: 0, duration: 300,
-                onComplete: () => { container.destroy(); this.startGameLogic(); },
-            });
-        });
-
-        container.add([bg, thinkingBot, sub, startBtn]);
-    }
-
     private startGameLogic() {
         const { width, height } = this.scale;
         this.isGameStarted = true;
