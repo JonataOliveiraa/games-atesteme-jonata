@@ -45,6 +45,35 @@ export default function PhaserCanvas({ config, gameId, stage }: PhaserCanvasProp
      * `finally` e não `then`: se a fonte falhar, o jogo abre do mesmo jeito.
      * Acabamento nunca pode ser motivo de tela preta.
      */
+    /*
+     * ── A PROPORÇÃO DO JOGO VIRA UMA VARIÁVEL DE CSS ───────────────────
+     *
+     * A caixa que envolve o canvas precisa ter a forma do jogo, senão sobra
+     * faixa por dentro dela ou a imagem deforma. Só que a resolução varia:
+     * 41 jogos são 1280x720 e a `oficina-dos-algoritmos` é 960x540.
+     *
+     * O CSS não tem como descobrir isso sozinho, então quem conta é aqui.
+     * Ver a regra `.phaser-container` do modo embed em `global.css`.
+     */
+    const anunciarProporcao = (largura?: number, altura?: number) => {
+      if (!containerRef.current) return;
+      if (!largura || !altura) return;
+      containerRef.current.style.setProperty(
+        "--jogo-ratio",
+        String(largura / altura)
+      );
+    };
+
+    /*
+     * A configuração já sabe, na maioria dos casos. Anunciar ANTES de criar o
+     * jogo importa: assim o Phaser mede um container que já tem a forma certa,
+     * e não precisa de um segundo cálculo depois.
+     */
+    anunciarProporcao(
+      typeof config.width === "number" ? config.width : undefined,
+      typeof config.height === "number" ? config.height : undefined
+    );
+
     void carregarFonteDoJogo().finally(() => {
       if (cancelado || !containerRef.current) return;
       gameRef.current = new Phaser.Game({
@@ -66,6 +95,20 @@ export default function PhaserCanvas({ config, gameId, stage }: PhaserCanvasProp
             config.callbacks?.preBoot?.(game);
           },
         },
+      });
+
+      /*
+       * A confirmação, para quem não declara a resolução na configuração.
+       *
+       * Três jogos deixam o tamanho a cargo do Phaser, e nesses a conta acima
+       * não teve o que anunciar. Depois do boot o valor de verdade existe em
+       * `scale.gameSize` — e corrigir aqui é barato: se já estava certo, a
+       * variável recebe o mesmo número e nada acontece.
+       */
+      gameRef.current.events.once("ready", () => {
+        const tamanho = gameRef.current?.scale?.gameSize;
+        anunciarProporcao(tamanho?.width, tamanho?.height);
+        gameRef.current?.scale?.refresh();
       });
     });
 

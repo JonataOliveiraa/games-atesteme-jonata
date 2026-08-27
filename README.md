@@ -647,7 +647,23 @@ Duas paginas de teste, com propositos diferentes:
 - **`/embed-sandbox.html`** — o ENQUADRAMENTO. A mesma URL numa caixa que voce
   redimensiona, com a medida do canvas lida de dentro do iframe.
 
-As duas passam `returnBase = window.location.origin`, porque e a unica origem
+- **`/embed-remoto.html`** — o CONTRATO CONTRA UM SITE DE OUTRA ORIGEM. Igual ao
+  harness, mas com o endereco do site como campo: aponte para
+  `https://games.atesteme.com` (ou para o local) e veja a partida inteira.
+  Faz o aperto de mao sozinho (`GAME_READY` → `START_GAME`), acompanha
+  progresso, acertos e erros num painel, e diz o veredito. E o unico que
+  exercita origem cruzada — os outros dois so conversam com o proprio site.
+
+  Ele precisa ser SERVIDO por http: aberto por `file://` a origem e `null`,
+  que nunca esta em allowlist nenhuma. Com `npm run dev` ele fica em
+  <http://localhost:5174/embed-remoto.html>.
+
+  E a origem dele precisa estar em `VITE_EMBED_ALLOWED_ORIGINS` **no build do
+  site de destino**. Se nao estiver, o jogo aparece, roda, e o painel fica
+  vazio para sempre — sem erro visivel. Por isso ele cronometra o silencio e
+  acusa depois de 12 segundos, citando as duas causas possiveis.
+
+As duas primeiras passam `returnBase = window.location.origin`, porque e a unica origem
 que elas tem e a unica que esta na allowlist local. Entao, no fim da partida, o
 iframe navega para o `/approve` ou `/reprove` **deste site** — e por isso as
 duas rotas existem no `App.tsx`, em `src/pages/EmbedReturnPage.tsx`. Elas se

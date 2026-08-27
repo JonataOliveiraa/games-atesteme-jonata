@@ -2795,7 +2795,6 @@ body.embed-active {
  * escondido atrás dela. Navegador que não conhece `dvh` ignora a segunda linha
  * e fica com a primeira.
  */
-body.embed-active .embed-stage .phaser-container,
 body.embed-active .embed-stage .game-screen {
   width: 100vw;
   height: 100vh;
@@ -2810,17 +2809,51 @@ body.embed-active .embed-stage .game-screen {
   background: #000;
 }
 
+/* ── A CAIXA TEM A PROPORÇÃO DO JOGO, E O CANVAS PREENCHE A CAIXA ─────────
+ *
+ * Havia aqui outra receita: a caixa ocupava a tela toda e o canvas era
+ * "libertado" com `width: auto !important`, para o tamanho que o `Scale.FIT`
+ * calculou pudesse valer. Só que `auto` num canvas não devolve o tamanho
+ * calculado — devolve o tamanho INTRÍNSECO, que é a resolução interna do jogo.
+ *
+ * Para os 41 jogos desenhados em 1280x720 isso dava certo por coincidência: a
+ * resolução interna já era o tamanho que se queria. A `oficina-dos-algoritmos`
+ * é 960x540, e apareceu como um retângulo pequeno no meio de uma moldura preta
+ * enorme — o `!important` do CSS estava jogando fora a conta que o Phaser
+ * tinha acabado de fazer (ele escrevia `width: 1280px` no style inline, e a
+ * regra passava por cima).
+ *
+ * Agora quem carrega a proporção é a CAIXA, e ela vem do jogo: o
+ * `PhaserCanvas` escreve `--jogo-ratio` a partir da resolução real. O canvas
+ * preenche 100% de uma caixa que já tem a forma certa, então não deforma, não
+ * sobra faixa por dentro, e funciona em qualquer resolução — inclusive numa
+ * que ninguém tenha desenhado ainda.
+ *
+ * O `min()` é o que impede a caixa de estourar: ela é o menor entre a largura
+ * da tela e a largura que a altura da tela permite naquela proporção. É a
+ * mesma conta do `Scale.FIT`, feita onde o CSS consegue respeitá-la. */
 body.embed-active .embed-stage .phaser-container {
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  /* padrão 16:9, para o caso de o jogo não ter dito a resolução ainda */
+  --jogo-ratio: 1.7778;
+
+  width: min(100vw, calc(100vh * var(--jogo-ratio)));
+  width: min(100dvw, calc(100dvh * var(--jogo-ratio)));
+  height: auto;
+  aspect-ratio: var(--jogo-ratio);
+
+  display: block;
+  max-width: none !important;
+  min-height: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  margin: 0 !important;
+  background: #000;
 }
 
 body.embed-active .embed-stage .phaser-container canvas {
-  width: auto !important;
-  height: auto !important;
-  max-width: 100% !important;
-  max-height: 100% !important;
+  width: 100% !important;
+  height: 100% !important;
+  display: block;
   aspect-ratio: auto !important;
   margin: 0 !important;
 }
