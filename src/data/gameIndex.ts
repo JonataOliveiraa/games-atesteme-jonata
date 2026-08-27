@@ -154,6 +154,100 @@ const gameModules = import.meta.glob<{
   default: Phaser.Types.Core.GameConfig;
 }>("../games/*/*/index.{ts,tsx}");
 
+/**
+ * ══════════════════════════════════════════════════════════════════════════
+ *  O CHUNK QUE SUMIU DEBAIXO DA ABA ABERTA
+ * ══════════════════════════════════════════════════════════════════════════
+ *
+ * Cada jogo é carregado por `import()`, e o arquivo tem hash no nome. Num
+ * deploy os arquivos novos entram com hashes novos e os antigos somem.
+ *
+ * Quem estava com a aba aberta nesse instante continua rodando o HTML velho,
+ * que só conhece os hashes velhos. Enquanto ninguém troca de tela, nada
+ * acontece — o problema aparece no primeiro `import()`: o arquivo não existe
+ * mais, e o jogo fica em "Carregando jogo..." para sempre.
+ *
+ * Isso não é hipótese: aconteceu em 27/08/2026, poucos minutos depois de um
+ * deploy. E o sintoma não ajuda — o console fala de MIME type e de módulo,
+ * porque o servidor devolvia `index.html` no lugar do arquivo que faltava.
+ *
+ * O remédio é o de sempre: recarregar uma vez. A aba pega o HTML novo, com os
+ * hashes novos, e segue. É o único conserto possível do lado do cliente —
+ * o código velho não tem como adivinhar o nome do arquivo novo.
+ */
+
+/** A marca fica no `sessionStorage`: é por aba, e sobrevive ao reload. */
+const MARCA_DE_RECARGA = "jogos:recarga-por-chunk-antigo";
+
+/**
+ * O erro é de arquivo que sumiu, ou é problema do jogo?
+ *
+ * Cada navegador escreve a mesma falha com uma frase diferente, e nenhum
+ * oferece um código. Sobrou casar texto — feio, e é o que existe.
+ *
+ * Exportado porque a decisão é a parte que precisa ser conferida: recarregar
+ * por engano custa a partida de alguém.
+ */
+export function pareceChunkAntigo(erro: unknown): boolean {
+  const mensagem = erro instanceof Error ? erro.message : String(erro ?? "");
+
+  return (
+    // Chrome
+    /Failed to fetch dynamically imported module/i.test(mensagem) ||
+    // Firefox
+    /error loading dynamically imported module/i.test(mensagem) ||
+    // Safari
+    /Importing a module script failed/i.test(mensagem) ||
+    /Unable to load module script/i.test(mensagem) ||
+    // o que o navegador diz quando recebeu HTML no lugar de JavaScript
+    /Expected a JavaScript(-or-Wasm)? module script/i.test(mensagem)
+  );
+}
+
+/**
+ * Vale recarregar por causa deste erro?
+ *
+ * Separado do ato de recarregar de propósito: assim a regra — que é a parte
+ * arriscada — pode ser exercitada sem ninguém precisar derrubar uma página.
+ *
+ * Três condições, e todas precisam valer:
+ *
+ *  1. o erro tem cara de arquivo que sumiu (e não de bug do jogo);
+ *  2. esta aba ainda não tentou — senão uma falha permanente vira laço
+ *     infinito de recarga, que é muito pior que uma tela travada;
+ *  3. dá para GRAVAR a marca. Sem `sessionStorage` (aba anônima, storage
+ *     bloqueado) a condição 2 não se sustenta depois do reload, e aí a opção
+ *     segura é não recarregar. Falhar como antes é ruim; falhar em laço é
+ *     inaceitável.
+ */
+export function decidirRecarga(erro: unknown): boolean {
+  if (!pareceChunkAntigo(erro)) return false;
+  if (typeof window === "undefined") return false;
+
+  try {
+    if (window.sessionStorage.getItem(MARCA_DE_RECARGA)) return false;
+    window.sessionStorage.setItem(MARCA_DE_RECARGA, "1");
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Apagada em toda carga bem-sucedida.
+ *
+ * Sem isto, a aba teria direito a UMA recarga na vida. Com isto, cada deploy
+ * novo ganha a sua — e o laço continua impossível, porque só um sucesso
+ * devolve o direito.
+ */
+function limparMarcaDeRecarga() {
+  try {
+    window.sessionStorage.removeItem(MARCA_DE_RECARGA);
+  } catch {
+    // sem storage não havia marca para apagar
+  }
+}
+
 export function loadGameConfig(game: Game) {
   const loader =
     gameModules[`../games/${game.module}/index.ts`] ??
@@ -167,5 +261,31 @@ export function loadGameConfig(game: Game) {
     );
   }
 
-  return loader();
+  return loader().then(
+    (modulo) => {
+      limparMarcaDeRecarga();
+      return modulo;
+    },
+    (erro: unknown) => {
+      if (!decidirRecarga(erro)) throw erro;
+
+      console.warn(
+        "[jogos] o arquivo deste jogo não existe mais no servidor — " +
+          "provavelmente houve um deploy com esta aba aberta. Recarregando " +
+          "uma vez para pegar a versão nova.",
+        erro
+      );
+
+      window.location.reload();
+
+      /*
+       * A promessa que nunca resolve.
+       *
+       * A página está sendo trocada; resolver ou rejeitar aqui só serviria
+       * para o chamador desenhar um erro que ninguém vai ler, no meio do
+       * caminho. Deixar pendente mantém a tela como está até o reload chegar.
+       */
+      return new Promise<never>(() => {});
+    }
+  );
 }
