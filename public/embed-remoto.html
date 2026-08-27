@@ -1,311 +1,475 @@
 <!doctype html>
 <html lang="pt-BR">
+
 <head>
-<meta charset="utf-8" />
-<title>Embed remoto — o jogo conversando com a plataforma</title>
-<style>
-  :root { color-scheme: dark; }
-  * { box-sizing: border-box; }
-  html, body { height: 100%; margin: 0; }
-  body {
-    background: #0b1220; color: #e8f4ff; overflow: hidden;
-    font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
-    display: grid; grid-template-columns: 320px 1fr 420px; grid-template-rows: 100%;
-  }
+  <meta charset="utf-8" />
+  <title>Embed remoto — o jogo conversando com a plataforma</title>
+  <style>
+    :root {
+      color-scheme: dark;
+    }
 
-  aside, #lado { min-height: 0; overflow: auto; }
-  aside { border-right: 1px solid #1f2f47; padding: 14px; }
-  #lado { border-left: 1px solid #1f2f47; display: flex; flex-direction: column; overflow: hidden; }
+    * {
+      box-sizing: border-box;
+    }
 
-  h1 { font-size: 13px; letter-spacing: .08em; text-transform: uppercase; opacity: .6; margin: 0 0 12px; }
-  h2 { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; opacity: .45; margin: 18px 0 8px; }
+    html,
+    body {
+      height: 100%;
+      margin: 0;
+    }
 
-  label { display: block; margin-bottom: 8px; opacity: .8; }
-  label input, label select {
-    width: 100%; margin-top: 3px; background: #0b1220; color: #e8f4ff;
-    border: 1px solid #29405f; border-radius: 6px; padding: 5px 8px; font: inherit;
-  }
-  .dupla { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    body {
+      background: #0b1220;
+      color: #e8f4ff;
+      overflow: hidden;
+      font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+      display: grid;
+      grid-template-columns: 320px 1fr 420px;
+      grid-template-rows: 100%;
+    }
 
-  button {
-    background: #1d4ed8; color: #fff; border: 0; border-radius: 6px;
-    padding: 7px 12px; font: inherit; cursor: pointer;
-  }
-  button.sec { background: #29405f; }
-  button:disabled { opacity: .4; cursor: not-allowed; }
-  .linha-botoes { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+    aside,
+    #lado {
+      min-height: 0;
+      overflow: auto;
+    }
 
-  /* ── o palco ───────────────────────────────────────────────────────── */
-  main { display: grid; grid-template-rows: auto 1fr; min-width: 0; min-height: 0; }
-  #barra-url {
-    padding: 8px 12px; background: #101c2e; border-bottom: 1px solid #1f2f47;
-    font-size: 11px; word-break: break-all; opacity: .75;
-  }
-  /* 16:9 é a proporção dos jogos: nesta caixa a faixa preta é zero. */
-  #caixa { display: grid; place-items: center; min-height: 0; padding: 16px; background: #060b14; }
-  #moldura { width: 100%; max-width: calc((100vh - 90px) * 16 / 9); aspect-ratio: 16 / 9; background: #000; }
-  #jogo { width: 100%; height: 100%; border: 0; display: block; }
+    aside {
+      border-right: 1px solid #1f2f47;
+      padding: 14px;
+    }
 
-  /* ── o diagnóstico que importa ─────────────────────────────────────── */
-  #situacao { padding: 10px 12px; border-bottom: 1px solid #1f2f47; font-size: 12px; }
-  #situacao.esperando { background: #1c1608; border-left: 3px solid #fbbf24; }
-  #situacao.mudo      { background: #1e0f0f; border-left: 3px solid #ff6b6b; }
-  #situacao.falando   { background: #0d1f14; border-left: 3px solid #51cf66; }
-  #situacao b { display: block; margin-bottom: 3px; }
-  #situacao span { opacity: .75; }
+    #lado {
+      border-left: 1px solid #1f2f47;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
 
-  #estado { padding: 10px 12px; border-bottom: 1px solid #1f2f47; }
-  #estado div { display: flex; justify-content: space-between; gap: 8px; padding: 2px 0; }
-  #estado b { color: #6ee7f9; font-weight: 400; }
+    h1 {
+      font-size: 13px;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      opacity: .6;
+      margin: 0 0 12px;
+    }
 
-  #log { flex: 1 1 0; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 8px 12px; }
-  .ev {
-    border-left: 3px solid #29405f; padding: 5px 9px; margin-bottom: 6px;
-    background: #0f1a2c; border-radius: 0 6px 6px 0; white-space: pre-wrap; word-break: break-word;
-  }
-  .ev b { color: #6ee7f9; }
-  .ev small { opacity: .5; }
-  .ev.ok { border-left-color: #51cf66; }
-  .ev.ruim { border-left-color: #ff6b6b; }
-  .ev.aviso { border-left-color: #fbbf24; }
-  .ev.pronto { border-left-color: #6ee7f9; background: #10233a; }
-  .ev.saiu { border-left-color: #a78bfa; }
+    h2 {
+      font-size: 11px;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      opacity: .45;
+      margin: 18px 0 8px;
+    }
 
-  .nota { opacity: .55; font-size: 11px; line-height: 1.5; margin-top: 12px; }
-  code { background: #16233a; padding: 1px 4px; border-radius: 4px; }
-</style>
+    label {
+      display: block;
+      margin-bottom: 8px;
+      opacity: .8;
+    }
+
+    label input,
+    label select {
+      width: 100%;
+      margin-top: 3px;
+      background: #0b1220;
+      color: #e8f4ff;
+      border: 1px solid #29405f;
+      border-radius: 6px;
+      padding: 5px 8px;
+      font: inherit;
+    }
+
+    .dupla {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    button {
+      background: #1d4ed8;
+      color: #fff;
+      border: 0;
+      border-radius: 6px;
+      padding: 7px 12px;
+      font: inherit;
+      cursor: pointer;
+    }
+
+    button.sec {
+      background: #29405f;
+    }
+
+    button:disabled {
+      opacity: .4;
+      cursor: not-allowed;
+    }
+
+    .linha-botoes {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-top: 10px;
+    }
+
+    /* ── o palco ───────────────────────────────────────────────────────── */
+    main {
+      display: grid;
+      grid-template-rows: auto 1fr;
+      min-width: 0;
+      min-height: 0;
+    }
+
+    #barra-url {
+      padding: 8px 12px;
+      background: #101c2e;
+      border-bottom: 1px solid #1f2f47;
+      font-size: 11px;
+      word-break: break-all;
+      opacity: .75;
+    }
+
+    /* 16:9 é a proporção dos jogos: nesta caixa a faixa preta é zero. */
+    #caixa {
+      display: grid;
+      place-items: center;
+      min-height: 0;
+      padding: 16px;
+      background: #060b14;
+    }
+
+    #moldura {
+      width: 100%;
+      max-width: calc((100vh - 90px) * 16 / 9);
+      aspect-ratio: 16 / 9;
+      background: #000;
+    }
+
+    #jogo {
+      width: 100%;
+      height: 100%;
+      border: 0;
+      display: block;
+    }
+
+    /* ── o diagnóstico que importa ─────────────────────────────────────── */
+    #situacao {
+      padding: 10px 12px;
+      border-bottom: 1px solid #1f2f47;
+      font-size: 12px;
+    }
+
+    #situacao.esperando {
+      background: #1c1608;
+      border-left: 3px solid #fbbf24;
+    }
+
+    #situacao.mudo {
+      background: #1e0f0f;
+      border-left: 3px solid #ff6b6b;
+    }
+
+    #situacao.falando {
+      background: #0d1f14;
+      border-left: 3px solid #51cf66;
+    }
+
+    #situacao b {
+      display: block;
+      margin-bottom: 3px;
+    }
+
+    #situacao span {
+      opacity: .75;
+    }
+
+    #estado {
+      padding: 10px 12px;
+      border-bottom: 1px solid #1f2f47;
+    }
+
+    #estado div {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 2px 0;
+    }
+
+    #estado b {
+      color: #6ee7f9;
+      font-weight: 400;
+    }
+
+    #log {
+      flex: 1 1 0;
+      min-height: 0;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      padding: 8px 12px;
+    }
+
+    .ev {
+      border-left: 3px solid #29405f;
+      padding: 5px 9px;
+      margin-bottom: 6px;
+      background: #0f1a2c;
+      border-radius: 0 6px 6px 0;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .ev b {
+      color: #6ee7f9;
+    }
+
+    .ev small {
+      opacity: .5;
+    }
+
+    .ev.ok {
+      border-left-color: #51cf66;
+    }
+
+    .ev.ruim {
+      border-left-color: #ff6b6b;
+    }
+
+    .ev.aviso {
+      border-left-color: #fbbf24;
+    }
+
+    .ev.pronto {
+      border-left-color: #6ee7f9;
+      background: #10233a;
+    }
+
+    .ev.saiu {
+      border-left-color: #a78bfa;
+    }
+
+    .nota {
+      opacity: .55;
+      font-size: 11px;
+      line-height: 1.5;
+      margin-top: 12px;
+    }
+
+    code {
+      background: #16233a;
+      padding: 1px 4px;
+      border-radius: 4px;
+    }
+  </style>
 </head>
+
 <body>
 
-<aside>
-  <h1>Embed remoto</h1>
+  <aside>
+    <h1>Embed remoto</h1>
 
-  <label>site dos jogos
-    <input id="base" value="https://games.atesteme.com" />
-  </label>
-  <div class="linha-botoes" style="margin-top:-4px">
-    <button class="sec" type="button" data-base="https://games.atesteme.com">produção</button>
-    <button class="sec" type="button" data-base="http://localhost:5174">local 5174</button>
+    <label>site dos jogos
+      <input id="base" value="https://games.atesteme.com" />
+    </label>
+    <div class="linha-botoes" style="margin-top:-4px">
+      <button class="sec" type="button" data-base="https://games.atesteme.com">produção</button>
+      <button class="sec" type="button" data-base="http://localhost:5174">local 5174</button>
+    </div>
+
+    <h2>O jogo</h2>
+    <label>slug
+      <select id="slug"></select>
+    </label>
+
+    <h2>O contexto da tentativa</h2>
+    <label>id (a etiqueta da partida)
+      <input id="id" />
+    </label>
+    <label>returnBase (para onde o jogo volta)
+      <input id="returnBase" />
+    </label>
+    <div class="linha-botoes" style="margin-top:-4px">
+      <button class="sec" type="button" id="rbSite">o próprio site</button>
+      <button class="sec" type="button" id="rbAqui">esta página</button>
+    </div>
+    <div class="dupla">
+      <label>stage <input id="stage" value="1" /></label>
+      <label>lives <input id="lives" value="3" /></label>
+    </div>
+    <div class="dupla">
+      <label>points <input id="points" value="0" /></label>
+      <label>locale <input id="locale" value="pt-BR" /></label>
+    </div>
+
+    <div class="linha-botoes">
+      <button id="abrir" type="button">Abrir o jogo</button>
+      <button id="novoId" class="sec" type="button">Novo id</button>
+    </div>
+
+    <h2>Comandos para o jogo</h2>
+    <div class="linha-botoes">
+      <button id="start" class="sec" type="button">START_GAME</button>
+      <button id="pause" class="sec" type="button">PAUSE</button>
+      <button id="resume" class="sec" type="button">RESUME</button>
+    </div>
+
+    <p class="nota">
+      O <code>id</code> volta igualzinho no fim, em
+      <code>&lt;returnBase&gt;/approve?id=…</code>. É por ele que a plataforma
+      reconhece de qual partida é o resultado.
+    </p>
+  </aside>
+
+  <main>
+    <div id="barra-url">—</div>
+    <div id="caixa">
+      <div id="moldura"><iframe id="jogo" allow="autoplay; fullscreen"></iframe></div>
+    </div>
+  </main>
+
+  <div id="lado">
+    <div id="situacao" class="esperando"><b>Nada aberto ainda</b><span>Clique em "Abrir o jogo".</span></div>
+    <div id="estado"></div>
+    <div id="log"></div>
   </div>
 
-  <h2>O jogo</h2>
-  <label>slug
-    <select id="slug"></select>
-  </label>
+  <script>
+    //  COMO O JOGO CONVERSA COM A PLATAFORMA
+    // Esta página faz exatamente o que a plataforma da Atesteme vai fazer. São
+    // quatro movimentos, e nenhum a mais:
 
-  <h2>O contexto da tentativa</h2>
-  <label>id (a etiqueta da partida)
-    <input id="id" />
-  </label>
-  <label>returnBase (para onde o jogo volta)
-    <input id="returnBase" />
-  </label>
-  <div class="linha-botoes" style="margin-top:-4px">
-    <button class="sec" type="button" id="rbSite">o próprio site</button>
-    <button class="sec" type="button" id="rbAqui">esta página</button>
-  </div>
-  <div class="dupla">
-    <label>stage <input id="stage" value="1" /></label>
-    <label>lives <input id="lives" value="3" /></label>
-  </div>
-  <div class="dupla">
-    <label>points <input id="points" value="0" /></label>
-    <label>locale <input id="locale" value="pt-BR" /></label>
-  </div>
+    //   1. A plataforma monta a URL do jogo com o contexto da tentativa e a põe
+    //      no `src` de um iframe.
+    //   2. O jogo avisa que carregou:  { channel: "platform-event",
+    //                                    payload: { type: "GAME_READY", … } }
+    //   3. A plataforma responde com o comando de início:
+    //                                  { channel: "platform-command",
+    //                                    payload: { type: "START_GAME", … } }
+    //   4. Durante a partida o jogo relata o que acontece (CHECKPOINT,
+    //      CORRECT_ANSWER, WRONG_ANSWER) e no fim manda GAME_COMPLETED com
+    //      `isFinalStage: true`, ou GAME_OVER. Depois disso ele NAVEGA o próprio
+    //      iframe para `<returnBase>/approve` ou `/reprove`.
 
-  <div class="linha-botoes">
-    <button id="abrir" type="button">Abrir o jogo</button>
-    <button id="novoId" class="sec" type="button">Novo id</button>
-  </div>
+    // Tudo por `postMessage`. O jogo nunca chama uma API, nunca escreve num banco
+    // e nunca sabe o que é uma competência.
 
-  <h2>Comandos para o jogo</h2>
-  <div class="linha-botoes">
-    <button id="start" class="sec" type="button">START_GAME</button>
-    <button id="pause" class="sec" type="button">PAUSE</button>
-    <button id="resume" class="sec" type="button">RESUME</button>
-  </div>
+    // `postMessage` exige que as duas pontas se reconheçam pela ORIGEM. O site
+    // dos jogos só fala com origens que estavam em `VITE_EMBED_ALLOWED_ORIGINS`
+    // NO MOMENTO DO BUILD. Se a origem desta página não estiver lá, o navegador
+    // descarta cada mensagem em silêncio: o jogo aparece e roda, e o painel da
+    // direita fica vazio para sempre.
 
-  <p class="nota">
-    O <code>id</code> volta igualzinho no fim, em
-    <code>&lt;returnBase&gt;/approve?id=…</code>. É por ele que a plataforma
-    reconhece de qual partida é o resultado.
-  </p>
-</aside>
+    // É de longe o erro mais comum, e não gera erro visível. Por isso esta página
+    // cronometra o silêncio e acusa (ver `vigiarSilencio`).
 
-<main>
-  <div id="barra-url">—</div>
-  <div id="caixa"><div id="moldura"><iframe id="jogo" allow="autoplay; fullscreen"></iframe></div></div>
-</main>
+    // E por isso ela precisa ser SERVIDA por http — abrir por `file://` dá origem
+    // `null`, que nunca vai estar em allowlist nenhuma. Rodando `npm run dev`,
+    // ela fica em http://localhost:5174/embed-remoto.html
 
-<div id="lado">
-  <div id="situacao" class="esperando"><b>Nada aberto ainda</b><span>Clique em "Abrir o jogo".</span></div>
-  <div id="estado"></div>
-  <div id="log"></div>
-</div>
 
-<script>
-/*
- * ══════════════════════════════════════════════════════════════════════════
- *  COMO O JOGO CONVERSA COM A PLATAFORMA — demonstrado, não descrito
- * ══════════════════════════════════════════════════════════════════════════
- *
- * Esta página faz exatamente o que a plataforma da Atesteme vai fazer. São
- * quatro movimentos, e nenhum a mais:
- *
- *   1. A plataforma monta a URL do jogo com o contexto da tentativa e a põe
- *      no `src` de um iframe.
- *   2. O jogo avisa que carregou:  { channel: "platform-event",
- *                                    payload: { type: "GAME_READY", … } }
- *   3. A plataforma responde com o comando de início:
- *                                  { channel: "platform-command",
- *                                    payload: { type: "START_GAME", … } }
- *   4. Durante a partida o jogo relata o que acontece (CHECKPOINT,
- *      CORRECT_ANSWER, WRONG_ANSWER) e no fim manda GAME_COMPLETED com
- *      `isFinalStage: true`, ou GAME_OVER. Depois disso ele NAVEGA o próprio
- *      iframe para `<returnBase>/approve` ou `/reprove`.
- *
- * Tudo por `postMessage`. O jogo nunca chama uma API, nunca escreve num banco
- * e nunca sabe o que é uma competência.
- *
- * ── A PEGADINHA QUE FAZ TUDO FICAR MUDO ──────────────────────────────────
- *
- * `postMessage` exige que as duas pontas se reconheçam pela ORIGEM. O site
- * dos jogos só fala com origens que estavam em `VITE_EMBED_ALLOWED_ORIGINS`
- * NO MOMENTO DO BUILD. Se a origem desta página não estiver lá, o navegador
- * descarta cada mensagem em silêncio: o jogo aparece e roda, e o painel da
- * direita fica vazio para sempre.
- *
- * É de longe o erro mais comum, e não gera erro visível. Por isso esta página
- * cronometra o silêncio e acusa (ver `vigiarSilencio`).
- *
- * E por isso ela precisa ser SERVIDA por http — abrir por `file://` dá origem
- * `null`, que nunca vai estar em allowlist nenhuma. Rodando `npm run dev`,
- * ela fica em http://localhost:5174/embed-remoto.html
- */
+    const $ = (id) => document.getElementById(id);
+    const ORIGEM = window.location.origin;
 
-const $ = (id) => document.getElementById(id);
-const ORIGEM = window.location.origin;
+    const SLUGS = ["base-dos-classificadores", "trilha-do-passo-a-passo", "oficina-dos-algoritmos", "correio-multimidia", "pixel-secreto", "desktop-digital-infantil", "guardioes-dos-dados", "hangar-dos-modelos", "desfile-do-robo-repetidor", "fabrica-de-maquinas", "museu-vivo-do-computador", "cidade-das-tecnologias", "checklist-do-jogador-seguro", "tribunal-do-verdadeiro-ou-falso", "labirinto-do-enquanto", "chef-dos-subproblemas", "montador-de-informacoes", "formato-certo", "central-de-entrada-e-saida", "detetives-da-busca", "estudio-multiformato", "investigacao-dados-risco", "batalha-das-coordenadas", "arquivo-dos-registros", "predio-dos-lacos", "tradutor-da-maquina", "atelier-codigos-digitais", "estudio-producao-digital", "missao-etica-digital", "caca-fonte-confiavel", "baralho-das-listas", "mapas-em-rede", "arena-da-logica", "cidade-das-decisoes", "monte-seu-computador", "missao-arquivo-seguro", "sistema-operacional", "radar-de-confiabilidade", "curadoria-com-creditos", "futuro-em-cena", "escolha-a-ferramenta-certa", "museu-das-estruturas", "academia-dos-algoritmos", "circuito-da-verdade", "arquiteto-das-missoes"];
 
-const SLUGS = ["base-dos-classificadores","trilha-do-passo-a-passo","oficina-dos-algoritmos","correio-multimidia","pixel-secreto","desktop-digital-infantil","guardioes-dos-dados","hangar-dos-modelos","desfile-do-robo-repetidor","fabrica-de-maquinas","museu-vivo-do-computador","cidade-das-tecnologias","checklist-do-jogador-seguro","tribunal-do-verdadeiro-ou-falso","labirinto-do-enquanto","chef-dos-subproblemas","montador-de-informacoes","formato-certo","central-de-entrada-e-saida","detetives-da-busca","estudio-multiformato","investigacao-dados-risco","batalha-das-coordenadas","arquivo-dos-registros","predio-dos-lacos","tradutor-da-maquina","atelier-codigos-digitais","estudio-producao-digital","missao-etica-digital","caca-fonte-confiavel","baralho-das-listas","mapas-em-rede","arena-da-logica","cidade-das-decisoes","monte-seu-computador","missao-arquivo-seguro","sistema-operacional","radar-de-confiabilidade","curadoria-com-creditos","futuro-em-cena","escolha-a-ferramenta-certa","museu-das-estruturas","academia-dos-algoritmos","circuito-da-verdade","arquiteto-das-missoes"];
+    SLUGS.forEach((s) => {
+      const o = document.createElement("option");
+      o.value = s; o.textContent = s;
+      $("slug").appendChild(o);
+    });
+    $("slug").value = "mapas-em-rede";
 
-SLUGS.forEach((s) => {
-  const o = document.createElement("option");
-  o.value = s; o.textContent = s;
-  $("slug").appendChild(o);
-});
-$("slug").value = "mapas-em-rede";
+    const baseDoSite = () => $("base").value.trim().replace(/\/+$/, "");
 
-const baseDoSite = () => $("base").value.trim().replace(/\/+$/, "");
-
-/*
- * ── O PADRÃO DO `returnBase` É O PRÓPRIO SITE, E NÃO ESTA PÁGINA ─────────
- *
- * O jogo confere o `returnBase` contra a allowlist DELE antes de começar, e
- * recusa a partida com "Endereço de retorno não autorizado" se não bater. A
- * origem desta página quase nunca está lá — a lista entra no build do site, e
- * ninguém sabe de antemão de onde alguém vai abrir um harness.
- *
- * A origem do próprio site está SEMPRE permitida (uma página e um iframe da
- * mesma origem já se leem sem `postMessage`; exigir configuração para o site
- * falar consigo mesmo não protegeria nada). Então este padrão faz o jogo abrir
- * em qualquer situação, e o fim da partida cai no `/approve` do próprio site,
- * que mostra a tela de retorno simulado.
- *
- * O botão "esta página" existe para quando a origem daqui JÁ estiver na
- * allowlist — aí dá para exercitar a navegação de volta de verdade.
- */
-function sincronizarReturnBase() {
-  $("returnBase").value = baseDoSite();
-}
-sincronizarReturnBase();
-$("base").addEventListener("change", sincronizarReturnBase);
-$("rbSite").onclick = sincronizarReturnBase;
-$("rbAqui").onclick = () => { $("returnBase").value = ORIGEM; };
-
-const novoId = () =>
-  "att-" + Math.random().toString(16).slice(2, 10) + "-" + Date.now().toString(16);
-$("id").value = novoId();
-
-/* ── o log ──────────────────────────────────────────────────────────────── */
-
-function log(titulo, dado, classe) {
-  const div = document.createElement("div");
-  div.className = "ev " + (classe || "");
-  div.innerHTML =
-    "<b>" + titulo + "</b> <small>" +
-    new Date().toLocaleTimeString("pt-BR") + "</small>" +
-    (dado === undefined ? "" : "\n" + JSON.stringify(dado, null, 2));
-  $("log").prepend(div);
-  $("log").scrollTop = 0;
-  while ($("log").children.length > 200) $("log").lastElementChild.remove();
-}
-
-function situacao(classe, titulo, detalhe) {
-  $("situacao").className = classe;
-  $("situacao").innerHTML = "<b>" + titulo + "</b><span>" + detalhe + "</span>";
-}
-
-/* ── o estado derivado da partida ───────────────────────────────────────── */
-
-const estado = {
-  ready: false, stage: "—", progresso: "—", pontos: "—",
-  acertos: 0, erros: 0, veredito: "em andamento",
-};
-
-function pintarEstado() {
-  const linha = (r, v) => "<div><span>" + r + "</span><b>" + v + "</b></div>";
-  $("estado").innerHTML =
-    linha("GAME_READY", estado.ready ? "recebido" : "—") +
-    linha("fase", estado.stage) +
-    linha("progresso", estado.progresso) +
-    linha("pontos", estado.pontos) +
-    linha("acertos / erros", estado.acertos + " / " + estado.erros) +
-    linha("veredito", estado.veredito);
-}
-pintarEstado();
-
-/* ── a URL, montada igual à da plataforma ───────────────────────────────── */
-
-function montarUrl() {
-  const q = new URLSearchParams({
-    embed: "1",
-    id: $("id").value.trim(),
-    stage: $("stage").value.trim() || "1",
-    points: $("points").value.trim() || "0",
-    lives: $("lives").value.trim() || "3",
-    locale: $("locale").value.trim() || "pt-BR",
-    returnBase: $("returnBase").value.trim() || baseDoSite(),
-  });
-  return baseDoSite() + "/jogos/" + encodeURIComponent($("slug").value) + "?" + q;
-}
-
-/*
- * O CRONÔMETRO DO SILÊNCIO.
- *
- * Se em 12 segundos nenhum evento chegou, ou a origem desta página não está
- * na allowlist do build, ou o endereço está errado. As duas coisas parecem
- * iguais na tela — o jogo aparece e nada acontece —, então a mensagem cita as
- * duas.
- */
-let vigia = null;
-function vigiarSilencio() {
-  clearTimeout(vigia);
-  vigia = setTimeout(() => {
-    if (estado.ready) return;
     /*
-     * O silêncio tem duas causas, e elas se distinguem OLHANDO A TELA — que é
-     * a única coisa que dá para fazer com um iframe de outra origem.
+     * O jogo confere o `returnBase` contra a allowlist DELE antes de começar, e
+     * recusa a partida com "Endereço de retorno não autorizado" se não bater. A
+     * origem desta página quase nunca está lá — a lista entra no build do site, e
+     * ninguém sabe de antemão de onde alguém vai abrir um harness.
+     *
+     * A origem do próprio site está SEMPRE permitida (uma página e um iframe da
+     * mesma origem já se leem sem `postMessage`; exigir configuração para o site
+     * falar consigo mesmo não protegeria nada). Então este padrão faz o jogo abrir
+     * em qualquer situação, e o fim da partida cai no `/approve` do próprio site,
+     * que mostra a tela de retorno simulado.
+     *
+     * O botão "esta página" existe para quando a origem daqui JÁ estiver na
+     * allowlist — aí dá para exercitar a navegação de volta de verdade.
      */
-    const mesmaOrigem = baseDoSite() === ORIGEM;
+    function sincronizarReturnBase() {
+      $("returnBase").value = baseDoSite();
+    }
+    sincronizarReturnBase();
+    $("base").addEventListener("change", sincronizarReturnBase);
+    $("rbSite").onclick = sincronizarReturnBase;
+    $("rbAqui").onclick = () => { $("returnBase").value = ORIGEM; };
 
-    situacao(
-      "mudo",
-      "12 segundos sem nenhum evento",
-      mesmaOrigem
-        ? "Esta página e o site são a mesma origem, então a ponte deveria " +
+    const novoId = () =>
+      "att-" + Math.random().toString(16).slice(2, 10) + "-" + Date.now().toString(16);
+    $("id").value = novoId();
+
+    function log(titulo, dado, classe) {
+      const div = document.createElement("div");
+      div.className = "ev " + (classe || "");
+      div.innerHTML =
+        "<b>" + titulo + "</b> <small>" +
+        new Date().toLocaleTimeString("pt-BR") + "</small>" +
+        (dado === undefined ? "" : "\n" + JSON.stringify(dado, null, 2));
+      $("log").prepend(div);
+      $("log").scrollTop = 0;
+      while ($("log").children.length > 200) $("log").lastElementChild.remove();
+    }
+
+    function situacao(classe, titulo, detalhe) {
+      $("situacao").className = classe;
+      $("situacao").innerHTML = "<b>" + titulo + "</b><span>" + detalhe + "</span>";
+    }
+
+    const estado = {
+      ready: false, stage: "—", progresso: "—", pontos: "—",
+      acertos: 0, erros: 0, veredito: "em andamento",
+    };
+
+    function pintarEstado() {
+      const linha = (r, v) => "<div><span>" + r + "</span><b>" + v + "</b></div>";
+      $("estado").innerHTML =
+        linha("GAME_READY", estado.ready ? "recebido" : "—") +
+        linha("fase", estado.stage) +
+        linha("progresso", estado.progresso) +
+        linha("pontos", estado.pontos) +
+        linha("acertos / erros", estado.acertos + " / " + estado.erros) +
+        linha("veredito", estado.veredito);
+    }
+    pintarEstado();
+
+    function montarUrl() {
+      const q = new URLSearchParams({
+        embed: "1",
+        id: $("id").value.trim(),
+        stage: $("stage").value.trim() || "1",
+        points: $("points").value.trim() || "0",
+        lives: $("lives").value.trim() || "3",
+        locale: $("locale").value.trim() || "pt-BR",
+        returnBase: $("returnBase").value.trim() || baseDoSite(),
+      });
+      return baseDoSite() + "/jogos/" + encodeURIComponent($("slug").value) + "?" + q;
+    }
+
+    let vigia = null;
+    function vigiarSilencio() {
+      clearTimeout(vigia);
+      vigia = setTimeout(() => {
+        if (estado.ready) return;
+        const mesmaOrigem = baseDoSite() === ORIGEM;
+
+        situacao(
+          "mudo",
+          "12 segundos sem nenhum evento",
+          mesmaOrigem
+            ? "Esta página e o site são a mesma origem, então a ponte deveria " +
             "funcionar. Verifique se o jogo carregou (canvas na tela) — se " +
             "nem carregou, o problema é o endereço ou a rota."
-        : "<b style='display:inline'>Olhe a tela do jogo, ela diz qual dos dois é:</b> " +
+            : "<b style='display:inline'>Olhe a tela do jogo, ela diz qual dos dois é:</b> " +
             "• Se aparece <i>“Endereço de retorno não autorizado”</i>, o " +
             "problema é o campo <code>returnBase</code> — clique em “o próprio " +
             "site”, que é sempre permitido. " +
@@ -317,130 +481,109 @@ function vigiarSilencio() {
             "Enquanto isso, abra este harness a partir do próprio site " +
             "(<code>" + baseDoSite() + "/embed-remoto.html</code>): de lá a " +
             "origem já é permitida e tudo funciona sem configurar nada."
-    );
-  }, 12000);
-}
+        );
+      }, 12000);
+    }
 
-function abrir() {
-  const url = montarUrl();
-  $("barra-url").textContent = url;
-  $("jogo").src = url;
+    function abrir() {
+      const url = montarUrl();
+      $("barra-url").textContent = url;
+      $("jogo").src = url;
 
-  estado.ready = false;
-  estado.stage = "—"; estado.progresso = "—"; estado.pontos = "—";
-  estado.acertos = 0; estado.erros = 0; estado.veredito = "em andamento";
-  pintarEstado();
+      estado.ready = false;
+      estado.stage = "—"; estado.progresso = "—"; estado.pontos = "—";
+      estado.acertos = 0; estado.erros = 0; estado.veredito = "em andamento";
+      pintarEstado();
 
-  log("→ iframe.src", url, "aviso");
-  situacao("esperando", "Esperando o GAME_READY…", "O jogo avisa quando terminar de carregar.");
-  vigiarSilencio();
-}
+      log("→ iframe.src", url, "aviso");
+      situacao("esperando", "Esperando o GAME_READY…", "O jogo avisa quando terminar de carregar.");
+      vigiarSilencio();
+    }
 
-/* ── comandos, com targetOrigin explícito ───────────────────────────────── */
+    function mandar(payload) {
+      const janela = $("jogo").contentWindow;
+      if (!janela) return log("sem iframe aberto", null, "ruim");
 
-function mandar(payload) {
-  const janela = $("jogo").contentWindow;
-  if (!janela) return log("sem iframe aberto", null, "ruim");
+      const destino = $("base").value.trim().replace(/\/+$/, "");
+      janela.postMessage({ channel: "platform-command", payload }, destino);
+      log("→ comando " + payload.type, payload, "saiu");
+    }
 
-  const destino = $("base").value.trim().replace(/\/+$/, "");
-  janela.postMessage({ channel: "platform-command", payload }, destino);
-  log("→ comando " + payload.type, payload, "saiu");
-}
+    $("abrir").onclick = abrir;
+    $("novoId").onclick = () => { $("id").value = novoId(); };
+    document.querySelectorAll("[data-base]").forEach((b) => {
+      b.onclick = () => { $("base").value = b.dataset.base; };
+    });
 
-$("abrir").onclick = abrir;
-$("novoId").onclick = () => { $("id").value = novoId(); };
-document.querySelectorAll("[data-base]").forEach((b) => {
-  b.onclick = () => { $("base").value = b.dataset.base; };
-});
-
-$("start").onclick = () => mandar({
-  type: "START_GAME", gameId: "",
-  points: Number($("points").value) || 0,
-  stage: Number($("stage").value) || 1,
-  lives: Number($("lives").value) || 3,
-});
-$("pause").onclick = () => mandar({ type: "PAUSE_GAME" });
-$("resume").onclick = () => mandar({ type: "RESUME_GAME" });
-
-/* ── o que chega do jogo ────────────────────────────────────────────────── */
-
-window.addEventListener("message", (e) => {
-  const base = $("base").value.trim().replace(/\/+$/, "");
-
-  /*
-   * A plataforma de verdade precisa desta linha. Sem conferir a origem,
-   * qualquer aba conseguiria forjar um GAME_COMPLETED e aprovar o aluno.
-   */
-  if (e.origin !== base) {
-    if (e.data && e.data.channel) log("⚠ origem recusada: " + e.origin, e.data, "ruim");
-    return;
-  }
-
-  const d = e.data;
-  if (!d || d.channel !== "platform-event") return;
-
-  const p = d.payload || {};
-  let classe = "";
-
-  if (p.type === "GAME_READY") {
-    classe = "pronto";
-    estado.ready = true;
-    clearTimeout(vigia);
-    situacao("falando", "Conversando", "O jogo está reportando normalmente.");
-
-    /*
-     * O APERTO DE MÃO.
-     *
-     * O START_GAME só vale depois do GAME_READY: antes disso a cena ainda
-     * está no preload e o comando cai no vazio. É por isso que a plataforma
-     * espera o aviso em vez de mandar por tempo.
-     */
-    mandar({
-      type: "START_GAME", gameId: p.gameId || "",
+    $("start").onclick = () => mandar({
+      type: "START_GAME", gameId: "",
       points: Number($("points").value) || 0,
       stage: Number($("stage").value) || 1,
       lives: Number($("lives").value) || 3,
     });
-  } else if (p.type === "CHECKPOINT") {
-    estado.progresso = (p.progress ?? "—") + "%";
-    estado.pontos = p.score ?? "—";
-    estado.stage = p.stage ?? "—";
-    if (p.hits !== undefined) estado.acertos = p.hits;
-    if (p.errors !== undefined) estado.erros = p.errors;
-  } else if (p.type === "CORRECT_ANSWER") {
-    classe = "ok"; estado.acertos++;
-  } else if (p.type === "WRONG_ANSWER") {
-    classe = "aviso"; estado.erros++;
-  } else if (p.type === "GAME_COMPLETED") {
-    classe = p.isFinalStage ? "ok" : "";
-    estado.stage = p.stage ?? "—";
-  } else if (p.type === "GAME_OVER") {
-    classe = "ruim";
-  }
+    $("pause").onclick = () => mandar({ type: "PAUSE_GAME" });
+    $("resume").onclick = () => mandar({ type: "RESUME_GAME" });
 
-  log("← " + p.type, p, classe);
+    window.addEventListener("message", (e) => {
+      const base = $("base").value.trim().replace(/\/+$/, "");
+      if (e.origin !== base) {
+        if (e.data && e.data.channel) log("⚠ origem recusada: " + e.origin, e.data, "ruim");
+        return;
+      }
 
-  /*
-   * ── A DECISÃO ────────────────────────────────────────────────────────
-   *
-   * `GAME_COMPLETED` é emitido A CADA FASE. Aprovar no primeiro seria aprovar
-   * o aluno na fase 1 — por isso o `isFinalStage`.
-   */
-  if (p.type === "GAME_COMPLETED" && p.isFinalStage) {
-    estado.veredito = "APROVADO";
-    log("APROVARIA → " + ORIGEM + "/approve?id=" + (p.meta && p.meta.attempt), null, "ok");
-    situacao("falando", "Partida concluída", "O jogo vai navegar para /approve.");
-  }
-  if (p.type === "GAME_OVER") {
-    estado.veredito = "REPROVADO";
-    log("REPROVARIA → " + ORIGEM + "/reprove?id=" + (p.meta && p.meta.attempt), null, "ruim");
-    situacao("falando", "Partida perdida", "O jogo vai navegar para /reprove.");
-  }
+      const d = e.data;
+      if (!d || d.channel !== "platform-event") return;
 
-  pintarEstado();
-});
+      const p = d.payload || {};
+      let classe = "";
 
-$("barra-url").textContent = montarUrl();
-</script>
+      if (p.type === "GAME_READY") {
+        classe = "pronto";
+        estado.ready = true;
+        clearTimeout(vigia);
+        situacao("falando", "Conversando", "O jogo está reportando normalmente.");
+
+        mandar({
+          type: "START_GAME", gameId: p.gameId || "",
+          points: Number($("points").value) || 0,
+          stage: Number($("stage").value) || 1,
+          lives: Number($("lives").value) || 3,
+        });
+      } else if (p.type === "CHECKPOINT") {
+        estado.progresso = (p.progress ?? "—") + "%";
+        estado.pontos = p.score ?? "—";
+        estado.stage = p.stage ?? "—";
+        if (p.hits !== undefined) estado.acertos = p.hits;
+        if (p.errors !== undefined) estado.erros = p.errors;
+      } else if (p.type === "CORRECT_ANSWER") {
+        classe = "ok"; estado.acertos++;
+      } else if (p.type === "WRONG_ANSWER") {
+        classe = "aviso"; estado.erros++;
+      } else if (p.type === "GAME_COMPLETED") {
+        classe = p.isFinalStage ? "ok" : "";
+        estado.stage = p.stage ?? "—";
+      } else if (p.type === "GAME_OVER") {
+        classe = "ruim";
+      }
+
+      log("← " + p.type, p, classe);
+
+      if (p.type === "GAME_COMPLETED" && p.isFinalStage) {
+        estado.veredito = "APROVADO";
+        log("APROVARIA → " + ORIGEM + "/approve?id=" + (p.meta && p.meta.attempt), null, "ok");
+        situacao("falando", "Partida concluída", "O jogo vai navegar para /approve.");
+      }
+      if (p.type === "GAME_OVER") {
+        estado.veredito = "REPROVADO";
+        log("REPROVARIA → " + ORIGEM + "/reprove?id=" + (p.meta && p.meta.attempt), null, "ruim");
+        situacao("falando", "Partida perdida", "O jogo vai navegar para /reprove.");
+      }
+
+      pintarEstado();
+    });
+
+    $("barra-url").textContent = montarUrl();
+  </script>
 </body>
+
 </html>
