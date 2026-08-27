@@ -98,8 +98,12 @@
     <input id="id" />
   </label>
   <label>returnBase (para onde o jogo volta)
-    <input id="returnBase" readonly />
+    <input id="returnBase" />
   </label>
+  <div class="linha-botoes" style="margin-top:-4px">
+    <button class="sec" type="button" id="rbSite">o próprio site</button>
+    <button class="sec" type="button" id="rbAqui">esta página</button>
+  </div>
   <div class="dupla">
     <label>stage <input id="stage" value="1" /></label>
     <label>lives <input id="lives" value="3" /></label>
@@ -190,7 +194,33 @@ SLUGS.forEach((s) => {
   $("slug").appendChild(o);
 });
 $("slug").value = "mapas-em-rede";
-$("returnBase").value = ORIGEM;
+
+const baseDoSite = () => $("base").value.trim().replace(/\/+$/, "");
+
+/*
+ * ── O PADRÃO DO `returnBase` É O PRÓPRIO SITE, E NÃO ESTA PÁGINA ─────────
+ *
+ * O jogo confere o `returnBase` contra a allowlist DELE antes de começar, e
+ * recusa a partida com "Endereço de retorno não autorizado" se não bater. A
+ * origem desta página quase nunca está lá — a lista entra no build do site, e
+ * ninguém sabe de antemão de onde alguém vai abrir um harness.
+ *
+ * A origem do próprio site está SEMPRE permitida (uma página e um iframe da
+ * mesma origem já se leem sem `postMessage`; exigir configuração para o site
+ * falar consigo mesmo não protegeria nada). Então este padrão faz o jogo abrir
+ * em qualquer situação, e o fim da partida cai no `/approve` do próprio site,
+ * que mostra a tela de retorno simulado.
+ *
+ * O botão "esta página" existe para quando a origem daqui JÁ estiver na
+ * allowlist — aí dá para exercitar a navegação de volta de verdade.
+ */
+function sincronizarReturnBase() {
+  $("returnBase").value = baseDoSite();
+}
+sincronizarReturnBase();
+$("base").addEventListener("change", sincronizarReturnBase);
+$("rbSite").onclick = sincronizarReturnBase;
+$("rbAqui").onclick = () => { $("returnBase").value = ORIGEM; };
 
 const novoId = () =>
   "att-" + Math.random().toString(16).slice(2, 10) + "-" + Date.now().toString(16);
@@ -237,7 +267,6 @@ pintarEstado();
 /* ── a URL, montada igual à da plataforma ───────────────────────────────── */
 
 function montarUrl() {
-  const base = $("base").value.trim().replace(/\/+$/, "");
   const q = new URLSearchParams({
     embed: "1",
     id: $("id").value.trim(),
@@ -245,9 +274,9 @@ function montarUrl() {
     points: $("points").value.trim() || "0",
     lives: $("lives").value.trim() || "3",
     locale: $("locale").value.trim() || "pt-BR",
-    returnBase: ORIGEM,
+    returnBase: $("returnBase").value.trim() || baseDoSite(),
   });
-  return base + "/jogos/" + encodeURIComponent($("slug").value) + "?" + q;
+  return baseDoSite() + "/jogos/" + encodeURIComponent($("slug").value) + "?" + q;
 }
 
 /*
@@ -263,15 +292,31 @@ function vigiarSilencio() {
   clearTimeout(vigia);
   vigia = setTimeout(() => {
     if (estado.ready) return;
+    /*
+     * O silêncio tem duas causas, e elas se distinguem OLHANDO A TELA — que é
+     * a única coisa que dá para fazer com um iframe de outra origem.
+     */
+    const mesmaOrigem = baseDoSite() === ORIGEM;
+
     situacao(
       "mudo",
       "12 segundos sem nenhum evento",
-      "O jogo pode estar rodando e mesmo assim não falar com esta página. " +
-        "Quase sempre é um destes dois: (1) a origem <code>" + ORIGEM +
-        "</code> não estava em VITE_EMBED_ALLOWED_ORIGINS quando o site foi " +
-        "publicado — e essa lista entra no build, então mudar exige um deploy " +
-        "novo; (2) o endereço do site está errado ou fora do ar. " +
-        "Olhe o console: mensagem descartada por origem aparece lá."
+      mesmaOrigem
+        ? "Esta página e o site são a mesma origem, então a ponte deveria " +
+            "funcionar. Verifique se o jogo carregou (canvas na tela) — se " +
+            "nem carregou, o problema é o endereço ou a rota."
+        : "<b style='display:inline'>Olhe a tela do jogo, ela diz qual dos dois é:</b> " +
+            "• Se aparece <i>“Endereço de retorno não autorizado”</i>, o " +
+            "problema é o campo <code>returnBase</code> — clique em “o próprio " +
+            "site”, que é sempre permitido. " +
+            "• Se o jogo carregou e está rodando, o problema é a origem " +
+            "<code>" + ORIGEM + "</code>: ela não estava em " +
+            "VITE_EMBED_ALLOWED_ORIGINS quando o site foi publicado, e o " +
+            "navegador descarta cada mensagem em silêncio. Essa lista entra no " +
+            "BUILD, então incluí-la exige um deploy novo. " +
+            "Enquanto isso, abra este harness a partir do próprio site " +
+            "(<code>" + baseDoSite() + "/embed-remoto.html</code>): de lá a " +
+            "origem já é permitida e tudo funciona sem configurar nada."
     );
   }, 12000);
 }
