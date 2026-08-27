@@ -1,57 +1,28 @@
 import Phaser from 'phaser'
 import { FX, Ease } from '../../../../shared/effects/FX'
-import { A, C, FONT, LETRA, RITMO, SIZE, hex } from '../data/theme'
-import { AVISO, BANCADA, CENA, COLUNA, HUD, PRATELEIRA, TRILHA } from '../data/layout'
-import { ACOES, CONDICOES, estadoDoObjeto } from '../data/casos'
-import type { Mundo, Nivel, Peca } from '../types'
+import { ALPHA, C, FONT, TEXT, TIMING, SIZE, hex } from '../data/theme'
+import { NOTICE, BENCH, STAGE, COLUMN, HUD, SHELF, TRACK } from '../data/layout'
+import { ACTIONS, CONDITIONS, OBJECTS } from '../data/puzzles'
+import { at } from '../types'
+import type { World, Level, Piece, Glyph } from '../types'
 
-/**
- * ══════════════════════════════════════════════════════════════════════════
- *  TUDO QUE DESENHA
- * ══════════════════════════════════════════════════════════════════════════
- *
- * A `GameScene` não desenha nada: se ela precisar de um `fillRoundedRect`,
- * falta um painter aqui. Todo `createX` devolve `{ container, ...métodos,
- * destroy() }` e ninguém de fora mexe nos filhos.
- *
- * ── A ARMADILHA DAS ZONAS DE TOQUE ───────────────────────────────────────
- *
- * A zona é um objeto de CENA solto, criado nas coordenadas absolutas passadas,
- * e ela NÃO acompanha tween nenhum. Isso é de propósito: um container que
- * cresce no toque comeria o clique na margem.
- *
- * Daí: nunca animar um container para longe da sua zona; nunca usar
- * `setVisible(false)` para desligar (o Phaser pula o teste de toque de todo
- * objeto que não renderiza — o interruptor é `zona.input.enabled`); e destruir
- * a lista de zonas na mão, senão as zonas do caso anterior comem os toques do
- * seguinte, invisíveis.
- */
+export const hasTexture = (scene: Phaser.Scene, key: string) => scene.textures.exists(key)
 
-export const temTex = (scene: Phaser.Scene, key: string) => scene.textures.exists(key)
-
-/** Põe uma imagem cabendo numa caixa, sem deformar. `null` se a arte faltar. */
-function posta(
+export function putImage(
   scene: Phaser.Scene,
   key: string,
   cx: number,
   cy: number,
-  maxAlt: number,
-  maxLarg = Number.POSITIVE_INFINITY
+  maxH: number,
+  maxW = Number.POSITIVE_INFINITY
 ): Phaser.GameObjects.Image | null {
-  if (!temTex(scene, key)) return null
+  if (!hasTexture(scene, key)) return null
   const img = scene.add.image(cx, cy, key)
-  img.setScale(Math.min(maxAlt / img.height, maxLarg / img.width, 1))
+  img.setScale(Math.min(maxH / img.height, maxW / img.width, 1))
   return img
 }
 
-/**
- * TODA letra do jogo passa por aqui: branca, contorno preto grosso.
- *
- * Não existe parâmetro de cor de propósito. A versão anterior escolhia a cor
- * pelo fundo e produziu um EXECUTAR preto sobre âmbar, ilegível. Ver `LETRA`
- * em `theme.ts`.
- */
-function texto(
+function makeText(
   scene: Phaser.Scene,
   x: number,
   y: number,
@@ -63,9 +34,9 @@ function texto(
     .text(x, y, txt, {
       fontFamily: FONT.black,
       fontSize: size,
-      color: hex(LETRA.cor),
-      stroke: hex(LETRA.contorno),
-      strokeThickness: LETRA.grossura,
+      color: hex(TEXT.color),
+      stroke: hex(TEXT.stroke),
+      strokeThickness: TEXT.thickness,
       align: 'center',
       ...extra,
     })
@@ -73,941 +44,1095 @@ function texto(
     .setResolution(2)
 }
 
-/** Placa ELEVADA: sombra embaixo, corpo, borda clara. Lê como "dá para pegar". */
-function elevada(
+function raised(
   g: Phaser.GameObjects.Graphics,
   x: number,
   y: number,
   w: number,
   h: number,
-  raio: number,
-  cor: number,
-  borda: number
+  radius: number,
+  color: number,
+  border: number
 ) {
-  g.fillStyle(C.sombra, A.sombra)
-  g.fillRoundedRect(x + 4, y + 7, w, h, raio)
-  g.fillStyle(cor, 1)
-  g.fillRoundedRect(x, y, w, h, raio)
-  g.lineStyle(3, borda, 0.95)
-  g.strokeRoundedRect(x, y, w, h, raio)
+  g.fillStyle(C.shadow, ALPHA.shadow)
+  g.fillRoundedRect(x + 4, y + 7, w, h, radius)
+  g.fillStyle(color, 1)
+  g.fillRoundedRect(x, y, w, h, radius)
+  g.lineStyle(3, border, 0.95)
+  g.strokeRoundedRect(x, y, w, h, radius)
 }
 
-/**
- * Buraco ESCAVADO: escuro por dentro, com um brilho na borda de baixo.
- *
- * É o oposto visual da placa elevada, e é o que separa a trilha da prateleira
- * sem precisar de um rótulo dizendo qual é qual.
- */
-function escavado(
+function carved(
   g: Phaser.GameObjects.Graphics,
   x: number,
   y: number,
   w: number,
   h: number,
-  raio: number,
-  cor: number,
-  alfa: number,
-  borda: number
+  radius: number,
+  color: number,
+  alpha: number,
+  border: number
 ) {
-  g.fillStyle(cor, alfa)
-  g.fillRoundedRect(x, y, w, h, raio)
-  /* a luz que bate na beirada de baixo do buraco */
-  g.lineStyle(3, borda, 0.9)
-  g.strokeRoundedRect(x, y, w, h, raio)
-  g.lineStyle(2, C.branco, 0.12)
-  g.lineBetween(x + raio, y + h - 2, x + w - raio, y + h - 2)
+  g.fillStyle(color, alpha)
+  g.fillRoundedRect(x, y, w, h, radius)
+
+  g.lineStyle(3, border, 0.9)
+  g.strokeRoundedRect(x, y, w, h, radius)
+  g.lineStyle(2, C.white, 0.12)
+  g.lineBetween(x + radius, y + h - 2, x + w - radius, y + h - 2)
 }
 
-/** Como um bloco se lê. Duas linhas no máximo. */
-export function rotuloDaPeca(p: Peca): string {
-  if (p.tipo === 'acao') return ACOES[p.acao]?.rotulo ?? p.acao
-  if (p.tipo === 'repetir') return `repetir ${p.vezes}x\n${ACOES[p.acao]?.rotulo ?? p.acao}`
-  const cond = CONDICOES[p.condicao]?.rotulo ?? p.condicao
-  return `se ${cond}\n${ACOES[p.entao]?.rotulo ?? p.entao}`
+function pieceLabel(p: Piece): string {
+  if (p.kind === 'action') return ACTIONS[p.action]?.label ?? p.action
+  if (p.kind === 'repeat') return `repetir ${p.times}x\n${ACTIONS[p.action]?.label ?? p.action}`
+  const cond = CONDITIONS[p.condition]?.label ?? p.condition
+  return `se ${cond}\n${(p.then ? ACTIONS[p.then]?.label ?? p.then : '')}`
 }
 
-export function texturaDaPeca(p: Peca): string {
-  if (p.tipo === 'acao') return ACOES[p.acao]?.textura ?? ''
-  if (p.tipo === 'repetir') return ACOES[p.acao]?.textura ?? ''
-  return ACOES[p.entao]?.textura ?? ''
+function pieceTexture(p: Piece): string {
+  if (p.kind === 'action') return ACTIONS[p.action]?.texture ?? ''
+  if (p.kind === 'repeat') return ACTIONS[p.action]?.texture ?? ''
+  return (p.then && ACTIONS[p.then]?.texture) ?? ''
 }
 
-/** A cor do bloco diz o TIPO dele antes de qualquer leitura. */
-function tomDaPeca(p: Peca): number {
-  if (p.tipo === 'acao') return C.madeira
-  if (p.tipo === 'repetir') return C.latao
-  return C.verde
+function pieceTone(p: Piece): number {
+  if (p.kind === 'action') return C.wood
+  if (p.kind === 'repeat') return C.brass
+  return C.green
 }
 
-/* ══════════════════════════════════════════════════════════════════════════
-   O HUD — só o nível e o progresso
-   ══════════════════════════════════════════════════════════════════════════ */
+function pieceGlyph(p: Piece): Glyph {
+  if (p.kind === 'action') return ACTIONS[p.action]?.glyph ?? 'none'
+  if (p.kind === 'repeat') return 'repeat'
+  return 'question'
+}
+
+export function drawGlyph(
+  g: Phaser.GameObjects.Graphics,
+  kind: Glyph,
+  cx: number,
+  cy: number,
+  r: number,
+  color: number
+) {
+  const line = Math.max(3, r * 0.22)
+  g.lineStyle(line, color, 1)
+  g.fillStyle(color, 1)
+
+  const arrow = (up: boolean) => {
+    const s = up ? -1 : 1
+
+    g.lineBetween(cx, cy + r * 0.55 * s, cx, cy - r * 0.5 * s)
+
+    g.fillTriangle(
+      cx, cy - r * 0.75 * s,
+      cx - r * 0.45, cy - r * 0.15 * s,
+      cx + r * 0.45, cy - r * 0.15 * s
+    )
+
+    g.lineBetween(cx - r * 0.6, cy + r * 0.75 * s, cx + r * 0.6, cy + r * 0.75 * s)
+  }
+
+  const drop = (dx: number, dy: number, k: number) => {
+    g.fillCircle(cx + dx, cy + dy + r * 0.18 * k, r * 0.34 * k)
+    g.fillTriangle(
+      cx + dx, cy + dy - r * 0.55 * k,
+      cx + dx - r * 0.32 * k, cy + dy + r * 0.16 * k,
+      cx + dx + r * 0.32 * k, cy + dy + r * 0.16 * k
+    )
+  }
+
+  const padlock = (open: boolean) => {
+    g.fillRoundedRect(cx - r * 0.55, cy - r * 0.05, r * 1.1, r * 0.85, r * 0.18)
+
+    g.lineStyle(line, color, 1)
+    g.beginPath()
+    g.arc(cx + (open ? r * 0.3 : 0), cy - r * 0.3, r * 0.36, Math.PI, 0)
+    g.strokePath()
+    g.lineBetween(
+      cx + (open ? r * 0.66 : r * 0.36), cy - r * 0.3,
+      cx + (open ? r * 0.66 : r * 0.36), cy - r * 0.05
+    )
+    if (!open) g.lineBetween(cx - r * 0.36, cy - r * 0.3, cx - r * 0.36, cy - r * 0.05)
+  }
+
+  switch (kind) {
+    case 'pick':
+      arrow(true)
+      break
+
+    case 'put':
+      arrow(false)
+      break
+
+    case 'drop':
+      drop(0, 0, 1.2)
+      break
+
+    case 'drops':
+      drop(-r * 0.5, -r * 0.1, 0.7)
+      drop(r * 0.5, -r * 0.1, 0.7)
+      drop(0, r * 0.35, 0.7)
+      break
+
+    case 'sparkle': {
+      const tip = r * 0.95
+      const waist = r * 0.24
+      g.fillTriangle(cx, cy - tip, cx - waist, cy, cx + waist, cy)
+      g.fillTriangle(cx, cy + tip, cx - waist, cy, cx + waist, cy)
+      g.fillTriangle(cx - tip, cy, cx, cy - waist, cx, cy + waist)
+      g.fillTriangle(cx + tip, cy, cx, cy - waist, cx, cy + waist)
+      break
+    }
+
+    case 'unlock':
+      padlock(true)
+      break
+
+    case 'lock':
+      padlock(false)
+      break
+
+    case 'stack':
+      for (let i = 0; i < 3; i++) {
+        g.fillRoundedRect(
+          cx - r * 0.6 + (i % 2) * r * 0.1,
+          cy + r * 0.55 - i * r * 0.42,
+          r * 1.2,
+          r * 0.34,
+          r * 0.1
+        )
+      }
+      break
+
+    case 'repeat': {
+      g.lineStyle(line, color, 1)
+      g.beginPath()
+      g.arc(cx, cy, r * 0.62, Math.PI * 0.35, Math.PI * 1.85)
+      g.strokePath()
+      g.fillTriangle(
+        cx + r * 0.62, cy + r * 0.1,
+        cx + r * 0.28, cy + r * 0.3,
+        cx + r * 0.8, cy + r * 0.55
+      )
+      break
+    }
+
+    case 'question': {
+      g.lineStyle(line, color, 1)
+      g.beginPath()
+      g.arc(cx, cy - r * 0.3, r * 0.42, Math.PI, Math.PI * 2.15)
+      g.strokePath()
+      g.lineBetween(cx + r * 0.05, cy + r * 0.02, cx + r * 0.05, cy + r * 0.35)
+      g.fillCircle(cx + r * 0.05, cy + r * 0.72, line * 0.7)
+      break
+    }
+
+    case 'check':
+      g.lineStyle(line * 1.2, color, 1)
+      g.beginPath()
+      g.moveTo(cx - r * 0.6, cy)
+      g.lineTo(cx - r * 0.15, cy + r * 0.5)
+      g.lineTo(cx + r * 0.65, cy - r * 0.55)
+      g.strokePath()
+      break
+
+    case 'walk':
+      g.lineStyle(line * 1.15, color, 1)
+      for (let i = 0; i < 2; i++) {
+        const x = cx - r * 0.3 + i * r * 0.62
+        g.beginPath()
+        g.moveTo(x - r * 0.24, cy - r * 0.5)
+        g.lineTo(x + r * 0.22, cy)
+        g.lineTo(x - r * 0.24, cy + r * 0.5)
+        g.strokePath()
+      }
+      break
+
+    case 'bang':
+      g.fillRoundedRect(cx - line * 0.5, cy - r * 0.72, line, r * 1.05, line * 0.5)
+      g.fillCircle(cx, cy + r * 0.65, line * 0.72)
+      break
+
+    case 'none':
+    default:
+      break
+  }
+}
+
+function glyphBadge(
+  scene: Phaser.Scene,
+  container: Phaser.GameObjects.Container,
+  children: Phaser.GameObjects.GameObject[],
+  cx: number,
+  cy: number,
+  glyph: Glyph,
+  radius = 23
+) {
+  if (glyph === 'none') return
+
+  const g = scene.add.graphics()
+  g.fillStyle(C.black, 0.55)
+  g.fillCircle(cx, cy + 2, radius + 2)
+  g.fillStyle(C.darkWood, 1)
+  g.fillCircle(cx, cy, radius)
+  g.lineStyle(2, C.cream, 0.9)
+  g.strokeCircle(cx, cy, radius)
+
+  drawGlyph(g, glyph, cx, cy, radius * 0.62, C.cream)
+
+  children.push(g)
+  container.add(g)
+}
 
 export interface Hud {
   container: Phaser.GameObjects.Container
-  setNivel(numero: number, ideia: string): void
-  setProgresso(feitos: number, total: number): void
+  setLevel(number: number, idea: string): void
+  setProgress(done: number, total: number): void
   destroy(): void
 }
 
-export function createHud(scene: Phaser.Scene, aoTocarAjuda: () => void): Hud {
+export function createHud(scene: Phaser.Scene, onHelpTap: () => void): Hud {
   const container = scene.add.container(0, 0).setDepth(40)
   const g = scene.add.graphics()
   container.add(g)
 
-  g.fillStyle(C.madeiraEscura, 1)
+  g.fillStyle(C.darkWood, 1)
   g.fillRect(HUD.x, HUD.y, HUD.w, HUD.h)
-  g.fillStyle(C.latao, 1)
-  g.fillRect(HUD.x, HUD.y + HUD.h - HUD.acento, HUD.w, HUD.acento)
-  g.fillStyle(C.sombra, A.sombra)
+  g.fillStyle(C.brass, 1)
+  g.fillRect(HUD.x, HUD.y + HUD.h - HUD.accent, HUD.w, HUD.accent)
+  g.fillStyle(C.shadow, ALPHA.shadow)
   g.fillRect(HUD.x, HUD.y + HUD.h, HUD.w, 8)
 
-  const rotuloNivel = texto(scene, HUD.nivel.x, HUD.nivel.cy, '', '24px').setOrigin(0, 0.5)
-  container.add(rotuloNivel)
+  const levelLabel = makeText(scene, HUD.level.x, HUD.level.cy, '', '24px').setOrigin(0, 0.5)
+  container.add(levelLabel)
 
-  const bolinhas = scene.add.graphics()
-  container.add(bolinhas)
+  const dots = scene.add.graphics()
+  container.add(dots)
 
-  const ajudaG = scene.add.graphics()
-  elevada(
-    ajudaG,
-    HUD.ajuda.cx - HUD.ajuda.r,
-    HUD.ajuda.cy - HUD.ajuda.r,
-    HUD.ajuda.r * 2,
-    HUD.ajuda.r * 2,
-    HUD.ajuda.r,
-    C.latao,
-    C.creme
+  const helpG = scene.add.graphics()
+  raised(
+    helpG,
+    HUD.help.cx - HUD.help.r,
+    HUD.help.cy - HUD.help.r,
+    HUD.help.r * 2,
+    HUD.help.r * 2,
+    HUD.help.r,
+    C.brass,
+    C.cream
   )
-  container.add(ajudaG)
-  container.add(texto(scene, HUD.ajuda.cx, HUD.ajuda.cy, '?', SIZE.ajuda))
+  container.add(helpG)
+  container.add(makeText(scene, HUD.help.cx, HUD.help.cy, '?', SIZE.help))
 
-  const zonaAjuda = scene.add
-    .zone(HUD.ajuda.cx, HUD.ajuda.cy, HUD.ajuda.r * 2, HUD.ajuda.r * 2)
+  const helpZone = scene.add
+    .zone(HUD.help.cx, HUD.help.cy, HUD.help.r * 2, HUD.help.r * 2)
     .setOrigin(0.5)
     .setInteractive({ useHandCursor: true })
     .setDepth(60)
-  zonaAjuda.on('pointerdown', aoTocarAjuda)
+  helpZone.on('pointerdown', onHelpTap)
 
   return {
     container,
-
-    setNivel(numero, ideia) {
-      rotuloNivel.setText(`NÍVEL ${numero} · ${ideia.toUpperCase()}`)
+    setLevel(number, idea) {
+      levelLabel.setText(`NÍVEL ${number} · ${idea.toUpperCase()}`)
     },
-
-    setProgresso(feitos, total) {
-      bolinhas.clear()
+    setProgress(done, total) {
+      dots.clear()
       for (let i = 0; i < total; i++) {
-        const aceso = i < feitos
-        bolinhas.fillStyle(C.preto, 0.5)
-        bolinhas.fillCircle(HUD.bolinha.x + i * HUD.bolinha.gap, HUD.bolinha.y + 1, HUD.bolinha.r + 2)
-        bolinhas.fillStyle(aceso ? C.latao : C.fosco, 1)
-        bolinhas.fillCircle(HUD.bolinha.x + i * HUD.bolinha.gap, HUD.bolinha.y, HUD.bolinha.r)
+        const lit = i < done
+        dots.fillStyle(C.black, 0.5)
+        dots.fillCircle(HUD.dot.x + i * HUD.dot.gap, HUD.dot.y + 1, HUD.dot.r + 2)
+        dots.fillStyle(lit ? C.brass : C.matte, 1)
+        dots.fillCircle(HUD.dot.x + i * HUD.dot.gap, HUD.dot.y, HUD.dot.r)
       }
     },
-
     destroy() {
-      zonaAjuda.destroy()
+      helpZone.destroy()
       container.destroy(true)
     },
   }
 }
 
-/* ══════════════════════════════════════════════════════════════════════════
-   A BANCADA — a placa onde tudo que é jogável vive
-   ══════════════════════════════════════════════════════════════════════════ */
-
-export function createBancada(scene: Phaser.Scene): Phaser.GameObjects.Container {
+export function createBench(scene: Phaser.Scene): Phaser.GameObjects.Container {
   const container = scene.add.container(0, 0).setDepth(5)
   const g = scene.add.graphics()
   container.add(g)
-  elevada(g, BANCADA.x, BANCADA.y, BANCADA.w, BANCADA.h, BANCADA.raio, C.madeiraEscura, C.madeira)
+  raised(g, BENCH.x, BENCH.y, BENCH.w, BENCH.h, BENCH.radius, C.darkWood, C.wood)
   return container
 }
 
-/* ══════════════════════════════════════════════════════════════════════════
-   A CENA — os objetos do problema, e o ESTADO de cada um
-   ══════════════════════════════════════════════════════════════════════════ */
-
-export interface Cena {
+export interface Stage {
   container: Phaser.GameObjects.Container
-  vestir(nivel: Nivel): void
-  montar(objetos: string[], mundo: Mundo): void
-  atualizar(mundo: Mundo): void
-  /** O objeto age: sobe, faz, volta. Verde quando deu, coral quando recusou. */
-  encenar(textura: string, ok: boolean): Promise<void>
-  festejar(): Promise<void>
+  dress(level: Level): void
+  build(ids: string[], world: World): void
+  refresh(world: World): void
+  play(actionId: string, ok: boolean, world: World): Promise<void>
+  celebrate(): Promise<void>
   destroy(): void
 }
 
-export function createCena(scene: Phaser.Scene): Cena {
+export function createStage(scene: Phaser.Scene): Stage {
   const container = scene.add.container(0, 0).setDepth(10)
 
-  const moldura = scene.add.graphics()
-  container.add(moldura)
+  const frame = scene.add.graphics()
+  container.add(frame)
 
-  let imgFundo: Phaser.GameObjects.Image | null = null
-  let veu: Phaser.GameObjects.Graphics | null = null
+  let bgImage: Phaser.GameObjects.Image | null = null
+  let veil: Phaser.GameObjects.Graphics | null = null
 
-  type Objeto = {
-    textura: string
+  type Thing = {
+    id: string
     img: Phaser.GameObjects.Image
-    faixa: Phaser.GameObjects.Graphics
-    rotulo: Phaser.GameObjects.Text
-    cyBase: number
+    halo: Phaser.GameObjects.Graphics
+    x: number
+    y: number
+    currentTexture: string
   }
-  let objetos: Objeto[] = []
+  let things: Thing[] = []
 
-  const desenharMoldura = () => {
-    moldura.clear()
-    escavado(moldura, CENA.x, CENA.y, CENA.w, CENA.h, CENA.raio, C.ink, 0.5, C.latao)
+  const drawFrame = () => {
+    frame.clear()
+    carved(frame, STAGE.x, STAGE.y, STAGE.w, STAGE.h, STAGE.radius, C.ink, 0.5, C.brass)
   }
-  desenharMoldura()
+  drawFrame()
 
-  const limpar = () => {
-    objetos.forEach((o) => {
-      FX.kill(scene, o.img)
-      o.img.destroy()
-      o.faixa.destroy()
-      o.rotulo.destroy()
+  const clearThings = () => {
+    things.forEach((c) => {
+      FX.kill(scene, c.img)
+      c.img.destroy()
+      c.halo.destroy()
     })
-    objetos = []
+    things = []
   }
 
-  const pintarFaixa = (o: Objeto, txt: string) => {
-    const y = o.cyBase + CENA.estado.dy
-    o.faixa.clear()
-    elevada(
-      o.faixa,
-      o.img.x - CENA.estado.w / 2,
-      y - CENA.estado.h / 2,
-      CENA.estado.w,
-      CENA.estado.h,
-      CENA.estado.raio,
-      C.madeiraEscura,
-      C.latao
-    )
-    o.rotulo.setText(txt).setPosition(o.img.x, y)
+  const scaleFor = (img: Phaser.GameObjects.Image) =>
+    Math.min(STAGE.object.size / img.height, STAGE.object.size / img.width, 1)
+
+  const find = (id: string) => things.find((c) => c.id === id)
+
+  const paintThing = (c: Thing, world: World, withImpact: boolean) => {
+    const def = OBJECTS[c.id]
+    if (!def) return
+
+    const wanted = def.texture(world)
+    if (wanted !== c.currentTexture && hasTexture(scene, wanted)) {
+      c.img.setTexture(wanted)
+      c.img.setScale(scaleFor(c.img))
+      c.currentTexture = wanted
+      if (withImpact) void FX.impact(scene, c.img, 0.2)
+    }
+
+    const isHidden = def.hidden?.(world) ?? false
+    c.img.setAlpha(isHidden ? 0 : 1)
+
+    c.halo.clear()
+    if (!isHidden && def.glows?.(world)) {
+      const r = STAGE.object.size * 0.62
+      c.halo.fillStyle(C.brass, 0.16)
+      c.halo.fillCircle(c.x, c.y, r)
+      c.halo.lineStyle(4, C.brass, 0.75)
+      c.halo.strokeCircle(c.x, c.y, r)
+    }
   }
 
   return {
     container,
+    dress(level) {
+      bgImage?.destroy()
+      veil?.destroy()
 
-    vestir(nivel) {
-      imgFundo?.destroy()
-      veu?.destroy()
+      const key = level.scenery === 'room' ? 'bg-sala-treino' : 'bg-academia-hub'
+      bgImage = putImage(scene, key, STAGE.x + STAGE.w / 2, STAGE.y + STAGE.h / 2, 4000, 4000)
 
-      const chave = nivel.palco === 'sala' ? 'bg-sala-treino' : 'bg-academia-hub'
-      imgFundo = posta(scene, chave, CENA.x + CENA.w / 2, CENA.y + CENA.h / 2, 4000, 4000)
+      if (bgImage) {
+        bgImage.setScale(Math.max(STAGE.w / bgImage.width, STAGE.h / bgImage.height))
 
-      if (imgFundo) {
-        imgFundo.setScale(Math.max(CENA.w / imgFundo.width, CENA.h / imgFundo.height))
-        /* `preFX` só existe no WebGL; o `?.` cobre o Canvas. Blur fraco de
-           propósito: blur forte lê como defeito de arte. */
-        imgFundo.preFX?.addBlur(1, 2, 2, 0.4)
-        container.addAt(imgFundo, 0)
+        bgImage.preFX?.addBlur(1, 2, 2, 0.4)
+        container.addAt(bgImage, 0)
 
-        veu = scene.add.graphics()
-        veu.fillStyle(C.ink, A.veu)
-        veu.fillRoundedRect(CENA.x, CENA.y, CENA.w, CENA.h, CENA.raio)
-        container.addAt(veu, 1)
+        veil = scene.add.graphics()
+        veil.fillStyle(C.ink, ALPHA.veil)
+        veil.fillRoundedRect(STAGE.x, STAGE.y, STAGE.w, STAGE.h, STAGE.radius)
+        container.addAt(veil, 1)
       }
 
-      desenharMoldura()
+      drawFrame()
     },
-
-    montar(ids, mundo) {
-      limpar()
+    build(ids, world) {
+      clearThings()
 
       const n = ids.length
-      const largura = n * CENA.objeto.tamanho + (n - 1) * CENA.objeto.gap
-      const x0 = CENA.x + (CENA.w - largura) / 2 + CENA.objeto.tamanho / 2
+      const width = n * STAGE.object.size + (n - 1) * STAGE.object.gap
+      const x0 = STAGE.x + (STAGE.w - width) / 2 + STAGE.object.size / 2
 
-      ids.forEach((tex, i) => {
-        const cx = x0 + i * (CENA.objeto.tamanho + CENA.objeto.gap)
-        const img = posta(scene, tex, cx, CENA.objeto.cy, CENA.objeto.tamanho, CENA.objeto.tamanho)
+      ids.forEach((id, i) => {
+        const def = OBJECTS[id]
+        if (!def) return
+
+        const cx = x0 + i * (STAGE.object.size + STAGE.object.gap)
+        const img = putImage(scene, def.texture(world), cx, STAGE.object.cy, STAGE.object.size, STAGE.object.size)
         if (!img) return
 
-        const faixa = scene.add.graphics()
-        const rotulo = texto(scene, cx, CENA.objeto.cy + CENA.estado.dy, '', SIZE.estado)
-
-        container.add(faixa)
+        const halo = scene.add.graphics()
+        container.add(halo)
         container.add(img)
-        container.add(rotulo)
 
-        const o: Objeto = { textura: tex, img, faixa, rotulo, cyBase: CENA.objeto.cy }
-        objetos.push(o)
+        const c: Thing = {
+          id,
+          img,
+          halo,
+          x: cx,
+          y: STAGE.object.cy,
+          currentTexture: def.texture(world),
+        }
+        things.push(c)
 
-        pintarFaixa(o, estadoDoObjeto(tex, mundo) ?? '')
+        paintThing(c, world, false)
         void FX.popIn(scene, img, { delay: i * 90 })
       })
     },
-
-    atualizar(mundo) {
-      objetos.forEach((o) => pintarFaixa(o, estadoDoObjeto(o.textura, mundo) ?? ''))
+    refresh(world) {
+      things.forEach((c) => paintThing(c, world, true))
     },
-
-    /**
-     * A BATIDA ENCENADA.
-     *
-     * O objeto da vez SOBE, faz o que tem que fazer, e volta. O olho segue
-     * quem se mexeu, e quem se mexeu é exatamente o passo que está rodando —
-     * é o que amarra a trilha lá embaixo ao que acontece aqui em cima.
-     */
-    async encenar(textura, ok) {
-      const o = objetos.find((x) => x.textura === textura)
-      if (!o) {
-        await FX.wait(scene, RITMO.batida * 0.4)
+    async play(actionId, ok, world) {
+      const def = ACTIONS[actionId]
+      if (!def) {
+        await FX.wait(scene, TIMING.beat * 0.4)
         return
       }
 
-      const alvoY = o.cyBase + CENA.foco.dy
-      await FX.to(scene, o.img, { y: alvoY }, { duration: 190, ease: Ease.back(2) })
+      const target = find(at(def.target, world))
+      const source = def.source ? find(at(def.source, world)) : null
 
-      if (ok) {
-        await FX.all(
-          FX.impact(scene, o.img, 0.2),
-          FX.ping(scene, o.img.x, alvoY, C.verde, { radius: 62 })
-        )
-      } else {
-        await FX.nope(scene, o.img)
+      if (!target) {
+        await FX.wait(scene, TIMING.beat * 0.4)
+        return
       }
 
-      await FX.to(scene, o.img, { y: o.cyBase }, { duration: 190, ease: Ease.smooth })
-    },
+      if (!source || source === target) {
+        const high = target.y + STAGE.focus.dy
+        await FX.to(scene, target.img, { y: high }, { duration: 190, ease: Ease.back(2) })
 
-    async festejar() {
+        if (ok) {
+          this.refresh(world)
+          await FX.all(
+            FX.impact(scene, target.img, 0.2),
+            FX.ping(scene, target.x, high, C.green, { radius: 64 })
+          )
+        } else {
+          await FX.nope(scene, target.img)
+        }
+
+        await FX.to(scene, target.img, { y: target.y }, { duration: 190, ease: Ease.smooth })
+        return
+      }
+
+      const prevDepth = source.img.depth
+      source.img.setDepth(50)
+
+      const dest = { x: target.x, y: target.y - STAGE.object.size * 0.42 }
+      await FX.arcTo(scene, source.img, dest, { duration: 320, height: 70 })
+
+      if (!ok) {
+        await FX.nope(scene, source.img)
+        await FX.arcTo(scene, source.img, { x: source.x, y: source.y }, { duration: 280, height: 50 })
+        source.img.setDepth(prevDepth)
+        return
+      }
+
+      await FX.to(scene, source.img, { angle: 32 }, { duration: 140, ease: Ease.smooth })
       await FX.all(
-        FX.confetti(scene, { colors: [C.latao, C.verde, C.creme, C.madeira] }),
-        ...objetos.map((o, i) =>
-          FX.wait(scene, i * 100).then(() => FX.impact(scene, o.img, 0.24))
-        )
+        FX.impact(scene, source.img, 0.16),
+        FX.ping(scene, target.x, target.y - 10, C.green, { radius: 58 })
+      )
+
+      this.refresh(world)
+      void FX.impact(scene, target.img, 0.18)
+
+      await FX.to(scene, source.img, { angle: 0 }, { duration: 120 })
+      await FX.arcTo(scene, source.img, { x: source.x, y: source.y }, { duration: 280, height: 50 })
+      source.img.setDepth(prevDepth)
+    },
+    async celebrate() {
+      await FX.all(
+        FX.confetti(scene, { colors: [C.brass, C.green, C.cream, C.wood] }),
+        ...things
+          .filter((c) => c.img.alpha > 0)
+          .map((c, i) => FX.wait(scene, i * 100).then(() => FX.impact(scene, c.img, 0.24)))
       )
     },
-
     destroy() {
-      limpar()
-      imgFundo?.destroy()
-      veu?.destroy()
+      clearThings()
+      bgImage?.destroy()
+      veil?.destroy()
       container.destroy(true)
     },
   }
 }
 
-/* ══════════════════════════════════════════════════════════════════════════
-   O AVISO — a frase do que travou, em linha própria
-   ══════════════════════════════════════════════════════════════════════════ */
-
-export interface Aviso {
+export interface Notice {
   container: Phaser.GameObjects.Container
-  mostrar(frase: string, tom: 'erro' | 'certo'): Promise<void>
-  esvaziar(): void
+  show(phrase: string, tone: 'error' | 'ok'): Promise<void>
+  clear(): void
   destroy(): void
 }
 
-/**
- * MÓVEL FIXO, CONTEÚDO TROCÁVEL.
- *
- * A moldura nasce na `create()` e nunca sai: aparecer e sumir a cada erro
- * deixa a tela inquieta e tira o endereço fixo da mensagem. Ela só esvazia.
- */
-export function createAviso(scene: Phaser.Scene): Aviso {
+export function createNotice(scene: Phaser.Scene): Notice {
   const container = scene.add.container(0, 0).setDepth(35).setAlpha(0)
   const g = scene.add.graphics()
   container.add(g)
 
-  const frase = texto(scene, AVISO.cx, AVISO.cy, '', SIZE.aviso, {
-    wordWrap: { width: AVISO.w - 44 },
+  const phrase = makeText(scene, NOTICE.cx, NOTICE.cy, '', SIZE.notice, {
+    wordWrap: { width: NOTICE.w - 44 },
   })
-  container.add(frase)
+  container.add(phrase)
 
   return {
     container,
-
-    async mostrar(txt, tom) {
-      const cor = tom === 'erro' ? C.coral : C.verde
+    async show(txt, tone) {
+      const color = tone === 'error' ? C.coral : C.green
       g.clear()
-      elevada(
+      raised(
         g,
-        AVISO.cx - AVISO.w / 2,
-        AVISO.cy - AVISO.h / 2,
-        AVISO.w,
-        AVISO.h,
-        AVISO.raio,
+        NOTICE.cx - NOTICE.w / 2,
+        NOTICE.cy - NOTICE.h / 2,
+        NOTICE.w,
+        NOTICE.h,
+        NOTICE.radius,
         C.ink,
-        cor
+        color
       )
-      frase.setText(txt)
+      phrase.setText(txt)
       await FX.to(scene, container, { alpha: 1 }, { duration: 200 })
     },
-
-    esvaziar() {
+    clear() {
       container.setAlpha(0)
-      frase.setText('')
+      phrase.setText('')
       g.clear()
     },
-
     destroy() {
       container.destroy(true)
     },
   }
 }
 
-/* ══════════════════════════════════════════════════════════════════════════
-   A TRILHA — espaços ESCAVADOS ligados por setas
-   ══════════════════════════════════════════════════════════════════════════ */
-
-export interface Trilha {
+export interface Track {
   container: Phaser.GameObjects.Container
-  montar(espacos: number): void
-  por(indice: number, peca: Peca): void
-  tirar(indice: number): Peca | null
-  primeiroVazio(): number
-  pecas(): (Peca | null)[]
-  posDoEspaco(indice: number): { x: number; y: number }
-  setAtiva(on: boolean): void
-  acender(indice: number, volta?: { atual: number; de: number }): Promise<void>
-  travar(indice: number): Promise<void>
-  /** A onda de luz que percorre a trilha quando o algoritmo fecha. */
-  celebrar(): Promise<void>
-  apagar(): void
+  build(slots: number): void
+  reserve(index: number): void
+  put(index: number, piece: Piece): void
+  take(index: number): Piece | null
+  firstEmpty(): number
+  pieces(): (Piece | null)[]
+  slotPos(index: number): { x: number; y: number }
+  setActive(on: boolean): void
+  light(index: number, loop?: { current: number; total: number }): Promise<void>
+  lock(index: number): Promise<void>
+  celebrate(): Promise<void>
   destroy(): void
 }
 
-export function createTrilha(
+export function createTrack(
   scene: Phaser.Scene,
-  aoTocarEspaco: (indice: number) => void
-): Trilha {
+  onSlotTap: (index: number) => void
+): Track {
   const container = scene.add.container(0, 0).setDepth(20)
   const g = scene.add.graphics()
   container.add(g)
 
-  let espacos = 0
-  let conteudo: (Peca | null)[] = []
-  let aceso = -1
-  let culpado = -1
-  let ativa = true
+  let slots = 0
+  let content: (Piece | null)[] = []
+  let lit = -1
+  let blamed = -1
+  let active = true
 
-  const filhos: Phaser.GameObjects.GameObject[] = []
-  const zonas: Phaser.GameObjects.Zone[] = []
+  const reserved = new Set<number>()
 
-  const cabeca = scene.add.graphics().setDepth(30)
-  container.add(cabeca)
+  const children: Phaser.GameObjects.GameObject[] = []
+  const zones: Phaser.GameObjects.Zone[] = []
 
-  const xDe = (i: number) => {
-    const total = espacos * TRILHA.larguraEspaco + (espacos - 1) * TRILHA.gap
-    const x0 = BANCADA.x + (BANCADA.w - total) / 2 + TRILHA.larguraEspaco / 2
-    return x0 + i * (TRILHA.larguraEspaco + TRILHA.gap)
+  const head = scene.add.graphics().setDepth(30)
+  container.add(head)
+
+  let headDrawn = false
+
+  const xOf = (i: number) => {
+    const total = slots * TRACK.slotWidth + (slots - 1) * TRACK.gap
+    const x0 = BENCH.x + (BENCH.w - total) / 2 + TRACK.slotWidth / 2
+    return x0 + i * (TRACK.slotWidth + TRACK.gap)
   }
 
-  /**
-   * Repintar `Graphics` é barato; recriar `Image` e `Text` não é.
-   *
-   * A moldura é redesenhada sempre e os filhos só quando a ASSINATURA do que
-   * está desenhado muda. Sem isso, uma trilha de quatro espaços recria oito
-   * objetos a cada quadro da execução.
-   */
-  let assinatura = ''
+  let signature = ''
 
-  const pintar = () => {
+  const paint = () => {
     g.clear()
 
-    for (let i = 0; i < espacos; i++) {
-      const cx = xDe(i)
-      const peca = conteudo[i]
-      const x = cx - TRILHA.larguraEspaco / 2
-      const y = TRILHA.cy - TRILHA.alturaEspaco / 2
+    for (let i = 0; i < slots; i++) {
+      const cx = xOf(i)
+      const piece = content[i]
+      const x = cx - TRACK.slotWidth / 2
+      const y = TRACK.cy - TRACK.slotHeight / 2
 
-      if (!peca) {
-        /* buraco vazio: escuro e afundado, convidando a encaixar */
-        escavado(g, x, y, TRILHA.larguraEspaco, TRILHA.alturaEspaco, TRILHA.raio, C.ink, A.vazio, C.madeira)
+      if (!piece) {
+        const incoming = reserved.has(i)
+        carved(
+          g, x, y, TRACK.slotWidth, TRACK.slotHeight, TRACK.radius,
+          C.ink, incoming ? 0.6 : ALPHA.empty, incoming ? C.brass : C.wood
+        )
       } else {
-        const tom = i === culpado ? C.coral : i === aceso ? C.latao : tomDaPeca(peca)
-        elevada(g, x, y, TRILHA.larguraEspaco, TRILHA.alturaEspaco, TRILHA.raio, tom, C.creme)
+        const tone = i === blamed ? C.coral : i === lit ? C.brass : pieceTone(piece)
+        raised(g, x, y, TRACK.slotWidth, TRACK.slotHeight, TRACK.radius, tone, C.cream)
       }
 
-      /*
-       * A SETA ENTRE UM PASSO E O SEGUINTE.
-       *
-       * É o que faz a fila de caixas ler como SEQUÊNCIA. Sem ela, a trilha e a
-       * prateleira eram duas fileiras iguais de caixas marrons e nada dizia
-       * qual era qual.
-       */
-      if (i < espacos - 1) {
-        const meio = cx + TRILHA.larguraEspaco / 2 + TRILHA.gap / 2
-        g.fillStyle(C.latao, 0.9)
+      if (i < slots - 1) {
+        const middle = cx + TRACK.slotWidth / 2 + TRACK.gap / 2
+        g.fillStyle(C.brass, 0.9)
         g.fillTriangle(
-          meio - TRILHA.seta.largura / 2, TRILHA.cy - TRILHA.seta.altura / 2,
-          meio - TRILHA.seta.largura / 2, TRILHA.cy + TRILHA.seta.altura / 2,
-          meio + TRILHA.seta.largura / 2, TRILHA.cy
+          middle - TRACK.arrow.width / 2, TRACK.cy - TRACK.arrow.height / 2,
+          middle - TRACK.arrow.width / 2, TRACK.cy + TRACK.arrow.height / 2,
+          middle + TRACK.arrow.width / 2, TRACK.cy
         )
       }
 
-      /* o número do passo, numa moeda na quina */
-      const nx = cx + TRILHA.numero.dx
-      const ny = TRILHA.cy + TRILHA.numero.dy
-      g.fillStyle(C.preto, 0.55)
-      g.fillCircle(nx, ny + 2, TRILHA.numero.r + 2)
-      g.fillStyle(peca ? C.latao : C.fosco, 1)
-      g.fillCircle(nx, ny, TRILHA.numero.r)
+      const nx = cx + TRACK.badge.dx
+      const ny = TRACK.cy + TRACK.badge.dy
+      g.fillStyle(C.black, 0.55)
+      g.fillCircle(nx, ny + 2, TRACK.badge.r + 2)
+      g.fillStyle(piece ? C.brass : C.matte, 1)
+      g.fillCircle(nx, ny, TRACK.badge.r)
     }
   }
 
-  const refazerFilhos = () => {
-    const nova = conteudo.map((p) => (p ? rotuloDaPeca(p) : '.')).join('|') + '#' + espacos
-    if (nova === assinatura) return
-    assinatura = nova
+  const rebuildChildren = () => {
+    const sig = content.map((p) => (p ? pieceLabel(p) : '.')).join('|') + '#' + slots
+    if (sig === signature) return
+    signature = sig
 
-    filhos.forEach((f) => f.destroy())
-    filhos.length = 0
+    children.forEach((f) => f.destroy())
+    children.length = 0
 
-    for (let i = 0; i < espacos; i++) {
-      const cx = xDe(i)
+    for (let i = 0; i < slots; i++) {
+      const cx = xOf(i)
 
-      const numero = texto(
+      const stepText = makeText(
         scene,
-        cx + TRILHA.numero.dx,
-        TRILHA.cy + TRILHA.numero.dy,
+        cx + TRACK.badge.dx,
+        TRACK.cy + TRACK.badge.dy,
         String(i + 1),
-        SIZE.numero
+        SIZE.badge
       )
-      filhos.push(numero)
-      container.add(numero)
+      children.push(stepText)
+      container.add(stepText)
 
-      const peca = conteudo[i]
-      if (!peca) continue
+      const piece = content[i]
+      if (!piece) continue
 
-      const img = posta(scene, texturaDaPeca(peca), cx, TRILHA.cy - 16, 46, 46)
+      const img = putImage(scene, pieceTexture(piece), cx, TRACK.cy - 16, 46, 46)
       if (img) {
-        filhos.push(img)
+        children.push(img)
         container.add(img)
       }
 
-      const rot = texto(scene, cx, TRILHA.cy + 28, rotuloDaPeca(peca), SIZE.bloco, {
-        wordWrap: { width: TRILHA.larguraEspaco - 20 },
+      glyphBadge(
+        scene,
+        container,
+        children,
+        cx + TRACK.slotWidth / 2 - 20,
+        TRACK.cy - TRACK.slotHeight / 2 + 20,
+        pieceGlyph(piece),
+        20
+      )
+
+      const rot = makeText(scene, cx, TRACK.cy + 28, pieceLabel(piece), SIZE.block, {
+        wordWrap: { width: TRACK.slotWidth - 20 },
       })
-      filhos.push(rot)
+      children.push(rot)
       container.add(rot)
     }
   }
 
   return {
     container,
+    build(n) {
+      slots = n
+      content = new Array(n).fill(null)
+      reserved.clear()
+      lit = -1
+      blamed = -1
+      signature = ''
 
-    montar(n) {
-      espacos = n
-      conteudo = new Array(n).fill(null)
-      aceso = -1
-      culpado = -1
-      assinatura = ''
-
-      zonas.forEach((z) => z.destroy())
-      zonas.length = 0
+      zones.forEach((z) => z.destroy())
+      zones.length = 0
 
       for (let i = 0; i < n; i++) {
         const z = scene.add
-          .zone(xDe(i), TRILHA.cy, TRILHA.larguraEspaco, TRILHA.alturaEspaco)
+          .zone(xOf(i), TRACK.cy, TRACK.slotWidth, TRACK.slotHeight)
           .setOrigin(0.5)
           .setInteractive({ useHandCursor: true })
           .setDepth(60)
         z.on('pointerdown', () => {
-          if (ativa) aoTocarEspaco(i)
+          if (active) onSlotTap(i)
         })
-        zonas.push(z)
+        zones.push(z)
       }
 
-      pintar()
-      refazerFilhos()
-      cabeca.clear()
+      paint()
+      rebuildChildren()
+      head.clear()
+      headDrawn = false
     },
-
-    por(i, peca) {
-      conteudo[i] = peca
-      pintar()
-      refazerFilhos()
+    reserve(i) {
+      reserved.add(i)
+      paint()
     },
-
-    tirar(i) {
-      const p = conteudo[i]
-      conteudo[i] = null
-      pintar()
-      refazerFilhos()
+    put(i, piece) {
+      reserved.delete(i)
+      content[i] = piece
+      paint()
+      rebuildChildren()
+    },
+    take(i) {
+      const p = content[i]
+      reserved.delete(i)
+      content[i] = null
+      paint()
+      rebuildChildren()
       return p
     },
-
-    primeiroVazio: () => conteudo.findIndex((p) => p === null),
-    pecas: () => [...conteudo],
-    posDoEspaco: (i) => ({ x: xDe(i), y: TRILHA.cy }),
-
-    /*
-     * O interruptor é `input.enabled`, NUNCA `setVisible(false)`.
-     *
-     * Uma `Zone` não desenha nada, então esconder parece inofensivo — e o
-     * teste de toque do Phaser pula todo objeto cujo `willRender` é falso. A
-     * zona some para sempre e ninguém entende por quê.
-     */
-    setAtiva(on) {
-      ativa = on
-      zonas.forEach((z) => {
+    firstEmpty: () => content.findIndex((p, i) => p === null && !reserved.has(i)),
+    pieces: () => [...content],
+    slotPos: (i) => ({ x: xOf(i), y: TRACK.cy }),
+    setActive(on) {
+      active = on
+      zones.forEach((z) => {
         if (z.input) z.input.enabled = on
       })
     },
+    async light(i, loop) {
+      lit = i
+      blamed = -1
+      paint()
 
-    async acender(i, volta) {
-      aceso = i
-      culpado = -1
-      pintar()
+      const cx = xOf(i)
+      const cy = TRACK.cy + TRACK.head.dy
 
-      const cx = xDe(i)
-      const cy = TRILHA.cy + TRILHA.cabeca.dy
+      if (!headDrawn) {
+        head.fillStyle(C.black, 0.5)
+        head.fillCircle(0, 2, TRACK.head.r + 6)
+        head.fillStyle(C.brass, 1)
+        head.fillCircle(0, 0, TRACK.head.r)
+        head.lineStyle(3, C.white, 0.95)
+        head.strokeCircle(0, 0, TRACK.head.r + 6)
+        headDrawn = true
+        head.setPosition(cx, cy).setAlpha(0)
+        await FX.to(scene, head, { alpha: 1 }, { duration: 160 })
+      } else {
+        await FX.to(scene, head, { x: cx, y: cy }, { duration: 220, ease: Ease.smooth })
+      }
 
-      cabeca.clear()
-      cabeca.fillStyle(C.preto, 0.5)
-      cabeca.fillCircle(cx, cy + 2, TRILHA.cabeca.r + 6)
-      cabeca.fillStyle(C.latao, 1)
-      cabeca.fillCircle(cx, cy, TRILHA.cabeca.r)
-      cabeca.lineStyle(3, C.branco, 0.95)
-      cabeca.strokeCircle(cx, cy, TRILHA.cabeca.r + 6)
-
-      if (volta) {
-        await FX.popText(scene, cx, cy - 36, `${volta.atual}/${volta.de}`, {
-          color: hex(C.branco),
-          size: SIZE.numero,
+      if (loop) {
+        await FX.popText(scene, cx, cy - 36, `${loop.current}/${loop.total}`, {
+          color: hex(C.white),
+          size: SIZE.badge,
         })
         return
       }
 
-      await FX.wait(scene, RITMO.batida * 0.3)
+      await FX.wait(scene, TIMING.beat * 0.3)
     },
-
-    async travar(i) {
-      culpado = i
-      aceso = -1
-      pintar()
+    async lock(i) {
+      blamed = i
+      lit = -1
+      paint()
       await FX.all(
-        FX.ping(scene, xDe(i), TRILHA.cy, C.coral, { radius: 96 }),
-        FX.wait(scene, RITMO.travou)
+        FX.ping(scene, xOf(i), TRACK.cy, C.coral, { radius: 96 }),
+        FX.wait(scene, TIMING.stuck)
       )
     },
+    async celebrate() {
+      head.clear()
+      headDrawn = false
+      lit = -1
+      blamed = -1
+      paint()
 
-    /** Uma onda de luz da esquerda para a direita: o algoritmo fechou. */
-    async celebrar() {
-      cabeca.clear()
-      aceso = -1
-      culpado = -1
-      pintar()
-
-      for (let i = 0; i < espacos; i++) {
-        if (!conteudo[i]) continue
-        void FX.ping(scene, xDe(i), TRILHA.cy, C.verde, { radius: 80 })
+      for (let i = 0; i < slots; i++) {
+        if (!content[i]) continue
+        void FX.ping(scene, xOf(i), TRACK.cy, C.green, { radius: 80 })
         await FX.wait(scene, 130)
       }
     },
-
-    apagar() {
-      aceso = -1
-      culpado = -1
-      cabeca.clear()
-      pintar()
-    },
-
     destroy() {
-      zonas.forEach((z) => z.destroy())
-      zonas.length = 0
+      zones.forEach((z) => z.destroy())
+      zones.length = 0
       container.destroy(true)
     },
   }
 }
 
-/* ══════════════════════════════════════════════════════════════════════════
-   A PRATELEIRA — cartões ELEVADOS sobre uma tábua
-   ══════════════════════════════════════════════════════════════════════════ */
-
-export interface Prateleira {
+export interface Shelf {
   container: Phaser.GameObjects.Container
-  montar(pecas: Peca[]): void
-  posDoCartao(indice: number): { x: number; y: number }
-  setAtiva(on: boolean): void
+  build(pieces: Piece[]): void
+  cardPos(index: number): { x: number; y: number }
+  setActive(on: boolean): void
   destroy(): void
 }
 
-export function createPrateleira(
+export function createShelf(
   scene: Phaser.Scene,
-  aoTocarBloco: (peca: Peca, indice: number) => void
-): Prateleira {
+  onBlockTap: (piece: Piece, index: number) => void
+): Shelf {
   const container = scene.add.container(0, 0).setDepth(20)
   const g = scene.add.graphics()
   container.add(g)
 
-  let pecas: Peca[] = []
-  let ativa = true
-  const filhos: Phaser.GameObjects.GameObject[] = []
-  const zonas: Phaser.GameObjects.Zone[] = []
+  let pieces: Piece[] = []
+  let active = true
+  const children: Phaser.GameObjects.GameObject[] = []
+  const zones: Phaser.GameObjects.Zone[] = []
 
-  const xDe = (i: number) => {
-    const total = pecas.length * PRATELEIRA.largura + (pecas.length - 1) * PRATELEIRA.gap
-    const x0 = BANCADA.x + (BANCADA.w - total) / 2 + PRATELEIRA.largura / 2
-    return x0 + i * (PRATELEIRA.largura + PRATELEIRA.gap)
+  const xOf = (i: number) => {
+    const total = pieces.length * SHELF.width + (pieces.length - 1) * SHELF.gap
+    const x0 = BENCH.x + (BENCH.w - total) / 2 + SHELF.width / 2
+    return x0 + i * (SHELF.width + SHELF.gap)
   }
 
-  const pintar = () => {
+  const paint = () => {
     g.clear()
 
-    /* a tábua: é ela que faz os cartões lerem como "coisas em cima de algo" */
-    g.fillStyle(C.madeira, 0.85)
+    g.fillStyle(C.wood, 0.85)
     g.fillRoundedRect(
-      BANCADA.x + BANCADA.pad,
-      PRATELEIRA.tabua.y,
-      BANCADA.w - BANCADA.pad * 2,
-      PRATELEIRA.tabua.h,
-      PRATELEIRA.tabua.h / 2
+      BENCH.x + BENCH.pad,
+      SHELF.board.y,
+      BENCH.w - BENCH.pad * 2,
+      SHELF.board.h,
+      SHELF.board.h / 2
     )
 
-    pecas.forEach((p, i) => {
-      const cx = xDe(i)
-      elevada(
+    pieces.forEach((p, i) => {
+      const cx = xOf(i)
+      raised(
         g,
-        cx - PRATELEIRA.largura / 2,
-        PRATELEIRA.cy - PRATELEIRA.altura / 2,
-        PRATELEIRA.largura,
-        PRATELEIRA.altura,
-        PRATELEIRA.raio,
-        ativa ? tomDaPeca(p) : C.fosco,
-        ativa ? C.creme : C.madeiraEscura
+        cx - SHELF.width / 2,
+        SHELF.cy - SHELF.height / 2,
+        SHELF.width,
+        SHELF.height,
+        SHELF.radius,
+        active ? pieceTone(p) : C.matte,
+        active ? C.cream : C.darkWood
       )
     })
   }
 
   return {
     container,
+    build(fresh) {
+      pieces = fresh
+      children.forEach((f) => f.destroy())
+      children.length = 0
+      zones.forEach((z) => z.destroy())
+      zones.length = 0
 
-    montar(novas) {
-      pecas = novas
-      filhos.forEach((f) => f.destroy())
-      filhos.length = 0
-      zonas.forEach((z) => z.destroy())
-      zonas.length = 0
+      paint()
 
-      pintar()
+      pieces.forEach((p, i) => {
+        const cx = xOf(i)
 
-      pecas.forEach((p, i) => {
-        const cx = xDe(i)
-
-        const img = posta(
+        const img = putImage(
           scene,
-          texturaDaPeca(p),
+          pieceTexture(p),
           cx,
-          PRATELEIRA.cy + PRATELEIRA.icone.dy,
-          PRATELEIRA.icone.tamanho,
-          PRATELEIRA.icone.tamanho
+          SHELF.cy + SHELF.icon.dy,
+          SHELF.icon.size,
+          SHELF.icon.size
         )
         if (img) {
-          filhos.push(img)
+          children.push(img)
           container.add(img)
         }
 
-        const rot = texto(
+        glyphBadge(
+          scene,
+          container,
+          children,
+          cx + SHELF.width / 2 - 22,
+          SHELF.cy - SHELF.height / 2 + 22,
+          pieceGlyph(p)
+        )
+
+        const rot = makeText(
           scene,
           cx,
-          PRATELEIRA.cy + PRATELEIRA.rotulo.dy,
-          rotuloDaPeca(p),
-          SIZE.bloco,
-          { wordWrap: { width: PRATELEIRA.largura - 20 } }
+          SHELF.cy + SHELF.label.dy,
+          pieceLabel(p),
+          SIZE.block,
+          { wordWrap: { width: SHELF.width - 20 } }
         )
-        filhos.push(rot)
+        children.push(rot)
         container.add(rot)
 
-        /*
-         * Zona SOLTA, criada no lugar definitivo.
-         *
-         * O cartão encolhe no toque, e um container que muda de escala comeria
-         * o clique na margem se a zona fosse filha dele.
-         */
         const z = scene.add
-          .zone(cx, PRATELEIRA.cy, PRATELEIRA.largura, PRATELEIRA.altura)
+          .zone(cx, SHELF.cy, SHELF.width, SHELF.height)
           .setOrigin(0.5)
           .setInteractive({ useHandCursor: true })
           .setDepth(60)
         z.on('pointerdown', () => {
-          if (!ativa) return
+          if (!active) return
           if (img) void FX.press(scene, img)
-          aoTocarBloco(p, i)
+          onBlockTap(p, i)
         })
-        zonas.push(z)
+        zones.push(z)
 
         void FX.popIn(scene, rot, { delay: i * 70 })
       })
     },
-
-    posDoCartao: (i) => ({ x: xDe(i), y: PRATELEIRA.cy }),
-
-    setAtiva(on) {
-      ativa = on
-      pintar()
-      zonas.forEach((z) => {
+    cardPos: (i) => ({ x: xOf(i), y: SHELF.cy }),
+    setActive(on) {
+      active = on
+      paint()
+      zones.forEach((z) => {
         if (z.input) z.input.enabled = on
       })
     },
-
     destroy() {
-      zonas.forEach((z) => z.destroy())
-      zonas.length = 0
+      zones.forEach((z) => z.destroy())
+      zones.length = 0
       container.destroy(true)
     },
   }
 }
 
-/**
- * O BLOCO VOANDO DA PRATELEIRA ATÉ A TRILHA.
- *
- * Um fantasma do cartão sai de onde a criança tocou e pousa no espaço. É
- * pouco código e resolve uma coisa importante: sem ele, o bloco simplesmente
- * APARECE na trilha, e quem tocou não tem certeza de que foi o toque dela que
- * fez aquilo — ainda mais numa tela com dois lugares parecidos.
- */
-export async function voarAteATrilha(
+export async function flyToTrack(
   scene: Phaser.Scene,
-  peca: Peca,
-  de: { x: number; y: number },
-  para: { x: number; y: number }
+  piece: Piece,
+  from: { x: number; y: number },
+  to: { x: number; y: number }
 ): Promise<void> {
-  const img = posta(scene, texturaDaPeca(peca), de.x, de.y, 56, 56)
+  const img = putImage(scene, pieceTexture(piece), from.x, from.y, 56, 56)
   if (!img) return
 
   img.setDepth(70)
-  await FX.arcTo(scene, img, { x: para.x, y: para.y }, { duration: RITMO.voo, height: 90 })
+  await FX.arcTo(scene, img, { x: to.x, y: to.y }, { duration: TIMING.flight, height: 90 })
   img.destroy()
 }
 
-/* ══════════════════════════════════════════════════════════════════════════
-   A COLUNA DO TREINADOR — fala, botão e personagem
-   ══════════════════════════════════════════════════════════════════════════ */
-
-export interface Coluna {
+export interface Column {
   container: Phaser.GameObjects.Container
-  setPedido(frase: string): void
-  setHumor(humor: 'normal' | 'feliz' | 'pensando'): void
-  setBotao(ligado: boolean, rotulo?: string): void
+  setRequest(phrase: string): void
+  setMood(mood: 'normal' | 'happy' | 'thinking'): void
+  setButton(enabled: boolean, label?: string): void
   destroy(): void
 }
 
-export function createColuna(scene: Phaser.Scene, aoExecutar: () => void): Coluna {
+export function createColumn(scene: Phaser.Scene, onRun: () => void): Column {
   const container = scene.add.container(0, 0).setDepth(20)
 
-  let imgTreinador: Phaser.GameObjects.Image | null = null
-  let ligado = false
+  let trainerImg: Phaser.GameObjects.Image | null = null
+  let enabled = false
 
-  /* ── o balão ─────────────────────────────────────────────────── */
+  const bubble = scene.add.graphics()
+  container.add(bubble)
 
-  const balao = scene.add.graphics()
-  container.add(balao)
-
-  const pedido = scene.add
-    .text(COLUNA.cx, COLUNA.balao.cy, '', {
+  const request = scene.add
+    .text(COLUMN.cx, COLUMN.bubble.cy, '', {
       fontFamily: FONT.black,
-      fontSize: `${SIZE.pedido}px`,
-      color: hex(LETRA.cor),
-      stroke: hex(LETRA.contorno),
-      strokeThickness: LETRA.grossura,
+      fontSize: `${SIZE.request}px`,
+      color: hex(TEXT.color),
+      stroke: hex(TEXT.stroke),
+      strokeThickness: TEXT.thickness,
       align: 'center',
-      wordWrap: { width: COLUNA.balao.w - 48 },
+      wordWrap: { width: COLUMN.bubble.w - 48 },
     })
     .setOrigin(0.5)
     .setResolution(2)
-  container.add(pedido)
+  container.add(request)
 
-  const pintarBalao = () => {
-    const h = Phaser.Math.Clamp(pedido.getBounds().height + 48, COLUNA.balao.hMin, COLUNA.balao.hMax)
-    const y = COLUNA.balao.cy - h / 2
-    balao.clear()
-    elevada(balao, COLUNA.cx - COLUNA.balao.w / 2, y, COLUNA.balao.w, h, COLUNA.balao.raio, C.madeiraEscura, C.latao)
-    /* o rabicho, apontando para o treinador embaixo */
-    balao.fillStyle(C.madeiraEscura, 1)
-    balao.fillTriangle(COLUNA.cx - 18, y + h - 2, COLUNA.cx + 18, y + h - 2, COLUNA.cx, y + h + 22)
+  const paintBubble = () => {
+    const h = Phaser.Math.Clamp(request.getBounds().height + 48, COLUMN.bubble.hMin, COLUMN.bubble.hMax)
+    const y = COLUMN.bubble.cy - h / 2
+    bubble.clear()
+    raised(bubble, COLUMN.cx - COLUMN.bubble.w / 2, y, COLUMN.bubble.w, h, COLUMN.bubble.radius, C.darkWood, C.brass)
+
+    bubble.fillStyle(C.darkWood, 1)
+    bubble.fillTriangle(COLUMN.cx - 18, y + h - 2, COLUMN.cx + 18, y + h - 2, COLUMN.cx, y + h + 22)
   }
 
-  /* ── o botão ─────────────────────────────────────────────────── */
+  const buttonG = scene.add.graphics()
+  container.add(buttonG)
+  const buttonTxt = makeText(scene, COLUMN.cx, COLUMN.button.cy, 'EXECUTAR', SIZE.button)
+  container.add(buttonTxt)
 
-  const botaoG = scene.add.graphics()
-  container.add(botaoG)
-  const botaoTxt = texto(scene, COLUNA.cx, COLUNA.botao.cy, 'EXECUTAR', SIZE.botao)
-  container.add(botaoTxt)
-
-  /**
-   * Repinta SEMPRE, mesmo sem mudança.
-   *
-   * A cor da LETRA não entra nesta conta: ela é branca com contorno preto em
-   * qualquer estado. Era justamente o cálculo "letra escura sobre botão claro"
-   * que produziu o EXECUTAR ilegível da versão anterior.
-   */
-  const pintarBotao = () => {
-    botaoG.clear()
-    elevada(
-      botaoG,
-      COLUNA.cx - COLUNA.botao.w / 2,
-      COLUNA.botao.cy - COLUNA.botao.h / 2,
-      COLUNA.botao.w,
-      COLUNA.botao.h,
-      COLUNA.botao.raio,
-      ligado ? C.latao : C.fosco,
-      ligado ? C.branco : C.madeiraEscura
+  const paintButton = () => {
+    buttonG.clear()
+    raised(
+      buttonG,
+      COLUMN.cx - COLUMN.button.w / 2,
+      COLUMN.button.cy - COLUMN.button.h / 2,
+      COLUMN.button.w,
+      COLUMN.button.h,
+      COLUMN.button.radius,
+      enabled ? C.brass : C.matte,
+      enabled ? C.white : C.darkWood
     )
-    botaoTxt.setAlpha(ligado ? 1 : 0.45)
+    buttonTxt.setAlpha(enabled ? 1 : 0.45)
   }
-  pintarBotao()
+  paintButton()
 
-  const zona = scene.add
-    .zone(COLUNA.cx, COLUNA.botao.cy, COLUNA.botao.w, COLUNA.botao.h)
+  const zone = scene.add
+    .zone(COLUMN.cx, COLUMN.button.cy, COLUMN.button.w, COLUMN.button.h)
     .setOrigin(0.5)
     .setInteractive({ useHandCursor: true })
     .setDepth(60)
-  zona.on('pointerdown', () => {
-    if (!ligado) return
-    void FX.press(scene, botaoTxt)
-    aoExecutar()
+  zone.on('pointerdown', () => {
+    if (!enabled) return
+    void FX.press(scene, buttonTxt)
+    onRun()
   })
 
   return {
     container,
-
-    setPedido(frase) {
-      pedido.setText(frase)
-      let tamanho = SIZE.pedido
-      pedido.setFontSize(tamanho)
-      while (pedido.getBounds().height > COLUNA.balao.hMax - 48 && tamanho > SIZE.pedidoMin) {
-        tamanho -= 2
-        pedido.setFontSize(tamanho)
+    setRequest(phrase) {
+      request.setText(phrase)
+      let size = SIZE.request
+      request.setFontSize(size)
+      while (request.getBounds().height > COLUMN.bubble.hMax - 48 && size > SIZE.requestMin) {
+        size -= 2
+        request.setFontSize(size)
       }
-      pintarBalao()
+      paintBubble()
     },
-
-    setHumor(humor) {
-      imgTreinador?.destroy()
-      imgTreinador = posta(
+    setMood(mood) {
+      trainerImg?.destroy()
+      trainerImg = putImage(
         scene,
-        `treinador-${humor}`,
-        COLUNA.cx,
-        COLUNA.treinador.cy,
-        COLUNA.treinador.h,
-        COLUNA.treinador.w
+        `treinador-${mood}`,
+        COLUMN.cx,
+        COLUMN.trainer.cy,
+        COLUMN.trainer.h,
+        COLUMN.trainer.w
       )
-      if (imgTreinador) {
-        container.add(imgTreinador)
-        void FX.popIn(scene, imgTreinador, { from: 0.95, duration: 220 })
+      if (trainerImg) {
+        container.add(trainerImg)
+        void FX.popIn(scene, trainerImg, { from: 0.95, duration: 220 }).then(() => {
+          if (trainerImg) FX.breathe(scene, trainerImg, { grow: 1.03, duration: 2400 })
+        })
       }
     },
+    setButton(on, label) {
+      const justLit = on && !enabled
+      enabled = on
+      if (label) buttonTxt.setText(label)
+      paintButton()
+      if (zone.input) zone.input.enabled = on
 
-    setBotao(on, rotulo) {
-      ligado = on
-      if (rotulo) botaoTxt.setText(rotulo)
-      pintarBotao()
-      if (zona.input) zona.input.enabled = on
+      if (justLit) {
+        void FX.impact(scene, buttonTxt, 0.22)
+        void FX.ping(scene, COLUMN.cx, COLUMN.button.cy, C.brass, { radius: 120 })
+      }
     },
-
     destroy() {
-      zona.destroy()
-      imgTreinador?.destroy()
+      zone.destroy()
+      trainerImg?.destroy()
       container.destroy(true)
     },
   }

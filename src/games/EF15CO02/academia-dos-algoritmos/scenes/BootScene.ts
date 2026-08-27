@@ -3,29 +3,19 @@ import { createLoadingScreen } from '../../../../shared/loading/createLoadingScr
 import { faseInicial } from '../../../../shared/level/faseInicial'
 import { C } from '../data/theme'
 
-/**
- * As texturas que os três níveis usam.
- *
- * `bg-academia-hub` e `cover-academia-dos-algoritmos` estão na pasta e NÃO
- * entram: o hub virou o fundo do Nível 2 por outro caminho, e a capa é do
- * catálogo, não do jogo. Carregar arte que ninguém mostra é peso de download
- * por nada.
- *
- * A falta de qualquer uma delas deixa o jogo feio e jogável: o lugar fica
- * vazio, o rótulo embaixo continua lá, e o estado continua legível — porque
- * quem desenha estado aqui é `Graphics`, nunca a textura.
- */
 const WANTED = [
   'bg-sala-treino',
   'bg-academia-hub',
+
+  'personagem-lia',
 
   'treinador-normal',
   'treinador-feliz',
   'treinador-pensando',
 
-  'avatar-crianca',
-
   'item-escova',
+  'item-escova-sem-pasta',
+  'escova-boca',
   'item-pasta-dente',
   'item-mochila',
   'item-caderno',
@@ -33,17 +23,9 @@ const WANTED = [
   'item-regador',
   'item-planta',
   'item-poca',
-  'item-bloco-montar',
   'item-brinquedo',
 ] as const
 
-/**
- * As texturas são VARRIDAS da pasta, não importadas uma a uma.
- *
- * Um `import` de arquivo que não existe quebra o build INTEIRO — não este
- * jogo, o site — e é assim que uma arte renomeada derruba o catálogo de
- * quarenta e cinco jogos. Com `import.meta.glob` o Vite registra o que está lá.
- */
 const FILES = import.meta.glob(
   '../../../../assets/games/EF15CO02/academia-dos-algoritmos/*.png',
   { eager: true, import: 'default' }
@@ -58,7 +40,7 @@ function found(): Array<[string, string]> {
     if (key) byKey.set(key, url)
   })
   return WANTED.map((key) => [key, byKey.get(key)] as [string, string | undefined]).filter(
-    (par): par is [string, string] => !!par[1]
+    (pair): pair is [string, string] => !!pair[1]
   )
 }
 
@@ -76,21 +58,21 @@ export class BootScene extends Phaser.Scene {
         background: {
           kind: 'dots',
           base: C.ink,
-          color: C.latao,
+          color: C.brass,
           alpha: 0.14,
           size: 46,
           radius: 4,
         },
-        card: C.madeiraEscura,
-        cardShadow: C.sombra,
-        cardBorder: C.latao,
-        title: C.creme,
-        subtitle: C.latao,
+        card: C.darkWood,
+        cardShadow: C.shadow,
+        cardBorder: C.brass,
+        title: C.cream,
+        subtitle: C.brass,
         description: C.dim,
         titleStroke: C.ink,
         progressTrack: C.ink,
-        progressBorder: C.latao,
-        progressFill: C.madeira,
+        progressBorder: C.brass,
+        progressFill: C.wood,
       },
     })
 
@@ -98,13 +80,7 @@ export class BootScene extends Phaser.Scene {
   }
 
   create() {
-    /*
-     * A fase inicial vem do registry, escrito no `preBoot`.
-     *
-     * A plataforma manda `?stage=2` na URL quando quer abrir direto no Nível
-     * 2. Pelo `START_GAME` seria tarde: a cena já teria nascido no Nível 1.
-     */
-    this.scene.start('GameScene', { nivel: faseInicial(this, 1), caso: 0 })
+    this.scene.start('GameScene', { level: faseInicial(this, 1), puzzle: 0 })
   }
 }
 
