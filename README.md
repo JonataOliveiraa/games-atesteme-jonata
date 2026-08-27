@@ -697,6 +697,82 @@ propósito: assim todo HTML publicado ja encontra o que ele pede.
 
 A Vercel pode seguir como preview; a AWS passa a ser o endereco oficial.
 
+# Previa de link (Open Graph)
+
+Colar `https://games.atesteme.com/iframe/<slug>` no WhatsApp mostra a capa do
+jogo, o titulo e a descricao. Vale para os 45.
+
+**A restricao que decide tudo: o robo do WhatsApp NAO executa JavaScript.** Ele
+baixa o HTML, procura as `<meta>` e vai embora. Como isto e uma SPA que serve o
+mesmo `index.html` para toda rota, qualquer solucao que escreva as tags depois
+— React Helmet e parentes — chega tarde: o robo ja foi. O HTML precisa JA estar
+certo quando o servidor responde.
+
+Dai as duas pecas:
+
+| Peca | O que faz | Quando roda |
+| --- | --- | --- |
+| `scripts/gerar-og.mjs` | capa (1672x941, ~2MB) → `public/og/<slug>.jpg` (1200x630, ~130KB) | **a mao**, e o resultado e commitado |
+| `scripts/gerar-paginas-og.mjs` | escreve `dist/iframe/<slug>.html` com as `<meta>` daquele jogo | no `npm run build` |
+
+## Por que a imagem e redimensionada
+
+As capas tem cerca de 2 MB. O WhatsApp desiste da previa acima de uns 300 KB —
+e "desiste" quer dizer que o link aparece **sem imagem nenhuma**, sem erro e sem
+aviso. Os JPEGs gerados ficam entre 98 e 182 KB.
+
+## Por que a geracao de imagem fica FORA do build
+
+Redimensionar exige `sharp`, que traz binario nativo por plataforma — a mesma
+familia de dependencia que quebrou o `npm ci` na integracao continua. Manter
+isso longe do caminho do build e deliberado.
+
+Quando uma capa mudar:
+
+```bash
+npm install --no-save sharp && npm run og:imagens
+```
+
+Commite `public/og/` junto. O build so copia.
+
+## Por que gerar no build, e nao numa funcao serverless
+
+Uma funcao no Vercel resolveria, mas o plano e publicar como site estatico em
+S3 + CloudFront, onde funcao nao existe. Gerar no build funciona nos dois, nao
+custa nada em tempo de resposta e nao tem o que quebrar em producao.
+
+O roteamento continua igual: o `vercel.json` manda tudo para `/index.html`, mas
+o sistema de arquivos e consultado ANTES do rewrite, entao `/iframe/<slug>`
+encontra o arquivo gerado. Como o conteudo e o mesmo `index.html` (mesmos
+scripts, mesmos caminhos de asset), o React sobe igual.
+
+**Cada pagina e escrita em duas formas**, `iframe/<slug>.html` e
+`iframe/<slug>/index.html`: um servidor procura uma, outro procura a outra, e a
+forma errada cai no fallback de SPA — o link funciona, mas a previa sai com o
+titulo e a imagem do site inteiro. Aconteceu no `vite preview` (com barra final
+vinha a certa, sem barra vinha a generica), e so aparece olhando o HTML cru,
+porque a tela fica identica nos dois casos.
+
+## O endereco precisa ser absoluto
+
+`og:image` com caminho relativo nao rende imagem nenhuma — o robo nao tem como
+resolver. O padrao e `https://games.atesteme.com`; para outro dominio:
+
+```bash
+VITE_SITE_URL=https://outro.exemplo.com npm run build
+```
+
+## Como conferir sem publicar
+
+Depois de publicar, os validadores oficiais mostram o que cada um enxerga (e o
+do Facebook tem um botao de limpar cache, util quando a previa fica velha):
+
+- <https://developers.facebook.com/tools/debug/>
+- <https://cards-dev.twitter.com/validator>
+
+O WhatsApp cacheia a previa por bastante tempo. Se mudar a imagem depois de
+alguem ja ter colado o link, acrescente `?v=2` para forcar.
+
 # Deploy na Vercel
 
 A Vercel e o endereco de preview, e e de la que a plataforma vai puxar o jogo

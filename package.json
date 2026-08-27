@@ -5,10 +5,11 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build && node scripts/gerar-paginas-og.mjs",
     "build:game:base": "vite build --config vite.game.config.ts",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "og:imagens": "node scripts/gerar-og.mjs"
   },
   "dependencies": {
     "phaser": "^3.90.0",
