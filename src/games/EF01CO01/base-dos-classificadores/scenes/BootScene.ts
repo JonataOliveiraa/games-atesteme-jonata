@@ -14,6 +14,8 @@ import planterBoxGreenRectangleUrl from '../../../../assets/games/EF01CO01/base-
 import woodSignUrl from '../../../../assets/games/EF01CO01/base-dos-classificadores/wood-sign.png'
 import flowerIconUrl from '../../../../assets/games/EF01CO01/base-dos-classificadores/flower-icon.png'
 import { createLoadingScreen } from '../../../../shared/loading/createLoadingScreen'
+import { faseInicial } from '../../../../shared/level/faseInicial'
+import { DEV_START_LEVEL } from './GameScene'
 
 /**
  * BootScene — carrega todos os assets e gera texturas programáticas.
@@ -77,7 +79,8 @@ export class BootScene extends Phaser.Scene {
     this.removeWhiteBackground('shelf-wood')
     this.removeWhiteBackground('wood-sign')
     this.removeWhiteBackground('flower-icon')
-    this.scene.start('GameScene')
+    // A plataforma manda ?stage=N; fora do embed vale o padrao de sempre.
+    this.scene.start('GameScene', { level: faseInicial(this, DEV_START_LEVEL) })
   }
 
   // ── Barra de carregamento ────────────────────────────────────────────────

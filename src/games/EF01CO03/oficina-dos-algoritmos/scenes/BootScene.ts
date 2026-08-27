@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { faseInicial } from '../../../../shared/level/faseInicial';
 
 import algorithmGameCoverUrl from '../../../../assets/games/EF01CO03/oficina-dos-algoritmos/algorithm-game-cover.png';
 import bgLevelTwoUrl from '../../../../assets/games/EF01CO03/oficina-dos-algoritmos/bg.3.2.png';
@@ -22,6 +23,7 @@ import toothbrushUrl from '../../../../assets/games/EF01CO03/oficina-dos-algorit
 import toothpasteUrl from '../../../../assets/games/EF01CO03/oficina-dos-algoritmos/toothpaste.png';
 import trashDistractorUrl from '../../../../assets/games/EF01CO03/oficina-dos-algoritmos/trash-distractor.png';
 import wateringPlantUrl from '../../../../assets/games/EF01CO03/oficina-dos-algoritmos/watering-plant.png';
+import { createLoadingScreen } from '../../../../shared/loading/createLoadingScreen';
 
 const ASSETS: Array<[string, string]> = [
   ['algorithm-game-cover', algorithmGameCoverUrl],
@@ -54,69 +56,31 @@ export class BootScene extends Phaser.Scene {
   }
 
   preload() {
-    this.createLoadingScreen();
+    createLoadingScreen(this, {
+      title: 'Oficina dos Algoritmos',
+      subtitle: 'Passo a passo',
+      description: 'Carregando...',
+      theme: {
+        background: { kind: 'dots', base: 0xfff6e8, color: 0xf57c00, alpha: 0.14, size: 64, radius: 6 },
+        card: 0x25327a,
+        cardShadow: 0x141c48,
+        cardHighlight: 0xffffff,
+        cardBorder: 0xffb74d,
+        title: 0xffffff,
+        subtitle: 0xffd166,
+        description: 0xe8ecff,
+        titleStroke: 0x141c48,
+        progressTrack: 0x141c48,
+        progressBorder: 0xffffff,
+        progressFill: 0x7ed321,
+        progressHighlight: 0xffffff,
+      },
+    });
     ASSETS.forEach(([key, url]) => this.load.image(key, url));
   }
 
   create() {
-    this.scene.start('GameScene');
-  }
-
-  private createLoadingScreen() {
-    const { width, height } = this.scale;
-
-    this.cameras.main.setBackgroundColor('#fff6e8');
-
-    const bg = this.add.graphics();
-    bg.fillStyle(0xfff6e8, 1);
-    bg.fillRect(0, 0, width, height);
-
-    const title = this.add
-      .text(width / 2, height / 2 - 58, 'Oficina dos Algoritmos', {
-        fontFamily: 'DynaPuff, Arial, sans-serif',
-        fontSize: '30px',
-        fontStyle: 'bold',
-        color: '#25327a',
-        stroke: '#ffffff',
-        strokeThickness: 5,
-      })
-      .setOrigin(0.5)
-      .setResolution(2);
-
-    const label = this.add
-      .text(width / 2, height / 2 - 14, 'Carregando...', {
-        fontFamily: 'DynaPuff, Arial, sans-serif',
-        fontSize: '18px',
-        fontStyle: 'bold',
-        color: '#f57c00',
-      })
-      .setOrigin(0.5)
-      .setResolution(2);
-
-    const barWidth = 360;
-    const barHeight = 22;
-    const barX = width / 2 - barWidth / 2;
-    const barY = height / 2 + 26;
-
-    const track = this.add.graphics();
-    track.fillStyle(0xffffff, 0.95);
-    track.fillRoundedRect(barX, barY, barWidth, barHeight, barHeight / 2);
-    track.lineStyle(3, 0xffffff, 1);
-    track.strokeRoundedRect(barX, barY, barWidth, barHeight, barHeight / 2);
-
-    const fill = this.add.graphics();
-
-    this.load.on('progress', (value: number) => {
-      fill.clear();
-      fill.fillStyle(0x7ed321, 1);
-      fill.fillRoundedRect(barX, barY, barWidth * value, barHeight, barHeight / 2);
-    });
-
-    this.load.once('complete', () => {
-      fill.clear();
-      fill.fillStyle(0x7ed321, 1);
-      fill.fillRoundedRect(barX, barY, barWidth, barHeight, barHeight / 2);
-      label.setText('Pronto!');
-    });
+    // A plataforma manda ?stage=N; fora do embed continua abrindo no 1.
+    this.scene.start('GameScene', { level: faseInicial(this, 1) });
   }
 }

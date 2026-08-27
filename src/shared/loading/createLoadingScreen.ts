@@ -1,7 +1,18 @@
 import Phaser from 'phaser'
 
-const W = 1280
-const H = 720
+/**
+ * O tamanho de PROJETO desta tela — o cartao, os textos e a barra sao
+ * desenhados nestas coordenadas.
+ *
+ * NAO e o tamanho do canvas. A EF01CO03 (oficina-dos-algoritmos) roda em
+ * 960x540, e enquanto estes numeros eram usados como se fossem o canvas o
+ * cartao nascia centrado em (640, 360) — o centro de OUTRA tela — e metade
+ * dele ficava para fora. O conteudo continua sendo desenhado em 1280x720 e
+ * o container inteiro e escalado para caber; assim a tela fica identica em
+ * qualquer resolucao, em vez de so caber.
+ */
+const DESIGN_W = 1280
+const DESIGN_H = 720
 
 export type BackgroundSpec =
     | { kind: 'solid'; color?: number }
@@ -63,7 +74,7 @@ const INK = 0xffffff
 
 const color = (hex: number) => '#' + hex.toString(16).padStart(6, '0')
 
-function paintBackground(scene: Phaser.Scene, spec: BackgroundSpec) {
+function paintBackground(scene: Phaser.Scene, spec: BackgroundSpec, W: number, H: number) {
     const g = scene.add.graphics()
 
     if (spec.kind === 'gradient') {
@@ -199,11 +210,27 @@ export function createLoadingScreen(
     const theme = { ...DEFAULT, ...options.theme }
     const layer = scene.add.container(0, 0).setDepth(10000)
 
+    // A CAIXA DE PROJETO — onde o cartao e desenhado.
+    const W = DESIGN_W
+    const H = DESIGN_H
+
+    // O CANVAS DESTE JOGO, que nao e necessariamente a caixa de projeto.
+    const telaW = scene.scale.width || DESIGN_W
+    const telaH = scene.scale.height || DESIGN_H
+
     const spec: BackgroundSpec = typeof theme.background === 'number'
         ? { kind: 'solid', color: theme.background }
         : theme.background
 
-    layer.add(paintBackground(scene, spec))
+    // O fundo cobre o canvas INTEIRO (nao entra no container escalado, senao
+    // sobraria borda nao pintada quando as proporcoes nao baterem).
+    layer.add(paintBackground(scene, spec, telaW, telaH))
+
+    // O cartao vive em coordenadas de projeto; o container inteiro encolhe.
+    const k = Math.min(telaW / W, telaH / H)
+    const conteudo = scene.add.container((telaW - W * k) / 2, (telaH - H * k) / 2)
+        .setScale(k)
+    layer.add(conteudo)
 
     const midY = H / 2
     const card = scene.add.graphics()
@@ -217,7 +244,7 @@ export function createLoadingScreen(
     card.lineStyle(5, theme.cardBorder, 1)
     card.strokeRoundedRect(W / 2 - 340, midY - 142, 680, 280, 30)
 
-    layer.add(card)
+    conteudo.add(card)
 
     const stroke = color(theme.titleStroke)
 
@@ -244,7 +271,7 @@ export function createLoadingScreen(
         color: color(theme.description),
     }).setOrigin(0.5).setResolution(2)
 
-    layer.add([title, subtitle, description])
+    conteudo.add([title, subtitle, description])
 
     const BAR_W = 540
     const BAR_H = 32
@@ -258,7 +285,7 @@ export function createLoadingScreen(
     track.strokeRoundedRect(barX, barY, BAR_W, BAR_H, 16)
 
     const fill = scene.add.graphics()
-    layer.add([track, fill])
+    conteudo.add([track, fill])
 
     const draw = (progress: number) => {
         const w = Math.max(14, (BAR_W - 10) * progress)

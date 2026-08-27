@@ -1,7 +1,10 @@
 import Phaser from 'phaser'
 
-const W = 1280
-const H = 720
+// Tamanho de PROJETO. O canvas real vem do `scene.scale` la embaixo — o
+// tutorial aponta para objetos do JOGO, entao ele tem que morar nas
+// coordenadas do jogo, e nao numa tela de 1280x720 imaginaria.
+const DESIGN_W = 1280
+const DESIGN_H = 720
 const SEEN_KEY = '__tutorialsSeen'
 
 function getSeenSet(scene: Phaser.Scene): Set<string> {
@@ -79,6 +82,9 @@ function ensureMasks(scene: Phaser.Scene) {
 }
 
 export function createTutorial(scene: Phaser.Scene, options: TutorialOptions) {
+    // O CANVAS DESTE JOGO (a EF01CO03 roda em 960x540).
+    const W = scene.scale.width || DESIGN_W
+    const H = scene.scale.height || DESIGN_H
     const once = options.once ?? true
     const seen = getSeenSet(scene)
 
@@ -155,8 +161,6 @@ export function createTutorial(scene: Phaser.Scene, options: TutorialOptions) {
 
         const w = step.w ?? 260
         const h = step.h ?? 260
-        const x = (step.x ?? W / 2) - w / 2
-        const y = (step.y ?? H / 2) - h / 2
 
         const maskGraphics = scene.add.graphics()
         maskGraphics.fillStyle(0xffffff, 1)

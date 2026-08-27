@@ -8,6 +8,7 @@ import pathMarkUrl from "../../../../assets/games/EF02CO02/desfile-do-robo-repet
 import robotUrl from "../../../../assets/games/EF02CO02/desfile-do-robo-repetidor/robot.png";
 import successBadgeUrl from "../../../../assets/games/EF02CO02/desfile-do-robo-repetidor/success-badge.png";
 import wallpaperUrl from "../../../../assets/games/EF02CO02/desfile-do-robo-repetidor/wallpaper.png";
+import { createLoadingScreen } from "../../../../shared/loading/createLoadingScreen";
 
 const ASSETS: Array<[string, string]> = [
   ["wallpaper", wallpaperUrl],
@@ -26,33 +27,30 @@ export class BootScene extends Phaser.Scene {
   }
 
   preload() {
-    this.createLoadingScreen();
+    createLoadingScreen(this, {
+      title: "Desfile do Robô Repetidor",
+      subtitle: "Repita os passos",
+      description: "Preparando os blocos...",
+      theme: {
+        background: { kind: "stripes", base: 0xe0f2fe, color: 0x25327a, alpha: 0.1, size: 40, gap: 60, angle: "diagonal" },
+        card: 0x25327a,
+        cardShadow: 0x141c48,
+        cardHighlight: 0xffffff,
+        cardBorder: 0x7dd3fc,
+        title: 0xffffff,
+        subtitle: 0xbae6fd,
+        description: 0xe2e8f0,
+        titleStroke: 0x141c48,
+        progressTrack: 0x141c48,
+        progressBorder: 0xffffff,
+        progressFill: 0x38bdf8,
+        progressHighlight: 0xffffff,
+      },
+    });
     ASSETS.forEach(([key, url]) => this.load.image(key, url));
   }
 
   create() {
     this.scene.start("GameScene");
-  }
-
-  private createLoadingScreen() {
-    this.add.rectangle(640, 360, 1280, 720, 0xe0f2fe);
-
-    this.add
-      .text(640, 300, "Desfile do Robô Repetidor", {
-        fontSize: "48px",
-        fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif",
-        color: "#25327a",
-        stroke: "#ffffff",
-        strokeThickness: 6,
-      })
-      .setOrigin(0.5);
-
-    this.add
-      .text(640, 380, "Preparando os blocos...", {
-        fontSize: "26px",
-        fontFamily: "DynaPuff, Arial, sans-serif",
-        color: "#334155",
-      })
-      .setOrigin(0.5);
   }
 }

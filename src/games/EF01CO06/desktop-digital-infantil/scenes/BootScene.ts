@@ -1,7 +1,6 @@
 import Phaser from 'phaser'
 import { APP_DEFS } from '../types'
 import desktopBgUrl from '../../../../assets/games/EF01CO06/desktop-digital-infantil/desktop-bg.png'
-import loadingBgUrl from '../../../../assets/games/EF01CO06/desktop-digital-infantil/loading-bg.png'
 import iconGravadorUrl from '../../../../assets/games/EF01CO06/desktop-digital-infantil/icon-gravador.png'
 import iconPastaUrl from '../../../../assets/games/EF01CO06/desktop-digital-infantil/icon-pasta.png'
 import iconDesenhoUrl from '../../../../assets/games/EF01CO06/desktop-digital-infantil/icon-desenho.png'
@@ -15,6 +14,7 @@ import pastaDocMatUrl from '../../../../assets/games/EF01CO06/desktop-digital-in
 import pastaDocLeitUrl from '../../../../assets/games/EF01CO06/desktop-digital-infantil/pasta-doc-leitura.png'
 import pastaDocArteUrl from '../../../../assets/games/EF01CO06/desktop-digital-infantil/pasta-doc-arte.png'
 import iconPowerUrl from '../../../../assets/games/EF01CO06/desktop-digital-infantil/icon-power.png'
+import { createLoadingScreen } from '../../../../shared/loading/createLoadingScreen'
 
 export class BootScene extends Phaser.Scene {
   constructor() {
@@ -22,13 +22,27 @@ export class BootScene extends Phaser.Scene {
   }
 
   preload() {
-    this.createLoadingBar()
-
-    this.load.image('loading-bg', loadingBgUrl)
-    this.load.on('filecomplete-image-loading-bg', () => {
-      const img = this.add.image(640, 360, 'loading-bg').setDisplaySize(1280, 720)
-      this.children.sendToBack(img)
+    createLoadingScreen(this, {
+      title: 'Desktop Digital Infantil',
+      subtitle: 'Área de trabalho',
+      description: 'Preparando o Desktop...',
+      theme: {
+        background: { kind: 'grid', base: 0x0d1628, color: 0x2e86c1, alpha: 0.14, size: 72 },
+        card: 0x0a1f38,
+        cardShadow: 0x05101f,
+        cardHighlight: 0xffffff,
+        cardBorder: 0x2e86c1,
+        title: 0xffffff,
+        subtitle: 0xaed6f1,
+        description: 0x85c1e9,
+        titleStroke: 0x05101f,
+        progressTrack: 0x071428,
+        progressBorder: 0x2e86c1,
+        progressFill: 0x2980b9,
+        progressHighlight: 0x5dade2,
+      },
     })
+
     this.load.on('loaderror', (file: Phaser.Loader.File) => {
       console.error('❌ Falha ao carregar asset:', file.key, '->', file.url);
     });
@@ -58,123 +72,6 @@ export class BootScene extends Phaser.Scene {
     this.generateTaskbarBg()
     this.scene.start('GameScene')
   }
-
-  // ── Tela de carregamento ──────────────────────────────────────────────────
-
-  private createLoadingBar() {
-    const cx = 640, cy = 360
-
-    // Fundo escuro inicial
-    this.add.rectangle(640, 360, 1280, 720, 0x0D1628)
-
-    // Painel central com borda
-    const panel = this.add.graphics()
-    panel.fillStyle(0x0A1F38, 0.92)
-    panel.fillRoundedRect(cx - 300, cy - 210, 600, 420, 20)
-    panel.lineStyle(2, 0x2E86C1, 0.7)
-    panel.strokeRoundedRect(cx - 300, cy - 210, 600, 420, 20)
-
-    // Faixa de título superior
-    const header = this.add.graphics()
-    header.fillStyle(0x1A3A6B, 1)
-    header.fillRoundedRect(cx - 300, cy - 210, 600, 54, { tl: 20, tr: 20, bl: 0, br: 0 })
-
-    this.add.text(cx, cy - 183, 'Desktop Digital Infantil', {
-      fontSize: '22px', color: '#AED6F1', fontFamily: '"DynaPuff Black", "Arial Black", sans-serif',
-    }).setOrigin(0.5)
-
-    // Monitor ilustrado
-    this.drawMonitorIllustration(cx, cy - 42)
-
-    // Título
-    this.add.text(cx, cy + 52, 'Preparando o Desktop...', {
-      fontSize: '20px', color: '#85C1E9', fontFamily: 'DynaPuff, Arial, sans-serif',
-    }).setOrigin(0.5)
-
-    // App icons preview (pequenos, como se fosse carregar)
-    // DEPOIS
-    const previewColors = [0x1A3A6B, 0x1E8449, 0xB7770D, 0x922B21, 0x76448A, 0x1A252F]
-    previewColors.forEach((color, i) => {
-      const ix = cx - 138 + i * 56
-      const dot = this.add.circle(ix, cy + 100, 18, color)
-      dot.setStrokeStyle(1.5, 0x2E86C1, 0.7)
-
-      dot.setAlpha(0.3)
-      this.time.addEvent({
-        delay: 200 + i * 120, callback: () => {
-          this.tweens.add({ targets: dot, alpha: 1, duration: 280, ease: 'Sine.easeOut' })
-        },
-      })
-    })
-
-  // Barra de progresso
-  const BAR_X = cx - 240, BAR_Y = cy + 142, BAR_W = 480, BAR_H = 22
-
-  const trackBg = this.add.graphics()
-    trackBg.fillStyle(0x071428, 1)
-    trackBg.fillRoundedRect(BAR_X - 3, BAR_Y - 3, BAR_W + 6, BAR_H + 6, (BAR_H + 6) / 2)
-trackBg.lineStyle(1.5, 0x2E86C1, 0.6)
-trackBg.strokeRoundedRect(BAR_X - 3, BAR_Y - 3, BAR_W + 6, BAR_H + 6, (BAR_H + 6) / 2)
-
-const barFill = this.add.graphics()
-const barShine = this.add.graphics()
-
-const pctText = this.add.text(cx, BAR_Y + BAR_H + 14, '0%', {
-  fontSize: '13px', color: '#7FB3D3', fontFamily: 'DynaPuff, Arial, sans-serif',
-}).setOrigin(0.5)
-
-this.load.on('progress', (v: number) => {
-  const filled = Math.max(BAR_H, BAR_W * v)
-  barFill.clear()
-  barFill.fillStyle(0x2980B9, 1)
-  barFill.fillRoundedRect(BAR_X, BAR_Y, filled, BAR_H, BAR_H / 2)
-  // Gradiente claro por cima
-  barFill.fillStyle(0x5DADE2, 0.5)
-  barFill.fillRoundedRect(BAR_X, BAR_Y, filled, BAR_H * 0.45, { tl: BAR_H / 2, tr: BAR_H / 2, bl: 0, br: 0 })
-
-  barShine.clear()
-  barShine.fillStyle(0xFFFFFF, 0.15)
-  barShine.fillRoundedRect(BAR_X + 2, BAR_Y + 2, filled - 4, 6, { tl: 4, tr: 4, bl: 0, br: 0 })
-
-  pctText.setText(Math.round(v * 100) + '%')
-})
-  }
-
-  private drawMonitorIllustration(cx: number, cy: number) {
-  const g = this.add.graphics()
-  const S = 0.66
-
-  g.fillStyle(0x000000, 0.25)
-  g.fillRoundedRect(cx - 106 * S, cy - 76 * S, 216 * S, 156 * S, 10)
-
-  g.fillStyle(0x1B4F72, 1)
-  g.fillRoundedRect(cx - 110 * S, cy - 80 * S, 220 * S, 150 * S, 10)
-  g.lineStyle(4, 0x2E86C1, 0.9)
-  g.strokeRoundedRect(cx - 110 * S, cy - 80 * S, 220 * S, 150 * S, 10)
-
-  g.fillStyle(0x0D2137, 1)
-  g.fillRoundedRect(cx - 96 * S, cy - 68 * S, 192 * S, 120 * S, 6)
-
-  const miniIcons = [
-    { x: cx - 72 * S, y: cy - 44 * S, c: 0x1A3A6B },
-    { x: cx - 40 * S, y: cy - 44 * S, c: 0x1E8449 },
-    { x: cx - 8 * S, y: cy - 44 * S, c: 0xB7770D },
-  ]
-  miniIcons.forEach(({ x, y, c }) => {
-    g.fillStyle(c, 0.9)
-    g.fillRoundedRect(x - 14 * S, y - 12 * S, 28 * S, 28 * S, 4)
-  })
-
-  g.fillStyle(0x071428, 0.85)
-  g.fillRect(cx - 96 * S, cy + 34 * S, 192 * S, 16 * S)
-
-  g.fillStyle(0x1B4F72, 1)
-  g.fillRect(cx - 14 * S, cy + 70 * S, 28 * S, 18 * S)
-
-  g.fillStyle(0x2E86C1, 0.7)
-  g.fillRoundedRect(cx - 44 * S, cy + 88 * S, 88 * S, 10 * S, 5)
-}
-
   private generateIconTextures() {
   const SIZE = 88
 

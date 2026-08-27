@@ -30,6 +30,7 @@ import iconCondPassosUrl from '../../../../assets/games/EF03CO02/labirinto-do-en
 import marcaRastroUrl from '../../../../assets/games/EF03CO02/labirinto-do-enquanto/marca-rastro.png'
 import marcaPalpiteUrl from '../../../../assets/games/EF03CO02/labirinto-do-enquanto/marca-palpite.png'
 import { faseInicial } from '../../../../shared/level/faseInicial'
+import { createLoadingScreen } from '../../../../shared/loading/createLoadingScreen'
 
 const ASSETS: Array<[string, string]> = [
     ['bg-oficina', bgOficinaUrl],
@@ -64,7 +65,26 @@ export class BootScene extends Phaser.Scene {
     }
 
     preload() {
-        this.createLoadingScreen()
+        createLoadingScreen(this, {
+            title: 'Labirinto do Enquanto',
+            subtitle: 'Enquanto...',
+            description: 'Ligando o robô...',
+            theme: {
+                background: { kind: 'grid', base: C.borda, color: C.claro, alpha: 0.16, size: 96, width: 1 },
+                card: C.escuro,
+                cardShadow: 0x000000,
+                cardHighlight: 0xffffff,
+                cardBorder: C.claro,
+                title: C.creme,
+                subtitle: C.amarelo,
+                description: C.creme,
+                titleStroke: C.borda,
+                progressTrack: C.borda,
+                progressBorder: C.claro,
+                progressFill: C.amarelo,
+                progressHighlight: 0xffffff,
+            },
+        })
         ASSETS.forEach(([key, url]) => this.load.image(key, url))
     }
 
@@ -108,43 +128,5 @@ export class BootScene extends Phaser.Scene {
         g.fillCircle(16, 16, 15)
         g.generateTexture('fx-faisca', 32, 32)
         g.destroy()
-    }
-
-    private createLoadingScreen() {
-        this.add.rectangle(640, 360, 1280, 720, C.borda).setDepth(0)
-
-        const grid = this.add.graphics().setDepth(1).setAlpha(0.16)
-        grid.lineStyle(1, C.claro)
-        for (let x = 0; x <= 1280; x += 96) grid.lineBetween(x, 0, x, 720)
-        for (let y = 0; y <= 720; y += 96) grid.lineBetween(0, y, 1280, y)
-
-        this.add.text(640, 292, 'Labirinto do Enquanto', {
-            fontSize: '52px',
-            fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif',
-            color: '#f3e7d3',
-            stroke: '#2d2319',
-            strokeThickness: 7,
-            align: 'center',
-        }).setOrigin(0.5).setDepth(2).setResolution(2)
-
-        this.add.text(640, 366, 'Ligando o robô...', {
-            fontSize: '26px',
-            fontFamily: 'DynaPuff, Arial, sans-serif',
-            color: '#dda21c',
-        }).setOrigin(0.5).setDepth(2).setResolution(2)
-
-        const barW = 560
-        const track = this.add.graphics().setDepth(2)
-        track.fillStyle(C.escuro, 1)
-        track.fillRoundedRect(640 - barW / 2, 442, barW, 26, 13)
-        track.lineStyle(3, C.claro, 0.8)
-        track.strokeRoundedRect(640 - barW / 2, 442, barW, 26, 13)
-
-        const fill = this.add.graphics().setDepth(3)
-        this.load.on('progress', (v: number) => {
-            fill.clear()
-            fill.fillStyle(C.amarelo, 1)
-            fill.fillRoundedRect(640 - barW / 2 + 4, 446, Math.max(8, (barW - 8) * v), 18, 9)
-        })
     }
 }

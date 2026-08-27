@@ -40,6 +40,7 @@ import iconPratoUrl from '../../../../assets/games/EF03CO03/chef-dos-subproblema
 import iconQueijoUrl from '../../../../assets/games/EF03CO03/chef-dos-subproblemas/icone-queijo.png'
 import iconSucoUrl from '../../../../assets/games/EF03CO03/chef-dos-subproblemas/icone-suco.png'
 import iconTalherUrl from '../../../../assets/games/EF03CO03/chef-dos-subproblemas/icone-talher.png'
+import { createLoadingScreen } from '../../../../shared/loading/createLoadingScreen'
 
 const ASSETS: Array<[string, string]> = [
   ['bg-chef-bancada', bgChefBancadaUrl],
@@ -97,52 +98,30 @@ export class BootScene extends Phaser.Scene {
   }
 
   preload() {
-    this.createLoadingScreen()
+    createLoadingScreen(this, {
+      title: 'Chef dos Subproblemas',
+      subtitle: 'Divida a receita',
+      description: 'Preparando a bancada...',
+      theme: {
+        background: { kind: 'solid', color: 0x050504 },
+        card: 0x1a1712,
+        cardShadow: 0x000000,
+        cardHighlight: 0xf0bc59,
+        cardBorder: 0xf0bc59,
+        title: 0xf7f6f2,
+        subtitle: 0xf0bc59,
+        description: 0xf7f6f2,
+        titleStroke: 0x050504,
+        progressTrack: 0x1a1712,
+        progressBorder: 0xf0bc59,
+        progressFill: 0xf0bc59,
+        progressHighlight: 0xffffff,
+      },
+    })
     ASSETS.forEach(([key, url]) => this.load.image(key, url))
   }
 
   create() {
     this.scene.start('GameScene')
-  }
-
-  private createLoadingScreen() {
-    this.cameras.main.setBackgroundColor('#050504')
-
-    const bg = this.add.graphics().setDepth(0)
-    bg.fillStyle(0x050504, 1)
-    bg.fillRect(0, 0, 1280, 720)
-    bg.fillStyle(0xf0bc59, 0.12)
-    bg.fillRoundedRect(210, 158, 860, 382, 36)
-    bg.lineStyle(4, 0xf0bc59, 0.76)
-    bg.strokeRoundedRect(210, 158, 860, 382, 36)
-
-    this.add.text(640, 282, 'Chef dos Subproblemas', {
-      fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif',
-      fontSize: '48px',
-      color: '#f7f6f2',
-      align: 'center',
-    }).setOrigin(0.5).setDepth(1).setResolution(2)
-
-    this.add.text(640, 344, 'Preparando a bancada...', {
-      fontFamily: 'DynaPuff, Arial, sans-serif',
-      fontStyle: 'bold',
-      fontSize: '24px',
-      color: '#f0bc59',
-      align: 'center',
-    }).setOrigin(0.5).setDepth(1).setResolution(2)
-
-    const barW = 480
-    const barBg = this.add.graphics().setDepth(1)
-    barBg.fillStyle(0xf7f6f2, 0.18)
-    barBg.fillRoundedRect(640 - barW / 2, 414, barW, 20, 10)
-
-    const bar = this.add.graphics().setDepth(2)
-    const paint = (v: number) => {
-      bar.clear()
-      bar.fillStyle(0xf0bc59, 1)
-      bar.fillRoundedRect(640 - barW / 2, 414, Math.max(16, barW * v), 20, 10)
-    }
-    paint(0.04)
-    this.load.on('progress', paint)
   }
 }

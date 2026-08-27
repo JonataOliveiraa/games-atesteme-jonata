@@ -28,7 +28,7 @@ const COLORS = {
   brown: 0x8D6E63,
 }
 
-const DEV_START_LEVEL: 1 | 2 | 3 = 1  // ← mude para 2 ou 3 para testar; volte para 1 antes de publicar
+export const DEV_START_LEVEL: 1 | 2 | 3 = 1  // ← mude para 2 ou 3 para testar; volte para 1 antes de publicar
 const DEV_NO_TIMER = true      // ← true = pula tela inicial e não inicia timer (ajuste visual)
 
 

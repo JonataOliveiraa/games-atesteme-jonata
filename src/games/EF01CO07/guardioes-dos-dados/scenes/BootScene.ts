@@ -15,6 +15,7 @@ import sceneOnlineStrangerUrl from "../../../../assets/games/EF01CO07/guardioes-
 import scenePasswordGameUrl from "../../../../assets/games/EF01CO07/guardioes-dos-dados/scene-password-game.png";
 import sceneSchoolPhotoUrl from "../../../../assets/games/EF01CO07/guardioes-dos-dados/scene-school-photo.png";
 import sceneStrangeLinkUrl from "../../../../assets/games/EF01CO07/guardioes-dos-dados/scene-strange-link.png";
+import { createLoadingScreen } from "../../../../shared/loading/createLoadingScreen";
 
 const ASSETS: Array<[string, string]> = [
   ["guardians-bg-main", bgMainUrl],
@@ -40,34 +41,31 @@ export class BootScene extends Phaser.Scene {
   }
 
   preload() {
-    this.createLoadingScreen();
+    createLoadingScreen(this, {
+      title: "Guardiões dos Dados",
+      subtitle: "Proteja seus dados",
+      description: "Preparando missões de segurança...",
+      theme: {
+        background: { kind: "grid", base: 0xeff6ff, color: 0x1d4ed8, alpha: 0.1, size: 72 },
+        card: 0x1d4ed8,
+        cardShadow: 0x0f2a6b,
+        cardHighlight: 0xffffff,
+        cardBorder: 0x93c5fd,
+        title: 0xffffff,
+        subtitle: 0xbfdbfe,
+        description: 0xe0edff,
+        titleStroke: 0x0f2a6b,
+        progressTrack: 0x0f2a6b,
+        progressBorder: 0xffffff,
+        progressFill: 0x60a5fa,
+        progressHighlight: 0xffffff,
+      },
+    });
     ASSETS.forEach(([key, url]) => this.load.image(key, url));
   }
 
   create() {
     this.scene.launch("UIScene");
     this.scene.start("GameScene");
-  }
-
-  private createLoadingScreen() {
-    this.add.rectangle(640, 360, 1280, 720, 0xeff6ff);
-
-    this.add
-      .text(640, 300, "Guardiões dos Dados", {
-        fontSize: "54px",
-        fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif",
-        color: "#1d4ed8",
-        stroke: "#ffffff",
-        strokeThickness: 6,
-      })
-      .setOrigin(0.5);
-
-    this.add
-      .text(640, 380, "Preparando missões de segurança...", {
-        fontSize: "28px",
-        fontFamily: "DynaPuff, Arial, sans-serif",
-        color: "#334155",
-      })
-      .setOrigin(0.5);
   }
 }

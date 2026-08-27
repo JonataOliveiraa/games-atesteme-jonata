@@ -1,7 +1,6 @@
 import Phaser from 'phaser'
 
 import bgCityMapUrl from '../../../../assets/games/EF02CO05/cidade-das-tecnologias/bg-city-map.png'
-import bgLoadingUrl from '../../../../assets/games/EF02CO05/cidade-das-tecnologias/bg-loading.png'
 
 import locationHouseUrl  from '../../../../assets/games/EF02CO05/cidade-das-tecnologias/location-house.png'
 import locationSchoolUrl from '../../../../assets/games/EF02CO05/cidade-das-tecnologias/location-school.png'
@@ -23,6 +22,7 @@ import techRadioUrl      from '../../../../assets/games/EF02CO05/cidade-das-tecn
 import techCameraUrl     from '../../../../assets/games/EF02CO05/cidade-das-tecnologias/tech-camera.png'
 import techGpsUrl        from '../../../../assets/games/EF02CO05/cidade-das-tecnologias/tech-gps.png'
 import techAtmUrl        from '../../../../assets/games/EF02CO05/cidade-das-tecnologias/tech-atm.png'
+import { createLoadingScreen } from '../../../../shared/loading/createLoadingScreen'
 
 const ASSETS: Array<[string, string]> = [
   ['bg-city-map', bgCityMapUrl],
@@ -52,47 +52,30 @@ export class BootScene extends Phaser.Scene {
   }
 
   preload() {
-    this.load.image('bg-loading', bgLoadingUrl)
-    this.createLoadingScreen()
+    createLoadingScreen(this, {
+      title: 'Cidade das Tecnologias',
+      subtitle: 'Mapa da cidade',
+      description: 'Montando o mapa da cidade...',
+      theme: {
+        background: { kind: 'dots', base: 0x0c3b2e, color: 0xa5d6a7, alpha: 0.12, size: 64, radius: 5 },
+        card: 0x11543f,
+        cardShadow: 0x04211a,
+        cardHighlight: 0xffffff,
+        cardBorder: 0xa5d6a7,
+        title: 0xffffff,
+        subtitle: 0xe8f5e9,
+        description: 0xa5d6a7,
+        titleStroke: 0x04211a,
+        progressTrack: 0x04211a,
+        progressBorder: 0xa5d6a7,
+        progressFill: 0x66bb6a,
+        progressHighlight: 0xffffff,
+      },
+    })
     ASSETS.forEach(([key, url]) => this.load.image(key, url))
   }
 
   create() {
     this.scene.start('GameScene')
-  }
-
-  private createLoadingScreen() {
-    const fallback = this.add.rectangle(640, 360, 1280, 720, 0x0c3b2e).setDepth(0)
-
-    this.load.once('filecomplete-image-bg-loading', () => {
-      fallback.destroy()
-      this.add.image(640, 360, 'bg-loading').setDisplaySize(1280, 720).setDepth(0)
-    })
-
-    this.add.text(640, 310, 'Cidade das Tecnologias', {
-      fontSize: '40px',
-      fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif',
-      color: '#E8F5E9',
-      stroke: '#000000',
-      strokeThickness: 6,
-      align: 'center',
-      wordWrap: { width: 900 },
-    }).setOrigin(0.5).setDepth(1)
-
-    this.add.text(640, 390, 'Montando o mapa da cidade...', {
-      fontSize: '22px',
-      fontFamily: 'DynaPuff, Arial, sans-serif',
-      color: '#A5D6A7',
-    }).setOrigin(0.5).setDepth(1)
-
-    const barW = 500
-    const barBg = this.add.rectangle(640, 450, barW + 8, 20, 0x0c3b2e)
-      .setStrokeStyle(2, 0xA5D6A7).setDepth(1)
-    const bar = this.add.rectangle(640 - barW / 2, 450, 4, 16, 0xA5D6A7).setOrigin(0, 0.5).setDepth(1)
-    void barBg
-
-    this.load.on('progress', (v: number) => {
-      bar.setSize(Math.max(4, barW * v), 16)
-    })
   }
 }

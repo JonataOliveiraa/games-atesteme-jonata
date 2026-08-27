@@ -1,7 +1,11 @@
 import Phaser from 'phaser'
 
-const W = 1280
-const H = 720
+// Tamanho de PROJETO — so fallback. Quem sabe o tamanho da tela e a cena:
+// use `FX.tela(scene)`. A EF01CO03 roda em 960x540 e, com estes numeros
+// usados como se fossem o canvas, a vinheta escurecia so dois lados e o
+// `punchZoom` deixava a camera fora do centro depois do efeito.
+const DESIGN_W = 1280
+const DESIGN_H = 720
 
 const FX_SETTINGS = '__fxSettings'
 const TEX_DOT = '__fx_dot'
@@ -192,6 +196,21 @@ function alive(t: unknown): t is FxTarget {
 // ═════════════════════════════════════════════════════════════════════
 
 export class FX {
+
+    /**
+     * O TAMANHO DO CANVAS DESTA CENA.
+     *
+     * Efeito de tela cheia (vinheta, confete, flash, cortina, camera) tem
+     * que medir a tela do jogo, e nao uma de 1280x720 imaginaria. Nos 44
+     * jogos de 1280x720 isto devolve exatamente 1280 e 720 — o `||` cobre
+     * a cena sem `scale` pronto.
+     */
+    private static tela(scene: Phaser.Scene) {
+        return {
+            W: scene.scale?.width || DESIGN_W,
+            H: scene.scale?.height || DESIGN_H,
+        }
+    }
 
     // ───────────────────────────────────────────────── núcleo
 
@@ -605,6 +624,7 @@ export class FX {
         layers: Array<{ target: FxTarget; depth: number }>,
         strength = 26,
     ) {
+        const { W, H } = FX.tela(scene)
         const bases = layers.map(l => ({ x: l.target.x, y: l.target.y }))
         const move = (p: Phaser.Input.Pointer) => {
             const nx = (p.worldX / W - 0.5) * 2
@@ -807,6 +827,7 @@ export class FX {
         scene: Phaser.Scene,
         { colors = [0xf9ce5d, 0x85b47e, 0xea6f67, 0x5882ac], count = 60, duration = 2200, depth = 9400 } = {},
     ): Promise<void> {
+        const { W, H } = FX.tela(scene)
         const jobs: Array<Promise<void>> = []
 
         // menos papelzinho caindo, mesma festa e mesma duração
@@ -881,12 +902,14 @@ export class FX {
 
     /** Flash de tela cheia. */
     static flash(scene: Phaser.Scene, color = 0xffffff, { duration = 320, peak = 0.55 } = {}): Promise<void> {
+        const { W, H } = FX.tela(scene)
         const r = scene.add.rectangle(W / 2, H / 2, W, H, color, peak).setDepth(9998)
         return FX.to(scene, r as unknown as FxTarget, { alpha: 0 }, { duration }).then(() => r.destroy())
     }
 
     /** Cortina: fecha, roda `onMid`, abre. Esconde troca de cena ou remonte de tela. */
     static async curtain(scene: Phaser.Scene, onMid: () => void | Promise<void>, color = 0x0b1220) {
+        const { W, H } = FX.tela(scene)
         const r = scene.add.rectangle(W / 2, H / 2, W, H, color, 0).setDepth(9999).setInteractive()
         await FX.to(scene, r as unknown as FxTarget, { alpha: 1 }, { duration: 300 })
         await onMid()
@@ -896,6 +919,7 @@ export class FX {
 
     /** Escurece as bordas, focando o centro. Devolve função para remover. */
     static vignette(scene: Phaser.Scene, { color = 0x000000, strength = 0.5, depth = 8900 } = {}) {
+        const { W, H } = FX.tela(scene)
         const g = scene.add.graphics().setDepth(depth).setAlpha(0)
         for (let i = 0; i < 14; i++) {
             g.fillStyle(color, (strength / 14))
@@ -911,14 +935,22 @@ export class FX {
     /** Zoom da câmera num ponto e volta. Dramatiza um acerto ou uma revelação. */
     static async punchZoom(
         scene: Phaser.Scene,
-        { x = W / 2, y = H / 2, zoom = 1.15, hold = 400, duration = 320 } = {},
+        { x, y, zoom = 1.15, hold = 400, duration = 320 }: {
+            x?: number; y?: number; zoom?: number; hold?: number; duration?: number
+        } = {},
     ) {
+        const { W, H } = FX.tela(scene)
+        // sem foco pedido, o foco e o centro DA TELA — e e para ele que a
+        // camera volta no fim; com 1280/720 chumbado ela voltava para fora
+        // do centro e o jogo ficava torto depois do efeito
+        const focoX = x ?? W / 2
+        const focoY = y ?? H / 2
         const cam = scene.cameras.main
         // o zoom aproxima a tela inteira; com menos movimento pedido ele quase
         // não sai do lugar, mas a PAUSA (`hold`) continua a mesma — é ela que
         // dá o peso do momento
         if (FX.reducedMotion()) zoom = 1 + (zoom - 1) * 0.3
-        cam.pan(x, y, duration, 'Sine.easeInOut')
+        cam.pan(focoX, focoY, duration, 'Sine.easeInOut')
         cam.zoomTo(zoom, duration, 'Sine.easeInOut')
         await FX.wait(scene, duration + hold)
         cam.pan(W / 2, H / 2, duration, 'Sine.easeInOut')

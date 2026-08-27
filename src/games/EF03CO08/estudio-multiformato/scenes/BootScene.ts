@@ -9,6 +9,7 @@ import formatCardDrawingUrl from "../../../../assets/games/EF03CO08/estudio-mult
 import formatCardTextUrl from "../../../../assets/games/EF03CO08/estudio-multiformato/format-card-text.png";
 import formatCardAudioUrl from "../../../../assets/games/EF03CO08/estudio-multiformato/format-card-audio.png";
 import formatCardPhotoUrl from "../../../../assets/games/EF03CO08/estudio-multiformato/format-card-photo.png";
+import { createLoadingScreen } from "../../../../shared/loading/createLoadingScreen";
 
 const ASSETS: Array<[string, string]> = [
   ["cover", coverUrl],
@@ -28,27 +29,30 @@ export class BootScene extends Phaser.Scene {
   }
 
   preload() {
-    this.createLoadingScreen();
+    createLoadingScreen(this, {
+      title: "Estúdio Multiformato",
+      subtitle: "Texto, som e imagem",
+      description: "Preparando o estúdio...",
+      theme: {
+        background: { kind: "rays", base: 0x4c1d95, color: 0xfbbf24, alpha: 0.08, count: 18 },
+        card: 0x1e1b4b,
+        cardShadow: 0x120f2e,
+        cardHighlight: 0xffffff,
+        cardBorder: 0xfbbf24,
+        title: 0xffffff,
+        subtitle: 0xfbbf24,
+        description: 0xe2e8f0,
+        titleStroke: 0x120f2e,
+        progressTrack: 0x120f2e,
+        progressBorder: 0xfbbf24,
+        progressFill: 0xa78bfa,
+        progressHighlight: 0xffffff,
+      },
+    });
     ASSETS.forEach(([key, url]) => this.load.image(key, url));
   }
 
   create() {
     this.scene.start("GameScene");
-  }
-
-  private createLoadingScreen() {
-    this.add.rectangle(640, 360, 1280, 720, 0x4c1d95);
-    this.add.text(640, 296, "Estúdio Multiformato", {
-      fontSize: "46px",
-      fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif",
-      color: "#fbbf24",
-      stroke: "#1e1b4b",
-      strokeThickness: 8,
-    }).setOrigin(0.5);
-    this.add.text(640, 374, "Preparando o estúdio...", {
-      fontSize: "26px",
-      fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif",
-      color: "#e2e8f0",
-    }).setOrigin(0.5);
   }
 }

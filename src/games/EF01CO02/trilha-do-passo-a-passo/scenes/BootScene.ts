@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { indiceInicial } from '../../../../shared/level/faseInicial';
 
 import fullRobot from '../../../../assets/games/EF01CO02/trilha-do-passo-a-passo/full_robot.png';
 import fullRobotSilhouette from '../../../../assets/games/EF01CO02/trilha-do-passo-a-passo/full_robot_silhouette.png';
@@ -29,6 +30,7 @@ import robotRightArmAnchorGlow from '../../../../assets/games/EF01CO02/trilha-do
 
 import robotRightLegAnchor from '../../../../assets/games/EF01CO02/trilha-do-passo-a-passo/robot_right_leg_anchor.png';
 import robotRightLegAnchorGlow from '../../../../assets/games/EF01CO02/trilha-do-passo-a-passo/robot_right_leg_anchor_glow.png';
+import { createLoadingScreen } from '../../../../shared/loading/createLoadingScreen';
 
 export class BootScene extends Phaser.Scene {
     constructor() {
@@ -36,6 +38,27 @@ export class BootScene extends Phaser.Scene {
     }
 
     preload() {
+        createLoadingScreen(this, {
+            title: 'Trilha do Passo a Passo',
+            subtitle: 'Monte o robô',
+            description: 'Preparando as peças...',
+            theme: {
+                background: { kind: 'grid', base: 0x0f1c3f, color: 0x2dd4bf, alpha: 0.12, size: 80 },
+                card: 0x182a5c,
+                cardShadow: 0x070d22,
+                cardHighlight: 0xffffff,
+                cardBorder: 0x2dd4bf,
+                title: 0xffffff,
+                subtitle: 0xffd166,
+                description: 0xdbeafe,
+                titleStroke: 0x070d22,
+                progressTrack: 0x0b1533,
+                progressBorder: 0x2dd4bf,
+                progressFill: 0xff6fb1,
+                progressHighlight: 0xffffff,
+            },
+        });
+
         this.load.image('full_robot', fullRobot);
         this.load.image('full_robot_glow', fullRobotGlow);
         this.load.image('full_robot_silhouette', fullRobotSilhouette)
@@ -69,6 +92,7 @@ export class BootScene extends Phaser.Scene {
 
     create() {
         this.scene.launch('UIScene');
-        this.scene.start('GameScene', { levelIndex: 0 });
+        // levelIndex e base ZERO aqui: ?stage=2 vira 1. Dai indiceInicial.
+        this.scene.start('GameScene', { levelIndex: indiceInicial(this, 0) });
     }
 }

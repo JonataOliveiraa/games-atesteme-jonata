@@ -1,7 +1,10 @@
 import Phaser from 'phaser'
 
-const W = 1280
-const H = 720
+// Tamanho de PROJETO — fallback, nao o canvas. O tamanho real vem do
+// `scene.scale` dentro da funcao: a EF01CO03 roda em 960x540 e o modal
+// nascia centrado em (640, 360), que la e o canto de baixo a direita.
+const DESIGN_W = 1280
+const DESIGN_H = 720
 const PW = 604          // painel mais largo: cabe fonte maior sem quebrar frase curta
 const PAD_X = 56
 const CAP_H = 34       // faixa de acento colada no topo do painel
@@ -43,6 +46,11 @@ export function showLevelComplete(
   const panelColor = options.panelColor ?? 0xfff6e8
   const overlayColor = options.overlayColor ?? 0x12324a
   const depth = options.depth ?? 450
+
+  // O CANVAS DESTE JOGO. Em 1280x720 estes dois valem 1280 e 720, e tudo
+  // abaixo fica identico ao que sempre foi.
+  const W = scene.scale.width || DESIGN_W
+  const H = scene.scale.height || DESIGN_H
 
   const overlay = scene.add.rectangle(W / 2, H / 2, W, H, overlayColor, 0.6)
     .setDepth(depth).setInteractive()

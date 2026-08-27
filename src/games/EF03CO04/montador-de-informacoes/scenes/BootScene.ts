@@ -16,6 +16,7 @@ import dataNeighborhoodMapUrl from "../../../../assets/games/EF03CO04/montador-d
 import dataPetCatUrl from "../../../../assets/games/EF03CO04/montador-de-informacoes/data-pet-cat.png";
 import dataStreetSignUrl from "../../../../assets/games/EF03CO04/montador-de-informacoes/data-street-sign.png";
 import dataZipEnvelopeUrl from "../../../../assets/games/EF03CO04/montador-de-informacoes/data-zip-envelope.png";
+import { createLoadingScreen } from "../../../../shared/loading/createLoadingScreen";
 
 const ASSETS: Array<[string, string]> = [
   ["bg-address-delivery", bgAddressDeliveryUrl],
@@ -42,27 +43,30 @@ export class BootScene extends Phaser.Scene {
   }
 
   preload() {
-    this.createLoadingScreen();
+    createLoadingScreen(this, {
+      title: "Montador de Informações",
+      subtitle: "Junte os dados",
+      description: "Organizando dados...",
+      theme: {
+        background: { kind: "grid", base: 0xdff7ff, color: 0x25327a, alpha: 0.1, size: 72 },
+        card: 0x25327a,
+        cardShadow: 0x141c48,
+        cardHighlight: 0xffffff,
+        cardBorder: 0x67e8f9,
+        title: 0xffffff,
+        subtitle: 0xa5f3fc,
+        description: 0xe0f7ff,
+        titleStroke: 0x141c48,
+        progressTrack: 0x141c48,
+        progressBorder: 0xffffff,
+        progressFill: 0x22d3ee,
+        progressHighlight: 0xffffff,
+      },
+    });
     ASSETS.forEach(([key, url]) => this.load.image(key, url));
   }
 
   create() {
     this.scene.start("GameScene");
-  }
-
-  private createLoadingScreen() {
-    this.add.rectangle(640, 360, 1280, 720, 0xdff7ff);
-    this.add.text(640, 296, "Montador de Informações", {
-      fontSize: "48px",
-      fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif",
-      color: "#25327a",
-      stroke: "#ffffff",
-      strokeThickness: 7,
-    }).setOrigin(0.5);
-    this.add.text(640, 374, "Organizando dados...", {
-      fontSize: "26px",
-      fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif",
-      color: "#334155",
-    }).setOrigin(0.5);
   }
 }

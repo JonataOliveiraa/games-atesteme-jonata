@@ -22,6 +22,7 @@ import productPlushFinalUrl from "../../../../assets/games/EF02CO03/fabrica-de-m
 import productBackpackFinalUrl from "../../../../assets/games/EF02CO03/fabrica-de-maquinas/product-backpack-final.png";
 import productShirtFinalUrl from "../../../../assets/games/EF02CO03/fabrica-de-maquinas/product-shirt-final.png";
 import successBadgeUrl from "../../../../assets/games/EF02CO02/desfile-do-robo-repetidor/success-badge.png";
+import { createLoadingScreen } from "../../../../shared/loading/createLoadingScreen";
 
 const ASSETS: Array<[string, string]> = [
   ["level-1-shirt-factory-bg", level1ShirtFactoryBgUrl],
@@ -54,29 +55,30 @@ export class BootScene extends Phaser.Scene {
   }
 
   preload() {
-    this.createLoadingScreen();
+    createLoadingScreen(this, {
+      title: "Fábrica de Máquinas",
+      subtitle: "Linha de montagem",
+      description: "Ligando as estações...",
+      theme: {
+        background: { kind: "checker", base: 0xdff7ff, color: 0x25327a, alpha: 0.07, size: 80 },
+        card: 0x25327a,
+        cardShadow: 0x141c48,
+        cardHighlight: 0xffffff,
+        cardBorder: 0x67e8f9,
+        title: 0xffffff,
+        subtitle: 0xa5f3fc,
+        description: 0xe0f7ff,
+        titleStroke: 0x141c48,
+        progressTrack: 0x141c48,
+        progressBorder: 0xffffff,
+        progressFill: 0x22d3ee,
+        progressHighlight: 0xffffff,
+      },
+    });
     ASSETS.forEach(([key, url]) => this.load.image(key, url));
   }
 
   create() {
     this.scene.start("GameScene");
-  }
-
-  private createLoadingScreen() {
-    this.add.rectangle(640, 360, 1280, 720, 0xdff7ff);
-
-    this.add.text(640, 296, "Fábrica de Máquinas", {
-      fontSize: "50px",
-      fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif",
-      color: "#25327a",
-      stroke: "#ffffff",
-      strokeThickness: 7,
-    }).setOrigin(0.5);
-
-    this.add.text(640, 374, "Ligando as estações...", {
-      fontSize: "26px",
-      fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif",
-      color: "#334155",
-    }).setOrigin(0.5);
   }
 }

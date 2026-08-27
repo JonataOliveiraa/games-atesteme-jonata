@@ -11,6 +11,7 @@ import cursorPinkUrl from "../../../../assets/games/EF01CO05/pixel-secreto/curso
 import cursorPurpleUrl from "../../../../assets/games/EF01CO05/pixel-secreto/cursor-paint-purple.png";
 import cursorWhiteUrl from "../../../../assets/games/EF01CO05/pixel-secreto/cursor-paint-white.png";
 import cursorYellowUrl from "../../../../assets/games/EF01CO05/pixel-secreto/cursor-paint-yellow.png";
+import { createLoadingScreen } from "../../../../shared/loading/createLoadingScreen";
 
 const ASSETS: Array<[string, string]> = [
   ["pixel-secret-bg-level-1", bgLevelOneUrl],
@@ -32,34 +33,31 @@ export class BootScene extends Phaser.Scene {
   }
 
   preload() {
-    this.createLoadingScreen();
+    createLoadingScreen(this, {
+      title: "Pixel Secreto",
+      subtitle: "Pinte o código",
+      description: "Preparando os códigos...",
+      theme: {
+        background: { kind: "checker", base: 0xfdf2f8, color: 0x86198f, alpha: 0.08, size: 60 },
+        card: 0x86198f,
+        cardShadow: 0x3b0a41,
+        cardHighlight: 0xffffff,
+        cardBorder: 0xf9a8d4,
+        title: 0xffffff,
+        subtitle: 0xfbcfe8,
+        description: 0xfce7f3,
+        titleStroke: 0x3b0a41,
+        progressTrack: 0x3b0a41,
+        progressBorder: 0xffffff,
+        progressFill: 0xf472b6,
+        progressHighlight: 0xffffff,
+      },
+    });
     ASSETS.forEach(([key, url]) => this.load.image(key, url));
   }
 
   create() {
     this.scene.launch("UIScene");
     this.scene.start("GameScene");
-  }
-
-  private createLoadingScreen() {
-    this.add.rectangle(640, 360, 1280, 720, 0xfdf2f8);
-
-    this.add
-      .text(640, 300, "Pixel Secreto", {
-        fontSize: "56px",
-        fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif",
-        color: "#86198f",
-        stroke: "#ffffff",
-        strokeThickness: 6,
-      })
-      .setOrigin(0.5);
-
-    this.add
-      .text(640, 380, "Preparando os códigos...", {
-        fontSize: "28px",
-        fontFamily: "DynaPuff, Arial, sans-serif",
-        color: "#334155",
-      })
-      .setOrigin(0.5);
   }
 }

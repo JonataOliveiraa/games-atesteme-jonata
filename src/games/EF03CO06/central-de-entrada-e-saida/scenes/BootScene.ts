@@ -25,6 +25,7 @@ import op03Url from '../../../../assets/games/EF03CO06/central-de-entrada-e-said
 import op04Url from '../../../../assets/games/EF03CO06/central-de-entrada-e-saida/op-04.png'
 import op05Url from '../../../../assets/games/EF03CO06/central-de-entrada-e-saida/op-05.png'
 import op06Url from '../../../../assets/games/EF03CO06/central-de-entrada-e-saida/op-06.png'
+import { createLoadingScreen } from '../../../../shared/loading/createLoadingScreen'
 
 const ASSETS: Array<[string, string]> = [
   ['bg-central', bgCentralUrl],
@@ -57,52 +58,30 @@ export class BootScene extends Phaser.Scene {
   }
 
   preload() {
-    this.createLoadingScreen()
+    createLoadingScreen(this, {
+      title: 'Central de Entrada e Saída',
+      subtitle: 'Entra e sai',
+      description: 'Ligando a central...',
+      theme: {
+        background: { kind: 'grid', base: 0x0d1b2a, color: 0x7fd4ff, alpha: 0.12, size: 72 },
+        card: 0x13324f,
+        cardShadow: 0x05101c,
+        cardHighlight: 0xffffff,
+        cardBorder: 0x7fd4ff,
+        title: 0xf4f7fb,
+        subtitle: 0x7fd4ff,
+        description: 0xd7e6f5,
+        titleStroke: 0x05101c,
+        progressTrack: 0x05101c,
+        progressBorder: 0x7fd4ff,
+        progressFill: 0x2f80ed,
+        progressHighlight: 0xffffff,
+      },
+    })
     ASSETS.forEach(([key, url]) => this.load.image(key, url))
   }
 
   create() {
     this.scene.start('GameScene')
-  }
-
-  private createLoadingScreen() {
-    this.cameras.main.setBackgroundColor('#0d1b2a')
-
-    const bg = this.add.graphics().setDepth(0)
-    bg.fillStyle(0x0d1b2a, 1)
-    bg.fillRect(0, 0, 1280, 720)
-    bg.fillStyle(0x2f80ed, 0.12)
-    bg.fillRoundedRect(210, 158, 860, 382, 36)
-    bg.lineStyle(4, 0x7fd4ff, 0.72)
-    bg.strokeRoundedRect(210, 158, 860, 382, 36)
-
-    this.add.text(640, 282, 'Central de Entrada e Saída', {
-      fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif',
-      fontSize: '48px',
-      color: '#f4f7fb',
-      align: 'center',
-    }).setOrigin(0.5).setDepth(1).setResolution(2)
-
-    this.add.text(640, 344, 'Ligando a central...', {
-      fontFamily: 'DynaPuff, Arial, sans-serif',
-      fontStyle: 'bold',
-      fontSize: '24px',
-      color: '#7fd4ff',
-      align: 'center',
-    }).setOrigin(0.5).setDepth(1).setResolution(2)
-
-    const barW = 480
-    const barBg = this.add.graphics().setDepth(1)
-    barBg.fillStyle(0xf4f7fb, 0.18)
-    barBg.fillRoundedRect(640 - barW / 2, 414, barW, 20, 10)
-
-    const bar = this.add.graphics().setDepth(2)
-    const paint = (v: number) => {
-      bar.clear()
-      bar.fillStyle(0x2f80ed, 1)
-      bar.fillRoundedRect(640 - barW / 2, 414, Math.max(16, barW * v), 20, 10)
-    }
-    paint(0.04)
-    this.load.on('progress', paint)
   }
 }
