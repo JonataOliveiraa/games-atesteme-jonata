@@ -10,7 +10,7 @@
  * A chave é o `slug`, e não o `id`, porque é assim que estava escrito e
  * mexer nisso agora seria reescrever 45 entradas sem ganho nenhum. Slug que
  * mudar precisa de um `alias` aqui também — ou cai no texto genérico, que é
- * uma degradação aceitável.
+ * uma degradação aceitável.dd
  */
 
 const POR_SLUG: Record<string, string[]> = {
