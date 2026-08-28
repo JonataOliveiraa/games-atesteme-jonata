@@ -1,7 +1,7 @@
 export const W = 1280
 export const H = 720
 
-export const HEADER = { h: 100, chipX: 36, chipW: 208, chipH: 62, textX: 276, titleY: 40, subY: 74 }
+export const HEADER = { h: 100, chipX: 36, chipW: 208, chipH: 62, textX: 276, titleY: 40 }
 
 export const STAGE_WITH_STRIP = { x: 36, y: 118, w: 624, h: 392 }
 export const STAGE_FULL = { x: 36, y: 118, w: 624, h: 552 }
@@ -35,7 +35,6 @@ export const PANEL = {
   optionFirstY: 344,
   backX: 820,
   backY: 628,
-  footerY: 626,
   actionY: 628,
   actionW: 500,
   actionH: 74,

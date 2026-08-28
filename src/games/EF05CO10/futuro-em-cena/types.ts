@@ -76,8 +76,8 @@ export interface Frame {
 
 interface BasePhase {
   id: string
+  /** Uma linha só, no alto: o que fazer nesta cena. */
   instruction: string
-  sub: string
   characterOptions: CharId[]
   sceneryOptions: SceneryId[]
 }

@@ -1,6 +1,5 @@
 import Phaser from 'phaser'
 import { runtimeGameBridge } from '../../../../shared/bridge/runtimeGameBridge'
-import { EventBus } from '../../../../shared/EventBus'
 import { createTutorial, type TutorialStep } from '../../../../shared/tutorial/createTutorial'
 import { showLevelComplete } from '../../../../shared/level/showLevelComplete'
 import { LEVELS, SCORE_LABEL } from '../data/levels'
@@ -55,6 +54,8 @@ export class GameScene extends Phaser.Scene {
     private stripLayer!: Phaser.GameObjects.Container
     private panelLayer!: Phaser.GameObjects.Container
     private stageMask!: Phaser.Display.Masks.GeometryMask
+
+    private helpBtn!: Phaser.GameObjects.Container
 
     private tutorialKey = ''
     private tutorialSteps: TutorialStep[] = []
@@ -123,16 +124,51 @@ export class GameScene extends Phaser.Scene {
         this.renderStage()
         this.renderStrip()
         this.renderPanel()
+        this.buildHelpButton()
 
         runtimeGameBridge.emit({ type: 'GAME_READY', gameId: GAME_ID })
 
-        EventBus.on('show-tutorial', this.replayTutorial, this)
-        this.events.once('shutdown', () => {
-            EventBus.off('show-tutorial', this.replayTutorial, this)
-        })
-
         if (this.phaseIdx === 0) this.showLevelIntro(() => this.runTutorial())
         else this.runTutorial()
+    }
+
+    /*
+     * O REVER TUTORIAL MORAVA NUMA UISCENE.
+     *
+     * Cena por cima de cena nao conhece depth: o botao ficava aceso acima do
+     * veu do proprio tutorial, do relatorio e da intro de nivel — e dava para
+     * abrir um tutorial por cima do outro. Aqui ele e um objeto da GameScene,
+     * num depth que passa por baixo de qualquer painel, e quem o desliga
+     * enquanto o tutorial roda e a propria cena.
+     */
+    private buildHelpButton() {
+        const btn = this.add.container(1218, 50).setDepth(70)
+        const g = this.add.graphics()
+        g.fillStyle(C.shadow, 0.22)
+        g.fillCircle(0, 6, 27)
+        g.fillStyle(C.violet, 1)
+        g.fillCircle(0, 0, 27)
+        g.fillStyle(C.white, A.gloss)
+        g.fillEllipse(0, -11, 36, 16)
+        const t = this.add.text(0, 0, '?', {
+            fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif',
+            fontSize: '29px',
+            color: '#ffffff',
+        }).setOrigin(0.5).setResolution(2)
+        btn.add([g, t])
+        btn.setSize(62, 62)
+        btn.setVisible(false)
+        btn.on('pointerdown', () => {
+            this.tweens.add({ targets: btn, scale: 0.9, duration: 80, yoyo: true })
+            this.replayTutorial()
+        })
+        this.helpBtn = btn
+    }
+
+    private setHelpEnabled(on: boolean) {
+        this.helpBtn.setAlpha(on ? 1 : 0.45)
+        if (on) this.helpBtn.setInteractive({ useHandCursor: true })
+        else this.helpBtn.disableInteractive()
     }
 
     private drawBackground() {
@@ -224,26 +260,22 @@ export class GameScene extends Phaser.Scene {
             color: hex(C.grey),
         }).setOrigin(0, 0.5).setResolution(2)
 
-        const title = this.add.text(HEADER.textX, HEADER.titleY, this.phase.instruction, {
+        /*
+         * O cabeçalho tinha título E subtítulo, e o subtítulo repetia a dica
+         * que o painel da direita já dá no passo atual. Duas frases longas no
+         * alto, mais a dica, mais o rodapé: a mesma coisa lida quatro vezes.
+         * Ficou uma linha só — o que fazer nesta cena.
+         */
+        const title = this.add.text(HEADER.textX, HEADER.titleY + 16, this.phase.instruction, {
             fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif',
-            fontSize: '27px',
+            fontSize: '28px',
             color: hex(C.violetDark),
             stroke: '#ffffff',
             strokeThickness: 7,
             wordWrap: { width: 860 },
         }).setOrigin(0, 0.5).setResolution(2)
 
-        const sub = this.add.text(HEADER.textX, HEADER.subY, this.phase.sub, {
-            fontFamily: 'DynaPuff, Arial, sans-serif',
-            fontStyle: 'bold',
-            fontSize: '22px',
-            color: hex(C.inkSoft),
-            stroke: '#ffffff',
-            strokeThickness: 5,
-            wordWrap: { width: 860 },
-        }).setOrigin(0, 0.5).setResolution(2)
-
-        this.headerLayer.add([g, level, phase, title, sub])
+        this.headerLayer.add([g, level, phase, title])
     }
 
     private renderStage() {
@@ -269,7 +301,7 @@ export class GameScene extends Phaser.Scene {
             const empty = this.add.graphics()
             empty.lineStyle(5, C.border, 1)
             empty.strokeRoundedRect(box.x + 28, box.y + 28, box.w - 56, box.h - 56, 0)
-            const hint = this.add.text(box.x + box.w / 2, box.y + box.h / 2, 'A sua cena aparece aqui\na cada escolha', {
+            const hint = this.add.text(box.x + box.w / 2, box.y + box.h / 2, 'A sua cena aparece aqui', {
                 fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif',
                 fontSize: '24px',
                 color: hex(C.grey),
@@ -565,42 +597,13 @@ export class GameScene extends Phaser.Scene {
         this.panelLayer.add(btn)
     }
 
-    private renderFooter(text: string) {
-        const fx = 1094
-        const fy = PANEL.footerY
-        const fw = 286
-        const fh = 54
-        const g = this.add.graphics()
-        g.fillStyle(C.violetSoft, 1)
-        g.fillRoundedRect(fx - fw / 2, fy - fh / 2, fw, fh, 0)
-        g.lineStyle(3, C.border, 1)
-        g.strokeRoundedRect(fx - fw / 2, fy - fh / 2, fw, fh, 0)
-
-        const icon = this.add.graphics()
-        icon.fillStyle(C.violet, 1)
-        icon.fillCircle(fx - fw / 2 + 28, fy, 14)
-        icon.lineStyle(3, C.white, 1)
-        icon.lineBetween(fx - fw / 2 + 22, fy, fx - fw / 2 + 34, fy)
-        icon.lineBetween(fx - fw / 2 + 28, fy - 6, fx - fw / 2 + 28, fy + 6)
-
-        const label = this.add.text(fx - fw / 2 + 50, fy, text, {
-            fontFamily: 'DynaPuff, Arial, sans-serif',
-            fontStyle: 'bold',
-            fontSize: '14px',
-            color: hex(C.violetDark),
-            wordWrap: { width: fw - 66 },
-        }).setOrigin(0, 0.5).setResolution(2)
-
-        this.panelLayer.add([g, icon, label])
-    }
-
     private renderStepPanel() {
         const step = this.steps[this.stepIdx]
         const p = this.phase
         this.stepPill(`PASSO ${this.stepIdx + 1} DE ${this.steps.length}`)
 
         if (step === 'tema' && p.kind === 'cena') {
-            this.panelHeader('Qual é o tema?', 'Escolha a mudança que a sua cena vai mostrar.')
+            this.panelHeader('Qual é o tema?', 'Escolha a mudança que você quer mostrar.')
             p.themeOptions.slice(0, 3).forEach((id, i) => {
                 const th = THEMES[id]
                 this.addOption(i, th.label, th.headline, () => {
@@ -610,12 +613,11 @@ export class GameScene extends Phaser.Scene {
                 }, icon => this.drawTechIcon(icon, th.tech, 0, 0, 20, C.violet))
             })
             this.backButton()
-            this.renderFooter('Tema escolhido: agora defina quem vive essa mudança.')
             return
         }
 
         if (step === 'personagem') {
-            this.panelHeader('Quem aparece na cena?', 'Pense em quem vive essa mudança de perto.')
+            this.panelHeader('Quem aparece na cena?', 'Quem vive essa mudança?')
             this.availableCharacters().forEach((id, i) => {
                 const ch = CHARACTERS[id]
                 this.addOption(i, ch.voice, ch.label, () => {
@@ -638,11 +640,10 @@ export class GameScene extends Phaser.Scene {
                 })
             })
             this.backButton()
-            this.renderFooter('O cenário ajuda a mostrar se a mudança é em casa, na rua ou no trabalho.')
             return
         }
 
-        this.panelHeader('O que essa pessoa diz?', 'A fala precisa mostrar o que a tecnologia mudou.')
+        this.panelHeader('O que essa pessoa diz?', 'A fala precisa dizer o que mudou.')
         this.availableLines().forEach((line, i) => {
             this.addOption(i, line.chip, line.text, () => {
                 this.draft.line = line
@@ -651,12 +652,11 @@ export class GameScene extends Phaser.Scene {
             })
         })
         this.backButton()
-        this.renderFooter('A fala vale mais quando mostra mudança e também algum cuidado.')
     }
 
     private renderMessagePanel() {
         this.stepPill('ÚLTIMO PASSO', C.amber)
-        this.panelHeader('Qual é a sua mensagem final?', 'Junte os dois pontos de vista em uma opinião sua.')
+        this.panelHeader('Qual é a sua mensagem?', 'Diga o que você acha dessa mudança.')
 
         const options = THEMES[this.themeId].messages ?? []
         options.forEach((option, i) => {
@@ -670,15 +670,14 @@ export class GameScene extends Phaser.Scene {
             this.backFromReady()
         }, '18px')
         this.panelLayer.add(back)
-        this.renderFooter('Procure uma mensagem equilibrada: ganho, limite e opinião.')
     }
 
     private renderReadyPanel() {
 
         this.stepPill('TUDO PRONTO', C.green)
         this.panelHeader('Confira a sua história', this.hasStrip
-            ? 'Toque em um quadro do storyboard para refazer, ou publique.'
-            : 'Veja a cena ao lado e publique quando gostar dela.')
+            ? 'Toque num quadro para refazer.'
+            : 'Gostou? Então publique.')
 
         const y = PANEL.optionFirstY - 16
 
@@ -974,14 +973,6 @@ export class GameScene extends Phaser.Scene {
         this.tweens.add({ targets: [mascot, mascotShadow], alpha: 1, duration: 420, ease: 'Sine.easeOut' })
         this.tweens.add({ targets: mascot, y: mascot.y - 10, angle: 3, duration: 820, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
 
-        const take = this.add.text(box.x + 24, box.y + box.h - 38, '', {
-            fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif',
-            fontSize: '18px',
-            color: hex(C.spotlight),
-            backgroundColor: '#162116',
-            padding: { left: 10, right: 10, top: 5, bottom: 5 },
-        }).setDepth(240).setResolution(2)
-
         this.stageLayer.setDepth(230)
         this.tweens.add({ targets: hiddenLayers, alpha: 0, duration: 320, ease: 'Sine.easeOut' })
         cam.pan(box.x + box.w / 2 + 34, box.y + box.h / 2, 700, 'Sine.easeInOut')
@@ -994,13 +985,12 @@ export class GameScene extends Phaser.Scene {
                 this.time.delayedCall(820, () => {
                     cam.pan(W / 2, H / 2, 560, 'Sine.easeInOut')
                     cam.zoomTo(1, 560, 'Sine.easeInOut')
-                    this.tweens.add({ targets: [veil, bars, rec, take, mascot, mascotShadow], alpha: 0, duration: 460 })
+                    this.tweens.add({ targets: [veil, bars, rec, mascot, mascotShadow], alpha: 0, duration: 460 })
                     this.tweens.add({ targets: hiddenLayers, alpha: 1, duration: 460, ease: 'Sine.easeOut' })
                     this.time.delayedCall(520, () => {
                         veil.destroy()
                         bars.destroy()
                         rec.destroy()
-                        take.destroy()
                         mascot.destroy()
                         mascotShadow.destroy()
                         this.stageLayer.setDepth(10)
@@ -1014,7 +1004,6 @@ export class GameScene extends Phaser.Scene {
             }
 
             this.slotIdx = i
-            take.setText(`TAKE ${i + 1}/${this.frames.length}`)
             this.renderStage()
             this.stageLayer.setDepth(230)
             this.stageLayer.setAlpha(0)
@@ -1095,7 +1084,7 @@ export class GameScene extends Phaser.Scene {
                 color: hex(C.ink),
             }).setOrigin(0, 0.5).setResolution(2)
 
-            const tag = this.add.text(242, y, SCORE_LABEL(value * 2), {
+            const tag = this.add.text(242, y, SCORE_LABEL(value), {
                 fontFamily: 'DynaPuff, Arial, sans-serif',
                 fontStyle: 'bold',
                 fontSize: '14px',
@@ -1149,9 +1138,9 @@ export class GameScene extends Phaser.Scene {
         if (score.clareza + score.mudanca + score.reflexao >= 5) {
             return this.message?.why ?? this.frames.filter(Boolean).map(f => f!.line.why)[0] ?? ''
         }
-        if (weakest.id === 'clareza') return 'Falta dizer qual tecnologia está em cena. Uma fala que cita o aparelho deixa isso claro.'
-        if (weakest.id === 'mudanca') return 'A história ainda não mostra o que ficou diferente. Compare como era antes e como é agora.'
-        return 'Toda mudança tem um ganho e um cuidado. Uma fala que mostra os dois lados vira opinião crítica.'
+        if (weakest.id === 'clareza') return 'Falta dizer qual tecnologia aparece na cena.'
+        if (weakest.id === 'mudanca') return 'Falta mostrar o que ficou diferente.'
+        return 'Toda mudança tem um lado bom e um cuidado. Mostre os dois.'
     }
 
     private completePhase() {
@@ -1190,7 +1179,7 @@ export class GameScene extends Phaser.Scene {
         showLevelComplete(this, {
             title: 'Estreia no estúdio!',
             subtitle: `${this.points} pontos`,
-            message: 'Toda tecnologia muda o jeito de viver e de trabalhar. Agora você sabe contar isso com opinião própria.',
+            message: 'Toda tecnologia muda o jeito de viver. Agora você sabe contar isso do seu jeito.',
             accent: C.green,
             overlayColor: C.shadow,
             titleColor: hex(C.violetDark),
@@ -1268,21 +1257,22 @@ export class GameScene extends Phaser.Scene {
     private runTutorial() {
         this.tutorialSteps = this.buildTutorialSteps()
         this.tutorialKey = `futuro-l${this.level.level}`
-        EventBus.emit('tutorial-ready')
+        this.helpBtn.setVisible(true)
+        this.setHelpEnabled(true)
 
         if (this.phaseIdx !== 0 || !this.tutorialSteps.length) {
             this.startPhase()
             return
         }
 
-        EventBus.emit('tutorial-start')
+        this.setHelpEnabled(false)
         createTutorial(this, {
             key: this.tutorialKey,
             accent: C.violet,
             safeTop: 118,
             steps: this.tutorialSteps,
             onFinish: () => {
-                EventBus.emit('tutorial-end')
+                this.setHelpEnabled(true)
                 this.startPhase()
             },
         })
@@ -1292,7 +1282,7 @@ export class GameScene extends Phaser.Scene {
         if (this.ended || !this.tutorialSteps.length) return
         const wasLocked = this.locked
         this.locked = true
-        EventBus.emit('tutorial-start')
+        this.setHelpEnabled(false)
         createTutorial(this, {
             key: this.tutorialKey,
             once: false,
@@ -1301,7 +1291,7 @@ export class GameScene extends Phaser.Scene {
             steps: this.tutorialSteps,
             onFinish: () => {
                 this.locked = wasLocked
-                EventBus.emit('tutorial-end')
+                this.setHelpEnabled(true)
             },
         })
     }
@@ -1309,35 +1299,28 @@ export class GameScene extends Phaser.Scene {
     private buildTutorialSteps(): TutorialStep[] {
         const box = this.stage
 
+        /*
+         * TRES PASSOS, NUNCA MAIS.
+         *
+         * Eram seis no nivel 1, e os tres ultimos explicavam coisas que a
+         * propria tela ja diz (o botao Voltar, o cabecalho, o que e uma boa
+         * fala). Tutorial que descreve a interface inteira antes de deixar
+         * tocar vira texto que a crianca pula. Ficou o que ela nao descobre
+         * sozinha: o que ela e, onde a cena aparece e onde se escolhe.
+         */
         if (this.level.level === 1) {
             return [
                 {
-                    text: 'Você é o diretor deste estúdio. A sua missão é montar uma cena que mostre a tecnologia mudando alguma coisa.',
+                    text: 'Você é o diretor! Monte uma cena que mostre o que a tecnologia mudou.',
                     shape: 'none', balloonY: 380,
                 },
                 {
-                    text: 'No alto fica sempre o que você precisa fazer agora. Leia sempre que ficar em dúvida.',
-                    shape: 'rect', x: W / 2 - 20, y: 54, w: 1180, h: 90, balloonY: 400,
-                },
-                {
-                    text: 'Este é o palco. A cena vai se montando aqui a cada escolha que você faz.',
+                    text: 'A sua cena aparece aqui no palco.',
                     shape: 'rect', x: box.x + box.w / 2, y: box.y + box.h / 2, w: box.w + 34, h: box.h + 34,
                 },
                 {
-                    text: 'Aqui à direita aparece um passo por vez. Toque em uma das opções para escolher.',
+                    text: 'Aqui vem um passo por vez. Toque na opção que você quiser.',
                     shape: 'rect', x: PANEL.cx, y: PANEL.y + PANEL.h / 2, w: PANEL.w + 26, h: PANEL.h + 26,
-                },
-                {
-                    text: 'Se escolher errado, o botão Voltar um passo desfaz a última escolha.',
-                    shape: 'rect',
-                    x: PANEL.backX,
-                    y: PANEL.backY,
-                    w: 250,
-                    h: 76,
-                },
-                {
-                    text: 'O passo mais importante é a fala. Ela precisa dizer o que mudou, e não só que a tecnologia existe.',
-                    shape: 'none', balloonY: 380,
                 },
             ]
         }
@@ -1345,32 +1328,24 @@ export class GameScene extends Phaser.Scene {
         if (this.level.level === 2) {
             return [
                 {
-                    text: 'Agora a história tem três quadros: como era antes, como ficou depois e o que isso mudou na vida das pessoas.',
+                    text: 'Agora a história tem 3 quadros: antes, depois e o que mudou.',
                     shape: 'rect', x: box.x + box.w / 2, y: STRIP.cy, w: box.w + 34, h: STRIP.h + 44,
                 },
                 {
-                    text: 'O quadro com a borda amarela mostra o que você está montando agora. Toque em outro para trocar.',
+                    text: 'O quadro de borda amarela é o que você monta agora. Toque em outro para trocar.',
                     shape: 'rect', x: this.slotX(0), y: STRIP.cy, w: STRIP.slotW + 26, h: STRIP.slotH + 26,
-                },
-                {
-                    text: 'Se os três quadros contarem a mesma coisa, o selo de Mudança não acende na hora de publicar.',
-                    shape: 'none', balloonY: 380,
                 },
             ]
         }
 
         return [
             {
-                text: 'Nesta história duas pessoas pensam diferente sobre a mesma tecnologia no trabalho.',
+                text: 'Aqui duas pessoas pensam diferente sobre a mesma tecnologia.',
                 shape: 'rect', x: box.x + box.w / 2, y: STRIP.cy, w: box.w + 34, h: STRIP.h + 44,
             },
             {
-                text: 'Depois dos três quadros vem o último passo: a mensagem final, que é a sua opinião sobre essa mudança.',
+                text: 'No fim você escolhe a mensagem: o que VOCÊ acha dessa mudança.',
                 shape: 'rect', x: PANEL.cx, y: PANEL.y + PANEL.h / 2, w: PANEL.w + 26, h: PANEL.h + 26,
-            },
-            {
-                text: 'No fim, três selos avaliam a sua história: Clareza, Mudança e Reflexão.',
-                shape: 'none', balloonY: 380,
             },
         ]
     }

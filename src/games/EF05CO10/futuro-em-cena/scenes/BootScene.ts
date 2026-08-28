@@ -61,7 +61,6 @@ export class BootScene extends Phaser.Scene {
   }
 
   create() {
-    this.scene.launch('UIScene')
     this.scene.start('GameScene', { level: faseInicial(this, 1), phase: 0 })
   }
 }
