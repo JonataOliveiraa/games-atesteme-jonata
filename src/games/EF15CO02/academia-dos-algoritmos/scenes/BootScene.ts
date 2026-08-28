@@ -18,12 +18,14 @@ const WANTED = [
   'escova-boca',
   'item-pasta-dente',
   'item-mochila',
+  'item-mochila-aberta',
   'item-caderno',
   'item-lanche',
   'item-regador',
   'item-planta',
   'item-poca',
   'item-brinquedo',
+  'item-bloco-montar',
 ] as const
 
 const FILES = import.meta.glob(

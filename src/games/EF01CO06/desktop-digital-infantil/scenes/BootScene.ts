@@ -1,4 +1,5 @@
 import Phaser from 'phaser'
+import { faseInicial } from '../../../../shared/level/faseInicial'
 import { APP_DEFS } from '../types'
 import desktopBgUrl from '../../../../assets/games/EF01CO06/desktop-digital-infantil/desktop-bg.png'
 import iconGravadorUrl from '../../../../assets/games/EF01CO06/desktop-digital-infantil/icon-gravador.png'
@@ -70,7 +71,7 @@ export class BootScene extends Phaser.Scene {
     this.generateIconTextures()
     this.generateDesktopBg()
     this.generateTaskbarBg()
-    this.scene.start('GameScene')
+    this.scene.start('GameScene', { level: faseInicial(this, 1) })
   }
   private generateIconTextures() {
   const SIZE = 88

@@ -1,4 +1,5 @@
 import Phaser from 'phaser'
+import { faseInicial } from '../../../../shared/level/faseInicial'
 import { createLoadingScreen } from '../../../../shared/loading/createLoadingScreen'
 
 import bgDeviceUrl from '../../../../assets/games/EF02CO06/checklist-do-jogador-seguro/bg-device.png'
@@ -96,6 +97,6 @@ export class BootScene extends Phaser.Scene {
 
   create() {
     this.scene.launch('UIScene')
-    this.scene.start('GameScene')
+    this.scene.start('GameScene', { level: faseInicial(this, 1) })
   }
 }

@@ -1,4 +1,5 @@
 import Phaser from 'phaser'
+import { indiceInicial } from '../../../../shared/level/faseInicial'
 
 import bgCityMapUrl from '../../../../assets/games/EF02CO05/cidade-das-tecnologias/bg-city-map.png'
 
@@ -76,6 +77,8 @@ export class BootScene extends Phaser.Scene {
   }
 
   create() {
-    this.scene.start('GameScene')
+    // `levelIndex` e base ZERO (`LEVELS[idx]` direto), entao e
+    // `indiceInicial` e nao `faseInicial`: ?stage=2 tem que virar 1.
+    this.scene.start('GameScene', { levelIndex: indiceInicial(this, 0) })
   }
 }

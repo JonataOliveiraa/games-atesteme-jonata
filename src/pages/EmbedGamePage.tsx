@@ -14,6 +14,8 @@ import {
   setEmbedSession,
 } from "../shared/bridge/embedSession";
 import { runtimeGameBridge } from "../shared/bridge/runtimeGameBridge";
+import SeletorDeFase from "../platform/dev/SeletorDeFase";
+import { useAtalhoDeFase } from "../platform/dev/useAtalhoDeFase";
 import { installGameUiTunnel } from "../shared/bridge/uiTunnel";
 import type { PlatformEvent } from "../shared/contracts/platformEvents";
 
@@ -47,7 +49,7 @@ const FASES_PADRAO = 3;
 
 export default function EmbedGamePage() {
   const { slug } = useParams<{ slug: string }>();
-  const [query] = useSearchParams();
+  const [query, setQuery] = useSearchParams();
 
   const params = parseEmbedParams(query);
   const validacao = validarEmbed(params);
@@ -80,6 +82,49 @@ export default function EmbedGamePage() {
 
   /** Mostrado quando as vidas acabam, no meio segundo antes de sair da tela. */
   const [semVidas, setSemVidas] = useState(false);
+
+  /* ── o atalho de teste para pular de fase (tecla L) ────────────────── */
+
+  const [seletorAberto, setSeletorAberto] = useState(false);
+
+  /*
+   * QUEM PODE PULAR DE FASE.
+   *
+   * `returnBase` e a assinatura da partida de verdade: e para onde o
+   * resultado volta, e so quem embute de fora manda. Sem ele, esta pagina
+   * ou foi aberta direto (`/jogos/<slug>`) ou pelo iframe da propria
+   * plataforma de jogos — os dois casos somos nos testando.
+   *
+   * Amarrar a permissao a ISSO, e nao a `import.meta.env.DEV`, e o que faz
+   * o atalho existir no link publicado, que e onde os testes acontecem de
+   * verdade. E amarrar ao `returnBase` — e nao a ausencia de `embed` — e o
+   * que garante que nenhum aluno da Atesteme alcance isto: a partida dele
+   * SEMPRE tem para onde voltar, senao `validarEmbed` nem deixa abrir.
+   */
+  const podePularDeFase = !params.returnBase;
+
+  const abrirSeletor = useCallback(() => setSeletorAberto(true), []);
+  useAtalhoDeFase(podePularDeFase && !seletorAberto, abrirSeletor);
+
+  /*
+   * A ESCOLHA VIRA A URL, E NAO UM ESTADO ESCONDIDO.
+   *
+   * `?stage=N` ja e o caminho por onde a fase inicial chega ao jogo (ver
+   * `shared/level/faseInicial.ts`): escrever nele reaproveita a tubulacao
+   * inteira, em vez de inventar uma segunda. E tem tres brindes — a barra
+   * de endereco explica por que o jogo esta na fase 3, um F5 nao perde o
+   * lugar, e o link e colavel para quem for reproduzir o mesmo teste.
+   */
+  const irParaFase = useCallback(
+    (fase: 1 | 2 | 3) => {
+      setSeletorAberto(false);
+
+      const proxima = new URLSearchParams(query);
+      proxima.set("stage", String(fase));
+      setQuery(proxima, { replace: true });
+    },
+    [query, setQuery]
+  );
 
   const pronto = !!game && validacao.ok;
 
@@ -339,6 +384,14 @@ export default function EmbedGamePage() {
               <span>Voltando para a atividade...</span>
             </div>
           </div>
+        )}
+
+        {seletorAberto && (
+          <SeletorDeFase
+            faseAtual={params.stage}
+            onEscolher={irParaFase}
+            onFechar={() => setSeletorAberto(false)}
+          />
         )}
 
         <GameFrame

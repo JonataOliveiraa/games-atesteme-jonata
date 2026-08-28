@@ -1,4 +1,5 @@
 import Phaser from 'phaser'
+import { faseInicial } from '../../../../shared/level/faseInicial'
 
 import bgMuseumUrl from '../../../../assets/games/EF02CO04/museu-vivo-do-computador/bg-museum.png'
 
@@ -62,6 +63,6 @@ export class BootScene extends Phaser.Scene {
 
   create() {
     this.scene.launch('UIScene')
-    this.scene.start('GameScene')
+    this.scene.start('GameScene', { level: faseInicial(this, 1) })
   }
 }

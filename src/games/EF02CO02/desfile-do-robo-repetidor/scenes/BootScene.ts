@@ -1,4 +1,5 @@
 ﻿import Phaser from "phaser";
+import { faseInicial } from "../../../../shared/level/faseInicial";
 
 import blockMoveUrl from "../../../../assets/games/EF02CO02/desfile-do-robo-repetidor/block-move.png";
 import goalStageUrl from "../../../../assets/games/EF02CO02/desfile-do-robo-repetidor/goal-stage.png";
@@ -51,6 +52,6 @@ export class BootScene extends Phaser.Scene {
   }
 
   create() {
-    this.scene.start("GameScene");
+    this.scene.start("GameScene", { level: faseInicial(this, 1) });
   }
 }

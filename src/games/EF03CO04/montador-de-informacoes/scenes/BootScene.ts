@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { faseInicial } from "../../../../shared/level/faseInicial";
 
 import bgAddressDeliveryUrl from "../../../../assets/games/EF03CO04/montador-de-informacoes/bg-address-delivery.png";
 import bgCharacterProfileUrl from "../../../../assets/games/EF03CO04/montador-de-informacoes/bg-character-profile.png";
@@ -67,6 +68,6 @@ export class BootScene extends Phaser.Scene {
   }
 
   create() {
-    this.scene.start("GameScene");
+    this.scene.start("GameScene", { level: faseInicial(this, 1) });
   }
 }

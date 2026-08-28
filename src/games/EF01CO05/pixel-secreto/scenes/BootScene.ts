@@ -1,4 +1,5 @@
 import * as Phaser from "phaser";
+import { faseInicial } from "../../../../shared/level/faseInicial";
 
 import bgLevelOneUrl from "../../../../assets/games/EF01CO05/pixel-secreto/bg1.png";
 import bgLevelTwoUrl from "../../../../assets/games/EF01CO05/pixel-secreto/bg2.png";
@@ -58,6 +59,6 @@ export class BootScene extends Phaser.Scene {
 
   create() {
     this.scene.launch("UIScene");
-    this.scene.start("GameScene");
+    this.scene.start("GameScene", { level: faseInicial(this, 1) });
   }
 }

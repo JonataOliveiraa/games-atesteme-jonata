@@ -1,4 +1,5 @@
 import * as Phaser from "phaser";
+import { faseInicial } from "../../../../shared/level/faseInicial";
 
 import bgMainUrl from "../../../../assets/games/EF01CO07/guardioes-dos-dados/bg-main.png";
 import guardianCharacterUrl from "../../../../assets/games/EF01CO07/guardioes-dos-dados/guardian-character.png";
@@ -66,6 +67,6 @@ export class BootScene extends Phaser.Scene {
 
   create() {
     this.scene.launch("UIScene");
-    this.scene.start("GameScene");
+    this.scene.start("GameScene", { level: faseInicial(this, 1) });
   }
 }

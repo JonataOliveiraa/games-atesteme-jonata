@@ -1,4 +1,5 @@
 import Phaser from 'phaser'
+import { faseInicial } from '../../../../shared/level/faseInicial'
 
 import type { PlatformCommand } from '../../../../shared/contracts/platformCommands'
 import { runtimeGameBridge } from '../../../../shared/bridge/runtimeGameBridge'
@@ -104,7 +105,15 @@ export class GameScene extends Phaser.Scene {
      */
     runtimeGameBridge.emit({ type: 'GAME_READY', gameId: GAME_ID })
 
-    this.startGame(1, 0)
+    /*
+     * O COMECO SEM PLATAFORMA.
+     *
+     * Quando o START_GAME chega, e ele quem manda: o `cmd.stage` la em cima
+     * ganha desta linha. Mas o jogo tambem abre sozinho pela URL, e ai
+     * ninguem manda comando nenhum — era este `1` chumbado que decidia, e
+     * o `?stage=` da query ficava sem leitor.
+     */
+    this.startGame(faseInicial(this, 1), 0)
   }
 
   shutdown() {

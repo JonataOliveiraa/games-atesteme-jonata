@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { faseInicial } from "../../../../shared/level/faseInicial";
 
 import level1ShirtFactoryBgUrl from "../../../../assets/games/EF02CO03/fabrica-de-maquinas/level-1-shirt-factory-bg.png";
 import level2PlushFactoryBgUrl from "../../../../assets/games/EF02CO03/fabrica-de-maquinas/level-2-plush-factory-bg.png";
@@ -79,6 +80,6 @@ export class BootScene extends Phaser.Scene {
   }
 
   create() {
-    this.scene.start("GameScene");
+    this.scene.start("GameScene", { level: faseInicial(this, 1) });
   }
 }

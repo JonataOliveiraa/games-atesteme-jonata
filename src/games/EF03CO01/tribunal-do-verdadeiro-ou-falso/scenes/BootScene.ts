@@ -1,4 +1,5 @@
 import Phaser from 'phaser'
+import { faseInicial } from '../../../../shared/level/faseInicial'
 
 import bgTribunalUrl from '../../../../assets/games/EF03CO01/tribunal-do-verdadeiro-ou-falso/bg-tribunal.png'
 import bgLoadingUrl from '../../../../assets/games/EF03CO01/tribunal-do-verdadeiro-ou-falso/bg-loading.png'
@@ -59,6 +60,6 @@ export class BootScene extends Phaser.Scene {
   }
 
   create() {
-    this.scene.start('GameScene')
+    this.scene.start('GameScene', { level: faseInicial(this, 1) })
   }
 }

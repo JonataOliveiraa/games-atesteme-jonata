@@ -1,4 +1,5 @@
 import Phaser from 'phaser'
+import { faseInicial } from '../../../../shared/level/faseInicial'
 
 import bgChefBancadaUrl from '../../../../assets/games/EF03CO03/chef-dos-subproblemas/bg-chef-bancada.png'
 import coverUrl from '../../../../assets/games/EF03CO03/chef-dos-subproblemas/cover-chef-dos-subproblemas.png'
@@ -122,6 +123,6 @@ export class BootScene extends Phaser.Scene {
   }
 
   create() {
-    this.scene.start('GameScene')
+    this.scene.start('GameScene', { level: faseInicial(this, 1) })
   }
 }

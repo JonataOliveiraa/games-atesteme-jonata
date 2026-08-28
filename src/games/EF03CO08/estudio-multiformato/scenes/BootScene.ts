@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { faseInicial } from "../../../../shared/level/faseInicial";
 
 import coverUrl from "../../../../assets/games/EF03CO08/estudio-multiformato/cover-estudio-multiformato.png";
 import bgFormatWorkshopUrl from "../../../../assets/games/EF03CO08/estudio-multiformato/bg-format-workshop.png";
@@ -53,6 +54,6 @@ export class BootScene extends Phaser.Scene {
   }
 
   create() {
-    this.scene.start("GameScene");
+    this.scene.start("GameScene", { level: faseInicial(this, 1) });
   }
 }
