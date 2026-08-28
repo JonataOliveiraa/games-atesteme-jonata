@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build && node scripts/gerar-paginas-og.mjs",
+    "build": "vite build && node scripts/gerar-paginas-og.mjs && node scripts/gerar-catalog-json.mjs",
     "build:game:base": "vite build --config vite.game.config.ts",
     "lint": "eslint .",
     "preview": "vite preview",
