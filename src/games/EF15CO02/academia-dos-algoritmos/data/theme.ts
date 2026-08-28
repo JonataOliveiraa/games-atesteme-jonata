@@ -16,17 +16,29 @@ export const C = {
 
 export const hex = (n: number) => `#${n.toString(16).padStart(6, '0')}`
 
-/** Every label in the game: white with a thick black stroke, no exceptions. */
+/**
+ * Toda letra do jogo: branca, com contorno grosso.
+ *
+ * O contorno é `C.ink` — o quase-preto amarronzado da paleta — e não
+ * `C.black`. Preto puro sobre a madeira e o latão desta cena vira um
+ * buraco: não pertence a nenhuma das outras cores da tela.
+ */
 export const TEXT = {
   color: C.white,
-  stroke: C.black,
+  stroke: C.ink,
   thickness: 7,
 }
 
 export const ALPHA = {
-  veil: 0.58,
+  /*
+   * O cenário é uma ilustração marrom, e a madeira das peças é marrom:
+   * sem véu forte as duas viram a mesma poça. O véu subiu, e a faixa do
+   * algoritmo ganhou uma chapa própria (`band`) para os ícones pararem
+   * de disputar leitura com o desenho de trás.
+   */
+  veil: 0.72,
   glass: 0.86,
-  empty: 0.4,
+  empty: 0.34,
   shadow: 0.32,
 }
 

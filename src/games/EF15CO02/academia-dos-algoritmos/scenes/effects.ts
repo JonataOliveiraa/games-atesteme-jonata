@@ -22,7 +22,7 @@ export function putImage(
   return img
 }
 
-function makeText(
+export function makeText(
   scene: Phaser.Scene,
   x: number,
   y: number,
@@ -119,18 +119,31 @@ export function drawGlyph(
   g.lineStyle(line, color, 1)
   g.fillStyle(color, 1)
 
+  /*
+   * PEGAR SOBE, PÔR DESCE — e estava ao contrário.
+   *
+   * O sinal `s` era aplicado a TODAS as partes, inclusive à ponta: com
+   * `up = true` a ponta ia parar embaixo do centro e a barra em cima. O
+   * glifo de `pegar` desenhava uma seta para BAIXO saindo de um teto, e o
+   * de `pôr` uma seta para CIMA. Os dois gestos do jogo, trocados.
+   *
+   * O chão agora é sempre o chão: fica embaixo nos dois casos, porque é
+   * de lá que se pega e é para lá que se põe. Quem muda é a seta.
+   */
   const arrow = (up: boolean) => {
     const s = up ? -1 : 1
+    const tip = cy + s * r * 0.62
+    const tail = cy - s * r * 0.45
 
-    g.lineBetween(cx, cy + r * 0.55 * s, cx, cy - r * 0.5 * s)
+    g.lineBetween(cx, tail, cx, tip - s * r * 0.3)
 
     g.fillTriangle(
-      cx, cy - r * 0.75 * s,
-      cx - r * 0.45, cy - r * 0.15 * s,
-      cx + r * 0.45, cy - r * 0.15 * s
+      cx, tip,
+      cx - r * 0.42, tip - s * r * 0.42,
+      cx + r * 0.42, tip - s * r * 0.42
     )
 
-    g.lineBetween(cx - r * 0.6, cy + r * 0.75 * s, cx + r * 0.6, cy + r * 0.75 * s)
+    g.lineBetween(cx - r * 0.62, cy + r * 0.86, cx + r * 0.62, cy + r * 0.86)
   }
 
   const drop = (dx: number, dy: number, k: number) => {
@@ -142,18 +155,36 @@ export function drawGlyph(
     )
   }
 
+  /*
+   * O CADEADO ABERTO ESTAVA SOLTO NO AR.
+   *
+   * A haste era deslocada 0.3r para a direita e a perna que devia entrar
+   * no corpo caía em `cx + 0.66r` — FORA do corpo, que termina em 0.55r.
+   * O desenho ficava um arco flutuando ao lado de um retângulo.
+   *
+   * Agora o deslocamento é o que cabe (0.18r): a perna direita entra no
+   * corpo, e é a ESQUERDA que fica erguida, que é o que se vê num cadeado
+   * aberto de verdade.
+   */
   const padlock = (open: boolean) => {
-    g.fillRoundedRect(cx - r * 0.55, cy - r * 0.05, r * 1.1, r * 0.85, r * 0.18)
+    const bodyTop = cy - r * 0.05
+    const arcY = cy - r * 0.34
+    const shift = open ? r * 0.18 : 0
+    const R = r * 0.36
+
+    g.fillStyle(color, 1)
+    g.fillRoundedRect(cx - r * 0.55, bodyTop, r * 1.1, r * 0.85, r * 0.18)
 
     g.lineStyle(line, color, 1)
     g.beginPath()
-    g.arc(cx + (open ? r * 0.3 : 0), cy - r * 0.3, r * 0.36, Math.PI, 0)
+    g.arc(cx + shift, arcY, R, Math.PI, 0)
     g.strokePath()
+
+    g.lineBetween(cx + shift + R, arcY, cx + shift + R, bodyTop)
     g.lineBetween(
-      cx + (open ? r * 0.66 : r * 0.36), cy - r * 0.3,
-      cx + (open ? r * 0.66 : r * 0.36), cy - r * 0.05
+      cx + shift - R, arcY,
+      cx + shift - R, open ? arcY + r * 0.2 : bodyTop
     )
-    if (!open) g.lineBetween(cx - r * 0.36, cy - r * 0.3, cx - r * 0.36, cy - r * 0.05)
   }
 
   switch (kind) {
@@ -205,15 +236,35 @@ export function drawGlyph(
       }
       break
 
+    /*
+     * A PONTA DA SETA MORA NO FIM DO ARCO.
+     *
+     * Ela era um triângulo em coordenadas fixas, e caía perto do COMEÇO do
+     * traço, virada para lugar nenhum: lido de longe, um arco com um
+     * caroço. Agora a ponta é calculada a partir do ângulo final — apoiada
+     * no ponto onde o traço acaba e virada para onde ele ia.
+     */
     case 'repeat': {
+      const R = r * 0.62
+      const from = Math.PI * 0.3
+      const to = Math.PI * 1.78
+
       g.lineStyle(line, color, 1)
       g.beginPath()
-      g.arc(cx, cy, r * 0.62, Math.PI * 0.35, Math.PI * 1.85)
+      g.arc(cx, cy, R, from, to)
       g.strokePath()
+
+      const ex = cx + Math.cos(to) * R
+      const ey = cy + Math.sin(to) * R
+      /* a tangente no fim do arco, e a perpendicular dela */
+      const tx = -Math.sin(to)
+      const ty = Math.cos(to)
+      const half = r * 0.3
+
       g.fillTriangle(
-        cx + r * 0.62, cy + r * 0.1,
-        cx + r * 0.28, cy + r * 0.3,
-        cx + r * 0.8, cy + r * 0.55
+        ex + tx * r * 0.5, ey + ty * r * 0.5,
+        ex - ty * half, ey + tx * half,
+        ex + ty * half, ey - tx * half
       )
       break
     }
@@ -234,6 +285,19 @@ export function drawGlyph(
       g.moveTo(cx - r * 0.6, cy)
       g.lineTo(cx - r * 0.15, cy + r * 0.5)
       g.lineTo(cx + r * 0.65, cy - r * 0.55)
+      g.strokePath()
+      break
+
+    /* O par do `check`. O ramo do NÃO usava um `bang`, que diz "atenção"
+     * e não "não" — e um par só se lê quando as duas metades são
+     * opostas. */
+    case 'cross':
+      g.lineStyle(line * 1.2, color, 1)
+      g.beginPath()
+      g.moveTo(cx - r * 0.52, cy - r * 0.52)
+      g.lineTo(cx + r * 0.52, cy + r * 0.52)
+      g.moveTo(cx + r * 0.52, cy - r * 0.52)
+      g.lineTo(cx - r * 0.52, cy + r * 0.52)
       g.strokePath()
       break
 
@@ -310,22 +374,34 @@ export function createHud(scene: Phaser.Scene, onHelpTap: () => void): Hud {
   const dots = scene.add.graphics()
   container.add(dots)
 
+  /*
+   * Era um retangulo arredondado passando por circulo, com o `?` branco de
+   * contorno preto grosso — e branco sobre latao nao se le. Agora e um
+   * circulo de verdade, com sombra, brilho no alto e a interrogacao em
+   * tinta escura.
+   */
+  const { cx: helpX, cy: helpY, r: helpR } = HUD.help
   const helpG = scene.add.graphics()
-  raised(
-    helpG,
-    HUD.help.cx - HUD.help.r,
-    HUD.help.cy - HUD.help.r,
-    HUD.help.r * 2,
-    HUD.help.r * 2,
-    HUD.help.r,
-    C.brass,
-    C.cream
-  )
+  helpG.fillStyle(C.black, 0.4)
+  helpG.fillCircle(helpX + 2, helpY + 4, helpR)
+  helpG.fillStyle(C.brass, 1)
+  helpG.fillCircle(helpX, helpY, helpR)
+  helpG.fillStyle(C.cream, 0.3)
+  helpG.fillCircle(helpX, helpY - helpR * 0.32, helpR * 0.7)
+  helpG.lineStyle(4, C.cream, 1)
+  helpG.strokeCircle(helpX, helpY, helpR)
   container.add(helpG)
-  container.add(makeText(scene, HUD.help.cx, HUD.help.cy, '?', SIZE.help))
+
+  container.add(
+    makeText(scene, helpX, helpY + 1, '?', SIZE.help, {
+      color: hex(C.darkWood),
+      stroke: hex(C.cream),
+      strokeThickness: 3,
+    })
+  )
 
   const helpZone = scene.add
-    .zone(HUD.help.cx, HUD.help.cy, HUD.help.r * 2, HUD.help.r * 2)
+    .zone(helpX, helpY, HUD.help.touch, HUD.help.touch)
     .setOrigin(0.5)
     .setInteractive({ useHandCursor: true })
     .setDepth(60)
@@ -927,7 +1003,7 @@ export function createShelf(
   return {
     container,
     build(fresh) {
-      pieces = fresh
+      pieces = Phaser.Utils.Array.Shuffle([...fresh])
       children.forEach((f) => f.destroy())
       children.length = 0
       zones.forEach((z) => z.destroy())

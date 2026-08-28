@@ -1,10 +1,10 @@
 import Phaser from 'phaser'
 import { FX, Ease } from '../../../../shared/effects/FX'
-import { ALPHA, C, TIMING } from '../data/theme'
+import { ALPHA, C, hex, TIMING } from '../data/theme'
 import { BELT, LANE, VERSIONS } from '../data/layout'
-import { ACTIONS, HELD, OBJECTS, slotCount } from '../data/puzzles'
+import { ACTIONS, CONDITIONS, HELD, OBJECTS, slotCount } from '../data/puzzles'
 import type { Station, TrailPuzzle, World } from '../types'
-import { drawGlyph, hasTexture, putImage } from './effects'
+import { drawGlyph, hasTexture, makeText, putImage } from './effects'
 
 type Point = { x: number; y: number }
 
@@ -50,17 +50,23 @@ function faceOf(
       bag.push(img)
       container.add(img)
     }
+    const bx = cx + r * 0.6
+    const by = cy + r * 0.6
     const badge = scene.add.graphics().setDepth(depth + 1)
-    badge.fillStyle(C.ink, 0.88)
-    badge.fillCircle(cx + r * 0.58, cy + r * 0.58, r * 0.42)
-    drawGlyph(badge, def.glyph, cx + r * 0.58, cy + r * 0.58, r * 0.26, C.cream)
+    badge.fillStyle(C.black, 0.35)
+    badge.fillCircle(bx + 2, by + 3, r * 0.56)
+    badge.fillStyle(C.ink, 1)
+    badge.fillCircle(bx, by, r * 0.54)
+    badge.lineStyle(3, C.cream, 0.9)
+    badge.strokeCircle(bx, by, r * 0.54)
+    drawGlyph(badge, def.glyph, bx, by, r * 0.36, C.cream)
     bag.push(badge)
     container.add(badge)
     return
   }
 
   const solo = scene.add.graphics().setDepth(depth)
-  drawGlyph(solo, def.glyph, cx, cy, r * 0.55, C.cream)
+  drawGlyph(solo, def.glyph, cx, cy, r * 0.7, C.cream)
   bag.push(solo)
   container.add(solo)
 }
@@ -88,10 +94,13 @@ export interface Garden {
   where(objectId: string, world: World): Point
   walkTo(x: number): Promise<void>
   hop(): Promise<void>
-  toBranch(station: number, yes: boolean): Promise<void>
+  toBranch(station: number): Promise<void>
+  /** A Lia, para a câmera seguir. */
+  walker(): Phaser.GameObjects.Container
   toLane(): Promise<void>
   reveal(station: number, yes: boolean): Promise<void>
   carry(sourceId: string, to: Point, world: World, consumed: boolean): Promise<void>
+  pour(to: Point): Promise<void>
   trouble(objectId: string, world: World): Promise<void>
   arrive(): Promise<void>
   missGoal(): Promise<void>
@@ -101,6 +110,7 @@ export interface Garden {
 export function createGarden(scene: Phaser.Scene, onSlotTap: (i: number) => void): Garden {
   const container = scene.add.container(0, 0).setDepth(10)
   const ground = scene.add.graphics().setDepth(8)
+  const hintG = scene.add.graphics().setDepth(13)
   const marks = scene.add.graphics().setDepth(13)
   const slotG = scene.add.graphics().setDepth(14)
   container.add(ground)
@@ -122,6 +132,7 @@ export function createGarden(scene: Phaser.Scene, onSlotTap: (i: number) => void
   const objectSpots = new Map<string, Point>()
   const objectImgs = new Map<string, Phaser.GameObjects.Image>()
   const covers = new Map<number, Phaser.GameObjects.Container>()
+  const askMarks = new Map<number, Phaser.GameObjects.Container>()
   const goalIcons: Phaser.GameObjects.Image[] = []
   const scrap: Phaser.GameObjects.GameObject[] = []
   const faces: Phaser.GameObjects.GameObject[] = []
@@ -137,6 +148,33 @@ export function createGarden(scene: Phaser.Scene, onSlotTap: (i: number) => void
   let handImg: Phaser.GameObjects.Image | null = null
 
   const followHand = () => hand.setPosition(lia.x + 54, lia.y - 46)
+
+  /*
+   * A ORDEM DAS CAMADAS, e por que ela e esta.
+   *
+   * Container nao ordena filho por `depth`: desenha na ordem em que
+   * recebeu. Sem arrumar, a Lia ficava atras de tudo e sumia; levantando
+   * ela para o topo, passava a andar por cima dos icones do algoritmo.
+   *
+   * Nem um nem outro: os icones sao a PROGRAMACAO, e programacao e camada
+   * de interface — fica sempre visivel. A Lia e mundo: anda na frente do
+   * chao, das pedras e das coisas, e por tras dos icones.
+   *
+   *   chao < pedras < coisas < Lia e a mao < colchete, buracos e gestos
+   */
+  const raiseWalker = () => {
+    container.bringToTop(lia)
+    container.bringToTop(hand)
+  }
+  scene.tweens.add({
+    targets: hintG,
+    alpha: 0.45,
+    duration: 780,
+    yoyo: true,
+    repeat: -1,
+    ease: 'Sine.easeInOut',
+  })
+
   const goalPost = (): Point => ({ x: LANE.goal.cx, y: LANE.cy + LANE.goal.objectDy })
 
   /**
@@ -160,6 +198,7 @@ export function createGarden(scene: Phaser.Scene, onSlotTap: (i: number) => void
     objectSpots.clear()
     covers.forEach((c) => c.destroy())
     covers.clear()
+    askMarks.clear()
     goalIcons.forEach((i) => i.destroy())
     goalIcons.length = 0
     zones.forEach((z) => z.destroy())
@@ -177,22 +216,6 @@ export function createGarden(scene: Phaser.Scene, onSlotTap: (i: number) => void
 
     stations.forEach((st, i) => {
       const cx = centers[i]
-
-      if (st.kind === 'fork') {
-        const px = cx + LANE.fork.postDx
-        const rx = cx + LANE.fork.slotDx + LANE.slot.r + 44
-        for (const dir of [-1, 1]) {
-          const y = LANE.cy + dir * LANE.fork.dy
-          ground.lineStyle(34, C.wood, 0.92)
-          ground.beginPath()
-          ground.moveTo(px, LANE.cy)
-          ground.lineTo(px + 68, y)
-          ground.lineTo(rx - 68, y)
-          ground.lineTo(rx, LANE.cy)
-          ground.strokePath()
-        }
-        return
-      }
 
       const { w, h, radius } = LANE.stone
       const wide = st.kind === 'loop' ? w + 44 : w
@@ -223,10 +246,10 @@ export function createGarden(scene: Phaser.Scene, onSlotTap: (i: number) => void
         const top = LANE.loop.top
         marks.lineStyle(8, C.brass, 0.95)
         marks.beginPath()
-        marks.moveTo(cx - hw, LANE.cy + 58)
+        marks.moveTo(cx - hw, LANE.loop.bottom)
         marks.lineTo(cx - hw, top)
         marks.lineTo(cx + hw, top)
-        marks.lineTo(cx + hw, LANE.cy + 58)
+        marks.lineTo(cx + hw, LANE.loop.bottom)
         marks.strokePath()
 
         const n = st.each.length
@@ -237,40 +260,72 @@ export function createGarden(scene: Phaser.Scene, onSlotTap: (i: number) => void
           marks.fillStyle(done > k ? C.green : C.cream, 1)
           marks.fillCircle(first + k * LANE.loop.pip.gap, top - 4, LANE.loop.pip.r)
         }
-        drawGlyph(marks, 'repeat', cx - hw - 28, top + 34, 17, C.brass)
         return
       }
 
       if (st.kind === 'fork') {
+        const F = LANE.fork
+        const elbow = cx + F.elbowDx
+
         for (const dir of [-1, 1]) {
-          const y = LANE.cy + dir * LANE.fork.dy
-          const mx = cx + LANE.fork.markDx
+          const y = LANE.slotY + dir * F.dy
           const yes = dir < 0
-          marks.fillStyle(C.ink, 0.8)
-          marks.fillCircle(mx, y, 27)
+
+          marks.lineStyle(10, C.wood, 1)
+          marks.beginPath()
+          marks.moveTo(cx + F.cardDx + F.cardR, LANE.slotY)
+          marks.lineTo(elbow, LANE.slotY)
+          marks.lineTo(elbow, y)
+          marks.lineTo(cx + F.slotDx - LANE.slot.r, y)
+          marks.strokePath()
+
+          marks.fillStyle(C.ink, 1)
+          marks.fillCircle(elbow, y, 24)
           marks.fillStyle(yes ? C.green : C.coral, 1)
-          marks.fillCircle(mx, y, 23)
-          drawGlyph(marks, yes ? 'check' : 'bang', mx, y, 13, C.ink)
+          marks.fillCircle(elbow, y, 20)
+          drawGlyph(marks, yes ? 'check' : 'cross', elbow, y, 12, C.ink)
         }
       }
     })
   }
 
+  const nextEmpty = () => placed.findIndex((p, i) => p === null && !reserved.has(i))
+
   const paintSlots = () => {
     slotG.clear()
+    hintG.clear()
+
+    const next = active ? nextEmpty() : -1
+
     slotXY.forEach((p, i) => {
       const taken = placed[i] !== null
       const ring =
-        blamed === i ? C.coral : lit === i || reserved.has(i) ? C.brass : C.wood
-      slotG.fillStyle(C.ink, taken ? 0.9 : ALPHA.empty)
+        blamed === i ? C.coral : lit === i || reserved.has(i) ? C.brass : C.dim
+      slotG.fillStyle(C.ink, taken ? 0.95 : ALPHA.empty)
       slotG.fillCircle(p.x, p.y, LANE.slot.r)
       slotG.lineStyle(blamed === i || lit === i ? 7 : 4, ring, 1)
       slotG.strokeCircle(p.x, p.y, LANE.slot.r)
       if (!taken && !reserved.has(i)) {
-        slotG.lineStyle(3, C.cream, 0.28)
+        slotG.lineStyle(3, C.cream, 0.22)
         slotG.strokeCircle(p.x, p.y, LANE.slot.r - 14)
       }
     })
+
+    // Onde o próximo gesto vai cair. Sem isto a criança toca no cinto e a
+    // peça some para um buraco que ela não estava olhando.
+    if (next >= 0) {
+      const p = slotXY[next]
+      hintG.fillStyle(C.brass, 0.16)
+      hintG.fillCircle(p.x, p.y, LANE.slot.r + 20)
+      hintG.lineStyle(7, C.brass, 0.95)
+      hintG.strokeCircle(p.x, p.y, LANE.slot.r + 6)
+      hintG.fillStyle(C.brass, 1)
+      hintG.fillTriangle(
+        p.x, p.y - LANE.slot.r - 20,
+        p.x - 15, p.y - LANE.slot.r - 44,
+        p.x + 15, p.y - LANE.slot.r - 44
+      )
+    }
   }
 
   const paintFaces = () => {
@@ -279,6 +334,7 @@ export function createGarden(scene: Phaser.Scene, onSlotTap: (i: number) => void
     placed.forEach((a, i) => {
       if (a) faceOf(scene, container, faces, a, slotXY[i].x, slotXY[i].y, LANE.slot.r - 10)
     })
+    raiseWalker()
   }
 
   const paintObjects = (world: World) => {
@@ -302,6 +358,7 @@ export function createGarden(scene: Phaser.Scene, onSlotTap: (i: number) => void
       }
       img.setAlpha(def.hidden?.(world) || held === id ? 0 : 1)
     })
+    raiseWalker()
   }
 
   const paintHand = (world: World) => {
@@ -346,27 +403,77 @@ export function createGarden(scene: Phaser.Scene, onSlotTap: (i: number) => void
         const cx = centers[i]
 
         if (st.kind === 'fork') {
-          slotXY.push({ x: cx + LANE.fork.slotDx, y: LANE.cy - LANE.fork.dy })
-          slotXY.push({ x: cx + LANE.fork.slotDx, y: LANE.cy + LANE.fork.dy })
-          place(st.about, { x: cx + LANE.fork.postDx, y: LANE.cy - 112 })
+          const F = LANE.fork
+          slotXY.push({ x: cx + F.slotDx, y: LANE.slotY - F.dy })
+          slotXY.push({ x: cx + F.slotDx, y: LANE.slotY + F.dy })
+          place(st.about, { x: cx + F.postDx, y: LANE.object.cy })
 
-          const cover = scene.add.container(cx + LANE.fork.postDx, LANE.cy - 112).setDepth(20)
+          const cover = scene.add.container(cx + F.cardDx, LANE.slotY).setDepth(20)
+
+          const plate = scene.add.graphics()
+          plate.fillStyle(C.black, 0.4)
+          plate.fillCircle(2, 6, F.cardR)
+          plate.fillStyle(C.glass, 1)
+          plate.fillCircle(0, 0, F.cardR)
+          plate.lineStyle(6, C.brass, 1)
+          plate.strokeCircle(0, 0, F.cardR)
+          cover.add(plate)
+
+          // A silhueta diz SOBRE O QUE se pergunta; o `?` diz que a
+          // resposta ainda não existe.
+          const shape = putImage(
+            scene,
+            OBJECTS[st.about]?.texture(world) ?? '',
+            0,
+            -4,
+            F.cardR * 1.2,
+            F.cardR * 1.2
+          )
+          if (shape) {
+            shape.setTintFill(C.ink)
+            cover.add(shape)
+          }
+
+          // O `?` é a letra, igual à do botão de ajuda — a interrogação
+          // desenhada à mão nunca fica com a mesma cara da fonte.
+          const badge = scene.add.container(F.cardR * 0.62, F.cardR * 0.62)
           const disc = scene.add.graphics()
-          disc.fillStyle(C.ink, 0.94)
-          disc.fillCircle(0, 0, 62)
-          disc.lineStyle(6, C.brass, 1)
-          disc.strokeCircle(0, 0, 62)
-          drawGlyph(disc, 'question', 0, -8, 26, C.cream)
-          drawGlyph(disc, st.ask, 0, 34, 13, C.brass)
-          cover.add(disc)
+          disc.fillStyle(C.ink, 1)
+          disc.fillCircle(0, 0, 25)
+          disc.lineStyle(3, C.brass, 1)
+          disc.strokeCircle(0, 0, 25)
+          badge.add(disc)
+          badge.add(
+            makeText(scene, 0, 1, '?', '30px', {
+              color: hex(C.brass),
+              strokeThickness: 0,
+            })
+          )
+          cover.add(badge)
+          askMarks.set(i, badge)
+
+          const ask = makeText(
+            scene,
+            cx + F.cardDx,
+            LANE.slotY + F.labelDy,
+            CONDITIONS[st.condition]?.question ?? '',
+            '22px',
+            { wordWrap: { width: 220 } }
+          )
+          ask.setDepth(21)
+          scrap.push(ask)
+          container.add(ask)
+
           covers.set(i, cover)
           container.add(cover)
           return
         }
 
-        slotXY.push({ x: cx, y: LANE.cy })
+        slotXY.push({ x: cx, y: LANE.slotY })
 
-        if (st.kind === 'loop') {
+        if (st.kind === 'check') {
+          place(st.about, { x: cx, y: LANE.object.cy })
+        } else if (st.kind === 'loop') {
           const n = st.each.length
           const first = cx - ((n - 1) * LANE.object.gap) / 2
           st.each.forEach((id, k) =>
@@ -440,6 +547,29 @@ export function createGarden(scene: Phaser.Scene, onSlotTap: (i: number) => void
       followHand()
     },
 
+    async pour(to) {
+      const water = putImage(scene, 'item-poca', to.x, to.y - 130, 76, 76)
+      if (!water) return
+
+      const wide = water.scaleX
+      const tall = water.scaleY
+      water.setDepth(30)
+      container.add(water)
+      raiseWalker()
+
+      await FX.to(scene, water, { y: to.y - 10 }, { duration: 240, ease: 'Quad.easeIn' })
+      await FX.to(
+        scene,
+        water,
+        { y: to.y + 16, scaleX: wide * 1.55, scaleY: tall * 0.4 },
+        { duration: 130 }
+      )
+      await FX.to(scene, water, { alpha: 0, scaleX: wide * 1.8 }, { duration: 340 })
+      water.destroy()
+    },
+
+    walker: () => lia,
+
     slots: () => placed.length,
     filled: () => [...placed],
     firstEmpty: () => placed.findIndex((p, i) => p === null && !reserved.has(i)),
@@ -472,6 +602,7 @@ export function createGarden(scene: Phaser.Scene, onSlotTap: (i: number) => void
       zones.forEach((z) => {
         if (z.input) z.input.enabled = on
       })
+      paintSlots()
     },
 
     light(i) {
@@ -497,7 +628,7 @@ export function createGarden(scene: Phaser.Scene, onSlotTap: (i: number) => void
      *
      * Na estação dela, se tiver uma; na mão da Lia, se ela estiver carregando;
      * senão, lá na placa do fim — que é onde mora a mochila, e é por isso que
-     * o brinquedo atravessa a tela até ela.
+     * a coisa atravessa a tela até ela.
      */
     where(objectId, world) {
       if (world.inHand && HELD[world.inHand] === objectId) {
@@ -529,10 +660,8 @@ export function createGarden(scene: Phaser.Scene, onSlotTap: (i: number) => void
       followHand()
     },
 
-    async toBranch(station, yes) {
-      const y = LANE.cy + (yes ? -LANE.fork.dy : LANE.fork.dy)
-      const x = centers[station] + LANE.fork.slotDx - LANE.slot.r - 30
-      await FX.to(scene, lia, { x, y }, { duration: 380, ease: Ease.smooth })
+    async toBranch(station) {
+      await FX.to(scene, lia, { x: centers[station] }, { duration: 320, ease: Ease.smooth })
       followHand()
     },
 
@@ -546,19 +675,30 @@ export function createGarden(scene: Phaser.Scene, onSlotTap: (i: number) => void
     async reveal(station, yes) {
       const cover = covers.get(station)
       if (!cover) return
-      await FX.to(scene, cover, { scale: 1.2 }, { duration: 150, ease: Ease.back(2) })
+
+      await FX.to(scene, cover, { scale: 1.16 }, { duration: 160, ease: Ease.back(2) })
+
+      const mark = askMarks.get(station)
+      if (mark) {
+        void FX.to(scene, mark, { alpha: 0, scale: 0.4 }, { duration: 200 })
+        askMarks.delete(station)
+      }
+      cover.list.forEach((child) => {
+        const img = child as Phaser.GameObjects.Image
+        if (typeof img.clearTint === 'function') img.clearTint()
+      })
+
       await FX.all(
-        FX.to(scene, cover, { alpha: 0, scale: 0.55 }, { duration: 240 }),
-        FX.ping(scene, cover.x, cover.y, yes ? C.green : C.coral, { radius: 92 })
+        FX.to(scene, cover, { scale: 1 }, { duration: 220, ease: Ease.settle }),
+        FX.ping(scene, cover.x, cover.y, yes ? C.green : C.coral, { radius: 96 })
       )
-      cover.destroy()
       covers.delete(station)
     },
 
     /**
      * A COISA VIAJA — e é ela, não um disco genérico.
      *
-     * O brinquedo sai do canteiro, entra na mochila e não volta; a pasta vai
+     * A coisa sai do lugar dela, entra na mochila e não volta; a pasta vai
      * até a escova, se inclina como quem espreme, e volta para o lugar dela.
      * Uma textura que troca sozinha esconde a causa; um objeto que se move
      * mostra quem fez o quê em quem, que é o que um passo de algoritmo é.
@@ -678,6 +818,8 @@ export interface Belt {
   container: Phaser.GameObjects.Container
   build(ids: string[]): void
   posOf(i: number): Point
+  /** Esconde os gestos que já estão num buraco. */
+  setUsed(ids: string[]): void
   setActive(on: boolean): void
   destroy(): void
 }
@@ -692,8 +834,10 @@ export function createBelt(
 
   let ids: string[] = []
   let active = true
+  let used: string[] = []
   const zones: Phaser.GameObjects.Zone[] = []
   const bag: Phaser.GameObjects.GameObject[] = []
+  const pieces = new Map<number, Phaser.GameObjects.GameObject[]>()
 
   const xOf = (i: number) => BELT.cx - ((ids.length - 1) * BELT.token.gap) / 2 + i * BELT.token.gap
 
@@ -701,24 +845,41 @@ export function createBelt(
     container,
 
     build(next) {
-      ids = next
+      ids = Phaser.Utils.Array.Shuffle([...next])
+      used = []
       bag.forEach((o) => o.destroy())
       bag.length = 0
       zones.forEach((z) => z.destroy())
       zones.length = 0
+      pieces.clear()
 
       g.clear()
       ids.forEach((_, i) => drawToken(g, xOf(i), BELT.cy, BELT.token.r, C.wood, C.brass))
 
       ids.forEach((id, i) => {
-        faceOf(scene, container, bag, id, xOf(i), BELT.cy, BELT.token.r - 10, 22)
+        const x = xOf(i)
+        const own: Phaser.GameObjects.GameObject[] = []
+        faceOf(scene, container, own, id, x, BELT.cy, BELT.token.r - 10, 22)
+        own.forEach((o) => bag.push(o))
+
+        const name = makeText(scene, x, BELT.cy + BELT.label.dy, ACTIONS[id]?.label ?? '', BELT.label.size, {
+          wordWrap: { width: BELT.label.wrap },
+        })
+        name.setDepth(23)
+        bag.push(name)
+        own.push(name)
+        container.add(name)
+        pieces.set(i, own)
+
         const z = scene.add
-          .zone(xOf(i), BELT.cy, BELT.token.r * 2, BELT.token.r * 2)
+          .zone(x, BELT.cy + BELT.label.dy / 2, BELT.token.r * 2 + 12, BELT.token.r * 2 + BELT.label.dy)
           .setOrigin(0.5)
           .setInteractive({ useHandCursor: true })
           .setDepth(60)
         z.on('pointerdown', () => {
-          if (active) onTap(id, i)
+          if (!active) return
+          void FX.ping(scene, x, BELT.cy, C.brass, { radius: BELT.token.r })
+          onTap(id, i)
         })
         zones.push(z)
       })
@@ -726,16 +887,40 @@ export function createBelt(
 
     posOf: (i) => ({ x: xOf(i), y: BELT.cy }),
 
+    /*
+     * Um gesto que já está no caminho não pode continuar no cinto: a
+     * criança tocava nele de novo e nada acontecia, o que lê como jogo
+     * travado. Tirar o gesto do lugar devolve o disco.
+     */
+    setUsed(next) {
+      used = next
+      g.clear()
+      ids.forEach((id, i) => {
+        const gone = used.includes(id)
+        if (!gone) drawToken(g, xOf(i), BELT.cy, BELT.token.r, C.wood, C.brass)
+
+        const own = pieces.get(i) ?? []
+        own.forEach((o) => {
+          const shown = o as unknown as { setAlpha?: (a: number) => void }
+          shown.setAlpha?.(gone ? 0 : 1)
+        })
+
+        const z = zones[i]
+        if (z?.input) z.input.enabled = active && !gone
+      })
+    },
+
     setActive(on) {
       active = on
-      zones.forEach((z) => {
-        if (z.input) z.input.enabled = on
+      zones.forEach((z, i) => {
+        if (z.input) z.input.enabled = on && !used.includes(ids[i])
       })
     },
 
     destroy() {
       zones.forEach((z) => z.destroy())
       zones.length = 0
+      pieces.clear()
       container.destroy(true)
     },
   }

@@ -1,7 +1,6 @@
 import Phaser from 'phaser'
 import { BootScene } from './scenes/BootScene'
 import { GameScene } from './scenes/GameScene'
-import { GardenScene } from './scenes/GardenScene'
 import { C, hex } from './data/theme'
 import { H, W } from './data/layout'
 
@@ -21,7 +20,7 @@ const config: Phaser.Types.Core.GameConfig = {
   audio: { disableWebAudio: false },
   dom: { createContainer: false },
 
-  scene: [BootScene, GameScene, GardenScene],
+  scene: [BootScene, GameScene],
 }
 
 export default config

@@ -9,7 +9,9 @@ export const HUD = {
   accent: 3,
   level: { x: 28, cy: 24 },
   dot: { r: 8, gap: 26, y: 48, x: 36 },
-  help: { cx: 1226, cy: 34, r: 30 },
+  // Longe da borda: 62px de margem a direita, e o toque e maior que o
+  // desenho (68px) para caber o dedo.
+  help: { cx: 1218, cy: 34, r: 27, touch: 68 },
 }
 
 export const BENCH = {
@@ -71,30 +73,68 @@ export const COLUMN = {
   trainer: { cy: 550, w: 280, h: 300 },
 }
 
-/** O nível 2 não tem bancada: tem um caminho, e o caminho é o enunciado. */
+/**
+ * O nível 2 em TRÊS FAIXAS, de cima para baixo.
+ *
+ *   1. o ALGORITMO — os buracos dos gestos e o colchete do laço
+ *   2. as COISAS   — plantas, mochila, o que a Lia usa
+ *   3. o CAMINHO   — as pedras, e a Lia andando
+ *
+ * Os buracos moravam na mesma linha do caminho, e a Lia passava por cima
+ * deles a partida inteira. Pôr ela atrás resolvia a metade errada: os
+ * ícones sumiam ou ela sumia. Separar as faixas resolve as duas, e de
+ * quebra diz o que cada coisa é — em cima o programa, embaixo o mundo.
+ *
+ * A conta que não pode quebrar: o topo da Lia (332) fica abaixo do buraco
+ * mais baixo da bifurcação (302), e os pés dela (424) ficam bem acima do
+ * cinto (534).
+ */
 export const LANE = {
-  cy: 392,
+  /** Faixa 1: a linha dos buracos. */
+  slotY: 200,
+  /** Faixa 3: o caminho por onde ela anda. */
+  cy: 424,
   x0: 110,
   x1: 1060,
-  /** Onde a Lia começa, fora da primeira estação. */
   startX: 62,
-  stone: { w: 208, h: 92, radius: 26 },
-  slot: { r: 52 },
-  /** A fileira de coisas, acima do caminho. */
-  object: { cy: 240, size: 96, gap: 104 },
-  /** O laço: um colchete que abraça a estação inteira. */
-  loop: { top: 172, halfWidth: 152, pip: { r: 9, gap: 26 } },
-  /** A bifurcação: o poste da dúvida e os dois ramos. */
-  fork: { dy: 84, postDx: -118, markDx: -62, slotDx: 34 },
-  goal: { cx: 1168, cy: 392, w: 156, radius: 22, icon: 52, gap: 8, objectDy: -210 },
-  lia: { h: 140 },
+  /** O quanto ela para antes da coisa: em cima dela o gesto fica escondido. */
+  stand: 82,
+  stone: { w: 208, h: 84, radius: 24 },
+  slot: { r: 46 },
+  /** Faixa 2. */
+  object: { cy: 348, size: 88, gap: 104 },
+  loop: { top: 116, bottom: 404, halfWidth: 152, pip: { r: 9, gap: 26 } },
+  /*
+   * A bifurcação lida como fluxograma: a placa da pergunta à esquerda,
+   * dois fios saindo dela, um ✓ e um ✗ na dobra, e um buraco no fim de
+   * cada fio. Antes era um disco preto solto com um `?` — e nos enigmas
+   * em que a coisa perguntada mora noutra estação o disco não cobria
+   * nada: ficava um `?` boiando, sem dizer sobre O QUE se perguntava.
+   */
+  fork: {
+    dy: 56,
+    postDx: -118,
+    cardDx: -104,
+    cardR: 50,
+    elbowDx: -20,
+    slotDx: 78,
+    labelDy: 76,
+  },
+  goal: { cx: 1168, cy: 424, w: 156, radius: 22, icon: 52, gap: 8, objectDy: -180 },
+  lia: { h: 104 },
 }
 
 export const BELT = {
-  cy: 636,
-  token: { r: 54, gap: 130 },
-  cx: 500,
-  play: { cx: 1160, cy: 636, r: 52 },
+  /*
+   * O cinto subiu 46px para caber o NOME de cada gesto embaixo do disco.
+   * O topo do disco (534) passa 6px abaixo do buraco mais baixo da
+   * bifurcacao (528); a base do nome fica em 694, com folga ate 720.
+   */
+  cy: 590,
+  token: { r: 56, gap: 176 },
+  cx: 512,
+  label: { dy: 90, size: '24px', wrap: 170 },
+  play: { cx: 1168, cy: 596, r: 60 },
 }
 
 /** O quadro de versões: o que ela tentou, em ordem, sem uma palavra. */

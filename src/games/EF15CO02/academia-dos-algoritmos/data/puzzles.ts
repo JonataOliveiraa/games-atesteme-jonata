@@ -9,7 +9,6 @@ import type {
   Result,
   Station,
   TrailPuzzle,
-  Glyph,
 } from '../types'
 
 const emptyWorld = (extra: Partial<World> = {}): World => ({
@@ -30,9 +29,20 @@ export const OBJECTS: Record<string, SceneObject> = {
           : 'item-escova-sem-pasta',
   },
   pasta: { id: 'pasta', texture: () => 'item-pasta-dente' },
+  /*
+   * A MOCHILA ABERTA PRECISA PARECER ABERTA.
+   *
+   * Ela desenhava `item-mochila` sempre, e o único sinal de estar aberta
+   * era um brilho em volta. No nível 2 isso quebra o enigma inteiro: a
+   * bifurcação PERGUNTA se a mochila está aberta, e a criança tinha de
+   * responder olhando para um brilho — enquanto o desenho, que é onde ela
+   * olha, dizia a mesma coisa nos dois casos.
+   *
+   * O brilho continua, como reforço. Quem conta a história é o desenho.
+   */
   mochila: {
     id: 'mochila',
-    texture: () => 'item-mochila',
+    texture: (m) => (m.facts.has('mochila-aberta') ? 'item-mochila-aberta' : 'item-mochila'),
     glows: (m) => m.facts.has('mochila-aberta'),
   },
   caderno: {
@@ -192,17 +202,34 @@ define({
 
 
 const THREE = [1, 2, 3]
+const SUPPLY_TEXTURES = ['item-caderno', 'item-lanche', 'item-bloco-montar']
+
+/** Os alvos do nível 3: cada um nasce seco ou já molhado, e isso se VÊ. */
+const TARGETS = ['alvo-1', 'alvo-2']
+
+TARGETS.forEach((id) => {
+  OBJECTS[id] = {
+    id,
+    texture: (m) => (m.facts.has(`${id}-molhado`) ? 'item-poca' : 'item-planta'),
+    glows: (m) => m.facts.has(`${id}-pronto`),
+  }
+})
+
+/** Qual alvo a vez atual olha. O contador anda a cada estação de checagem. */
+const currentTarget = (m: World) => TARGETS[Math.min(m.counter, TARGETS.length - 1)]
 
 THREE.forEach((n) => {
+  // O canteiro nao troca de desenho: quem mostra a rega e a agua caindo
+  // (`garden.pour`). O brilho marca os que ja foram.
   OBJECTS[`canteiro-${n}`] = {
     id: `canteiro-${n}`,
-    texture: (m) => (m.facts.has(`canteiro-${n}-molhado`) ? 'item-poca' : 'item-planta'),
+    texture: () => 'item-planta',
     glows: (m) => m.facts.has(`canteiro-${n}-regado`),
   }
-  OBJECTS[`brinquedo-${n}`] = {
-    id: `brinquedo-${n}`,
-    texture: () => 'item-brinquedo',
-    hidden: (m) => m.facts.has(`brinquedo-${n}-guardado`),
+  OBJECTS[`material-${n}`] = {
+    id: `material-${n}`,
+    texture: () => SUPPLY_TEXTURES[n - 1],
+    hidden: (m) => m.facts.has(`material-${n}-guardado`),
   }
 })
 
@@ -234,30 +261,103 @@ define({
 })
 
 define({
-  id: 'guardar-brinquedo',
+  id: 'guardar-material',
   label: 'guardar',
-  texture: 'item-brinquedo',
+  texture: 'item-caderno',
   glyph: 'put',
   target: 'mochila',
-  source: (m) => `brinquedo-${Math.min(m.counter + 1, 3)}`,
+  source: (m) => `material-${Math.min(m.counter + 1, 3)}`,
   blame: 'mochila',
   apply: (m) => {
     if (!m.facts.has('mochila-aberta')) return 'A mochila está fechada.'
     m.counter += 1
-    m.facts.add(`brinquedo-${m.counter}-guardado`)
+    m.facts.add(`material-${m.counter}-guardado`)
     return null
   },
 })
 
+define({
+  id: 'se-seco-regar',
+  label: 'se seco, regar',
+  texture: 'item-planta',
+  glyph: 'drops',
+  target: (m) => currentTarget(m),
+  source: 'regador',
+  requires: 'alvo-seco',
+  apply: (m) => {
+    if (m.inHand !== 'o regador') return 'O regador não está na mão.'
+    m.facts.add(`${currentTarget(m)}-pronto`)
+    m.counter += 1
+    return null
+  },
+})
+
+define({
+  id: 'se-molhado-seguir',
+  label: 'se molhado, seguir',
+  texture: 'item-poca',
+  glyph: 'walk',
+  target: (m) => currentTarget(m),
+  requires: 'alvo-molhado',
+  apply: (m) => {
+    m.facts.add(`${currentTarget(m)}-pronto`)
+    m.counter += 1
+    return null
+  },
+})
+
+define({
+  id: 'se-fechada-abrir',
+  label: 'se fechada, abrir',
+  texture: 'item-mochila',
+  glyph: 'unlock',
+  target: 'mochila',
+  requires: 'mochila-fechada',
+  apply: (m) => {
+    m.facts.add('mochila-aberta')
+    return null
+  },
+})
+
+define({
+  id: 'se-aberta-seguir',
+  label: 'se aberta, seguir',
+  texture: 'item-mochila-aberta',
+  glyph: 'walk',
+  target: 'mochila',
+  requires: 'mochila-aberta',
+  apply: () => null,
+})
+
 export const CONDITIONS: Record<string, Condition> = {
+  'alvo-seco': {
+    id: 'alvo-seco',
+    label: 'seco',
+    question: 'ESTÁ SECO?',
+    test: (m) => !m.facts.has(`${currentTarget(m)}-molhado`),
+  },
+  'alvo-molhado': {
+    id: 'alvo-molhado',
+    label: 'molhado',
+    question: 'ESTÁ MOLHADO?',
+    test: (m) => m.facts.has(`${currentTarget(m)}-molhado`),
+  },
+  'mochila-fechada': {
+    id: 'mochila-fechada',
+    label: 'fechada',
+    question: 'ESTÁ FECHADA?',
+    test: (m) => !m.facts.has('mochila-aberta'),
+  },
   'regador-cheio': {
     id: 'regador-cheio',
     label: 'cheio',
+    question: 'TEM ÁGUA?',
     test: (m) => m.facts.has('regador-cheio'),
   },
   'mochila-aberta': {
     id: 'mochila-aberta',
     label: 'aberta',
+    question: 'ESTÁ ABERTA?',
     test: (m) => m.facts.has('mochila-aberta'),
   },
 }
@@ -281,6 +381,15 @@ export function simulate(
   const runAction = (actionId: string, slot: number, extra: Partial<Beat> = {}) => {
     const a = ACTIONS[actionId]
     if (!a) return `O passo "${actionId}" não existe.`
+
+    // Carta SE cuja condição não vale: o passo trava, e a frase diz o que
+    // ele esperava encontrar. É o que faz a criança olhar o caminho.
+    if (a.requires && !CONDITIONS[a.requires]?.test(world)) {
+      const esperado = CONDITIONS[a.requires]?.label ?? ''
+      const recado = `Esta carta só serve quando está ${esperado}.`
+      beats.push({ slot, action: actionId, ...extra, error: recado })
+      return recado
+    }
 
     const error = a.apply(world)
     beats.push({ slot, action: actionId, ...extra, ...(error ? { error } : {}) })
@@ -403,71 +512,107 @@ const trail = (
 ): TrailPuzzle => ({ id, goal, trail: stations, belt, initialWorld, reached })
 
 const walk = (object?: string): Station => ({ kind: 'step', object })
+const check = (about: string): Station => ({ kind: 'check', about })
 const loop = (each: string[]): Station => ({ kind: 'loop', each })
-const fork = (about: string, condition: string, ask: Glyph): Station => ({
-  kind: 'fork',
-  about,
-  condition,
-  ask,
-})
-
 const CANTEIROS = ['canteiro-1', 'canteiro-2', 'canteiro-3']
-const BRINQUEDOS = ['brinquedo-1', 'brinquedo-2', 'brinquedo-3']
+const SUPPLIES = ['material-1', 'material-2', 'material-3']
 
-/** Meio a meio, e a criança não vê qual saiu: é o que obriga a bifurcação. */
-const maybe = (fact: string) => () =>
-  Math.random() < 0.5 ? emptyWorld({ facts: new Set([fact]) }) : emptyWorld()
-
+/*
+ * A ficha do EF15CO02 divide as três estruturas por nível:
+ *   N1 sequência · N2 repetição · N3 seleção condicional
+ *
+ * O cinto só traz o que o algoritmo usa. A exceção é o N3: lá as DUAS
+ * cartas SE aparecem de propósito, porque escolher entre elas olhando o
+ * caminho é a atividade — a que não serve não é distrator, é a outra
+ * metade da decisão. A ordem dos discos é sorteada na montagem.
+ */
 const TRAIL_PUZZLES: TrailPuzzle[] = [
   trail(
     'canteiros',
     ['item-planta', 'item-planta', 'item-planta'],
     [walk('regador'), walk(), loop(CANTEIROS)],
-    ['pegar-regador', 'encher-regador', 'regar-canteiro', 'seguir'],
+    ['pegar-regador', 'encher-regador', 'regar-canteiro'],
     () => emptyWorld(),
     (m) => m.counter === 3 && CANTEIROS.every((c) => m.facts.has(`${c}-regado`))
   ),
   trail(
-    'brinquedos',
-    ['item-brinquedo', 'item-brinquedo', 'item-brinquedo'],
-    [walk('mochila'), loop(BRINQUEDOS)],
-    ['abrir-mochila', 'guardar-brinquedo', 'fechar-mochila', 'seguir'],
+    'material',
+    SUPPLY_TEXTURES,
+    [walk('mochila'), loop(SUPPLIES)],
+    ['abrir-mochila', 'guardar-material'],
     () => emptyWorld(),
-    (m) => m.counter === 3 && BRINQUEDOS.every((b) => m.facts.has(`${b}-guardado`))
-  ),
-  trail(
-    'regador-misterioso',
-    ['item-planta'],
-    [walk('regador'), fork('regador', 'regador-cheio', 'drop'), walk('canteiro-1')],
-    ['pegar-regador', 'encher-regador', 'regar-canteiro', 'seguir'],
-    maybe('regador-cheio'),
-    (m) => m.counter === 1 && m.facts.has('canteiro-1-regado')
-  ),
-  trail(
-    'mochila-misteriosa',
-    ['item-brinquedo'],
-    [fork('mochila', 'mochila-aberta', 'unlock'), walk('brinquedo-1')],
-    ['abrir-mochila', 'guardar-brinquedo', 'seguir', 'fechar-mochila'],
-    maybe('mochila-aberta'),
-    (m) => m.counter === 1 && m.facts.has('brinquedo-1-guardado')
-  ),
-  trail(
-    'jardim-inteiro',
-    ['item-planta', 'item-planta', 'item-planta'],
-    [walk('regador'), fork('regador', 'regador-cheio', 'drop'), loop(CANTEIROS)],
-    ['pegar-regador', 'encher-regador', 'regar-canteiro', 'seguir'],
-    maybe('regador-cheio'),
-    (m) => m.counter === 3 && CANTEIROS.every((c) => m.facts.has(`${c}-regado`))
+    (m) => m.counter === 3 && SUPPLIES.every((s) => m.facts.has(`${s}-guardado`))
   ),
 ]
 
-LEVELS.push({
-  number: 2,
-  kind: 'trail',
-  idea: 'repetir e decidir',
-  scenery: 'garden',
-  puzzles: TRAIL_PUZZLES,
-})
+/*
+ * NÍVEL 3 — OLHE O CAMINHO
+ *
+ * Da ficha: *"entram cartas SE com condição visível adiante — o SE certo
+ * depende de OLHAR o caminho"*. A coisa fica à vista com o estado dela
+ * desenhado (planta seca ou poça; mochila aberta ou fechada) e o cinto
+ * traz as duas cartas SE. A que não se encaixa TRAVA o passo.
+ *
+ * O sorteio dá SEMPRE um de cada quando há dois alvos: as duas cartas são
+ * usadas exatamente uma vez, e a criança precisa descobrir QUAL vai ONDE.
+ */
+const oneOfEach = (): World => {
+  const molhado = Math.random() < 0.5 ? 'alvo-1' : 'alvo-2'
+  return emptyWorld({
+    inHand: 'o regador',
+    facts: new Set(['regador-cheio', `${molhado}-molhado`]),
+  })
+}
+
+const CHECK_PUZZLES: TrailPuzzle[] = [
+  trail(
+    'olhar-uma',
+    ['item-planta'],
+    [check('alvo-1')],
+    ['se-seco-regar', 'se-molhado-seguir'],
+    () =>
+      emptyWorld({
+        inHand: 'o regador',
+        facts: new Set(
+          Math.random() < 0.5 ? ['regador-cheio', 'alvo-1-molhado'] : ['regador-cheio']
+        ),
+      }),
+    (m) => m.facts.has('alvo-1-pronto')
+  ),
+  trail(
+    'olhar-duas',
+    ['item-planta', 'item-poca'],
+    [check('alvo-1'), check('alvo-2')],
+    ['se-seco-regar', 'se-molhado-seguir'],
+    oneOfEach,
+    (m) => TARGETS.every((t) => m.facts.has(`${t}-pronto`))
+  ),
+  trail(
+    'olhar-a-mochila',
+    [...SUPPLY_TEXTURES],
+    [check('mochila'), loop(SUPPLIES)],
+    ['se-fechada-abrir', 'se-aberta-seguir', 'guardar-material'],
+    () => (Math.random() < 0.5 ? emptyWorld({ facts: new Set(['mochila-aberta']) }) : emptyWorld()),
+    (m) => SUPPLIES.every((s) => m.facts.has(`${s}-guardado`))
+  ),
+]
+
+LEVELS.push(
+  {
+    number: 2,
+    kind: 'trail',
+    idea: 'repetir',
+    scenery: 'garden',
+    puzzles: TRAIL_PUZZLES,
+  },
+  {
+    number: 3,
+    kind: 'trail',
+    idea: 'olhar e escolher',
+    scenery: 'garden',
+    puzzles: CHECK_PUZZLES,
+  }
+)
 
 /** Quantos gestos o caminho pede. A bifurcação pede dois: um por ramo. */
 export const slotCount = (stations: Station[]) =>
@@ -483,7 +628,7 @@ export function buildPieces(stations: Station[], placed: (string | null)[]): (Pi
   const out: (Piece | null)[] = []
   let i = 0
   for (const st of stations) {
-    if (st.kind === 'step') {
+    if (st.kind === 'step' || st.kind === 'check') {
       const a = placed[i++]
       out.push(a ? { kind: 'action', action: a } : null)
     } else if (st.kind === 'loop') {

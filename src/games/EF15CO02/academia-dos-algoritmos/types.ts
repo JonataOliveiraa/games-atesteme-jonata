@@ -31,6 +31,13 @@ export type Action = {
    * a outra o alvo. O padrão é a origem, e quem foge dele diz.
    */
   blame?: Target
+  /**
+   * Carta SE: só serve quando esta condição é verdadeira no mundo.
+   *
+   * É o que o nível 3 pede — a criança OLHA o caminho e escolhe a carta
+   * que se encaixa no que vem pela frente. Pôr a outra trava o passo.
+   */
+  requires?: string
   /** null quando o passo rodou; a frase do que impediu quando travou. */
   apply: (m: World) => string | null
 }
@@ -48,6 +55,7 @@ export type Glyph =
   | 'repeat'
   | 'question'
   | 'check'
+  | 'cross'
   | 'walk'
   | 'bang'
 
@@ -59,6 +67,8 @@ export type Piece =
 export type Condition = {
   id: string
   label: string
+  /** A pergunta escrita na placa da bifurcação. Curta, em caixa alta. */
+  question: string
   test: (m: World) => boolean
 }
 
@@ -84,6 +94,8 @@ export type Station =
   | { kind: 'step'; object?: string }
   /** Um gesto só, repetido uma vez em cada coisa. */
   | { kind: 'loop'; each: string[] }
+  /** Nível 3: a coisa está À VISTA, e a criança escolhe a carta que serve. */
+  | { kind: 'check'; about: string }
   /** O caminho se abre em dois. Só a execução diz qual ramo a Lia toma. */
   | {
       kind: 'fork'
