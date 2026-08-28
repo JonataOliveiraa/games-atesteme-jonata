@@ -1,4 +1,4 @@
-import { getAllowedOrigins } from "../../shared/bridge/allowedOrigins";
+import { isOriginAllowed } from "../../shared/bridge/allowedOrigins";
 
 /**
  * ══════════════════════════════════════════════════════════════════════════
@@ -150,7 +150,7 @@ export function validarEmbed(params: EmbedParams): EmbedValidation {
     return { ok: false, motivo: "Endereço de retorno não recebido." };
   }
 
-  if (!getAllowedOrigins().includes(params.returnBase)) {
+  if (!isOriginAllowed(params.returnBase)) {
     return { ok: false, motivo: "Endereço de retorno não autorizado." };
   }
 
