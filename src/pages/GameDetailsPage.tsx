@@ -19,6 +19,7 @@ const GAMES_WITH_IN_GAME_COMPLETION_SCREEN = new Set([
   "guardioes-dos-dados",
   "desfile-do-robo-repetidor",
   "fabrica-de-maquinas",
+  "corrida-dos-parecidos",
   "montador-de-informacoes",
   "formato-certo",
   "central-de-entrada-e-saida",

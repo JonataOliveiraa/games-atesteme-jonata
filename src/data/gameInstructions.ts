@@ -29,6 +29,11 @@ const POR_SLUG: Record<string, string[]> = {
     "Arraste para a base correspondente.",
     "Classifique tudo para concluir a fase.",
   ],
+  "corrida-dos-parecidos": [
+    "Observe a placa no topo: ela mostra quem combina com a rodada.",
+    "Toque em uma faixa para mover o carrinho até ela.",
+    "Pegue só os itens parecidos com a regra e deixe os diferentes passarem.",
+  ],
   "guardioes-dos-dados": [
     "Leia cada situação com atenção.",
     "Escolha a atitude mais segura.",

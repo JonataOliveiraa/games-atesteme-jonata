@@ -1,6 +1,7 @@
 import type { Game } from "../types/game";
 
 import classificadoresThumbnail from "../assets/games/EF01CO01/base-dos-classificadores/cover-01.png";
+import corridaDosParecidosThumbnail from "../assets/games/EF01CO01/corrida-dos-parecidos/cover-corrida-dos-parecidos.png";
 import trilhaThumbnail from "../assets/games/EF01CO02/trilha-do-passo-a-passo/splash_art.png";
 import algorithmsThumbnail from "../assets/games/EF01CO03/oficina-dos-algoritmos/algorithm-game-cover.png";
 import correioThumbnail from "../assets/games/EF01CO04/correio-multimidia/cover-correio-multimidia.png";
@@ -99,6 +100,23 @@ export const catalog: Game[] = [
     points: 60,
     icon: "🗂️",
     thumbnail: classificadoresThumbnail,
+  },
+  {
+    id: "046",
+    slug: "corrida-dos-parecidos",
+    module: "EF01CO01/corrida-dos-parecidos",
+    skill: "EF01CO01",
+    years: [1],
+    tags: ["classificação", "semelhanças", "diferenças", "toque"],
+    order: 15,
+    status: "published",
+    title: "Corrida dos Parecidos",
+    description:
+      "Toque na faixa certa para o carrinho recolher só os itens que combinam com a placa.",
+    category: "Pensamento Computacional",
+    points: 60,
+    icon: "🏁",
+    thumbnail: corridaDosParecidosThumbnail,
   },
   {
     id: "002",
@@ -846,4 +864,4 @@ export const catalog: Game[] = [
 ];
 
 /** Próximo id livre. Use ao cadastrar um jogo novo. */
-export const NEXT_FREE_ID = "046";
+export const NEXT_FREE_ID = "047";
