@@ -68,6 +68,8 @@ export class GameScene extends Phaser.Scene {
 
     private placed: string[] = []
     private trayCards = new Map<string, Phaser.GameObjects.Container>()
+    /** O x de bandeja de cada peça da lista, para ela saber voltar. */
+    private listaHome = new Map<string, number>()
     private slotLayer?: Phaser.GameObjects.Graphics
 
     private edges = new Set<string>()
@@ -116,6 +118,7 @@ export class GameScene extends Phaser.Scene {
         this.currentTask = undefined
         this.placed = []
         this.trayCards = new Map()
+        this.listaHome = new Map()
         this.slotLayer = undefined
         this.edges = new Set()
         this.edgeLayer = undefined
@@ -524,11 +527,12 @@ export class GameScene extends Phaser.Scene {
                 const x = STAGE.cx - total / 2 + LISTA.cardW / 2 + i * (LISTA.cardW + LISTA.gap)
                 const card = this.buildItemCard(this.itemOf(id), x, LISTA.trayY)
                 this.trayCards.set(id, card)
+                this.listaHome.set(id, x)
                 card.setAlpha(0).setScale(0.8)
                 this.tweens.add({ targets: card, alpha: 1, scale: 1, duration: 380, delay: 80 * i, ease: 'Back.easeOut' })
                 const hit = this.add.rectangle(0, 0, LISTA.cardW, LISTA.cardH, C.white, 0.001)
                 hit.setInteractive({ useHandCursor: true })
-                hit.on('pointerdown', () => this.onListaPick(task, id))
+                hit.on('pointerdown', () => this.onListaTap(task, id))
                 card.add(hit)
             })
             return
@@ -571,44 +575,94 @@ export class GameScene extends Phaser.Scene {
         this.slotLayer.clear()
         for (let i = 0; i < n; i++) {
             const x = left + i * (LISTA.cardW + LISTA.gap)
-            const done = i < this.placed.length
-            this.slotLayer.fillStyle(done ? C.goodSoft : C.panelSoft, 0.9)
+            // vaga cheia não é mais vaga certa: quem confere a ordem é o fim
+            const taken = i < this.placed.length
+            this.slotLayer.fillStyle(C.panelSoft, 0.9)
             this.slotLayer.fillRoundedRect(x, LISTA.slotY - LISTA.cardH / 2, LISTA.cardW, LISTA.cardH, 16)
-            this.slotLayer.lineStyle(4, done ? C.good : C.border, 1)
+            this.slotLayer.lineStyle(4, C.border, 1)
             this.slotLayer.strokeRoundedRect(x, LISTA.slotY - LISTA.cardH / 2, LISTA.cardW, LISTA.cardH, 16)
-            if (done) continue
+            if (taken) continue
             this.slotLayer.fillStyle(C.stroke, 0.55)
             this.slotLayer.fillCircle(x + LISTA.cardW / 2, LISTA.slotY, 9)
         }
     }
 
-    private onListaPick(task: ListaTask, id: string) {
+    private listaSlotX(n: number, i: number) {
+        const total = n * LISTA.cardW + (n - 1) * LISTA.gap
+        return STAGE.cx - total / 2 + i * (LISTA.cardW + LISTA.gap) + LISTA.cardW / 2
+    }
+
+    /*
+     * ORDENAR SEM PODER DESFAZER NÃO É ORDENAR.
+     *
+     * Antes só a peça certa entrava na fila: errar sacudia a carta e ela
+     * ficava onde estava. A criança nunca via a própria ordem montada, só o
+     * "ainda não" — e um jogo de fila em que a fila só aceita a resposta
+     * certa é um quiz disfarçado.
+     *
+     * Agora qualquer peça entra na primeira vaga livre, tocar numa peça da
+     * fila devolve ela para a bandeja (as de trás andam para a frente), e a
+     * conferência acontece quando a fila enche. Errado não desmonta nada:
+     * a fila fica na tela para ser mexida, que é onde a criança compara
+     * tamanho com tamanho de verdade.
+     */
+    private onListaTap(task: ListaTask, id: string) {
         if (this.isInputBlocked() || this.taskLocked) return
         const card = this.trayCards.get(id)
         if (!card) return
+        if (this.placed.includes(id)) this.takeFromLista(task, id, card)
+        else this.putInLista(task, id, card)
+    }
 
-        const expected = task.answer[this.placed.length]
-        if (id !== expected) {
-            this.wrongCount++
-            this.tweens.add({ targets: card, x: card.x + 12, duration: 60, yoyo: true, repeat: 2 })
-            this.speak('duvida', task.hint)
+    private putInLista(task: ListaTask, id: string, card: Phaser.GameObjects.Container) {
+        this.placed.push(id)
+        const n = task.answer.length
+        this.tweens.add({
+            targets: card, x: this.listaSlotX(n, this.placed.length - 1), y: LISTA.slotY,
+            duration: 340, ease: 'Back.easeOut',
+            onComplete: () => {
+                if (this.placed.length >= n) this.checkLista(task)
+            },
+        })
+        this.paintSlots(n)
+    }
+
+    private takeFromLista(task: ListaTask, id: string, card: Phaser.GameObjects.Container) {
+        this.placed = this.placed.filter(other => other !== id)
+        this.tweens.add({
+            targets: card, x: this.listaHome.get(id) ?? card.x, y: LISTA.trayY,
+            duration: 300, ease: 'Back.easeOut',
+        })
+        this.layoutPlaced(task)
+        this.paintSlots(task.answer.length)
+    }
+
+    /** Tirou uma do meio: as de trás andam para a frente. */
+    private layoutPlaced(task: ListaTask) {
+        this.placed.forEach((id, i) => {
+            const c = this.trayCards.get(id)
+            if (!c) return
+            this.tweens.add({
+                targets: c, x: this.listaSlotX(task.answer.length, i), y: LISTA.slotY,
+                duration: 260, ease: 'Sine.easeOut',
+            })
+        })
+    }
+
+    private checkLista(task: ListaTask) {
+        if (this.placed.every((id, i) => id === task.answer[i])) {
+            this.taskLocked = true
+            this.finishTask(task)
             return
         }
 
-        this.placed.push(id)
-        const total = task.answer.length * LISTA.cardW + (task.answer.length - 1) * LISTA.gap
-        const left = STAGE.cx - total / 2
-        const tx = left + (this.placed.length - 1) * (LISTA.cardW + LISTA.gap) + LISTA.cardW / 2
-        this.trayCards.delete(id)
-
-        this.tweens.add({
-            targets: card, x: tx, y: LISTA.slotY, duration: 380, ease: 'Back.easeOut',
-            onComplete: () => {
-                this.paintSlots(task.answer.length)
-                if (this.placed.length >= task.answer.length) this.finishTask(task)
-            },
+        this.wrongCount++
+        this.placed.forEach(id => {
+            const c = this.trayCards.get(id)
+            if (!c) return
+            this.tweens.add({ targets: c, y: LISTA.slotY + 9, duration: 70, yoyo: true, repeat: 2 })
         })
-        this.paintSlots(task.answer.length)
+        this.speak('duvida', task.hint)
     }
 
     private onInsertPick(task: ListaTask, index: number, gap: Phaser.GameObjects.Container, incoming: Phaser.GameObjects.Container) {
@@ -644,7 +698,8 @@ export class GameScene extends Phaser.Scene {
         g.strokeRoundedRect(-LISTA.cardW / 2, -LISTA.cardH / 2, LISTA.cardW, LISTA.cardH, 16)
 
         const shape = this.add.graphics()
-        this.drawShape(shape, item.shape, 0, -8, 10 + item.size * 11, SWATCH[item.swatch])
+        const r = LISTA.shapeRBase + item.size * LISTA.shapeRStep
+        this.drawShape(shape, item.shape, 0, LISTA.shapeDY, r, SWATCH[item.swatch])
 
         const label = this.add.text(0, LISTA.labelDY, item.label, {
             fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif', fontSize: '18px', color: hex(C.ink),
@@ -1178,6 +1233,7 @@ export class GameScene extends Phaser.Scene {
 
     private resetTaskState() {
         this.trayCards = new Map()
+        this.listaHome = new Map()
         this.tokenViews = new Map()
         this.nodePos = new Map()
         this.binCounts = new Map()
@@ -1498,8 +1554,8 @@ export class GameScene extends Phaser.Scene {
 
         if (id === 'lista') {
             return [
-                { text: 'Veja esses círculos! Eles estão desorganizados...', ...stage },
-                { text: 'Toque no menor círculo, ele vai se organizar!', ...stage },
+                { text: 'Veja essas peças! Elas estão fora de ordem...', ...stage },
+                { text: 'Toque numa peça para colocar na fila. Tocou nela de novo, ela volta.', ...stage },
             ]
         }
         if (id === 'matriz') {

@@ -81,6 +81,21 @@ export const LISTA = {
     trayY: 236,
     slotY: 434,
     labelDY: 52,
+
+    /*
+     * O RAIO DA PEÇA TEM TETO, E O TETO É A CARTA.
+     *
+     * Era `10 + size * 11`, e o tamanho 5 dava raio 65 numa carta de meia
+     * largura 64: a bolinha "maior" saía pelos dois lados e ainda cobria o
+     * rótulo. Com base 14 e passo 5.5 a escala vai de 19,5 a 41,5 — a maior
+     * continua sendo visivelmente a maior, mas cabe entre as bordas e para
+     * acima do texto. Mexer nestes dois números exige refazer a conta:
+     * shapeRBase + 5 * shapeRStep tem que caber em cardW / 2 e não pode
+     * passar de labelDY + shapeDY.
+     */
+    shapeDY: -8,
+    shapeRBase: 14,
+    shapeRStep: 5.5,
 }
 
 export const MATRIZ = {
