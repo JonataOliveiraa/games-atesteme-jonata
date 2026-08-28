@@ -6,6 +6,9 @@ export const LEVELS: LevelConfig[] = [
     level: 1,
     title: 'Dê os créditos',
     objective: 'Complete a etiqueta de cada mídia dizendo quem fez e de onde ela veio.',
+    // por MÍDIA, e não pelo nível: cada fase remonta a cena com a barra cheia.
+    // Duas lacunas cabem em um minuto sem virar corrida
+    timeLimit: 60,
     phases: [
       {
         id: 'l1f1',
@@ -37,6 +40,8 @@ export const LEVELS: LevelConfig[] = [
     level: 2,
     title: 'Revise a permissão',
     objective: 'Agora a etiqueta tem uma lacuna a mais: o uso. Olhe a licença antes de escolher.',
+    // uma lacuna a mais e uma licença para ler antes de decidir
+    timeLimit: 80,
     phases: [
       {
         id: 'l2f1',
@@ -73,8 +78,8 @@ export const LEVELS: LevelConfig[] = [
       {
         id: 'l3f1',
         kind: 'mural',
-        instruction: 'Toque em cada quadro, complete a etiqueta e publique o mural.',
-        sub: 'Publicar só libera quando não sobrar nenhum selo vermelho.',
+        instruction: 'Toque em cada quadro',
+        sub: 'Não deixe selo vermelho',
         fields: ['autor', 'fonte', 'uso'],
         items: [MEDIA.espacial, MEDIA.floresta, MEDIA.quadrinho, MEDIA.natureza],
       },

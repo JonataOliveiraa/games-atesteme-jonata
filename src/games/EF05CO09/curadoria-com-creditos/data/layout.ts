@@ -65,3 +65,20 @@ export const MURAL = {
 }
 
 export const MASCOTE = 88
+
+export const HUD = {
+  depth: 100,
+  plate: { x: 26, y: 16, w: 212, h: 58 },
+  labelX: 56,
+  levelY: 34,
+  phaseY: 60,
+  instructionX: W / 2 - 120,
+  instructionY: 44,
+  subX: W / 2 - 70,
+  subY: 88,
+  tally: { x: 984, y: 20, w: 244, h: 52, firstX: 1004, gapX: 74, cy: 46, r: 13 },
+  help: { cx: 948, cy: 46, r: 23, touch: 54 },
+  // sob a caixa de selos, alinhada à borda direita dela: o canto do tempo e
+  // o canto do placar são o mesmo canto, e nada disso cruza o texto do meio
+  timer: { cx: 1130, cy: 100, w: 196, h: 18 },
+}

@@ -1,12 +1,12 @@
 import Phaser from 'phaser'
 import { runtimeGameBridge } from '../../../../shared/bridge/runtimeGameBridge'
-import { EventBus } from '../../../../shared/EventBus'
 import { createTutorial, type TutorialStep } from '../../../../shared/tutorial/createTutorial'
 import { showLevelComplete } from '../../../../shared/level/showLevelComplete'
 import { LEVELS } from '../data/levels'
 import { FIELDS, LICENSE_LABEL, KIND_LABEL, SEAL_LABEL } from '../data/media'
 import { C, A, SEAL_COLOR, SEAL_SOFT, hex } from '../data/theme'
 import { W, H, PANEL, EASEL, TAG, SHEET, MURAL, MASCOTE } from '../data/layout'
+import { createHud, type Hud, type TallyData } from './hud'
 import type {
     CreditOption,
     FichaPhase,
@@ -57,6 +57,8 @@ export class GameScene extends Phaser.Scene {
     private benchLayer?: Phaser.GameObjects.Container
     private sheetLayer?: Phaser.GameObjects.Container
 
+    private hud!: Hud
+
     private tutorialKey = ''
     private tutorialSteps: TutorialStep[] = []
 
@@ -96,26 +98,34 @@ export class GameScene extends Phaser.Scene {
         if (this.levelIdx === 0 && this.phaseIdx === 0) this.resetTally()
 
         this.drawBackground()
+        this.hud = createHud(this, {
+            onHelpTap: this.replayTutorial,
+            timeLimit: this.level.timeLimit,
+            onTimeUp: this.onTimeUp,
+        })
 
         const p = this.phase
         if (p.kind === 'ficha') this.buildFicha(p)
         else this.buildMural(p)
 
         this.publishHud()
-        this.time.delayedCall(0, () => this.publishHud())
-        EventBus.once('ui-ready', () => this.publishHud())
+        this.syncTally()
         // GAME_READY não carrega fase: quando ele sai, a partida ainda não começou
         runtimeGameBridge.emit({ type: 'GAME_READY', gameId: GAME_ID })
 
-        EventBus.on('spool-end', this.onTimeUp, this)
-        EventBus.on('show-tutorial', this.replayTutorial, this)
-        this.events.once('shutdown', () => {
-            EventBus.off('spool-end', this.onTimeUp, this)
-            EventBus.off('show-tutorial', this.replayTutorial, this)
-        })
+        this.events.once('shutdown', () => this.hud.destroy())
 
         if (this.phaseIdx === 0) this.showLevelIntro(() => this.runTutorial())
         else this.runTutorial()
+    }
+
+    /*
+     * O relógio só anda quando a criança pode agir. O `locked` já cobre intro,
+     * tutorial, carimbo, veredito e fim de nível — os lugares onde um
+     * cronômetro correndo estaria mentindo sobre o que está acontecendo.
+     */
+    update(_time: number, delta: number) {
+        this.hud.tick(delta, !this.locked && !this.ended)
     }
 
     private drawBackground() {
@@ -129,7 +139,6 @@ export class GameScene extends Phaser.Scene {
 
     private startPhase() {
         this.locked = false
-        if (this.level.timeLimit) EventBus.emit('spool-start', this.level.timeLimit)
     }
 
     private buildFicha(p: FichaPhase) {
@@ -155,6 +164,7 @@ export class GameScene extends Phaser.Scene {
 
         const p = this.phase
         if (p.kind === 'ficha') this.buildFicha(p)
+        this.hud.resetTimer()
         this.locked = false
     }
 
@@ -316,11 +326,6 @@ export class GameScene extends Phaser.Scene {
         paper.fillStyle(C.panelSoft, 1)
         for (let y = TAG.y + 40; y < TAG.y + TAG.h - 20; y += 26) {
             paper.fillCircle(TAG.x, y, 7)
-        }
-
-        paper.lineStyle(2, C.paperLine, 0.45)
-        for (let y = TAG.y + 292; y < TAG.y + TAG.h - 100; y += 26) {
-            paper.lineBetween(TAG.x + 40, y, TAG.x + TAG.w - 40, y)
         }
 
         paper.fillStyle(C.panelSoft, 1)
@@ -637,7 +642,7 @@ export class GameScene extends Phaser.Scene {
             ease: 'Back.easeIn',
             onComplete: () => {
                 this.cameras.main.shake(160, 0.006)
-                EventBus.emit('seal-pulse')
+                this.hud.pulseTally()
                 if (this.easelBody) {
                     this.tweens.add({
                         targets: this.easelBody,
@@ -915,7 +920,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     private playSweep(onDone: () => void) {
-        EventBus.emit('spool-stop')
+        this.hud.stopTimer()
 
         const beam = this.add.graphics().setDepth(240)
         beam.fillStyle(C.white, 0.55)
@@ -1033,10 +1038,71 @@ export class GameScene extends Phaser.Scene {
 
     private onTimeUp = () => {
         if (this.ended || this.locked) return
-        const p = this.phase
-        if (p.kind !== 'mural') return
         this.locked = true
-        this.showReport(p)
+
+        const p = this.phase
+        // no mural o tempo PUBLICA a galeria como ela está; na ficha ele só
+        // devolve a mesma mídia com a barra cheia, que é perder o caso e não
+        // o nível — errar aqui trava até entender, nunca empurra para a frente
+        if (p.kind === 'mural') this.showReport(p)
+        else this.showTimeUp(p.item)
+    }
+
+    private showTimeUp(item: MediaItem) {
+        this.hud.stopTimer()
+
+        const overlay = this.add.rectangle(W / 2, H / 2, W, H, C.shadow, A.overlay)
+            .setDepth(700).setInteractive()
+        const modal = this.add.container(W / 2, H / 2).setDepth(701)
+
+        const message = this.add.text(0, 0, 'A etiqueta desta mídia volta em branco. Desta vez, sem pressa.', {
+            fontFamily: 'DynaPuff, Arial, sans-serif',
+            fontStyle: 'bold',
+            fontSize: '21px',
+            color: hex(C.ink),
+            align: 'center',
+            wordWrap: { width: 520 },
+        }).setOrigin(0.5).setResolution(2)
+
+        const PH = message.height + 260
+        const top = -PH / 2
+
+        const bg = this.add.graphics()
+        bg.fillStyle(C.shadow, 0.22)
+        bg.fillRoundedRect(-310, top + 12, 620, PH, 28)
+        bg.fillStyle(C.paper, 1)
+        bg.fillRoundedRect(-310, top, 620, PH, 28)
+        bg.lineStyle(5, C.easel, 1)
+        bg.strokeRoundedRect(-310, top, 620, PH, 28)
+        bg.fillStyle(C.easel, 1)
+        bg.fillRoundedRect(-150, top - 15, 300, 28, 14)
+
+        const title = this.add.text(0, top + 84, 'O tempo acabou', {
+            fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif',
+            fontSize: '34px',
+            color: hex(C.blueDark),
+        }).setOrigin(0.5).setResolution(2)
+
+        message.setY(top + 142 + message.height / 2)
+
+        const btn = this.button(0, PH / 2 - 56, 340, 68, 'Refazer etiqueta', C.blue, () => {
+            overlay.destroy()
+            modal.destroy()
+            this.retryItem(item)
+        }, '22px', true)
+
+        modal.add([bg, title, message, btn])
+        modal.setScale(0.92).setAlpha(0)
+        this.tweens.add({ targets: modal, alpha: 1, scale: 1, duration: 240, ease: 'Back.easeOut' })
+    }
+
+    // o placar atravessa o restart da cena, então continua morando no registry
+    private get tally(): TallyData {
+        return this.registry.get('tally') ?? { verde: 0, amarelo: 0, vermelho: 0, total: 0 }
+    }
+
+    private syncTally() {
+        this.hud.setTally(this.tally)
     }
 
     private resetTally() {
@@ -1044,17 +1110,19 @@ export class GameScene extends Phaser.Scene {
     }
 
     private bumpTally(seal: SealId) {
-        const t = this.registry.get('tally') ?? { verde: 0, amarelo: 0, vermelho: 0, total: 0 }
+        const t = this.tally
         this.registry.set('tally', { ...t, [seal]: t[seal] + 1, total: t.total + 1 })
+        this.syncTally()
     }
 
     private dropTally(seal: SealId) {
-        const t = this.registry.get('tally') ?? { verde: 0, amarelo: 0, vermelho: 0, total: 0 }
+        const t = this.tally
         this.registry.set('tally', {
             ...t,
             [seal]: Math.max(0, t[seal] - 1),
             total: Math.max(0, t.total - 1),
         })
+        this.syncTally()
     }
 
     private completePhase() {
@@ -1169,7 +1237,7 @@ export class GameScene extends Phaser.Scene {
     private runTutorial() {
         this.tutorialSteps = this.buildTutorialSteps()
         this.tutorialKey = `curadoria-l${this.level.level}`
-        EventBus.emit('tutorial-ready')
+        this.hud.showHelp()
 
         if (this.phaseIdx !== 0 || !this.tutorialSteps.length) {
             this.startPhase()
@@ -1251,8 +1319,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     private publishHud() {
-        this.registry.remove('hud')
-        this.registry.set('hud', {
+        this.hud.setInfo({
             instruction: this.phase.instruction,
             sub: this.phase.sub,
             level: this.level.level,
