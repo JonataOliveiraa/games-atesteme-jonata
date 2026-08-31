@@ -2,9 +2,12 @@ import type { Game } from "../types/game";
 
 import classificadoresThumbnail from "../assets/games/EF01CO01/base-dos-classificadores/cover-01.png";
 import corridaDosParecidosThumbnail from "../assets/games/EF01CO01/corrida-dos-parecidos/cover-corrida-dos-parecidos.png";
+import ritmoDaRotinaThumbnail from "../assets/games/EF01CO02/ritmo-da-rotina/cover-ritmo-da-rotina.png";
 import trilhaThumbnail from "../assets/games/EF01CO02/trilha-do-passo-a-passo/splash_art.png";
 import algorithmsThumbnail from "../assets/games/EF01CO03/oficina-dos-algoritmos/algorithm-game-cover.png";
+import puloProgramadoThumbnail from "../assets/games/EF01CO03/pulo-programado/cover-pulo-programado.png";
 import correioThumbnail from "../assets/games/EF01CO04/correio-multimidia/cover-correio-multimidia.png";
+import passeDaMensagemThumbnail from "../assets/games/EF01CO04/passe-da-mensagem/personagens.png";
 import pixelSecretThumbnail from "../assets/games/EF01CO05/pixel-secreto/cover5.png";
 import desktopThumbnail from "../assets/games/EF01CO06/desktop-digital-infantil/cover.png";
 import guardiansThumbnail from "../assets/games/EF01CO07/guardioes-dos-dados/cover.png";
@@ -135,6 +138,40 @@ export const catalog: Game[] = [
     thumbnail: trilhaThumbnail,
   },
   {
+    id: "047",
+    slug: "ritmo-da-rotina",
+    module: "EF01CO02/ritmo-da-rotina",
+    skill: "EF01CO02",
+    years: [1],
+    tags: ["sequência", "rotina", "ritmo", "toque"],
+    order: 16,
+    status: "published",
+    title: "Ritmo da Rotina",
+    description:
+      "Bata no meio do tambor quando o próximo passo da rotina chegar, e na borda quando não for a hora dele.",
+    category: "Pensamento Computacional",
+    points: 60,
+    icon: "🥁",
+    thumbnail: ritmoDaRotinaThumbnail,
+  },
+  {
+    id: "048",
+    slug: "pulo-programado",
+    module: "EF01CO03/pulo-programado",
+    skill: "EF01CO03",
+    years: [1],
+    tags: ["algoritmo", "sequência", "plataforma", "toque"],
+    order: 28,
+    status: "published",
+    title: "Pulo Programado",
+    description:
+      "Monte a lista de ações do coelho, aperte VAI e veja o seu algoritmo atravessar o campo.",
+    category: "Pensamento Computacional",
+    points: 60,
+    icon: "🐰",
+    thumbnail: puloProgramadoThumbnail,
+  },
+  {
     id: "003",
     slug: "oficina-dos-algoritmos",
     module: "EF01CO03/oficina-dos-algoritmos",
@@ -150,6 +187,23 @@ export const catalog: Game[] = [
     points: 50,
     icon: "🛠️",
     thumbnail: algorithmsThumbnail,
+  },
+  {
+    id: "049",
+    slug: "passe-da-mensagem",
+    module: "EF01CO04/passe-da-mensagem",
+    skill: "EF01CO04",
+    years: [1],
+    tags: ["informação", "linguagens", "mensagem", "toque"],
+    order: 38,
+    status: "published",
+    title: "Passe da Mensagem",
+    description:
+      "Passe a bola para o colega que diz a mesma coisa de outro jeito, e guarde a mensagem no mural.",
+    category: "Mundo Digital",
+    points: 60,
+    icon: "⚽",
+    thumbnail: passeDaMensagemThumbnail,
   },
   {
     id: "004",

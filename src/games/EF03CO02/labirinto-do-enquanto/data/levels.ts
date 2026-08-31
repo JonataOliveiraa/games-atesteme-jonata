@@ -17,7 +17,7 @@ export const LEVELS: LevelConfig[] = [
                 walls: [at(3, 1)],
                 given: { condition: 'caminho_livre', setup: [], body: ['avancar'] },
                 solution: { condition: 'caminho_livre', setup: [], body: ['avancar'] },
-                explanation: 'O robô andou até a parede aparecer na frente dele. Aí a condição ficou falsa e o laço parou.',
+                explanation: 'O robô andou até aparecer um espaço fechado na frente dele. Aí a condição ficou falsa e o laço parou.',
             },
             {
                 id: 'l1-c2',
@@ -65,7 +65,7 @@ export const LEVELS: LevelConfig[] = [
         level: 2,
         title: 'Escolha a Condição',
         objective: 'O robô já sabe andar. Escolha qual condição faz o laço parar exatamente na casa.',
-        tip: 'Compare as opções: uma olha parede, outra olha casa, outra conta passos.',
+        tip: 'Compare as opções: uma olha o espaço da frente, outra olha a casa, outra conta passos.',
         challenges: [
             {
                 id: 'l2-c1',
@@ -76,7 +76,7 @@ export const LEVELS: LevelConfig[] = [
                 given: { condition: 'nao_no_objetivo', setup: [], body: ['avancar'] },
                 conditionOptions: ['caminho_livre', 'nao_no_objetivo', 'passos_menos_de_2'],
                 solution: { condition: 'nao_no_objetivo', setup: [], body: ['avancar'] },
-                explanation: 'Só "não chegou na casa" para em cima da casa. Caminho livre passaria direto.',
+                explanation: 'Só "não chegou na casa" para em cima dela. Espaço livre passaria direto.',
             },
             {
                 id: 'l2-c2',
@@ -87,7 +87,7 @@ export const LEVELS: LevelConfig[] = [
                 given: { condition: 'passos_menos_de_3', setup: [], body: ['avancar'] },
                 conditionOptions: ['caminho_livre', 'passos_menos_de_2', 'passos_menos_de_3'],
                 solution: { condition: 'passos_menos_de_3', setup: [], body: ['avancar'] },
-                explanation: 'Sem parede nenhuma, caminho livre iria até a borda. Contar 3 passos era o que faltava.',
+                explanation: 'Sem nenhum espaço fechado, o robô iria até a borda. Contar 3 passos era o que faltava.',
             },
             {
                 id: 'l2-c3',
@@ -98,7 +98,7 @@ export const LEVELS: LevelConfig[] = [
                 given: { condition: 'caminho_livre', setup: [], body: ['avancar'] },
                 conditionOptions: ['passos_menos_de_2', 'caminho_livre', 'passos_menos_de_6'],
                 solution: { condition: 'caminho_livre', setup: [], body: ['avancar'] },
-                explanation: 'Contar 6 passos faria o robô bater. Contar não enxerga parede; caminho livre enxerga.',
+                explanation: 'Contar 6 passos faria o robô bater. Contar não enxerga espaço fechado; olhar a frente enxerga.',
             },
             {
                 id: 'l2-c4',
@@ -109,7 +109,7 @@ export const LEVELS: LevelConfig[] = [
                 given: { condition: 'passos_menos_de_3', setup: [], body: ['avancar'] },
                 conditionOptions: ['caminho_livre', 'passos_menos_de_3', 'passos_menos_de_5'],
                 solution: { condition: 'passos_menos_de_3', setup: [], body: ['avancar'] },
-                explanation: 'A casa ficava antes da parede, então contar os passos era o jeito de parar nela.',
+                explanation: 'A casa ficava antes do espaço fechado, então contar os passos era o jeito de parar nela.',
             },
             {
                 id: 'l2-c5',
@@ -139,7 +139,7 @@ export const LEVELS: LevelConfig[] = [
                 allowedActions: ['avancar', 'virar-esq', 'virar-dir'],
                 allowedConditions: ['caminho_livre', 'nao_no_objetivo', 'passos_menos_de_2'],
                 solution: { condition: 'caminho_livre', setup: ['virar-esq'], body: ['avancar'] },
-                explanation: 'Uma curva para apontar o robô e um laço para subir até a parede.',
+                explanation: 'Uma curva para apontar o robô e um laço para subir até o espaço fechado.',
             },
             {
                 id: 'l3-c2',
@@ -150,7 +150,7 @@ export const LEVELS: LevelConfig[] = [
                 allowedActions: ['avancar', 'virar-esq', 'virar-dir'],
                 allowedConditions: ['caminho_livre', 'passos_menos_de_2', 'passos_menos_de_6'],
                 solution: { condition: 'caminho_livre', setup: ['virar-esq'], body: ['avancar'] },
-                explanation: 'Olhando para baixo, virar à esquerda aponta para a direita. Depois o laço anda até a parede.',
+                explanation: 'Olhando para baixo, virar à esquerda aponta para a direita. Depois o laço anda até o espaço fechado.',
             },
             {
                 id: 'l3-c3',
@@ -172,7 +172,7 @@ export const LEVELS: LevelConfig[] = [
                 allowedActions: ['avancar', 'virar-esq', 'virar-dir'],
                 allowedConditions: ['caminho_livre', 'passos_menos_de_2', 'passos_menos_de_5'],
                 solution: { condition: 'passos_menos_de_2', setup: [], body: ['avancar'] },
-                explanation: 'Aqui o caminho continuava livre depois da casa. Só contando passos dava para parar em cima dela.',
+                explanation: 'Aqui o espaço continuava livre depois da casa. Só contando passos dava para parar em cima dela.',
             },
             {
                 id: 'l3-c5',
@@ -183,7 +183,7 @@ export const LEVELS: LevelConfig[] = [
                 allowedActions: ['avancar', 'virar-esq', 'virar-dir'],
                 allowedConditions: ['caminho_livre', 'nao_no_objetivo', 'passos_menos_de_5'],
                 solution: { condition: 'caminho_livre', setup: ['virar-esq'], body: ['avancar'] },
-                explanation: 'O robô olhava para cima e a casa estava à esquerda. Uma curva, um laço, e a parede fez o resto.',
+                explanation: 'O robô olhava para cima e a casa estava à esquerda. Uma curva, um laço, e o espaço fechado fez o resto.',
             },
         ],
     },

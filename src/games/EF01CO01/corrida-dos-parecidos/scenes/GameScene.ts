@@ -16,12 +16,12 @@ import {
     CAR, CAR_H, DEPTH, H, HEADER, ITEM, ROAD, TRAVEL, W, laneLeft, laneX,
 } from '../data/layout'
 import type {
-    Candidate, FallingItem, ItemDef, LevelDef, LevelNumber, PlayState, Rule,
+    FallingItem, ItemDef, LevelDef, LevelNumber, PlayState, Rule,
 } from '../types'
 import {
     createAlbum, createCar, createCopilot, createFrame, createGate,
     createHelpButton, createItemIcon, createLaneHint, createLock, createProgress,
-    createRuleSign, puff,
+    createRuleAlert, createRuleSign, puff,
 } from './effects'
 import { createRoad, type RoadWorld } from './road'
 
@@ -53,7 +53,7 @@ export class GameScene extends Phaser.Scene {
 
     private decisions: boolean[] = []
     private lanes: number[] = []
-    private collected: Candidate[] = []
+    private collected: ItemDef[] = []
 
     private current: FallingItem | null = null
     private icon: Phaser.GameObjects.Container | null = null
@@ -61,6 +61,7 @@ export class GameScene extends Phaser.Scene {
     private road!: RoadWorld
     private frame!: ReturnType<typeof createFrame>
     private sign!: ReturnType<typeof createRuleSign>
+    private alert!: ReturnType<typeof createRuleAlert>
     private progress!: ReturnType<typeof createProgress>
     private help!: ReturnType<typeof createHelpButton>
     private copilot!: ReturnType<typeof createCopilot>
@@ -109,6 +110,7 @@ export class GameScene extends Phaser.Scene {
         this.road = createRoad(this, { biome: level.biome, lanes: level.lanes })
         this.frame = createFrame(this, level.biome)
         this.sign = createRuleSign(this)
+        this.alert = createRuleAlert(this)
         this.progress = createProgress(this, level.stretches.length)
         this.progress.setLevel(level.level, LEVELS.length)
         this.help = createHelpButton(this, () => this.replayTutorial())
@@ -165,11 +167,10 @@ export class GameScene extends Phaser.Scene {
          * pega. Antes existia uma linha invisível na altura do carro, e
          * encostar nele não bastava — a mecânica contradizia os olhos.
          */
-        const size = item.size === 'big' ? ITEM.big : ITEM.small
         const car = this.car.at()
         const touching =
-            Math.abs(icon.x - car.x) < CAR.w * 0.5 + size * 0.42 &&
-            Math.abs(item.y - car.y) < CAR_H * 0.5 + size * 0.42
+            Math.abs(icon.x - car.x) < CAR.w * 0.5 + ITEM.size * 0.42 &&
+            Math.abs(item.y - car.y) < CAR_H * 0.5 + ITEM.size * 0.42
 
         if (touching) this.resolveItem(true)
         else if (item.y > car.y + 10) this.resolveItem(false)
@@ -183,6 +184,7 @@ export class GameScene extends Phaser.Scene {
         this.road?.destroy()
         this.frame?.destroy()
         this.sign?.destroy()
+        this.alert?.destroy()
         this.progress?.destroy()
         this.help?.destroy()
         this.copilot?.destroy()
@@ -373,15 +375,13 @@ export class GameScene extends Phaser.Scene {
         this.decisions.push(collect)
         this.lanes.push(lane)
 
-        const size = candidate.size === 'big' ? ITEM.big : ITEM.small
         const aura = this.levelDef.level === 1 && collect
-        const icon = createItemIcon(this, candidate.def, size, aura)
+        const icon = createItemIcon(this, candidate, ITEM.size, aura)
         icon.setPosition(laneX(lane, lanes), ITEM.spawnY).setDepth(DEPTH.item).setScale(0)
 
         this.icon = icon
         this.current = {
-            def: candidate.def,
-            size: candidate.size,
+            def: candidate,
             lane,
             y: ITEM.spawnY,
             mistakes: 0,
@@ -396,7 +396,7 @@ export class GameScene extends Phaser.Scene {
         const item = this.current
         const icon = this.icon
         if (!item || !icon || item.returning) return
-        const wanted = shouldCollect(item.def, item.size, this.rule)
+        const wanted = shouldCollect(item.def, this.rule)
         if (tookIt === wanted) void this.succeed(item, icon, tookIt)
         else void this.trip(item, icon, tookIt)
     }
@@ -427,7 +427,7 @@ export class GameScene extends Phaser.Scene {
                 { duration: 300, ease: 'Back.easeIn' })
             if (gen !== this.gen) return
             void this.car.bounce()
-            this.collected.push({ def: item.def, size: item.size })
+            this.collected.push(item.def)
             void this.copilot.say(OK_COLLECT, 'happy')
         } else {
             this.playPass()
@@ -475,7 +475,7 @@ export class GameScene extends Phaser.Scene {
         this.playScreech()
         this.rampTo(0, 260)
         this.cameras.main.shake(220, 0.005)
-        void this.copilot.say(mistakeSentence(item.def, item.size, this.rule, tookIt), 'oops')
+        void this.copilot.say(mistakeSentence(item.def, this.rule, tookIt), 'oops')
         void this.sign.alert()
         void this.car.nudge()
 
@@ -491,7 +491,7 @@ export class GameScene extends Phaser.Scene {
         if (gen !== this.gen) return
 
         if (item.mistakes >= 2) {
-            const wanted = shouldCollect(item.def, item.size, this.rule)
+            const wanted = shouldCollect(item.def, this.rule)
             const all = Array.from({ length: this.levelDef.lanes }, (_, i) => i)
             this.laneHint.show(wanted ? [item.lane] : all.filter(l => l !== item.lane))
         }
@@ -548,9 +548,11 @@ export class GameScene extends Phaser.Scene {
         this.rule = this.rollRule(slot)
         this.decisions = []
         this.collected.splice(0)
+        void this.alert.show(this.rule)
         await this.sign.swap(this.rule)
         void this.copilot.say(ruleSentence(this.rule), 'calm')
         await FX.wait(this, 1400)
+        void this.alert.hide()
         this.rampTo(this.cruise, 620)
     }
 
@@ -567,6 +569,7 @@ export class GameScene extends Phaser.Scene {
         const gen = ++this.gen
         this.state = 'ending'
         this.laneHint.hide()
+        void this.alert.hide()
         this.help.setEnabled(false)
         this.progress.set(this.levelDef.stretches.length, -1)
         this.rampTo(0.12, 1300)
@@ -595,14 +598,12 @@ export class GameScene extends Phaser.Scene {
 
         // e só então o painel de fim de nível, igual ao dos outros 44 jogos
         const level = this.levelDef.level
-        const message = `${this.hits} decisões certas · ${Math.max(0, this.score)} pontos`
 
         if (level < LEVELS.length) {
             const next = (level + 1) as LevelNumber
             showLevelComplete(this, {
                 title: `Nível ${level} completo!`,
                 subtitle: this.albumTitle(),
-                message,
                 accent: C.ok,
                 panelColor: C.cream,
                 overlayColor: C.ink,
@@ -619,7 +620,6 @@ export class GameScene extends Phaser.Scene {
         showLevelComplete(this, {
             title: 'Corrida completa!',
             subtitle: this.albumTitle(),
-            message,
             accent: C.ok,
             panelColor: C.cream,
             overlayColor: C.ink,
@@ -664,9 +664,22 @@ export class GameScene extends Phaser.Scene {
                     return
                 }
             }
-            if (command.type === 'PAUSE_GAME') this.paused = true
-            if (command.type === 'RESUME_GAME') this.paused = false
+            if (command.type === 'PAUSE_GAME') this.setPaused(true)
+            if (command.type === 'RESUME_GAME') this.setPaused(false)
         })
+    }
+
+    /**
+     * Pausa de verdade. O sinalizador sozinho só segurava o `update`: item
+     * continuava nascendo, tween continuava correndo e som continuava tocando
+     * atrás da tela de game over da plataforma. Pausar a CENA congela update,
+     * tweens, timers e entrada de uma vez — e o quadro parado continua na tela.
+     */
+    private setPaused(paused: boolean) {
+        if (this.paused === paused) return
+        this.paused = paused
+        if (paused) this.scene.pause()
+        else this.scene.resume()
     }
 
     private onMute(muted: boolean) {

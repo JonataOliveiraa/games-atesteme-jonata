@@ -34,6 +34,21 @@ const POR_SLUG: Record<string, string[]> = {
     "Toque em uma faixa para mover o carrinho até ela.",
     "Pegue só os itens parecidos com a regra e deixe os diferentes passarem.",
   ],
+  "ritmo-da-rotina": [
+    "Olhe a rotina no topo: ela mostra a ordem dos passos.",
+    "Bata no MEIO do tambor quando o próximo passo chegar no círculo.",
+    "Bata na BORDA quando a figura não for a hora dela.",
+  ],
+  "pulo-programado": [
+    "Toque nas cartas para montar a lista de ações do coelho.",
+    "Cada quadrado é um pedaço do caminho, na mesma ordem.",
+    "Aperte VAI: se ele esbarrar, troque a carta daquele quadrado.",
+  ],
+  "passe-da-mensagem": [
+    "Olhe no topo a mensagem que você está levando.",
+    "Toque no colega que diz a MESMA coisa de outro jeito.",
+    "No último passe, a mensagem vai para a caixa de recados.",
+  ],
   "guardioes-dos-dados": [
     "Leia cada situação com atenção.",
     "Escolha a atitude mais segura.",

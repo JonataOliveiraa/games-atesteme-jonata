@@ -16,11 +16,10 @@
 export type LevelNumber = 1 | 2 | 3
 export type ItemSheet = 'item-frutas' | 'item-formas'
 export type RuleMode = 'include' | 'exclude'
-export type TraitKind = 'color' | 'size' | 'shape'
-export type ItemSize = 'small' | 'big'
+export type TraitKind = 'color' | 'shape'
 export type ColorName = 'vermelho' | 'azul' | 'amarelo' | 'roxo' | 'verde' | 'laranja'
 export type ShapeName = 'redondo' | 'quadrado' | 'triangulo' | 'estrela' | 'retangulo' | 'comprido'
-export type TraitValue = ColorName | ShapeName | ItemSize
+export type TraitValue = ColorName | ShapeName
 export type Biome = 'forest' | 'snow' | 'autumn'
 
 /** `locked` é a TRAVA: o mundo para até a criança resolver o mesmo item. */
@@ -51,12 +50,8 @@ export interface RuleOption {
     fromStretch: number
 }
 
-export interface Candidate {
+export interface FallingItem {
     def: ItemDef
-    size: ItemSize
-}
-
-export interface FallingItem extends Candidate {
     lane: number
     y: number
     mistakes: number

@@ -139,6 +139,29 @@ Regras:
 Quando o jogo tiver termos técnicos, explique pelo contexto visual ou com uma
 frase curta.
 
+## Anotações
+
+Nunca coloque comentários enormes no código. Toda anotação deve ser criada num arquivo .md separado na pasta do jogo.
+
+## Pontuação
+
+Nunca escreva pontos, acertos, erros ou porcentagem em texto na tela.
+
+Isso vale principalmente para o painel de fim de nível: nada de frases como
+`12 decisões certas · 80 pontos`. Criança do Fundamental I não lê placar; ela
+lê que ganhou ou que precisa tentar de novo, e um número solto só serve para
+comparar com o colega.
+
+O progresso e o resultado devem aparecer de forma visual:
+
+- estrelas, selos ou medalhas;
+- barra ou bolinhas de fase concluída;
+- o que ela juntou, montou ou consertou, mostrado na tela;
+- animação de acerto no momento em que acontece.
+
+Pontos continuam existindo no código, porque a plataforma os recebe pelo
+`runtimeGameBridge`. O que não pode é virar texto para a criança.
+
 ## Código
 
 O código dos jogos deve usar nomes em inglês para variáveis, funções, métodos,
@@ -182,5 +205,6 @@ Antes de considerar um jogo pronto, confira:
 - acertos, erros e conclusão têm feedback visual;
 - há efeitos sonoros;
 - as animações ajudam a jogabilidade;
+- nenhuma tela mostra texto de pontos, acertos ou erros;
 - o código novo usa nomes em inglês;
 - não foram adicionados comentários desnecessários.

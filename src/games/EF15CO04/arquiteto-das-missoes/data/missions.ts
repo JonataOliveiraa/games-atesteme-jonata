@@ -16,6 +16,7 @@ export const MISSIONS: Record<string, MissionDef> = {
             cafe: {
                 id: 'cafe',
                 label: 'Preparar o café',
+                short: 'Café',
                 detail: 'esquentar a água e coar',
                 minutes: 10,
                 needs: [],
@@ -24,6 +25,7 @@ export const MISSIONS: Record<string, MissionDef> = {
             sanduiche: {
                 id: 'sanduiche',
                 label: 'Fazer o sanduíche',
+                short: 'Sanduíche',
                 detail: 'montar o pão com recheio',
                 minutes: 6,
                 needs: [],
@@ -47,6 +49,7 @@ export const MISSIONS: Record<string, MissionDef> = {
             decorar: {
                 id: 'decorar',
                 label: 'Decorar o pátio',
+                short: 'Decoração',
                 detail: 'bandeirinhas e balões',
                 minutes: 20,
                 needs: [],
@@ -55,6 +58,7 @@ export const MISSIONS: Record<string, MissionDef> = {
             bolo: {
                 id: 'bolo',
                 label: 'Assar o bolo',
+                short: 'Bolo',
                 detail: 'massa no forno',
                 minutes: 30,
                 needs: [],
@@ -63,6 +67,7 @@ export const MISSIONS: Record<string, MissionDef> = {
             servir: {
                 id: 'servir',
                 label: 'Servir o bolo',
+                short: 'Servir',
                 detail: 'cortar e colocar na mesa',
                 minutes: 10,
                 needs: ['bolo'],
@@ -70,6 +75,7 @@ export const MISSIONS: Record<string, MissionDef> = {
             som: {
                 id: 'som',
                 label: 'Ligar o som',
+                short: 'Som',
                 detail: 'caixa e músicas escolhidas',
                 minutes: 10,
                 needs: [],
@@ -93,6 +99,7 @@ export const MISSIONS: Record<string, MissionDef> = {
             caixas: {
                 id: 'caixas',
                 label: 'Encaixotar o material',
+                short: 'Caixas',
                 detail: 'livros e jogos nas caixas',
                 minutes: 20,
                 needs: [],
@@ -101,6 +108,7 @@ export const MISSIONS: Record<string, MissionDef> = {
             carregar: {
                 id: 'carregar',
                 label: 'Levar as caixas',
+                short: 'Levar',
                 detail: 'caixas até a sala nova',
                 minutes: 15,
                 needs: ['caixas'],
@@ -108,6 +116,7 @@ export const MISSIONS: Record<string, MissionDef> = {
             arrumar: {
                 id: 'arrumar',
                 label: 'Arrumar as mesas',
+                short: 'Mesas',
                 detail: 'mesas e cadeiras no lugar',
                 minutes: 15,
                 needs: [],
@@ -116,6 +125,7 @@ export const MISSIONS: Record<string, MissionDef> = {
             mural: {
                 id: 'mural',
                 label: 'Montar o mural',
+                short: 'Mural',
                 detail: 'cartazes na parede nova',
                 minutes: 10,
                 needs: ['carregar'],
@@ -138,6 +148,7 @@ export const MISSIONS: Record<string, MissionDef> = {
             experimento: {
                 id: 'experimento',
                 label: 'Preparar o experimento',
+                short: 'Experimento',
                 detail: 'ainda tem partes dentro dele',
                 minutes: 0,
                 needs: [],
@@ -146,6 +157,7 @@ export const MISSIONS: Record<string, MissionDef> = {
             materiais: {
                 id: 'materiais',
                 label: 'Separar os materiais',
+                short: 'Materiais',
                 detail: 'potes, água e corante',
                 minutes: 15,
                 needs: [],
@@ -155,14 +167,16 @@ export const MISSIONS: Record<string, MissionDef> = {
             testar: {
                 id: 'testar',
                 label: 'Testar o experimento',
+                short: 'Testar',
                 detail: 'ver se funciona antes',
                 minutes: 20,
-                needs: ['materiais'],
+                needs: [],
                 track: 'voce',
             },
             cartaz: {
                 id: 'cartaz',
                 label: 'Fazer o cartaz',
+                short: 'Cartaz',
                 detail: 'título e desenhos',
                 minutes: 25,
                 needs: [],
@@ -172,6 +186,7 @@ export const MISSIONS: Record<string, MissionDef> = {
             bancada: {
                 id: 'bancada',
                 label: 'Arrumar a bancada',
+                short: 'Bancada',
                 detail: 'toalha e lugar das coisas',
                 minutes: 15,
                 needs: [],
@@ -196,6 +211,7 @@ export const MISSIONS: Record<string, MissionDef> = {
             barracas: {
                 id: 'barracas',
                 label: 'Montar as barracas',
+                short: 'Barracas',
                 detail: 'ainda tem partes dentro dele',
                 minutes: 0,
                 needs: [],
@@ -204,6 +220,7 @@ export const MISSIONS: Record<string, MissionDef> = {
             limpar: {
                 id: 'limpar',
                 label: 'Limpar o terreno',
+                short: 'Terreno',
                 detail: 'tirar pedras e galhos',
                 minutes: 15,
                 needs: [],
@@ -213,6 +230,7 @@ export const MISSIONS: Record<string, MissionDef> = {
             armar: {
                 id: 'armar',
                 label: 'Armar as barracas',
+                short: 'Armar',
                 detail: 'varetas e lona no lugar',
                 minutes: 25,
                 needs: ['limpar'],
@@ -221,6 +239,7 @@ export const MISSIONS: Record<string, MissionDef> = {
             fogueira: {
                 id: 'fogueira',
                 label: 'Preparar a fogueira',
+                short: 'Fogueira',
                 detail: 'lenha em roda de pedras',
                 minutes: 20,
                 needs: [],
@@ -230,6 +249,7 @@ export const MISSIONS: Record<string, MissionDef> = {
             jantar: {
                 id: 'jantar',
                 label: 'Fazer o jantar',
+                short: 'Jantar',
                 detail: 'panela sobre o fogo',
                 minutes: 20,
                 needs: ['fogueira'],

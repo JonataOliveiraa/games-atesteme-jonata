@@ -20,6 +20,9 @@ const GAMES_WITH_IN_GAME_COMPLETION_SCREEN = new Set([
   "desfile-do-robo-repetidor",
   "fabrica-de-maquinas",
   "corrida-dos-parecidos",
+  "ritmo-da-rotina",
+  "pulo-programado",
+  "passe-da-mensagem",
   "montador-de-informacoes",
   "formato-certo",
   "central-de-entrada-e-saida",
@@ -359,6 +362,7 @@ export default function GameDetailsPage() {
             pointsEarned: 0,
           });
 
+          gameBridge.send({ type: 'PAUSE_GAME' });
           setShowNoLivesModal(false);
           setShowGameOverModal(true);
 
@@ -430,6 +434,7 @@ export default function GameDetailsPage() {
         });
 
         streakRef.current = 0;
+        gameBridge.send({ type: 'PAUSE_GAME' });
         setShowNoLivesModal(false);
         setShowGameOverModal(true);
 
@@ -827,9 +832,9 @@ export default function GameDetailsPage() {
             <h1 className="game-over-title error">Você cometeu um erro!</h1>
 
             <p className="game-over-text">
-              Você perdeu uma vida.
+              Você perdeu ponto de vida.
               <br />
-              Deseja comprar uma vida ou continuar com 0 vidas?
+              Deseja comprar um ponto de vida ou continuar com 0 pontos de vida?
             </p>
 
             <p className="game-over-warning">
@@ -892,7 +897,7 @@ export default function GameDetailsPage() {
             <p className="game-over-text">
               O jogo foi bloqueado.
               {blockedUntil && (
-                <>a
+                <>
                   <br />
                   Liberação automática em:
                   <br />

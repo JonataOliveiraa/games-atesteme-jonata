@@ -1,7 +1,5 @@
 import type {
-    Candidate,
     ItemDef,
-    ItemSize,
     LevelDef,
     Rule,
     RuleOption,
@@ -48,7 +46,7 @@ export const LEVELS: LevelDef[] = [
         spawnGapMs: 480,
         sprintFrom: 2,
         sprintFactor: 1.14,
-        hint: 'A placa troca no meio da corrida.',
+        hint: 'A placa troca de cor para forma no meio da corrida.',
         rulePlan: [
             {
                 fromStretch: 0,
@@ -59,9 +57,9 @@ export const LEVELS: LevelDef[] = [
             },
             {
                 fromStretch: 1,
-                kind: 'size',
+                kind: 'shape',
                 mode: 'include',
-                values: ['big', 'small'],
+                values: ['redondo', 'quadrado', 'triangulo', 'estrela'],
                 sheets: ['item-formas', 'item-frutas'],
             },
         ],
@@ -106,7 +104,6 @@ export const WORD_MANY: Record<string, string> = {
     roxo: 'ROXOS', verde: 'VERDES', laranja: 'LARANJAS',
     redondo: 'REDONDOS', quadrado: 'QUADRADOS', triangulo: 'TRIÂNGULOS',
     estrela: 'ESTRELAS', retangulo: 'RETÂNGULOS', comprido: 'COMPRIDOS',
-    small: 'PEQUENOS', big: 'GRANDES',
 }
 
 export const WORD_ONE: Record<string, string> = {
@@ -114,17 +111,16 @@ export const WORD_ONE: Record<string, string> = {
     roxo: 'ROXO', verde: 'VERDE', laranja: 'LARANJA',
     redondo: 'REDONDO', quadrado: 'QUADRADO', triangulo: 'TRIÂNGULO',
     estrela: 'ESTRELA', retangulo: 'RETÂNGULO', comprido: 'COMPRIDO',
-    small: 'PEQUENO', big: 'GRANDE',
 }
 
 // ─────────────────────────────────────────────────── a regra é um teste
 
-export const traitOf = (def: ItemDef, size: ItemSize, kind: TraitKind): TraitValue =>
-    kind === 'color' ? def.color : kind === 'shape' ? def.shape : size
+export const traitOf = (def: ItemDef, kind: TraitKind): TraitValue =>
+    kind === 'color' ? def.color : def.shape
 
 /** O veredito é uma FUNÇÃO do item e da placa do momento — nunca um campo. */
-export function shouldCollect(def: ItemDef, size: ItemSize, rule: Rule): boolean {
-    const has = traitOf(def, size, rule.kind) === rule.value
+export function shouldCollect(def: ItemDef, rule: Rule): boolean {
+    const has = traitOf(def, rule.kind) === rule.value
     return rule.mode === 'include' ? has : !has
 }
 
@@ -135,17 +131,8 @@ export const makeRule = (option: RuleOption, value: TraitValue): Rule => ({
     word: WORD_MANY[String(value)] ?? String(value).toUpperCase(),
 })
 
-const SIZES: ItemSize[] = ['small', 'big']
-
-export function candidatesFor(pool: ItemDef[], rule: Rule, collect: boolean): Candidate[] {
-    const out: Candidate[] = []
-    for (const def of pool) {
-        for (const size of SIZES) {
-            if (shouldCollect(def, size, rule) === collect) out.push({ def, size })
-        }
-    }
-    return out
-}
+export const candidatesFor = (pool: ItemDef[], rule: Rule, collect: boolean): ItemDef[] =>
+    pool.filter(def => shouldCollect(def, rule) === collect)
 
 /**
  * Uma rodada só é jogável se as DUAS respostas existirem. Placa que só produz
@@ -173,7 +160,7 @@ export function pickCandidate(
     rule: Rule,
     collect: boolean,
     rng: () => number,
-): Candidate | null {
+): ItemDef | null {
     const list = candidatesFor(pool, rule, collect)
     if (!list.length) return null
     return list[Math.floor(rng() * list.length) % list.length]
@@ -218,11 +205,10 @@ export const OK_PASS = 'Isso! O diferente passa direto.'
 /** Erro nunca é "tente de novo": diz QUAL peça e por quê. */
 export function mistakeSentence(
     def: ItemDef,
-    size: ItemSize,
     rule: Rule,
     tookIt: boolean,
 ): string {
-    const mine = WORD_ONE[String(traitOf(def, size, rule.kind))] ?? ''
+    const mine = WORD_ONE[String(traitOf(def, rule.kind))] ?? ''
     const asked = WORD_ONE[String(rule.value)] ?? ''
     if (tookIt) {
         return rule.mode === 'include'

@@ -13,9 +13,19 @@ import type {
 /** Trava contra laço infinito. A criança pode montar um em 'montar-programa'. */
 export const MAX_ITERATIONS = 40
 
+/**
+ * VOCABULÁRIO DO JOGO — uma palavra para cada coisa, sempre a mesma.
+ *
+ *   CASA   = o objetivo, a casinha desenhada no tabuleiro.
+ *   ESPAÇO = uma célula do grid, por onde se anda.
+ *            Espaço LIVRE dá para andar; espaço FECHADO não.
+ *
+ * Antes "casa" era usada para os dois, e o objetivo às vezes virava
+ * "estrela" — que nem existe no desenho. Três nomes para duas coisas.
+ */
 export const CONDITION_LABELS: Record<ConditionId, string> = {
-    caminho_livre: 'a casa da frente estiver livre',
-    nao_no_objetivo: 'não chegou na estrela',
+    caminho_livre: 'o espaço da frente estiver livre',
+    nao_no_objetivo: 'não chegou na casa',
     passos_menos_de_2: 'andou menos de 2 passos',
     passos_menos_de_3: 'andou menos de 3 passos',
     passos_menos_de_4: 'andou menos de 4 passos',
@@ -24,8 +34,8 @@ export const CONDITION_LABELS: Record<ConditionId, string> = {
 }
 
 export const CONDITION_HELP: Record<ConditionId, string> = {
-    caminho_livre: 'Olhe a casa destacada na frente do robô.',
-    nao_no_objetivo: 'Veja se o robô ainda não está na estrela.',
+    caminho_livre: 'Olhe o espaço destacado na frente do robô.',
+    nao_no_objetivo: 'Veja se o robô ainda não chegou na casa.',
     passos_menos_de_2: 'Conte só os passos que ele já andou.',
     passos_menos_de_3: 'Conte só os passos que ele já andou.',
     passos_menos_de_4: 'Conte só os passos que ele já andou.',

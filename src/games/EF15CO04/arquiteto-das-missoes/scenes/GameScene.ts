@@ -251,12 +251,33 @@ export class GameScene extends Phaser.Scene {
 
     // ------------------------------------------------------------- cenário
 
+    /**
+     * O FUNDO É FUNDO, E FUNDO SE DESFOCA.
+     *
+     * A sala desenhada tem relógio, prateleira, plantas e quadros — detalhe
+     * demais competindo com as peças da prancheta, que é onde a criança tem
+     * que olhar. Phaser não desfoca sem um pipeline próprio, mas o efeito sai
+     * empilhando cópias deslocadas da mesma imagem: cada borda vira mancha
+     * suave. É imagem estática, então não custa quadro nenhum depois de pronta.
+     */
     private buildBackground() {
-        const bg = this.add.image(W / 2, H / 2, TEX.central).setDepth(-3)
-        bg.setScale(Math.max(W / bg.width, H / bg.height))
+        const base = this.add.image(W / 2, H / 2, TEX.central).setDepth(-4)
+        const scale = Math.max(W / base.width, H / base.height)
+        base.setScale(scale)
+
+        const smear = [
+            [-7, -7], [7, -7], [-7, 7], [7, 7],
+            [0, -11], [0, 11], [-11, 0], [11, 0],
+        ]
+        smear.forEach(([dx, dy], i) => {
+            this.add.image(W / 2 + dx, H / 2 + dy, TEX.central)
+                .setDepth(-3)
+                .setScale(scale * (1 + i * 0.005))
+                .setAlpha(0.34)
+        })
 
         const veil = this.add.graphics().setDepth(-2)
-        veil.fillStyle(C.night, A.veil)
+        veil.fillStyle(C.night, A.veil + 0.14)
         veil.fillRect(0, 0, W, H)
 
         this.stageLayer = this.add.container(0, 0).setDepth(4)
@@ -574,7 +595,7 @@ export class GameScene extends Phaser.Scene {
         this.card = buildProblemCard(this, this.workLayer!, phase.task.cardTitle, phase.task.cardText)
         this.showPanel(false)
 
-        const btn = this.button(W / 2, DOCK.cy, DOCK.btnWide, DOCK.btnH, 'PARTIR', C.coral, () => {
+        const btn = this.button(W / 2, DOCK.cy, DOCK.btnWide, DOCK.btnH, 'DIVIDIR', C.coral, () => {
             this.blockInput()
             this.tweens.add({
                 targets: btn,
@@ -754,19 +775,34 @@ export class GameScene extends Phaser.Scene {
     }
 
     private onCandidatePick(cand: Candidate) {
-        if (this.isInputBlocked() || this.locked) return
+        if (this.isInputBlocked()) return
         const card = this.trayCards.get(cand.id)
         if (!card) return
 
         const phase = this.phase as SplitPhase
         const task = this.secondPassDone && phase.task.secondPass ? phase.task.secondPass : phase.task
 
+        /*
+         * ERRO RESPONDE NA HORA — INCLUSIVE COM OUTRA PEÇA VOANDO.
+         *
+         * Antes o `locked` da animação engolia o toque inteiro, sem nem um
+         * tremor: a criança tocava na peça errada, não acontecia nada, e o
+         * aviso só aparecia quando ela tocava de novo, um ou dois segundos
+         * depois. Parecia que o jogo tinha demorado a perceber o erro.
+         *
+         * Recusar não mexe em nada no tabuleiro, então pode acontecer sempre.
+         * O `locked` continua valendo para ENCAIXAR, que é o que mexe.
+         */
         if (!cand.fits) {
+            if (this.time.now - this.lastRejectMs < 320) return
+            this.lastRejectMs = this.time.now
             this.result.wrongPicks++
             rejectShake(this, card)
             this.toast(cand.reason, C.coral)
             return
         }
+
+        if (this.locked) return
 
         const slot = this.slots.find(s => !s.filled)
         if (!slot) return
@@ -826,9 +862,9 @@ export class GameScene extends Phaser.Scene {
                 })
                 this.time.delayedCall(360, () => {
                     this.card = buildProblemCard(this, this.workLayer!, 'PARTE GRANDE', second.cardText)
-                    this.say('Esta parte ainda guarda outras dentro. Toque em PARTIR de novo.', C.amber)
+                    this.say('Esta parte ainda tem coisas dentro. Toque em DIVIDIR de novo.', C.amber)
 
-                    const btn = this.button(W / 2, DOCK.cy, DOCK.btnWide, DOCK.btnH, 'PARTIR', C.coral, () => {
+                    const btn = this.button(W / 2, DOCK.cy, DOCK.btnWide, DOCK.btnH, 'DIVIDIR', C.coral, () => {
                         this.blockInput()
                         this.tweens.add({ targets: btn, alpha: 0, duration: 200, onComplete: () => btn.destroy() })
                         this.card?.tear(second.slots, () => {
@@ -991,13 +1027,16 @@ export class GameScene extends Phaser.Scene {
     }
 
     private onStepPick(id: string, text: string) {
-        if (this.isInputBlocked() || this.locked) return
+        if (this.isInputBlocked()) return
         const phase = this.phase as SolvePhase
         const card = this.stepCards.get(id)
         if (!card) return
 
         const expected = phase.task.answer[this.stepPlaced.length]
+        // mesmo motivo do `onCandidatePick`: recusa não espera animação
         if (id !== expected) {
+            if (this.time.now - this.lastRejectMs < 320) return
+            this.lastRejectMs = this.time.now
             this.result.wrongOrder++
             rejectShake(this, card)
             const step = phase.task.steps.find(s => s.id === expected)
@@ -1005,6 +1044,7 @@ export class GameScene extends Phaser.Scene {
             return
         }
 
+        if (this.locked) return
         this.locked = true
         card.disableInteractive()
         const index = this.stepPlaced.length
@@ -1239,13 +1279,26 @@ export class GameScene extends Phaser.Scene {
             g.lineStyle(3, block.reused ? C.gold : C.paperEdge, 1)
             g.strokeRoundedRect(-w / 2, -TIMELINE.laneH / 2 + 12, w, TIMELINE.laneH - 26, TIMELINE.blockR)
 
-            const label = this.add.text(0, -6, block.label, {
+            /*
+             * NOME CURTO NO BLOCO, NOME INTEIRO NO TOQUE.
+             *
+             * A largura do bloco é o tempo dele: dez minutos são oitenta
+             * pixels. "Separar os materiais" não cabe em oitenta pixels, e
+             * como o Phaser não quebra dentro da palavra, o texto vazava por
+             * cima do bloco vizinho. O nome curto cabe; quem quiser o inteiro
+             * toca no bloco.
+             */
+            const part = partOf(this.phase.mission, block.partId)
+            const label = this.add.text(0, -6, part?.short ?? block.label, {
                 fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif',
                 fontSize: TIMELINE.blockFont,
                 color: '#ffffff',
                 align: 'center',
-                wordWrap: { width: w - 16 },
             }).setOrigin(0.5).setResolution(2)
+
+            for (let px = parseInt(TIMELINE.blockFont, 10); px > 10 && label.width > w - 14; px -= 1) {
+                label.setFontSize(`${px}px`)
+            }
 
             const mins = this.add.text(0, 20, minutesLabel(block.minutes), {
                 fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif',
@@ -1253,7 +1306,11 @@ export class GameScene extends Phaser.Scene {
                 color: hex(C.paperSoft),
             }).setOrigin(0.5).setResolution(2)
 
-            container.add([g, label, mins])
+            const peek = this.add.rectangle(0, 0, w, TIMELINE.laneH - 26, C.white, 0.001)
+                .setInteractive({ useHandCursor: true })
+            peek.on('pointerdown', () => this.toast(block.label, tone))
+
+            container.add([g, label, mins, peek])
             container.setData('partId', block.partId)
             this.blockLayer!.add(container)
 
@@ -1733,7 +1790,7 @@ export class GameScene extends Phaser.Scene {
         if (this.phase.kind === 'partir') {
             const base: TutorialStep[] = [
                 { text: 'Este é o pedido inteiro. Ele é grande demais para resolver de uma vez.', ...boardRect },
-                { text: 'Toque em PARTIR. O cartão se divide e abrem encaixes vazios.', ...dockRect },
+                { text: 'Toque em DIVIDIR: o cartão se abre em encaixes vazios.', ...dockRect },
                 { text: 'Depois toque nas partes que cabem dentro do pedido. As que não cabem voltam.', ...dockRect },
             ]
             if (this.level.level === 3) {
@@ -1746,7 +1803,7 @@ export class GameScene extends Phaser.Scene {
             return [
                 { text: 'Agora você resolve uma parte por vez, sem pensar no resto.', ...boardRect },
                 { text: 'Toque nos passos na ordem certa. Eles sobem para a lista.', ...dockRect },
-                { text: 'Parte resolvida vira um módulo guardado na caixa.', ...panelRect },
+                { text: 'Parte pronta vai para a caixa, guardada.', ...panelRect },
             ]
         }
 
@@ -1779,6 +1836,9 @@ export class GameScene extends Phaser.Scene {
             score: this.points,
         })
     }
+
+    /** Evita empilhar avisos iguais quando a criança bate várias vezes. */
+    private lastRejectMs = -1e9
 
     private isInputBlocked() {
         return this.time.now < this.inputBlockedUntil

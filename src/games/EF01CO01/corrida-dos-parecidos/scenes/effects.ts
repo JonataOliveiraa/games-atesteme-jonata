@@ -2,10 +2,10 @@ import Phaser from 'phaser'
 import { Ease, FX, type FxTarget } from '../../../../shared/effects/FX'
 import { BIOME, C, CSS, FONT, SIZE, SWATCH } from '../data/theme'
 import {
-    ALBUM, CAR, CAR_H, COPILOT, DEPTH, GATE, HEADER, HELP, PROGRESS,
+    ALBUM, ALERT, CAR, CAR_H, COPILOT, DEPTH, GATE, HEADER, HELP, PROGRESS,
     ROAD, SIGN, W, laneLeft, laneWidth, laneX,
 } from '../data/layout'
-import type { Biome, Candidate, ColorName, ItemDef, Rule, ShapeName } from '../types'
+import type { Biome, ColorName, ItemDef, Rule, ShapeName } from '../types'
 
 /**
  * Todo desenho deste jogo mora aqui. A GameScene não desenha nada: se ela
@@ -60,6 +60,18 @@ export function createFrame(scene: Phaser.Scene, biome: Biome) {
 
 // ══════════════════════════════════════════════════════ pictograma
 
+export function paintBan(
+    g: Phaser.GameObjects.Graphics,
+    cx: number, cy: number, r: number,
+) {
+    g.lineStyle(Math.max(4, r * 0.24), C.bad, 1)
+    g.strokeCircle(cx, cy, r)
+    g.beginPath()
+    g.moveTo(cx - r * 0.7, cy + r * 0.7)
+    g.lineTo(cx + r * 0.7, cy - r * 0.7)
+    g.strokePath()
+}
+
 export function paintPictogram(
     g: Phaser.GameObjects.Graphics,
     rule: Rule,
@@ -75,32 +87,6 @@ export function paintPictogram(
         g.fillRoundedRect(cx - r + 5, cy - r + 5, size - 10, size - 10, 11)
         g.fillStyle(C.white, 0.6)
         g.fillEllipse(cx - r * 0.3, cy - r * 0.34, size * 0.3, size * 0.2)
-        return
-    }
-
-    if (rule.kind === 'size') {
-        /*
-         * Os dois na MESMA LINHA DE BASE, como coisas apoiadas no chão: é
-         * assim que o olho compara tamanho. O citado ganha cor e um aro
-         * escuro por fora; o outro fica cinza-claro, presente só como régua.
-         */
-        const wantsBig = rule.value === 'big'
-        const baseline = cy + r * 0.66
-        const ball = (x: number, rad: number, on: boolean) => {
-            const y = baseline - rad
-            if (on) {
-                g.fillStyle(C.ink, 1)
-                g.fillCircle(x, y, rad + 4)
-            }
-            g.fillStyle(on ? C.warnDark : 0xb4c1cb, 1)
-            g.fillCircle(x, y, rad)
-            g.fillStyle(on ? C.warn : 0xd6dee5, 1)
-            g.fillCircle(x, y - rad * 0.1, rad * 0.84)
-            g.fillStyle(C.white, on ? 0.65 : 0.4)
-            g.fillEllipse(x - rad * 0.3, y - rad * 0.42, rad * 0.62, rad * 0.36)
-        }
-        ball(cx - r * 0.62, r * 0.32, !wantsBig)
-        ball(cx + r * 0.34, r * 0.54, wantsBig)
         return
     }
 
@@ -214,14 +200,7 @@ export function createRuleSign(scene: Phaser.Scene): RuleSign {
         const iconX = left + 34
         picto.clear()
         paintPictogram(picto, rule, iconX, 0, 56)
-        if (exclude) {
-            picto.lineStyle(8, C.bad, 1)
-            picto.strokeCircle(iconX, 0, 33)
-            picto.beginPath()
-            picto.moveTo(iconX - 23, 23)
-            picto.lineTo(iconX + 23, -23)
-            picto.strokePath()
-        }
+        if (exclude) paintBan(picto, iconX, 0, 33)
         word.setPosition(left + 84 + word.width / 2, 1)
 
         alertRing.clear()
@@ -241,6 +220,66 @@ export function createRuleSign(scene: Phaser.Scene): RuleSign {
         },
         at: () => ({ x: SIGN.x, y: SIGN.y }),
         destroy: () => container.destroy(),
+    }
+}
+
+// ══════════════════════════════════════════════════════ aviso de troca
+
+/**
+ * Quando a placa troca, a criança precisa saber DUAS coisas: que mudou, e
+ * para o quê. O aviso amarelo entra no header dizendo "placa nova" e mostra
+ * o pictograma do valor que passou a valer — o mesmo desenho da placa, com o
+ * mesmo proibido vermelho quando a regra é de negação, para que os dois nunca
+ * contem histórias diferentes.
+ */
+export function createRuleAlert(scene: Phaser.Scene) {
+    const halfW = ALERT.w / 2
+    const halfH = ALERT.h / 2
+    const container = scene.add.container(ALERT.x, ALERT.y).setDepth(DEPTH.hud + 3)
+    const body = scene.add.graphics()
+    const picto = scene.add.graphics()
+    const label = text(scene, 26, 0, 'PLACA\nNOVA!', '20px', CSS.ink)
+    label.setAlign('center').setLineSpacing(-4)
+    container.add([body, picto, label])
+    container.setScale(0).setAlpha(0)
+
+    body.fillStyle(0x000000, 0.3)
+    body.fillRoundedRect(-halfW + 3, -halfH + 5, ALERT.w, ALERT.h, 20)
+    body.fillStyle(C.ink, 1)
+    body.fillRoundedRect(-halfW, -halfH, ALERT.w, ALERT.h, 20)
+    body.fillStyle(C.warnDark, 1)
+    body.fillRoundedRect(-halfW + 4, -halfH + 4, ALERT.w - 8, ALERT.h - 8, 17)
+    body.fillStyle(C.warn, 1)
+    body.fillRoundedRect(-halfW + 4, -halfH + 4, ALERT.w - 8, ALERT.h - 14, 17)
+    body.fillStyle(C.white, 0.35)
+    body.fillRoundedRect(-halfW + 14, -halfH + 10, ALERT.w - 28, 11, 6)
+
+    const iconX = -halfW + 12 + ALERT.picto / 2
+
+    return {
+        async show(rule: Rule) {
+            FX.kill(scene, fx(container))
+            picto.clear()
+            paintPictogram(picto, rule, iconX, 0, ALERT.picto)
+            if (rule.mode === 'exclude') paintBan(picto, iconX, 0, ALERT.picto * 0.6)
+
+            container.setAlpha(1).setScale(0)
+            await FX.to(scene, fx(container), { scale: 1 },
+                { duration: 300, ease: Ease.back(2.8) })
+            await FX.shake(scene, fx(container), { amount: 6, times: 3 })
+            FX.breathe(scene, fx(container), { grow: 1.09, duration: 620 })
+        },
+
+        async hide() {
+            FX.kill(scene, fx(container))
+            await FX.to(scene, fx(container), { scale: 0.7, alpha: 0 }, { duration: 260 })
+            container.setScale(0)
+        },
+
+        destroy() {
+            FX.kill(scene, fx(container))
+            container.destroy()
+        },
     }
 }
 
@@ -668,7 +707,7 @@ export function createAlbum(scene: Phaser.Scene) {
     const parts: Phaser.GameObjects.GameObject[] = []
 
     return {
-        async show(items: Candidate[], headline: string, stars: number) {
+        async show(items: ItemDef[], headline: string, stars: number) {
             const title = text(scene, W / 2, ALBUM.titleY, headline, '34px', CSS.cream)
             title.setStroke(CSS.ink, 9).setDepth(DEPTH.fx).setScale(0.6).setAlpha(0)
             parts.push(title)
@@ -676,7 +715,7 @@ export function createAlbum(scene: Phaser.Scene) {
             const shown = items.slice(-8)
             const icons = shown.map((entry, i) => {
                 const x = W / 2 + (i - (shown.length - 1) / 2) * ALBUM.gap
-                const icon = createItemIcon(scene, entry.def, ALBUM.size)
+                const icon = createItemIcon(scene, entry, ALBUM.size)
                 icon.setPosition(x, ALBUM.y).setDepth(DEPTH.fx).setScale(0)
                 parts.push(icon)
                 return icon

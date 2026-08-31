@@ -44,26 +44,25 @@ export class UIScene extends Phaser.Scene {
 
         // ── Identidade, à esquerda ──
         this.add.image(38, mid, 'robot')
-            .setDisplaySize(40, 40)
+            .setDisplaySize(44, 44)
             .setDepth(1)
 
-        this.add.text(68, mid, 'Labirinto do Enquanto', {
+        /*
+         * O NOME DO JOGO SAIU DA BARRA.
+         *
+         * Ele ocupava um terço dela para dizer algo que a criança não precisa
+         * saber enquanto joga — e empurrava a instrução, que é a única coisa
+         * ali que muda, para uma coluna estreita no meio. Agora a instrução
+         * tem a barra quase inteira e cabe numa linha grande.
+         */
+        this.instructionText = this.add.text(W / 2 - 20, mid, '', {
             fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif',
-            fontSize: '25px',
-            color: CSS.creme,
-            stroke: CSS.borda,
-            strokeThickness: 4,
-        }).setOrigin(0, 0.5).setDepth(1).setResolution(2)
-
-        // ── Instrução do momento, no centro ──
-        this.instructionText = this.add.text(W / 2, mid - 10, '', {
-            fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif',
-            fontSize: '24px',
+            fontSize: '28px',
             color: CSS.amarelo,
             stroke: CSS.borda,
-            strokeThickness: 4,
+            strokeThickness: 5,
             align: 'center',
-            wordWrap: { width: 600 },
+            wordWrap: { width: 880 },
         }).setOrigin(0.5).setDepth(1).setResolution(2)
 
         // ── Nível e ajuda, à direita ──

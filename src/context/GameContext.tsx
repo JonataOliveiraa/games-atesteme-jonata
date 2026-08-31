@@ -2,6 +2,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -156,6 +157,27 @@ function loadInitialState(): PlatformState {
 
 export function GameProvider({ children }: Props) {
   const [state, setState] = useState<PlatformState>(loadInitialState);
+
+  /**
+   * ══════════════════════════════════════════════════════════════════════
+   *  O ESPELHO DO ESTADO, PARA QUEM PRECISA DE RESPOSTA NA HORA
+   * ══════════════════════════════════════════════════════════════════════
+   *
+   * `setState(prev => ...)` roda DEPOIS. Marcar `let deu = true` lá dentro
+   * não adianta: quando a função retorna, a variável ainda vale `false`, e
+   * quem chamou lê "não deu certo" para uma operação que deu.
+   *
+   * Foi exatamente o bug do "Desbloquear jogo": o desbloqueio acontecia (os
+   * pontos saíam, o jogo liberava), `unlockGameAccess` devolvia `false`, a
+   * página desistia antes de fechar o modal — e o GAME OVER ficava na tela
+   * por cima de um jogo já liberado.
+   *
+   * Com o espelho, a decisão é tomada sobre o estado ATUAL e devolvida na
+   * mesma batida. O atualizador continua com as mesmas guardas, para que uma
+   * segunda chamada não cobre duas vezes.
+   */
+  const stateRef = useRef(state);
+  stateRef.current = state;
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
@@ -359,7 +381,11 @@ historyItems.unshift(
 
   const buyExtraLife = useCallback((gameId: string) => {
     const normalizedGameId = normalizeGameId(gameId);
-    let bought = false;
+    const atual = stateRef.current;
+
+    if (atual.points < atual.extraLifeCost) {
+      return false;
+    }
 
     setState((prev) => {
       if (prev.points < prev.extraLifeCost) {
@@ -371,7 +397,6 @@ historyItems.unshift(
         normalizedGameId in nextLives ? nextLives[normalizedGameId] : 1;
 
       nextLives[normalizedGameId] = currentLives + 1;
-      bought = true;
 
       return normalizeState({
         ...prev,
@@ -389,12 +414,20 @@ historyItems.unshift(
       });
     });
 
-    return bought;
+    return true;
   }, []);
 
   const unlockGameAccess = useCallback((gameId: string) => {
     const normalizedGameId = normalizeGameId(gameId);
-    let unlocked = false;
+    const atual = stateRef.current;
+
+    if (!isBlockStillActive(atual.blockedGames[normalizedGameId])) {
+      return false;
+    }
+
+    if (atual.points < atual.unlockCost) {
+      return false;
+    }
 
     setState((prev) => {
       const blockedUntil = prev.blockedGames[normalizedGameId];
@@ -413,8 +446,6 @@ historyItems.unshift(
       delete nextBlockedGames[normalizedGameId];
       nextGameLives[normalizedGameId] = 0;
 
-      unlocked = true;
-
       return normalizeState({
         ...prev,
         points: prev.points - prev.unlockCost,
@@ -432,7 +463,7 @@ historyItems.unshift(
       });
     });
 
-    return unlocked;
+    return true;
   }, []);
 
   const resetProgress = useCallback(() => {

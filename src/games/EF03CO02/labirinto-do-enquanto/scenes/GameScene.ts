@@ -9,7 +9,6 @@ import {
     ACTION_ICON,
     ACTION_LABELS,
     ahead,
-    CONDITION_HELP,
     CONDITION_ICON,
     conditionSentence,
     simulate,
@@ -67,7 +66,8 @@ export class GameScene extends Phaser.Scene {
     private overlay: Phaser.GameObjects.GameObject[] = []
 
     private robot?: Phaser.GameObjects.Image
-    private robotGlow?: Phaser.GameObjects.Image
+    private compass?: Phaser.GameObjects.Container
+    private compassArrow?: Phaser.GameObjects.Image
     private badge?: Phaser.GameObjects.Image
     private conditionFocus?: Phaser.GameObjects.Container
 
@@ -78,6 +78,8 @@ export class GameScene extends Phaser.Scene {
     private setupViews: SlotView[] = []
     private bodyViews: SlotView[] = []
     private runBtn?: Phaser.GameObjects.Container
+    private loopToken?: Phaser.GameObjects.Container
+    private station: 'testar' | 'andar' = 'testar'
 
     private unsubPlatform?: () => void
 
@@ -105,6 +107,11 @@ export class GameScene extends Phaser.Scene {
         this.setupViews = []
         this.bodyViews = []
         this.overlay = []
+    }
+
+    /** A casa cresce com o espaço disponível — ver `tileFor`. */
+    private get tile() {
+        return L.tileFor(this.challenge)
     }
 
     private get challenge(): MazeChallenge {
@@ -201,73 +208,135 @@ export class GameScene extends Phaser.Scene {
     //  FUNDO E TABULEIRO
     // ══════════════════════════════════════════════════════════════════════
 
+    /**
+     * O cenário é FUNDO, não conteúdo. A oficina desenhada tem ferramentas,
+     * engrenagens e um robô grande no canto — tudo isso disputava o olho com o
+     * tabuleiro, que é a única coisa que a criança precisa ler. Escurecendo
+     * mais, ele vira textura de parede e some do primeiro plano.
+     */
     private drawBackground() {
         const key = this.levelConfig.level === 3 ? 'bg-campo' : 'bg-oficina'
         const bg = this.add.image(L.W / 2, L.H / 2, key).setDepth(0)
         bg.setScale(Math.max(L.W / bg.width, L.H / bg.height))
-        this.add.rectangle(L.W / 2, L.H / 2, L.W, L.H, C.borda, 0.46).setDepth(1)
+        this.add.rectangle(L.W / 2, L.H / 2, L.W, L.H, C.borda, 0.76).setDepth(1)
     }
 
-    private plannedPathCells(ch: MazeChallenge) {
-        const path = new Set<string>()
-        path.add(ch.start.c + ',' + ch.start.r)
+    /**
+     * As casas por onde o robô pode andar: a partida, tudo o que a solução
+     * percorre e o objetivo. É o corredor do labirinto — o "vazio" da frase
+     * "enquanto a próxima posição estiver vazia".
+     */
+    private corridorCells(ch: MazeChallenge) {
+        const cells = new Set<string>()
+        cells.add(ch.start.c + ',' + ch.start.r)
+        cells.add(ch.goal.c + ',' + ch.goal.r)
 
-        const result = simulate(ch, ch.solution)
-        result.trace.forEach(step => {
-            if (step.kind === 'avancar') {
-                path.add(step.after.c + ',' + step.after.r)
-            }
+        simulate(ch, ch.solution).trace.forEach(step => {
+            if (step.kind === 'avancar') cells.add(step.after.c + ',' + step.after.r)
         })
 
-        return path
+        return cells
     }
 
     private drawBoard() {
         this.boardLayer.removeAll(true)
         this.trailLayer.removeAll(true)
         this.robot?.destroy()
-        this.robotGlow?.destroy()
+        this.compass?.destroy()
         this.badge?.destroy()
         this.conditionFocus?.destroy()
         this.robot = undefined
-        this.robotGlow = undefined
+        this.compass = undefined
+        this.compassArrow = undefined
         this.badge = undefined
 
         const ch = this.challenge
-        const plannedPath = this.plannedPathCells(ch)
         const o = L.boardOrigin(ch)
 
         const frame = this.add.graphics()
         frame.fillStyle(C.borda, 0.55)
-        frame.fillRoundedRect(o.x - L.TILE / 2 - 10, o.y - L.TILE / 2 - 10, o.boardW + 20, o.boardH + 20, 22)
+        frame.fillRoundedRect(o.x - this.tile / 2 - 10, o.y - this.tile / 2 - 10, o.boardW + 20, o.boardH + 20, 22)
         frame.lineStyle(4, C.claro, 0.5)
-        frame.strokeRoundedRect(o.x - L.TILE / 2 - 10, o.y - L.TILE / 2 - 10, o.boardW + 20, o.boardH + 20, 22)
+        frame.strokeRoundedRect(o.x - this.tile / 2 - 10, o.y - this.tile / 2 - 10, o.boardW + 20, o.boardH + 20, 22)
         this.boardLayer.add(frame)
+
+        /*
+         * ══════════════════════════════════════════════════════════════
+         *  O CORREDOR É O QUE ESTÁ LIVRE
+         * ══════════════════════════════════════════════════════════════
+         *
+         * As duas texturas são a MESMA chapa, uma clara e outra escura. Chapa
+         * clara com rebite não parece chão livre: parece muro. Pintar o
+         * tabuleiro inteiro de chapa clara deixou tudo com cara de bloqueado —
+         * inclusive o corredor por onde o robô tem que andar.
+         *
+         * Então o desenho volta a separar as duas coisas pelo que elas
+         * significam: o corredor por onde dá para andar é o rebaixado escuro,
+         * e a chapa clara em volta é muro. É a leitura que a habilidade cobra
+         * ("enquanto a próxima posição estiver vazia") — a criança precisa ver
+         * DE LONGE onde acaba o vazio.
+         *
+         * Isso não entrega a resposta: o corredor mostra por onde o robô PODE
+         * andar, não onde o laço para. Onde ele para é o que se pergunta.
+         */
+        const corridor = this.corridorCells(ch)
+        const isWall = (c: number, r: number) =>
+            ch.walls.some(w => w.c === c && w.r === r)
+        const isOpen = (c: number, r: number) =>
+            corridor.has(c + ',' + r) && !isWall(c, r)
 
         for (let r = 0; r < ch.height; r++) {
             for (let c = 0; c < ch.width; c++) {
                 const p = L.cellCenter(ch, c, r)
                 const isGoal = ch.goal.c === c && ch.goal.r === r
                 const isStart = ch.start.c === c && ch.start.r === r
-                const isPath = plannedPath.has(c + ',' + r)
 
-                const key = isGoal ? 'tile-objetivo'
-                    : isStart ? 'tile-partida'
-                        : isPath ? 'tile-parede'
-                            : 'tile-piso'
-
+                /*
+                 * O CHÃO VEM PRIMEIRO, SEMPRE.
+                 *
+                 * A bandeira da partida e a casa do objetivo são OBJETOS com
+                 * fundo transparente, não pisos. Desenhar um deles no lugar do
+                 * chão abria um buraco na casa, e a moldura escura do tabuleiro
+                 * aparecia por baixo.
+                 */
+                const open = isOpen(c, r)
                 this.boardLayer.add(
-                    this.add.image(p.x, p.y, key).setDisplaySize(L.TILE, L.TILE),
+                    this.add.image(p.x, p.y, open ? 'tile-parede' : 'tile-piso')
+                        .setDisplaySize(this.tile, this.tile),
                 )
 
                 if (isGoal) {
+                    this.boardLayer.add(
+                        this.add.image(p.x, p.y, 'tile-objetivo')
+                            .setDisplaySize(this.tile * 0.86, this.tile * 0.86),
+                    )
+                }
+
+                if (isStart) {
+                    // a bandeira é lembrete de onde ele começou, não obstáculo:
+                    // apagada o bastante para não disputar com o robô
+                    this.boardLayer.add(
+                        this.add.image(p.x, p.y, 'tile-partida')
+                            .setDisplaySize(this.tile * 0.7, this.tile * 0.7)
+                            .setAlpha(0.34),
+                    )
+                }
+
+                /*
+                 * O espaço fechado não recebe moldura nenhuma. Ele é chapa,
+                 * igual a toda a chapa em volta — porque é a mesma coisa: fim
+                 * do corredor. Contornar só aquele quadrado dava a ele um
+                 * status que ele não tem, e sujava o desenho.
+                 */
+
+                if (isGoal) {
                     const glow = this.add.image(p.x, p.y, 'fx-brilho')
-                        .setDisplaySize(L.TILE * 1.5, L.TILE * 1.5)
+                        .setDisplaySize(this.tile * 1.4, this.tile * 1.4)
                         .setTint(C.amarelo)
                         .setBlendMode(Phaser.BlendModes.ADD)
-                        .setAlpha(0.32)
+                        .setAlpha(0.24)
                     this.boardLayer.add(glow)
-                    this.tweens.add({ targets: glow, alpha: 0.62, duration: 950, yoyo: true, repeat: -1 })
+                    this.tweens.add({ targets: glow, alpha: 0.44, duration: 1100, yoyo: true, repeat: -1 })
                 }
             }
         }
@@ -275,19 +344,18 @@ export class GameScene extends Phaser.Scene {
         const start = L.cellCenter(ch, ch.start.c, ch.start.r)
         this.robotAngle = ch.startDir * 90
 
-        this.robotGlow = this.add.image(start.x, start.y, 'fx-brilho')
-            .setDisplaySize(L.TILE * 1.3, L.TILE * 1.3)
-            .setTint(C.creme)
-            .setBlendMode(Phaser.BlendModes.ADD)
-            .setAlpha(0.22)
-            .setDepth(12)
-
+        /*
+         * O robô NÃO gira. Girar o desenho inteiro deixava ele deitado de lado
+         * quando andava para a direita. Quem aponta a direção é a seta ao lado
+         * dele — o corpo continua de pé, do jeito que uma criança desenha.
+         */
         this.robot = this.add.image(start.x, start.y, 'robot')
-            .setDisplaySize(L.TILE * 0.78, L.TILE * 0.78)
-            .setAngle(this.robotAngle)
+            .setDisplaySize(this.tile * 0.78, this.tile * 0.78)
             .setDepth(13)
 
-        this.badge = this.add.image(start.x, start.y - L.TILE * 0.62, 'badge-verdadeiro')
+        this.buildCompass()
+
+        this.badge = this.add.image(start.x, start.y - this.tile * 0.62, 'badge-verdadeiro')
             .setDisplaySize(54, 54)
             .setDepth(14)
             .setAlpha(0)
@@ -299,10 +367,76 @@ export class GameScene extends Phaser.Scene {
     //  PAINEL DO PROGRAMA — redesenhado a cada desafio, só com o necessário
     // ══════════════════════════════════════════════════════════════════════
 
+    /**
+     * O DESTAQUE VERDE/VERMELHO É ANDAIME, E ANDAIME SE TIRA.
+     *
+     * Ele pinta o espaço da frente de verde ou vermelho e escreve "ESPAÇO
+     * LIVRE" / "ESPAÇO FECHADO" — ou seja, responde a pergunta que o jogo está
+     * fazendo. Serve
+     * para ensinar o que a condição olha, e só isso: da segunda fase em diante
+     * quem tem que testar a condição é a criança, olhando o tabuleiro.
+     */
+    private get helperOn() {
+        return this.levelConfig.level === 1 && this.challengeIndex === 0
+    }
+
+    /**
+     * A bússola: painel próprio, acima do tabuleiro, com a seta grande. Antes
+     * a seta ficava grudada no robô — pequena, atravessando a casa vizinha e
+     * competindo com a figura que a criança precisa olhar.
+     */
+    private buildCompass() {
+        const ch = this.challenge
+        if (!L.needsCompass(ch.mode)) return
+
+        const r = L.compassRect(ch)
+        const box = this.add.container(0, 0).setDepth(15)
+
+        const g = this.add.graphics()
+        g.fillStyle(C.borda, 0.35)
+        g.fillRoundedRect(r.x + 4, r.y + 6, r.w, r.h, L.COMPASS.r)
+        g.fillStyle(C.escuro, 0.96)
+        g.fillRoundedRect(r.x, r.y, r.w, r.h, L.COMPASS.r)
+        g.lineStyle(4, C.amarelo, 0.8)
+        g.strokeRoundedRect(r.x, r.y, r.w, r.h, L.COMPASS.r)
+
+        const robot = this.add.image(r.x + 46, L.cy(r), 'robot').setDisplaySize(52, 52)
+
+        const dial = this.add.graphics()
+        dial.fillStyle(C.borda, 0.55)
+        dial.fillCircle(r.x + r.w - 60, L.cy(r), 34)
+        dial.lineStyle(3, C.claro, 0.6)
+        dial.strokeCircle(r.x + r.w - 60, L.cy(r), 34)
+
+        this.compassArrow = this.add.image(r.x + r.w - 60, L.cy(r), 'icon-avancar')
+            .setDisplaySize(46, 46)
+            .setAngle(this.robotAngle)
+
+        box.add([g, robot, dial, this.compassArrow])
+        this.compass = box
+    }
+
+    /** A virada gira a agulha — é o feedback de que a curva aconteceu. */
+    private turnCompass(done: () => void) {
+        if (!this.compassArrow) {
+            this.time.delayedCall(260, done)
+            return
+        }
+        this.tweens.add({
+            targets: this.compassArrow, angle: this.robotAngle,
+            duration: 300, ease: 'Back.easeOut',
+            onComplete: done,
+        })
+        this.tweens.add({
+            targets: this.compassArrow, scale: this.compassArrow.scale * 1.18,
+            duration: 150, yoyo: true,
+        })
+    }
+
     private showConditionFocus(state: RobotState, value?: boolean) {
         this.conditionFocus?.destroy()
         this.conditionFocus = undefined
-        if (!this.condition) return
+        if (!this.condition || !this.helperOn) return
 
         const ch = this.challenge
         const current = L.cellCenter(ch, state.c, state.r)
@@ -317,41 +451,41 @@ export class GameScene extends Phaser.Scene {
             const inside = target.c >= 0 && target.c < ch.width && target.r >= 0 && target.r < ch.height
             const p = inside
                 ? L.cellCenter(ch, target.c, target.r)
-                : { x: current.x + dx * L.TILE, y: current.y + dy * L.TILE }
+                : { x: current.x + dx * this.tile, y: current.y + dy * this.tile }
             const isFree = inside && !ch.walls.some(w => w.c === target.c && w.r === target.r)
             const markColor = value === undefined ? (isFree ? C.verde : C.vermelho) : color
 
             g.lineStyle(7, markColor, 1)
-            g.strokeRoundedRect(p.x - L.TILE / 2 + 8, p.y - L.TILE / 2 + 8, L.TILE - 16, L.TILE - 16, 16)
+            g.strokeRoundedRect(p.x - this.tile / 2 + 8, p.y - this.tile / 2 + 8, this.tile - 16, this.tile - 16, 16)
             g.fillStyle(markColor, 0.18)
-            g.fillRoundedRect(p.x - L.TILE / 2 + 8, p.y - L.TILE / 2 + 8, L.TILE - 16, L.TILE - 16, 16)
+            g.fillRoundedRect(p.x - this.tile / 2 + 8, p.y - this.tile / 2 + 8, this.tile - 16, this.tile - 16, 16)
             g.lineStyle(8, C.amarelo, 0.95)
-            g.lineBetween(current.x + dx * L.TILE * 0.24, current.y + dy * L.TILE * 0.24, current.x + dx * L.TILE * 0.44, current.y + dy * L.TILE * 0.44)
+            g.lineBetween(current.x + dx * this.tile * 0.24, current.y + dy * this.tile * 0.24, current.x + dx * this.tile * 0.44, current.y + dy * this.tile * 0.44)
             g.fillStyle(C.amarelo, 1)
-            g.fillCircle(current.x + dx * L.TILE * 0.5, current.y + dy * L.TILE * 0.5, 9)
+            g.fillCircle(current.x + dx * this.tile * 0.5, current.y + dy * this.tile * 0.5, 9)
 
-            const label = this.add.text(p.x, p.y - L.TILE / 2 - 16, isFree ? 'CASA LIVRE' : 'BLOQUEADO', {
+            const label = this.add.text(p.x, p.y - this.tile / 2 - 16, isFree ? 'ESPAÇO LIVRE' : 'ESPAÇO FECHADO', {
                 fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif', fontSize: '18px', color: CSS.creme,
                 stroke: CSS.borda, strokeThickness: 5,
             }).setOrigin(0.5).setResolution(2)
             focus.add([g, label])
         } else if (this.condition === 'nao_no_objetivo') {
             g.lineStyle(7, color, 1)
-            g.strokeRoundedRect(current.x - L.TILE / 2 + 8, current.y - L.TILE / 2 + 8, L.TILE - 16, L.TILE - 16, 16)
+            g.strokeRoundedRect(current.x - this.tile / 2 + 8, current.y - this.tile / 2 + 8, this.tile - 16, this.tile - 16, 16)
             g.fillStyle(color, 0.15)
-            g.fillRoundedRect(current.x - L.TILE / 2 + 8, current.y - L.TILE / 2 + 8, L.TILE - 16, L.TILE - 16, 16)
+            g.fillRoundedRect(current.x - this.tile / 2 + 8, current.y - this.tile / 2 + 8, this.tile - 16, this.tile - 16, 16)
             const atGoal = state.c === ch.goal.c && state.r === ch.goal.r
-            const label = this.add.text(current.x, current.y - L.TILE / 2 - 16, atGoal ? 'NA CASA' : 'AINDA FORA', {
+            const label = this.add.text(current.x, current.y - this.tile / 2 - 16, atGoal ? 'NA CASA' : 'AINDA FORA', {
                 fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif', fontSize: '18px', color: CSS.creme,
                 stroke: CSS.borda, strokeThickness: 5,
             }).setOrigin(0.5).setResolution(2)
             focus.add([g, label])
         } else {
             g.fillStyle(C.borda, 0.9)
-            g.fillRoundedRect(current.x - 84, current.y - L.TILE / 2 - 46, 168, 42, 18)
+            g.fillRoundedRect(current.x - 84, current.y - this.tile / 2 - 46, 168, 42, 18)
             g.lineStyle(3, color, 1)
-            g.strokeRoundedRect(current.x - 84, current.y - L.TILE / 2 - 46, 168, 42, 18)
-            const label = this.add.text(current.x, current.y - L.TILE / 2 - 25, `${state.steps} PASSOS`, {
+            g.strokeRoundedRect(current.x - 84, current.y - this.tile / 2 - 46, 168, 42, 18)
+            const label = this.add.text(current.x, current.y - this.tile / 2 - 25, `${state.steps} PASSOS`, {
                 fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif', fontSize: '18px', color: CSS.creme,
                 stroke: CSS.borda, strokeThickness: 4,
             }).setOrigin(0.5).setResolution(2)
@@ -380,67 +514,133 @@ export class GameScene extends Phaser.Scene {
         g.strokeRoundedRect(L.PANEL.x, L.PANEL.y, L.PANEL.w, L.PANEL.h, L.PANEL.r)
         this.panelLayer.add(g)
 
-        this.panelLayer.add(
-            this.add.text(L.PANEL.x + L.PANEL.w / 2, L.PANEL_TITLE_Y, 'PAINEL DO ROBÔ', {
-                fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif', fontSize: '25px', color: CSS.amarelo,
-                stroke: CSS.borda, strokeThickness: 3,
-            }).setOrigin(0.5).setResolution(2),
-        )
-
-        this.buildMissionGuide()
+        // sem título: a barra do topo já diz o que fazer, e "PAINEL DO ROBÔ"
+        // era mais uma linha de texto para uma tela que já tinha texto demais
 
         if (lay.setupSlots.length) {
             this.panelLabel(lay.setupLabelY, 'ANTES DO LAÇO')
             lay.setupSlots.forEach((rect, i) => this.setupViews.push(this.buildSlot(rect, 'setup', i)))
         }
 
-        const wb = this.add.graphics()
-        wb.fillStyle(C.normal, 0.55)
-        wb.fillRoundedRect(lay.whileBlock.x, lay.whileBlock.y, lay.whileBlock.w, lay.whileBlock.h, 16)
-        wb.lineStyle(3, C.amarelo, 0.8)
-        wb.strokeRoundedRect(lay.whileBlock.x, lay.whileBlock.y, lay.whileBlock.w, lay.whileBlock.h, 16)
-        this.panelLayer.add(wb)
-
+        this.drawCycle()
         this.buildChip()
-        this.panelLabel(lay.bodyLabelY, 'REPITA')
         lay.bodySlots.forEach((rect, i) => this.bodyViews.push(this.buildSlot(rect, 'body', i)))
+        this.buildLoopToken()
 
-        this.panelLabel(lay.trayLabelY, lay.trayLabel)
+        if (lay.trayLabel) this.panelLabel(lay.trayLabelY, lay.trayLabel)
         this.buildTray()
         this.buildControls()
 
         this.refreshProgram()
+        this.setStation('testar', false)
     }
 
-    private buildMissionGuide() {
-        const mode = this.challenge.mode
-        const text = mode === 'prever-condicao'
-            ? `Olhe o robô e teste: ${this.condition ? CONDITION_HELP[this.condition] : 'a condição vale agora?'}`
-            : mode === 'escolher-condicao'
-                ? 'Escolha a condição que fica falsa quando o robô chega na casa.'
-                : 'Toque em um encaixe, toque na peça e execute o programa.'
+    /**
+     * ══════════════════════════════════════════════════════════════════
+     *  O DESENHO DO LAÇO
+     * ══════════════════════════════════════════════════════════════════
+     *
+     * Duas estações e uma seta que volta. A de cima é o teste, a de baixo é o
+     * que se repete, e a volta pela esquerda é o "enquanto" — a única parte do
+     * programa que a palavra sozinha não conseguia mostrar.
+     */
+    private drawCycle() {
+        const { testar, andar, loopX } = this.lay.cycle
+        const wb = this.lay.whileBlock
+        const g = this.add.graphics()
 
-        const x = L.PANEL.x + 18
-        const y = L.PANEL.y + 48
-        const w = L.PANEL.w - 36
-        const h = 50
+        g.fillStyle(C.normal, 0.4)
+        g.fillRoundedRect(wb.x, wb.y, wb.w, wb.h, 20)
+        g.lineStyle(3, C.amarelo, 0.55)
+        g.strokeRoundedRect(wb.x, wb.y, wb.w, wb.h, 20)
 
-        const bg = this.add.graphics()
-        bg.fillStyle(C.borda, 0.46)
-        bg.fillRoundedRect(x, y, w, h, 14)
-        bg.lineStyle(2, C.amarelo, 0.72)
-        bg.strokeRoundedRect(x, y, w, h, 14)
+        const midT = L.cy(testar)
+        const midA = L.cy(andar)
+        const downX = L.cx(testar)
 
-        const label = this.add.text(x + 16, y + h / 2, text, {
-            fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif', fontSize: '15px', color: CSS.creme,
-            wordWrap: { width: w - 32 },
-        }).setOrigin(0, 0.5).setResolution(2)
+        // descida: depois de testar, ele anda
+        g.lineStyle(9, C.amarelo, 0.85)
+        g.lineBetween(downX, testar.y + testar.h, downX, andar.y - 6)
+        g.fillStyle(C.amarelo, 0.95)
+        g.fillTriangle(downX - 13, andar.y - 16, downX + 13, andar.y - 16, downX, andar.y + 2)
 
-        this.panelLayer.add([bg, label])
+        // volta pela esquerda: e testa de novo
+        g.lineStyle(9, C.claro, 0.9)
+        g.beginPath()
+        g.moveTo(andar.x - 8, midA)
+        g.lineTo(loopX, midA)
+        g.lineTo(loopX, midT)
+        g.lineTo(testar.x - 20, midT)
+        g.strokePath()
+        g.fillStyle(C.claro, 1)
+        g.fillTriangle(testar.x - 20, midT - 13, testar.x - 20, midT + 13, testar.x - 2, midT)
+
+        this.panelLayer.add(g)
     }
+
+    /** A luz que percorre o ciclo — é ela que faz o laço acontecer na tela. */
+    private buildLoopToken() {
+        const { testar } = this.lay.cycle
+        this.loopToken = this.add.container(testar.x - 30, L.cy(testar))
+
+        const halo = this.add.graphics()
+        halo.fillStyle(C.creme, 0.28)
+        halo.fillCircle(0, 0, 22)
+        const core = this.add.graphics()
+        core.fillStyle(C.borda, 1)
+        core.fillCircle(0, 2, 13)
+        core.fillStyle(C.creme, 1)
+        core.fillCircle(0, 0, 11)
+
+        this.loopToken.add([halo, core])
+        this.panelLayer.add(this.loopToken)
+        this.tweens.add({
+            targets: halo, scale: 1.45, alpha: 0.1,
+            duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+        })
+    }
+
+    /**
+     * Move a luz para a estação que está acontecendo. Descendo ela vai reto
+     * pelo meio; voltando ela faz a curva da esquerda, que é o gesto do laço.
+     */
+    private setStation(station: 'testar' | 'andar', animate = true) {
+        const token = this.loopToken
+        if (!token) return
+        const { testar, andar, loopX } = this.lay.cycle
+        this.station = station
+
+        const home = station === 'testar'
+            ? { x: testar.x - 30, y: L.cy(testar) }
+            : { x: andar.x - 30, y: L.cy(andar) }
+
+        this.tweens.killTweensOf(token)
+        if (!animate) {
+            token.setPosition(home.x, home.y)
+            return
+        }
+
+        const path = station === 'andar'
+            ? [{ x: L.cx(testar), y: andar.y - 10 }, home]
+            : [{ x: loopX, y: L.cy(andar) }, { x: loopX, y: L.cy(testar) }, home]
+
+        let chain = Promise.resolve()
+        path.forEach((point, i) => {
+            chain = chain.then(() => new Promise<void>(resolve => {
+                this.tweens.add({
+                    targets: token, x: point.x, y: point.y,
+                    duration: i === path.length - 1 ? 180 : 150,
+                    ease: 'Sine.easeInOut',
+                    onComplete: () => resolve(),
+                })
+            }))
+        })
+        void chain
+    }
+
     private panelLabel(y: number, label: string) {
         const t = this.add.text(L.PANEL.x + 34, y, label, {
-            fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif', fontSize: '18px', color: CSS.claro,
+            fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif', fontSize: '21px', color: CSS.claro,
             stroke: CSS.borda, strokeThickness: 2,
         }).setOrigin(0, 0.5).setResolution(2)
         this.panelLayer.add(t)
@@ -454,8 +654,8 @@ export class GameScene extends Phaser.Scene {
         this.chipIcon = this.add.image(chip.x + 32, L.cy(chip), 'icon-cond-caminho')
             .setDisplaySize(44, 44).setVisible(false)
         this.chipText = this.add.text(chip.x + 60, L.cy(chip), '', {
-            fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif', fontSize: '19px', color: CSS.creme,
-            wordWrap: { width: chip.w - 96 },
+            fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif', fontSize: '24px', color: CSS.creme,
+            wordWrap: { width: chip.w - 100 },
         }).setOrigin(0, 0.5).setResolution(2)
 
         const zone = this.add.zone(L.cx(chip), L.cy(chip), chip.w, chip.h)
@@ -496,9 +696,9 @@ export class GameScene extends Phaser.Scene {
         const bg = this.add.graphics()
         const icon = this.add.image(rect.x + 26, L.cy(rect), 'icon-avancar')
             .setDisplaySize(34, 34).setVisible(false)
-        const label = this.add.text(rect.x + 48, L.cy(rect), '', {
-            fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif', fontSize: '18px', color: CSS.creme,
-            wordWrap: { width: rect.w - 76 },
+        const label = this.add.text(rect.x + 56, L.cy(rect), '', {
+            fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif', fontSize: '23px', color: CSS.creme,
+            wordWrap: { width: rect.w - 84 },
         }).setOrigin(0, 0.5).setResolution(2)
 
         const zone = this.add.zone(L.cx(rect), L.cy(rect), rect.w, rect.h)
@@ -595,26 +795,45 @@ export class GameScene extends Phaser.Scene {
     private buildTrayCard(rect: L.Rect | undefined, iconKey: string, text: string, onTap: () => void) {
         if (!rect) return
 
-        const card = this.add.image(L.cx(rect), L.cy(rect), 'card-acao')
-            .setDisplaySize(rect.w, rect.h)
-        const icon = this.add.image(rect.x + 38, L.cy(rect), iconKey).setDisplaySize(40, 40)
-        const label = this.add.text(rect.x + 70, L.cy(rect), text, {
-            fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif', fontSize: '18px', color: CSS.borda,
-            wordWrap: { width: rect.w - 92 },
+        /*
+         * A peça é desenhada, não esticada. A textura `card-acao` era um
+         * cartão quase quadrado; espremido em 428x46 ele virava um borrão com
+         * emenda visível na direita. Rounded rect no mesmo acabamento do resto
+         * do painel resolve, e ainda troca de cor sozinho.
+         */
+        const holder = this.add.container(L.cx(rect), L.cy(rect))
+        const half = { w: rect.w / 2, h: rect.h / 2 }
+
+        const g = this.add.graphics()
+        g.fillStyle(C.borda, 0.4)
+        g.fillRoundedRect(-half.w, -half.h + 5, rect.w, rect.h, 13)
+        g.fillStyle(C.borda, 1)
+        g.fillRoundedRect(-half.w, -half.h, rect.w, rect.h, 13)
+        g.fillStyle(C.claro, 1)
+        g.fillRoundedRect(-half.w + 3, -half.h + 3, rect.w - 6, rect.h - 6, 11)
+        g.fillStyle(C.creme, 0.32)
+        g.fillRoundedRect(-half.w + 10, -half.h + 8, rect.w - 20, 9, 5)
+
+        const icon = this.add.image(-half.w + 38, 0, iconKey).setDisplaySize(38, 38)
+        const label = this.add.text(-half.w + 70, 0, text, {
+            fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif', fontSize: '20px', color: CSS.borda,
+            wordWrap: { width: rect.w - 96 },
         }).setOrigin(0, 0.5).setResolution(2)
+
+        holder.add([g, icon, label])
 
         const zone = this.add.zone(L.cx(rect), L.cy(rect), rect.w, rect.h)
             .setInteractive({ useHandCursor: true })
 
-        zone.on('pointerover', () => this.tweens.add({ targets: [card, icon, label], y: '-=3', duration: 90 }))
-        zone.on('pointerout', () => this.tweens.add({ targets: [card, icon, label], y: '+=3', duration: 90 }))
+        zone.on('pointerover', () => this.tweens.add({ targets: holder, y: L.cy(rect) - 3, duration: 90 }))
+        zone.on('pointerout', () => this.tweens.add({ targets: holder, y: L.cy(rect), duration: 90 }))
         zone.on('pointerdown', () => {
             if (this.phase === 'rodando') return
-            this.tweens.add({ targets: card, scaleX: card.scaleX * 0.96, duration: 70, yoyo: true })
+            this.tweens.add({ targets: holder, scale: 0.96, duration: 70, yoyo: true })
             onTap()
         })
 
-        this.panelLayer.add([card, icon, label, zone])
+        this.panelLayer.add([holder, zone])
     }
 
     private buildVFButtons() {
@@ -844,6 +1063,7 @@ export class GameScene extends Phaser.Scene {
         const ch = this.challenge
 
         if (step.kind === 'verificar') {
+            this.setStation('testar')
             this.showConditionFocus(step.before, step.conditionValue)
             this.flashChip(!!step.conditionValue)
             this.showBadge(step.conditionValue ? 'badge-verdadeiro' : 'badge-falso')
@@ -853,12 +1073,15 @@ export class GameScene extends Phaser.Scene {
         }
 
         if (step.kind === 'virar') {
+            this.setStation('andar')
             this.robotAngle += step.action === 'virar-dir' ? 90 : -90
             this.playNote(520)
+
             this.tweens.add({
-                targets: this.robot, angle: this.robotAngle, duration: 260, ease: 'Sine.easeInOut',
-                onComplete: () => this.time.delayedCall(100, done),
+                targets: this.robot, scaleX: this.robot!.scaleX * 0.86,
+                duration: 130, yoyo: true, ease: 'Sine.easeInOut',
             })
+            this.turnCompass(() => this.time.delayedCall(100, done))
             return
         }
 
@@ -869,10 +1092,9 @@ export class GameScene extends Phaser.Scene {
             this.dropTrail(from.x, from.y)
             this.playNote(600)
 
-            const followers = [this.robot, this.robotGlow].filter(Boolean)
-            this.tweens.add({ targets: followers, x: to.x, y: to.y, duration: 280, ease: 'Sine.easeInOut' })
+            this.tweens.add({ targets: this.robot, x: to.x, y: to.y, duration: 280, ease: 'Sine.easeInOut' })
             this.tweens.add({
-                targets: this.badge, x: to.x, y: to.y - L.TILE * 0.62,
+                targets: this.badge, x: to.x, y: to.y - this.tile * 0.62,
                 duration: 280, ease: 'Sine.easeInOut',
                 onComplete: () => this.time.delayedCall(80, done),
             })
@@ -897,7 +1119,7 @@ export class GameScene extends Phaser.Scene {
 
     private dropTrail(x: number, y: number) {
         const mark = this.add.image(x, y, 'marca-rastro')
-            .setDisplaySize(L.TILE * 0.42, L.TILE * 0.42)
+            .setDisplaySize(this.tile * 0.42, this.tile * 0.42)
             .setAlpha(0)
         this.trailLayer.add(mark)
         this.tweens.add({ targets: mark, alpha: 0.55, duration: 200 })
@@ -972,7 +1194,7 @@ export class GameScene extends Phaser.Scene {
 
         const msg =
             res.outcome === 'bateu'
-                ? 'O robô bateu. A condição ainda estava verdadeira e mandou ele andar para cima da parede.'
+                ? 'O robô bateu. A condição ainda estava verdadeira e mandou ele entrar num espaço fechado.'
                 : res.outcome === 'infinito'
                     ? 'Laço infinito! Do jeito que ficou, a condição nunca chega a ser falsa.'
                     : 'O laço parou, mas fora da casa. Onde essa condição vira falsa?'
@@ -1029,30 +1251,45 @@ export class GameScene extends Phaser.Scene {
             w: r.w + pad, h: r.h + pad,
         })
 
+        /*
+         * TUTORIAL É DEMONSTRAÇÃO, NÃO PARÁGRAFO.
+         *
+         * A versão anterior eram quatro telas de frase apontando para
+         * retângulos — exatamente o que o INSTRUCOES.md manda evitar. Agora
+         * cada passo mostra UMA coisa acontecendo: a casa que o robô olha, a
+         * volta do laço no painel, e a resposta. Frases curtas, um alvo cada.
+         */
         if (this.levelConfig.level === 1) {
+            const ch = this.challenge
+            const front = ahead({ c: ch.start.c, r: ch.start.r, dir: ch.startDir, steps: 0 })
+            const cell = L.cellCenter(ch, front.c, front.r)
             const vf = lay.vfButtons
             const vfArea: L.Rect = {
                 x: vf[0].x, y: vf[0].y,
                 w: vf[0].w, h: vf[1].y + vf[1].h - vf[0].y,
             }
+            const cycle = lay.cycle
+
             return [
                 {
-                    text: 'Esta é a condição do laço. O robô testa ela antes de cada volta.',
-                    ...around(chip),
+                    text: 'O robô olha o espaço da frente.',
+                    shape: 'circle',
+                    x: cell.x, y: cell.y,
+                    w: this.tile * 1.5, h: this.tile * 1.5,
+                    balloonX: L.cx(L.PANEL), balloonY: 300,
                 } as TutorialStep,
                 {
-                    text: 'E isto é o que ele repete enquanto a condição for verdadeira.',
-                    ...around(bodySlot),
+                    text: 'Se estiver livre, ele anda — e volta a olhar.',
+                    ...around(lay.whileBlock),
+                    pointer: {
+                        fromX: L.cx(cycle.testar), fromY: L.cy(cycle.testar),
+                        toX: L.cx(cycle.andar), toY: L.cy(cycle.andar),
+                    },
                 } as TutorialStep,
                 {
-                    text: 'Sua vez: olhe o robô no tabuleiro e diga se a condição é verdadeira ou falsa agora.',
+                    text: 'Sua vez: o espaço da frente está livre?',
                     ...around(vfArea),
-                } as TutorialStep,
-                {
-                    text: 'Verdadeira, ele dá mais um passo. Falsa, o laço para na hora — não importa onde ele esteja.',
-                    shape: 'none',
-                    balloonY: 380,
-                    buttonLabel: 'Vamos testar!',
+                    buttonLabel: 'Vamos!',
                 } as TutorialStep,
             ]
         }
@@ -1065,11 +1302,11 @@ export class GameScene extends Phaser.Scene {
             }
             return [
                 {
-                    text: 'Agora o laço está sem condição, e é você quem escolhe.',
+                    text: 'O laço está sem condição.',
                     ...around(chip),
                 } as TutorialStep,
                 {
-                    text: 'Toque em uma destas três. Cada uma vira falsa num lugar diferente do caminho.',
+                    text: 'Escolha uma. Cada uma para num lugar diferente.',
                     ...around(trayArea),
                     pointer: {
                         fromX: L.cx(tray[0]), fromY: L.cy(tray[0]),
@@ -1077,8 +1314,9 @@ export class GameScene extends Phaser.Scene {
                     },
                 } as TutorialStep,
                 {
-                    text: 'Escolheu? Toque em EXECUTAR e veja se o robô para em cima da casa.',
+                    text: 'Depois toque em EXECUTAR.',
                     ...around(lay.btnRun!),
+                    buttonLabel: 'Vamos!',
                 } as TutorialStep,
             ]
         }

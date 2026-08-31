@@ -9,6 +9,13 @@ export type ScoreKey = 'completo' | 'limpo' | 'rapido' | 'reuso'
 export interface PartDef {
     id: string
     label: string
+    /**
+     * Nome de uma palavra, para o bloco na linha do tempo. A largura do bloco
+     * é o tempo dele, então um bloco de 10 minutos tem 80 px — e "Separar os
+     * materiais" não cabe em 80 px de jeito nenhum: a palavra vazava por cima
+     * do bloco vizinho. O nome inteiro continua existindo, aparece ao tocar.
+     */
+    short: string
     detail: string
     minutes: number
     needs: string[]

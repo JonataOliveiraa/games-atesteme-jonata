@@ -41,6 +41,13 @@ export const PROGRESS = {
 
 export const HELP = { x: 1234, y: 50, r: 30 }
 
+/**
+ * O aviso de placa nova mora entre a placa e o `?`, no único vão do header
+ * que ninguém ocupa. Ele nunca cobre a placa: a criança precisa ver as duas
+ * coisas ao mesmo tempo — que mudou, e para o quê.
+ */
+export const ALERT = { x: 1072, y: 50, w: 196, h: 66, picto: 40 }
+
 /** A pista ocupa o meio; as duas margens ficam para o cenário do bioma. */
 export const ROAD = {
     x: 340,
@@ -64,8 +71,7 @@ export const CAR_H = Math.round((CAR.w * CAR.sheetH) / CAR.sheetW)
  */
 export const ITEM = {
     spawnY: 158,
-    small: 66,
-    big: 102,
+    size: 92,
 }
 
 /**
@@ -73,7 +79,7 @@ export const ITEM = {
  * caixas — passar por cima pega, e é isso que os olhos da criança dizem que
  * deveria acontecer. `fallMs` mede o tempo até aqui.
  */
-export const TOUCH_Y = CAR.y - CAR_H / 2 - ITEM.small * 0.4
+export const TOUCH_Y = CAR.y - CAR_H / 2 - ITEM.size * 0.4
 export const TRAVEL = TOUCH_Y - ITEM.spawnY
 
 export const GATE = { h: 44 }
