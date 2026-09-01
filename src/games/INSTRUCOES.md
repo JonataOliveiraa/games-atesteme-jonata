@@ -24,6 +24,12 @@ Cada nível deve ter no máximo 5 fases, desafios, rodadas ou etapas jogáveis.
 Se o conteúdo precisar de mais exemplos, distribua melhor entre os níveis ou
 reduza a duração de cada interação.
 
+Os níveis moram em `data/levels.ts`, e esse é o único lugar. Ao refazer um
+jogo, reescreva esse arquivo — não crie um `casos.ts` ou `missions.ts` ao lado
+dele. Dois arquivos exportando `LEVELS` na mesma pasta compilam, rodam e não
+avisam nada: quem for ler depois abre o errado, e um `from '../data/levels'`
+digitado por engano troca o conteúdo do jogo sem quebrar nada.
+
 O loop principal deve ser simples e bem acabado:
 
 1. o jogo apresenta uma situação;
@@ -162,6 +168,114 @@ O progresso e o resultado devem aparecer de forma visual:
 Pontos continuam existindo no código, porque a plataforma os recebe pelo
 `runtimeGameBridge`. O que não pode é virar texto para a criança.
 
+## Conversa Com A Plataforma
+
+O jogo não conhece a Atesteme. Ele só avisa o que aconteceu na partida. Quem
+traduz isso em aprovado ou reprovado é a camada de embed, em
+`src/pages/EmbedGamePage.tsx`. Nunca decida aprovação dentro do jogo.
+
+Sempre use `runtimeGameBridge`. Existe um `gameBridge` parecido que só fala com
+a própria página: um jogo que importa ele roda perfeito na tela e não entrega
+nada para a plataforma. Nada denuncia o erro, e a criança joga sem receber nota.
+
+```ts
+import { runtimeGameBridge } from '../../../../shared/bridge/runtimeGameBridge'
+```
+
+### Nível é o que a plataforma chama de `stage`
+
+Esta é a confusão mais fácil de cometer. `stage` é o número do **nível**, de 1 a
+3 — não a fase, rodada ou desafio dentro do nível. Concluir o último nível é o
+que aprova a criança.
+
+Todo evento com `stage` usa o número do nível atual, começando em 1, nunca um
+índice de array começando em 0.
+
+### Declare quantos níveis o jogo tem
+
+Sem isso a plataforma chuta 3. Hoje o chute acerta, porque todo jogo tem 3
+níveis — mas é sorte, não garantia. Derive do próprio array de níveis, nunca
+escreva o número na mão:
+
+```ts
+runtimeGameBridge.emit({
+  type: 'GAME_COMPLETED',
+  gameId: GAME_ID,
+  stage: this.level.level,
+  totalStages: LEVELS.length,
+})
+```
+
+`LEVELS.length` continua certo se alguém mexer nos níveis; um `3` escrito na mão
+vira mentira silenciosa.
+
+### Os eventos
+
+| Evento | Quando |
+|---|---|
+| `GAME_READY` | uma vez, quando dá para jogar |
+| `GAME_COMPLETED` | ao concluir **cada** nível, não só o último |
+| `CORRECT_ANSWER` | a cada acerto real |
+| `WRONG_ANSWER` | a cada erro real |
+| `CHECKPOINT` | fim de nível ou marco de progresso |
+| `GAME_OVER` | só se o jogo tiver derrota própria |
+
+`WRONG_ANSWER` não é telemetria: cada um custa uma vida. Não emita em erro de
+arrastar, toque fora ou tentativa cancelada.
+
+Não invente derrota. Na maioria dos jogos insistir até acertar é o exercício, e
+a camada de embed já reprova sozinha quando os erros passam das vidas. Emita
+`GAME_OVER` apenas se existir derrota de verdade — tempo esgotado, vidas
+próprias, sequência quebrada.
+
+O `progress` do `CHECKPOINT` é porcentagem de 0 a 100, arredondada:
+
+```ts
+progress: Math.round((concluidos / total) * 100)
+```
+
+### Quatro armadilhas que já custaram conserto
+
+Nenhuma destas dá erro de compilação. Todas deixam o jogo funcionando na tela e
+errado para a plataforma.
+
+**1. O `return` que engole os níveis do meio.** O fim de nível costuma ser
+escrito assim:
+
+```ts
+if (!isLastLevel) {
+    showLevelComplete(/* ...avança para o próximo... */)
+    return                    // <- o emit abaixo nunca roda nos níveis 1 e 2
+}
+runtimeGameBridge.emit({ type: 'GAME_COMPLETED', /* ... */ })
+```
+
+O evento só sai no último nível. A aprovação continua certa, mas a plataforma
+nunca fica sabendo dos níveis 1 e 2. Emita **antes** da condição, ou dentro dos
+dois ramos.
+
+**2. Nunca escreva `isFinalStage` no jogo.** Ele é calculado fora, comparando
+`stage` com `totalStages`. Um `isFinalStage: true` fixo no código aprova a
+criança no primeiro nível assim que alguém mover o emit de lugar.
+
+**3. Nunca escreva o número do nível na mão.** `stage: 3` está certo hoje e
+vira mentira no dia em que o jogo ganhar um quarto nível — a criança
+terminaria o nível 3, o total seria 4, e ela nunca seria aprovada. Use
+`this.level.level` para o atual e `LEVELS.length` para o total.
+
+**4. Contador de tolerância precisa zerar.** Se o jogo perdoa os dois primeiros
+desvios e só cobra no terceiro, o contador tem que voltar a zero depois de
+cobrar. Sem isso, o terceiro desvio e **todos os seguintes** custam uma vida
+cada, e a regra generosa vira a mais dura do jogo.
+
+### Como conferir
+
+Abra o jogo em `?embed=1&inline=1&stage=1&points=0&lives=3` e jogue com o
+console aberto. Se nenhum evento aparecer, o jogo está mudo.
+
+Jogue os três níveis até o fim e confira que sai um `GAME_COMPLETED` por nível,
+com `stage` 1, 2 e 3 — não só um no final.
+
 ## Código
 
 O código dos jogos deve usar nomes em inglês para variáveis, funções, métodos,
@@ -207,4 +321,11 @@ Antes de considerar um jogo pronto, confira:
 - as animações ajudam a jogabilidade;
 - nenhuma tela mostra texto de pontos, acertos ou erros;
 - o código novo usa nomes em inglês;
-- não foram adicionados comentários desnecessários.
+- não foram adicionados comentários desnecessários;
+- os níveis estão em `data/levels.ts`, e não há outro `LEVELS` na pasta;
+- o jogo importa `runtimeGameBridge`, não `gameBridge`;
+- `GAME_COMPLETED` sai ao fim de cada nível, com `totalStages: LEVELS.length`;
+- `stage` é o número do nível, de 1 a 3, e não está escrito na mão;
+- o jogo não escreve `isFinalStage` em lugar nenhum;
+- todo contador de tolerância zera depois de cobrar;
+- jogou os três níveis e viu um `GAME_COMPLETED` por nível no console.
