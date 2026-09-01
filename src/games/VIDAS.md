@@ -87,6 +87,25 @@ do header e não flutuam por cima dele.
 
 ---
 
+## Os corações estão OCULTOS
+
+`VIDAS_VISIVEIS = false`, no topo de `shared/hud/createLives.ts`, esconde o
+par ícone+número nos 49 jogos.
+
+**A contagem continua rodando.** `lose()` roda, e no zero o `GAME_OVER` sai
+igual — o que some é só o desenho. Na prática, hoje a criança perde a partida
+sem nenhum aviso na tela.
+
+Isso é aceitável enquanto o recurso está parado, mas **não pode ir para
+produção assim**. Duas saídas quando chegar a hora:
+
+- virar `VIDAS_VISIVEIS` para `true` (as posições precisam estar prontas), ou
+- parar de emitir o `GAME_OVER` enquanto estiver oculto — é um `if` dentro do
+  `lose()`, e aí a reprovação volta a ser só a da `EmbedGamePage`.
+
+Com o modo de ajuste (M) ligado, o componente aparece mesmo oculto: é assim
+que se acerta a posição sem ligar o recurso.
+
 ## Ajustar a posição: a tecla M
 
 Só no dev server. Abra o jogo:

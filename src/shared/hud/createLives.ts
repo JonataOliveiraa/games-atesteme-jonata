@@ -34,6 +34,22 @@ import hpIconUrl from '../../assets/global/hp-icon.png'
  * `tint` que combina com a paleta dele.
  */
 
+/**
+ * ══════════════════════════════════════════════════════════════════════════
+ *  OS CORAÇÕES ESTÃO OCULTOS
+ * ══════════════════════════════════════════════════════════════════════════
+ *
+ * `false` esconde o par ícone+número em todos os 49 jogos. A CONTAGEM
+ * CONTINUA: `lose()` roda, e no zero o `GAME_OVER` sai igual — o que some é
+ * só o desenho.
+ *
+ * O modo de ajuste (tecla M) mostra o componente enquanto está ligado, para
+ * a posição poder ser acertada mesmo com ele oculto.
+ *
+ * Vire para `true` quando as posições estiverem prontas nos 49.
+ */
+const VIDAS_VISIVEIS = false
+
 /** A textura compartilhada. Carregada por `preloadLives`. */
 export const LIVES_TEXTURE = 'shared-hp-icon'
 
@@ -133,6 +149,11 @@ function ligarAjuste(
 
     if (tecla === 'm') {
       editando = !editando
+
+      // com `VIDAS_VISIVEIS` em false, o ajuste é a única hora em que dá
+      // para ver o que se está movendo
+      container.setVisible(VIDAS_VISIVEIS || editando)
+
       if (editando) {
         moldura = scene.add.graphics().setDepth(9998)
         aviso = scene.add
@@ -201,7 +222,7 @@ export function createLives(scene: Phaser.Scene, options: LivesOptions): Lives {
     let remaining = Math.max(0, Math.min(total, options.remaining ?? total))
     let acabou = remaining <= 0
 
-    const container = scene.add.container(0, 0).setDepth(depth)
+    const container = scene.add.container(0, 0).setDepth(depth).setVisible(VIDAS_VISIVEIS)
 
     const icone = scene.add
         .image(x + size / 2, y, LIVES_TEXTURE)
