@@ -13,7 +13,6 @@ import {
   clearEmbedSession,
   setEmbedSession,
 } from "../shared/bridge/embedSession";
-import { runtimeGameBridge } from "../shared/bridge/runtimeGameBridge";
 import SeletorDeFase from "../platform/dev/SeletorDeFase";
 import { useAtalhoDeFase } from "../platform/dev/useAtalhoDeFase";
 import { installGameUiTunnel } from "../shared/bridge/uiTunnel";
@@ -78,7 +77,6 @@ export default function EmbedGamePage() {
    * para a mesma tentativa.
    */
   const jaFinalizou = useRef(false);
-  const errosCometidos = useRef(0);
 
   /** Mostrado quando as vidas acabam, no meio segundo antes de sair da tela. */
   const [semVidas, setSemVidas] = useState(false);
@@ -288,59 +286,26 @@ export default function EmbedGamePage() {
         return;
       }
 
-      if (evento.type === "GAME_OVER") {
-        finalizar("reprove");
-        return;
-      }
-
       /*
-       * A DERROTA DOS JOGOS QUE NÃO TÊM DERROTA.
+       * A DERROTA VEM DO JOGO, E DE MAIS NINGUÉM.
        *
-       * Só 14 dos 45 jogos emitem GAME_OVER — o resto simplesmente não tem
-       * uma condição de perder, e inventar uma seria mexer na jogabilidade de
-       * 31 jogos. Então a tolerância a erro vem de FORA: são as `lives` que a
-       * plataforma mandou na query, contadas aqui pelos WRONG_ANSWER.
+       * Esta camada já contou `WRONG_ANSWER` contra as `lives` da query e
+       * emitiu o `GAME_OVER` ela mesma, porque a maioria dos jogos não sabia
+       * perder. Hoje os 49 sabem: `shared/hud/createLives.ts` desconta a cada
+       * erro e emite no zero.
        *
-       * Assim a regra de reprovação é a mesma para os 45, e a plataforma
-       * controla o rigor sem que nenhum jogo precise saber que ela existe.
+       * Manter a contagem aqui deixaria dois juízes para a mesma partida.
+       * Enquanto os dois lessem o mesmo `lives=` e os mesmos eventos eles
+       * concordariam — mas basta um jogo descontar uma vida sem emitir
+       * `WRONG_ANSWER`, ou o contrário, para o resultado passar a depender de
+       * qual chegou primeiro. Não daria erro e não apareceria na tela.
        */
-      if (evento.type === "WRONG_ANSWER") {
-        errosCometidos.current += 1;
-        if (errosCometidos.current < params.lives) return;
-
-        /*
-         * ── A DERROTA QUE O JOGO NÃO TEM ─────────────────────────────────
-         *
-         * 30 dos 45 jogos não emitem `GAME_OVER` porque simplesmente não têm
-         * como perder: a criança erra, o jogo mostra o erro e a vida segue.
-         * Inventar uma condição de derrota dentro de cada um seria mexer na
-         * jogabilidade de 30 jogos — e a maioria deles é de reconhecimento,
-         * onde insistir até acertar É o exercício.
-         *
-         * Então a derrota mora aqui, e é a MESMA para os 45: acabaram as
-         * vidas que a plataforma mandou, acabou a tentativa.
-         *
-         * O `GAME_OVER` é emitido POR ESTA CAMADA, e não pelo jogo. Sai pela
-         * ponte de sempre, então chega na plataforma com `meta` completo e no
-         * meio do fluxo normal de eventos — quem integra não precisa saber
-         * que o jogo não sabia perder. Quem JÁ emite o próprio `GAME_OVER`
-         * nunca chega aqui: aquele evento resolve a partida antes.
-         *
-         * A dureza é da plataforma, não deste código: `lives=1` na query faz
-         * "errou, perdeu"; `lives=5` dá cinco chances. Nenhum jogo precisa ser
-         * editado para mudar isso.
-         */
-        runtimeGameBridge.emit({
-          type: "GAME_OVER",
-          gameId: evento.gameId,
-          stage: evento.stage,
-        });
-
+      if (evento.type === "GAME_OVER") {
         setSemVidas(true);
         finalizar("reprove");
       }
     },
-    [finalizar, params.lives, params.inline]
+    [finalizar, params.inline]
   );
 
   /* ── as telas ──────────────────────────────────────────────────────── */
