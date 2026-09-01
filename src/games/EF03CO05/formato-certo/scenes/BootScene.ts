@@ -19,6 +19,7 @@ import seloPixelsUrl from '../../../../assets/games/EF03CO05/formato-certo/selo-
  */
 import seloTextoUrl from '../../../../assets/games/EF03CO05/formato-certo/selo-texto.png'
 import { faseInicial } from '../../../../shared/level/faseInicial'
+import { preloadLives } from '../../../../shared/hud/createLives'
 
 /**
  * Textura é opcional aqui, por decisão de projeto.
@@ -83,6 +84,7 @@ export class BootScene extends Phaser.Scene {
         })
 
         ASSETS.forEach(([key, url]) => this.load.image(key, url))
+        preloadLives(this)
     }
 
     create() {

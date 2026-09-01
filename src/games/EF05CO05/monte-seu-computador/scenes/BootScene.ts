@@ -37,6 +37,7 @@ import iconePowerUrl from '../../../../assets/games/EF05CO05/monte-seu-computado
 import seloOkUrl from '../../../../assets/games/EF05CO05/monte-seu-computador/selo-ok.png'
 import seloXUrl from '../../../../assets/games/EF05CO05/monte-seu-computador/selo-x.png'
 import { faseInicial } from '../../../../shared/level/faseInicial'
+import { preloadLives } from '../../../../shared/hud/createLives'
 
 const BASES: Array<[string, string]> = [
     ['bg-oficina', bgOficinaUrl],
@@ -117,6 +118,7 @@ export class BootScene extends Phaser.Scene {
         })
 
         ;[...BASES, ...LAYERS, ...EXTRAS].forEach(([key, url]) => this.load.image(key, url))
+        preloadLives(this)
     }
 
     create() {

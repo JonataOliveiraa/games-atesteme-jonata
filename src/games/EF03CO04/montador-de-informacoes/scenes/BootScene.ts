@@ -18,6 +18,7 @@ import dataPetCatUrl from "../../../../assets/games/EF03CO04/montador-de-informa
 import dataStreetSignUrl from "../../../../assets/games/EF03CO04/montador-de-informacoes/data-street-sign.png";
 import dataZipEnvelopeUrl from "../../../../assets/games/EF03CO04/montador-de-informacoes/data-zip-envelope.png";
 import { createLoadingScreen } from "../../../../shared/loading/createLoadingScreen";
+import { preloadLives } from '../../../../shared/hud/createLives'
 
 const ASSETS: Array<[string, string]> = [
   ["bg-address-delivery", bgAddressDeliveryUrl],
@@ -65,6 +66,7 @@ export class BootScene extends Phaser.Scene {
       },
     });
     ASSETS.forEach(([key, url]) => this.load.image(key, url));
+      preloadLives(this)
   }
 
   create() {

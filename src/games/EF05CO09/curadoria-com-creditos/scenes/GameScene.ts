@@ -18,6 +18,8 @@ import type {
     PhaseConfig,
     SealId,
 } from '../types'
+import { createLives, type Lives } from '../../../../shared/hud/createLives'
+import { vidasIniciais } from '../../../../shared/level/vidasIniciais'
 
 const GAME_ID = 'curadoria-com-creditos'
 
@@ -38,6 +40,9 @@ interface FrameView {
 }
 
 export class GameScene extends Phaser.Scene {
+    private lives!: Lives
+    private livesTotal = 3
+    private livesLeft = 3
     private levelIdx = 0
     private phaseIdx = 0
     private points = 0
@@ -66,7 +71,9 @@ export class GameScene extends Phaser.Scene {
         super({ key: 'GameScene' })
     }
 
-    init(data: { level?: number; phase?: number; points?: number }) {
+    init(data: { level?: number; phase?: number; points?: number; lives?: number }) {
+        this.livesTotal = vidasIniciais(this, 3)
+        this.livesLeft = data?.lives ?? this.livesTotal
         this.levelIdx = (data.level ?? 1) - 1
         this.phaseIdx = data.phase ?? 0
         this.points = data.points ?? 0
@@ -131,6 +138,18 @@ export class GameScene extends Phaser.Scene {
 
         if (this.phaseIdx === 0) this.showLevelIntro(() => this.runTutorial())
         else this.runTutorial()
+
+        /* AJUSTE A POSIÇÃO COM A TECLA M (dev). Ver shared/hud/createLives.ts */
+        this.lives = createLives(this, {
+            total: this.livesTotal,
+            remaining: this.livesLeft,
+            gameId: GAME_ID,
+            x: 40,
+            y: 40,
+            size: 30,
+            stage: () => this.level.level,
+        })
+        this.events.once('shutdown', () => this.lives.destroy())
     }
 
     /*
@@ -192,6 +211,8 @@ export class GameScene extends Phaser.Scene {
             pointsEarned: earned,
             stage: this.level.level,
         })
+        // só o erro custa vida: o mesmo emit serve para acerto
+        if (!(seal === 'verde')) { this.lives.lose(); this.livesLeft = this.lives.remaining }
 
         this.completePhase()
     }
@@ -986,6 +1007,8 @@ export class GameScene extends Phaser.Scene {
             pointsEarned: earned,
             stage: this.level.level,
         })
+        // só o erro custa vida: o mesmo emit serve para acerto
+        if (!(clean)) { this.lives.lose(); this.livesLeft = this.lives.remaining }
 
         const overlay = this.add.rectangle(W / 2, H / 2, W, H, C.shadow, A.overlay)
             .setDepth(700).setInteractive()
@@ -1144,7 +1167,7 @@ export class GameScene extends Phaser.Scene {
         const isLastLevel = this.levelIdx + 1 >= LEVELS.length
 
         if (!isLastPhase) {
-            this.scene.restart({ level: this.level.level, phase: this.phaseIdx + 1, points: this.points })
+            this.scene.restart({ lives: this.livesLeft, level: this.level.level, phase: this.phaseIdx + 1, points: this.points })
             return
         }
 
@@ -1169,7 +1192,7 @@ export class GameScene extends Phaser.Scene {
                 progress: { total: LEVELS.length, current: this.level.level },
                 autoAdvance: {
                     delay: 2300,
-                    onComplete: () => this.scene.restart({ 
+                    onComplete: () => this.scene.restart({ lives: this.livesLeft, 
                         level: this.level.level + 1,
                         phase: 0,
                         points: this.points,

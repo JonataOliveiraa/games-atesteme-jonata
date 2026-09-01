@@ -14,6 +14,7 @@ import thumbQuadrinhoDigitalUrl from '../../../../assets/games/EF05CO09/curadori
 import thumbFotoSemAutorUrl from '../../../../assets/games/EF05CO09/curadoria-com-creditos/thumb-foto-sem-autor.png'
 import thumbPersonagemFamosoUrl from '../../../../assets/games/EF05CO09/curadoria-com-creditos/thumb-personagem-famoso-alerta.png'
 import { faseInicial } from '../../../../shared/level/faseInicial'
+import { preloadLives } from '../../../../shared/hud/createLives'
 
 const ASSETS: Array<[string, string]> = [
   ['bg-portfolio', bgPortfolioUrl],
@@ -58,6 +59,7 @@ export class BootScene extends Phaser.Scene {
     })
 
     ASSETS.forEach(([key, url]) => this.load.image(key, url))
+      preloadLives(this)
   }
 
   create() {

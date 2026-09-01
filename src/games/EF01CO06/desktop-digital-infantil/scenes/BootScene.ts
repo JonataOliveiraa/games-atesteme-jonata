@@ -66,7 +66,7 @@ export class BootScene extends Phaser.Scene {
 
     // TODO: this.load.audio('sfx-open',    ['assets/audio/window-open.ogg', 'assets/audio/window-open.mp3'])
     // TODO: this.load.audio('sfx-success', ['assets/audio/success.ogg',     'assets/audio/success.mp3'])
-    preloadLives(this)
+      preloadLives(this)
   }
 
   create() {

@@ -5,6 +5,8 @@ import { LEVELS } from '../data/levels'
 import { ALL_TECH } from '../data/tech'
 import type { CityLocation, LevelConfig, Situation } from '../types'
 import { createTutorial, type TutorialStep } from '../../../../shared/tutorial/createTutorial'
+import { createLives, type Lives } from '../../../../shared/hud/createLives'
+import { vidasIniciais } from '../../../../shared/level/vidasIniciais'
 
 const GAME_ID = 'cidade-das-tecnologias'
 
@@ -30,6 +32,9 @@ interface LocationSprite {
 }
 
 export class GameScene extends Phaser.Scene {
+    private lives!: Lives
+    private livesTotal = 3
+    private livesLeft = 3
   private levelIdx = 0
   private levelConfig!: LevelConfig
   private answered = new Set<string>()
@@ -46,7 +51,9 @@ export class GameScene extends Phaser.Scene {
     super({ key: 'GameScene' })
   }
 
-  init(data: { levelIndex?: number }) {
+  init(data: { levelIndex?: number; lives?: number }) {
+      this.livesTotal = vidasIniciais(this, 3)
+      this.livesLeft = data?.lives ?? this.livesTotal
     this.levelIdx = data.levelIndex ?? 0
     this.levelConfig = LEVELS[this.levelIdx]
     this.answered = new Set()
@@ -61,6 +68,18 @@ export class GameScene extends Phaser.Scene {
 
     this.showLevelIntro()
     runtimeGameBridge.emit({ type: 'GAME_READY', gameId: GAME_ID })
+
+      /* AJUSTE A POSIÇÃO COM A TECLA M (dev). Ver shared/hud/createLives.ts */
+      this.lives = createLives(this, {
+          total: this.livesTotal,
+          remaining: this.livesLeft,
+          gameId: GAME_ID,
+          x: 40,
+          y: 40,
+          size: 30,
+          stage: () => this.levelConfig.level,
+      })
+      this.events.once('shutdown', () => this.lives.destroy())
   }
 
 
@@ -404,6 +423,7 @@ export class GameScene extends Phaser.Scene {
         type: 'WRONG_ANSWER', gameId: GAME_ID,
         pointsEarned: -2, stage: this.levelConfig.level,
       })
+        this.lives.lose(); this.livesLeft = this.lives.remaining
     }
 
     const feedback = this.add.text(640, 529,
@@ -484,7 +504,7 @@ export class GameScene extends Phaser.Scene {
 
       const againBtn = this.makeButton(640, 440, 340, 66, 'Jogar de novo', 0x2E7D32, () => {
         this.playClick()
-        this.scene.restart({ levelIndex: 0 })
+        this.scene.restart({ lives: this.livesLeft, levelIndex: 0 })
       })
 
       const exitBtn = this.makeButton(640, 530, 340, 66, 'Outros jogos', 0x1565C0, () => {
@@ -496,7 +516,7 @@ export class GameScene extends Phaser.Scene {
     } else {
       const nextBtn = this.makeButton(640, 460, 300, 66, 'Próximo nível', 0x2E7D32, () => {
         this.playClick()
-        this.scene.restart({ levelIndex: this.levelIdx + 1 })
+        this.scene.restart({ lives: this.livesLeft, levelIndex: this.levelIdx + 1 })
       })
 
       container.add([overlay, title, nextBtn])

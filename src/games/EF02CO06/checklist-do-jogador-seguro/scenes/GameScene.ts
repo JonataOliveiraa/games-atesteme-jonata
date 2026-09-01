@@ -11,6 +11,8 @@ import {
   W, H, C, hex, label, paperCard, headerBand,
   chunkyButton, floatingNote, confetti, type Btn,
 } from '../ui/kit'
+import { createLives, type Lives } from '../../../../shared/hud/createLives'
+import { vidasIniciais } from '../../../../shared/level/vidasIniciais'
 
 const GAME_ID = 'checklist-do-jogador-seguro'
 
@@ -30,6 +32,9 @@ interface CardView {
 }
 
 export class GameScene extends Phaser.Scene {
+    private lives!: Lives
+    private livesTotal = 3
+    private livesLeft = 3
   private levelIdx = 0
   private roundIdx = 0
   private score = 0
@@ -53,6 +58,8 @@ export class GameScene extends Phaser.Scene {
   constructor() { super({ key: 'GameScene' }) }
 
   init(data: GameSceneData) {
+      this.livesTotal = vidasIniciais(this, 3)
+      this.livesLeft = data?.lives ?? this.livesTotal
     this.levelIdx = Phaser.Math.Clamp((data?.level ?? 1) - 1, 0, LEVELS.length - 1)
     this.roundIdx = Phaser.Math.Clamp(data?.round ?? 0, 0, this.level.rounds.length - 1)
     this.score = data?.score ?? 0
@@ -88,6 +95,18 @@ export class GameScene extends Phaser.Scene {
     } else {
       this.startRound()
     }
+
+      /* AJUSTE A POSIÇÃO COM A TECLA M (dev). Ver shared/hud/createLives.ts */
+      this.lives = createLives(this, {
+          total: this.livesTotal,
+          remaining: this.livesLeft,
+          gameId: GAME_ID,
+          x: 40,
+          y: 40,
+          size: 30,
+          stage: () => this.level.level,
+      })
+      this.events.once('shutdown', () => this.lives.destroy())
   }
 
   private dimHud(on: boolean) { EventBus.emit('hud-dim', on) }
@@ -344,6 +363,7 @@ export class GameScene extends Phaser.Scene {
     runtimeGameBridge.emit({
       type: 'WRONG_ANSWER', gameId: GAME_ID, pointsEarned: 0, stage: this.level.level,
     })
+      this.lives.lose(); this.livesLeft = this.lives.remaining
     this.emitCheckpoint()
 
     // Não avança: explica, devolve os cartões e espera a correção.
@@ -450,7 +470,7 @@ export class GameScene extends Phaser.Scene {
     const lastLevel = this.levelIdx + 1 >= LEVELS.length
 
     if (!lastRound) {
-      this.scene.restart({ 
+      this.scene.restart({ lives: this.livesLeft, 
         level: this.level.level, round: this.roundIdx + 1,
         score: this.score, hits: this.hits, errors: this.errors,
       } satisfies GameSceneData)
@@ -472,7 +492,7 @@ export class GameScene extends Phaser.Scene {
         progress: { total: LEVELS.length, current: this.level.level },
         autoAdvance: {
           delay: 2600,
-          onComplete: () => this.scene.restart({ 
+          onComplete: () => this.scene.restart({ lives: this.livesLeft, 
             level: this.level.level + 1, round: 0,
             score: this.score, hits: this.hits, errors: this.errors,
           } satisfies GameSceneData),
@@ -496,7 +516,7 @@ export class GameScene extends Phaser.Scene {
       buttons: [
         {
           label: 'Jogar de novo', color: C.mintDeep,
-          onClick: () => this.scene.restart({ level: 1, round: 0, score: 0, hits: 0, errors: 0 }),
+          onClick: () => this.scene.restart({ lives: this.livesLeft, level: 1, round: 0, score: 0, hits: 0, errors: 0 }),
         },
         { label: 'Outros jogos', color: C.skyDeep, onClick: () => EventBus.emit('exit-game') },
       ],
@@ -545,7 +565,7 @@ export class GameScene extends Phaser.Scene {
     this.unsubPlatform = runtimeGameBridge.onCommand((cmd: PlatformCommand) => {
       if (cmd.type !== 'START_GAME' || cmd.gameId !== GAME_ID) return
       if (cmd.stage === this.level.level) return
-      this.scene.restart({ level: cmd.stage, round: 0, score: this.score })
+      this.scene.restart({ lives: this.livesLeft, level: cmd.stage, round: 0, score: this.score })
     })
 
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {

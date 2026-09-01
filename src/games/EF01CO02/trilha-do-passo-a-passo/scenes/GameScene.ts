@@ -116,7 +116,6 @@ export class GameScene extends Phaser.Scene {
             size: 30,
             stage: () => this.currentLevelIdx,
         })
-    this.lives.lose(); this.livesLeft = this.lives.remaining
         this.events.once('shutdown', () => this.lives.destroy())
     }
 

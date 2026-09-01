@@ -14,6 +14,7 @@ import personagemIdosoUrl from '../../../../assets/games/EF05CO10/futuro-em-cena
 import personagemRoboUrl from '../../../../assets/games/EF05CO10/futuro-em-cena/personagem-robo.png'
 import propDroneUrl from '../../../../assets/games/EF05CO10/futuro-em-cena/prop-drone.png'
 import { faseInicial } from '../../../../shared/level/faseInicial'
+import { preloadLives } from '../../../../shared/hud/createLives'
 
 const ASSETS: Array<[string, string]> = [
   ['bg-studio', bgStudioUrl],
@@ -58,6 +59,7 @@ export class BootScene extends Phaser.Scene {
     })
 
     ASSETS.forEach(([key, url]) => this.load.image(key, url))
+      preloadLives(this)
   }
 
   create() {

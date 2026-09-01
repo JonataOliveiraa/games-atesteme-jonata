@@ -39,6 +39,7 @@ import eventoInternetUrl from '../../../../assets/games/EF05CO06/missao-arquivo-
 import contextoUrl from '../../../../assets/games/EF05CO06/missao-arquivo-seguro/contexto.png'
 import { createLoadingScreen } from '../../../../shared/loading/createLoadingScreen'
 import { faseInicial } from '../../../../shared/level/faseInicial'
+import { preloadLives } from '../../../../shared/hud/createLives'
 
 
 const ASSETS: Array<[string, string]> = [
@@ -97,6 +98,7 @@ export class BootScene extends Phaser.Scene {
             },
         })
         ASSETS.forEach(([key, url]) => this.load.image(key, url))
+        preloadLives(this)
     }
 
     create() {

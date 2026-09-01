@@ -2,6 +2,7 @@ import Phaser from 'phaser'
 import { createLoadingScreen } from '../../../../shared/loading/createLoadingScreen'
 import { C } from '../data/theme'
 import { faseInicial } from '../../../../shared/level/faseInicial'
+import { preloadLives } from '../../../../shared/hud/createLives'
 
 /**
  * As chaves que o jogo consome: o cenário e as seis artes do acervo.
@@ -99,6 +100,7 @@ export class BootScene extends Phaser.Scene {
         })
 
         found().forEach(([key, url]) => this.load.image(key, url))
+        preloadLives(this)
     }
 
     create() {

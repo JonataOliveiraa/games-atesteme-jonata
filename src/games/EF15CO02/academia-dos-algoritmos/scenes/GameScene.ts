@@ -53,6 +53,8 @@ import type {
   TrailPuzzle,
   World,
 } from '../types'
+import { createLives, type Lives } from '../../../../shared/hud/createLives'
+import { vidasIniciais } from '../../../../shared/level/vidasIniciais'
 
 const GAME_ID = '043'
 
@@ -80,6 +82,9 @@ const GAME_ID = '043'
  * é `scene.restart` — não `scene.start` de outra cena.
  */
 export class GameScene extends Phaser.Scene {
+    private lives!: Lives
+    private livesTotal = 3
+    private livesLeft = 3
   private level!: Level
   private idx = 0
   private points = 0
@@ -141,7 +146,9 @@ export class GameScene extends Phaser.Scene {
     return this.level.kind === 'trail'
   }
 
-  init(data: { level?: number; puzzle?: number; points?: number }) {
+  init(data: { level?: number; puzzle?: number; points?: number; lives?: number }) {
+      this.livesTotal = vidasIniciais(this, 3)
+      this.livesLeft = data?.lives ?? this.livesTotal
     const n = Phaser.Math.Clamp(data.level ?? 1, 1, LEVELS.length)
     this.level = LEVELS[n - 1]
     this.idx = Phaser.Math.Clamp(data.puzzle ?? 0, 0, this.level.puzzles.length - 1)
@@ -181,6 +188,18 @@ export class GameScene extends Phaser.Scene {
     this.emitCheckpoint()
 
     void this.playPuzzle(this.idx === 0)
+
+      /* AJUSTE A POSIÇÃO COM A TECLA M (dev). Ver shared/hud/createLives.ts */
+      this.lives = createLives(this, {
+          total: this.livesTotal,
+          remaining: this.livesLeft,
+          gameId: GAME_ID,
+          x: 40,
+          y: 40,
+          size: 30,
+          stage: () => this.level.number,
+      })
+      this.events.once('shutdown', () => this.lives.destroy())
   }
 
   private buildBenchBoard() {
@@ -800,6 +819,7 @@ export class GameScene extends Phaser.Scene {
       stage: this.level.number,
       pointsEarned: 0,
     })
+      this.lives.lose(); this.livesLeft = this.lives.remaining
   }
 
   /* ──────────────────────────────────────────────── fim do nível ─────── */
@@ -831,7 +851,7 @@ export class GameScene extends Phaser.Scene {
           delay: 2400,
           label: 'Preparando o próximo treino...',
           onComplete: () =>
-            this.scene.restart({ 
+            this.scene.restart({ lives: this.livesLeft, 
               level: this.level.number + 1,
               puzzle: 0,
               points: this.points,
@@ -857,7 +877,7 @@ export class GameScene extends Phaser.Scene {
         {
           label: 'Jogar de novo',
           color: C.brass,
-          onClick: () => this.scene.restart({ level: 1, puzzle: 0, points: 0 }),
+          onClick: () => this.scene.restart({ lives: this.livesLeft, level: 1, puzzle: 0, points: 0 }),
         },
         { label: 'Escolher jogo', color: C.matte, onClick: () => EventBus.emit('exit-game') },
       ],

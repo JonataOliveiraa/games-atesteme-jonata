@@ -11,6 +11,8 @@ import type {
   DrawingChallenge,
   TextChallenge,
 } from "../types";
+import { createLives, type Lives } from '../../../../shared/hud/createLives'
+import { vidasIniciais } from '../../../../shared/level/vidasIniciais'
 
 const GAME_ID = "estudio-multiformato";
 
@@ -79,6 +81,9 @@ const COLORS = {
 };
 
 export class GameScene extends Phaser.Scene {
+    private lives!: Lives
+    private livesTotal = 3
+    private livesLeft = 3
   private levelConfig!: StudioLevel;
   private gameEnded = false;
   private hits = 0;
@@ -130,7 +135,9 @@ export class GameScene extends Phaser.Scene {
     super({ key: "GameScene" });
   }
 
-  init(data?: { level?: number; hits?: number; errors?: number }) {
+  init(data?: { level?: number; hits?: number; errors?: number; lives?: number }) {
+      this.livesTotal = vidasIniciais(this, 3)
+      this.livesLeft = data?.lives ?? this.livesTotal
     const level = Phaser.Math.Clamp(data?.level ?? 1, 1, 3) as StudioLevelNumber;
     this.levelConfig = LEVELS.find((l) => l.level === level) ?? LEVELS[0];
     this.gameEnded = false;
@@ -160,6 +167,18 @@ export class GameScene extends Phaser.Scene {
     this.createBackground();
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.onShutdown());
     this.showStartScreen();
+
+      /* AJUSTE A POSIÇÃO COM A TECLA M (dev). Ver shared/hud/createLives.ts */
+      this.lives = createLives(this, {
+          total: this.livesTotal,
+          remaining: this.livesLeft,
+          gameId: GAME_ID,
+          x: 40,
+          y: 40,
+          size: 30,
+          stage: () => this.levelConfig.level,
+      })
+      this.events.once('shutdown', () => this.lives.destroy())
   }
 
   update() {
@@ -249,6 +268,7 @@ export class GameScene extends Phaser.Scene {
     this.errors += 1;
     this.playWrong();
     runtimeGameBridge.emit({ type: "WRONG_ANSWER", gameId: GAME_ID, stage: this.levelConfig.level, pointsEarned: -5 });
+    this.lives.lose(); this.livesLeft = this.lives.remaining
     this.time.delayedCall(300, () => this.showGameOverScreen());
   }
 
@@ -817,6 +837,7 @@ export class GameScene extends Phaser.Scene {
       this.playWrong();
       this.showToast(`Ainda não. ${hint}`, COLORS.red, 2200);
       runtimeGameBridge.emit({ type: "WRONG_ANSWER", gameId: GAME_ID, stage: this.levelConfig.level, pointsEarned: -5 });
+      this.lives.lose(); this.livesLeft = this.lives.remaining
       this.time.delayedCall(350, () => {
         if (!this.gameEnded) this.n1AnswerLocked = false;
       });
@@ -1296,6 +1317,7 @@ export class GameScene extends Phaser.Scene {
       const hint = FORMAT_OPTIONS.find((f) => f.id === correct)!;
       this.showToast(`Dica: use ${hint.label} para esta missão.`, COLORS.red, 2200);
       runtimeGameBridge.emit({ type: "WRONG_ANSWER", gameId: GAME_ID, stage: this.levelConfig.level, pointsEarned: -5 });
+      this.lives.lose(); this.livesLeft = this.lives.remaining
       this.time.delayedCall(350, () => {
         if (!this.gameEnded) this.n3AnswerLocked = false;
       });
@@ -1645,7 +1667,7 @@ export class GameScene extends Phaser.Scene {
       autoAdvance: {
         delay: 1800,
         label: `Abrindo nível ${nextLevel}...`,
-        onComplete: () => this.scene.restart({ level: nextLevel, hits: this.hits, errors: this.errors }),
+        onComplete: () => this.scene.restart({ lives: this.livesLeft, level: nextLevel, hits: this.hits, errors: this.errors }),
       },
     });
   }
@@ -1663,7 +1685,7 @@ export class GameScene extends Phaser.Scene {
       subtitleColor: "#7c3aed",
       progress: { total: 3, current: 3 },
       buttons: [
-        { label: "Reiniciar", color: COLORS.green, onClick: () => { this.playClick(); this.scene.restart({ level: 1, hits: 0, errors: 0 }); } },
+        { label: "Reiniciar", color: COLORS.green, onClick: () => { this.playClick(); this.scene.restart({ lives: this.livesLeft, level: 1, hits: 0, errors: 0 }); } },
         { label: "Voltar", color: COLORS.purple, onClick: () => { this.playClick(); EventBus.emit("exit-game"); } },
       ],
     });
@@ -1720,7 +1742,7 @@ export class GameScene extends Phaser.Scene {
     rz.setInteractive({ useHandCursor: true });
     rz.on("pointerover", () => this.input.setDefaultCursor("pointer"));
     rz.on("pointerout", () => this.input.setDefaultCursor("default"));
-    rz.on("pointerdown", () => { this.playClick(); this.scene.restart({ level: this.levelConfig.level, hits: 0, errors: 0 }); });
+    rz.on("pointerdown", () => { this.playClick(); this.scene.restart({ lives: this.livesLeft, level: this.levelConfig.level, hits: 0, errors: 0 }); });
 
     const ez = this.addOverlay(this.add.zone(640 + 142 * MODAL_SCALE, 360 + 94 * MODAL_SCALE, 258 * MODAL_SCALE, 64 * MODAL_SCALE).setDepth(70));
     ez.setInteractive({ useHandCursor: true });

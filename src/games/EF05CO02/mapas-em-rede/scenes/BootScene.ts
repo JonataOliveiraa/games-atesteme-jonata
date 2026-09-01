@@ -24,6 +24,7 @@ import avatarNicoUrl from '../../../../assets/games/EF05CO02/mapas-em-rede/avata
 import marcadorPartidaUrl from '../../../../assets/games/EF05CO02/mapas-em-rede/marcador-partida.png'
 import marcadorChegadaUrl from '../../../../assets/games/EF05CO02/mapas-em-rede/marcador-chegada.png'
 import { faseInicial } from '../../../../shared/level/faseInicial'
+import { preloadLives } from '../../../../shared/hud/createLives'
 
 const ASSETS: Array<[string, string]> = [
   ['bg-bairro', bgBairroUrl],
@@ -76,6 +77,7 @@ export class BootScene extends Phaser.Scene {
 
 
     ASSETS.forEach(([key, url]) => this.load.image(key, url))
+      preloadLives(this)
   }
 
   create() {

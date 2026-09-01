@@ -78,7 +78,7 @@ export class BootScene extends Phaser.Scene {
       },
     });
     ASSETS.forEach(([key, url]) => this.load.image(key, url));
-    preloadLives(this)
+      preloadLives(this)
   }
 
   create() {

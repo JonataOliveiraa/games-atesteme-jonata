@@ -10,6 +10,7 @@ import robotUrl from "../../../../assets/games/EF02CO02/desfile-do-robo-repetido
 import successBadgeUrl from "../../../../assets/games/EF02CO02/desfile-do-robo-repetidor/success-badge.png";
 import wallpaperUrl from "../../../../assets/games/EF02CO02/desfile-do-robo-repetidor/wallpaper.png";
 import { createLoadingScreen } from "../../../../shared/loading/createLoadingScreen";
+import { preloadLives } from '../../../../shared/hud/createLives'
 
 const ASSETS: Array<[string, string]> = [
   ["wallpaper", wallpaperUrl],
@@ -49,6 +50,7 @@ export class BootScene extends Phaser.Scene {
       },
     });
     ASSETS.forEach(([key, url]) => this.load.image(key, url));
+      preloadLives(this)
   }
 
   create() {

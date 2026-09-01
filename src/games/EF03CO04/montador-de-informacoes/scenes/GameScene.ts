@@ -4,6 +4,8 @@ import { runtimeGameBridge } from "../../../../shared/bridge/runtimeGameBridge";
 import type { PlatformCommand } from "../../../../shared/contracts/platformCommands";
 import { LEVELS, shufflePieces } from "../data/levels";
 import type { FieldId, InfoLevel, InfoPiece, InfoPieceId } from "../types";
+import { createLives, type Lives } from '../../../../shared/hud/createLives'
+import { vidasIniciais } from '../../../../shared/level/vidasIniciais'
 
 const GAME_ID = "montador-de-informacoes";
 const TIMER_BAR_W = 980;
@@ -37,6 +39,9 @@ type CardRecord = {
 };
 
 export class GameScene extends Phaser.Scene {
+    private lives!: Lives
+    private livesTotal = 3
+    private livesLeft = 3
   private levelConfig!: InfoLevel;
   private pieces: InfoPiece[] = [];
   private cards = new Map<InfoPieceId, CardRecord>();
@@ -57,7 +62,9 @@ export class GameScene extends Phaser.Scene {
     super({ key: "GameScene" });
   }
 
-  init(data: { level?: number }) {
+  init(data: { level?: number; lives?: number }) {
+      this.livesTotal = vidasIniciais(this, 3)
+      this.livesLeft = data?.lives ?? this.livesTotal
     const lvl = (data?.level ?? 1) as 1 | 2 | 3;
     this.levelConfig = LEVELS.find((level) => level.level === lvl) ?? LEVELS[0];
     this.pieces = shufflePieces(this.levelConfig.pieces);
@@ -87,6 +94,18 @@ export class GameScene extends Phaser.Scene {
 
     runtimeGameBridge.emit({ type: "GAME_READY", gameId: GAME_ID });
     this.emitProgress();
+
+      /* AJUSTE A POSIÇÃO COM A TECLA M (dev). Ver shared/hud/createLives.ts */
+      this.lives = createLives(this, {
+          total: this.livesTotal,
+          remaining: this.livesLeft,
+          gameId: GAME_ID,
+          x: 40,
+          y: 40,
+          size: 30,
+          stage: () => this.levelConfig.level,
+      })
+      this.events.once('shutdown', () => this.lives.destroy())
   }
 
   update() {
@@ -585,6 +604,7 @@ export class GameScene extends Phaser.Scene {
       this.playWrong();
       this.showToast(`Esse dado não completa o campo ${wrongField.label}. ${this.levelConfig.hint}`, COLORS.red);
       runtimeGameBridge.emit({ type: "WRONG_ANSWER", gameId: GAME_ID, stage: this.levelConfig.level, pointsEarned: -5 });
+      this.lives.lose(); this.livesLeft = this.lives.remaining
       this.emitProgress();
       return;
     }
@@ -731,7 +751,7 @@ export class GameScene extends Phaser.Scene {
     buttonHitbox.on("pointerout", () => this.tweens.add({ targets: button, scale: 1, duration: 90, ease: "Sine.easeOut" }));
     buttonHitbox.on("pointerdown", () => {
       this.playClick();
-      this.scene.restart({ level: nextLevel });
+      this.scene.restart({ lives: this.livesLeft, level: nextLevel });
     });
     modal.add([title, objective, detail, button]);
     this.animateModal(modal);
@@ -847,7 +867,7 @@ export class GameScene extends Phaser.Scene {
       item.add([badgeBg, number, label]);
       return item;
     });
-    const playAgain = this.createFinalButton(-158, 138, "Jogar novamente", COLORS.green, () => this.scene.restart({ level: 1 }));
+    const playAgain = this.createFinalButton(-158, 138, "Jogar novamente", COLORS.green, () => this.scene.restart({ lives: this.livesLeft, level: 1 }));
     const exit = this.createFinalButton(158, 138, "Voltar aos jogos", COLORS.orange, () => EventBus.emit("exit-game"));
     panel.add([shadow, bg, ribbon, ...sparkles, title, subtitle, message, ...levelLabels, playAgain, exit]);
     this.animateModal(panel);
@@ -1084,7 +1104,7 @@ export class GameScene extends Phaser.Scene {
       if (command.type !== "START_GAME") return;
       if (command.gameId !== GAME_ID) return;
       if (command.stage === this.levelConfig.level) return;
-      this.scene.restart({ level: command.stage as 1 | 2 | 3 });
+      this.scene.restart({ lives: this.livesLeft, level: command.stage as 1 | 2 | 3 });
     });
   }
 

@@ -17,6 +17,7 @@ import scenePasswordGameUrl from "../../../../assets/games/EF01CO07/guardioes-do
 import sceneSchoolPhotoUrl from "../../../../assets/games/EF01CO07/guardioes-dos-dados/scene-school-photo.png";
 import sceneStrangeLinkUrl from "../../../../assets/games/EF01CO07/guardioes-dos-dados/scene-strange-link.png";
 import { createLoadingScreen } from "../../../../shared/loading/createLoadingScreen";
+import { preloadLives } from '../../../../shared/hud/createLives'
 
 const ASSETS: Array<[string, string]> = [
   ["guardians-bg-main", bgMainUrl],
@@ -63,6 +64,7 @@ export class BootScene extends Phaser.Scene {
       },
     });
     ASSETS.forEach(([key, url]) => this.load.image(key, url));
+      preloadLives(this)
   }
 
   create() {

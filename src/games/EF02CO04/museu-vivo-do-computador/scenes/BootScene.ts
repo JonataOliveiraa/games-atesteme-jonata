@@ -16,6 +16,7 @@ import swMusicUrl from '../../../../assets/games/EF02CO04/museu-vivo-do-computad
 import swPhotoUrl from '../../../../assets/games/EF02CO04/museu-vivo-do-computador/sw-photo.png'
 import swTextUrl from '../../../../assets/games/EF02CO04/museu-vivo-do-computador/sw-text.png'
 import swPrinterDriverUrl from '../../../../assets/games/EF02CO04/museu-vivo-do-computador/sw-printer-driver.png'
+import { preloadLives } from '../../../../shared/hud/createLives'
 
 const ASSETS: Array<[string, string]> = [
   ['bg-museum', bgMuseumUrl],
@@ -59,6 +60,7 @@ export class BootScene extends Phaser.Scene {
     })
 
     ASSETS.forEach(([key, url]) => this.load.image(key, url))
+      preloadLives(this)
   }
 
   create() {

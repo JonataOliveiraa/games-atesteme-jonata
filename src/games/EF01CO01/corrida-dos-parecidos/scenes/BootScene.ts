@@ -60,8 +60,8 @@ export class BootScene extends Phaser.Scene {
             const sheet = SHEETS[key]
             if (sheet) this.load.spritesheet(key, url, sheet)
             else this.load.image(key, url)
-            preloadLives(this)
         })
+        preloadLives(this)
     }
 
     create() {

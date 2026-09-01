@@ -35,6 +35,8 @@ export interface RepeatLevel {
 }
 
 export interface GameSceneData {
+    /** Saldo de vidas que atravessa a troca de nível. */
+    lives?: number
     level?: number
     phase?: number
     score?: number

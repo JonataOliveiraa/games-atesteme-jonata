@@ -17,6 +17,8 @@ import type {
     QueryPhase,
     IsomorphismPhase,
 } from '../types'
+import { createLives, type Lives } from '../../../../shared/hud/createLives'
+import { vidasIniciais } from '../../../../shared/level/vidasIniciais'
 
 const GAME_ID = 'mapas-em-rede'
 
@@ -61,6 +63,9 @@ interface NodeView {
 }
 
 export class GameScene extends Phaser.Scene {
+    private lives!: Lives
+    private livesTotal = 3
+    private livesLeft = 3
     private levelIdx = 0
     private phaseIdx = 0
     private points = 0
@@ -106,7 +111,9 @@ export class GameScene extends Phaser.Scene {
         super({ key: 'GameScene' })
     }
 
-    init(data: { level?: number; phase?: number; points?: number }) {
+    init(data: { level?: number; phase?: number; points?: number; lives?: number }) {
+        this.livesTotal = vidasIniciais(this, 3)
+        this.livesLeft = data?.lives ?? this.livesTotal
         this.levelIdx = (data.level ?? 1) - 1
         this.phaseIdx = data.phase ?? 0
         this.points = data.points ?? 0
@@ -157,6 +164,18 @@ export class GameScene extends Phaser.Scene {
         } else {
             this.runTutorials(() => this.startPhase())
         }
+
+        /* AJUSTE A POSIÇÃO COM A TECLA M (dev). Ver shared/hud/createLives.ts */
+        this.lives = createLives(this, {
+            total: this.livesTotal,
+            remaining: this.livesLeft,
+            gameId: GAME_ID,
+            x: 40,
+            y: 40,
+            size: 30,
+            stage: () => this.level.level,
+        })
+        this.events.once('shutdown', () => this.lives.destroy())
     }
 
     private startPhase() {
@@ -1093,6 +1112,7 @@ export class GameScene extends Phaser.Scene {
                 type: 'WRONG_ANSWER', gameId: GAME_ID,
                 pointsEarned: -3, stage: this.level.level,
             })
+                this.lives.lose(); this.livesLeft = this.lives.remaining
         }
 
         this.emitCheckpoint()
@@ -1148,7 +1168,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     private retryPhase() {
-        this.scene.restart({ level: this.level.level, phase: this.phaseIdx, points: this.points })
+        this.scene.restart({ lives: this.livesLeft, level: this.level.level, phase: this.phaseIdx, points: this.points })
     }
 
     private completePhase() {
@@ -1156,7 +1176,7 @@ export class GameScene extends Phaser.Scene {
         const isLastLevel = this.levelIdx + 1 >= LEVELS.length
 
         if (!isLastPhase) {
-            this.scene.restart({ level: this.level.level, phase: this.phaseIdx + 1, points: this.points })
+            this.scene.restart({ lives: this.livesLeft, level: this.level.level, phase: this.phaseIdx + 1, points: this.points })
             return
         }
 
@@ -1172,7 +1192,7 @@ export class GameScene extends Phaser.Scene {
                 progress: { total: LEVELS.length, current: this.level.level },
                 autoAdvance: {
                     delay: 2300,
-                    onComplete: () => this.scene.restart({ 
+                    onComplete: () => this.scene.restart({ lives: this.livesLeft, 
                         level: this.level.level + 1,
                         phase: 0,
                         points: this.points,
@@ -1199,7 +1219,7 @@ export class GameScene extends Phaser.Scene {
             subtitleColor: hex(C.madeira),
             progress: { total: LEVELS.length, current: LEVELS.length },
             buttons: [
-                { label: 'Jogar novamente', color: C.green, onClick: () => this.scene.restart({ level: 1, phase: 0, points: 0 }) },
+                { label: 'Jogar novamente', color: C.green, onClick: () => this.scene.restart({ lives: this.livesLeft, level: 1, phase: 0, points: 0 }) },
                 { label: 'Outros jogos', color: C.madeiraMedia, onClick: () => EventBus.emit('exit-game') },
             ],
         })
@@ -1214,6 +1234,7 @@ export class GameScene extends Phaser.Scene {
             type: 'WRONG_ANSWER', gameId: GAME_ID,
             pointsEarned: -3, stage: this.level.level,
         })
+            this.lives.lose(); this.livesLeft = this.lives.remaining
         runtimeGameBridge.emit({ type: 'GAME_OVER', gameId: GAME_ID, stage: this.level.level })
 
         this.playError()

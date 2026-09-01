@@ -16,6 +16,8 @@ import {
     type Hud, type SentenceCard, type AnswerButton, type TimerBar, type Gavel,
     type ExplanationPanel,
 } from './effects'
+import { createLives, type Lives } from '../../../../shared/hud/createLives'
+import { vidasIniciais } from '../../../../shared/level/vidasIniciais'
 
 const GAME_ID = 'tribunal-do-verdadeiro-ou-falso'
 const MAX_CONSECUTIVE_ERRORS = 3
@@ -45,6 +47,9 @@ const SUCCESS_MESSAGE: Record<number, string> = {
 }
 
 export class GameScene extends Phaser.Scene {
+    private livesHud!: Lives
+    private livesTotal = 3
+    private livesLeft = 3
 
     /* ── estado da partida ─────────────────────────────────────────── */
 
@@ -96,6 +101,8 @@ export class GameScene extends Phaser.Scene {
     }
 
     init(data: { level?: number; points?: number; showLevelStart?: boolean; lives?: number }) {
+        this.livesTotal = vidasIniciais(this, 3)
+        this.livesLeft = data?.lives ?? this.livesTotal
         const lvl = Phaser.Math.Clamp(data?.level ?? 1, 1, 3) as 1 | 2 | 3
 
         this.levelConfig = LEVELS.find(l => l.level === lvl) ?? LEVELS[0]
@@ -153,6 +160,18 @@ export class GameScene extends Phaser.Scene {
         } else {
             void this.playSentence(true)
         }
+
+        /* AJUSTE A POSIÇÃO COM A TECLA M (dev). Ver shared/hud/createLives.ts */
+        this.livesHud = createLives(this, {
+            total: this.livesTotal,
+            remaining: this.livesLeft,
+            gameId: GAME_ID,
+            x: 40,
+            y: 40,
+            size: 30,
+            stage: () => this.levelConfig.level,
+        })
+        this.events.once('shutdown', () => this.livesHud.destroy())
     }
 
     private shutdownScene() {
@@ -299,6 +318,7 @@ export class GameScene extends Phaser.Scene {
                 pointsEarned: POINTS.miss,
                 stage: this.levelConfig.level,
             })
+                this.livesHud.lose(); this.livesLeft = this.livesHud.remaining
         }
         this.emitCheckpoint()
 

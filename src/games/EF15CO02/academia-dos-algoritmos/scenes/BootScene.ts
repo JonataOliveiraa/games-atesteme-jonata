@@ -2,6 +2,7 @@ import Phaser from 'phaser'
 import { createLoadingScreen } from '../../../../shared/loading/createLoadingScreen'
 import { faseInicial } from '../../../../shared/level/faseInicial'
 import { C } from '../data/theme'
+import { preloadLives } from '../../../../shared/hud/createLives'
 
 const WANTED = [
   'bg-sala-treino',
@@ -79,6 +80,7 @@ export class BootScene extends Phaser.Scene {
     })
 
     found().forEach(([key, url]) => this.load.image(key, url))
+      preloadLives(this)
   }
 
   create() {

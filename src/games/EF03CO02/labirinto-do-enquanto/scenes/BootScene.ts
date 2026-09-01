@@ -31,6 +31,7 @@ import marcaRastroUrl from '../../../../assets/games/EF03CO02/labirinto-do-enqua
 import marcaPalpiteUrl from '../../../../assets/games/EF03CO02/labirinto-do-enquanto/marca-palpite.png'
 import { faseInicial } from '../../../../shared/level/faseInicial'
 import { createLoadingScreen } from '../../../../shared/loading/createLoadingScreen'
+import { preloadLives } from '../../../../shared/hud/createLives'
 
 const ASSETS: Array<[string, string]> = [
     ['bg-oficina', bgOficinaUrl],
@@ -86,6 +87,7 @@ export class BootScene extends Phaser.Scene {
             },
         })
         ASSETS.forEach(([key, url]) => this.load.image(key, url))
+        preloadLives(this)
     }
 
     create() {

@@ -24,6 +24,7 @@ import productBackpackFinalUrl from "../../../../assets/games/EF02CO03/fabrica-d
 import productShirtFinalUrl from "../../../../assets/games/EF02CO03/fabrica-de-maquinas/product-shirt-final.png";
 import successBadgeUrl from "../../../../assets/games/EF02CO02/desfile-do-robo-repetidor/success-badge.png";
 import { createLoadingScreen } from "../../../../shared/loading/createLoadingScreen";
+import { preloadLives } from '../../../../shared/hud/createLives'
 
 const ASSETS: Array<[string, string]> = [
   ["level-1-shirt-factory-bg", level1ShirtFactoryBgUrl],
@@ -77,6 +78,7 @@ export class BootScene extends Phaser.Scene {
       },
     });
     ASSETS.forEach(([key, url]) => this.load.image(key, url));
+      preloadLives(this)
   }
 
   create() {

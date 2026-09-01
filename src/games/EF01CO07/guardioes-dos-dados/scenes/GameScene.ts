@@ -5,6 +5,8 @@ import type { PlatformCommand } from "../../../../shared/contracts/platformComma
 import { LEVELS } from "../data/levels";
 import type { SafetyChoice, SafetyLevel, SafetyScene } from "../types";
 import { createTutorial, type TutorialStep } from "../../../../shared/tutorial/createTutorial";
+import { createLives, type Lives } from '../../../../shared/hud/createLives'
+import { vidasIniciais } from '../../../../shared/level/vidasIniciais'
 
 const GAME_ID = "guardioes-dos-dados";
 const TIMER_BAR_Y = 55;
@@ -12,6 +14,9 @@ const TIMER_BAR_W = 900;
 const MODAL_SCALE = 1.28;
 
 export class GameScene extends Phaser.Scene {
+    private lives!: Lives
+    private livesTotal = 3
+    private livesLeft = 3
   private levelStarted = false;
   private hasStartedTimer = false;
   private overlayObjects: Phaser.GameObjects.GameObject[] = [];
@@ -36,7 +41,9 @@ export class GameScene extends Phaser.Scene {
     super({ key: "GameScene" });
   }
 
-  init(data: { level?: number }) {
+  init(data: { level?: number; lives?: number }) {
+      this.livesTotal = vidasIniciais(this, 3)
+      this.livesLeft = data?.lives ?? this.livesTotal
     const lvl = (data?.level ?? 1) as 1 | 2 | 3;
     this.levelConfig = LEVELS.find((item) => item.level === lvl) ?? LEVELS[0];
     this.currentSceneIndex = 0;
@@ -75,6 +82,18 @@ export class GameScene extends Phaser.Scene {
     } else {
       this.levelStarted = true;
     }
+
+      /* AJUSTE A POSIÇÃO COM A TECLA M (dev). Ver shared/hud/createLives.ts */
+      this.lives = createLives(this, {
+          total: this.livesTotal,
+          remaining: this.livesLeft,
+          gameId: GAME_ID,
+          x: 40,
+          y: 40,
+          size: 30,
+          stage: () => this.levelConfig.level,
+      })
+      this.events.once('shutdown', () => this.lives.destroy())
   }
 
   update() {
@@ -746,6 +765,7 @@ export class GameScene extends Phaser.Scene {
       stage: this.levelConfig.level,
       pointsEarned: -5,
     });
+      this.lives.lose(); this.livesLeft = this.lives.remaining
 
     this.showFeedback(choice.feedback, 0xef4444, "⚠️");
     this.emitProgress();
@@ -1051,7 +1071,7 @@ export class GameScene extends Phaser.Scene {
       this.hasStartedTimer = false;
       this.timerEvent?.destroy();
       this.timerEvent = undefined;
-      this.scene.restart({ level: nextLevel });
+      this.scene.restart({ lives: this.livesLeft, level: nextLevel });
     });
 
     modal.add([shadow, bg, topBar, title, objective, detail, button]);
@@ -1192,7 +1212,7 @@ export class GameScene extends Phaser.Scene {
     };
 
     const playAgain = createFinalButton(-142, "Jogar novamente", this.paletteColors.green, "#166534", () => {
-      this.scene.restart({ level: 1 });
+      this.scene.restart({ lives: this.livesLeft, level: 1 });
     });
     const exit = createFinalButton(142, "Voltar aos jogos", this.paletteColors.orange, "#9a3f00", () => {
       EventBus.emit("exit-game");
@@ -1341,7 +1361,7 @@ export class GameScene extends Phaser.Scene {
       this.timerEvent?.destroy();
       this.timerEvent = undefined;
 
-      this.scene.restart({ level: nextLevel });
+      this.scene.restart({ lives: this.livesLeft, level: nextLevel });
     };
 
     button.on("pointerdown", goNext);
@@ -1404,7 +1424,7 @@ export class GameScene extends Phaser.Scene {
         if (command.stage === this.levelConfig.level) return;
 
         this.time.delayedCall(100, () => {
-          this.scene.restart({ level: command.stage as 1 | 2 | 3 });
+          this.scene.restart({ lives: this.livesLeft, level: command.stage as 1 | 2 | 3 });
         });
       }
     );

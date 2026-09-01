@@ -19,6 +19,8 @@ import {
     type Botao, type Encaixes, type FilaView, type Fileira, type ItemFila,
     type Luzes, type PainelPedido,
 } from './effects'
+import { createLives, type Lives } from '../../../../shared/hud/createLives'
+import { vidasIniciais } from '../../../../shared/level/vidasIniciais'
 
 const GAME_ID = 'sistema-operacional'
 
@@ -58,6 +60,9 @@ const GAME_ID = 'sistema-operacional'
 const PONTOS = { acerto: 20, erro: -5 }
 
 export class GameScene extends Phaser.Scene {
+    private lives!: Lives
+    private livesTotal = 3
+    private livesLeft = 3
 
     /* ── partida ───────────────────────────────────────────────────── */
 
@@ -106,7 +111,9 @@ export class GameScene extends Phaser.Scene {
         super({ key: 'GameScene' })
     }
 
-    init(data: { nivel?: number; points?: number }) {
+    init(data: { nivel?: number; points?: number; lives?: number }) {
+        this.livesTotal = vidasIniciais(this, 3)
+        this.livesLeft = data?.lives ?? this.livesTotal
         this.nivelIdx = Phaser.Math.Clamp(data?.nivel ?? 1, 1, NIVEIS.length) - 1
         this.pontos = data?.points ?? 0
         this.acertos = 0
@@ -216,6 +223,18 @@ export class GameScene extends Phaser.Scene {
          * tela vazia e falaria de peças que ainda não existem.
          */
         this.time.delayedCall(900, () => void this.mostrarPedido(true))
+
+        /* AJUSTE A POSIÇÃO COM A TECLA M (dev). Ver shared/hud/createLives.ts */
+        this.lives = createLives(this, {
+            total: this.livesTotal,
+            remaining: this.livesLeft,
+            gameId: GAME_ID,
+            x: 40,
+            y: 40,
+            size: 30,
+            stage: () => this.nivel.numero,
+        })
+        this.events.once('shutdown', () => this.lives.destroy())
     }
 
     /* ═══════════════════════════════════════════════ o que está vivo */
@@ -667,6 +686,7 @@ export class GameScene extends Phaser.Scene {
             type: 'WRONG_ANSWER', gameId: GAME_ID,
             pointsEarned: PONTOS.erro, stage: this.nivel.numero,
         })
+            this.lives.lose(); this.livesLeft = this.lives.remaining
         this.emitCheckpoint()
 
         if (this.luzesRestantes <= 0) void this.travou()
@@ -738,7 +758,7 @@ export class GameScene extends Phaser.Scene {
                 {
                     label: 'Tentar de novo',
                     color: C.verde,
-                    onClick: () => this.scene.restart({ nivel: this.nivel.numero, points: this.pontos }),
+                    onClick: () => this.scene.restart({ lives: this.livesLeft, nivel: this.nivel.numero, points: this.pontos }),
                 },
                 { label: 'Escolher jogo', color: C.fosco, onClick: () => EventBus.emit('exit-game') },
             ],
@@ -781,7 +801,7 @@ export class GameScene extends Phaser.Scene {
                 {
                     label: 'Tentar de novo',
                     color: C.verde,
-                    onClick: () => this.scene.restart({ nivel: this.nivel.numero, points: this.pontos }),
+                    onClick: () => this.scene.restart({ lives: this.livesLeft, nivel: this.nivel.numero, points: this.pontos }),
                 },
                 { label: 'Escolher jogo', color: C.fosco, onClick: () => EventBus.emit('exit-game') },
             ],
@@ -821,7 +841,7 @@ export class GameScene extends Phaser.Scene {
                 autoAdvance: {
                     delay: 2400,
                     label: proximo.numero === 2 ? 'Ligando a memória...' : 'Abrindo a fila...',
-                    onComplete: () => this.scene.restart({ 
+                    onComplete: () => this.scene.restart({ lives: this.livesLeft, 
                         nivel: this.nivel.numero + 1, points: this.pontos,
                     }),
                 },
@@ -846,7 +866,7 @@ export class GameScene extends Phaser.Scene {
                 {
                     label: 'Jogar de novo',
                     color: C.verde,
-                    onClick: () => this.scene.restart({ nivel: 1, points: this.pontos }),
+                    onClick: () => this.scene.restart({ lives: this.livesLeft, nivel: 1, points: this.pontos }),
                 },
                 { label: 'Escolher jogo', color: C.fosco, onClick: () => EventBus.emit('exit-game') },
             ],

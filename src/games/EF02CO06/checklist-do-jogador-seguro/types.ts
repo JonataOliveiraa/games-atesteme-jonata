@@ -34,6 +34,8 @@ export interface LevelConfig {
 }
 
 export interface GameSceneData {
+    /** Saldo de vidas que atravessa a troca de nível. */
+    lives?: number
     level?: number
     round?: number
     score?: number

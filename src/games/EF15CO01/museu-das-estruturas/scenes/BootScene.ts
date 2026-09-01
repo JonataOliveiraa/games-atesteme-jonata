@@ -16,6 +16,7 @@ import roboApontandoUrl from '../../../../assets/games/EF15CO01/museu-das-estrut
 import roboDuvidaUrl from '../../../../assets/games/EF15CO01/museu-das-estruturas/robo-duvida.png'
 import roboFelizUrl from '../../../../assets/games/EF15CO01/museu-das-estruturas/robo-feliz.png'
 import { faseInicial } from '../../../../shared/level/faseInicial'
+import { preloadLives } from '../../../../shared/hud/createLives'
 
 const ASSETS: Array<[string, string]> = [
   ['bg-saguao', bgSaguaoUrl],
@@ -62,6 +63,7 @@ export class BootScene extends Phaser.Scene {
     })
 
     ASSETS.forEach(([key, url]) => this.load.image(key, url))
+      preloadLives(this)
   }
 
     create() {

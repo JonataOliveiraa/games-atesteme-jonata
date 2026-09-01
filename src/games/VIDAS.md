@@ -110,18 +110,21 @@ troca `x`, `y` e `size`. Ele não está versionado; peça que eu refaça.
 
 ## Onde parou
 
-### Prontos (11)
+### O componente está nos 49
+
+Todos criam a barra, todos chamam `lose()` no erro, e as 70 chamadas de
+`lose()` ficam logo depois de um `WRONG_ANSWER` — conferido por varredura.
+
+### A posição foi ajustada em 11
 
 `base-dos-classificadores` · `corrida-dos-parecidos` · `ritmo-da-rotina` ·
 `trilha-do-passo-a-passo` · `oficina-dos-algoritmos` · `pulo-programado` ·
 `correio-multimidia` · `passe-da-mensagem` · `pixel-secreto` ·
 `desktop-digital-infantil` · `hangar-dos-modelos`
 
-Todos com posição ajustada à mão e gravada no `lives-positions.json`.
-
-### Faltam (38)
-
-Todo o resto de `src/games/`.
+**Os outros 38 estão em 40,40**, que é só o ponto de partida. Em vários o
+ícone cai atrás do chip do nível — no `tribunal-do-verdadeiro-ou-falso`, por
+exemplo, ele existe mas some debaixo do "NÍVEL 1". Passe o M em cada um.
 
 ---
 
@@ -136,22 +139,40 @@ jogo. Nenhum dos 11 recebeu cor ainda. Em fundo escuro fica bom; no
 Duas saídas: puxar a cor de destaque do `theme.ts` de cada jogo, ou fixar uma
 cor só para os 49.
 
-### Sete jogos vão precisar de mão
+### Sete jogos têm um segundo sistema de vidas — este é o item mais sério
 
-Estes emitem `acerto ? CORRECT_ANSWER : WRONG_ANSWER` na mesma linha. Chamar
-`lose()` ali cegamente puniria o acerto:
+Estes já contavam derrota por conta própria, e agora essa regra convive com a
+das vidas:
+
+| Jogo | Regra própria |
+|---|---|
+| `cidade-das-decisoes` | `consecutiveErrors >= MAX_CONSECUTIVE_ERRORS` |
+| `labirinto-do-enquanto` | idem |
+| `monte-seu-computador` | idem |
+| `missao-arquivo-seguro` | idem |
+| `sistema-operacional` | 3 luzes (`LUZES_INICIAIS`) |
+| `desktop-digital-infantil` | campo `lives` próprio, lido da query |
+| `tribunal-do-verdadeiro-ou-falso` | campo `lives` próprio, lido da query |
+
+Com `lives=5`, a criança ainda seria reprovada no 3º erro seguido nos quatro
+primeiros. Nos três últimos, dois contadores andam em paralelo e podem
+discordar.
+
+Precisa escolher um dos dois e apagar o outro. Enquanto isso não acontece, o
+comportamento é o do que chegar primeiro — e o `EmbedGamePage` bloqueia o
+segundo resultado, então não há dupla reprovação, só imprevisibilidade sobre
+qual regra valeu.
+
+### Os sete de emit condicional já foram
 
 `radar-de-confiabilidade` · `curadoria-com-creditos` · `futuro-em-cena` ·
 `escolha-a-ferramenta-certa` · `museu-das-estruturas` · `circuito-da-verdade` ·
-`arquiteto-das-missoes`
+`arquiteto-das-missoes` emitem `acerto ? CORRECT : WRONG` na mesma linha.
+Receberam a chamada guardada pela negação da condição:
 
-### Quatro jogos têm um segundo sistema de vidas
-
-`cidade-das-decisoes`, `labirinto-do-enquanto`, `monte-seu-computador` e
-`missao-arquivo-seguro` reprovam por `consecutiveErrors >=
-MAX_CONSECUTIVE_ERRORS`, uma regra própria que ignora as vidas da plataforma.
-Com `lives=5`, a criança ainda seria reprovada no 3º erro seguido. Precisa
-sumir quando as vidas entrarem.
+```ts
+if (!(clean)) { this.lives.lose(); this.livesLeft = this.lives.remaining }
+```
 
 ### A `EmbedGamePage` ainda conta por fora
 

@@ -15,6 +15,7 @@ import thumbLanchePublicidadeUrl from '../../../../assets/games/EF05CO08/radar-d
 import thumbProdutoMilagrosoUrl from '../../../../assets/games/EF05CO08/radar-de-confiabilidade/thumb-produto-milagroso.png'
 import thumbRecreioEscolarUrl from '../../../../assets/games/EF05CO08/radar-de-confiabilidade/thumb-recreio-escolar.png'
 import { faseInicial } from '../../../../shared/level/faseInicial'
+import { preloadLives } from '../../../../shared/hud/createLives'
 
 const ASSETS: Array<[string, string]> = [
   ['bg-feed', bgFeedUrl],
@@ -60,6 +61,7 @@ export class BootScene extends Phaser.Scene {
     })
 
     ASSETS.forEach(([key, url]) => this.load.image(key, url))
+      preloadLives(this)
   }
 
   create() {

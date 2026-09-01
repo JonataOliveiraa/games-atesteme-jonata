@@ -117,12 +117,12 @@ export class BootScene extends Phaser.Scene {
     this.load.audio('som_latido', somLatidoUrl)
     this.load.audio('som_miado', somMiadoUrl)
     this.load.audio('som_buzina', somBuzinaUrl)
-    preloadLives(this)
 
     this.load.once('complete', () => {
       this.scene.start('GameScene')
       this.scene.launch('UIScene')
     })
+      preloadLives(this)
   }
 
   create() {

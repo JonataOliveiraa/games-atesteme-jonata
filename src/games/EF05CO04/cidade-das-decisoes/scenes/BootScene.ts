@@ -19,6 +19,7 @@ import personagemUrl from '../../../../assets/games/EF05CO04/cidade-das-decisoes
 import itensUrl from '../../../../assets/games/EF05CO04/cidade-das-decisoes/itens.png'
 import { createLoadingScreen } from '../../../../shared/loading/createLoadingScreen'
 import { faseInicial } from '../../../../shared/level/faseInicial'
+import { preloadLives } from '../../../../shared/hud/createLives'
 
 const IMAGES: Array<[string, string]> = [
     ['bg-cidade', bgCidadeUrl],
@@ -87,6 +88,7 @@ export class BootScene extends Phaser.Scene {
             frameWidth: SHEET.itens,
             frameHeight: SHEET.itens,
         })
+        preloadLives(this)
     }
 
     create() {

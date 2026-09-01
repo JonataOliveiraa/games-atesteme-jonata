@@ -12,6 +12,8 @@ import {
   W, H, C, hex, label, paperCard, headerBand,
   chunkyButton, circleButton, floatingNote, confetti, type Btn,
 } from "../ui/kit"
+import { createLives, type Lives } from '../../../../shared/hud/createLives'
+import { vidasIniciais } from '../../../../shared/level/vidasIniciais'
 
 const GAME_ID = "desfile-do-robo-repetidor"
 
@@ -45,6 +47,9 @@ const DIRECTION_META: Record<Direction, { label: string; angle: number; dx: numb
 }
 
 export class GameScene extends Phaser.Scene {
+    private lives!: Lives
+    private livesTotal = 3
+    private livesLeft = 3
   private levelIdx = 0
   private phaseIdx = 0
   private score = 0
@@ -99,6 +104,8 @@ export class GameScene extends Phaser.Scene {
   constructor() { super({ key: "GameScene" }) }
 
   init(data: GameSceneData) {
+      this.livesTotal = vidasIniciais(this, 3)
+      this.livesLeft = data?.lives ?? this.livesTotal
     this.levelIdx = Phaser.Math.Clamp((data?.level ?? 1) - 1, 0, LEVELS.length - 1)
     this.phaseIdx = Phaser.Math.Clamp(data?.phase ?? 0, 0, this.level.phases.length - 1)
     this.score = data?.score ?? 0
@@ -150,6 +157,18 @@ export class GameScene extends Phaser.Scene {
 
     if (this.phaseIdx === 0) this.showLevelIntro(begin)
     else begin()
+
+      /* AJUSTE A POSIÇÃO COM A TECLA M (dev). Ver shared/hud/createLives.ts */
+      this.lives = createLives(this, {
+          total: this.livesTotal,
+          remaining: this.livesLeft,
+          gameId: GAME_ID,
+          x: 40,
+          y: 40,
+          size: 30,
+          stage: () => this.level.level,
+      })
+      this.events.once('shutdown', () => this.lives.destroy())
   }
 
   update(_t: number, dt: number) {
@@ -712,6 +731,7 @@ export class GameScene extends Phaser.Scene {
     runtimeGameBridge.emit({
       type: "WRONG_ANSWER", gameId: GAME_ID, stage: this.level.level, pointsEarned: 0,
     })
+      this.lives.lose(); this.livesLeft = this.lives.remaining
     this.playWrong()
     this.cameras.main.shake(160, 0.004)
 
@@ -778,6 +798,7 @@ export class GameScene extends Phaser.Scene {
     runtimeGameBridge.emit({
       type: "WRONG_ANSWER", gameId: GAME_ID, stage: this.level.level, pointsEarned: 0,
     })
+      this.lives.lose(); this.livesLeft = this.lives.remaining
     this.playWrong()
     this.cameras.main.shake(180, 0.005)
 
@@ -827,7 +848,7 @@ export class GameScene extends Phaser.Scene {
     const lastLevel = this.levelIdx + 1 >= LEVELS.length
 
     if (!lastPhase) {
-      this.scene.restart({ 
+      this.scene.restart({ lives: this.livesLeft, 
         level: this.level.level, phase: this.phaseIdx + 1,
         score: this.score, hits: this.hits, errors: this.errors,
       } satisfies GameSceneData)
@@ -848,7 +869,7 @@ export class GameScene extends Phaser.Scene {
         progress: { total: LEVELS.length, current: this.level.level },
         autoAdvance: {
           delay: 2600,
-          onComplete: () => this.scene.restart({ 
+          onComplete: () => this.scene.restart({ lives: this.livesLeft, 
             level: this.level.level + 1, phase: 0,
             score: this.score, hits: this.hits, errors: this.errors,
           } satisfies GameSceneData),
@@ -871,7 +892,7 @@ export class GameScene extends Phaser.Scene {
       buttons: [
         {
           label: "Jogar de novo", color: C.mintDeep,
-          onClick: () => this.scene.restart({ level: 1, phase: 0, score: 0, hits: 0, errors: 0 }),
+          onClick: () => this.scene.restart({ lives: this.livesLeft, level: 1, phase: 0, score: 0, hits: 0, errors: 0 }),
         },
         { label: "Outros jogos", color: C.grapeDeep, onClick: () => EventBus.emit("exit-game") },
       ],
@@ -1163,7 +1184,7 @@ export class GameScene extends Phaser.Scene {
     this.unsubPlatform = runtimeGameBridge.onCommand((cmd: PlatformCommand) => {
       if (cmd.type !== "START_GAME" || cmd.gameId !== GAME_ID) return
       if (cmd.stage === this.level.level) return
-      this.scene.restart({ level: cmd.stage, phase: 0, score: this.score })
+      this.scene.restart({ lives: this.livesLeft, level: cmd.stage, phase: 0, score: this.score })
     })
   }
 

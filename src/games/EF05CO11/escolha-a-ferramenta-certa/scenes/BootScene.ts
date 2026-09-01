@@ -27,6 +27,7 @@ import casoSecretariaUrl from '../../../../assets/games/EF05CO11/escolha-a-ferra
 import casoFeiraCienciasUrl from '../../../../assets/games/EF05CO11/escolha-a-ferramenta-certa/caso-feira-ciencias.png'
 import casoSalaInformaticaUrl from '../../../../assets/games/EF05CO11/escolha-a-ferramenta-certa/caso-sala-informatica.png'
 import { faseInicial } from '../../../../shared/level/faseInicial'
+import { preloadLives } from '../../../../shared/hud/createLives'
 
 const ASSETS: Array<[string, string]> = [
   ['bg-oficina', bgOficinaUrl],
@@ -84,6 +85,7 @@ export class BootScene extends Phaser.Scene {
     })
 
     ASSETS.forEach(([key, url]) => this.load.image(key, url))
+      preloadLives(this)
   }
 
   create() {

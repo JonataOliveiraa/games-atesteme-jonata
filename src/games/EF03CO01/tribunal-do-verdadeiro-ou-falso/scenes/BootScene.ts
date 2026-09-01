@@ -13,6 +13,7 @@ import badgeLevelUrl from '../../../../assets/games/EF03CO01/tribunal-do-verdade
 
 import { createLoadingScreen } from '../../../../shared/loading/createLoadingScreen'
 import { C } from '../data/theme'
+import { preloadLives } from '../../../../shared/hud/createLives'
 
 const ASSETS: Array<[string, string]> = [
   ['bg-tribunal', bgTribunalUrl],
@@ -57,6 +58,7 @@ export class BootScene extends Phaser.Scene {
     })
 
     ASSETS.forEach(([key, url]) => this.load.image(key, url))
+      preloadLives(this)
   }
 
   create() {

@@ -13,6 +13,7 @@ import feiraDepoisUrl from '../../../../assets/games/EF15CO04/arquiteto-das-miss
 import acampamentoAntesUrl from '../../../../assets/games/EF15CO04/arquiteto-das-missoes/missao-acampamento-antes.png'
 import acampamentoDepoisUrl from '../../../../assets/games/EF15CO04/arquiteto-das-missoes/missao-acampamento-depois.png'
 import { faseInicial } from '../../../../shared/level/faseInicial'
+import { preloadLives } from '../../../../shared/hud/createLives'
 
 const ASSETS: Array<[string, string]> = [
     ['bg-central-missoes', bgCentralUrl],
@@ -56,6 +57,7 @@ export class BootScene extends Phaser.Scene {
         })
 
         ASSETS.forEach(([key, url]) => this.load.image(key, url))
+        preloadLives(this)
     }
 
     create() {

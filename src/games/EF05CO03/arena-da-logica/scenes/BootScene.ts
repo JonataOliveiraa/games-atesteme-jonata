@@ -25,6 +25,7 @@ import brilhoRadialUrl from '../../../../assets/games/EF05CO03/arena-da-logica/b
 import { createLoadingScreen } from '../../../../shared/loading/createLoadingScreen'
 import iconeAjudaUrl from '../../../../assets/games/EF05CO03/arena-da-logica/icone-ajuda.png'
 import { faseInicial } from '../../../../shared/level/faseInicial'
+import { preloadLives } from '../../../../shared/hud/createLives'
 
 const ASSETS: Array<[string, string]> = [
   ['bg-arena', bgArenaUrl],
@@ -113,6 +114,7 @@ export class BootScene extends Phaser.Scene {
     })
 
     ASSETS.forEach(([key, url]) => this.load.image(key, url))
+      preloadLives(this)
   }
 
   create() {

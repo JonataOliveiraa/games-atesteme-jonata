@@ -11,6 +11,7 @@ import formatCardTextUrl from "../../../../assets/games/EF03CO08/estudio-multifo
 import formatCardAudioUrl from "../../../../assets/games/EF03CO08/estudio-multiformato/format-card-audio.png";
 import formatCardPhotoUrl from "../../../../assets/games/EF03CO08/estudio-multiformato/format-card-photo.png";
 import { createLoadingScreen } from "../../../../shared/loading/createLoadingScreen";
+import { preloadLives } from '../../../../shared/hud/createLives'
 
 const ASSETS: Array<[string, string]> = [
   ["cover", coverUrl],
@@ -51,6 +52,7 @@ export class BootScene extends Phaser.Scene {
       },
     });
     ASSETS.forEach(([key, url]) => this.load.image(key, url));
+      preloadLives(this)
   }
 
   create() {

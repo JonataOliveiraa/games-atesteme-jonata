@@ -37,6 +37,8 @@ import {
 } from '../data/layout'
 import { createRide, pulseRail, litReveal, type RideView } from './effects'
 import type { AttractionId, Beat, LevelConfig, PhaseConfig, Statement, TraceEntry } from '../types'
+import { createLives, type Lives } from '../../../../shared/hud/createLives'
+import { vidasIniciais } from '../../../../shared/level/vidasIniciais'
 
 const GAME_ID = 'circuito-da-verdade'
 
@@ -88,6 +90,9 @@ interface LampView {
 }
 
 export class GameScene extends Phaser.Scene {
+    private lives!: Lives
+    private livesTotal = 3
+    private livesLeft = 3
     private levelIdx = 0
     private phaseIdx = 0
     private points = 0
@@ -134,7 +139,9 @@ export class GameScene extends Phaser.Scene {
         super({ key: 'GameScene' })
     }
 
-    init(data: { level?: number; phase?: number; points?: number; streak?: number }) {
+    init(data: { level?: number; phase?: number; points?: number; streak?: number; lives?: number }) {
+        this.livesTotal = vidasIniciais(this, 3)
+        this.livesLeft = data?.lives ?? this.livesTotal
         this.levelIdx = (data.level ?? 1) - 1
         this.phaseIdx = data.phase ?? 0
         this.points = data.points ?? 0
@@ -210,6 +217,18 @@ export class GameScene extends Phaser.Scene {
             return
         }
         this.openStageIntro()
+
+        /* AJUSTE A POSIÇÃO COM A TECLA M (dev). Ver shared/hud/createLives.ts */
+        this.lives = createLives(this, {
+            total: this.livesTotal,
+            remaining: this.livesLeft,
+            gameId: GAME_ID,
+            x: 40,
+            y: 40,
+            size: 30,
+            stage: () => this.level.level,
+        })
+        this.events.once('shutdown', () => this.lives.destroy())
     }
 
     private fadeIn() {
@@ -1129,6 +1148,8 @@ export class GameScene extends Phaser.Scene {
             pointsEarned: earned,
             stage: this.level.level,
         })
+        // só o erro custa vida: o mesmo emit serve para acerto
+        if (!(clean)) { this.lives.lose(); this.livesLeft = this.lives.remaining }
         this.emitCheckpoint()
 
         const inputs = beat.refs.map(id => this.values.get(id) ?? false)
@@ -1154,7 +1175,7 @@ export class GameScene extends Phaser.Scene {
         const isLastLevel = this.levelIdx + 1 >= LEVELS.length
 
         if (!isLastPhase) {
-            EventBus.emit('curtain', () => this.scene.restart({ 
+            EventBus.emit('curtain', () => this.scene.restart({ lives: this.livesLeft, 
                 level: this.level.level,
                 phase: this.phaseIdx + 1,
                 points: this.points,
@@ -1176,7 +1197,7 @@ export class GameScene extends Phaser.Scene {
                 progress: { total: LEVELS.length, current: this.level.level },
                 autoAdvance: {
                     delay: 2400,
-                    onComplete: () => this.scene.restart({ 
+                    onComplete: () => this.scene.restart({ lives: this.livesLeft, 
                         level: this.level.level + 1,
                         phase: 0,
                         points: this.points,

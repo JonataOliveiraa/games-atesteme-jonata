@@ -24,6 +24,7 @@ import techCameraUrl     from '../../../../assets/games/EF02CO05/cidade-das-tecn
 import techGpsUrl        from '../../../../assets/games/EF02CO05/cidade-das-tecnologias/tech-gps.png'
 import techAtmUrl        from '../../../../assets/games/EF02CO05/cidade-das-tecnologias/tech-atm.png'
 import { createLoadingScreen } from '../../../../shared/loading/createLoadingScreen'
+import { preloadLives } from '../../../../shared/hud/createLives'
 
 const ASSETS: Array<[string, string]> = [
   ['bg-city-map', bgCityMapUrl],
@@ -74,6 +75,7 @@ export class BootScene extends Phaser.Scene {
       },
     })
     ASSETS.forEach(([key, url]) => this.load.image(key, url))
+      preloadLives(this)
   }
 
   create() {

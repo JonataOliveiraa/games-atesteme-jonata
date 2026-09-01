@@ -14,6 +14,8 @@ import {
     comparePlans, type ChefDialog, type BigButton, type PlateState,
 } from './effects'
 import type { ChefMission, PlayState, SequenceStep, SubtaskPlate } from '../types'
+import { createLives, type Lives } from '../../../../shared/hud/createLives'
+import { vidasIniciais } from '../../../../shared/level/vidasIniciais'
 
 const GAME_ID = 'chef-dos-subproblemas'
 
@@ -42,6 +44,9 @@ interface DropView {
 }
 
 export class GameScene extends Phaser.Scene {
+    private lives!: Lives
+    private livesTotal = 3
+    private livesLeft = 3
     private levelIdx = 0
     private missionIdx = 0
     private points = 0
@@ -92,7 +97,9 @@ export class GameScene extends Phaser.Scene {
         super({ key: 'GameScene' })
     }
 
-    init(data: { level?: number; points?: number }) {
+    init(data: { level?: number; points?: number; lives?: number }) {
+        this.livesTotal = vidasIniciais(this, 3)
+        this.livesLeft = data?.lives ?? this.livesTotal
         this.levelIdx = Phaser.Math.Clamp(data.level ?? 1, 1, 3) - 1
         this.missionIdx = 0
         this.points = data.points ?? 0
@@ -122,6 +129,18 @@ export class GameScene extends Phaser.Scene {
         runtimeGameBridge.emit({ type: 'GAME_READY', gameId: GAME_ID })
         this.emitCheckpoint()
         this.showSplit()
+
+        /* AJUSTE A POSIÇÃO COM A TECLA M (dev). Ver shared/hud/createLives.ts */
+        this.lives = createLives(this, {
+            total: this.livesTotal,
+            remaining: this.livesLeft,
+            gameId: GAME_ID,
+            x: 40,
+            y: 40,
+            size: 30,
+            stage: () => this.level.level,
+        })
+        this.events.once('shutdown', () => this.lives.destroy())
     }
 
     private get level() { return LEVELS[this.levelIdx] }
@@ -990,6 +1009,7 @@ export class GameScene extends Phaser.Scene {
         const gen = this.stageGen
         this.errors += 1
         runtimeGameBridge.emit({ type: 'WRONG_ANSWER', gameId: GAME_ID, pointsEarned: -2, stage: this.level.level })
+        this.lives.lose(); this.livesLeft = this.lives.remaining
         this.emitCheckpoint()
         this.react('c7', message)
         this.playError()
@@ -1090,7 +1110,7 @@ export class GameScene extends Phaser.Scene {
                 autoAdvance: {
                     delay: 1800,
                     label: `Preparando nível ${next}...`,
-                    onComplete: () => this.scene.restart({ level: next, points: this.points }),
+                    onComplete: () => this.scene.restart({ lives: this.livesLeft, level: next, points: this.points }),
                 },
             })
             return
@@ -1109,7 +1129,7 @@ export class GameScene extends Phaser.Scene {
             // botão em showLevelComplete cresce com o texto (label.length * 15
             // + 76), então os dois somados precisam caber nos 604px do painel.
             buttons: [
-                { label: 'Jogar de novo', color: C.green, onClick: () => this.scene.restart({ level: 1, points: 0 }) },
+                { label: 'Jogar de novo', color: C.green, onClick: () => this.scene.restart({ lives: this.livesLeft, level: 1, points: 0 }) },
                 { label: 'Escolher jogo', color: C.gold, onClick: () => EventBus.emit('exit-game') },
             ],
         })

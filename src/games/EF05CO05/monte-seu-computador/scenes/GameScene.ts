@@ -28,6 +28,8 @@ import type {
     View,
 } from '../types'
 import { offsetOf } from '../data/parts'
+import { createLives, type Lives } from '../../../../shared/hud/createLives'
+import { vidasIniciais } from '../../../../shared/level/vidasIniciais'
 
 const GAME_ID = 'monte-seu-computador'
 const MAX_CONSECUTIVE_ERRORS = 3
@@ -40,6 +42,9 @@ interface Mould {
 }
 
 export class GameScene extends Phaser.Scene {
+    private lives!: Lives
+    private livesTotal = 3
+    private livesLeft = 3
     private levelConfig!: LevelConfig
     private challengeIndex = 0
     private hits = 0
@@ -96,7 +101,9 @@ export class GameScene extends Phaser.Scene {
         super({ key: 'GameScene' })
     }
 
-    init(data: { level?: number; points?: number }) {
+    init(data: { level?: number; points?: number; lives?: number }) {
+        this.livesTotal = vidasIniciais(this, 3)
+        this.livesLeft = data?.lives ?? this.livesTotal
         const lvl = (data?.level ?? 1) as 1 | 2 | 3
         this.levelConfig = LEVELS.find(l => l.level === lvl) ?? LEVELS[0]
         this.challengeIndex = 0
@@ -167,6 +174,18 @@ export class GameScene extends Phaser.Scene {
             this.buildView()
             this.refreshAll()
         })
+
+        /* AJUSTE A POSIÇÃO COM A TECLA M (dev). Ver shared/hud/createLives.ts */
+        this.lives = createLives(this, {
+            total: this.livesTotal,
+            remaining: this.livesLeft,
+            gameId: GAME_ID,
+            x: 40,
+            y: 40,
+            size: 30,
+            stage: () => this.levelConfig.level,
+        })
+        this.events.once('shutdown', () => this.lives.destroy())
     }
 
     private startChallenge(autoStart = true) {
@@ -1712,6 +1731,7 @@ export class GameScene extends Phaser.Scene {
             type: 'WRONG_ANSWER', gameId: GAME_ID,
             pointsEarned: 0, stage: this.levelConfig.level,
         })
+            this.lives.lose(); this.livesLeft = this.lives.remaining
         this.emitCheckpoint()
     }
 
@@ -1741,14 +1761,14 @@ export class GameScene extends Phaser.Scene {
                 ? {
                     autoAdvance: {
                         delay: 2600,
-                        onComplete: () => this.scene.restart({ level: next, points: this.points }),
+                        onComplete: () => this.scene.restart({ lives: this.livesLeft, level: next, points: this.points }),
                     },
                 }
                 : {
                     buttons: [
                         {
                             label: 'Jogar de novo', color: C.verde,
-                            onClick: () => this.scene.restart({ level: 1, points: 0 }),
+                            onClick: () => this.scene.restart({ lives: this.livesLeft, level: 1, points: 0 }),
                         },
                         {
                             label: 'Sair', color: C.medio,
@@ -2108,7 +2128,7 @@ export class GameScene extends Phaser.Scene {
             buttons: [
                 {
                     label: 'Tentar de novo', color: C.verde,
-                    onClick: () => this.scene.restart({ 
+                    onClick: () => this.scene.restart({ lives: this.livesLeft, 
                         level: this.levelConfig.level, points: this.points,
                     }),
                 },
@@ -2245,7 +2265,7 @@ export class GameScene extends Phaser.Scene {
             if (cmd.gameId !== GAME_ID) return
             if (cmd.stage === this.levelConfig.level) return
             this.time.delayedCall(100, () => {
-                this.scene.restart({ level: cmd.stage as 1 | 2 | 3, points: this.points })
+                this.scene.restart({ lives: this.livesLeft, level: cmd.stage as 1 | 2 | 3, points: this.points })
             })
         })
     }

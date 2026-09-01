@@ -5,6 +5,8 @@ import type { PlatformCommand } from "../../../../shared/contracts/platformComma
 import { LEVELS, shuffleStages } from "../data/levels";
 import type { FactoryLevel, FactoryStage, FactoryStageId, ProductStage } from "../types";
 import { createTutorial, TutorialStep } from "../../../../shared/tutorial/createTutorial";
+import { createLives, type Lives } from '../../../../shared/hud/createLives'
+import { vidasIniciais } from '../../../../shared/level/vidasIniciais'
 
 const GAME_ID = "fabrica-de-maquinas";
 
@@ -48,6 +50,9 @@ type CardRecord = {
 };
 
 export class GameScene extends Phaser.Scene {
+    private lives!: Lives
+    private livesTotal = 3
+    private livesLeft = 3
   private levelConfig!: FactoryLevel;
   private shuffledStages: FactoryStage[] = [];
   private cards = new Map<FactoryStageId, CardRecord>();
@@ -69,7 +74,9 @@ export class GameScene extends Phaser.Scene {
     super({ key: "GameScene" });
   }
 
-  init(data: { level?: number }) {
+  init(data: { level?: number; lives?: number }) {
+      this.livesTotal = vidasIniciais(this, 3)
+      this.livesLeft = data?.lives ?? this.livesTotal
     const lvl = (data?.level ?? 1) as 1 | 2 | 3;
 
     this.levelConfig = LEVELS.find((level) => level.level === lvl) ?? LEVELS[0];
@@ -112,6 +119,18 @@ export class GameScene extends Phaser.Scene {
     this.runTutorials(() => {
       this.commandLocked = false;
     });
+
+      /* AJUSTE A POSIÇÃO COM A TECLA M (dev). Ver shared/hud/createLives.ts */
+      this.lives = createLives(this, {
+          total: this.livesTotal,
+          remaining: this.livesLeft,
+          gameId: GAME_ID,
+          x: 40,
+          y: 40,
+          size: 30,
+          stage: () => this.levelConfig.level,
+      })
+      this.events.once('shutdown', () => this.lives.destroy())
   }
 
   private runTutorials(onDone: () => void) {
@@ -643,6 +662,7 @@ export class GameScene extends Phaser.Scene {
         stage: this.levelConfig.level,
         pointsEarned: -5,
       });
+        this.lives.lose(); this.livesLeft = this.lives.remaining
 
       this.commandLocked = false;
       this.emitProgress();
@@ -984,7 +1004,7 @@ export class GameScene extends Phaser.Scene {
 
     buttonHitbox.on("pointerdown", () => {
       this.playClick();
-      this.scene.restart({ level: nextLevel });
+      this.scene.restart({ lives: this.livesLeft, level: nextLevel });
     });
 
     modal.add([title, objective, detail, button]);
@@ -1098,7 +1118,7 @@ export class GameScene extends Phaser.Scene {
     });
 
     const playAgain = this.createFinalButton(-158, 138, "Jogar novamente", COLORS.green, () => {
-      this.scene.restart({ level: 1 });
+      this.scene.restart({ lives: this.livesLeft, level: 1 });
     });
 
     const exit = this.createFinalButton(158, 138, "Voltar aos jogos", COLORS.orange, () => {
@@ -1433,7 +1453,7 @@ export class GameScene extends Phaser.Scene {
       if (command.gameId !== GAME_ID) return;
       if (command.stage === this.levelConfig.level) return;
 
-      this.scene.restart({ level: command.stage as 1 | 2 | 3 });
+      this.scene.restart({ lives: this.livesLeft, level: command.stage as 1 | 2 | 3 });
     });
   }
 

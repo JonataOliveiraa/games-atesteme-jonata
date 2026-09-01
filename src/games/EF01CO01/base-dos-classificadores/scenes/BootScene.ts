@@ -73,7 +73,7 @@ export class BootScene extends Phaser.Scene {
     // this.load.audio('narr-forma-circulo',  ['assets/audio/narr-forma-circulo.ogg',  'assets/audio/narr-forma-circulo.mp3'])
     // this.load.audio('narr-forma-quadrado', ['assets/audio/narr-forma-quadrado.ogg', 'assets/audio/narr-forma-quadrado.mp3'])
     // this.load.audio('narr-forma-triangulo',['assets/audio/narr-forma-triangulo.ogg','assets/audio/narr-forma-triangulo.mp3'])
-    preloadLives(this)
+      preloadLives(this)
   }
 
   create() {

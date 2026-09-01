@@ -27,6 +27,7 @@ import op04Url from '../../../../assets/games/EF03CO06/central-de-entrada-e-said
 import op05Url from '../../../../assets/games/EF03CO06/central-de-entrada-e-saida/op-05.png'
 import op06Url from '../../../../assets/games/EF03CO06/central-de-entrada-e-saida/op-06.png'
 import { createLoadingScreen } from '../../../../shared/loading/createLoadingScreen'
+import { preloadLives } from '../../../../shared/hud/createLives'
 
 const ASSETS: Array<[string, string]> = [
   ['bg-central', bgCentralUrl],
@@ -80,6 +81,7 @@ export class BootScene extends Phaser.Scene {
       },
     })
     ASSETS.forEach(([key, url]) => this.load.image(key, url))
+      preloadLives(this)
   }
 
   create() {

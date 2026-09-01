@@ -17,6 +17,7 @@ import toggleOnUrl from '../../../../assets/games/EF02CO06/checklist-do-jogador-
 import toggleOffUrl from '../../../../assets/games/EF02CO06/checklist-do-jogador-seguro/toggle-off.png'
 
 import characterPlayersUrl from '../../../../assets/games/EF02CO06/checklist-do-jogador-seguro/character-players.png'
+import { preloadLives } from '../../../../shared/hud/createLives'
 
 const C = {
   bg: 0x0d47a1,
@@ -93,6 +94,7 @@ export class BootScene extends Phaser.Scene {
     })
 
     ASSETS.forEach(([key, url]) => this.load.image(key, url))
+      preloadLives(this)
   }
 
   create() {

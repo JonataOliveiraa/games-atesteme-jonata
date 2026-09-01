@@ -42,6 +42,7 @@ import iconQueijoUrl from '../../../../assets/games/EF03CO03/chef-dos-subproblem
 import iconSucoUrl from '../../../../assets/games/EF03CO03/chef-dos-subproblemas/icone-suco.png'
 import iconTalherUrl from '../../../../assets/games/EF03CO03/chef-dos-subproblemas/icone-talher.png'
 import { createLoadingScreen } from '../../../../shared/loading/createLoadingScreen'
+import { preloadLives } from '../../../../shared/hud/createLives'
 
 const ASSETS: Array<[string, string]> = [
   ['bg-chef-bancada', bgChefBancadaUrl],
@@ -120,6 +121,7 @@ export class BootScene extends Phaser.Scene {
       },
     })
     ASSETS.forEach(([key, url]) => this.load.image(key, url))
+      preloadLives(this)
   }
 
   create() {

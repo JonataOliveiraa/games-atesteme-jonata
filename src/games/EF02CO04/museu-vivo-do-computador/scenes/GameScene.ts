@@ -5,6 +5,8 @@ import type { PlatformCommand } from '../../../../shared/contracts/platformComma
 import type { LevelConfig, MuseumItem, ItemCard, DropZoneDef, ZoneKind, ConfirmMode } from '../types'
 import { LEVELS } from '../data/levels'
 import { ALL_ITEMS } from '../data/items'
+import { createLives, type Lives } from '../../../../shared/hud/createLives'
+import { vidasIniciais } from '../../../../shared/level/vidasIniciais'
 
 const GAME_ID = 'museu-vivo-do-computador'
 
@@ -44,6 +46,9 @@ interface ZoneView {
 type MissionPhase = 'intro' | 'tutorial' | 'playing' | 'feedback' | 'level-complete'
 
 export class GameScene extends Phaser.Scene {
+    private lives!: Lives
+    private livesTotal = 3
+    private livesLeft = 3
   private levelConfig!: LevelConfig
   private currentMissionIndex = 0
   private hits = 0
@@ -85,6 +90,8 @@ export class GameScene extends Phaser.Scene {
   }
 
   init(data: { level?: number; points?: number; lives?: number }) {
+      this.livesTotal = vidasIniciais(this, 3)
+      this.livesLeft = data?.lives ?? this.livesTotal
     const lvl = (data?.level ?? 1) as 1 | 2 | 3
     this.levelConfig = LEVELS.find(l => l.level === lvl) ?? LEVELS[0]
     this.currentMissionIndex = 0
@@ -131,6 +138,18 @@ export class GameScene extends Phaser.Scene {
     this.emitCheckpoint()
     this.buildMission()
     this.showLevelIntroScreen()
+
+      /* AJUSTE A POSIÇÃO COM A TECLA M (dev). Ver shared/hud/createLives.ts */
+      this.lives = createLives(this, {
+          total: this.livesTotal,
+          remaining: this.livesLeft,
+          gameId: GAME_ID,
+          x: 40,
+          y: 40,
+          size: 30,
+          stage: () => this.levelConfig.level,
+      })
+      this.events.once('shutdown', () => this.lives.destroy())
   }
 
   private onMuteAudio(muted: boolean) {
@@ -263,6 +282,7 @@ export class GameScene extends Phaser.Scene {
       type: 'WRONG_ANSWER', gameId: GAME_ID,
       pointsEarned: 0, stage: this.levelConfig.level,
     })
+      this.lives.lose(); this.livesLeft = this.lives.remaining
     this.showGameOverScreen()
   }
 
@@ -518,6 +538,7 @@ export class GameScene extends Phaser.Scene {
       type: 'WRONG_ANSWER', gameId: GAME_ID,
       pointsEarned: -2, stage: this.levelConfig.level,
     })
+      this.lives.lose(); this.livesLeft = this.lives.remaining
     this.emitCheckpoint()
   }
 
@@ -669,6 +690,7 @@ export class GameScene extends Phaser.Scene {
         type: 'WRONG_ANSWER', gameId: GAME_ID,
         pointsEarned: -2, stage: this.levelConfig.level,
       })
+        this.lives.lose(); this.livesLeft = this.lives.remaining
       this.emitCheckpoint()
       this.confirmMsg?.setText(
         wrong.length === 1

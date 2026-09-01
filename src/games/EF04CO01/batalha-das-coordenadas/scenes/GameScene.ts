@@ -15,6 +15,8 @@ import {
     createScene, createHud, createGrid, createPanel, showToast,
     type Hud, type GridView, type Panel,
 } from './effects'
+import { createLives, type Lives } from '../../../../shared/hud/createLives'
+import { vidasIniciais } from '../../../../shared/level/vidasIniciais'
 
 const GAME_ID = 'batalha-das-coordenadas'
 
@@ -25,6 +27,9 @@ const POINTS = {
 } as const
 
 export class GameScene extends Phaser.Scene {
+    private lives!: Lives
+    private livesTotal = 3
+    private livesLeft = 3
 
     /* ── partida ───────────────────────────────────────────────────── */
 
@@ -67,7 +72,9 @@ export class GameScene extends Phaser.Scene {
      * `this.caso` devolver `undefined`, e o estouro apareceria três telas
      * adiante sem nenhuma pista de que veio daqui.
      */
-    init(data: { level?: number; phase?: number; points?: number }) {
+    init(data: { level?: number; phase?: number; points?: number; lives?: number }) {
+        this.livesTotal = vidasIniciais(this, 3)
+        this.livesLeft = data?.lives ?? this.livesTotal
         this.levelIdx = Phaser.Math.Clamp(data?.level ?? 1, 1, LEVELS.length) - 1
         this.caseIdx = Phaser.Math.Clamp(
             data?.phase ?? 0, 0, LEVELS[this.levelIdx].cases.length - 1,
@@ -105,6 +112,18 @@ export class GameScene extends Phaser.Scene {
 
         // O tutorial é a abertura do NÍVEL, não de um caso qualquer.
         void this.playCase(this.caseIdx === 0)
+
+        /* AJUSTE A POSIÇÃO COM A TECLA M (dev). Ver shared/hud/createLives.ts */
+        this.lives = createLives(this, {
+            total: this.livesTotal,
+            remaining: this.livesLeft,
+            gameId: GAME_ID,
+            x: 40,
+            y: 40,
+            size: 30,
+            stage: () => this.level.level,
+        })
+        this.events.once('shutdown', () => this.lives.destroy())
     }
 
     private shutdownScene() {
@@ -205,6 +224,7 @@ export class GameScene extends Phaser.Scene {
                 type: 'WRONG_ANSWER', gameId: GAME_ID,
                 pointsEarned: POINTS.miss, stage: this.level.level,
             })
+                this.lives.lose(); this.livesLeft = this.lives.remaining
             this.emitCheckpoint()
 
             await this.grid?.dig(col, row)
@@ -314,6 +334,7 @@ export class GameScene extends Phaser.Scene {
                 type: 'WRONG_ANSWER', gameId: GAME_ID,
                 pointsEarned: POINTS.miss, stage: this.level.level,
             })
+                this.lives.lose(); this.livesLeft = this.lives.remaining
             this.emitCheckpoint()
 
             await this.grid?.nudge(col, row)
@@ -429,7 +450,7 @@ export class GameScene extends Phaser.Scene {
                 autoAdvance: {
                     delay: 2300,
                     label: 'Preparando o próximo mapa...',
-                    onComplete: () => this.scene.restart({ level: next, points: this.points }),
+                    onComplete: () => this.scene.restart({ lives: this.livesLeft, level: next, points: this.points }),
                 },
             })
             return
@@ -448,7 +469,7 @@ export class GameScene extends Phaser.Scene {
                 {
                     label: 'Jogar de novo',
                     color: C.ok,
-                    onClick: () => this.scene.restart({ level: 1, points: 0 }),
+                    onClick: () => this.scene.restart({ lives: this.livesLeft, level: 1, points: 0 }),
                 },
                 {
                     label: 'Escolher jogo',
