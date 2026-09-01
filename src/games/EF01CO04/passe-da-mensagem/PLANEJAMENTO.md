@@ -1,300 +1,249 @@
 # Passe da Mensagem — EF01CO04
 
-Documentos irmãos: [TEXTURAS.md](./TEXTURAS.md) ·
-[PLANEJAMENTO MODAL.md](../../PLANEJAMENTO%20MODAL.md)
+> (EF01CO04) Reconhecer o que é a informação, que ela pode ser **armazenada**,
+> **transmitida como mensagem por diversos meios** e **descrita em várias
+> linguagens**.
 
-A bola-mensagem só chega no colega que está dizendo **a mesma coisa de outro
-jeito**. No fim, tudo o que chegou fica guardado no mural.
+O recado atravessa a quadra em dois passes, desviando do robô, e chega em quem
+está esperando do outro lado. A cada passe ele troca de meio — voz, carta,
+celular — e o desenho lá dentro continua exatamente o mesmo.
 
 ---
 
-## 1. A habilidade, e o teste que o briefing não passa
+## 1. O que a criança decide, e o que ela aprende
 
-> **(EF01CO04)** Reconhecer o que é a informação, que ela pode ser armazenada,
-> transmitida como mensagem por diversos meios e descrita em várias linguagens.
+São duas coisas separadas, e essa separação é a lição desta versão:
 
-O briefing propõe: tocar no colega **livre**, desviando de um robô que anda
-entre eles. Aplique o teste da bolinha — troque a bola-mensagem por uma bola
-comum e as plaquinhas por nada. **O jogo continua idêntico**: continua sendo
-achar a linha que o robô não está cruzando. É um jogo de tempo e trajetória; a
-mensagem viajando por voz, papel e telefone é enfeite por cima.
+| | |
+|---|---|
+| **O que ela DECIDE** | por qual caminho passar (o que o robô não está cobrindo) e para quem entregar |
+| **O que ela APRENDE** | o recado muda de casca a cada parada e continua dizendo a mesma coisa |
 
-E a habilidade tem três afirmações. O briefing só encosta numa delas, e por
-fora: a mensagem *muda de meio* entre as travessias, mas a criança nunca
-decide nada sobre isso — o jogo decide por ela.
+A versão anterior pedia as duas coisas na mesma jogada: a criança tinha que
+*comparar linguagens para escolher o alvo*. Era um teste de equivalência
+abstrata, com três a seis cartões na tela, para quem tem 6 anos — e por isso
+ficou confuso. Aqui a escolha é **espacial e visível**, e a lição acontece
+sozinha, na frente dela, como consequência de ter acertado.
 
-**A troca:** o passe só funciona para o colega que está segurando **a mesma
-informação escrita em outra linguagem**. Cada jogador em quadra mostra uma
-plaquinha — um desenho, uma palavra, um balão de fala. A criança olha a
-mensagem que está com ela e toca em quem diz aquilo de outro jeito. Errou, o
-robô intercepta.
+---
 
-Agora o teste inverte: troque as plaquinhas por bolinhas e o jogo fica
-impossível, porque não sobra nada para comparar.
+## 2. O laço
 
-## 2. Como isso não vira o Correio Multimídia
+1. O recado está com um colega. A bola-mensagem flutua ao lado da cabeça dele.
+2. Dele saem **caminhos até cada alvo**: verde com seta, ou vermelho tracejado
+   com ✕ onde o robô está.
+3. Um toque no colega escolhido: a bola voa por 0,5 s.
+4. Ao chegar, ela **vira outro meio** e um balão mostra `antes = depois`.
+5. Segundo toque: a entrega no destinatário. O recado vira o terceiro meio e
+   some dentro da caixa.
+6. A travessia entregue é guardada no **mural**, no alto à esquerda, com os
+   três carimbos dos meios por onde ela passou.
+7. Três travessias e o nível acaba.
 
-`EF01CO04` já tem jogo publicado. O **Correio Multimídia** é: escolher o CANAL
-(áudio, texto ou desenho) certo para enviar uma mensagem, com contextos que
-limitam ("sem som", "sem lápis"). Ou seja, ele já ocupa a parte do
-*"transmitida por diversos meios"* — e ocupa bem, inclusive com a restrição de
-contexto que o briefing propunha como nível 3 daqui.
+**Dois toques por travessia, seis por nível.** Três meios aparecem em cada
+travessia, sem nenhuma tela de leitura no meio do caminho.
 
-Sobra a outra metade do texto oficial, e é dela que este jogo vive:
+---
 
-| | Correio Multimídia | Passe da Mensagem |
+## 3. Os caminhos — o coração do jogo
+
+É o único desenho que a criança precisa entender, e ele responde a pergunta
+**antes do toque**:
+
+| | |
+|---|---|
+| **verde, com seta** | dá para passar |
+| **vermelho tracejado, com ✕** | o robô está aí |
+
+Como o robô anda, os caminhos mudam de cor sozinhos. Quando **todos** os alvos
+válidos estão fechados, a faixa de instrução troca para *"Espere o robô sair do
+caminho!"* — esperar vira uma jogada legítima, e não um travamento.
+
+### Os dois raios, e por que são dois
+
+`BLOCK.show = 82` pinta de vermelho. `BLOCK.hit = 60` intercepta de verdade.
+
+A folga é de propósito: quem tocou um instante depois de o caminho fechar ainda
+passa. Punir reflexo lento não ensina nada sobre mensagem, e um erro que a
+criança não teria como evitar destrói a confiança no desenho verde/vermelho —
+que é justamente o que o jogo inteiro pede que ela leia.
+
+---
+
+## 4. Os três meios
+
+| Meio | Como aparece | Cor |
 |---|---|---|
-| A pergunta | por qual **meio** mando isto? | qual destes diz **a mesma coisa**? |
-| O que se compara | mensagem × canal | linguagem × linguagem |
-| O que limita | o contexto (sem som, sem lápis) | o que os colegas estão segurando |
-| Trecho da habilidade | transmitida por diversos meios | **descrita em várias linguagens** |
-| O que fica no fim | a mensagem enviada | o **mural**: informação armazenada |
+| **Voz** | balão redondo com ondinhas de som | ciano |
+| **Carta** | envelope com a aba aberta | laranja |
+| **Celular** | telefone com tela | roxo |
 
-O mural do fim cobre a terceira afirmação — *armazenada* —, que nenhum dos
-dois tinha.
+O desenho de dentro tem **sempre o mesmo tamanho e a mesma posição** nos três.
+É essa igualdade que a criança precisa notar; se ele encolhesse dentro do
+envelope, a casca passaria a mudar o conteúdo — o contrário do que a habilidade
+diz. Por isso um módulo só (`scenes/message.ts`) desenha as três formas, e a
+bola em quadra, o mural e os dois lados do balão de comparação saem todos dele.
 
-## 3. O robô: o que ele deixa de ser
-
-No briefing o robô anda e cria pressa de tempo. Aqui ele **não anda e não
-tem relógio**: ele é a consequência do erro. Passe para a plaquinha errada, e
-ele corta a bola, levanta com cara boba e devolve.
-
-O motivo é o mesmo que já apareceu em Ritmo da Rotina: pressa e comparação
-brigam. Comparar duas linguagens é trabalho de olhar com calma, e um
-interceptador andando transforma isso em chute. O robô ganha mais graça sendo
-o dono do erro do que sendo um cronômetro com pernas.
-
----
-
-## 4. O laço
-
-```
-    a bola mostra a mensagem  ──▶  achar quem diz o mesmo  ──▶  tocar nele
-              ▲                                                     │
-              │                                            ┌────────┴────────┐
-              │                                       acertou            errou
-              │                                            │                 │
-              └──── a bola chega, e a mensagem muda ────────┘       o robô corta,
-                    de linguagem com ele                            aquela linha
-                                                                    fica bloqueada
-                    ┌─────────────────────────────┐
-    último passe ──▶│ o destino recebe            │──▶ o mural guarda a mensagem
-                    │ e a fase acaba              │     com as linguagens por que
-                    └─────────────────────────────┘     ela passou
-```
-
-**Uma fase são 3 passes.** A bola sai com a mensagem em uma linguagem, passa
-por dois colegas trocando de linguagem a cada parada, e o terceiro passe
-entrega no destino.
+A roda é fixa — voz → carta → celular → voz — e cada travessia começa uma casa
+adiante. Assim a criança consegue prever o próximo meio, e o mural do fim do
+nível fica com os três carimbos em ordens diferentes.
 
 ---
 
 ## 5. A grade
 
-Tela fixa de **1280 × 720** com `Phaser.Scale.FIT`. Coordenada absoluta; não
-existe layout relativo neste projeto. A última coluna é o tamanho físico num
-celular de 390 px de largura (× 0,30) — é ela que decide legibilidade e toque.
+Tela fixa de **1280 × 720** com `Phaser.Scale.FIT`.
 
-| Faixa | y | Conteúdo | Tamanho | No celular |
-|---|---|---|---|---|
-| Painel | 10 – 150 | Pílula `NÍVEL x/3` e bolinhas de fase à esquerda; **a mensagem de agora** no centro, grande; `?` em (1210, 80) | carta 118 | 35 px |
-| Quadra | 160 – 720 | Vista de cima, ocupando todo o resto. Jogadores em posições fixas, cada um com sua plaquinha; o destino na borda direita | jogador 150, plaquinha 130 | 45 / 39 px |
+| Faixa | y | Conteúdo |
+|---|---|---|
+| Painel | 10 – 150 | `NÍVEL x/3` e o **mural** à esquerda; o recado (desenho + frase) no centro; `PARA:` e o retrato do destinatário; `?` na ponta |
+| Faixa de instrução | 153 – 199 | uma frase curta, que muda conforme a etapa |
+| Quadra | 206 – 714 | colegas fixos, robô, destinatários na borda direita |
 
-**A quadra ocupa tudo o que sobra e não rola.** A criança precisa ver todas as
-plaquinhas ao mesmo tempo para poder comparar — é o mesmo motivo pelo qual o
-percurso de Pulo Programado não rola.
+Posições (x, y do pé):
 
-**Não existe painel embaixo**, porque o controle é tocar no próprio jogador.
-Isso libera a metade de baixo da tela para a quadra, que é o que dá ao jogo
-cara de esporte.
-
-Posições dos jogadores, por quantidade (x, y em coordenada absoluta):
-
-| Nº | Posições |
+| Quem | Onde |
 |---|---|
-| 3 | (250, 300) · (250, 590) · (700, 440) |
-| 4 | (250, 300) · (250, 590) · (640, 250) · (640, 620) |
-| 5 | (240, 300) · (240, 600) · (600, 230) · (600, 620) · (860, 430) |
-| 6 | (230, 290) · (230, 610) · (560, 220) · (560, 630) · (830, 300) · (830, 600) |
+| Colegas | (250, 430) · (250, 690) · (640, 430) · (640, 690) |
+| Destinatário único | (1105, 515) |
+| Dois destinatários | (1105, 375) · (1105, 655) |
+| Robô, nível 1 | parado em (498, 416) |
+| Robô, níveis 2 e 3 | vai e volta entre (880, 350) e (880, 630) |
 
-O **destino** fica sempre em (1120, 440), e quem começa com a bola é sempre o
-primeiro da lista. Nenhuma plaquinha encosta na outra em nenhuma dessas
-combinações.
+A bola fica em `(x + 92, y − 118)` — ao lado da cabeça, não no pé. Os caminhos
+saem e entram por aí: passe que sai do pé parece chute, e o que este jogo faz é
+**entregar**.
 
----
-
-## 6. As três linguagens
-
-| Linguagem | Como aparece na plaquinha | Entra no |
-|---|---|---|
-| **Desenho** | o assunto desenhado (bolo, lápis, relógio, presente) | nível 1 |
-| **Fala** | balão de fala com o desenho pequeno dentro, e ondinhas de som | nível 1 |
-| **Palavra** | a palavra escrita, com a inicial grande | nível 2 |
-
-A ordem não é estética, é de leitura: criança de 1º ano está aprendendo a ler,
-então a palavra escrita entra **depois** que a ideia de "a mesma coisa dita de
-outro jeito" já foi entendida com duas linguagens que ela lê de olho.
-
-Assuntos prontos, do briefing:
-
-| Assunto | Desenho | Palavra |
-|---|---|---|
-| A festa é sábado | bolo com velinha | `FESTA` |
-| Traga o lápis amarelo | lápis amarelo | `LÁPIS` |
-| O treino mudou de hora | relógio | `TREINO` |
-| Feliz aniversário | presente | `PARABÉNS` |
+O robô do nível 1 está exatamente sobre a diagonal do primeiro colega até o
+colega de baixo-meio, e a mais de 100 px das outras duas linhas. Ou seja:
+**uma linha fechada, duas abertas**, sempre. Não é acaso — foi medido.
 
 ---
 
-## 7. Níveis e fases
+## 6. Níveis
 
-Três níveis, **três fases cada**. A fase é uma travessia inteira: três passes
-até o destino.
-
-| Nível | Jogadores | Linguagens | O que cresce |
+| Nível | Robô | Destinatários | O que se aprende |
 |---|---|---|---|
-| 1 — Fala e desenho | 3, 3 e 4 | desenho e fala | a mesma mensagem nos três passes |
-| 2 — Entra a palavra | 4, 5 e 5 | as três | mensagens diferentes por fase |
-| 3 — Quadra cheia | 5, 6 e 6 | as três | dois colegas com assuntos **parecidos** (bolo × presente) |
+| 1 — Caminho livre | parado, cobrindo uma linha | 1 | olhar o caminho antes de tocar |
+| 2 — Robô andando | vai e volta, 2,4 s por trecho | 1 | esperar o caminho abrir |
+| 3 — Para quem é? | vai e volta, 1,5 s por trecho | 2 | conferir para quem é o recado |
 
-O nível 3 aperta pela **semelhança**, não pela velocidade: o distrator deixa de
-ser qualquer coisa e passa a ser algo do mesmo mundo (festa e aniversário),
-que só se separa olhando direito. É o jeito de subir dificuldade sem pedir
-pressa de uma criança que está comparando.
+A mecânica é a mesma nos três. O nível 1 repete o mesmo recado nas três
+travessias, para a criança ver a roda dos meios inteira com uma coisa só na
+cabeça.
 
----
-
-## 8. As regras, em código
-
-O veredito é uma função do estado, nunca um campo guardado na plaquinha — a
-mesma plaquinha é resposta certa numa fase e distrator na outra:
-
-```
-mesmaInformacao(bola, placa)  →  bola.assunto === placa.assunto
-                                 && bola.linguagem !== placa.linguagem
-```
-
-As duas condições importam. Sem a primeira, qualquer plaquinha serve; **sem a
-segunda, a criança poderia passar desenho para desenho** e o jogo viraria
-"ache a figura igual" — que é jogo de memória, não de linguagem.
-
-Montagem da fase:
-
-1. sorteia o assunto da mensagem e a linguagem de partida;
-2. para cada passe, escolhe a linguagem de chegada (diferente da atual) e
-   coloca essa plaquinha em um colega;
-3. os outros colegas recebem plaquinhas de **assuntos diferentes**, em
-   linguagens variadas — nunca duas certas ao mesmo tempo;
-4. o destino recebe a última linguagem da corrente.
-
-Nenhum estado sem saída: sempre existe exatamente um colega certo, e a
-plaquinha dele não muda enquanto a criança pensa.
+Os seis quadros da folha de personagens são divididos assim: **0–3 em quadra,
+4 e 5 esperando**. Ninguém aparece duas vezes — dois rostos iguais na tela
+quebrariam justamente a pergunta do nível 3.
 
 ---
 
-## 9. O erro
+## 7. O erro
 
-TRAVA no padrão do catálogo, mas sobre **uma linha de passe**, não sobre a tela:
+TRAVA no padrão do catálogo, e são dois erros possíveis, cada um com o seu
+motivo dito em uma frase:
 
-1. o robô entra na frente, pega a bola e faz cara boba — sem queda, sem dano,
-   sem vida perdida;
-2. a linha daquele passe fica **tracejada e bloqueada**: aquele colega não
-   aceita mais a bola nesta rodada;
-3. o balão diz o que não bateu — `Esse colega fala de OUTRA coisa!` —, nunca
-   "tente de novo" e nunca qual é o certo;
-4. a bola volta para quem estava com ela e o jogo destrava sozinho: a criança
-   escolhe de novo entre os que sobraram;
-5. depois de **dois erros na mesma parada**, o colega certo acena.
+| Erro | O que acontece |
+|---|---|
+| Passar pelo robô | ✕ vermelho em quem foi tocado, o robô ergue a bola com cara boba e devolve — *"O robô estava nesse caminho!"* |
+| Entregar para o outro | ✕ vermelho no destinatário errado — *"Esse recado não é para ele!"* |
 
-Pontos: **+10** por passe certo de primeira, **+5** depois de erro. Pelo
-`runtimeGameBridge`. **Nenhum número na tela**, conforme a seção Pontuação do
+Depois de **dois erros na mesma parada**, um alvo válido e aberto acena.
+
+Não existe trava permanente em caminho nenhum: o vermelho já diz tudo, e um
+bloqueio invisível por cima contradiria o desenho. Uma regra só, e ela está
+na tela.
+
+Pontos: **+10** de primeira, **+5** depois de erro, pelo `runtimeGameBridge`.
+**Nenhum número na tela**, conforme a seção Pontuação do
 [INSTRUCOES.md](../../INSTRUCOES.md).
 
 ---
 
-## 10. O mural, e por que ele existe
+## 8. O mural
 
-No fim de cada fase a mensagem entregue **entra no mural**, com a corrente de
-linguagens por que ela passou desenhada em fila: desenho → fala → palavra.
+Fica dentro do painel do topo, à esquerda: três vagas vazias no começo do
+nível. Cada travessia entregue vira uma cartinha ali, com o desenho do recado e
+os três carimbos dos meios embaixo.
 
-Isso não é enfeite de comemoração. É a única parte do jogo que mostra a
-terceira afirmação da habilidade — que a informação pode ser **armazenada** —
-e é onde a frase-chave do briefing fecha o raciocínio:
-
-> **Olha: a mensagem é a mesma, só mudou o jeito de viajar!**
-
-O mural acumula durante o nível: no fim das três fases ele aparece cheio, com
-as três mensagens e seus caminhos, antes do painel de fim de nível.
+Ele é **progresso e lição ao mesmo tempo** — mostra quantas travessias faltam e
+mostra a informação **armazenada**, que é a terceira afirmação da habilidade. É
+por isso que não existem bolinhas de fase separadas: seriam duas coisas
+ocupando espaço para dizer a mesma.
 
 ---
 
-## 11. Feedback
+## 9. Feedback
 
 | Momento | O que acontece |
 |---|---|
-| Bola parada | ela pulsa devagar com quem está; as plaquinhas dos colegas têm um brilho leve |
-| Toque num colega | a plaquinha afunda e volta; a linha do passe acende |
-| Passe voando | rastro colorido, 0,5 s, e a bola gira |
-| Chegou | a plaquinha vira a nova mensagem no painel do topo, com estalo; moldura da tela pisca verde |
-| Intercepção | robô entra, moldura pisca vermelha, câmera treme de leve, a linha vira tracejado |
-| Entrega no destino | torcida curta, confete, e a mensagem voa para o mural |
-| Fim do nível | mural cheio, frase-chave em balão, estrelas |
+| Parado | a bola pulsa; holofote no chão de quem a tem; o robô do nível 1 flutua de leve |
+| Mouse em cima | o colega cresce 5 % |
+| Toque | ele afunda e volta |
+| Passe voando | 0,5 s, e os caminhos somem |
+| Chegou | quem recebeu pula, faíscas verdes, a bola gira e vira outro meio |
+| A troca | balão `antes = depois` com o mesmo desenho dos dois lados |
+| Intercepção | robô com cara boba, moldura vermelha, câmera treme |
+| Entrega | terceira troca de meio, a bola some na caixa, confete, torcida, o mural ganha uma cartinha |
+| Fim do nível | fanfarra e o painel com a frase-chave |
 
-Áudio sintetizado em WebAudio, como nos jogos irmãos: assobio curto do passe,
-"pop" da chegada, buzina boba do robô, torcida no fim. Respeita `mute-audio`.
+A frase *"É a mesma coisa!"* aparece **uma vez por nível**, na primeira troca.
+Repetir a cada passe transformaria a prova em leitura obrigatória.
 
----
-
-## 12. Antes da arte existir
-
-`createSubjectCard` desenha uma plaquinha com o nome do assunto quando a
-textura do desenho não existe — mesmo padrão de Ritmo da Rotina e Pulo
-Programado. Com ele a fase inteira é jogável e ajustável antes do primeiro
-desenho chegar, e um arquivo faltando não derruba o `vite build`.
-
-Ordem de produção:
-
-1. quadra em Graphics, jogadores em placeholder, uma fase jogável de ponta a
-   ponta;
-2. as três linguagens e a montagem da fase;
-3. robô, trava por linha e a dica depois de dois erros;
-4. mural, frase-chave e o painel de fim de nível;
-5. arte real entrando no lugar dos cartões;
-6. conferência: mudo, pausa pelo `?`, retomada sem salto, e a faixa 16:9 num
-   celular em pé.
+Áudio sintetizado em WebAudio, como nos jogos irmãos. Respeita `mute-audio`.
 
 ---
 
-## 13. O que mudou na construção
+## 10. Antes da arte existir
 
-**A primeira versão ficou ilegível para uma criança**, e o defeito era de
-fundo: a tela tinha DUAS cartas ao mesmo tempo — a do topo e a que a bola
-carregava — sem nada dizendo qual era qual, e o topo escrevia "em palavra",
-que é justamente o que uma criança de 6 anos não consegue ler. As plaquinhas
-flutuavam ao lado dos colegas sem dono, e quem estava com a bola só se
-distinguia por NÃO ter plaquinha — ausência ninguém vê.
+`createMessage` cai para o nome do recado escrito quando a textura do desenho
+não existe, `createCourt` desenha um boneco em Graphics sem a folha
+`personagens`, e `createPortrait` mostra só a moldura. Um arquivo faltando não
+derruba o `vite build` nem trava a fase.
 
-A correção foi dar **três papéis e três aparências**:
+---
 
-| Elemento | Responde | Como ficou |
-|---|---|---|
-| Painel do topo | o QUE mandar | o desenho grande e a frase por extenso, sem cor de linguagem |
-| Bola | ONDE o recado está | uma bola de verdade, sem conteúdo, e um holofote no chão de quem a tem |
-| Plaquinhas | COMO cada um falaria | cartão com BICO apontando para o dono |
+## 11. O que mudou, e por quê
 
-Mais uma faixa de instrução **sempre na tela** — *"Toque em quem diz a MESMA
-coisa"* —, que é o que responde "o que eu faço aqui" sem depender de lembrar
-do tutorial.
+A primeira versão pedia comparação de linguagens como decisão de jogo: "toque
+em quem diz a MESMA coisa de outro jeito", com até seis plaquinhas na quadra.
+Duas rodadas de correção — etiquetas, veredito `=`/`≠`, trilho, caixa de
+correio — melhoraram a leitura de cada peça e não resolveram o problema de
+fundo, porque o problema era **a natureza da tarefa**, e não a apresentação
+dela.
 
-O efeito colateral bom: a regra que a criança segue virou uma só e visível
-("ache quem diz isto"). A lição — a mesma coisa dita de vários jeitos — deixou
-de ser um rótulo que ela precisava ler e passou a ser o que ela vê acontecendo
-a cada passe.
+O briefing já descrevia um jogo mais simples, e é o que está aqui: *"toque no
+colega livre para a bola-mensagem chegar ao destino sem o robô interceptar"*.
+A decisão virou espacial; a lição virou consequência.
 
-## 14. Registro
+| Saiu | Entrou |
+|---|---|
+| plaquinhas com assunto + linguagem em cada colega | caminhos verdes e vermelhos saindo de quem tem a bola |
+| comparar equivalências para escolher o alvo | desviar do robô, e esperar quando ele fecha tudo |
+| a bola era uma bola qualquer | a bola **é** o recado, e troca de casca a cada parada |
+| trilho lateral de linguagens | mural dentro do painel, que também é o progresso |
+| destino como quadrado amarelo | destinatário com **rosto**, e a pergunta "para quem é?" no nível 3 |
+
+---
+
+## 12. Registro
 
 - pasta: `src/games/EF01CO04/passe-da-mensagem/`
 - assets: `src/assets/games/EF01CO04/passe-da-mensagem/`
 - slug `passe-da-mensagem`, módulo `EF01CO04/passe-da-mensagem`, ícone ⚽
 - entra em `catalog.ts`, `gameInstructions.ts` e no conjunto
   `GAMES_WITH_IN_GAME_COMPLETION_SCREEN` de `GameDetailsPage.tsx`
+
+Arquivos, e o que cada um sabe:
+
+| Arquivo | Responsabilidade |
+|---|---|
+| `data/levels.ts` | os 3 níveis, os recados, a roda dos meios, o elenco |
+| `data/layout.ts` | toda coordenada, na grade de 1280 × 720 |
+| `scenes/lines.ts` | a geometria do bloqueio e o desenho dos caminhos |
+| `scenes/message.ts` | as três formas do recado, os carimbos e os retratos |
+| `scenes/court.ts` | campo, colegas, destinatários e as zonas de toque |
+| `scenes/robot.ts` | o vaivém e a cara boba |
+| `scenes/ball.ts` | a bola-mensagem e o balão `antes = depois` |
+| `scenes/header.ts` | o painel do topo e o mural |
+| `scenes/GameScene.ts` | o laço, os erros e a conversa com a plataforma |

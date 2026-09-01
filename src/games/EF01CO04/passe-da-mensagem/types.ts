@@ -3,65 +3,47 @@
  *  PASSE DA MENSAGEM — EF01CO04
  * ══════════════════════════════════════════════════════════════════════
  *
- * A habilidade pede reconhecer que a informação pode ser ARMAZENADA,
- * TRANSMITIDA e DESCRITA EM VÁRIAS LINGUAGENS. O jogo irmão desta habilidade,
- * o Correio Multimídia, já cobre o meio de transmissão; aqui o assunto é a
- * linguagem: a bola só chega em quem está dizendo A MESMA COISA de outro jeito.
+ * A criança recebe um recado em DESENHO e monta o mesmo recado na linguagem
+ * que a fase pede — em fala, ou em palavra. Aperta ENVIAR, e o colega do outro
+ * lado lê o que ela mandou e põe na mesa dele, um item de cada vez.
  *
- * O veredito nunca é um campo guardado na plaquinha — é uma função da bola e
- * da plaquinha no instante do toque (ver `sameInformation`). A mesma plaquinha
- * é resposta certa numa fase e distrator na outra.
+ * A prova de que a informação sobreviveu à troca de linguagem é a MESA DELE
+ * ficar igual ao recado do topo. Não é uma frase explicando: é a tela
+ * mostrando.
+ *
+ * Ver PLANEJAMENTO.md.
  */
 
 export type LevelNumber = 1 | 2 | 3
 
-/** Os quatro assuntos das mensagens. */
-export type SubjectId = 'festa' | 'lapis' | 'treino' | 'parabens'
+/** Os quatro objetos do jogo. A paleta mostra sempre os quatro, nesta ordem. */
+export type ItemId = 'bolo' | 'lapis' | 'presente' | 'relogio'
 
-/** As três linguagens em que uma mensagem pode ser descrita. */
+/** As linguagens em que o mesmo recado pode ser descrito. */
 export type Language = 'desenho' | 'fala' | 'palavra'
 
-export type PlayState = 'intro' | 'tutorial' | 'playing' | 'passing' | 'locked' | 'mural' | 'ending'
+export type PlayState = 'tutorial' | 'building' | 'sending' | 'locked' | 'ending'
 
-export interface SubjectDef {
-    id: SubjectId
-    /** A palavra escrita — a linguagem `palavra`. */
+export interface ItemDef {
+    id: ItemId
     word: string
-    /** A frase inteira, usada no mural e nos balões. */
-    phrase: string
     texture: string
 }
 
-/** Uma mensagem é sempre um par: o que ela diz, e em que linguagem está. */
-export interface Message {
-    subject: SubjectDef
-    language: Language
-}
-
 export interface PhaseDef {
-    /** Quantos colegas ficam em quadra. */
-    players: number
-    /** As linguagens que podem aparecer nesta fase. */
-    languages: Language[]
-    /**
-     * Distratores do mesmo mundo (bolo × presente). É assim que o nível 3
-     * aperta: por semelhança, e não por velocidade.
-     */
-    nearMiss: boolean
+    /** O recado, em ordem. Pode repetir o mesmo item. */
+    message: ItemId[]
 }
 
 export interface LevelDef {
     level: LevelNumber
     name: string
+    /** A linguagem que a mesa pede nesta rodada inteira. */
+    language: Language
+    /**
+     * Cartas de PALAVRA com o desenho pequeno no canto. É o degrau entre ler
+     * a figura e ler a palavra: some no nível 3.
+     */
+    wordHint: boolean
     phases: PhaseDef[]
-}
-
-/** Um colega em quadra, com a plaquinha que ele está segurando. */
-export interface Teammate {
-    index: number
-    x: number
-    y: number
-    message: Message
-    /** Linha já recusada nesta parada: não aceita mais a bola. */
-    blocked: boolean
 }

@@ -1,22 +1,18 @@
 import Phaser from 'phaser'
 import { createLoadingScreen } from '../../../../shared/loading/createLoadingScreen'
 import { faseInicial } from '../../../../shared/level/faseInicial'
-import { C } from '../data/theme'
 import { preloadLives } from '../../../../shared/hud/createLives'
+import { C } from '../data/theme'
 
-/**
- * As texturas entram por glob, e não por `import` estático: um import de
- * arquivo que ainda não existe quebra o `vite build` inteiro. Com o glob, um
- * PNG novo entra no jogo assim que for salvo na pasta, e um que falta apenas
- * não entra — o cartão de reserva de `cards.ts` cobre o buraco.
- */
 const SHEETS: Record<string, { frameWidth: number; frameHeight: number }> = {
-    personagens: { frameWidth: 400, frameHeight: 500 },
-    robo: { frameWidth: 300, frameHeight: 300 },
+    bau: { frameWidth: 300, frameHeight: 250 },
+    explorador: { frameWidth: 250, frameHeight: 370 },
+    'simbolos-ilha': { frameWidth: 250, frameHeight: 250 },
 }
 
+/** Glob, e não import: arquivo que ainda não existe derrubaria o build inteiro. */
 const FILES = import.meta.glob(
-    '../../../../assets/games/EF01CO04/passe-da-mensagem/*.png',
+    '../../../../assets/games/EF01CO05/ilha-dos-codigos/*.png',
     { eager: true, import: 'default' },
 ) as Record<string, string>
 
@@ -29,23 +25,23 @@ export class BootScene extends Phaser.Scene {
 
     preload() {
         createLoadingScreen(this, {
-            title: 'Passe da Mensagem',
-            subtitle: 'O mesmo recado, por voz, carta e celular',
-            description: 'Entrando em quadra...',
+            title: 'Ilha dos Códigos',
+            subtitle: 'Abra os baús da ilha!',
+            description: 'Preparando o mapa...',
             theme: {
-                background: { kind: 'solid', color: 0x6fbf5a },
+                background: { kind: 'waves', color: 0x9fe0ef, base: 0xbfe9f5 },
                 card: C.cream,
                 cardShadow: C.ink,
                 cardHighlight: C.white,
-                cardBorder: C.shirtDark,
+                cardBorder: C.wood,
                 title: C.ink,
-                subtitle: C.shirtDark,
+                subtitle: C.woodDark,
                 description: C.inkSoft,
                 titleStroke: C.white,
                 progressTrack: C.white,
-                progressBorder: C.shirtDark,
-                progressFill: C.shirt,
-                progressHighlight: C.warn,
+                progressBorder: C.woodDark,
+                progressFill: C.warn,
+                progressHighlight: C.cream,
             },
         })
 

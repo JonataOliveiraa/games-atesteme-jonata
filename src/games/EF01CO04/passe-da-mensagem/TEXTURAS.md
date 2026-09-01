@@ -26,7 +26,7 @@ contrato com o código, não sugestão.
 ## 2. Tamanho — pequeno de propósito
 
 **256 × 256 por quadro.** O jogador aparece a 150 px na grade de 1280 × 720, o
-que num celular dá cerca de **45 px reais**; o desenho dentro da plaquinha fica
+que num celular dá cerca de **45 px reais**; o desenho dentro da bola-mensagem fica
 menor ainda. Pedir 1024 seria carregar megabytes para jogar fora no `setScale`.
 
 A regra que vale mais que a resolução: **se a criança não reconhece o desenho
@@ -58,14 +58,14 @@ words, watermark, signature, frame, border, grid lines, panel, sign, card, speec
 bubble, ground, floor line, court lines, background scenery, cropped, cut off
 ```
 
-**`text, letters, numbers` é obrigatório.** As palavras do jogo — `FESTA`,
-`LÁPIS`, `TREINO`, `PARABÉNS` — são escritas pelo Phaser em cima da plaquinha,
-em português e no tamanho certo. Letra dentro do PNG vira lixo por baixo do
-texto de verdade.
+**`text, letters, numbers` é obrigatório.** As frases do jogo são escritas pelo
+Phaser no painel do topo, em português e no tamanho certo. Letra dentro do PNG
+vira lixo por baixo do texto de verdade.
 
-**`sign, card, speech bubble` também é obrigatório aqui.** A plaquinha e o
-balão de fala são desenhados pelo código; se vierem dentro do PNG, ficam duas
-molduras encaixadas e nenhuma delas muda de cor quando o estado muda.
+**`sign, card, speech bubble, envelope, phone` também é obrigatório aqui.** As
+três cascas do recado são desenhadas pelo código em volta do mesmo quadro; se
+vierem dentro do PNG, ficam duas molduras encaixadas e o desenho de dentro
+deixa de ser idêntico nos três meios.
 
 **`court lines, ground` importa:** a quadra é Graphics, e uma linha de quadra
 dentro do sprite cria duas marcações que não se encaixam.
@@ -122,10 +122,10 @@ Frames, left to right then top to bottom, varying only hair and skin:
 
 ### 6.2 `assuntos.png` — 512 × 512, grade 2 × 2
 
-Os quatro assuntos das mensagens. Cada um aparece **três vezes no jogo**: solto
-na plaquinha (linguagem "desenho"), pequeno dentro de um balão de fala
-desenhado pelo código (linguagem "fala"), e no mural. Por isso são objetos
-isolados, sem cenário e sem mão segurando.
+Os quatro recados. Cada um aparece **quatro vezes no jogo**: grande no painel do
+topo, dentro da bola-mensagem nos três meios (balão de voz, envelope, celular),
+no balão de comparação e no mural. Por isso são objetos isolados, sem cenário e
+sem mão segurando.
 
 ```
 Sprite sheet with 4 frames in a strict 2-column by 2-row grid, every frame the same
@@ -174,9 +174,9 @@ Additional negative: angry, menacing, weapon, red eyes, sharp edges, sparks
 
 ## 7. O que NÃO é textura
 
-Não peça e não aceite: **quadra, linhas da quadra, plaquinha, cartão, balão de
-fala, envelope, telefone, mural, moldura, seta, cadeado, interrogação,
-estrela, rastro do passe, brilho, confete, bola.**
+Não peça e não aceite: **quadra, linhas da quadra, caminho, seta, ✕, balão de
+voz, envelope, telefone, caixa de correio, mural, moldura, retrato,
+interrogação, estrela, brilho, confete, bola.**
 
 Tudo isso é Graphics do Phaser. Vale a mesma separação de Corrida dos
 Parecidos, Ritmo da Rotina e Pulo Programado, e por dois motivos concretos:
@@ -186,15 +186,15 @@ carregada.
 
 **Três merecem nota, porque é onde o pedido de textura costuma escapar:**
 
-- **a plaquinha** é um retângulo desenhado, e o que vai dentro dela muda: às
-  vezes é o quadro de `assuntos.png`, às vezes é a palavra escrita pelo Phaser,
-  às vezes é o mesmo desenho dentro de um balão de fala. Uma plaquinha em PNG
-  serviria para um caso só;
-- **o balão de fala com ondinhas** é a linguagem "fala" — ele nasce em torno do
-  desenho, e o desenho é que varia;
-- **a bola-mensagem** é um círculo desenhado que carrega o assunto atual
-  dentro. Ela muda de conteúdo a cada passe; é justamente o que o jogo tem para
-  ensinar.
+- **os três meios** (balão de voz, envelope, celular) são cascas desenhadas em
+  volta do MESMO quadro de `assuntos.png`. Em PNG, cada meio precisaria de uma
+  arte por recado — doze arquivos para dizer o que o código diz com três
+  funções, e sem a garantia de que o desenho de dentro é idêntico, que é a
+  lição inteira;
+- **os caminhos** mudam de verde para vermelho a cada frame, conforme o robô
+  anda. PNG não muda de cor;
+- **os retratos** dos destinatários são recortes da própria folha de
+  personagens, feitos com `setCrop`. Nada de arte extra.
 
 ## 8. Entrega
 
@@ -220,9 +220,9 @@ Pulo Programado. O procedimento está na §7 do
 ## 9. Ordem
 
 **Mande `assuntos.png` primeiro.** Ele sozinho responde a pergunta que decide o
-jogo: o bolo continua reconhecível a 40 px, dentro de uma plaquinha, ao lado de
-um presente? Se a resposta for não, o ajuste de traço acontece num arquivo, não
-em três — e é esse par (bolo × presente) que o nível 3 usa como distrator.
+jogo: o bolo continua reconhecível a 44 px, dentro de um envelope e dentro de
+um celular? Se a resposta for não, o ajuste de traço acontece num arquivo, não
+em três — e é a igualdade desse desenho nos três meios que o jogo ensina.
 
 `time.png` vem em seguida, que é o que fecha a primeira fase jogável com arte
 real. O robô pode vir por último: ele só aparece no erro, e um retângulo cinza

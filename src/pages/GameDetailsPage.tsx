@@ -16,6 +16,7 @@ import { useBeepSound } from "../hooks/useBeepSound";
 const GAMES_WITH_IN_GAME_COMPLETION_SCREEN = new Set([
   "oficina-dos-algoritmos",
   "pixel-secreto",
+  "ilha-dos-codigos",
   "guardioes-dos-dados",
   "desfile-do-robo-repetidor",
   "fabrica-de-maquinas",

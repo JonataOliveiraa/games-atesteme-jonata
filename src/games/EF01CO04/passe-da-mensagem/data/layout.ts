@@ -2,89 +2,78 @@ export const W = 1280
 export const H = 720
 
 export const DEPTH = {
-    field: 0,
-    line: 4,
-    lane: 8,
-    shadow: 12,
-    player: 20,
-    plaque: 30,
-    ball: 40,
-    robot: 50,
+    room: 0,
+    furniture: 8,
+    person: 20,
+    tableTop: 28,
     panel: 60,
-    hud: 70,
-    balloon: 90,
-    fx: 110,
-    edge: 130,
-    mural: 300,
+    slot: 70,
+    card: 80,
+    hud: 90,
+    flying: 110,
+    balloon: 130,
+    fx: 150,
+    edge: 170,
     overlay: 400,
 }
 
-/** O painel do topo: nível e fases à esquerda, o RECADO no meio, `?` na ponta. */
-export const PANEL = { x: 16, y: 10, w: 1248, h: 152, r: 28 }
-
-export const LEVEL_PILL = { x: 36, y: 26, w: 172, h: 36 }
-
-export const PHASE_PIPS = { cx: 122, y: 84, gap: 28, r: 8 }
-
 /**
- * O RECADO, grande, no centro do painel. Ele mostra o SIGNIFICADO — o desenho
- * e a frase —, e nunca a linguagem de agora: se o topo estivesse escrito em
- * palavra, a criança que ainda nao le nao teria como saber o que mandar.
+ * TRÊS FAIXAS, e é só isso que existe na tela.
+ *
+ *   topo    o recado que chegou  →  a mesa que a criança preenche
+ *   meio    ela, o colega esperando, e a mesa dele
+ *   base    as quatro cartas e o ENVIAR
+ *
+ * O mesmo formato de Pulo Programado: o que eu monto em cima, o mundo no meio,
+ * minhas peças embaixo. Painel nenhum invade a faixa do outro.
  */
-export const HEADER_CARD = { x: 470, y: 86, size: 116 }
+export const BOARD = { x: 16, y: 10, w: 1248, h: 180, r: 28 }
 
-export const HEADER_TEXT = { x: 556, y: 86, w: 560 }
+export const LEVEL_PILL = { x: 34, y: 22, w: 166, h: 30 }
 
-export const HELP = { x: 1210, y: 86, r: 30 }
+/** O mural: uma vaga por fase entregue, embaixo da pílula do nível. */
+export const MURAL = { cx: [56, 106, 156], cy: 122, size: 42 }
 
-/**
- * A faixa de instrucao, sempre na tela. Uma frase curta que nao muda e o que
- * responde "o que eu faco aqui" sem a crianca ter que lembrar do tutorial.
- */
-export const HINT = { x: 640, y: 186, w: 640, h: 46 }
+/** O RECADO — o que chegou, sempre em desenho. Até três itens. */
+export const NOTE = { labelX: 206, labelY: 36, size: 80, gap: 12, from: 206, cy: 116 }
 
-/** A quadra ocupa tudo o que sobra e NÃO rola: comparar exige ver tudo junto. */
-export const COURT = { top: 218, bottom: 716, x: 24, w: 1232, r: 34 }
+/** A seta grande entre o recado e a mesa: é ela que diz "isto vira aquilo". */
+export const ARROW = { x: 524, y: 116 }
+
+/** A MESA — os quadrados que a criança preenche, na linguagem da fase. */
+export const DESK = { labelX: 764, labelY: 36, size: 96, gap: 18, cx: 764, cy: 116 }
+
+/** O selo da linguagem, ao lado da mesa. Diz de novo, em desenho, o que pedir. */
+export const SEAL = { x: 1062, y: 116, size: 92 }
+
+export const HELP = { x: 1210, y: 106, r: 30 }
+
+// ─────────────────────────────────────────────────── o meio: a sala
+
+export const ROOM = { top: 200, bottom: 502 }
+
+/** A linha do chão. Os dois personagens PISAM nela. */
+export const FLOOR = { y: 470 }
 
 /**
  * Os pés do personagem ficam em 98 % da altura do quadro — medido no PNG. Por
- * isso o centro dele mora a 48 % da altura acima do ponto do chao: assim ele
- * PISA na quadra em vez de flutuar.
+ * isso o centro dele mora a 48 % da altura acima do ponto do chão.
  */
-export const PLAYER = { h: 158, footRatio: 0.48, ratio: 400 / 500 }
+export const PERSON = { h: 158, footRatio: 0.48, ratio: 400 / 500 }
 
-/**
- * A plaquinha fica ao lado de quem a segura, e tem um BICO apontando para ele:
- * sem o bico ela flutua, e cartao flutuando nao tem dono — a crianca nao lia
- * "este colega esta dizendo isto".
- */
-export const PLAQUE = { size: 132, dx: 96, dy: -104 }
+export const SENDER = { x: 140 }
+export const RECEIVER = { x: 892 }
 
-/**
- * A bola e SO uma bola: ela marca quem esta com o recado, e nao mostra
- * conteudo nenhum. Antes ela carregava um cartao, e a tela ficava com duas
- * cartas diferentes ao mesmo tempo — a do topo e a da bola — sem nada dizendo
- * qual era qual. Tres papeis, tres aparencias: o topo diz O QUE mandar, a
- * bola diz ONDE ele esta, as plaquinhas dizem COMO cada um falaria.
- */
-export const BALL = { r: 46, dx: -96, dy: -104 }
+/** A bancada do colega: é aqui que o recado dele vira objeto de novo. */
+export const TABLE = { x: 976, w: 280, top: 424, cy: 388, slot: 74, gap: 12 }
 
-export const DESTINATION = { x: 1160, y: 530, size: 132 }
+// ─────────────────────────────────────────────────── a base: as cartas
 
-/**
- * Onde cada colega pisa, por quantidade. Duas fileiras só: com plaquinha ao
- * lado, cada um ocupa uns 240 x 190, e mais fileiras encostariam uma coisa na
- * outra — o que estraga justamente a comparação que o jogo pede.
- */
-export const SLOTS: Record<number, Array<[number, number]>> = {
-    3: [[270, 440], [620, 700], [960, 440]],
-    4: [[270, 440], [270, 700], [700, 440], [700, 700]],
-    5: [[250, 440], [250, 700], [610, 440], [610, 700], [940, 570]],
-    6: [[250, 440], [250, 700], [590, 440], [590, 700], [930, 440], [930, 700]],
-}
+export const TRAY = { x: 16, y: 512, w: 1248, h: 196, r: 28 }
 
-export const ROBOT = { size: 190 }
+/** Quatro cartas, sempre nas mesmas posições — a criança decora onde estão. */
+export const CARD = { w: 172, h: 152, cy: 610, cx: [180, 374, 568, 762] }
 
-export const BALLOON = { x: 640, y: 250, w: 520 }
+export const SEND = { x: 1060, y: 610, r: 88 }
 
-export const MURAL = { titleY: 172, rowY: 330, gap: 150, size: 118, chainY: 452 }
+export const BALLOON = { x: 640, y: 330, w: 560 }

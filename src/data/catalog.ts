@@ -49,7 +49,7 @@ import coverMuseuDasEstruturas from "../assets/games/EF15CO01/museu-das-estrutur
 import coverAcademiaDosAlgoritmos from "../assets/games/EF15CO02/academia-dos-algoritmos/cover-academia-dos-algoritmos.png";
 import coverCircuitoDaVerdade from "../assets/games/EF15CO03/circuito-da-verdade/cover-circuito-da-verdade.png";
 import coverArquitetoDasMissoes from "../assets/games/EF15CO04/arquiteto-das-missoes/cover-arquiteto-das-missoes.png";
-
+import ilhaDosCodigosThumbnail from "../assets/games/EF01CO05/ilha-dos-codigos/cover-ilha-dos-codigos.png";
 /**
  * 1. `id` nunca muda e nunca é reaproveitado. Se um jogo for removido,
  *    marque status "draft" — não devolva o id para a fila.
@@ -199,7 +199,7 @@ export const catalog: Game[] = [
     status: "published",
     title: "Passe da Mensagem",
     description:
-      "Passe a bola para o colega que diz a mesma coisa de outro jeito, e guarde a mensagem no mural.",
+      "Leve o recado pelo caminho que o robô não está cobrindo: ele vira voz, carta e celular sem mudar o que diz.",
     category: "Mundo Digital",
     points: 60,
     icon: "⚽",
@@ -221,6 +221,23 @@ export const catalog: Game[] = [
     points: 50,
     icon: "📬",
     thumbnail: correioThumbnail,
+  },
+  {
+    id: "050",
+    slug: "ilha-dos-codigos",
+    module: "EF01CO05/ilha-dos-codigos",
+    skill: "EF01CO05",
+    years: [1],
+    tags: ["código", "cor", "som", "toque"],
+    order: 48,
+    status: "published",
+    title: "Ilha dos Códigos",
+    description:
+      "Escreva na fechadura do baú a mesma mensagem em outro código e abra o tesouro da ilha.",
+    category: "Mundo Digital",
+    points: 60,
+    icon: "🗝️",
+    thumbnail: ilhaDosCodigosThumbnail,
   },
   {
     id: "005",

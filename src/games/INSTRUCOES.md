@@ -18,7 +18,7 @@ Priorize:
 
 ## Começando Um Jogo Novo
 
-Os 49 jogos seguem o mesmo esqueleto. Comece copiando a forma, não inventando
+Os jogos seguem o mesmo esqueleto. Comece copiando a forma, não inventando
 outra — é o que faz um jogo novo parecer da mesma família e reusar tudo que já
 está pronto.
 
@@ -33,6 +33,8 @@ src/games/<COMPETENCIA>/<slug>/
   scenes/GameScene.ts o jogo
   scenes/UIScene.ts   o que fica por cima (opcional)
 ```
+
+Pode sim criar arquivos extras, mas manntenha uma boa arquitetura
 
 **A tela é 1280 × 720.** Toda coordenada do jogo é nessa grade; o
 enquadramento em telas diferentes é resolvido fora, pelo `Scale.FIT`.
@@ -102,6 +104,8 @@ O loop principal deve ser simples e bem acabado:
 
 Evite mecânicas com muitas regras simultâneas. A dificuldade deve crescer por
 combinação, ritmo, quantidade ou contexto, não por confusão de interface.
+
+Sempre faça o jogo com apenas 1 NIVEL, para teste. Avise ao usuário que fez 1 nível só para teste, e mostre o resultado. 
 
 ## Tutorial
 
@@ -230,6 +234,12 @@ O progresso e o resultado devem aparecer de forma visual:
 Pontos continuam existindo no código, porque a plataforma os recebe pelo
 `runtimeGameBridge`. O que não pode é virar texto para a criança.
 
+# Olho Infantil
+
+Os jogos são jogados por crianças. Então apele pelo óbvio, pelo o que deve ser feito. As crianças não espera um jogo cheio de elemento visual confuso e textos, e esperando "jogue aí". Você deve fazer os jogos pensando na criança que vai jogar. O início está claro? Ao entrar no jogo, ele vai entender mais ou menos o que é pra fazer? 
+
+Tudo isso importa muito. Deve ser priorizado o máximo possível o entendimento. Os jogos devem ser claros e concisos. Não adianta um jogo muito bem feito, mas ele é complexo, confuso, cheio de elementos visuauis estranhos ou até bugados.
+
 ## Conversa Com A Plataforma
 
 O jogo não conhece a Atesteme. Ele só avisa o que aconteceu na partida. Quem
@@ -335,26 +345,6 @@ O `progress` do `CHECKPOINT` é porcentagem de 0 a 100, arredondada:
 ```ts
 progress: Math.round((concluidos / total) * 100)
 ```
-
-### Quatro armadilhas que já custaram conserto
-
-Nenhuma destas dá erro de compilação. Todas deixam o jogo funcionando na tela e
-errado para a plataforma.
-
-**1. O `return` que engole os níveis do meio.** O fim de nível costuma ser
-escrito assim:
-
-```ts
-if (!isLastLevel) {
-    showLevelComplete(/* ...avança para o próximo... */)
-    return                    // <- o emit abaixo nunca roda nos níveis 1 e 2
-}
-runtimeGameBridge.emit({ type: 'GAME_COMPLETED', /* ... */ })
-```
-
-O evento só sai no último nível. A aprovação continua certa, mas a plataforma
-nunca fica sabendo dos níveis 1 e 2. Emita **antes** da condição, ou dentro dos
-dois ramos.
 
 **2. Nunca escreva `isFinalStage` no jogo.** Ele é calculado fora, comparando
 `stage` com `totalStages`. Um `isFinalStage: true` fixo no código aprova a

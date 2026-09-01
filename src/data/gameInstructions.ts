@@ -19,6 +19,11 @@ const POR_SLUG: Record<string, string[]> = {
     "Monte todos os passos antes de testar.",
     "A ordem certa completa a fase; erros custam pontos e vidas.",
   ],
+  "ilha-dos-codigos": [
+    "O baú diz uma mensagem com sons, cores ou desenhos.",
+    "Toque na paleta para escrever a mesma mensagem no outro código.",
+    "Com a fechadura cheia, gire a chave para abrir o baú.",
+  ],
   "pixel-secreto": [
     "Observe a legenda de cores.",
     "Pinte os espaços corretos da grade.",
@@ -45,9 +50,10 @@ const POR_SLUG: Record<string, string[]> = {
     "Aperte VAI: se ele esbarrar, troque a carta daquele quadrado.",
   ],
   "passe-da-mensagem": [
-    "Olhe no topo a mensagem que você está levando.",
-    "Toque no colega que diz a MESMA coisa de outro jeito.",
-    "No último passe, a mensagem vai para a caixa de recados.",
+    "O topo mostra o recado e para quem ele é.",
+    "Toque num colega pelo caminho VERDE; o vermelho é onde o robô está.",
+    "Se tudo estiver vermelho, espere o robô sair do caminho.",
+    "A cada passe o recado vira voz, carta ou celular — e diz sempre a mesma coisa.",
   ],
   "guardioes-dos-dados": [
     "Leia cada situação com atenção.",
