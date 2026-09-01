@@ -24,6 +24,8 @@ import {
     createRuleAlert, createRuleSign, puff,
 } from './effects'
 import { createRoad, type RoadWorld } from './road'
+import { createLives, type Lives } from '../../../../shared/hud/createLives'
+import { vidasIniciais } from '../../../../shared/level/vidasIniciais'
 
 const GAME_ID = 'corrida-dos-parecidos'
 const MAX_STEP_MS = 34
@@ -31,6 +33,9 @@ const MAX_STEP_MS = 34
 const fx = (o: unknown) => o as unknown as FxTarget
 
 export class GameScene extends Phaser.Scene {
+    private lives!: Lives
+    private livesTotal = 3
+    private livesLeft = 3
     private levelDef!: LevelDef
     private pool: ItemDef[] = []
     private rule!: Rule
@@ -79,7 +84,9 @@ export class GameScene extends Phaser.Scene {
         super({ key: 'GameScene' })
     }
 
-    init(data: { level?: number; points?: number }) {
+    init(data: { level?: number; points?: number; lives?: number }) {
+        this.livesTotal = vidasIniciais(this, 3)
+        this.livesLeft = data?.lives ?? this.livesTotal
         const number = Phaser.Math.Clamp(data?.level ?? 1, 1, LEVELS.length) as LevelNumber
         this.levelDef = LEVELS[number - 1]
         this.baseSpeed = TRAVEL / this.levelDef.fallMs
@@ -130,6 +137,18 @@ export class GameScene extends Phaser.Scene {
 
         runtimeGameBridge.emit({ type: 'GAME_READY', gameId: GAME_ID })
         this.startLevel()
+
+        /* AJUSTE A POSIÇÃO COM A TECLA M (dev). Ver shared/hud/createLives.ts */
+        this.lives = createLives(this, {
+            total: this.livesTotal,
+            remaining: this.livesLeft,
+            gameId: GAME_ID,
+            x: 40,
+            y: 40,
+            size: 30,
+            stage: () => this.levelDef.level,
+        })
+        this.events.once('shutdown', () => this.lives.destroy())
     }
 
     update(_time: number, delta: number) {
@@ -485,6 +504,7 @@ export class GameScene extends Phaser.Scene {
             pointsEarned: 0,
             stage: this.levelDef.level,
         })
+            this.lives.lose(); this.livesLeft = this.lives.remaining
         this.emitCheckpoint()
 
         await this.lock.showAt(icon.x, icon.y - 66)
@@ -612,7 +632,7 @@ export class GameScene extends Phaser.Scene {
                 autoAdvance: {
                     delay: 2600,
                     label: `Preparando o nível ${next}...`,
-                    onComplete: () => this.scene.restart({ level: next, points: this.score }),
+                    onComplete: () => this.scene.restart({ lives: this.livesLeft, level: next, points: this.score }),
                 },
             })
             return
@@ -629,7 +649,7 @@ export class GameScene extends Phaser.Scene {
                 {
                     label: 'Correr de novo',
                     color: C.ok,
-                    onClick: () => this.scene.restart({ level: 1, points: 0 }),
+                    onClick: () => this.scene.restart({ lives: this.livesLeft, level: 1, points: 0 }),
                 },
                 {
                     label: 'Escolher jogo',
@@ -661,7 +681,7 @@ export class GameScene extends Phaser.Scene {
             if (command.type === 'START_GAME') {
                 this.score = command.points ?? this.score
                 if (command.stage && command.stage !== this.levelDef.level) {
-                    this.scene.restart({ level: command.stage, points: this.score })
+                    this.scene.restart({ lives: this.livesLeft, level: command.stage, points: this.score })
                     return
                 }
             }

@@ -16,6 +16,7 @@ import pastaDocLeitUrl from '../../../../assets/games/EF01CO06/desktop-digital-i
 import pastaDocArteUrl from '../../../../assets/games/EF01CO06/desktop-digital-infantil/pasta-doc-arte.png'
 import iconPowerUrl from '../../../../assets/games/EF01CO06/desktop-digital-infantil/icon-power.png'
 import { createLoadingScreen } from '../../../../shared/loading/createLoadingScreen'
+import { preloadLives } from '../../../../shared/hud/createLives'
 
 export class BootScene extends Phaser.Scene {
   constructor() {
@@ -65,6 +66,7 @@ export class BootScene extends Phaser.Scene {
 
     // TODO: this.load.audio('sfx-open',    ['assets/audio/window-open.ogg', 'assets/audio/window-open.mp3'])
     // TODO: this.load.audio('sfx-success', ['assets/audio/success.ogg',     'assets/audio/success.mp3'])
+    preloadLives(this)
   }
 
   create() {

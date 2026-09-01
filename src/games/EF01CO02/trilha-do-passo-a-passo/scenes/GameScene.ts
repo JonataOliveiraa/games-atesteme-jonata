@@ -7,6 +7,8 @@ import type { PlatformEvent } from '../../../../shared/contracts/platformEvents'
 import { EventBus } from '../../../../shared/EventBus';
 import { createTutorial } from '../../../../shared/tutorial/createTutorial';
 import { showLevelComplete } from '../../../../shared/level/showLevelComplete';
+import { createLives, type Lives } from '../../../../shared/hud/createLives'
+import { vidasIniciais } from '../../../../shared/level/vidasIniciais'
 
 const GAME_ID = 'trilha-do-passo-a-passo';
 const VISIBLE_SLOTS = 3;
@@ -44,6 +46,9 @@ interface TrayCard {
 }
 
 export class GameScene extends Phaser.Scene {
+    private lives!: Lives
+    private livesTotal = 3
+    private livesLeft = 3
     private currentLevelIdx = 0;
     private currentPhaseIdx = 0;
     private missingParts: RobotPartId[] = [];
@@ -74,7 +79,9 @@ export class GameScene extends Phaser.Scene {
     private get level() { return LEVELS[this.currentLevelIdx]; }
     private get phase() { return this.level.phases[this.currentPhaseIdx]; }
 
-    init(data: { levelIndex?: number; phaseIndex?: number }) {
+    init(data: { levelIndex?: number; phaseIndex?: number; lives?: number }) {
+        this.livesTotal = vidasIniciais(this, 3)
+        this.livesLeft = data?.lives ?? this.livesTotal
         this.currentLevelIdx = data.levelIndex ?? 0;
         this.currentPhaseIdx = data.phaseIndex ?? 0;
         this.missingParts = [...this.phase.missingParts];
@@ -98,6 +105,19 @@ export class GameScene extends Phaser.Scene {
         this.emitPlatformEvent('GAME_READY');
         if (this.currentPhaseIdx === 0) this.showLevelIntro();
         else this.startGameLogic();
+
+        /* AJUSTE A POSIÇÃO COM A TECLA M (dev). Ver shared/hud/createLives.ts */
+        this.lives = createLives(this, {
+            total: this.livesTotal,
+            remaining: this.livesLeft,
+            gameId: GAME_ID,
+            x: 40,
+            y: 40,
+            size: 30,
+            stage: () => this.currentLevelIdx,
+        })
+    this.lives.lose(); this.livesLeft = this.lives.remaining
+        this.events.once('shutdown', () => this.lives.destroy())
     }
 
     update() {
@@ -542,6 +562,7 @@ export class GameScene extends Phaser.Scene {
             this.cameras.main.shake(150, 0.01);
             this.playWrong();
             this.emitPlatformEvent('WRONG_ANSWER', { pointsEarned: -5 });
+            this.lives.lose(); this.livesLeft = this.lives.remaining
             this.tweenCardHome(card);
 
             this.handleGameOver();
@@ -596,7 +617,7 @@ export class GameScene extends Phaser.Scene {
                     autoAdvance: {
                         delay: 1800,
                         label: 'Preparando a próxima fase...',
-                        onComplete: () => this.scene.restart({ 
+                        onComplete: () => this.scene.restart({ lives: this.livesLeft, 
                             levelIndex: this.currentLevelIdx,
                             phaseIndex: this.currentPhaseIdx + 1,
                         }),
@@ -613,7 +634,7 @@ export class GameScene extends Phaser.Scene {
                     progress: { total: LEVELS.length, current: this.currentLevelIdx + 1 },
                     autoAdvance: {
                         delay: 2300,
-                        onComplete: () => this.scene.restart({ 
+                        onComplete: () => this.scene.restart({ lives: this.livesLeft, 
                             levelIndex: this.currentLevelIdx + 1,
                             phaseIndex: 0,
                         }),
@@ -632,7 +653,7 @@ export class GameScene extends Phaser.Scene {
                     {
                         label: 'Jogar de novo',
                         color: COLORS.green,
-                        onClick: () => this.scene.restart({ levelIndex: 0, phaseIndex: 0 }),
+                        onClick: () => this.scene.restart({ lives: this.livesLeft, levelIndex: 0, phaseIndex: 0 }),
                     },
                     {
                         label: 'Outros jogos',
@@ -656,7 +677,7 @@ export class GameScene extends Phaser.Scene {
             title: 'Ops, tente de novo!',
             subtitle: `Nível ${this.level.level} — Fase ${this.currentPhaseIdx + 1}`,
             buttonLabel: 'TENTAR DE NOVO',
-            onButton: () => this.scene.restart({ 
+            onButton: () => this.scene.restart({ lives: this.livesLeft, 
                 levelIndex: this.currentLevelIdx,
                 phaseIndex: this.currentPhaseIdx,
             }),
@@ -737,7 +758,7 @@ export class GameScene extends Phaser.Scene {
 
             const againBtn = this.createButton(width / 2, height * 0.79, 340, 64, 'JOGAR DE NOVO', COLORS.green, () => {
                 this.playClick();
-                this.scene.restart({ levelIndex: 0 });
+                this.scene.restart({ lives: this.livesLeft, levelIndex: 0 });
             });
 
             const exitBtn = this.createButton(width / 2, height * 0.91, 340, 64, 'OUTROS JOGOS', COLORS.lemon, () => {
@@ -750,8 +771,8 @@ export class GameScene extends Phaser.Scene {
             const btnLabel = won ? 'PRÓXIMO ROBÔ' : 'TENTAR DE NOVO';
             const btn = this.createButton(width / 2, height * 0.86, 320, 70, btnLabel, won ? COLORS.green : COLORS.lemon, () => {
                 this.playClick();
-                if (!won) this.scene.restart({ levelIndex: this.currentLevelIdx });
-                else this.scene.restart({ levelIndex: this.currentLevelIdx + 1 });
+                if (!won) this.scene.restart({ lives: this.livesLeft, levelIndex: this.currentLevelIdx });
+                else this.scene.restart({ lives: this.livesLeft, levelIndex: this.currentLevelIdx + 1 });
             });
 
             container.add([overlay, title, robotImg, btn]);

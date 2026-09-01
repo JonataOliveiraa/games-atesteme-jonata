@@ -9,6 +9,8 @@ import { EventBus } from '../../../../shared/EventBus'
 
 import { createTutorial } from '../../../../shared/tutorial/createTutorial';
 import { showLevelComplete } from '../../../../shared/level/showLevelComplete'
+import { createLives, type Lives } from '../../../../shared/hud/createLives'
+import { vidasIniciais } from '../../../../shared/level/vidasIniciais'
 const GAME_ID = 'correio-multimidia'
 
 type SceneState = 'tutorial' | 'map' | 'registering' | 'transmitting' | 'comparing'
@@ -53,6 +55,7 @@ const SOUND_COLORS = [
 ]
 
 export class GameScene extends Phaser.Scene {
+    private lives!: Lives
   private currentLevelIndex = 0
   private currentMissionIndex = 0
   private levelConfig!: LevelConfig
@@ -114,6 +117,19 @@ export class GameScene extends Phaser.Scene {
      * o `?stage=` da query ficava sem leitor.
      */
     this.startGame(faseInicial(this, 1), 0)
+
+      /* AJUSTE A POSIÇÃO COM A TECLA M (dev). Ver shared/hud/createLives.ts */
+      this.lives = createLives(this, {
+          // este jogo troca de nível sem `scene.restart`, então o saldo
+          // não precisa atravessar nada: a cena é a mesma o tempo todo
+          total: vidasIniciais(this, 3),
+          gameId: GAME_ID,
+          x: 40,
+          y: 40,
+          size: 30,
+          stage: () => this.levelConfig.level,
+      })
+      this.events.once('shutdown', () => this.lives.destroy())
   }
 
   shutdown() {
@@ -1051,6 +1067,7 @@ export class GameScene extends Phaser.Scene {
       pointsEarned: -WRONG_CHANNEL_PENALTY,
       stage: this.levelConfig.level
     })
+      this.lives.lose()
 
     this.points = Math.max(0, this.points - WRONG_CHANNEL_PENALTY)
     this.showLossComparison()

@@ -7,6 +7,8 @@ import { LEVELS } from '../data/levels';
 import type { AlgorithmCard, AlgorithmLevel } from '../types';
 import { showLevelComplete } from '../data/showLevelComplete';
 import { createTutorial, type TutorialStep } from '../../../../shared/tutorial/createTutorial';
+import { createLives, type Lives } from '../../../../shared/hud/createLives'
+import { vidasIniciais } from '../../../../shared/level/vidasIniciais'
 
 type AlgorithmStep = AlgorithmCard & {
   correctOrder: number | null;
@@ -33,6 +35,9 @@ const COLORS = {
 };
 
 export class GameScene extends Phaser.Scene {
+    private lives!: Lives
+    private livesTotal = 3
+    private livesLeft = 3
   private sequenceSlots: Phaser.GameObjects.Container[] = [];
   private placedOrder: Array<number | null> = [];
   private testButton?: Phaser.GameObjects.Container;
@@ -61,6 +66,8 @@ export class GameScene extends Phaser.Scene {
   }
 
   init(data?: { level?: number; points?: number; showLevelStart?: boolean; lives?: number }) {
+      this.livesTotal = vidasIniciais(this, 3)
+      this.livesLeft = data?.lives ?? this.livesTotal
     const requestedLevel = data?.level ?? 1;
     this.currentLevel = LEVELS.find((level) => level.level === requestedLevel) ?? LEVELS[0];
     this.currentPoints = data?.points ?? this.currentPoints;
@@ -109,6 +116,18 @@ export class GameScene extends Phaser.Scene {
     if (this.currentLevel.level === 1) {
       this.runTutorial();
     }
+
+      /* AJUSTE A POSIÇÃO COM A TECLA M (dev). Ver shared/hud/createLives.ts */
+      this.lives = createLives(this, {
+          total: this.livesTotal,
+          remaining: this.livesLeft,
+          gameId: GAME_ID,
+          x: 40,
+          y: 40,
+          size: 30,
+          stage: () => this.currentLevel.level,
+      })
+      this.events.once('shutdown', () => this.lives.destroy())
   }
 
   private runTutorial() {
@@ -1318,6 +1337,7 @@ export class GameScene extends Phaser.Scene {
       pointsEarned: -5,
       stage: this.currentLevel.level,
     });
+      this.lives.lose(); this.livesLeft = this.lives.remaining
   }
 
   private emitCheckpoint() {

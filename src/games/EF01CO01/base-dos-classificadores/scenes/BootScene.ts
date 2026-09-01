@@ -16,6 +16,7 @@ import flowerIconUrl from '../../../../assets/games/EF01CO01/base-dos-classifica
 import { createLoadingScreen } from '../../../../shared/loading/createLoadingScreen'
 import { faseInicial } from '../../../../shared/level/faseInicial'
 import { DEV_START_LEVEL } from './GameScene'
+import { preloadLives } from '../../../../shared/hud/createLives'
 
 /**
  * BootScene — carrega todos os assets e gera texturas programáticas.
@@ -72,6 +73,7 @@ export class BootScene extends Phaser.Scene {
     // this.load.audio('narr-forma-circulo',  ['assets/audio/narr-forma-circulo.ogg',  'assets/audio/narr-forma-circulo.mp3'])
     // this.load.audio('narr-forma-quadrado', ['assets/audio/narr-forma-quadrado.ogg', 'assets/audio/narr-forma-quadrado.mp3'])
     // this.load.audio('narr-forma-triangulo',['assets/audio/narr-forma-triangulo.ogg','assets/audio/narr-forma-triangulo.mp3'])
+    preloadLives(this)
   }
 
   create() {

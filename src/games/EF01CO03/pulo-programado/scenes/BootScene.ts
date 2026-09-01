@@ -2,6 +2,7 @@ import Phaser from 'phaser'
 import { createLoadingScreen } from '../../../../shared/loading/createLoadingScreen'
 import { faseInicial } from '../../../../shared/level/faseInicial'
 import { C } from '../data/theme'
+import { preloadLives } from '../../../../shared/hud/createLives'
 
 const SHEETS: Record<string, { frameWidth: number; frameHeight: number }> = {
     coelho: { frameWidth: 400, frameHeight: 400 },
@@ -47,6 +48,7 @@ export class BootScene extends Phaser.Scene {
             const sheet = SHEETS[key]
             if (sheet) this.load.spritesheet(key, url, sheet)
             else this.load.image(key, url)
+            preloadLives(this)
         })
     }
 

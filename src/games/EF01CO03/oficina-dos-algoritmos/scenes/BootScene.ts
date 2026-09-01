@@ -24,6 +24,7 @@ import toothpasteUrl from '../../../../assets/games/EF01CO03/oficina-dos-algorit
 import trashDistractorUrl from '../../../../assets/games/EF01CO03/oficina-dos-algoritmos/trash-distractor.png';
 import wateringPlantUrl from '../../../../assets/games/EF01CO03/oficina-dos-algoritmos/watering-plant.png';
 import { createLoadingScreen } from '../../../../shared/loading/createLoadingScreen';
+import { preloadLives } from '../../../../shared/hud/createLives'
 
 const ASSETS: Array<[string, string]> = [
   ['algorithm-game-cover', algorithmGameCoverUrl],
@@ -77,6 +78,7 @@ export class BootScene extends Phaser.Scene {
       },
     });
     ASSETS.forEach(([key, url]) => this.load.image(key, url));
+    preloadLives(this)
   }
 
   create() {

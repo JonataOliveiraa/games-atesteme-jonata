@@ -6,6 +6,8 @@ import type { RoundResult } from '../../../../shared/types/game'
 import type { GameItem, LevelConfig, ClassifierBase } from '../types'
 import { LEVELS } from '../data/levels'
 import { createTutorial, type TutorialStep } from '../../../../shared/tutorial/createTutorial'
+import { createLives, type Lives } from '../../../../shared/hud/createLives'
+import { vidasIniciais } from '../../../../shared/level/vidasIniciais'
 
 interface DraggableItem extends Phaser.GameObjects.Image {
   itemData: GameItem
@@ -33,6 +35,9 @@ const DEV_NO_TIMER = true      // ← true = pula tela inicial e não inicia tim
 
 
 export class GameScene extends Phaser.Scene {
+    private lives!: Lives
+    private livesTotal = 3
+    private livesLeft = 3
   private levelConfig!: LevelConfig
   private bases: Phaser.GameObjects.Container[] = []
   private itemSprites: DraggableItem[] = []
@@ -58,6 +63,8 @@ export class GameScene extends Phaser.Scene {
   }
 
   init(data: { level?: number; points?: number; lives?: number }) {
+      this.livesTotal = vidasIniciais(this, 3)
+      this.livesLeft = data?.lives ?? this.livesTotal
     const lvl = (data?.level ?? DEV_START_LEVEL) as 1 | 2 | 3
     this.levelConfig = LEVELS.find((l) => l.level === lvl) ?? LEVELS[0]
     this.hits = 0
@@ -96,6 +103,18 @@ export class GameScene extends Phaser.Scene {
     } else {
       this.showStartScreen()
     }
+
+      /* AJUSTE A POSIÇÃO COM A TECLA M (dev). Ver shared/hud/createLives.ts */
+      this.lives = createLives(this, {
+          total: this.livesTotal,
+          remaining: this.livesLeft,
+          gameId: GAME_ID,
+          x: 40,
+          y: 40,
+          size: 30,
+          stage: () => this.levelConfig.level,
+      })
+      this.events.once('shutdown', () => this.lives.destroy())
   }
 
   shutdown() {
@@ -1073,6 +1092,7 @@ export class GameScene extends Phaser.Scene {
       pointsEarned: -5,
       stage: this.levelConfig.level,
     })
+      this.lives.lose(); this.livesLeft = this.lives.remaining
 
     this.onWrongDrop(item, baseContainer)
 
@@ -1293,6 +1313,7 @@ export class GameScene extends Phaser.Scene {
       pointsEarned: 0,
       stage: this.levelConfig.level,
     })
+      this.lives.lose(); this.livesLeft = this.lives.remaining
     this.showGameOverScreen()
   }
 

@@ -2,6 +2,7 @@ import Phaser from 'phaser'
 import { createLoadingScreen } from '../../../../shared/loading/createLoadingScreen'
 import { faseInicial } from '../../../../shared/level/faseInicial'
 import { C } from '../data/theme'
+import { preloadLives } from '../../../../shared/hud/createLives'
 
 /**
  * As texturas entram por glob, e não por `import` estático: um import de
@@ -45,6 +46,7 @@ export class BootScene extends Phaser.Scene {
 
         Object.entries(FILES).forEach(([path, url]) => {
             this.load.image(keyOf(path), url)
+            preloadLives(this)
         })
     }
 

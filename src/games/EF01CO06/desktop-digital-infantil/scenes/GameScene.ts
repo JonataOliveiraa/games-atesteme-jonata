@@ -13,6 +13,8 @@ import {
   chunkyButton, circleButton, floatingNote, type AppId,
 } from '../ui/kit'
 import { APP_BUILDERS, type AppView, type Area } from '../apps/apps'
+import { createLives, type Lives } from '../../../../shared/hud/createLives'
+import { vidasIniciais } from '../../../../shared/level/vidasIniciais'
 
 /**
  * Quantos desvios até o jogo contar um erro para a plataforma.
@@ -48,6 +50,9 @@ const CARD_TITLE_MAX_H = 116
 const HINT_AFTER_MS = 9000
 
 export class GameScene extends Phaser.Scene {
+    private livesHud!: Lives
+    private livesTotal = 3
+    private livesLeft = 3
   private cfg!: LevelConfig
   private missionIdx = 0
   private stepIdx = 0
@@ -93,6 +98,8 @@ export class GameScene extends Phaser.Scene {
   constructor() { super({ key: 'GameScene' }) }
 
   init(data: { level?: number; points?: number; lives?: number }) {
+      this.livesTotal = vidasIniciais(this, 3)
+      this.livesLeft = data?.lives ?? this.livesTotal
     const lvl = (data?.level ?? 1) as 1 | 2 | 3
     this.cfg = LEVELS.find(l => l.level === lvl) ?? LEVELS[0]
 
@@ -137,6 +144,18 @@ export class GameScene extends Phaser.Scene {
     })
 
     this.showIntro()
+
+      /* AJUSTE A POSIÇÃO COM A TECLA M (dev). Ver shared/hud/createLives.ts */
+      this.livesHud = createLives(this, {
+          total: this.livesTotal,
+          remaining: this.livesLeft,
+          gameId: GAME_ID,
+          x: 40,
+          y: 40,
+          size: 30,
+          stage: () => this.cfg.level,
+      })
+      this.events.once('shutdown', () => this.livesHud.destroy())
   }
 
   update(_t: number, dt: number) {
@@ -492,6 +511,7 @@ export class GameScene extends Phaser.Scene {
     runtimeGameBridge.emit({
       type: 'WRONG_ANSWER', gameId: GAME_ID, pointsEarned: 0, stage: this.cfg.level,
     })
+      this.livesHud.lose(); this.livesLeft = this.livesHud.remaining
   }
 
   // ═══════════════════════════════════════════════ progressão
@@ -755,7 +775,7 @@ export class GameScene extends Phaser.Scene {
       progress: { total: 3, current: this.cfg.level },
       ...(last ? {
         buttons: [
-          { label: 'Jogar de novo', color: C.mintDeep, onClick: () => this.scene.restart({ level: 1 }) },
+          { label: 'Jogar de novo', color: C.mintDeep, onClick: () => this.scene.restart({ lives: this.livesLeft, level: 1 }) },
           { label: 'Outros jogos', color: C.slateDeep, onClick: () => EventBus.emit('exit-game') },
         ],
       } : {

@@ -2,6 +2,7 @@ import Phaser from 'phaser'
 import { createLoadingScreen } from '../../../../shared/loading/createLoadingScreen'
 import { faseInicial } from '../../../../shared/level/faseInicial'
 import { BIOME, C } from '../data/theme'
+import { preloadLives } from '../../../../shared/hud/createLives'
 
 /**
  * As texturas entram por glob, e não por `import` estático: um import de
@@ -59,6 +60,7 @@ export class BootScene extends Phaser.Scene {
             const sheet = SHEETS[key]
             if (sheet) this.load.spritesheet(key, url, sheet)
             else this.load.image(key, url)
+            preloadLives(this)
         })
     }
 

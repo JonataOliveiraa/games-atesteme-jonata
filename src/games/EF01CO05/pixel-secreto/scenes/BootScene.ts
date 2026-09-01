@@ -13,6 +13,7 @@ import cursorPurpleUrl from "../../../../assets/games/EF01CO05/pixel-secreto/cur
 import cursorWhiteUrl from "../../../../assets/games/EF01CO05/pixel-secreto/cursor-paint-white.png";
 import cursorYellowUrl from "../../../../assets/games/EF01CO05/pixel-secreto/cursor-paint-yellow.png";
 import { createLoadingScreen } from "../../../../shared/loading/createLoadingScreen";
+import { preloadLives } from '../../../../shared/hud/createLives'
 
 const ASSETS: Array<[string, string]> = [
   ["pixel-secret-bg-level-1", bgLevelOneUrl],
@@ -55,6 +56,7 @@ export class BootScene extends Phaser.Scene {
       },
     });
     ASSETS.forEach(([key, url]) => this.load.image(key, url));
+    preloadLives(this)
   }
 
   create() {

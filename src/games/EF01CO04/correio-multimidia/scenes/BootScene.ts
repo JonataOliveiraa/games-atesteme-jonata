@@ -38,6 +38,7 @@ import somLatidoUrl from '../../../../assets/games/EF01CO04/correio-multimidia/a
 import somMiadoUrl from '../../../../assets/games/EF01CO04/correio-multimidia/audio/som_miado.ogg'
 import somBuzinaUrl from '../../../../assets/games/EF01CO04/correio-multimidia/audio/som_buzina.ogg'
 import { createLoadingScreen } from '../../../../shared/loading/createLoadingScreen'
+import { preloadLives } from '../../../../shared/hud/createLives'
 
 export class BootScene extends Phaser.Scene {
   private progressBar!: Phaser.GameObjects.Graphics
@@ -116,6 +117,7 @@ export class BootScene extends Phaser.Scene {
     this.load.audio('som_latido', somLatidoUrl)
     this.load.audio('som_miado', somMiadoUrl)
     this.load.audio('som_buzina', somBuzinaUrl)
+    preloadLives(this)
 
     this.load.once('complete', () => {
       this.scene.start('GameScene')

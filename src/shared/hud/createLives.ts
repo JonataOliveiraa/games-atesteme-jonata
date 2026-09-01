@@ -67,6 +67,11 @@ export interface LivesOptions {
     fontSize?: string
     stroke?: string
     strokeThickness?: number
+    /**
+     * Onde na pilha. O padrão fica acima do conteúdo do jogo e ABAIXO de
+     * qualquer overlay — tutorial (9000+), intro de nível e fim de nível
+     * (180+). Os corações são parte do header, não flutuam por cima dele.
+     */
     depth?: number
 }
 
@@ -190,7 +195,7 @@ export function createLives(scene: Phaser.Scene, options: LivesOptions): Lives {
         fontSize = '24px',
         stroke,
         strokeThickness = 0,
-        depth = 900,
+        depth = 50,
     } = options
 
     let remaining = Math.max(0, Math.min(total, options.remaining ?? total))

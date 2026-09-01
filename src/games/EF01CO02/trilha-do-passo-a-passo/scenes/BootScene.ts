@@ -31,6 +31,7 @@ import robotRightArmAnchorGlow from '../../../../assets/games/EF01CO02/trilha-do
 import robotRightLegAnchor from '../../../../assets/games/EF01CO02/trilha-do-passo-a-passo/robot_right_leg_anchor.png';
 import robotRightLegAnchorGlow from '../../../../assets/games/EF01CO02/trilha-do-passo-a-passo/robot_right_leg_anchor_glow.png';
 import { createLoadingScreen } from '../../../../shared/loading/createLoadingScreen';
+import { preloadLives } from '../../../../shared/hud/createLives'
 
 export class BootScene extends Phaser.Scene {
     constructor() {
@@ -88,6 +89,7 @@ export class BootScene extends Phaser.Scene {
 
         this.load.image('robot_right_leg_anchor', robotRightLegAnchor);
         this.load.image('robot_right_leg_anchor_glow', robotRightLegAnchorGlow);
+        preloadLives(this)
     }
 
     create() {
