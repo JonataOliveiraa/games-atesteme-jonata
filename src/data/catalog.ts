@@ -7,9 +7,9 @@ import trilhaThumbnail from "../assets/games/EF01CO02/trilha-do-passo-a-passo/sp
 import algorithmsThumbnail from "../assets/games/EF01CO03/oficina-dos-algoritmos/algorithm-game-cover.png";
 import puloProgramadoThumbnail from "../assets/games/EF01CO03/pulo-programado/cover-pulo-programado.png";
 import correioThumbnail from "../assets/games/EF01CO04/correio-multimidia/cover-correio-multimidia.png";
-import passeDaMensagemThumbnail from "../assets/games/EF01CO04/passe-da-mensagem/personagens.png";
+import passeDaMensagemThumbnail from "../assets/games/EF01CO04/passe-da-mensagem/cover-passe-da-mensagem.png";
 import pixelSecretThumbnail from "../assets/games/EF01CO05/pixel-secreto/cover5.png";
-import desktopThumbnail from "../assets/games/EF01CO06/desktop-digital-infantil/cover.png";
+import desktopThumbnail from "../assets/games/EF01CO06/desktop-digital-infantil/cover.png"; 
 import guardiansThumbnail from "../assets/games/EF01CO07/guardioes-dos-dados/cover.png";
 import hangarThumbnail from "../assets/games/EF02CO01/hangar-dos-modelos/cover-hangar.png";
 import robotParadeThumbnail from "../assets/games/EF02CO02/desfile-do-robo-repetidor/cover.png";
