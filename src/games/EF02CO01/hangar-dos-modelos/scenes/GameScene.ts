@@ -3,11 +3,13 @@ import { EventBus } from '../../../../shared/EventBus'
 import { runtimeGameBridge } from '../../../../shared/bridge/runtimeGameBridge'
 import { createTutorial, type TutorialStep } from '../../../../shared/tutorial/createTutorial'
 import { showLevelComplete } from '../../../../shared/level/showLevelComplete'
+import { createLives, type Lives } from '../../../../shared/hud/createLives'
+import { vidasIniciais } from '../../../../shared/level/vidasIniciais'
 import { LEVELS } from '../data/levels'
 import { vehicleById } from '../data/vehicles'
 import type { LevelConfig, SelectionMission, Vehicle } from '../types'
 
-const GAME_ID = 'hangar-dos-transportes'
+const GAME_ID = 'hangar-dos-modelos'
 const W = 1280
 const H = 720
 
@@ -67,6 +69,10 @@ export class GameScene extends Phaser.Scene {
   private cardLayer!: Phaser.GameObjects.Container
   private footerLayer!: Phaser.GameObjects.Container
 
+  private lives!: Lives
+  private livesTotal = 3
+  private livesLeft = 3
+
   private cards: CardView[] = []
   private selected = new Set<string>()
   private tutorialSteps: TutorialStep[] = []
@@ -76,10 +82,18 @@ export class GameScene extends Phaser.Scene {
     super({ key: 'GameScene' })
   }
 
-  init(data: { level?: number; mission?: number; points?: number }) {
+  init(data: { level?: number; mission?: number; points?: number; lives?: number }) {
     this.levelIdx = (data.level ?? 1) - 1
     this.missionIdx = data.mission ?? 0
     this.points = data.points ?? 0
+
+    /*
+     * As vidas valem pela PARTIDA. `data.lives` é o saldo que veio do nível
+     * anterior; `vidasIniciais` só responde no primeiro, quando ninguém passou
+     * saldo nenhum.
+     */
+    this.livesTotal = vidasIniciais(this, 3)
+    this.livesLeft = data.lives ?? this.livesTotal
     this.locked = true
     this.ended = false
     this.cards = []
@@ -88,6 +102,20 @@ export class GameScene extends Phaser.Scene {
 
   private get level(): LevelConfig {
     return LEVELS[this.levelIdx]
+  }
+
+  /**
+   * Progresso por nível concluído. Não afeta a nota: serve para a
+   * plataforma mostrar andamento e para diagnosticar partidas.
+   */
+  private emitCheckpoint() {
+    runtimeGameBridge.emit({
+      type: 'CHECKPOINT',
+      gameId: GAME_ID,
+      progress: Math.round(((this.levelIdx + 1) / LEVELS.length) * 100),
+      score: Math.max(0, this.points),
+      stage: this.level.level,
+    })
   }
 
   private get mission(): SelectionMission {
@@ -103,6 +131,28 @@ export class GameScene extends Phaser.Scene {
     this.footerLayer = this.add.container(0, 0).setDepth(30)
 
     this.renderAll()
+
+    /*
+     * Fora do `headerLayer`: aquele container é limpo com `removeAll(true)` a
+     * cada `renderHeader()`, e levaria os corações junto.
+     */
+    this.lives = createLives(this, {
+      total: this.livesTotal,
+      remaining: this.livesLeft,
+      gameId: GAME_ID,
+      x: 1040,
+      y: 50,
+      size: 30,
+      gap: 8,
+      tint: C.red,
+      color: hex(C.ink),
+      fontSize: '22px',
+      stroke: '#071426',
+      strokeThickness: 6,
+      stage: () => this.level.level,
+    })
+    this.events.once('shutdown', () => this.lives.destroy())
+
     runtimeGameBridge.emit({ type: 'GAME_READY', gameId: GAME_ID })
 
     EventBus.on('show-tutorial', this.replayTutorial, this)
@@ -356,6 +406,12 @@ export class GameScene extends Phaser.Scene {
       stage: this.level.level,
     })
 
+    // o GAME_OVER sai de dentro do componente quando o último coração apaga
+    if (!perfect) {
+      this.lives.lose()
+      this.livesLeft = this.lives.remaining
+    }
+
     this.renderHeader()
     this.renderFooter(perfect ? `Perfeito! +${earned} pontos.` : `Veja os cartões marcados. +${earned} pontos.`, perfect ? C.green : C.amber)
     this.time.delayedCall(perfect ? 1100 : 1800, () => this.nextMission())
@@ -375,9 +431,10 @@ export class GameScene extends Phaser.Scene {
 
   private completeLevel() {
     const isLastLevel = this.levelIdx + 1 >= LEVELS.length
+    runtimeGameBridge.emit({ type: 'GAME_COMPLETED', gameId: GAME_ID, stage: this.level.level, totalStages: LEVELS.length })
+    this.emitCheckpoint()
     if (isLastLevel) {
       this.ended = true
-      runtimeGameBridge.emit({ type: 'GAME_COMPLETED', gameId: GAME_ID, stage: this.level.level })
       showLevelComplete(this, {
         title: 'Hangar organizado!',
         subtitle: `${this.points} pontos`,
@@ -401,7 +458,7 @@ export class GameScene extends Phaser.Scene {
       progress: { total: LEVELS.length, current: this.level.level },
       autoAdvance: {
         delay: 2200,
-        onComplete: () => this.scene.restart({ level: this.level.level + 1, mission: 0, points: this.points }),
+        onComplete: () => this.scene.restart({ level: this.level.level + 1, mission: 0, points: this.points, lives: this.livesLeft }),
       },
     })
   }

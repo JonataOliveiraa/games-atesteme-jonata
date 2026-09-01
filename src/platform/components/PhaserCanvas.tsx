@@ -9,9 +9,11 @@ interface PhaserCanvasProps {
   gameId: string;
   /** A fase em que a partida deve começar. Chega ao jogo antes do boot. */
   stage?: 1 | 2 | 3;
+  /** Com quantas vidas a partida começa. Mesmo caminho do `stage`. */
+  lives?: number;
 }
 
-export default function PhaserCanvas({ config, gameId, stage }: PhaserCanvasProps) {
+export default function PhaserCanvas({ config, gameId, stage, lives }: PhaserCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const gameRef = useRef<Phaser.Game | null>(null);
   const { isFullscreen, toggle } = useFullscreen();
@@ -92,6 +94,7 @@ export default function PhaserCanvas({ config, gameId, stage }: PhaserCanvasProp
           ...config.callbacks,
           preBoot: (game) => {
             if (stage) game.registry.set("faseInicial", stage);
+            if (lives !== undefined) game.registry.set("vidasIniciais", lives);
             config.callbacks?.preBoot?.(game);
           },
         },

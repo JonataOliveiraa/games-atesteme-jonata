@@ -15,6 +15,7 @@ import onibusUrl from '../../../../assets/games/EF02CO01/hangar-dos-modelos/onib
 import patineteUrl from '../../../../assets/games/EF02CO01/hangar-dos-modelos/patinete.png'
 import tremUrl from '../../../../assets/games/EF02CO01/hangar-dos-modelos/trem.png'
 import { faseInicial } from '../../../../shared/level/faseInicial'
+import { preloadLives } from '../../../../shared/hud/createLives'
 
 const ASSETS: Array<[string, string]> = [
   ['hangar-bg', hangarBgUrl],
@@ -60,6 +61,7 @@ export class BootScene extends Phaser.Scene {
     })
 
     ASSETS.forEach(([key, url]) => this.load.image(key, url))
+    preloadLives(this)
   }
 
   create() {

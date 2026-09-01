@@ -98,5 +98,5 @@ export default function GameLauncher({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gameId]);
 
-return <PhaserCanvas key={gameId} gameId={gameId} config={config} stage={level} />;
+return <PhaserCanvas key={gameId} gameId={gameId} config={config} stage={level} lives={lives} />;
 }
