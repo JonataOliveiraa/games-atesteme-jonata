@@ -13,6 +13,7 @@ import {
   clearEmbedSession,
   setEmbedSession,
 } from "../shared/bridge/embedSession";
+import { registrarOrigemDeQuemEmbute } from "../shared/bridge/allowedOrigins";
 import SeletorDeFase from "../platform/dev/SeletorDeFase";
 import { useAtalhoDeFase } from "../platform/dev/useAtalhoDeFase";
 import { installGameUiTunnel } from "../shared/bridge/uiTunnel";
@@ -194,6 +195,16 @@ export default function EmbedGamePage() {
         : null);
 
     if (!attempt) return;
+
+    /*
+     * Quem embutiu é o destino das mensagens da partida.
+     *
+     * Quando a plataforma vem por um subdomínio de parceiro, ela é autorizada por
+     * padrão (`https://*.atesteme.com`) e não aparece na lista fixa — e padrão não
+     * serve de `targetOrigin`. O `returnBase` é a origem concreta dela, já validada
+     * contra a mesma regra, então registrá-lo aqui é o que faz o evento chegar.
+     */
+    if (params.returnBase) registrarOrigemDeQuemEmbute(params.returnBase);
 
     setEmbedSession({
       attempt,

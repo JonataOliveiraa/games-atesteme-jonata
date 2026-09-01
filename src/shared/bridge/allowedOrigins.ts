@@ -23,6 +23,56 @@
  * reporta) em vez de falhar aberto (o jogo reporta para todo mundo).
  */
 
+/**
+ * ── ORIGENS COM CURINGA ──────────────────────────────────────────────────
+ *
+ * A plataforma que embute este site atende cada parceiro num subdomínio
+ * próprio — `inpeq.edu-staging.atesteme.com`, e um novo a cada venda. Como a
+ * lista entra no BUILD, listar host por host significa que todo parceiro novo
+ * nasce com o jogo quebrado até alguém lembrar de republicar este site.
+ *
+ * Então a lista aceita padrão de sufixo:
+ *
+ *   VITE_EMBED_ALLOWED_ORIGINS=https://edu.atesteme.com,https://*.atesteme.com
+ *
+ * O curinga cobre um nível ou mais de subdomínio, sempre no mesmo protocolo, e
+ * nunca o domínio pelado: `https://*.atesteme.com` não autoriza
+ * `https://atesteme.com` nem `https://malicioso-atesteme.com` — o ponto vai
+ * junto no sufixo, e é ele que impede o vizinho de se passar pelo domínio.
+ *
+ * ── CURINGA SÓ SERVE PARA ACEITAR ────────────────────────────────────────
+ *
+ * `postMessage` exige um `targetOrigin` concreto: mandar para
+ * `https://*.atesteme.com` é erro, não coringa. Por isso o padrão entra só na
+ * checagem de quem PODE falar; a origem concreta de quem embute é aprendida em
+ * tempo de execução, pelo `returnBase` da query ou pela primeira mensagem que
+ * chega dela.
+ */
+function ehPadrao(bruto: string): boolean {
+  return bruto.includes("*");
+}
+
+function casaComPadrao(origem: string, padrao: string): boolean {
+  const separador = padrao.indexOf("://");
+  if (separador < 0) return false;
+
+  const protocolo = padrao.slice(0, separador);
+  const host = padrao.slice(separador + 3);
+  if (!host.startsWith("*.")) return false;
+
+  let alvo: URL;
+  try {
+    alvo = new URL(origem);
+  } catch {
+    return false;
+  }
+
+  if (alvo.protocol !== protocolo + ":") return false;
+
+  const sufixo = host.slice(1);
+  return alvo.hostname.endsWith(sufixo) && alvo.hostname.length > sufixo.length;
+}
+
 /** Só o `origin`: protocolo + host + porta. Path e barra final não entram. */
 function normalizar(bruto: string): string | null {
   const limpo = bruto.trim();
@@ -35,6 +85,31 @@ function normalizar(bruto: string): string | null {
 }
 
 let cache: string[] | null = null;
+let padroes: string[] | null = null;
+
+/**
+ * Origens concretas descobertas em execução.
+ *
+ * Quem embute por um subdomínio de parceiro é autorizado por padrão, mas o
+ * padrão não serve de `targetOrigin`. Então a origem real é registrada quando
+ * aparece — pelo `returnBase` da query, antes da partida começar — e a partir
+ * daí as mensagens vão direto para ela, sem depender de tentativa e erro.
+ */
+const aprendidas = new Set<string>();
+
+/**
+ * Registra a origem concreta de quem embutiu, se ela for autorizada.
+ *
+ * Devolve `true` quando passou a valer como destino. Chamar com origem não
+ * autorizada não faz nada — o registro não é uma porta lateral para a lista.
+ */
+export function registrarOrigemDeQuemEmbute(origem: string): boolean {
+  const normalizada = normalizar(origem);
+  if (!normalizada || !isOriginAllowed(normalizada)) return false;
+
+  aprendidas.add(normalizada);
+  return true;
+}
 
 /**
  * ── A PRÓPRIA ORIGEM ENTRA SEMPRE ────────────────────────────────────────
@@ -63,8 +138,15 @@ export function getAllowedOrigins(): string[] {
 
   const bruto = import.meta.env.VITE_EMBED_ALLOWED_ORIGINS as string | undefined;
 
-  const daVariavel = (bruto ?? "")
+  const entradas = (bruto ?? "")
     .split(",")
+    .map((entrada) => entrada.trim())
+    .filter(Boolean);
+
+  padroes = entradas.filter(ehPadrao);
+
+  const daVariavel = entradas
+    .filter((entrada) => !ehPadrao(entrada))
     .map(normalizar)
     .filter((o): o is string => !!o);
 
@@ -85,7 +167,14 @@ export function getAllowedOrigins(): string[] {
 }
 
 export function isOriginAllowed(origin: string): boolean {
-  return getAllowedOrigins().includes(origin);
+  if (getAllowedOrigins().includes(origin)) return true;
+  return (padroes ?? []).some((padrao) => casaComPadrao(origin, padrao));
+}
+
+/** Só para teste: os padrões com curinga configurados nesta build. */
+export function getAllowedOriginPatterns(): string[] {
+  getAllowedOrigins();
+  return [...(padroes ?? [])];
 }
 
 /**
@@ -116,10 +205,15 @@ export function origensDeDestino(janela: Window | null): string[] {
     const mesma = janela.location.origin;
     if (mesma && isOriginAllowed(mesma)) return [mesma];
   } catch {
-    // origem diferente: não dá para saber qual é, então vale a lista inteira
+    // origem diferente: não dá para ler qual é
   }
 
-  return getAllowedOrigins();
+  /*
+   * As origens aprendidas entram aqui, e são o que faz o curinga funcionar de
+   * verdade: um parceiro autorizado por padrão não aparece na lista fixa, então
+   * sem isto a mensagem não teria para onde ir.
+   */
+  return [...new Set([...aprendidas, ...getAllowedOrigins()])];
 }
 
 /** Só para teste: força a releitura da variável. */
