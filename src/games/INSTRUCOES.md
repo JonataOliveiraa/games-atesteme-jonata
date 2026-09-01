@@ -16,6 +16,68 @@ Priorize:
 - resposta imediata a cada toque;
 - baixa carga cognitiva por fase.
 
+## Começando Um Jogo Novo
+
+Os 49 jogos seguem o mesmo esqueleto. Comece copiando a forma, não inventando
+outra — é o que faz um jogo novo parecer da mesma família e reusar tudo que já
+está pronto.
+
+```
+src/games/<COMPETENCIA>/<slug>/
+  index.ts            config do Phaser: 1280 × 720, as cenas
+  types.ts            os tipos do jogo
+  data/levels.ts      OS 3 NÍVEIS — ver "Estrutura Do Jogo"
+  data/layout.ts      coordenadas, na grade de 1280 × 720
+  data/theme.ts       as cores
+  scenes/BootScene.ts carrega os assets e escolhe a fase inicial
+  scenes/GameScene.ts o jogo
+  scenes/UIScene.ts   o que fica por cima (opcional)
+```
+
+**A tela é 1280 × 720.** Toda coordenada do jogo é nessa grade; o
+enquadramento em telas diferentes é resolvido fora, pelo `Scale.FIT`.
+
+### Registre no catálogo, senão o jogo não existe
+
+Sem uma entrada em `src/data/catalog.ts` o jogo não aparece na plataforma e
+não pode ser embutido:
+
+```ts
+{
+  slug: "caca-fonte-confiavel",
+  module: "EF04CO08/caca-fonte-confiavel",   // a pasta, a partir de src/games
+  skill: "EF04CO08",
+  years: [4],
+  status: "published",
+  title: "Caça à Fonte Confiável",
+  // ...capa, descrição, tags, order
+}
+```
+
+### Não reescreva o que já existe
+
+Quase tudo que um jogo precisa já está em `src/shared/`. Reimplementar é o jeito
+mais rápido de sair diferente dos outros 49:
+
+| Módulo | Para quê | Usado por |
+|---|---|---|
+| `loading/createLoadingScreen` | tela de carregamento | 49 |
+| `level/faseInicial` | abrir na fase que a plataforma pediu | 49 |
+| `hud/createLives` | as vidas e a derrota | 49 |
+| `level/showLevelComplete` | painel de fim de nível | 48 |
+| `tutorial/createTutorial` | o tutorial guiado | 47 |
+| `effects/FX` | tremida, flash, espera | vários |
+| `hud/createTimeBar` | barra de tempo | 7 |
+
+**`faseInicial` não é opcional.** A plataforma manda `?stage=2` e o jogo tem que
+abrir no nível 2. O valor chega pelo `registry` do Phaser, antes de qualquer
+cena existir — pelo `START_GAME` seria tarde, com a cena já montada na fase 1:
+
+```ts
+// BootScene.create()
+this.scene.start('GameScene', { level: faseInicial(this, 1) })
+```
+
 ## Estrutura Do Jogo
 
 Cada jogo deve ter 3 níveis.
@@ -218,15 +280,55 @@ vira mentira silenciosa.
 | `CORRECT_ANSWER` | a cada acerto real |
 | `WRONG_ANSWER` | a cada erro real |
 | `CHECKPOINT` | fim de nível ou marco de progresso |
-| `GAME_OVER` | só se o jogo tiver derrota própria |
+| `GAME_OVER` | **não emita à mão** — ver abaixo |
 
 `WRONG_ANSWER` não é telemetria: cada um custa uma vida. Não emita em erro de
 arrastar, toque fora ou tentativa cancelada.
 
-Não invente derrota. Na maioria dos jogos insistir até acertar é o exercício, e
-a camada de embed já reprova sozinha quando os erros passam das vidas. Emita
-`GAME_OVER` apenas se existir derrota de verdade — tempo esgotado, vidas
-próprias, sequência quebrada.
+### As vidas, e quem reprova
+
+A criança começa a partida com as vidas que a plataforma mandou em `?lives=`, e
+elas valem pela **partida inteira** — trocar de nível não devolve nenhuma.
+
+Quem conta é `shared/hud/createLives.ts`, e a regra mora lá: no zero, ele emite
+o `GAME_OVER` sozinho. Nenhum jogo decide quando reprovar.
+
+```ts
+// BootScene.preload()
+preloadLives(this)
+
+// GameScene.init()
+this.livesTotal = vidasIniciais(this, 3)
+this.livesLeft = data?.lives ?? this.livesTotal
+
+// GameScene.create() — FORA de container que sofra removeAll()
+this.lives = createLives(this, {
+    total: this.livesTotal,
+    remaining: this.livesLeft,
+    gameId: GAME_ID,
+    x: 40, y: 40, size: 30,
+    stage: () => this.level.level,
+})
+this.events.once('shutdown', () => this.lives.destroy())
+
+// no erro real, DEPOIS do WRONG_ANSWER que o jogo já emite
+this.lives.lose()
+this.livesLeft = this.lives.remaining
+
+// em cada scene.restart que troca de nível
+this.scene.restart({ ..., lives: this.livesLeft })
+```
+
+Duas coisas fáceis de errar aqui:
+
+- **O saldo tem que atravessar o `scene.restart`.** Passar `this.livesTotal` em
+  vez de `this.livesLeft` devolve todas as vidas a cada nível, e o `lives=1`
+  nunca reprova. Só o botão de recomeçar do zero (`level: 1`) devolve cheias.
+- **A posição se ajusta com a tecla M**, no dev server: WASD move, Shift move de
+  10 em 10, M grava em `lives-positions.json`. Ver `src/games/VIDAS.md`.
+
+O único caso em que o jogo emite `GAME_OVER` por conta própria é **tempo
+esgotado**, que reprova na hora sem passar pelas vidas. Fora isso, não emita.
 
 O `progress` do `CHECKPOINT` é porcentagem de 0 a 100, arredondada:
 
@@ -322,6 +424,11 @@ Antes de considerar um jogo pronto, confira:
 - nenhuma tela mostra texto de pontos, acertos ou erros;
 - o código novo usa nomes em inglês;
 - não foram adicionados comentários desnecessários;
+- está registrado em `src/data/catalog.ts`, com `module` apontando para a pasta;
+- abre na fase certa com `faseInicial`, e não sempre no nível 1;
+- usa os módulos de `src/shared/` em vez de reimplementar tutorial, carregamento
+  ou painel de fim de nível;
+- tem as vidas por `createLives`, e o saldo atravessa o `scene.restart`;
 - os níveis estão em `data/levels.ts`, e não há outro `LEVELS` na pasta;
 - o jogo importa `runtimeGameBridge`, não `gameBridge`;
 - `GAME_COMPLETED` sai ao fim de cada nível, com `totalStages: LEVELS.length`;
