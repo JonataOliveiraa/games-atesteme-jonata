@@ -124,8 +124,8 @@ export class GameScene extends Phaser.Scene {
           // não precisa atravessar nada: a cena é a mesma o tempo todo
           total: vidasIniciais(this, 3),
           gameId: GAME_ID,
-          x: 40,
-          y: 40,
+          x: 30,
+          y: 46,
           size: 30,
           stage: () => this.levelConfig.level,
       })

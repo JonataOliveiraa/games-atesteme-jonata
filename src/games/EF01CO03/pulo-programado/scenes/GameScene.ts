@@ -116,8 +116,8 @@ export class GameScene extends Phaser.Scene {
             total: this.livesTotal,
             remaining: this.livesLeft,
             gameId: GAME_ID,
-            x: 40,
-            y: 40,
+            x: 19,
+            y: 179,
             size: 30,
             stage: () => this.levelDef.level,
         })

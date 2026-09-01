@@ -1,1 +1,57 @@
-{}
+{
+  "base-dos-classificadores": {
+    "x": 29,
+    "y": 38,
+    "size": 30
+  },
+  "correio-multimidia": {
+    "x": 30,
+    "y": 46,
+    "size": 30
+  },
+  "corrida-dos-parecidos": {
+    "x": 12,
+    "y": 125,
+    "size": 30
+  },
+  "desktop-digital-infantil": {
+    "x": 1128,
+    "y": 49,
+    "size": 30
+  },
+  "hangar-dos-modelos": {
+    "x": 1134,
+    "y": 21,
+    "size": 30
+  },
+  "oficina-dos-algoritmos": {
+    "x": 9,
+    "y": 24,
+    "size": 30
+  },
+  "passe-da-mensagem": {
+    "x": 24,
+    "y": 191,
+    "size": 30
+  },
+  "pixel-secreto": {
+    "x": 78,
+    "y": 32,
+    "size": 30
+  },
+  "pulo-programado": {
+    "x": 19,
+    "y": 179,
+    "size": 30
+  },
+  "ritmo-da-rotina": {
+    "x": 40,
+    "y": 40,
+    "size": 30
+  },
+  "trilha-do-passo-a-passo": {
+    "x": 36,
+    "y": 51,
+    "size": 30
+  }
+}
