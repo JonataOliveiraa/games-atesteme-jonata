@@ -20,7 +20,6 @@ import { createLives, type Lives } from '../../../../shared/hud/createLives'
 import { vidasIniciais } from '../../../../shared/level/vidasIniciais'
 
 const GAME_ID = 'tribunal-do-verdadeiro-ou-falso'
-const MAX_CONSECUTIVE_ERRORS = 3
 
 /**
  * Economia de pontos.
@@ -59,7 +58,6 @@ export class GameScene extends Phaser.Scene {
     private errors = 0
     private consecutiveErrors = 0
     private points = 0
-    private lives = 1
     private isMuted = false
     private phase: RoundPhase = 'intro'
     private ended = false
@@ -111,7 +109,6 @@ export class GameScene extends Phaser.Scene {
         this.errors = 0
         this.consecutiveErrors = 0
         this.points = data?.points ?? 0
-        this.lives = data?.lives ?? 1
         this.isMuted = false
         this.phase = 'intro'
         this.ended = false
@@ -342,7 +339,7 @@ export class GameScene extends Phaser.Scene {
 
         this.explanation = showExplanation(this, sentence)
 
-        const tooManyErrors = !correct && this.consecutiveErrors >= MAX_CONSECUTIVE_ERRORS
+        const tooManyErrors = !correct && this.livesHud.remaining <= 0
         const hold = tooManyErrors
             ? HOLD.beforeGameOver
             : correct
@@ -474,7 +471,7 @@ export class GameScene extends Phaser.Scene {
                     onComplete: () => this.scene.restart({ 
                         level: next,
                         points: this.points,
-                        lives: this.lives,
+                        lives: this.livesLeft,
                         showLevelStart: true,
                     }),
                 },
@@ -498,7 +495,7 @@ export class GameScene extends Phaser.Scene {
                 {
                     label: 'Jogar de novo',
                     color: C.green,
-                    onClick: () => this.scene.restart({ level: 1, points: 0, lives: this.lives }),
+                    onClick: () => this.scene.restart({ level: 1, points: 0, lives: this.livesTotal }),
                 },
                 {
                     label: 'Escolher jogo',
@@ -518,13 +515,8 @@ export class GameScene extends Phaser.Scene {
         this.syncButtons()
         this.hud.setHelpEnabled(false)
 
-        // A versão anterior nunca emitia GAME_OVER: a plataforma via a criança
-        // sumir no meio do nível sem nenhum evento explicando por quê.
-        runtimeGameBridge.emit({
-            type: 'GAME_OVER',
-            gameId: GAME_ID,
-            stage: this.levelConfig.level,
-        })
+        // O GAME_OVER sai do componente de vidas, no zero. Aqui é só a tela:
+        // emitir de novo daria dois resultados para a mesma partida.
         this.emitCheckpoint()
 
         this.playGameOverSting()
@@ -546,7 +538,7 @@ export class GameScene extends Phaser.Scene {
                     onClick: () => this.scene.restart({ 
                         level: this.levelConfig.level,
                         points: this.points,
-                        lives: this.lives,
+                        lives: this.livesLeft,
                     }),
                 },
                 {
@@ -729,7 +721,7 @@ export class GameScene extends Phaser.Scene {
         this.unsubPlatform = runtimeGameBridge.onCommand((cmd: PlatformCommand) => {
             if (cmd.type !== 'START_GAME') return
             this.points = cmd.points ?? this.points
-            this.lives = cmd.lives ?? this.lives
+            
         })
     }
 

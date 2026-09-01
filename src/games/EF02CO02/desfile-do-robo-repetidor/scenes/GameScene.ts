@@ -892,7 +892,7 @@ export class GameScene extends Phaser.Scene {
       buttons: [
         {
           label: "Jogar de novo", color: C.mintDeep,
-          onClick: () => this.scene.restart({ lives: this.livesLeft, level: 1, phase: 0, score: 0, hits: 0, errors: 0 }),
+          onClick: () => this.scene.restart({ lives: this.livesTotal, level: 1, phase: 0, score: 0, hits: 0, errors: 0 }),
         },
         { label: "Outros jogos", color: C.grapeDeep, onClick: () => EventBus.emit("exit-game") },
       ],

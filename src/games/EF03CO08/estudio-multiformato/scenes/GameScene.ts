@@ -1685,7 +1685,7 @@ export class GameScene extends Phaser.Scene {
       subtitleColor: "#7c3aed",
       progress: { total: 3, current: 3 },
       buttons: [
-        { label: "Reiniciar", color: COLORS.green, onClick: () => { this.playClick(); this.scene.restart({ lives: this.livesLeft, level: 1, hits: 0, errors: 0 }); } },
+        { label: "Reiniciar", color: COLORS.green, onClick: () => { this.playClick(); this.scene.restart({ lives: this.livesTotal, level: 1, hits: 0, errors: 0 }); } },
         { label: "Voltar", color: COLORS.purple, onClick: () => { this.playClick(); EventBus.emit("exit-game"); } },
       ],
     });

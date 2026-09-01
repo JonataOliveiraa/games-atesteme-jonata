@@ -47,7 +47,6 @@ export class GameScene extends Phaser.Scene {
   private currentLevel: AlgorithmLevel = LEVELS[0];
   private steps: AlgorithmStep[] = [];
   private currentPoints = 0;
-  private currentLives = 0;
   private hits = 0;
   private errors = 0;
   private hasCompletedLevel = false;
@@ -71,7 +70,6 @@ export class GameScene extends Phaser.Scene {
     const requestedLevel = data?.level ?? 1;
     this.currentLevel = LEVELS.find((level) => level.level === requestedLevel) ?? LEVELS[0];
     this.currentPoints = data?.points ?? this.currentPoints;
-    this.currentLives = data?.lives ?? this.currentLives;
     this.hits = 0;
     this.errors = 0;
     this.hasCompletedLevel = false;
@@ -818,7 +816,7 @@ export class GameScene extends Phaser.Scene {
         onComplete: () => this.scene.restart({ 
           level: nextLevel,
           points: this.currentPoints,
-          lives: this.currentLives,
+          lives: this.livesLeft,
           showLevelStart: true,
         }),
       },
@@ -1178,7 +1176,7 @@ export class GameScene extends Phaser.Scene {
       this.scene.restart({ 
         level: 1,
         points: this.currentPoints,
-        lives: this.currentLives,
+        lives: this.livesLeft,
       });
     });
 
@@ -1305,29 +1303,17 @@ export class GameScene extends Phaser.Scene {
   /**
    * A VIDA ACABOU — e este jogo nunca contava isso a ninguém.
    *
-   * `currentLives` já era descontado em dois lugares (o tempo esgotado e a
-   * ordem errada), sempre com `Math.max(0, ...)`, e nunca era LIDO. A criança
-   * chegava a zero e o jogo seguia como se nada tivesse acontecido; de fora,
-   * a partida parecia perfeita até o fim.
+   * Este jogo tinha um `currentLives` próprio que era descontado em dois
+   * lugares e nunca era LIDO: a criança chegava a zero e o jogo seguia como
+   * se nada tivesse acontecido.
    *
-   * ── POR QUE A TRANSIÇÃO, E NÃO O VALOR ───────────────────────────────
-   *
-   * `currentLives` nasce em 0 e só vira outra coisa se alguém mandar
-   * `lives` na abertura da cena. Emitir "acabou" sempre que ele for zero
-   * reprovaria a criança no primeiro erro de toda partida que não recebeu
-   * vidas. Então o que conta é a BORDA: tinha vida, ficou sem.
+   * Agora quem conta é o componente de vidas, que desconta, redesenha e
+   * emite o `GAME_OVER` no zero — uma vez só, e com o mesmo critério dos
+   * outros 48 jogos.
    */
   private perderVida() {
-    const antes = this.currentLives;
-    this.currentLives = Math.max(0, antes - 1);
-
-    if (antes > 0 && this.currentLives === 0) {
-      runtimeGameBridge.emit({
-        type: 'GAME_OVER',
-        gameId: GAME_ID,
-        stage: this.currentLevel.level,
-      });
-    }
+    this.lives.lose();
+    this.livesLeft = this.lives.remaining;
   }
 
   private emitWrongAnswer() {

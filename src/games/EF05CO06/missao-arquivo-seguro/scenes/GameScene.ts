@@ -20,7 +20,6 @@ import { createLives, type Lives } from '../../../../shared/hud/createLives'
 import { vidasIniciais } from '../../../../shared/level/vidasIniciais'
 
 const GAME_ID = 'missao-arquivo-seguro'
-const MAX_CONSECUTIVE_ERRORS = 3
 const ORDER: StorageId[] = ['disco', 'pendrive', 'nuvem']
 
 interface DestView {
@@ -662,7 +661,7 @@ export class GameScene extends Phaser.Scene {
             this.cameras.main.shake(160, 0.005)
             this.showToast(`${def.label} não resolve aqui. ${def.limite}`)
             this.returnCard()
-            if (this.consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
+            if (this.lives.remaining <= 0) {
                 this.time.delayedCall(2000, () => this.showGameOver())
             }
             return
@@ -1112,7 +1111,7 @@ export class GameScene extends Phaser.Scene {
             buttons: [
                 {
                     label: 'Jogar de novo', color: C.ouro,
-                    onClick: () => this.scene.restart({ lives: this.livesLeft, level: 1, phase: 0, points: 0 }),
+                    onClick: () => this.scene.restart({ lives: this.livesTotal, level: 1, phase: 0, points: 0 }),
                 },
                 {
                     label: 'Sair', color: C.preto,
@@ -1127,7 +1126,7 @@ export class GameScene extends Phaser.Scene {
         EventBus.emit('timer-stop')
         this.clearOverlay()
 
-        runtimeGameBridge.emit({ type: 'GAME_OVER', gameId: GAME_ID, stage: this.level.level })
+        // o GAME_OVER sai do componente de vidas, no zero. Aqui é só a tela.
 
         showLevelComplete(this, {
             title: 'Quase lá!',

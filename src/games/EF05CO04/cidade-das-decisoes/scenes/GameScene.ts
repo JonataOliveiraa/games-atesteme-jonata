@@ -39,7 +39,6 @@ import { createLives, type Lives } from '../../../../shared/hud/createLives'
 import { vidasIniciais } from '../../../../shared/level/vidasIniciais'
 
 const GAME_ID = 'cidade-das-decisoes'
-const MAX_CONSECUTIVE_ERRORS = 3
 
 type Phase = 'montando' | 'rodando'
 
@@ -1207,7 +1206,7 @@ export class GameScene extends Phaser.Scene {
         )
 
         this.time.delayedCall(2300, () => {
-            if (this.consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) this.showGameOver()
+            if (this.lives.remaining <= 0) this.showGameOver()
             else this.startChallenge()
         })
     }
@@ -1493,7 +1492,7 @@ export class GameScene extends Phaser.Scene {
             this.registerError()
             this.showToast(outcomeMessage(res.outcome), false)
             this.time.delayedCall(2500, () => {
-                if (this.consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) this.showGameOver()
+                if (this.lives.remaining <= 0) this.showGameOver()
                 else { this.phase = 'montando'; this.resetBoardOnly(); this.refreshScript() }
             })
             return
@@ -1523,7 +1522,7 @@ export class GameScene extends Phaser.Scene {
                     false,
                 )
                 this.time.delayedCall(3000, () => {
-                    if (this.consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) this.showGameOver()
+                    if (this.lives.remaining <= 0) this.showGameOver()
                     else { this.phase = 'montando'; this.resetBoardOnly(); this.refreshScript() }
                 })
                 return
@@ -1593,7 +1592,7 @@ export class GameScene extends Phaser.Scene {
                     buttons: [
                         {
                             label: 'Jogar de novo', color: C.verde,
-                            onClick: () => this.scene.restart({ lives: this.livesLeft, level: 1, points: 0 }),
+                            onClick: () => this.scene.restart({ lives: this.livesTotal, level: 1, points: 0 }),
                         },
                         {
                             label: 'Sair', color: C.normal,
@@ -1904,7 +1903,7 @@ export class GameScene extends Phaser.Scene {
 
         showLevelCompleteModal(this, {
             title: 'Quase lá!',
-            subtitle: 'Três tentativas seguidas sem acertar.',
+            subtitle: 'As vidas acabaram.',
             message: this.challenge.explanation,
             accent: C.vermelho,
             buttons: [
@@ -1921,7 +1920,7 @@ export class GameScene extends Phaser.Scene {
             ],
         })
 
-        runtimeGameBridge.emit({ type: 'GAME_OVER', gameId: GAME_ID, stage: this.levelConfig.level })
+        // o GAME_OVER sai do componente de vidas, no zero. Aqui é só a tela.
     }
 
     private modalButton(x: number, y: number, label: string, color: number, onClick: () => void) {

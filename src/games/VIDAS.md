@@ -158,29 +158,35 @@ jogo. Nenhum dos 11 recebeu cor ainda. Em fundo escuro fica bom; no
 Duas saídas: puxar a cor de destaque do `theme.ts` de cada jogo, ou fixar uma
 cor só para os 49.
 
-### Sete jogos têm um segundo sistema de vidas — este é o item mais sério
+### Os sistemas de derrota paralelos foram embora
 
-Estes já contavam derrota por conta própria, e agora essa regra convive com a
-das vidas:
+Nove jogos tinham a regra própria deles. Todas saíram; **errou é
+`WRONG_ANSWER`, e quem decide a derrota são as vidas**.
 
-| Jogo | Regra própria |
-|---|---|
-| `cidade-das-decisoes` | `consecutiveErrors >= MAX_CONSECUTIVE_ERRORS` |
-| `labirinto-do-enquanto` | idem |
-| `monte-seu-computador` | idem |
-| `missao-arquivo-seguro` | idem |
-| `sistema-operacional` | 3 luzes (`LUZES_INICIAIS`) |
-| `desktop-digital-infantil` | campo `lives` próprio, lido da query |
-| `tribunal-do-verdadeiro-ou-falso` | campo `lives` próprio, lido da query |
+| Jogo | Tinha | Virou |
+|---|---|---|
+| `cidade-das-decisoes`, `labirinto-do-enquanto`, `monte-seu-computador`, `missao-arquivo-seguro` | `consecutiveErrors >= 3` | `this.lives.remaining <= 0` |
+| `sistema-operacional` | 3 luzes próprias | as luzes mostram as vidas da plataforma |
+| `base-dos-classificadores`, `oficina-dos-algoritmos` | `currentLives` próprio | o componente conta |
+| `desktop-digital-infantil`, `tribunal-do-verdadeiro-ou-falso` | campo `lives` carregador | removido |
 
-Com `lives=5`, a criança ainda seria reprovada no 3º erro seguido nos quatro
-primeiros. Nos três últimos, dois contadores andam em paralelo e podem
-discordar.
+**As telas de derrota ficaram.** O que mudou foi o gatilho: elas aparecem
+quando as vidas acabam, não pela regra antiga. E o `GAME_OVER` delas saiu — o
+componente já emite, e emitir de novo daria dois resultados para a mesma
+partida.
 
-Precisa escolher um dos dois e apagar o outro. Enquanto isso não acontece, o
-comportamento é o do que chegar primeiro — e o `EmbedGamePage` bloqueia o
-segundo resultado, então não há dupla reprovação, só imprevisibilidade sobre
-qual regra valeu.
+Junto veio um bug que ninguém tinha visto: os `scene.restart` desses jogos
+passavam o **total** de vidas em vez do saldo, e o saldo se recuperava a cada
+troca de nível. Foram 34 chamadas em 34 jogos. Agora só os botões de
+recomeçar do zero (`level: 1`) devolvem vidas cheias.
+
+### Ainda emitem `GAME_OVER` próprio — e devem
+
+Sete, todos por tempo esgotado, que reprova na hora sem passar pelas vidas:
+
+`arena-da-logica` · `baralho-das-listas` · `fabrica-de-maquinas` ·
+`guardioes-dos-dados` · `mapas-em-rede` · `montador-de-informacoes` ·
+`sistema-operacional`
 
 ### Os sete de emit condicional já foram
 

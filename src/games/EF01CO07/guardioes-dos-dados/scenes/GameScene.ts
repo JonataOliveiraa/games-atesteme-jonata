@@ -1212,7 +1212,7 @@ export class GameScene extends Phaser.Scene {
     };
 
     const playAgain = createFinalButton(-142, "Jogar novamente", this.paletteColors.green, "#166534", () => {
-      this.scene.restart({ lives: this.livesLeft, level: 1 });
+      this.scene.restart({ lives: this.livesTotal, level: 1 });
     });
     const exit = createFinalButton(142, "Voltar aos jogos", this.paletteColors.orange, "#9a3f00", () => {
       EventBus.emit("exit-game");

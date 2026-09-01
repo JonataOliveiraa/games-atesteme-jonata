@@ -1219,7 +1219,7 @@ export class GameScene extends Phaser.Scene {
             subtitleColor: hex(C.madeira),
             progress: { total: LEVELS.length, current: LEVELS.length },
             buttons: [
-                { label: 'Jogar novamente', color: C.green, onClick: () => this.scene.restart({ lives: this.livesLeft, level: 1, phase: 0, points: 0 }) },
+                { label: 'Jogar novamente', color: C.green, onClick: () => this.scene.restart({ lives: this.livesTotal, level: 1, phase: 0, points: 0 }) },
                 { label: 'Outros jogos', color: C.madeiraMedia, onClick: () => EventBus.emit('exit-game') },
             ],
         })

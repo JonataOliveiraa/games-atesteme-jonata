@@ -8,7 +8,7 @@ import { createTimeBar, type TimeBar } from '../../../../shared/hud/createTimeBa
 import { FX } from '../../../../shared/effects/FX'
 
 import {
-    NIVEIS, PROGRAMAS, USO_MS, ENTRE_PEDIDOS_MS, LUZES_INICIAIS, AJUDA_MS,
+    NIVEIS, PROGRAMAS, USO_MS, ENTRE_PEDIDOS_MS, AJUDA_MS,
 } from '../data/niveis'
 import { C, TEMPO_TEMA } from '../data/theme'
 import { AJUDA, PECAS, PEDIDO, BOTAO, TEMPO } from '../data/layout'
@@ -70,7 +70,6 @@ export class GameScene extends Phaser.Scene {
     private pontos = 0
     private acertos = 0
     private erros = 0
-    private luzesRestantes = LUZES_INICIAIS
     private mudo = false
     private estado: EstadoCena = 'pedindo'
 
@@ -118,7 +117,6 @@ export class GameScene extends Phaser.Scene {
         this.pontos = data?.points ?? 0
         this.acertos = 0
         this.erros = 0
-        this.luzesRestantes = LUZES_INICIAIS
         this.mudo = false
         this.estado = 'pedindo'
         this.gen = 0
@@ -139,7 +137,7 @@ export class GameScene extends Phaser.Scene {
 
         createCenario(this, nivel.cenario)
 
-        this.luzes = createLuzes(this, LUZES_INICIAIS)
+        this.luzes = createLuzes(this, this.livesTotal)
         this.painel = createPedido(this)
         this.fileira = createPecas(this, {
             pecas: nivel.pecas,
@@ -676,8 +674,6 @@ export class GameScene extends Phaser.Scene {
         if (this.estado === 'travado' || this.estado === 'fim') return
         this.erros += 1
         this.pontos += PONTOS.erro
-        this.luzesRestantes -= 1
-        this.luzes.set(this.luzesRestantes)
         this.playErro()
         FX.shakeCam(this, 'leve')
         void FX.flash(this, C.vermelho, { duration: 260, peak: 0.12 })
@@ -686,10 +682,12 @@ export class GameScene extends Phaser.Scene {
             type: 'WRONG_ANSWER', gameId: GAME_ID,
             pointsEarned: PONTOS.erro, stage: this.nivel.numero,
         })
-            this.lives.lose(); this.livesLeft = this.lives.remaining
+        this.lives.lose()
+        this.livesLeft = this.lives.remaining
+        this.luzes.set(this.livesLeft)
         this.emitCheckpoint()
 
-        if (this.luzesRestantes <= 0) void this.travou()
+        if (this.livesLeft <= 0) void this.travou()
     }
 
     /** A ajuda de quem travou: a peça certa pisca. Sem frase, sem bronca. */
@@ -739,7 +737,7 @@ export class GameScene extends Phaser.Scene {
         this.trancar(true)
         this.playTravou()
 
-        runtimeGameBridge.emit({ type: 'GAME_OVER', gameId: GAME_ID, stage: this.nivel.numero })
+        // o GAME_OVER sai do componente de vidas, no zero. Aqui é só a tela.
         this.emitCheckpoint()
 
         await travar(this)
@@ -866,7 +864,7 @@ export class GameScene extends Phaser.Scene {
                 {
                     label: 'Jogar de novo',
                     color: C.verde,
-                    onClick: () => this.scene.restart({ lives: this.livesLeft, nivel: 1, points: this.pontos }),
+                    onClick: () => this.scene.restart({ lives: this.livesTotal, nivel: 1, points: this.pontos }),
                 },
                 { label: 'Escolher jogo', color: C.fosco, onClick: () => EventBus.emit('exit-game') },
             ],

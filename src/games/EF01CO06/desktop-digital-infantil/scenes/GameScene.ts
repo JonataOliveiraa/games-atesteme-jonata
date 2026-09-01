@@ -59,7 +59,6 @@ export class GameScene extends Phaser.Scene {
   private done = 0
 
   private points = 0
-  private lives = 1
   private startedAt = 0
   private muted = false
   private running = false
@@ -109,7 +108,6 @@ export class GameScene extends Phaser.Scene {
     this.errors = 0
     this.offTaskTaps = 0
     this.points = data?.points ?? 0
-    this.lives = data?.lives ?? 1
     this.startedAt = Date.now()
     this.running = false
     this.ended = false
@@ -775,14 +773,14 @@ export class GameScene extends Phaser.Scene {
       progress: { total: 3, current: this.cfg.level },
       ...(last ? {
         buttons: [
-          { label: 'Jogar de novo', color: C.mintDeep, onClick: () => this.scene.restart({ lives: this.livesLeft, level: 1 }) },
+          { label: 'Jogar de novo', color: C.mintDeep, onClick: () => this.scene.restart({ lives: this.livesTotal, level: 1 }) },
           { label: 'Outros jogos', color: C.slateDeep, onClick: () => EventBus.emit('exit-game') },
         ],
       } : {
         autoAdvance: {
           delay: 2400,
           onComplete: () => this.scene.restart({ 
-            level: this.cfg.level + 1, points: this.points, lives: this.lives,
+            level: this.cfg.level + 1, points: this.points, lives: this.livesLeft,
           }),
         },
       }),
@@ -805,7 +803,7 @@ export class GameScene extends Phaser.Scene {
         if (cmd.stage !== this.cfg.level) {
           this.scene.restart({ level: cmd.stage, points: cmd.points, lives: cmd.lives })
         } else {
-          this.points = cmd.points; this.lives = cmd.lives
+          this.points = cmd.points
         }
         return
       }

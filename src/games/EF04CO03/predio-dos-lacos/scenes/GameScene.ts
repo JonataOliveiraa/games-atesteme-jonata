@@ -430,7 +430,7 @@ export class GameScene extends Phaser.Scene {
                 {
                     label: 'Jogar de novo',
                     color: C.ok,
-                    onClick: () => this.scene.restart({ lives: this.livesLeft, level: 1, points: 0 }),
+                    onClick: () => this.scene.restart({ lives: this.livesTotal, level: 1, points: 0 }),
                 },
                 {
                     label: 'Escolher jogo',

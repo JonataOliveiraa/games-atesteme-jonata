@@ -28,7 +28,6 @@ import { createLives, type Lives } from '../../../../shared/hud/createLives'
 import { vidasIniciais } from '../../../../shared/level/vidasIniciais'
 
 const GAME_ID = 'labirinto-do-enquanto'
-const MAX_CONSECUTIVE_ERRORS = 3
 
 type Phase = 'montando' | 'rodando'
 type SlotKind = 'setup' | 'body'
@@ -1044,7 +1043,7 @@ export class GameScene extends Phaser.Scene {
         )
 
         this.time.delayedCall(2100, () => {
-            if (this.consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) this.showGameOver()
+            if (this.lives.remaining <= 0) this.showGameOver()
             else this.startChallenge()
         })
     }
@@ -1220,7 +1219,7 @@ export class GameScene extends Phaser.Scene {
 
         this.showToast(msg, false)
         this.time.delayedCall(2400, () => {
-            if (this.consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) this.showGameOver()
+            if (this.lives.remaining <= 0) this.showGameOver()
             else this.startChallenge()
         })
     }
@@ -1574,7 +1573,7 @@ export class GameScene extends Phaser.Scene {
             })
         } else {
             panel.add(this.modalButton(-140, ph / 2 - 60, 'Jogar de novo', C.verde,
-                () => this.scene.restart({ lives: this.livesLeft, level: 1, points: 0 })))
+                () => this.scene.restart({ lives: this.livesTotal, level: 1, points: 0 })))
             panel.add(this.modalButton(140, ph / 2 - 60, 'Sair', C.normal,
                 () => EventBus.emit('exit-game')))
         }
@@ -1623,7 +1622,7 @@ export class GameScene extends Phaser.Scene {
         panel.setAlpha(0).setScale(0.9)
         this.tweens.add({ targets: panel, alpha: 1, scale: 1, duration: 260, ease: 'Back.easeOut' })
 
-        runtimeGameBridge.emit({ type: 'GAME_OVER', gameId: GAME_ID, stage: this.levelConfig.level })
+        // o GAME_OVER sai do componente de vidas, no zero. Aqui é só a tela.
     }
 
     private modalButton(x: number, y: number, label: string, color: number, onClick: () => void) {

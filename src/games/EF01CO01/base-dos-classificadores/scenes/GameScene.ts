@@ -46,7 +46,6 @@ export class GameScene extends Phaser.Scene {
   private errors = 0
   private startTime = 0
   private currentPoints = 0
-  private currentLives = 1
   private gameEnded = false
   private unsubscribePlatformCommands?: () => void
 
@@ -71,7 +70,6 @@ export class GameScene extends Phaser.Scene {
     this.errors = 0
     this.startTime = Date.now()
     this.currentPoints = data?.points ?? 0
-    this.currentLives = data?.lives ?? 1
     this.gameEnded = false
     this.hasStartedTimer = false
     this.timerState = { progress: 1 }
@@ -391,7 +389,7 @@ export class GameScene extends Phaser.Scene {
     this.time.delayedCall(2300, () => {
       overlay.destroy()
       modal.destroy()
-      this.scene.restart({ level: nextLevel, points: this.currentPoints, lives: this.currentLives })
+      this.scene.restart({ level: nextLevel, points: this.currentPoints, lives: this.livesLeft })
     })
   }
 
@@ -587,7 +585,7 @@ export class GameScene extends Phaser.Scene {
     retryHit.on('pointerover', () => this.tweens.add({ targets: retryBtn, scale: 1.05, duration: 80 }))
     retryHit.on('pointerout', () => this.tweens.add({ targets: retryBtn, scale: 1, duration: 80 }))
     retryHit.on('pointerdown', () => {
-      this.scene.restart({ level: this.levelConfig.level, points: this.currentPoints, lives: this.currentLives })
+      this.scene.restart({ level: this.levelConfig.level, points: this.currentPoints, lives: this.livesLeft })
     })
 
     const exitHit = this.add.zone(W / 2 + 110, H / 2 + 60, 160, 44)
@@ -1084,7 +1082,6 @@ export class GameScene extends Phaser.Scene {
     // Erro — deduz ponto e vida
     this.errors += 1
     this.currentPoints = Math.max(0, this.currentPoints - 5)
-    this.currentLives = Math.max(0, this.currentLives - 1)
 
     runtimeGameBridge.emit({
       type: 'WRONG_ANSWER',
@@ -1097,12 +1094,8 @@ export class GameScene extends Phaser.Scene {
     this.onWrongDrop(item, baseContainer)
 
     // Se ficou sem vidas, emite GAME_OVER e congela a cena (React exibe modal bloqueante)
-    if (this.currentLives <= 0) {
-      runtimeGameBridge.emit({
-        type: 'GAME_OVER',
-        gameId: GAME_ID,
-        stage: this.levelConfig.level,
-      })
+    if (this.livesLeft <= 0) {
+      // o GAME_OVER sai do componente de vidas, no zero
       this.gameEnded = true
       this.input.enabled = false
       this.timerTween?.stop()
@@ -1403,7 +1396,6 @@ export class GameScene extends Phaser.Scene {
               })
             } else {
               this.currentPoints = command.points
-              this.currentLives = command.lives
             }
 
             return

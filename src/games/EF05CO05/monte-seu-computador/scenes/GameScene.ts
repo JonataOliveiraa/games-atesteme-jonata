@@ -32,7 +32,6 @@ import { createLives, type Lives } from '../../../../shared/hud/createLives'
 import { vidasIniciais } from '../../../../shared/level/vidasIniciais'
 
 const GAME_ID = 'monte-seu-computador'
-const MAX_CONSECUTIVE_ERRORS = 3
 
 type Phase = 'montando' | 'rodando'
 
@@ -246,7 +245,7 @@ export class GameScene extends Phaser.Scene {
             this.registerError()
             this.showToast('O tempo acabou.', false)
             this.time.delayedCall(2200, () => {
-                if (this.consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) this.showGameOver()
+                if (this.lives.remaining <= 0) this.showGameOver()
                 else this.startChallenge()
             })
         }
@@ -539,7 +538,7 @@ export class GameScene extends Phaser.Scene {
                     this.registerError()
                     this.cameras.main.shake(140, 0.004)
 
-                    if (this.consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
+                    if (this.lives.remaining <= 0) {
                         locked = true
                         this.time.delayedCall(1200, () => {
                             this.clearOverlay()
@@ -686,7 +685,7 @@ export class GameScene extends Phaser.Scene {
                     this.playError()
                     this.registerError()
                     this.stamp('selo-x', L.cx(rect), rect.y + 70)
-                    if (this.consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
+                    if (this.lives.remaining <= 0) {
                         this.time.delayedCall(1200, () => {
                             this.clearOverlay()
                             this.showGameOver()
@@ -1253,7 +1252,7 @@ export class GameScene extends Phaser.Scene {
             )
             this.returnHand()
 
-            if (this.consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
+            if (this.lives.remaining <= 0) {
                 this.time.delayedCall(2200, () => this.showGameOver())
             }
             return
@@ -1691,7 +1690,7 @@ export class GameScene extends Phaser.Scene {
 
         this.time.delayedCall(2800, () => {
             cleanup()
-            if (this.consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
+            if (this.lives.remaining <= 0) {
                 this.showGameOver()
                 return
             }
@@ -1768,7 +1767,7 @@ export class GameScene extends Phaser.Scene {
                     buttons: [
                         {
                             label: 'Jogar de novo', color: C.verde,
-                            onClick: () => this.scene.restart({ lives: this.livesLeft, level: 1, points: 0 }),
+                            onClick: () => this.scene.restart({ lives: this.livesTotal, level: 1, points: 0 }),
                         },
                         {
                             label: 'Sair', color: C.medio,
@@ -2139,7 +2138,7 @@ export class GameScene extends Phaser.Scene {
             ],
         })
 
-        runtimeGameBridge.emit({ type: 'GAME_OVER', gameId: GAME_ID, stage: this.levelConfig.level })
+        // o GAME_OVER sai do componente de vidas, no zero. Aqui é só a tela.
     }
 
     private makeButton(rect: L.Rect, label: string, color: number, onClick: () => void) {
