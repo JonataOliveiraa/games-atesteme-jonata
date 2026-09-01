@@ -112,7 +112,7 @@ export class GameScene extends Phaser.Scene {
             remaining: this.livesLeft,
             gameId: GAME_ID,
             x: 36,
-            y: 48,
+            y: 51,
             size: 30,
             stage: () => this.currentLevelIdx,
         })
