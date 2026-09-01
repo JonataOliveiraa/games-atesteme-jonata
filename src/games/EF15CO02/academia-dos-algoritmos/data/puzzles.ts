@@ -494,8 +494,6 @@ export const LEVELS: Level[] = [
   },
 ]
 
-export const TOTAL_PUZZLES = LEVELS.reduce((n, level) => n + level.puzzles.length, 0)
-
 /** O que a mão segura, em id de coisa: é o que a Lia carrega desenhado. */
 export const HELD: Record<string, string> = {
   'o regador': 'regador',
@@ -613,6 +611,15 @@ LEVELS.push(
     puzzles: CHECK_PUZZLES,
   }
 )
+
+/**
+ * Quantos puzzles o jogo tem, somando os três níveis.
+ *
+ * Fica DEPOIS do `push` de propósito. Os níveis 2 e 3 entram ali em cima, e
+ * uma soma feita antes disso enxergaria só o nível 1 — congelaria em 3 no
+ * lugar de 8, e o `progress` do CHECKPOINT passaria de 200%.
+ */
+export const TOTAL_PUZZLES = LEVELS.reduce((n, level) => n + level.puzzles.length, 0)
 
 /** Quantos gestos o caminho pede. A bifurcação pede dois: um por ramo. */
 export const slotCount = (stations: Station[]) =>

@@ -579,6 +579,7 @@ export class GameScene extends Phaser.Scene {
             type: 'GAME_COMPLETED',
             gameId: GAME_ID,
             stage: this.levelDef.level,
+            totalStages: LEVELS.length,
         })
         this.emitCheckpoint(true)
 

@@ -1,61 +1,198 @@
-import type { PersonRecord, ArchiveLevel } from "../types";
+import type { Caso, Criterio, Ficha, FieldId, Level } from '../types'
 
-export const RECORDS: PersonRecord[] = [
-  { id: "1", emoji: "👦", Nome: "Lucas",   Cidade: "São Paulo",     Hobby: "Futebol", Idade: "9",  Animal: "Cachorro" },
-  { id: "2", emoji: "👧", Nome: "Beatriz", Cidade: "Rio de Janeiro", Hobby: "Dança",   Idade: "10", Animal: "Gato"     },
-  { id: "3", emoji: "👦", Nome: "Miguel",  Cidade: "São Paulo",     Hobby: "Xadrez",  Idade: "9",  Animal: "Peixe"    },
-  { id: "4", emoji: "👧", Nome: "Sofia",   Cidade: "Curitiba",      Hobby: "Futebol", Idade: "11", Animal: "Cachorro" },
-  { id: "5", emoji: "👦", Nome: "Pedro",   Cidade: "Salvador",      Hobby: "Leitura", Idade: "10", Animal: "Gato"     },
-  { id: "6", emoji: "👧", Nome: "Ana",     Cidade: "Rio de Janeiro", Hobby: "Desenho", Idade: "9",  Animal: "Pássaro"  },
-  { id: "7", emoji: "👦", Nome: "Rafael",  Cidade: "Curitiba",      Hobby: "Leitura", Idade: "11", Animal: "Cachorro" },
-  { id: "8", emoji: "👧", Nome: "Julia",   Cidade: "São Paulo",     Hobby: "Dança",   Idade: "10", Animal: "Gato"     },
-];
+/**
+ * O arquivo: doze crianças, cinco campos cada.
+ *
+ * Os nomes foram escolhidos para combinar com o retrato de cada uma — a ficha é
+ * um documento, e documento com foto que não bate com o nome é a primeira coisa
+ * que uma criança de 9 anos estranha.
+ *
+ * ── COMO OS CASOS SÃO ARMADOS ────────────────────────────────────────────
+ *
+ * Em todo caso de filtro e de identificação, os distratores compartilham UM dos
+ * campos com a resposta. Se o primeiro campo já resolvesse, o segundo seria
+ * enfeite — e a habilidade é justamente cruzar mais de um campo.
+ */
 
-export const LEVELS: ArchiveLevel[] = [
-  {
-    level: 1,
-    title: "Encontre o Registro",
-    objective: "Leia a ficha e toque no estudante correto!",
-    detail: "Cada cartão mostra informações de um estudante. Leia a pergunta e toque na ficha que corresponde.",
-    tip: "Procure o campo pedido em cada cartão para encontrar a resposta certa.",
-    timeLimit: 35,
-    n1Questions: [
-      // Q1: records 1,2,3,5 — only Lucas (1) has Hobby=Futebol (Sofia was removed to avoid ambiguity)
-      { field: "Hobby",  value: "Futebol",  recordIds: ["1","2","3","5"], correctId: "1" },
-      // Q2: records 2,3,4,5 — only Sofia (4) has Cidade=Curitiba
-      { field: "Cidade", value: "Curitiba", recordIds: ["2","3","4","5"], correctId: "4" },
-      // Q3: records 4,5,6,7 — only Pedro (5) has Animal=Gato
-      { field: "Animal", value: "Gato",     recordIds: ["4","5","6","7"], correctId: "5" },
-      // Q4: records 5,6,7,8 — only Rafael (7) has Idade=11
-      { field: "Idade",  value: "11",       recordIds: ["5","6","7","8"], correctId: "7" },
-    ],
-  },
-  {
-    level: 2,
-    title: "Qual é o Valor do Campo?",
-    objective: "Leia a ficha completa e responda a pergunta!",
-    detail: "Uma ficha com todos os campos será exibida. Escolha a resposta correta entre as quatro opções.",
-    tip: "Leia com atenção — as opções são parecidas!",
-    timeLimit: 45,
-    n2Questions: [
-      { recordId: "2", field: "Hobby",  question: "Qual o Hobby de Beatriz?",                              correct: "Dança",                          options: ["Dança","Futebol","Xadrez","Leitura"]                                          },
-      { recordId: "3", field: "Cidade", question: "Qual a Cidade de Miguel?",                              correct: "São Paulo",                       options: ["São Paulo","Curitiba","Salvador","Rio de Janeiro"]                             },
-      { recordId: "5", field: "Animal", question: "Qual o Animal de Pedro?",                               correct: "Gato",                           options: ["Gato","Cachorro","Peixe","Pássaro"]                                           },
-      { recordId: "7", field: "Idade",  question: "Qual a Idade de Rafael?",                               correct: "11",                             options: ["9","10","11","8"]                                                             },
-      { recordId: "6", field: "Nome",   question: "Qual o Nome de quem mora no Rio e tem Pássaro?",        correct: "Ana",                            options: ["Ana","Julia","Beatriz","Sofia"]                                               },
-    ],
-  },
-  {
-    level: 3,
-    title: "Filtro de Registros",
-    objective: "Analise todos os registros e responda!",
-    detail: "Todos os 8 estudantes aparecem em cards. Leia os registros com atenção para contar ou filtrar.",
-    tip: "Veja todos os cards antes de responder — cada detalhe conta!",
-    timeLimit: 55,
-    n3Questions: [
-      { question: "Quantos estudantes moram em São Paulo?",             correct: "3",                               options: ["2","3","4","5"],                                    explanation: "Lucas, Miguel e Julia moram em São Paulo"               },
-      { question: "Quantos estudantes têm Cachorro como animal?",       correct: "3",                               options: ["2","3","4","1"],                                    explanation: "Lucas, Sofia e Rafael têm Cachorro"                     },
-      { question: "Qual é o Hobby mais comum entre os registros?",      correct: "Empate: Futebol, Dança e Leitura", options: ["Futebol","Empate: Futebol, Dança e Leitura","Xadrez","Leitura"], explanation: "Futebol, Dança e Leitura aparecem 2x cada" },
-    ],
-  },
-];
+export const FICHAS: Ficha[] = [
+    { id: 'bia', nome: 'Bia', portrait: 'portrait-1', cidade: 'Recife', ano: '2015', esporte: 'Vôlei', comida: 'Tapioca', bicho: 'Gato' },
+    { id: 'alice', nome: 'Alice', portrait: 'portrait-2', cidade: 'Salvador', ano: '2015', esporte: 'Vôlei', comida: 'Pizza', bicho: 'Cachorro' },
+    { id: 'manu', nome: 'Manu', portrait: 'portrait-3', cidade: 'Curitiba', ano: '2016', esporte: 'Judô', comida: 'Pizza', bicho: 'Coelho' },
+    { id: 'theo', nome: 'Théo', portrait: 'portrait-4', cidade: 'Recife', ano: '2016', esporte: 'Futebol', comida: 'Pizza', bicho: 'Cachorro' },
+    { id: 'caio', nome: 'Caio', portrait: 'portrait-5', cidade: 'Manaus', ano: '2014', esporte: 'Futebol', comida: 'Macarrão', bicho: 'Papagaio' },
+    { id: 'iara', nome: 'Iara', portrait: 'portrait-6', cidade: 'Belém', ano: '2015', esporte: 'Vôlei', comida: 'Açaí', bicho: 'Tartaruga' },
+    { id: 'davi', nome: 'Davi', portrait: 'portrait-7', cidade: 'Salvador', ano: '2014', esporte: 'Futebol', comida: 'Feijoada', bicho: 'Gato' },
+    { id: 'sofia', nome: 'Sofia', portrait: 'portrait-8', cidade: 'Recife', ano: '2015', esporte: 'Natação', comida: 'Macarrão', bicho: 'Coelho' },
+    { id: 'malu', nome: 'Malu', portrait: 'portrait-9', cidade: 'Curitiba', ano: '2014', esporte: 'Vôlei', comida: 'Pizza', bicho: 'Gato' },
+    { id: 'enzo', nome: 'Enzo', portrait: 'portrait-10', cidade: 'Manaus', ano: '2016', esporte: 'Judô', comida: 'Tapioca', bicho: 'Cachorro' },
+    { id: 'yuna', nome: 'Yuna', portrait: 'portrait-11', cidade: 'Belém', ano: '2016', esporte: 'Natação', comida: 'Pizza', bicho: 'Tartaruga' },
+    { id: 'nina', nome: 'Nina', portrait: 'portrait-12', cidade: 'Salvador', ano: '2016', esporte: 'Vôlei', comida: 'Feijoada', bicho: 'Papagaio' },
+]
+
+const byId = new Map(FICHAS.map(f => [f.id, f]))
+
+export const fichaOf = (id: string): Ficha | undefined => byId.get(id)
+
+export const valueOf = (ficha: Ficha, field: FieldId): string => ficha[field]
+
+/** Uma ficha passa quando TODOS os critérios batem. */
+export const passes = (ficha: Ficha, criterios: Criterio[]): boolean =>
+    criterios.every(c => valueOf(ficha, c.field) === c.value)
+
+/** O primeiro critério que esta ficha não atende. Serve para explicar a recusa. */
+export const firstMiss = (ficha: Ficha, criterios: Criterio[]): Criterio | null =>
+    criterios.find(c => valueOf(ficha, c.field) !== c.value) ?? null
+
+const crit = (field: FieldId, value: string): Criterio => ({ field, value })
+
+export const LEVELS: Level[] = [
+
+    /* ────────────────────────────── NÍVEL 1 — cada campo tem um nome */
+    {
+        level: 1,
+        title: 'Cada campo tem um nome',
+        objective: 'Quem dá sentido ao valor é o nome do campo.',
+        tip: 'Leia a pergunta e toque no campo que responde.',
+        cases: [
+            {
+                id: 'a1-1',
+                kind: 'campo',
+                question: 'Toque no campo que responde a pergunta.',
+                hint: 'O nome do campo está escrito à esquerda de cada linha.',
+                fichaId: 'bia',
+                asks: [
+                    { prompt: 'Onde a Bia nasceu?', field: 'cidade' },
+                    { prompt: 'Em que ano ela nasceu?', field: 'ano' },
+                    { prompt: 'O que ela mais gosta de comer?', field: 'comida' },
+                ],
+                successLine: 'Cada informação mora num campo com nome. É isso que faz uma ficha ser uma ficha.',
+            },
+            {
+                id: 'a1-2',
+                kind: 'campo',
+                question: 'Toque no campo que responde a pergunta.',
+                hint: 'A pergunta nunca usa a mesma palavra do campo.',
+                fichaId: 'theo',
+                asks: [
+                    { prompt: 'Que esporte o Théo pratica?', field: 'esporte' },
+                    { prompt: 'De que cidade ele é?', field: 'cidade' },
+                    { prompt: 'Que animal ele prefere?', field: 'bicho' },
+                ],
+                successLine: '"De que cidade" e "onde nasceu" perguntam a mesma coisa: o campo Cidade.',
+            },
+            {
+                id: 'a1-3',
+                kind: 'campo',
+                question: 'Toque no campo que responde a pergunta.',
+                hint: 'Três perguntas, três campos diferentes.',
+                fichaId: 'yuna',
+                asks: [
+                    { prompt: 'Qual é o bicho preferido da Yuna?', field: 'bicho' },
+                    { prompt: 'Quando ela nasceu?', field: 'ano' },
+                    { prompt: 'Do que ela gosta de brincar na quadra?', field: 'esporte' },
+                ],
+                successLine: 'Você já lê uma ficha inteira sem se perder entre os campos.',
+            },
+        ],
+    },
+
+    /* ─────────────────────────────────── NÍVEL 2 — filtre o arquivo */
+    {
+        level: 2,
+        title: 'Filtre o arquivo',
+        objective: 'Filtrar é separar quem atende ao critério.',
+        tip: 'Toque em TODAS as fichas que passam no filtro.',
+        cases: [
+            {
+                id: 'a2-1',
+                kind: 'filtrar',
+                question: 'Toque em todas as fichas de quem nasceu em RECIFE.',
+                hint: 'Confira o campo Cidade de cada ficha.',
+                fichaIds: ['bia', 'alice', 'theo', 'davi', 'sofia', 'malu'],
+                show: ['cidade', 'ano', 'esporte'],
+                filters: [crit('cidade', 'Recife')],
+                successLine: 'Três de seis nasceram em Recife. Filtrar é ler o mesmo campo em todas as fichas.',
+            },
+            {
+                id: 'a2-2',
+                kind: 'filtrar',
+                question: 'Toque em todas as fichas de quem nasceu em 2016.',
+                hint: 'Agora o campo que importa é o Ano.',
+                fichaIds: ['manu', 'caio', 'iara', 'enzo', 'yuna', 'davi'],
+                show: ['cidade', 'ano', 'comida'],
+                filters: [crit('ano', '2016')],
+                successLine: 'Mudou o campo, mudou o grupo. O arquivo é o mesmo.',
+            },
+            {
+                id: 'a2-3',
+                kind: 'filtrar',
+                /*
+                 * Dois campos. Quatro fichas passam em UM dos critérios e só duas
+                 * passam nos dois — é o que faz a criança conferir o segundo em
+                 * vez de parar no primeiro.
+                 */
+                question: 'Toque em quem nasceu em SALVADOR e joga VÔLEI.',
+                hint: 'As duas coisas precisam bater na mesma ficha.',
+                fichaIds: ['alice', 'davi', 'nina', 'bia', 'iara', 'malu'],
+                show: ['cidade', 'esporte', 'ano'],
+                filters: [crit('cidade', 'Salvador'), crit('esporte', 'Vôlei')],
+                successLine: 'Só duas passaram nos dois campos. Vôlei sozinho deixava cinco.',
+            },
+        ],
+    },
+
+    /* ──────────────────────── NÍVEL 3 — de quem é este formulário? */
+    {
+        level: 3,
+        title: 'De quem é este formulário?',
+        objective: 'Cruzando campos, o conjunto revela uma pessoa só.',
+        tip: 'O formulário não tem nome nem foto. Ache a ficha que bate.',
+        cases: [
+            {
+                id: 'a3-1',
+                kind: 'identificar',
+                question: 'Este formulário chegou sem nome. De quem é?',
+                hint: 'Compare os dois campos do formulário com cada ficha.',
+                fichaIds: ['caio', 'enzo', 'davi', 'iara', 'nina', 'manu'],
+                show: ['cidade', 'bicho', 'ano'],
+                form: [crit('cidade', 'Manaus'), crit('bicho', 'Papagaio')],
+                answerId: 'caio',
+                successLine: 'Dois de Manaus, dois com papagaio — mas só um tem os dois.',
+            },
+            {
+                id: 'a3-2',
+                kind: 'identificar',
+                question: 'Mais um formulário anônimo. De quem é?',
+                hint: 'Quatro fichas são de 2015. Só uma delas bate na comida.',
+                fichaIds: ['iara', 'bia', 'sofia', 'alice', 'yuna', 'theo'],
+                show: ['ano', 'comida', 'cidade'],
+                form: [crit('ano', '2015'), crit('comida', 'Açaí')],
+                answerId: 'iara',
+                successLine: 'O ano sozinho deixava quatro candidatas. A comida fechou o caso.',
+            },
+            {
+                id: 'a3-3',
+                kind: 'identificar',
+                question: 'O último formulário do arquivo. De quem é?',
+                hint: 'Agora são três campos. Nenhum resolve sozinho.',
+                fichaIds: ['malu', 'manu', 'bia', 'davi', 'nina', 'caio'],
+                show: ['cidade', 'esporte', 'bicho'],
+                form: [crit('cidade', 'Curitiba'), crit('esporte', 'Vôlei'), crit('bicho', 'Gato')],
+                answerId: 'malu',
+                successLine: 'Cada campo tinha duas ou três candidatas. Juntos, sobrou uma pessoa só.',
+            },
+        ],
+    },
+]
+
+export const TOTAL_CASES = LEVELS.reduce((sum, l) => sum + l.cases.length, 0)
+
+/** Quantas fichas do caso passam no filtro. */
+export function matchCount(caso: Caso): number {
+    const ids = caso.fichaIds ?? []
+    const filters = caso.filters ?? []
+    return ids.filter(id => {
+        const f = byId.get(id)
+        return f ? passes(f, filters) : false
+    }).length
+}

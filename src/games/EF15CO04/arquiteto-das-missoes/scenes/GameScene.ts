@@ -1526,7 +1526,7 @@ export class GameScene extends Phaser.Scene {
         const isLastLevel = this.levelIdx + 1 >= LEVELS.length
 
         if (!isLastPhase) {
-            EventBus.emit('curtain', () => this.scene.restart({
+            EventBus.emit('curtain', () => this.scene.restart({ 
                 level: this.level.level,
                 phase: this.phaseIdx + 1,
                 points: this.points,
@@ -1537,6 +1537,7 @@ export class GameScene extends Phaser.Scene {
         }
 
         if (!isLastLevel) {
+            runtimeGameBridge.emit({ type: 'GAME_COMPLETED', gameId: GAME_ID, stage: this.level.level, totalStages: LEVELS.length })
             EventBus.emit('stage-flash', C.paper)
             showLevelComplete(this, {
                 subtitle: `Nível ${this.level.level} completo`,
@@ -1548,7 +1549,7 @@ export class GameScene extends Phaser.Scene {
                 progress: { total: LEVELS.length, current: this.level.level },
                 autoAdvance: {
                     delay: 2400,
-                    onComplete: () => this.scene.restart({
+                    onComplete: () => this.scene.restart({ 
                         level: this.level.level + 1,
                         phase: 0,
                         points: this.points,
@@ -1560,7 +1561,7 @@ export class GameScene extends Phaser.Scene {
         }
 
         this.ended = true
-        runtimeGameBridge.emit({ type: 'GAME_COMPLETED', gameId: GAME_ID, stage: this.level.level })
+        runtimeGameBridge.emit({ type: 'GAME_COMPLETED', gameId: GAME_ID, stage: this.level.level, totalStages: LEVELS.length })
 
         showLevelComplete(this, {
             title: 'Central fechada!',

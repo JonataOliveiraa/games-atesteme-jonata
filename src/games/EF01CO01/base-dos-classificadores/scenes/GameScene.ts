@@ -495,7 +495,7 @@ export class GameScene extends Phaser.Scene {
 
     this.tweens.add({ targets: panel, alpha: 1, scale: 1, duration: 260, ease: 'Back.easeOut' })
 
-    runtimeGameBridge.emit({ type: 'GAME_COMPLETED', gameId: GAME_ID, stage: 3 })
+    runtimeGameBridge.emit({ type: 'GAME_COMPLETED', gameId: GAME_ID, stage: 3, totalStages: LEVELS.length })
   }
 
   private showGameOverScreen() {
@@ -1245,6 +1245,7 @@ export class GameScene extends Phaser.Scene {
         type: 'GAME_COMPLETED',
         gameId: GAME_ID,
         stage: this.levelConfig.level,
+        totalStages: LEVELS.length,
       })
 
       this.endRound()
@@ -1374,7 +1375,7 @@ export class GameScene extends Phaser.Scene {
             const shouldRestart = command.stage !== this.levelConfig.level
 
             if (shouldRestart) {
-              this.scene.restart({
+              this.scene.restart({ 
                 level: command.stage as 1 | 2 | 3,
                 points: command.points,
                 lives: command.lives,

@@ -95,7 +95,7 @@ export class GameScene extends Phaser.Scene {
         super({ key: 'GameScene' })
     }
 
-    init(data: { level?: number; points?: number; lives?: number; showLevelStart?: boolean }) {
+    init(data: { level?: number; points?: number; showLevelStart?: boolean; lives?: number }) {
         const lvl = Phaser.Math.Clamp(data?.level ?? 1, 1, 3) as 1 | 2 | 3
 
         this.levelConfig = LEVELS.find(l => l.level === lvl) ?? LEVELS[0]
@@ -432,6 +432,7 @@ export class GameScene extends Phaser.Scene {
             type: 'GAME_COMPLETED',
             gameId: GAME_ID,
             stage: this.levelConfig.level,
+            totalStages: LEVELS.length,
         })
         this.emitCheckpoint()
 
@@ -450,7 +451,7 @@ export class GameScene extends Phaser.Scene {
                 autoAdvance: {
                     delay: 2300,
                     label: 'Preparando o próximo nível...',
-                    onComplete: () => this.scene.restart({
+                    onComplete: () => this.scene.restart({ 
                         level: next,
                         points: this.points,
                         lives: this.lives,
@@ -522,7 +523,7 @@ export class GameScene extends Phaser.Scene {
                 {
                     label: 'Tentar de novo',
                     color: C.green,
-                    onClick: () => this.scene.restart({
+                    onClick: () => this.scene.restart({ 
                         level: this.levelConfig.level,
                         points: this.points,
                         lives: this.lives,

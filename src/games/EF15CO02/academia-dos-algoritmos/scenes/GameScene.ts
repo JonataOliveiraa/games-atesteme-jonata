@@ -831,7 +831,7 @@ export class GameScene extends Phaser.Scene {
           delay: 2400,
           label: 'Preparando o próximo treino...',
           onComplete: () =>
-            this.scene.restart({
+            this.scene.restart({ 
               level: this.level.number + 1,
               puzzle: 0,
               points: this.points,

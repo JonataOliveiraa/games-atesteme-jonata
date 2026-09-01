@@ -8,7 +8,7 @@ import { FX } from '../../../../shared/effects/FX'
 
 import {
     LEVELS, TOTAL_CASES, fichaOf, passes, firstMiss, matchCount,
-} from '../data/casos'
+} from '../data/levels'
 import { C, hex, FIELD_LABEL } from '../data/theme'
 import { HUD, BIG, CARD, FORM } from '../data/layout'
 import type { Caso, CaseState, FieldId, Level } from '../types'
@@ -424,7 +424,7 @@ export class GameScene extends Phaser.Scene {
         this.hud.setHelpEnabled(false)
 
         runtimeGameBridge.emit({
-            type: 'GAME_COMPLETED', gameId: GAME_ID, stage: this.level.level,
+            type: 'GAME_COMPLETED', gameId: GAME_ID, stage: this.level.level, totalStages: LEVELS.length,
         })
         this.emitCheckpoint(true)
 

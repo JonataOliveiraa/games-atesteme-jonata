@@ -6,7 +6,7 @@ import { createTutorial, type TutorialStep } from '../../../../shared/tutorial/c
 import { showLevelComplete, type LevelCompleteHandle } from '../../../../shared/level/showLevelComplete'
 import { FX, Ease } from '../../../../shared/effects/FX'
 
-import { LEVELS, TOTAL_CASES, search, labelOf } from '../data/casos'
+import { LEVELS, TOTAL_CASES, search, labelOf } from '../data/levels'
 import { C, FONT, SIZE, hex, typePhrase, LONG_WORD } from '../data/theme'
 import { HUD, CASE, SEARCH, FILTERS, MURAL, TRAY } from '../data/layout'
 import type { Case, CaseState, FilterId, Level, Query, Result } from '../types'
@@ -567,7 +567,7 @@ export class GameScene extends Phaser.Scene {
         this.hud.setHelpEnabled(false)
 
         runtimeGameBridge.emit({
-            type: 'GAME_COMPLETED', gameId: GAME_ID, stage: this.level.level,
+            type: 'GAME_COMPLETED', gameId: GAME_ID, stage: this.level.level, totalStages: LEVELS.length,
         })
         this.emitCheckpoint(true)
 

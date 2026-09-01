@@ -61,6 +61,12 @@ export class GameScene extends Phaser.Scene {
   private ended = false
   private errors = 0
 
+  /**
+   * Desvios desde a última vida cobrada. Separado de `errors`, que é
+   * telemetria e não pode zerar.
+   */
+  private offTaskTaps = 0
+
   private unsubCommands?: () => void
 
   private wallpaper!: Phaser.GameObjects.Image
@@ -94,6 +100,7 @@ export class GameScene extends Phaser.Scene {
     this.stepIdx = 0
     this.done = 0
     this.errors = 0
+    this.offTaskTaps = 0
     this.points = data?.points ?? 0
     this.lives = data?.lives ?? 1
     this.startedAt = Date.now()
@@ -470,14 +477,18 @@ export class GameScene extends Phaser.Scene {
    */
   private nudgeOffTask() {
     this.errors++
+    this.offTaskTaps++
 
     floatingNote(this, W / 2, 240, 'Legal! Mas agora precisamos de outra coisa',
       { tone: C.sky, deep: C.skyDeep })
     FX.shake(this, this.taskCard, { amount: 9, times: 2 })
     this.revealHint()
 
-    if (this.errors < DESVIOS_ATE_CONTAR) return
+    if (this.offTaskTaps < DESVIOS_ATE_CONTAR) return
 
+    // zera o grupo: a regra é uma vida a cada três desvios, não uma vida por
+    // toque a partir do terceiro
+    this.offTaskTaps = 0
     runtimeGameBridge.emit({
       type: 'WRONG_ANSWER', gameId: GAME_ID, pointsEarned: 0, stage: this.cfg.level,
     })
@@ -724,7 +735,7 @@ export class GameScene extends Phaser.Scene {
       timestamp: Date.now(),
     }
     EventBus.emit('round-complete', result)
-    runtimeGameBridge.emit({ type: 'GAME_COMPLETED', gameId: GAME_ID, stage: this.cfg.level })
+    runtimeGameBridge.emit({ type: 'GAME_COMPLETED', gameId: GAME_ID, stage: this.cfg.level, totalStages: LEVELS.length })
 
     FX.flash(this, C.white, { peak: 0.4 })
     FX.confetti(this, { colors: [C.sun, C.mint, C.coral, C.sky] })
@@ -750,7 +761,7 @@ export class GameScene extends Phaser.Scene {
       } : {
         autoAdvance: {
           delay: 2400,
-          onComplete: () => this.scene.restart({
+          onComplete: () => this.scene.restart({ 
             level: this.cfg.level + 1, points: this.points, lives: this.lives,
           }),
         },

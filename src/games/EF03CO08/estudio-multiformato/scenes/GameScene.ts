@@ -1602,10 +1602,16 @@ export class GameScene extends Phaser.Scene {
     this.playSuccess();
     const nextLevel = (this.levelConfig.level + 1) as StudioLevelNumber;
     runtimeGameBridge.emit({
+      type: "GAME_COMPLETED",
+      gameId: GAME_ID,
+      stage: this.levelConfig.level,
+      totalStages: LEVELS.length,
+    });
+    runtimeGameBridge.emit({
       type: "CHECKPOINT",
       gameId: GAME_ID,
       stage: nextLevel,
-      progress: this.levelConfig.level / 3,
+      progress: Math.round((this.levelConfig.level / LEVELS.length) * 100),
       score: this.getScore(),
       hits: this.hits,
       errors: this.errors,
@@ -1620,7 +1626,7 @@ export class GameScene extends Phaser.Scene {
     this.hideHud();
     this.input.enabled = false;
     this.playSuccess();
-    runtimeGameBridge.emit({ type: "GAME_COMPLETED", gameId: GAME_ID, stage: 3 });
+    runtimeGameBridge.emit({ type: "GAME_COMPLETED", gameId: GAME_ID, stage: 3, totalStages: LEVELS.length });
     this.time.delayedCall(400, () => this.showFinalCompleteScreen());
   }
 

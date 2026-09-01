@@ -1027,7 +1027,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     private retryPhase() {
-        this.scene.restart({
+        this.scene.restart({ 
             level: this.level.level, phase: this.phaseIdx, points: this.points,
         })
     }
@@ -1037,7 +1037,7 @@ export class GameScene extends Phaser.Scene {
         const lastLevel = this.levelIdx + 1 >= LEVELS.length
 
         if (!lastPhase) {
-            this.scene.restart({
+            this.scene.restart({ 
                 level: this.level.level, phase: this.phaseIdx + 1, points: this.points,
             })
             return
@@ -1069,7 +1069,7 @@ export class GameScene extends Phaser.Scene {
                 progress: { total: LEVELS.length, current: this.level.level },
                 autoAdvance: {
                     delay: 2600,
-                    onComplete: () => this.scene.restart({
+                    onComplete: () => this.scene.restart({ 
                         level: this.level.level + 1, phase: 0, points: this.points,
                     }),
                 },

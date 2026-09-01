@@ -90,6 +90,20 @@ export class GameScene extends Phaser.Scene {
         return LEVELS[this.levelIdx]
     }
 
+    /**
+     * Progresso por nível concluído. Não afeta a nota: serve para a
+     * plataforma mostrar andamento e para diagnosticar partidas.
+     */
+    private emitCheckpoint() {
+        runtimeGameBridge.emit({
+            type: 'CHECKPOINT',
+            gameId: GAME_ID,
+            progress: Math.round(((this.levelIdx + 1) / LEVELS.length) * 100),
+            score: Math.max(0, this.points),
+            stage: this.level.level,
+        })
+    }
+
     private get phase(): PhaseConfig {
         return this.level.phases[this.phaseIdx]
     }
@@ -1134,6 +1148,16 @@ export class GameScene extends Phaser.Scene {
             return
         }
 
+        // sai a cada nível concluído. Quem separa "acabou o nível 1" de "acabou
+        // o jogo" é `isFinalStage`, calculado fora daqui a partir do `stage`
+        runtimeGameBridge.emit({
+            type: 'GAME_COMPLETED',
+            gameId: GAME_ID,
+            stage: this.level.level,
+            totalStages: LEVELS.length,
+        })
+            this.emitCheckpoint()
+
         if (!isLastLevel) {
             showLevelComplete(this, {
                 subtitle: `Nível ${this.level.level} concluído`,
@@ -1145,7 +1169,7 @@ export class GameScene extends Phaser.Scene {
                 progress: { total: LEVELS.length, current: this.level.level },
                 autoAdvance: {
                     delay: 2300,
-                    onComplete: () => this.scene.restart({
+                    onComplete: () => this.scene.restart({ 
                         level: this.level.level + 1,
                         phase: 0,
                         points: this.points,
@@ -1156,15 +1180,6 @@ export class GameScene extends Phaser.Scene {
         }
 
         this.ended = true
-        // um evento só, e ele diz que é o fim. `FINISH_GAME` não existe no
-        // contrato — saía junto e ninguém do lado de fora reconhecia
-        runtimeGameBridge.emit({
-            type: 'GAME_COMPLETED',
-            gameId: GAME_ID,
-            stage: this.level.level,
-            totalStages: LEVELS.length,
-            isFinalStage: true,
-        })
 
         showLevelComplete(this, {
             title: 'Curadoria concluída!',

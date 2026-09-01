@@ -1074,7 +1074,7 @@ export class GameScene extends Phaser.Scene {
     private endLevel() {
         this.ended = true
         this.locked = true
-        runtimeGameBridge.emit({ type: 'GAME_COMPLETED', gameId: GAME_ID, stage: this.level.level })
+        runtimeGameBridge.emit({ type: 'GAME_COMPLETED', gameId: GAME_ID, stage: this.level.level, totalStages: LEVELS.length })
         this.emitCheckpoint(true)
 
         const next = this.level.level < 3 ? this.level.level + 1 : null

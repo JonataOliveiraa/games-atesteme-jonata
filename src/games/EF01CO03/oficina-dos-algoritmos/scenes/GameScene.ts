@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 
 import { EventBus } from '../../../../shared/EventBus';
-import { gameBridge } from '../../../../shared/bridge/gameBridge';
+import { runtimeGameBridge } from '../../../../shared/bridge/runtimeGameBridge';
 import type { PlatformCommand } from '../../../../shared/contracts/platformCommands';
 import { LEVELS } from '../data/levels';
 import type { AlgorithmCard, AlgorithmLevel } from '../types';
@@ -60,7 +60,7 @@ export class GameScene extends Phaser.Scene {
     super('GameScene');
   }
 
-  init(data?: { level?: number; points?: number; lives?: number; showLevelStart?: boolean }) {
+  init(data?: { level?: number; points?: number; showLevelStart?: boolean; lives?: number }) {
     const requestedLevel = data?.level ?? 1;
     this.currentLevel = LEVELS.find((level) => level.level === requestedLevel) ?? LEVELS[0];
     this.currentPoints = data?.points ?? this.currentPoints;
@@ -747,10 +747,11 @@ export class GameScene extends Phaser.Scene {
       this.currentPoints += 5;
       this.emitCorrectAnswer();
       this.emitCheckpoint();
-      gameBridge.emit({
+      runtimeGameBridge.emit({
         type: 'GAME_COMPLETED',
         gameId: GAME_ID,
         stage: this.currentLevel.level,
+        totalStages: LEVELS.length,
       });
 
       if (this.currentLevel.level < 3) {
@@ -795,7 +796,7 @@ export class GameScene extends Phaser.Scene {
       progress: { total: 3, current: this.currentLevel.level },
       autoAdvance: {
         delay: 2300,
-        onComplete: () => this.scene.restart({
+        onComplete: () => this.scene.restart({ 
           level: nextLevel,
           points: this.currentPoints,
           lives: this.currentLives,
@@ -1155,7 +1156,7 @@ export class GameScene extends Phaser.Scene {
     };
 
     const playAgain = createFinalButton(-142, 'Jogar novamente', COLORS.green, '#1b7d1c', () => {
-      this.scene.restart({
+      this.scene.restart({ 
         level: 1,
         points: this.currentPoints,
         lives: this.currentLives,
@@ -1267,14 +1268,14 @@ export class GameScene extends Phaser.Scene {
   }
 
   private emitReady() {
-    gameBridge.emit({
+    runtimeGameBridge.emit({
       type: 'GAME_READY',
       gameId: GAME_ID,
     });
   }
 
   private emitCorrectAnswer() {
-    gameBridge.emit({
+    runtimeGameBridge.emit({
       type: 'CORRECT_ANSWER',
       gameId: GAME_ID,
       pointsEarned: 5,
@@ -1302,7 +1303,7 @@ export class GameScene extends Phaser.Scene {
     this.currentLives = Math.max(0, antes - 1);
 
     if (antes > 0 && this.currentLives === 0) {
-      gameBridge.emit({
+      runtimeGameBridge.emit({
         type: 'GAME_OVER',
         gameId: GAME_ID,
         stage: this.currentLevel.level,
@@ -1311,7 +1312,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private emitWrongAnswer() {
-    gameBridge.emit({
+    runtimeGameBridge.emit({
       type: 'WRONG_ANSWER',
       gameId: GAME_ID,
       pointsEarned: -5,
@@ -1323,7 +1324,7 @@ export class GameScene extends Phaser.Scene {
     const placedCount = this.placedOrder.filter((value) => value !== null).length;
     const progress = Math.round((placedCount / this.currentLevel.correctOrder.length) * 100);
 
-    gameBridge.emit({
+    runtimeGameBridge.emit({
       type: 'CHECKPOINT',
       gameId: GAME_ID,
       progress,
@@ -1336,11 +1337,11 @@ export class GameScene extends Phaser.Scene {
 
   private registerPlatformCommands() {
     this.unsubscribePlatformCommands?.();
-    this.unsubscribePlatformCommands = gameBridge.onPlatformCommand((command: PlatformCommand) => {
+    this.unsubscribePlatformCommands = runtimeGameBridge.onCommand((command: PlatformCommand) => {
       switch (command.type) {
         case 'START_GAME':
           if (command.gameId !== GAME_ID) return;
-          this.scene.restart({
+          this.scene.restart({ 
             level: command.stage,
             points: command.points,
             lives: command.lives,

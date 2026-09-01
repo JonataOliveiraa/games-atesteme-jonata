@@ -474,10 +474,10 @@ export class GameScene extends Phaser.Scene {
       stroke: '#07251c', strokeThickness: 7,
     }).setOrigin(0.5)
 
+    runtimeGameBridge.emit({ type: 'GAME_COMPLETED', gameId: GAME_ID, stage: this.levelConfig.level, totalStages: LEVELS.length })
+
     // DEPOIS
     if (isLast) {
-      runtimeGameBridge.emit({ type: 'GAME_COMPLETED', gameId: GAME_ID, stage: this.levelConfig.level })
-
       const subtitle = this.add.text(640, 330, 'Você explorou toda a cidade!', {
         fontSize: '24px', fontFamily: 'DynaPuff, Arial, sans-serif', color: '#C8E6C9',
       }).setOrigin(0.5)

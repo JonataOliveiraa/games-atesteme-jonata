@@ -1551,7 +1551,7 @@ export class GameScene extends Phaser.Scene {
 
     private endLevel() {
         this.playFanfare()
-        runtimeGameBridge.emit({ type: 'GAME_COMPLETED', gameId: GAME_ID, stage: this.levelConfig.level })
+        runtimeGameBridge.emit({ type: 'GAME_COMPLETED', gameId: GAME_ID, stage: this.levelConfig.level, totalStages: LEVELS.length })
         this.emitCheckpoint()
 
         const next = this.levelConfig.level < 3 ? (this.levelConfig.level + 1) as 2 | 3 : null
@@ -1890,7 +1890,7 @@ export class GameScene extends Phaser.Scene {
             buttons: [
                 {
                     label: 'Tentar de novo', color: C.verde,
-                    onClick: () => this.scene.restart({
+                    onClick: () => this.scene.restart({ 
                         level: this.levelConfig.level, points: this.points,
                     }),
                 },

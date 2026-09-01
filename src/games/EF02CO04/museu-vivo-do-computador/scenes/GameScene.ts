@@ -921,7 +921,7 @@ export class GameScene extends Phaser.Scene {
     this.playFanfare()
 
     runtimeGameBridge.emit({
-      type: 'GAME_COMPLETED', gameId: GAME_ID, stage: this.levelConfig.level,
+      type: 'GAME_COMPLETED', gameId: GAME_ID, stage: this.levelConfig.level, totalStages: LEVELS.length,
     })
     this.emitCheckpoint()
 

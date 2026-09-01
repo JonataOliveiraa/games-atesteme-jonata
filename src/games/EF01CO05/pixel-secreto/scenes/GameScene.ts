@@ -63,7 +63,7 @@ export class GameScene extends Phaser.Scene {
     super({ key: "GameScene" });
   }
 
-  init(data: { level?: number; lives?: number }) {
+  init(data: { level?: number }) {
     const lvl = (data?.level ?? 1) as 1 | 2 | 3;
     this.levelConfig = LEVELS.find((item) => item.level === lvl) ?? LEVELS[0];
     this.selectedCode = this.levelConfig.palette[0]?.code ?? "A";
@@ -1275,6 +1275,7 @@ export class GameScene extends Phaser.Scene {
         type: "GAME_COMPLETED",
         gameId: GAME_ID,
         stage: this.levelConfig.level,
+        totalStages: LEVELS.length,
       });
 
       this.input.enabled = false;
@@ -1951,7 +1952,7 @@ export class GameScene extends Phaser.Scene {
         if (command.stage === this.levelConfig.level) return;
 
         this.time.delayedCall(100, () => {
-          this.scene.restart({
+          this.scene.restart({ 
             level: command.stage as 1 | 2 | 3,
           });
         });

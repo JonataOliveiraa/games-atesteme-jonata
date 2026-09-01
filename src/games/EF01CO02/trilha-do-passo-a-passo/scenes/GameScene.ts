@@ -596,7 +596,7 @@ export class GameScene extends Phaser.Scene {
                     autoAdvance: {
                         delay: 1800,
                         label: 'Preparando a próxima fase...',
-                        onComplete: () => this.scene.restart({
+                        onComplete: () => this.scene.restart({ 
                             levelIndex: this.currentLevelIdx,
                             phaseIndex: this.currentPhaseIdx + 1,
                         }),
@@ -613,7 +613,7 @@ export class GameScene extends Phaser.Scene {
                     progress: { total: LEVELS.length, current: this.currentLevelIdx + 1 },
                     autoAdvance: {
                         delay: 2300,
-                        onComplete: () => this.scene.restart({
+                        onComplete: () => this.scene.restart({ 
                             levelIndex: this.currentLevelIdx + 1,
                             phaseIndex: 0,
                         }),
@@ -656,7 +656,7 @@ export class GameScene extends Phaser.Scene {
             title: 'Ops, tente de novo!',
             subtitle: `Nível ${this.level.level} — Fase ${this.currentPhaseIdx + 1}`,
             buttonLabel: 'TENTAR DE NOVO',
-            onButton: () => this.scene.restart({
+            onButton: () => this.scene.restart({ 
                 levelIndex: this.currentLevelIdx,
                 phaseIndex: this.currentPhaseIdx,
             }),

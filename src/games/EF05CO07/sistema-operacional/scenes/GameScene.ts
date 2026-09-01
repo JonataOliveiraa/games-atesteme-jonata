@@ -795,11 +795,12 @@ export class GameScene extends Phaser.Scene {
         this.fila.set([])
 
         const ultimo = this.nivelIdx >= NIVEIS.length - 1
-        if (ultimo) {
-            runtimeGameBridge.emit({
-                type: 'GAME_COMPLETED', gameId: GAME_ID, stage: this.nivel.numero,
-            })
-        }
+
+        // sai a cada nível, não só no último: quem decide o que é conclusão
+        // final é `isFinalStage`, preenchido fora daqui
+        runtimeGameBridge.emit({
+            type: 'GAME_COMPLETED', gameId: GAME_ID, stage: this.nivel.numero, totalStages: NIVEIS.length,
+        })
         this.emitCheckpoint(true)
 
         await FX.wait(this, 400)
@@ -820,7 +821,7 @@ export class GameScene extends Phaser.Scene {
                 autoAdvance: {
                     delay: 2400,
                     label: proximo.numero === 2 ? 'Ligando a memória...' : 'Abrindo a fila...',
-                    onComplete: () => this.scene.restart({
+                    onComplete: () => this.scene.restart({ 
                         nivel: this.nivel.numero + 1, points: this.pontos,
                     }),
                 },

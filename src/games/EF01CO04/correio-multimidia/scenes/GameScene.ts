@@ -1132,9 +1132,31 @@ export class GameScene extends Phaser.Scene {
     })
   }
 
+  /**
+   * Progresso por nível concluído. Não afeta a nota: serve para a plataforma
+   * mostrar andamento e para diagnosticar partidas.
+   */
+  private emitCheckpoint() {
+    runtimeGameBridge.emit({
+      type: 'CHECKPOINT',
+      gameId: GAME_ID,
+      progress: Math.round(((this.currentLevelIndex + 1) / LEVELS.length) * 100),
+      score: Math.max(0, this.points),
+      stage: this.levelConfig.level,
+    })
+  }
+
   private advanceLevel() {
     const finishedLevel = this.levelConfig.level
     this.state = 'comparing'
+
+    runtimeGameBridge.emit({
+      type: 'GAME_COMPLETED',
+      gameId: GAME_ID,
+      stage: this.levelConfig.level,
+      totalStages: LEVELS.length,
+    })
+    this.emitCheckpoint()
 
     if (this.currentLevelIndex < LEVELS.length - 1) {
       showLevelComplete(this, {
@@ -1157,12 +1179,6 @@ export class GameScene extends Phaser.Scene {
       })
       return
     }
-
-    runtimeGameBridge.emit({
-      type: 'GAME_COMPLETED',
-      gameId: GAME_ID,
-      stage: this.levelConfig.level
-    })
 
     showLevelComplete(this, {
       title: 'Jogo concluído!',

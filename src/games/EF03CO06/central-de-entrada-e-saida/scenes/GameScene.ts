@@ -1024,7 +1024,7 @@ export class GameScene extends Phaser.Scene {
     this.locked = true
     this.state = 'complete'
     this.setPose('op-06')
-    runtimeGameBridge.emit({ type: 'GAME_COMPLETED', gameId: GAME_ID, stage: this.level.level })
+    runtimeGameBridge.emit({ type: 'GAME_COMPLETED', gameId: GAME_ID, stage: this.level.level, totalStages: LEVELS.length })
     this.emitCheckpoint(true)
 
     const next = this.level.level < 3 ? this.level.level + 1 : null

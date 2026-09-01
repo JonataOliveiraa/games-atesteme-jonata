@@ -827,7 +827,7 @@ export class GameScene extends Phaser.Scene {
     const lastLevel = this.levelIdx + 1 >= LEVELS.length
 
     if (!lastPhase) {
-      this.scene.restart({
+      this.scene.restart({ 
         level: this.level.level, phase: this.phaseIdx + 1,
         score: this.score, hits: this.hits, errors: this.errors,
       } satisfies GameSceneData)
@@ -837,6 +837,7 @@ export class GameScene extends Phaser.Scene {
     this.ended = true
 
     if (!lastLevel) {
+      runtimeGameBridge.emit({ type: "GAME_COMPLETED", gameId: GAME_ID, stage: this.level.level, totalStages: LEVELS.length })
       showLevelComplete(this, {
         subtitle: `Nível ${this.level.level} concluído`,
         message: LEVELS[this.levelIdx + 1].objective,
@@ -847,7 +848,7 @@ export class GameScene extends Phaser.Scene {
         progress: { total: LEVELS.length, current: this.level.level },
         autoAdvance: {
           delay: 2600,
-          onComplete: () => this.scene.restart({
+          onComplete: () => this.scene.restart({ 
             level: this.level.level + 1, phase: 0,
             score: this.score, hits: this.hits, errors: this.errors,
           } satisfies GameSceneData),
@@ -856,7 +857,7 @@ export class GameScene extends Phaser.Scene {
       return
     }
 
-    runtimeGameBridge.emit({ type: "GAME_COMPLETED", gameId: GAME_ID, stage: this.level.level })
+    runtimeGameBridge.emit({ type: "GAME_COMPLETED", gameId: GAME_ID, stage: this.level.level, totalStages: LEVELS.length })
     confetti(this)
     showLevelComplete(this, {
       title: "Desfile completo!",

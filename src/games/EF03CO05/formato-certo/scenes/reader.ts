@@ -2,7 +2,7 @@ import Phaser from 'phaser'
 import { FX, Ease } from '../../../../shared/effects/FX'
 import { C, FONT, SIZE, TYPE_MS, hex, formatTone } from '../data/theme'
 import { READER } from '../data/layout'
-import { FORMAT_INFO, FORMAT_GIVEN } from '../data/missions'
+import { FORMAT_INFO, FORMAT_GIVEN } from '../data/levels'
 import type { BoxReading, FormatBoxSpec, FormatId, Piece, ReadCell } from '../types'
 
 /*
