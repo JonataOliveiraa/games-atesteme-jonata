@@ -175,8 +175,12 @@ Additional negative: angry, menacing, weapon, red eyes, sharp edges, sparks
 ## 7. O que NÃO é textura
 
 Não peça e não aceite: **quadra, linhas da quadra, caminho, seta, ✕, balão de
-voz, envelope, telefone, caixa de correio, mural, moldura, retrato,
-interrogação, estrela, brilho, confete, bola.**
+voz, envelope, telefone, mural, moldura, retrato, interrogação, estrela,
+brilho, confete, bola.**
+
+**Exceção entregue:** o balde onde o recado é depositado veio como PNG
+(`balde.png`, 300 × 300). O jogo usa o sprite quando ele existe e cai para um
+balde em Graphics quando não existe.
 
 Tudo isso é Graphics do Phaser. Vale a mesma separação de Corrida dos
 Parecidos, Ritmo da Rotina e Pulo Programado, e por dois motivos concretos:

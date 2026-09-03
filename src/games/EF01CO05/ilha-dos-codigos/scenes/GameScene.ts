@@ -8,23 +8,31 @@ import { createLives, type Lives } from '../../../../shared/hud/createLives'
 import { vidasIniciais } from '../../../../shared/level/vidasIniciais'
 import { formatTime } from '../../../../shared/hud/createTimeBar'
 import { FX } from '../../../../shared/effects/FX'
-import { LEVELS, TOTAL_CHESTS, chestsBefore } from '../data/levels'
-import { nameOf } from '../data/island'
+import { LEVELS, TOTAL_CHESTS, chestsBefore, optionsOf } from '../data/levels'
 import { C } from '../data/theme'
-import { CHEST, KEY, PALETTE, W } from '../data/layout'
-import type { ChestDef, LevelDef, LevelNumber, PlayState, Word } from '../types'
+import {
+    CLUE,
+    OPTION,
+    W,
+    cluePanelHeight,
+    cluePanelWidth,
+    optionsSpan,
+} from '../data/layout'
+import type { ChestDef, Code, LevelDef, LevelNumber, PlayState, Word } from '../types'
 import { createAudio } from './audio'
 import { createClue } from './clue'
 import { createHud } from './hud'
 import { createIsland } from './island'
 import { createLegend } from './legend'
-import { createLock } from './lock'
-import { createPalette } from './palette'
+import { createOptions } from './options'
 import { createRecap } from './recap'
-import { createTalk } from './talk'
+import { createStatus } from './status'
 
 const GAME_ID = 'ilha-dos-codigos'
 const KEY_PHRASE = 'A mesma coisa pode ser dita com sons, cores ou desenhos!'
+const DOT_SIZE = 7
+
+const hasSound = (code: Code) => code === 'batidas' || code === 'som'
 
 export class GameScene extends Phaser.Scene {
     private lives!: Lives
@@ -37,7 +45,7 @@ export class GameScene extends Phaser.Scene {
 
     private state: PlayState = 'intro'
     private paused = false
-    private saying = false
+    private busy = false
     private gen = 0
 
     private score = 0
@@ -45,20 +53,16 @@ export class GameScene extends Phaser.Scene {
     private errors = 0
     private streak = 0
     private chestsDone = 0
-    private chestClean = true
-    private blamed = -1
-    /** Erros por encaixe: dois no mesmo e a carta certa pisca. */
-    private slotMistakes: number[] = []
+    private attempts = 0
     private levelStart = 0
 
     private island!: ReturnType<typeof createIsland>
     private clue!: ReturnType<typeof createClue>
-    private lock!: ReturnType<typeof createLock>
-    private palette!: ReturnType<typeof createPalette>
+    private options!: ReturnType<typeof createOptions>
     private legend!: ReturnType<typeof createLegend>
-    private talk!: ReturnType<typeof createTalk>
     private hud!: ReturnType<typeof createHud>
     private recap!: ReturnType<typeof createRecap>
+    private status!: ReturnType<typeof createStatus>
     private audio!: ReturnType<typeof createAudio>
 
     private unsubPlatform?: () => void
@@ -78,15 +82,13 @@ export class GameScene extends Phaser.Scene {
 
         this.state = 'intro'
         this.paused = false
-        this.saying = false
+        this.busy = false
         this.score = data?.points ?? 0
         this.hits = 0
         this.errors = 0
         this.streak = 0
         this.chestsDone = 0
-        this.chestClean = true
-        this.blamed = -1
-        this.slotMistakes = []
+        this.attempts = 0
     }
 
     create() {
@@ -96,32 +98,25 @@ export class GameScene extends Phaser.Scene {
         this.audio = createAudio(this)
         this.island = createIsland(this, this.level.chests.length)
         this.clue = createClue(this, () => void this.replayClue())
-        this.lock = createLock(this, {
-            onSlot: index => this.onSlot(index),
-            onKey: () => void this.onKey(),
+        this.options = createOptions(this, {
+            onPick: index => this.onPick(index),
+            onPreview: index => void this.onPreview(index),
         })
-        this.palette = createPalette(this, word => this.onPick(word))
         this.legend = createLegend(this)
-        this.talk = createTalk(this)
         this.hud = createHud(this, () => this.replayTutorial())
         this.recap = createRecap(this)
+        this.status = createStatus(this)
 
-        this.legend.build(this.level.alphabet, this.level.from, this.level.to)
-        this.palette.build(this.level.alphabet, this.level.to)
-        this.palette.setEnabled(false)
+        this.legend.build(this.level.from, this.level.to)
+        this.status.setLevel(this.level.level, LEVELS.length)
+        this.status.setPhases(this.level.chests.length)
+        this.options.setEnabled(false)
 
         this.bindPlatform()
         EventBus.on('mute-audio', this.onMute, this)
         EventBus.on('show-tutorial', this.replayTutorial, this)
         this.events.once('shutdown', this.shutdownScene, this)
 
-        runtimeGameBridge.emit({ type: 'GAME_READY', gameId: GAME_ID })
-        this.emitCheckpoint()
-
-        this.state = 'tutorial'
-        this.runTutorial(true, () => void this.startChest(0))
-
-        /* AJUSTE A POSIÇÃO COM A TECLA M (dev). Ver shared/hud/createLives.ts */
         this.lives = createLives(this, {
             total: this.livesTotal,
             remaining: this.livesLeft,
@@ -132,61 +127,70 @@ export class GameScene extends Phaser.Scene {
             stage: () => this.level.level,
         })
         this.events.once('shutdown', () => this.lives.destroy())
+
+        runtimeGameBridge.emit({ type: 'GAME_READY', gameId: GAME_ID })
+        this.emitCheckpoint()
+
+        void this.startChest(0)
     }
 
     private shutdownScene() {
         this.gen++
         this.island?.destroy()
         this.clue?.destroy()
-        this.lock?.destroy()
-        this.palette?.destroy()
+        this.options?.destroy()
         this.legend?.destroy()
-        this.talk?.destroy()
         this.hud?.destroy()
         this.recap?.destroy()
+        this.status?.destroy()
         EventBus.off('mute-audio', this.onMute, this)
         EventBus.off('show-tutorial', this.replayTutorial, this)
         this.unsubPlatform?.()
     }
 
-    // ─────────────────────────────────────────────────────── o baú da vez
-
     private async startChest(index: number) {
         const gen = this.gen
         this.chestIndex = index
         this.chest = this.level.chests[index]
-        this.chestClean = true
-        this.blamed = -1
-        this.slotMistakes = this.chest.message.map(() => 0)
+        this.attempts = 0
+        this.status.setPhase(index)
 
         this.state = 'walking'
-        this.palette.setEnabled(false)
-        this.lock.setEnabled(false)
-        this.lock.setKeyReady(false)
-        this.clue.close()
+        this.busy = false
+        this.options.clear()
+        this.options.setEnabled(false)
         this.clue.setEnabled(false)
+        this.clue.close()
+        this.clue.hidePanel()
 
         await this.island.walkTo(index)
         if (gen !== this.gen) return
 
-        this.lock.setup(this.chest.message.length, this.level.to)
-        this.clue.show(this.chest.message, this.level.from)
+        this.clue.show(this.chest.message, this.level.from, hasSound(this.level.from))
         this.applyLegendPolicy(index)
 
         this.state = 'telling'
         this.clue.setEnabled(true)
-        await FX.wait(this, 320)
+        await FX.wait(this, 340)
         if (gen !== this.gen) return
 
-        await this.clue.say(word => this.audio.say(word))
+        await this.clue.say(word => this.audio.speak(word, this.level.from))
         if (gen !== this.gen) return
 
-        this.state = 'building'
-        this.palette.setEnabled(true)
-        this.lock.setEnabled(true)
+        this.options.show(optionsOf(this.chest), this.level.to, this.level.playsOnTap)
+        await FX.wait(this, 280)
+        if (gen !== this.gen) return
+
+        if (index === 0) {
+            this.state = 'tutorial'
+            await this.runTutorial(true)
+            if (gen !== this.gen) return
+        }
+
+        this.state = 'choosing'
+        this.options.setEnabled(true)
     }
 
-    /** A legenda aperta de nível em nível — mas o botão nunca some. */
     private applyLegendPolicy(index: number) {
         this.legend.setSticky(this.level.legend === 'always')
         if (this.level.legend === 'always') {
@@ -201,93 +205,51 @@ export class GameScene extends Phaser.Scene {
         else this.legend.hide()
     }
 
-    private async replayClue() {
-        if (this.state !== 'building' && this.state !== 'locked') return
-        if (this.saying) return
+    private async speakRow(words: Word[], code: Code) {
         const gen = this.gen
-        this.saying = true
-        await this.clue.say(word => this.audio.say(word))
-        if (gen !== this.gen) return
-        this.saying = false
-    }
-
-    // ─────────────────────────────────────────────────────── os toques
-
-    private onPick(word: Word) {
-        if (this.state !== 'building') return
-        const words = this.lock.words()
-        const free = words.findIndex(slot => slot === null)
-        if (free < 0) return
-
-        this.audio.place()
-        this.palette.stopPulse()
-        this.lock.put(free, word, this.palette.point(word))
-        this.clue.link(free, 'idle')
-        this.lock.setKeyReady(this.lock.isFull())
-    }
-
-    private onSlot(index: number) {
-        if (this.state === 'locked') {
-            if (index !== this.blamed) return
-            this.lock.take(index)
-            this.audio.remove()
-            this.clue.link(index, 'idle')
-            this.talk.hide()
-            this.palette.stopPulse()
-            this.blamed = -1
-            this.state = 'building'
-            this.palette.setEnabled(true)
-            this.lock.setKeyReady(this.lock.isFull())
-            return
-        }
-
-        if (this.state !== 'building') return
-        if (this.lock.take(index) === null) return
-        this.audio.remove()
-        this.clue.link(index, 'idle')
-        this.lock.setKeyReady(false)
-    }
-
-    /** A chave é o ÚNICO compromisso: pôr e tirar não custam nada. */
-    private async onKey() {
-        if (this.state !== 'building' || !this.lock.isFull()) return
-        const gen = this.gen
-
-        this.state = 'checking'
-        this.palette.setEnabled(false)
-        this.lock.setEnabled(false)
-        this.lock.setKeyReady(false)
-        this.palette.stopPulse()
-
-        this.audio.keyTurn()
-        await this.lock.turnKey()
-        if (gen !== this.gen) return
-
-        const words = this.lock.words()
-        for (let i = 0; i < this.chest.message.length; i++) {
-            if (words[i] !== this.chest.message[i]) {
-                this.trap(i)
-                return
-            }
-            this.lock.verify(i)
-            this.clue.link(i, 'ok')
-            this.audio.check(i)
-            // O contador de tolerância zera assim que o encaixe fica certo.
-            this.slotMistakes[i] = 0
-            await FX.wait(this, 120)
+        for (const word of words) {
+            const ms = this.audio.speak(word, code)
+            await FX.wait(this, Math.max(380, ms))
             if (gen !== this.gen) return
         }
-
-        await this.openChest()
     }
 
-    // ─────────────────────────────────────────────────────── a trava
+    private async replayClue() {
+        if (this.state !== 'choosing' || this.busy) return
+        const gen = this.gen
+        this.busy = true
+        this.options.setEnabled(false)
+        await this.clue.say(word => this.audio.speak(word, this.level.from))
+        if (gen !== this.gen) return
+        this.busy = false
+        if (this.state === 'choosing') this.options.setEnabled(true)
+    }
+
+    private async onPreview(index: number) {
+        if (this.state !== 'choosing' || this.busy) return
+        const gen = this.gen
+        this.busy = true
+        this.options.setEnabled(false)
+        await this.speakRow(optionsOf(this.chest)[index], this.level.to)
+        if (gen !== this.gen) return
+        this.busy = false
+        if (this.state === 'choosing') this.options.setEnabled(true)
+    }
+
+    private onPick(index: number) {
+        if (this.state !== 'choosing' || this.busy) return
+        this.audio.pick()
+        if (index === this.chest.correctAt) {
+            void this.openChest()
+            return
+        }
+        this.trap(index)
+    }
 
     private trap(index: number) {
+        this.attempts++
         this.errors++
         this.streak = 0
-        this.chestClean = false
-        this.blamed = index
 
         runtimeGameBridge.emit({
             type: 'WRONG_ANSWER',
@@ -300,34 +262,23 @@ export class GameScene extends Phaser.Scene {
 
         this.audio.wrong()
         this.hud.flash(C.bad)
+        this.options.reject(index)
         void this.clue.shakeChest()
+        this.clue.flashWrong()
+        this.legend.peek(3200)
 
-        this.lock.blame(index)
-        this.clue.link(index, 'wrong')
-        this.clue.pulse(index)
-        if (this.level.from === 'som') this.audio.say(this.chest.message[index])
-
-        this.legend.peek(3000)
-        this.talk.say(`Aqui o baú disse ${nameOf(this.chest.message[index], this.level.from)}.`, C.badDark, 3200)
-
-        this.slotMistakes[index]++
-        if (this.slotMistakes[index] >= 2) this.palette.pulse(this.chest.message[index])
-
-        this.state = 'locked'
-        this.lock.setEnabled(true)
-        this.palette.setEnabled(false)
+        if (this.attempts >= 2) this.options.hint(this.chest.correctAt)
         this.emitCheckpoint()
     }
-
-    // ─────────────────────────────────────────────────────── o baú abre
 
     private async openChest() {
         const gen = this.gen
         this.state = 'opening'
+        this.options.setEnabled(false)
         this.hits++
         this.streak++
 
-        const earned = this.chestClean ? 10 : 5
+        const earned = this.attempts === 0 ? 10 : 5
         this.score += earned
         runtimeGameBridge.emit({
             type: 'CORRECT_ANSWER',
@@ -336,45 +287,60 @@ export class GameScene extends Phaser.Scene {
             stage: this.level.level,
         })
 
-        this.clue.linkAll('ok')
+        this.options.accept(this.chest.correctAt)
+        this.clue.tone('ok')
         this.hud.flash(C.ok)
         this.audio.open()
+
         await this.clue.open()
         if (gen !== this.gen) return
 
         this.audio.streak(this.streak)
         this.island.sendPiece(this.clue.chestPoint(), this.chestIndex)
-        this.talk.say(KEY_PHRASE, C.okDark, 2600)
-
         this.chestsDone++
+        this.status.setPhase(this.chestIndex + 1)
         this.emitCheckpoint()
 
-        await FX.wait(this, 1500)
+        await FX.wait(this, 900)
         if (gen !== this.gen) return
 
         if (this.chestIndex + 1 < this.level.chests.length) {
+            this.clue.hidePanel()
+            this.options.clear()
+            await this.fadeHud(0, 240)
+            if (gen !== this.gen) return
+
+            await this.island.travelTo(this.chestIndex + 1)
+            if (gen !== this.gen) return
+
+            await this.fadeHud(1, 240)
+            if (gen !== this.gen) return
+
             await this.startChest(this.chestIndex + 1)
             return
         }
+
+        await FX.wait(this, 300)
+        if (gen !== this.gen) return
         await this.endLevel()
     }
 
-    // ─────────────────────────────────────────────────────── fim do nível
+    private fadeHud(alpha: number, ms: number) {
+        this.legend.fade(alpha, ms)
+        this.hud.fade(alpha, ms)
+        this.status.fade(alpha, ms)
+        return FX.wait(this, ms + 40)
+    }
 
     private async endLevel() {
         const gen = ++this.gen
         this.state = 'ending'
         this.hud.setEnabled(false)
+        this.status.setEnabled(false)
         this.legend.setEnabled(false)
         this.clue.setEnabled(false)
-        this.lock.setEnabled(false)
-        this.palette.setEnabled(false)
-        this.talk.hide()
+        this.options.setEnabled(false)
 
-        /*
-         * ANTES de qualquer condição: com o emit dentro do `else`, os níveis 1
-         * e 2 terminariam sem a plataforma nunca ficar sabendo.
-         */
         runtimeGameBridge.emit({
             type: 'GAME_COMPLETED',
             gameId: GAME_ID,
@@ -400,11 +366,11 @@ export class GameScene extends Phaser.Scene {
             const next = (level + 1) as LevelNumber
             showLevelComplete(this, {
                 title: `${this.level.name} completa!`,
-                subtitle: `Três baús abertos  ·  ${elapsed}`,
+                subtitle: `Baús abertos  ·  ${elapsed}`,
                 accent: C.warn,
                 panelColor: C.cream,
                 overlayColor: C.ink,
-                progress: { total: LEVELS.length, current: level },
+                progress: { total: LEVELS.length, current: level, size: DOT_SIZE },
                 autoAdvance: {
                     delay: 2600,
                     label: 'Seguindo pela trilha...',
@@ -420,11 +386,11 @@ export class GameScene extends Phaser.Scene {
 
         showLevelComplete(this, {
             title: 'Tesouro da ilha!',
-            subtitle: `Você escreveu tudo em sons, cores e desenhos  ·  ${elapsed}`,
+            subtitle: KEY_PHRASE,
             accent: C.warn,
             panelColor: C.cream,
             overlayColor: C.ink,
-            progress: { total: LEVELS.length, current: LEVELS.length },
+            progress: { total: LEVELS.length, current: LEVELS.length, size: DOT_SIZE },
             buttons: [
                 {
                     label: 'Jogar de novo',
@@ -444,69 +410,68 @@ export class GameScene extends Phaser.Scene {
         })
     }
 
-    // ─────────────────────────────────────────────────────── tutorial
-
     private tutorialSteps(): TutorialStep[] {
+        const n = this.chest.message.length
+
         return [
             {
-                text: 'O baú diz uma mensagem.',
+                text: 'O baú falou isto.',
                 shape: 'rect',
-                x: CHEST.x, y: CHEST.baseY - 110, w: CHEST.w + 40, h: 250,
-                balloonX: W / 2 + 120, balloonY: 190,
+                x: CLUE.cx, y: CLUE.cy,
+                w: cluePanelWidth(n) + 30,
+                h: cluePanelHeight(n) + 30,
             },
             {
-                text: 'Toque aqui para escrever a mesma mensagem no outro código.',
+                text: 'Toque no cartão igual.',
                 shape: 'rect',
-                x: PALETTE.cx, y: PALETTE.cy, w: PALETTE.pitch * 4, h: PALETTE.size + 30,
-                balloonX: W / 2, balloonY: 210,
+                x: OPTION.cx, y: OPTION.cy,
+                w: optionsSpan(n) + 26,
+                h: OPTION.h + 26,
+                balloonX: W / 2, balloonY: 238,
                 pointer: {
-                    fromX: PALETTE.cx, fromY: PALETTE.cy,
-                    toX: PALETTE.cx - PALETTE.pitch, toY: PALETTE.cy,
+                    fromX: OPTION.cx, fromY: OPTION.cy,
+                    toX: OPTION.cx, toY: OPTION.cy,
                     tap: true,
                 },
             },
             {
-                text: 'Fechadura cheia? Gire a chave e o baú abre!',
-                shape: 'circle',
-                x: KEY.x, y: KEY.y, w: KEY.r * 2.8, h: KEY.r * 2.8,
-                balloonX: W / 2 - 60, balloonY: 210,
+                text: KEY_PHRASE,
+                shape: 'none',
+                balloonX: W / 2, balloonY: 330,
                 buttonLabel: 'Vamos lá!',
             },
         ]
     }
 
-    private runTutorial(once: boolean, onFinish: () => void) {
-        createTutorial(this, {
-            // uma chave só para a partida: a mecânica não muda de nível para
-            // nível, e repetir os três passos a cada troca vira interrupção
-            key: 'ef01co05-ilha',
-            once,
-            accent: C.warn,
-            safeTop: 12,
-            steps: this.tutorialSteps(),
-            onFinish,
+    private runTutorial(once: boolean) {
+        return new Promise<void>(resolve => {
+            createTutorial(this, {
+                key: 'ef01co05-ilha',
+                once,
+                accent: C.warn,
+                safeTop: 12,
+                steps: this.tutorialSteps(),
+                onFinish: () => resolve(),
+            })
         })
     }
 
     private replayTutorial() {
-        if (this.state !== 'building' && this.state !== 'locked') return
-        const previous = this.state
+        if (this.state !== 'choosing' || this.busy) return
+        const gen = this.gen
         this.state = 'tutorial'
         this.hud.setEnabled(false)
-        this.palette.setEnabled(false)
-        this.lock.setEnabled(false)
+        this.options.setEnabled(false)
         this.clue.setEnabled(false)
 
-        this.runTutorial(false, () => {
-            this.state = previous
+        void this.runTutorial(false).then(() => {
+            if (gen !== this.gen) return
+            this.state = 'choosing'
             this.hud.setEnabled(true)
-            this.palette.setEnabled(previous === 'building')
-            this.lock.setEnabled(true)
+            this.options.setEnabled(true)
             this.clue.setEnabled(true)
         })
     }
-
-    // ─────────────────────────────────────────────────────── plataforma
 
     private emitCheckpoint(complete = false) {
         const done = chestsBefore(this.level.level)

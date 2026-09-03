@@ -1,79 +1,70 @@
+import type { Point } from '../types'
+
 export const W = 1280
 export const H = 720
 
 export const DEPTH = {
-    room: 0,
-    furniture: 8,
-    person: 20,
-    tableTop: 28,
-    panel: 60,
-    slot: 70,
-    card: 80,
-    hud: 90,
-    flying: 110,
-    balloon: 130,
+    field: 0,
+    paint: 4,
+    spot: 8,
+    box: 14,
+    line: 18,
+    person: 24,
+    board: 60,
+    hud: 70,
+    ball: 90,
+    proof: 130,
     fx: 150,
     edge: 170,
+    demo: 300,
     overlay: 400,
 }
 
-/**
- * TRÊS FAIXAS, e é só isso que existe na tela.
- *
- *   topo    o recado que chegou  →  a mesa que a criança preenche
- *   meio    ela, o colega esperando, e a mesa dele
- *   base    as quatro cartas e o ENVIAR
- *
- * O mesmo formato de Pulo Programado: o que eu monto em cima, o mundo no meio,
- * minhas peças embaixo. Painel nenhum invade a faixa do outro.
- */
-export const BOARD = { x: 16, y: 10, w: 1248, h: 180, r: 28 }
+export const BOARD = { x: 12, y: 8, w: 1256, h: 138, r: 26 }
 
-export const LEVEL_PILL = { x: 34, y: 22, w: 166, h: 30 }
+export const LEVEL_PILL = { x: 30, y: 26, w: 204, h: 40, r: 20 }
 
-/** O mural: uma vaga por fase entregue, embaixo da pílula do nível. */
-export const MURAL = { cx: [56, 106, 156], cy: 122, size: 42 }
+export const PHASES = { cx: 132, cy: 100, r: 13, gap: 40 }
 
-/** O RECADO — o que chegou, sempre em desenho. Até três itens. */
-export const NOTE = { labelX: 206, labelY: 36, size: 80, gap: 12, from: 206, cy: 116 }
+export const NOTE = { x: 460, y: 77, art: 84 }
 
-/** A seta grande entre o recado e a mesa: é ela que diz "isto vira aquilo". */
-export const ARROW = { x: 524, y: 116 }
+export const FLOW = { x: 762, y: 77 }
 
-/** A MESA — os quadrados que a criança preenche, na linguagem da fase. */
-export const DESK = { labelX: 764, labelY: 36, size: 96, gap: 18, cx: 764, cy: 116 }
+export const TO = { x: 1000, y: 77, size: 104 }
 
-/** O selo da linguagem, ao lado da mesa. Diz de novo, em desenho, o que pedir. */
-export const SEAL = { x: 1062, y: 116, size: 92 }
+export const HELP = { x: 1212, y: 77, r: 32 }
 
-export const HELP = { x: 1210, y: 106, r: 30 }
+export const COURT = { top: 156, bottom: 716 }
 
-// ─────────────────────────────────────────────────── o meio: a sala
+export const PERSON = { h: 210, ratio: 400 / 500 }
 
-export const ROOM = { top: 200, bottom: 502 }
+export const HOOK = { dx: 118, dy: -150 }
 
-/** A linha do chão. Os dois personagens PISAM nela. */
-export const FLOOR = { y: 470 }
+export const GOAL_HOOK = { dx: -98, dy: -122 }
 
-/**
- * Os pés do personagem ficam em 98 % da altura do quadro — medido no PNG. Por
- * isso o centro dele mora a 48 % da altura acima do ponto do chão.
- */
-export const PERSON = { h: 158, footRatio: 0.48, ratio: 400 / 500 }
+export const BOX = { dx: -98, dy: -64, w: 138, h: 138 }
 
-export const SENDER = { x: 140 }
-export const RECEIVER = { x: 892 }
+export const TOUCH = { w: 240, h: 250, dx: 0, dy: -105 }
 
-/** A bancada do colega: é aqui que o recado dele vira objeto de novo. */
-export const TABLE = { x: 976, w: 280, top: 424, cy: 388, slot: 74, gap: 12 }
+export const TOUCH_GOAL = { w: 284, h: 250, dx: -42, dy: -105 }
 
-// ─────────────────────────────────────────────────── a base: as cartas
+export const MATES: Point[] = [
+    { x: 250, y: 380 },
+    { x: 250, y: 660 },
+    { x: 610, y: 380 },
+    { x: 610, y: 660 },
+]
 
-export const TRAY = { x: 16, y: 512, w: 1248, h: 196, r: 28 }
+export const GOALS: Point[] = [
+    { x: 1090, y: 400 },
+    { x: 1090, y: 668 },
+]
 
-/** Quatro cartas, sempre nas mesmas posições — a criança decora onde estão. */
-export const CARD = { w: 172, h: 152, cy: 610, cx: [180, 374, 568, 762] }
+export const BALL = 86
 
-export const SEND = { x: 1060, y: 610, r: 88 }
+export const hookOf = (foot: Point): Point => ({ x: foot.x + HOOK.dx, y: foot.y + HOOK.dy })
 
-export const BALLOON = { x: 640, y: 330, w: 560 }
+export const goalHookOf = (foot: Point): Point =>
+    ({ x: foot.x + GOAL_HOOK.dx, y: foot.y + GOAL_HOOK.dy })
+
+export const boxOf = (foot: Point): Point => ({ x: foot.x + BOX.dx, y: foot.y + BOX.dy })

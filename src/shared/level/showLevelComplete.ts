@@ -25,7 +25,11 @@ export interface LevelCompleteOptions {
   titleColor?: string
   subtitleColor?: string
   messageColor?: string
-  progress?: { total: number; current: number }
+  /**
+   * `size` e o raio da bolinha cheia. O padrao 11 e o de todos os jogos; um
+   * valor menor encolhe as bolinhas, o vao e o espaco que elas ocupam juntos.
+   */
+  progress?: { total: number; current: number; size?: number }
   buttons?: LevelCompleteButton[]
   autoAdvance?: { delay: number; label?: string; onComplete: () => void }
   depth?: number
@@ -116,10 +120,12 @@ export function showLevelComplete(
   place(subtitle, 16)
   place(message, options.progress || hasFooter ? 30 : 0)
 
+  const dotScale = (options.progress?.size ?? 11) / 11
+
   let dotsY = 0
   if (options.progress) {
-    dotsY = cursor + 12
-    cursor += 24 + (hasFooter ? 32 : 0)
+    dotsY = cursor + 12 * dotScale
+    cursor += 24 * dotScale + (hasFooter ? 32 : 0)
   }
 
   if (buttons.length) {
@@ -177,7 +183,7 @@ export function showLevelComplete(
   let dotsGroup: Phaser.GameObjects.Container | null = null
   if (options.progress) {
     const { total, current } = options.progress
-    const gap = 34
+    const gap = 34 * dotScale
     const startX = -((total - 1) * gap) / 2
     dotsGroup = scene.add.container(0, dotsY + shift)
 
@@ -185,14 +191,14 @@ export function showLevelComplete(
       const x = startX + i * gap
       const g = scene.add.graphics()
       if (i < current) {
-        g.fillStyle(accent, 1); g.fillCircle(x, 0, 11)
-        g.lineStyle(3, 0xffffff, 0.9); g.strokeCircle(x, 0, 11)
+        g.fillStyle(accent, 1); g.fillCircle(x, 0, 11 * dotScale)
+        g.lineStyle(3 * dotScale, 0xffffff, 0.9); g.strokeCircle(x, 0, 11 * dotScale)
       } else if (i === current) {
         // "atual" precisa aparecer sobre painel claro: anel forte, miolo suave
-        g.fillStyle(accent, 0.28); g.fillCircle(x, 0, 12)
-        g.lineStyle(4, accent, 1); g.strokeCircle(x, 0, 12)
+        g.fillStyle(accent, 0.28); g.fillCircle(x, 0, 12 * dotScale)
+        g.lineStyle(4 * dotScale, accent, 1); g.strokeCircle(x, 0, 12 * dotScale)
       } else {
-        g.fillStyle(0xd8dde8, 1); g.fillCircle(x, 0, 9)
+        g.fillStyle(0xd8dde8, 1); g.fillCircle(x, 0, 9 * dotScale)
       }
       dotsGroup.add(g)
     }

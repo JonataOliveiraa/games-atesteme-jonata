@@ -1,25 +1,39 @@
-import type { LevelDef, Word } from '../types'
+import type { ChestDef, LevelDef, Word } from '../types'
 
-/**
- * Três níveis, três baús cada. A fase é UM BAÚ.
- *
- * Dentro do nível cresce o tamanho da mensagem; entre os níveis mudam três
- * coisas de uma vez — o tamanho, a direção da tradução e o quanto a legenda
- * ajuda. O COCO só entra no nível 3: com três palavras, quatro símbolos
- * seriam o nível 2 mais comprido.
- */
 export const LEVELS: LevelDef[] = [
     {
         level: 1,
         name: 'Praia',
-        from: 'som',
+        from: 'batidas',
         to: 'cor',
-        alphabet: ['SOL', 'PEIXE', 'LUA'],
         legend: 'always',
+        playsOnTap: false,
         chests: [
-            { message: ['SOL', 'PEIXE'] },
-            { message: ['LUA', 'SOL'] },
-            { message: ['PEIXE', 'LUA', 'SOL'] },
+            {
+                message: ['SOL', 'PEIXE'],
+                decoys: [['LUA', 'SOL'], ['PEIXE', 'LUA']],
+                correctAt: 0,
+            },
+            {
+                message: ['LUA', 'SOL'],
+                decoys: [['SOL', 'PEIXE'], ['PEIXE', 'LUA']],
+                correctAt: 1,
+            },
+            {
+                message: ['PEIXE', 'LUA'],
+                decoys: [['SOL', 'PEIXE'], ['LUA', 'SOL']],
+                correctAt: 2,
+            },
+            {
+                message: ['SOL', 'LUA'],
+                decoys: [['SOL', 'PEIXE'], ['LUA', 'PEIXE']],
+                correctAt: 0,
+            },
+            {
+                message: ['PEIXE', 'SOL'],
+                decoys: [['PEIXE', 'LUA'], ['LUA', 'SOL']],
+                correctAt: 1,
+            },
         ],
     },
     {
@@ -27,12 +41,34 @@ export const LEVELS: LevelDef[] = [
         name: 'Trilha',
         from: 'cor',
         to: 'figura',
-        alphabet: ['SOL', 'PEIXE', 'LUA'],
         legend: 'peek',
+        playsOnTap: false,
         chests: [
-            { message: ['LUA', 'PEIXE'] },
-            { message: ['SOL', 'LUA', 'PEIXE'] },
-            { message: ['PEIXE', 'SOL', 'LUA'] },
+            {
+                message: ['PEIXE', 'SOL', 'LUA'],
+                decoys: [['SOL', 'LUA', 'PEIXE'], ['LUA', 'PEIXE', 'SOL']],
+                correctAt: 1,
+            },
+            {
+                message: ['LUA', 'PEIXE', 'SOL'],
+                decoys: [['PEIXE', 'SOL', 'LUA'], ['SOL', 'LUA', 'PEIXE']],
+                correctAt: 2,
+            },
+            {
+                message: ['SOL', 'PEIXE', 'PEIXE'],
+                decoys: [['SOL', 'PEIXE', 'LUA'], ['SOL', 'LUA', 'PEIXE']],
+                correctAt: 0,
+            },
+            {
+                message: ['LUA', 'SOL', 'LUA'],
+                decoys: [['LUA', 'SOL', 'PEIXE'], ['PEIXE', 'SOL', 'LUA']],
+                correctAt: 2,
+            },
+            {
+                message: ['PEIXE', 'LUA', 'SOL'],
+                decoys: [['PEIXE', 'LUA', 'PEIXE'], ['LUA', 'LUA', 'SOL']],
+                correctAt: 0,
+            },
         ],
     },
     {
@@ -40,12 +76,34 @@ export const LEVELS: LevelDef[] = [
         name: 'Gruta',
         from: 'figura',
         to: 'som',
-        alphabet: ['SOL', 'PEIXE', 'LUA', 'COCO'],
         legend: 'first',
+        playsOnTap: true,
         chests: [
-            { message: ['COCO', 'SOL', 'PEIXE'] },
-            { message: ['LUA', 'COCO', 'SOL'] },
-            { message: ['PEIXE', 'COCO', 'LUA', 'SOL'] },
+            {
+                message: ['PEIXE', 'LUA', 'SOL'],
+                decoys: [['LUA', 'PEIXE', 'SOL'], ['PEIXE', 'SOL', 'LUA']],
+                correctAt: 2,
+            },
+            {
+                message: ['LUA', 'SOL', 'PEIXE'],
+                decoys: [['SOL', 'LUA', 'PEIXE'], ['LUA', 'PEIXE', 'SOL']],
+                correctAt: 0,
+            },
+            {
+                message: ['SOL', 'PEIXE', 'PEIXE'],
+                decoys: [['SOL', 'PEIXE', 'LUA'], ['SOL', 'LUA', 'PEIXE']],
+                correctAt: 1,
+            },
+            {
+                message: ['LUA', 'LUA', 'SOL'],
+                decoys: [['LUA', 'LUA', 'PEIXE'], ['SOL', 'LUA', 'SOL']],
+                correctAt: 2,
+            },
+            {
+                message: ['PEIXE', 'SOL', 'LUA'],
+                decoys: [['PEIXE', 'LUA', 'SOL'], ['SOL', 'SOL', 'LUA']],
+                correctAt: 1,
+            },
         ],
     },
 ]
@@ -55,17 +113,8 @@ export const TOTAL_CHESTS = LEVELS.reduce((sum, level) => sum + level.chests.len
 export const chestsBefore = (level: number) =>
     LEVELS.slice(0, level - 1).reduce((sum, l) => sum + l.chests.length, 0)
 
-/**
- * O VEREDITO É UMA FUNÇÃO, E ELE OLHA A INFORMAÇÃO — não o desenho.
- * Devolve o índice do primeiro encaixe errado, ou -1 se a fechadura inteira
- * está certa.
- */
-export function firstWrongSlot(message: Word[], lock: (Word | null)[]): number {
-    for (let i = 0; i < message.length; i++) {
-        if (lock[i] !== message[i]) return i
-    }
-    return -1
+export function optionsOf(chest: ChestDef): Word[][] {
+    const list: Word[][] = [chest.decoys[0], chest.decoys[1]]
+    list.splice(chest.correctAt, 0, chest.message)
+    return list
 }
-
-export const lockIsFull = (message: Word[], lock: (Word | null)[]) =>
-    message.every((_, i) => lock[i] !== null && lock[i] !== undefined)

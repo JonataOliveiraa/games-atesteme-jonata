@@ -426,3 +426,8 @@ Antes de considerar um jogo pronto, confira:
 - o jogo não escreve `isFinalStage` em lugar nenhum;
 - todo contador de tolerância zera depois de cobrar;
 - jogou os três níveis e viu um `GAME_COMPLETED` por nível no console.
+
+# Importante
+
+- Testes reais (interação, cliques, avaliação visual) é tudo pro usuário. O Claude será responsável por fazer codigos e corrigir bugs, praticando em rodadas. Fez um codigo completo corrigindo algo e adicionando algo? o usuário irá avaliar. Mecheu na interface? O usuário vai avaliar. E assim vai
+- Nada de comentário no código

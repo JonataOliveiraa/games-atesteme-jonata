@@ -1,10 +1,5 @@
 import Phaser from 'phaser'
 
-/**
- * Sem arquivo de áudio: tudo é WebAudio, como nos jogos irmãos. O que separa
- * um "bip" de um som de jogo é o ENVELOPE e o FILTRO — ataque curto, queda
- * exponencial, e ruído passa-banda para o que é ar e terra.
- */
 export function createAudio(scene: Phaser.Scene) {
     let muted = false
 
@@ -91,13 +86,11 @@ export function createAudio(scene: Phaser.Scene) {
             muted = value
         },
 
-        /** O assobio do passe: ar cortando, subindo e sumindo. */
         pass() {
             noise({ dur: 0.26, from: 900, to: 2600, gain: 0.05 })
             note({ freq: 420, to: 760, dur: 0.22, type: 'sine', gain: 0.05 })
         },
 
-        /** O "pop" da chegada, e a mensagem trocando de linguagem. */
         land() {
             note({ freq: 660, dur: 0.09, type: 'triangle', gain: 0.09 })
             note({ freq: 990, dur: 0.13, type: 'sine', gain: 0.06, delay: 0.06 })
@@ -107,14 +100,12 @@ export function createAudio(scene: Phaser.Scene) {
             note({ freq: 520, to: 380, dur: 0.07, type: 'triangle', gain: 0.06 })
         },
 
-        /** A buzina boba do robô: errar aqui é piada, não castigo. */
-        robot() {
+        wrong() {
             note({ freq: 300, to: 190, dur: 0.16, type: 'square', gain: 0.07, cutoff: 900 })
             note({ freq: 220, to: 150, dur: 0.2, type: 'square', gain: 0.06, cutoff: 700, delay: 0.14 })
             noise({ dur: 0.12, from: 1400, to: 500, gain: 0.035, delay: 0.02 })
         },
 
-        /** Torcida curta: ruído em ondas, que é como multidão soa de longe. */
         crowd() {
             for (let i = 0; i < 4; i++) {
                 noise({ dur: 0.34, from: 700 + i * 120, to: 400, gain: 0.045, delay: i * 0.12 })

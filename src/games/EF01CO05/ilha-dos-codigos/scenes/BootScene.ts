@@ -10,7 +10,6 @@ const SHEETS: Record<string, { frameWidth: number; frameHeight: number }> = {
     'simbolos-ilha': { frameWidth: 250, frameHeight: 250 },
 }
 
-/** Glob, e não import: arquivo que ainda não existe derrubaria o build inteiro. */
 const FILES = import.meta.glob(
     '../../../../assets/games/EF01CO05/ilha-dos-codigos/*.png',
     { eager: true, import: 'default' },

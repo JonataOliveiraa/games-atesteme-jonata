@@ -1,25 +1,26 @@
 import Phaser from 'phaser'
 import { FX } from '../../../../shared/effects/FX'
+import { WORDS } from '../data/island'
 import { DEPTH, LEGEND_BTN, LEGEND_PANEL } from '../data/layout'
-import { C, CSS, FONT, SIZE } from '../data/theme'
-import { createCard, type Card } from './symbols'
-import type { Code, Word } from '../types'
+import { C } from '../data/theme'
+import { drawCodeIcon } from './codeIcon'
+import { createTile, type Tile } from './symbols'
+import type { Code } from '../types'
 
-/**
- * A LEGENDA NUNCA DEIXA DE EXISTIR.
- *
- * "Sem legenda" é o estado padrão da tela nos níveis mais difíceis, mas o
- * botão continua lá o nível inteiro: esconder de vez criaria uma criança
- * presa num baú que ela não teria mais como resolver. Quantas vezes ela abriu
- * é medida — não é castigo.
- */
+const ROW_TILE = 72
+const ROW_GAP = 64
+const BTN_ICON = 32
+
+function paintEquals(g: Phaser.GameObjects.Graphics, x: number, y: number, w: number, color: number) {
+    const bar = w * 0.26
+    g.fillStyle(color, 1)
+    g.fillRoundedRect(x - w / 2, y - bar * 1.4, w, bar, bar / 2)
+    g.fillRoundedRect(x - w / 2, y + bar * 0.4, w, bar, bar / 2)
+}
+
 export function createLegend(scene: Phaser.Scene) {
     const button = scene.add.graphics().setDepth(DEPTH.hud)
-    const label = scene.add.text(LEGEND_BTN.x, LEGEND_BTN.y, 'LEGENDA', {
-        fontFamily: FONT.black,
-        fontSize: SIZE.legendLabel,
-        color: CSS.ink,
-    }).setOrigin(0.5).setDepth(DEPTH.hud).setResolution(2)
+    const buttonIcons = scene.add.container(LEGEND_BTN.x, LEGEND_BTN.y).setDepth(DEPTH.hud)
 
     const zone = scene.add.zone(LEGEND_BTN.x, LEGEND_BTN.y, LEGEND_BTN.w, LEGEND_BTN.h)
         .setOrigin(0.5)
@@ -30,7 +31,7 @@ export function createLegend(scene: Phaser.Scene) {
     const panelBg = scene.add.graphics()
     panel.add(panelBg)
 
-    let rows: Card[] = []
+    let rows: Tile[] = []
     let open = false
     let opens = 0
     let sticky = false
@@ -41,24 +42,23 @@ export function createLegend(scene: Phaser.Scene) {
         button.fillStyle(C.ink, 0.2)
         button.fillRoundedRect(
             LEGEND_BTN.x - LEGEND_BTN.w / 2, LEGEND_BTN.y - LEGEND_BTN.h / 2 + 5,
-            LEGEND_BTN.w, LEGEND_BTN.h, 18,
+            LEGEND_BTN.w, LEGEND_BTN.h, 20,
         )
         button.fillStyle(open ? C.warn : C.cream, 1)
         button.fillRoundedRect(
             LEGEND_BTN.x - LEGEND_BTN.w / 2, LEGEND_BTN.y - LEGEND_BTN.h / 2,
-            LEGEND_BTN.w, LEGEND_BTN.h, 18,
+            LEGEND_BTN.w, LEGEND_BTN.h, 20,
+        )
+        button.fillStyle(C.white, 0.5)
+        button.fillRoundedRect(
+            LEGEND_BTN.x - LEGEND_BTN.w / 2 + 8, LEGEND_BTN.y - LEGEND_BTN.h / 2 + 6,
+            LEGEND_BTN.w - 16, 12, 6,
         )
         button.lineStyle(5, open ? C.warnDark : C.woodDark, 1)
         button.strokeRoundedRect(
             LEGEND_BTN.x - LEGEND_BTN.w / 2, LEGEND_BTN.y - LEGEND_BTN.h / 2,
-            LEGEND_BTN.w, LEGEND_BTN.h, 18,
+            LEGEND_BTN.w, LEGEND_BTN.h, 20,
         )
-    }
-    paintButton()
-
-    const clearRows = () => {
-        panel.list.slice(1).forEach(child => child.destroy())
-        rows = []
     }
 
     const setVisible = (value: boolean) => {
@@ -68,9 +68,21 @@ export function createLegend(scene: Phaser.Scene) {
     }
 
     const api = {
-        build(words: Word[], from: Code, to: Code) {
-            clearRows()
-            const h = LEGEND_PANEL.pad * 2 + words.length * LEGEND_PANEL.rowH
+        build(from: Code, to: Code) {
+            rows.forEach(tile => tile.destroy())
+            rows = []
+            panel.list.slice(1).forEach(child => child.destroy())
+            buttonIcons.removeAll(true)
+
+            const left = scene.add.graphics().setPosition(-44, 0)
+            drawCodeIcon(left, from, BTN_ICON)
+            const right = scene.add.graphics().setPosition(44, 0)
+            drawCodeIcon(right, to, BTN_ICON)
+            const eq = scene.add.graphics()
+            paintEquals(eq, 0, 0, 24, C.inkSoft)
+            buttonIcons.add([left, eq, right])
+
+            const h = LEGEND_PANEL.pad * 2 + WORDS.length * LEGEND_PANEL.rowH
             panel.setY(LEGEND_PANEL.top + h / 2)
 
             panelBg.clear()
@@ -78,32 +90,30 @@ export function createLegend(scene: Phaser.Scene) {
             panelBg.fillRoundedRect(-LEGEND_PANEL.w / 2, -h / 2 + 7, LEGEND_PANEL.w, h, 26)
             panelBg.fillStyle(C.cream, 0.97)
             panelBg.fillRoundedRect(-LEGEND_PANEL.w / 2, -h / 2, LEGEND_PANEL.w, h, 26)
+            panelBg.fillStyle(C.white, 0.6)
+            panelBg.fillRoundedRect(-LEGEND_PANEL.w / 2 + 12, -h / 2 + 8, LEGEND_PANEL.w - 24, 14, 7)
             panelBg.lineStyle(6, C.woodDark, 1)
             panelBg.strokeRoundedRect(-LEGEND_PANEL.w / 2, -h / 2, LEGEND_PANEL.w, h, 26)
 
-            words.forEach((word, i) => {
+            const marks = scene.add.graphics()
+            panel.add(marks)
+
+            WORDS.forEach((word, i) => {
                 const y = -h / 2 + LEGEND_PANEL.pad + LEGEND_PANEL.rowH * (i + 0.5)
 
-                const left = createCard(scene, word, from, 52)
-                left.container.setPosition(-52, y)
-                panel.add(left.container)
+                const a = createTile(scene, word, from, ROW_TILE)
+                a.container.setPosition(-ROW_GAP, y)
+                panel.add(a.container)
 
-                const right = createCard(scene, word, to, 52)
-                right.container.setPosition(52, y)
-                panel.add(right.container)
+                const b = createTile(scene, word, to, ROW_TILE)
+                b.container.setPosition(ROW_GAP, y)
+                panel.add(b.container)
 
-                const equals = scene.add.text(0, y, '=', {
-                    fontFamily: FONT.black,
-                    fontSize: SIZE.legendTitle,
-                    color: CSS.inkSoft,
-                }).setOrigin(0.5).setResolution(2)
-                panel.add(equals)
-
-                rows.push(left, right)
+                paintEquals(marks, 0, y, 28, C.inkSoft)
+                rows.push(a, b)
             })
         },
 
-        /** No nível de legenda fixa, `sticky` ignora o prazo: ela não some. */
         setSticky(value: boolean) {
             sticky = value
             if (!value) return
@@ -119,7 +129,10 @@ export function createLegend(scene: Phaser.Scene) {
                 FX.popIn(scene, panel, { from: 0.86, duration: 240 })
             }
             if (autoHideMs && !sticky) {
-                hideTimer = scene.time.delayedCall(FX.ms(scene, autoHideMs), () => setVisible(false))
+                hideTimer = scene.time.delayedCall(
+                    FX.ms(scene, autoHideMs),
+                    () => setVisible(false),
+                )
             }
         },
 
@@ -138,9 +151,9 @@ export function createLegend(scene: Phaser.Scene) {
             api.show()
         },
 
-        /** Reacende sozinha na trava: é apoio, e não a resposta. */
         peek(ms: number) {
             api.show(ms)
+            FX.popIn(scene, panel, { from: 1.1, duration: 260 })
         },
 
         get openCount() {
@@ -150,15 +163,23 @@ export function createLegend(scene: Phaser.Scene) {
         setEnabled(value: boolean) {
             zone.setVisible(value)
             button.setAlpha(value ? 1 : 0.5)
-            label.setAlpha(value ? 1 : 0.5)
+            buttonIcons.setAlpha(value ? 1 : 0.5)
+        },
+
+        fade(alpha: number, ms: number) {
+            scene.tweens.add({
+                targets: [button, buttonIcons, panel],
+                alpha,
+                duration: FX.ms(scene, ms),
+            })
         },
 
         destroy() {
             hideTimer?.remove()
-            clearRows()
+            rows.forEach(tile => tile.destroy())
             panel.destroy()
             button.destroy()
-            label.destroy()
+            buttonIcons.destroy()
             zone.destroy()
         },
     }
@@ -168,6 +189,7 @@ export function createLegend(scene: Phaser.Scene) {
         api.toggle()
     })
 
+    paintButton()
     setVisible(false)
     return api
 }

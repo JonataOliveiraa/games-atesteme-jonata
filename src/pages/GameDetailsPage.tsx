@@ -24,6 +24,7 @@ const GAMES_WITH_IN_GAME_COMPLETION_SCREEN = new Set([
   "ritmo-da-rotina",
   "pulo-programado",
   "passe-da-mensagem",
+  "detetive-dos-modelos",
   "montador-de-informacoes",
   "formato-certo",
   "central-de-entrada-e-saida",

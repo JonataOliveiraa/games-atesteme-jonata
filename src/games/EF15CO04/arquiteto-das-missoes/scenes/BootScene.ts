@@ -1,33 +1,18 @@
 import Phaser from 'phaser'
 import { createLoadingScreen } from '../../../../shared/loading/createLoadingScreen'
-
-import bgCentralUrl from '../../../../assets/games/EF15CO04/arquiteto-das-missoes/bg-central-missoes.png'
-import caixaModulosUrl from '../../../../assets/games/EF15CO04/arquiteto-das-missoes/caixa-modulos.png'
-
-import cafeAntesUrl from '../../../../assets/games/EF15CO04/arquiteto-das-missoes/missao-cafe-antes.png'
-import cafeDepoisUrl from '../../../../assets/games/EF15CO04/arquiteto-das-missoes/missao-cafe-depois.png'
-import festaAntesUrl from '../../../../assets/games/EF15CO04/arquiteto-das-missoes/missao-festa-antes.png'
-import festaDepoisUrl from '../../../../assets/games/EF15CO04/arquiteto-das-missoes/missao-festa-depois.png'
-import feiraAntesUrl from '../../../../assets/games/EF15CO04/arquiteto-das-missoes/missao-feira-antes.png'
-import feiraDepoisUrl from '../../../../assets/games/EF15CO04/arquiteto-das-missoes/missao-feira-depois.png'
-import acampamentoAntesUrl from '../../../../assets/games/EF15CO04/arquiteto-das-missoes/missao-acampamento-antes.png'
-import acampamentoDepoisUrl from '../../../../assets/games/EF15CO04/arquiteto-das-missoes/missao-acampamento-depois.png'
 import { faseInicial } from '../../../../shared/level/faseInicial'
 import { preloadLives } from '../../../../shared/hud/createLives'
+import { C } from '../data/theme'
+import { ICON_SHEETS } from './cards'
 
-const ASSETS: Array<[string, string]> = [
-    ['bg-central-missoes', bgCentralUrl],
-    ['caixa-modulos', caixaModulosUrl],
+const ICON_FRAME = { frameWidth: 256, frameHeight: 256 }
 
-    ['missao-cafe-antes', cafeAntesUrl],
-    ['missao-cafe-depois', cafeDepoisUrl],
-    ['missao-festa-antes', festaAntesUrl],
-    ['missao-festa-depois', festaDepoisUrl],
-    ['missao-feira-antes', feiraAntesUrl],
-    ['missao-feira-depois', feiraDepoisUrl],
-    ['missao-acampamento-antes', acampamentoAntesUrl],
-    ['missao-acampamento-depois', acampamentoDepoisUrl],
-]
+const FILES = import.meta.glob(
+    '../../../../assets/games/EF15CO04/arquiteto-das-missoes/*.png',
+    { eager: true, import: 'default' },
+) as Record<string, string>
+
+const keyOf = (path: string) => path.split('/').pop()!.replace(/\.png$/i, '')
 
 export class BootScene extends Phaser.Scene {
     constructor() {
@@ -37,31 +22,38 @@ export class BootScene extends Phaser.Scene {
     preload() {
         createLoadingScreen(this, {
             title: 'Arquiteto das Missões',
-            subtitle: 'Central de Planos',
-            description: 'Abrindo a prancheta e afiando o lápis...',
+            subtitle: 'Divida o pedido em partes!',
+            description: 'Abrindo a prancheta...',
             theme: {
-                background: { kind: 'grid', base: 0x1b2b46, color: 0xfaf6e8, alpha: 0.1, size: 68, width: 2 },
-                card: 0x22344f,
-                cardShadow: 0x0b1424,
-                cardHighlight: 0xfaf6e8,
-                cardBorder: 0xefa525,
-                title: 0xfaf6e8,
-                subtitle: 0xf2c744,
-                description: 0xc6ece9,
-                titleStroke: 0x0b1424,
-                progressTrack: 0x111e33,
-                progressBorder: 0xefa525,
-                progressFill: 0x2aa6a1,
-                progressHighlight: 0xfaf6e8,
+                background: { kind: 'waves', color: 0x2ea6a1, base: 0x35c6c0 },
+                card: C.cream,
+                cardShadow: C.ink,
+                cardHighlight: C.white,
+                cardBorder: C.wood,
+                title: C.ink,
+                subtitle: C.tealDark,
+                description: C.inkSoft,
+                titleStroke: C.white,
+                progressTrack: C.white,
+                progressBorder: C.woodDark,
+                progressFill: C.teal,
+                progressHighlight: C.cream,
             },
         })
 
-        ASSETS.forEach(([key, url]) => this.load.image(key, url))
+        Object.entries(FILES).forEach(([path, url]) => {
+            const key = keyOf(path)
+            if (key.startsWith('cover-')) return
+            if (ICON_SHEETS.includes(key)) {
+                this.load.spritesheet(key, url, ICON_FRAME)
+                return
+            }
+            this.load.image(key, url)
+        })
         preloadLives(this)
     }
 
     create() {
-        this.scene.launch('UIScene')
-        this.scene.start('GameScene', { level: faseInicial(this, 1), phase: 0, points: 0 })
+        this.scene.start('GameScene', { level: faseInicial(this, 1), points: 0 })
     }
 }

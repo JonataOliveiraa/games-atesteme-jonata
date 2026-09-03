@@ -11,11 +11,16 @@ export const C = {
     sandDark: 0xb09681,
     sandDeep: 0x8d7566,
     sky: 0xbfe9f5,
+    skyTop: 0x2f95cf,
+    skyMid: 0x77cdea,
     sea: 0x2fb8d6,
 
     wood: 0xa9663b,
     woodDark: 0x71401f,
     metal: 0xe7b84f,
+
+    glyph: 0x5b4030,
+    glyphSoft: 0x9c7a5e,
 
     ok: 0x4ecb63,
     okDark: 0x2b8a44,
@@ -44,12 +49,9 @@ export const FONT = {
 
 export const SIZE = {
     help: '30px',
-    legendTitle: '20px',
-    legendLabel: '17px',
-    balloon: '27px',
-    banner: '42px',
-    key: '22px',
-    placeholder: '16px',
+    chip: '22px',
+    goal: '20px',
+    balloon: '26px',
 }
 
 export const hex = (n: number) => `#${n.toString(16).padStart(6, '0')}`

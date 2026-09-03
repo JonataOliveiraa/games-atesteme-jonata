@@ -3,16 +3,22 @@ import { FX } from '../../../../shared/effects/FX'
 import { DEPTH, H, HELP, HUD, W } from '../data/layout'
 import { C, CSS, FONT, SIZE } from '../data/theme'
 
+const BAND_H = HUD.h + 32
+
 export function createHud(scene: Phaser.Scene, onHelp: () => void) {
     const strip = scene.add.graphics().setDepth(DEPTH.hud - 2)
-    strip.fillStyle(C.ink, 0.18)
-    strip.fillRoundedRect(-40, -40, W + 80, HUD.h + 40, 26)
+    strip.fillStyle(C.ink, 0.14)
+    strip.fillRoundedRect(-40, -40, W + 80, BAND_H + 40, 28)
+    strip.fillStyle(C.white, 0.22)
+    strip.fillRect(0, BAND_H - 5, W, 5)
 
     const helpG = scene.add.graphics().setPosition(HELP.x, HELP.y).setDepth(DEPTH.hud)
-    helpG.fillStyle(C.ink, 0.22)
-    helpG.fillCircle(2, 5, HELP.r)
+    helpG.fillStyle(C.ink, 0.24)
+    helpG.fillCircle(2, 6, HELP.r)
     helpG.fillStyle(C.cream, 1)
     helpG.fillCircle(0, 0, HELP.r)
+    helpG.fillStyle(C.white, 0.7)
+    helpG.fillEllipse(-HELP.r * 0.2, -HELP.r * 0.36, HELP.r * 1.05, HELP.r * 0.5)
     helpG.lineStyle(5, C.woodDark, 1)
     helpG.strokeCircle(0, 0, HELP.r)
 
@@ -43,10 +49,14 @@ export function createHud(scene: Phaser.Scene, onHelp: () => void) {
             helpText.setAlpha(value ? 1 : 0.5)
         },
 
-        /**
-         * A moldura da tela pisca nas bordas: faz o momento parecer grande sem
-         * tirar o olho do meio, que é onde estão a pista e a fechadura.
-         */
+        fade(alpha: number, ms: number) {
+            scene.tweens.add({
+                targets: [strip, helpG, helpText],
+                alpha,
+                duration: FX.ms(scene, ms),
+            })
+        },
+
         flash(color: number) {
             edge.clear()
             edge.lineStyle(22, color, 1)

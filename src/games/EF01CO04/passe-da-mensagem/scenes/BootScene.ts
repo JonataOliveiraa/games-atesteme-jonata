@@ -4,16 +4,11 @@ import { faseInicial } from '../../../../shared/level/faseInicial'
 import { C } from '../data/theme'
 import { preloadLives } from '../../../../shared/hud/createLives'
 
-/**
- * As texturas entram por glob, e não por `import` estático: um import de
- * arquivo que ainda não existe quebra o `vite build` inteiro. Com o glob, um
- * PNG novo entra no jogo assim que for salvo na pasta, e um que falta apenas
- * não entra — o cartão de reserva de `cards.ts` cobre o buraco.
- */
 const SHEETS: Record<string, { frameWidth: number; frameHeight: number }> = {
     personagens: { frameWidth: 400, frameHeight: 500 },
-    robo: { frameWidth: 300, frameHeight: 300 },
 }
+
+const SKIP = ['robo', 'cover-passe-da-mensagem']
 
 const FILES = import.meta.glob(
     '../../../../assets/games/EF01CO04/passe-da-mensagem/*.png',
@@ -51,6 +46,7 @@ export class BootScene extends Phaser.Scene {
 
         Object.entries(FILES).forEach(([path, url]) => {
             const key = keyOf(path)
+            if (SKIP.includes(key)) return
             const sheet = SHEETS[key]
             if (sheet) this.load.spritesheet(key, url, sheet)
             else this.load.image(key, url)

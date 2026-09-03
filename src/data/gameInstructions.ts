@@ -20,9 +20,17 @@ const POR_SLUG: Record<string, string[]> = {
     "A ordem certa completa a fase; erros custam pontos e vidas.",
   ],
   "ilha-dos-codigos": [
-    "O baú diz uma mensagem com sons, cores ou desenhos.",
-    "Toque na paleta para escrever a mesma mensagem no outro código.",
-    "Com a fechadura cheia, gire a chave para abrir o baú.",
+    "O baú fala uma mensagem em batidas, cores ou desenhos.",
+    "Embaixo aparecem três cartões com a mensagem em outro código.",
+    "Toque no cartão que diz a mesma coisa e o baú abre.",
+    "No último nível, o alto-falante de cada cartão toca a resposta antes de escolher.",
+  ],
+  "arquiteto-das-missoes": [
+    "O pedido do topo é grande demais e se parte em pedaços vazios.",
+    "Toque nas partes que estão dentro dele — algumas cartas não pertencem ao pedido.",
+    "Depois, coloque os passos de cada parte na ordem em que acontecem.",
+    "No fim, ponha as partes prontas no plano e toque em VAI!",
+    "A cada nível o pedido cresce: duas partes, depois três, depois quatro.",
   ],
   "pixel-secreto": [
     "Observe a legenda de cores.",
@@ -50,20 +58,35 @@ const POR_SLUG: Record<string, string[]> = {
     "Aperte VAI: se ele esbarrar, troque a carta daquele quadrado.",
   ],
   "passe-da-mensagem": [
-    "O topo mostra o recado e para quem ele é.",
-    "Toque num colega pelo caminho VERDE; o vermelho é onde o robô está.",
-    "Se tudo estiver vermelho, espere o robô sair do caminho.",
+    "O topo mostra o recado e o rosto de quem vai recebê-lo.",
+    "As setas verdes apontam para quem você pode tocar.",
+    "Toque num colega, depois na caixa do colega certo.",
     "A cada passe o recado vira voz, carta ou celular — e diz sempre a mesma coisa.",
+  ],
+  "esconde-dados": [
+    "Espere a luz da lanterna apagar: verde é pode ir.",
+    "Toque na moita para correr até o próximo esconderijo.",
+    "No portão, entregue o cartão só para quem tem o escudo verde.",
   ],
   "guardioes-dos-dados": [
     "Leia cada situação com atenção.",
     "Escolha a atitude mais segura.",
     "Proteja os dados para avançar.",
   ],
+  "meu-bichinho-conectado": [
+    "Olhe o pedido do bichinho no balão de cima.",
+    "Toque no aparelho da prateleira que ajuda naquele pedido.",
+    "Atenda os três pedidos para deixar o bichinho feliz.",
+  ],
   "desktop-digital-infantil": [
     "Explore os aplicativos disponíveis.",
     "Use a ferramenta certa para cada missão.",
     "Complete as missões para avançar.",
+  ],
+  "detetive-dos-modelos": [
+    "Toque no veículo para pegá-lo.",
+    "Toque no lugar que combina com ele: céu, estrada ou água.",
+    "Se nenhum lugar servir, toque em NÃO COMBINA.",
   ],
   "hangar-dos-modelos": [
     "Compare os veículos apresentados.",

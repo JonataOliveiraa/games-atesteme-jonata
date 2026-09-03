@@ -50,6 +50,9 @@ import coverAcademiaDosAlgoritmos from "../assets/games/EF15CO02/academia-dos-al
 import coverCircuitoDaVerdade from "../assets/games/EF15CO03/circuito-da-verdade/cover-circuito-da-verdade.png";
 import coverArquitetoDasMissoes from "../assets/games/EF15CO04/arquiteto-das-missoes/cover-arquiteto-das-missoes.png";
 import ilhaDosCodigosThumbnail from "../assets/games/EF01CO05/ilha-dos-codigos/cover-ilha-dos-codigos.png";
+import coverMeuBichinhoConectado from "../assets/games/EF01CO06/meu-bichinho-conectado/cover-meu-bichinho-conectado.png";
+import coverEscondeDados from "../assets/games/EF01CO07/esconde-dados/cover-esconde-dados.png";
+import coverDetetiveDosModelos from "../assets/games/EF02CO01/detetive-dos-modelos/cover-detetive-dos-modelos.png";
 /**
  * 1. `id` nunca muda e nunca é reaproveitado. Se um jogo for removido,
  *    marque status "draft" — não devolva o id para a fila.
@@ -199,7 +202,7 @@ export const catalog: Game[] = [
     status: "published",
     title: "Passe da Mensagem",
     description:
-      "Leve o recado pelo caminho que o robô não está cobrindo: ele vira voz, carta e celular sem mudar o que diz.",
+      "Leve o recado até a caixa de quem está esperando: ele vira voz, carta e celular sem mudar o que diz.",
     category: "Mundo Digital",
     points: 60,
     icon: "⚽",
@@ -228,14 +231,14 @@ export const catalog: Game[] = [
     module: "EF01CO05/ilha-dos-codigos",
     skill: "EF01CO05",
     years: [1],
-    tags: ["código", "cor", "som", "toque"],
+    tags: ["código", "cor", "som", "desenho", "toque"],
     order: 48,
     status: "published",
     title: "Ilha dos Códigos",
     description:
-      "Escreva na fechadura do baú a mesma mensagem em outro código e abra o tesouro da ilha.",
+      "Veja a pista do baú em um código e toque no cartão que diz a mesma coisa em outro código.",
     category: "Mundo Digital",
-    points: 60,
+    points: 150,
     icon: "🗝️",
     thumbnail: ilhaDosCodigosThumbnail,
   },
@@ -273,6 +276,23 @@ export const catalog: Game[] = [
     thumbnail: desktopThumbnail,
   },
   {
+    id: "051",
+    slug: "meu-bichinho-conectado",
+    module: "EF01CO06/meu-bichinho-conectado",
+    skill: "EF01CO06",
+    years: [1],
+    tags: ["artefatos", "necessidades", "cultura digital", "toque"],
+    order: 65,
+    status: "published",
+    title: "Meu Bichinho Conectado",
+    description:
+      "O bichinho mostra o que precisa e você escolhe o aparelho que ajuda: caixinha, tablet, telefone ou relógio.",
+    category: "Cultura Digital",
+    points: 60,
+    icon: "🐾",
+    thumbnail: coverMeuBichinhoConectado,
+  },
+  {
     id: "007",
     slug: "guardioes-dos-dados",
     module: "EF01CO07/guardioes-dos-dados",
@@ -290,6 +310,23 @@ export const catalog: Game[] = [
     thumbnail: guardiansThumbnail,
   },
   {
+    id: "052",
+    slug: "esconde-dados",
+    module: "EF01CO07/esconde-dados",
+    skill: "EF01CO07",
+    years: [1],
+    tags: ["segurança", "dados pessoais", "privacidade", "toque"],
+    order: 75,
+    status: "published",
+    title: "Esconde-Dados",
+    description:
+      "Leve o cartão de dados pela pracinha sem ser visto e entregue só para quem cuida de você.",
+    category: "Cultura Digital",
+    points: 60,
+    icon: "🔐",
+    thumbnail: coverEscondeDados,
+  },
+  {
     id: "008",
     slug: "hangar-dos-modelos",
     module: "EF02CO01/hangar-dos-modelos",
@@ -305,6 +342,23 @@ export const catalog: Game[] = [
     points: 55,
     icon: "✈️",
     thumbnail: hangarThumbnail,
+  },
+  {
+    id: "053",
+    slug: "detetive-dos-modelos",
+    module: "EF02CO01/detetive-dos-modelos",
+    skill: "EF02CO01",
+    years: [2],
+    tags: ["modelos", "atributos", "veículos", "toque"],
+    order: 85,
+    status: "published",
+    title: "Detetive dos Modelos",
+    description:
+      "Pegue o veículo e teste onde ele funciona: no céu, na estrada ou na água. Os atributos decidem.",
+    category: "Pensamento Computacional",
+    points: 60,
+    icon: "🔎",
+    thumbnail: coverDetetiveDosModelos,
   },
   {
     id: "009",
@@ -921,18 +975,18 @@ export const catalog: Game[] = [
     module: "EF15CO04/arquiteto-das-missoes",
     skill: "EF15CO04",
     years: [1, 2, 3, 4, 5],
-    tags: ["planejamento", "sequência", "missões"],
+    tags: ["decomposição", "planejamento", "partes", "toque"],
     order: 450,
     status: "published",
     title: "Arquiteto das Missões",
     description:
-      "Projete e organize missões usando lógica e sequências de ações para alcançar objetivos.",
+      "Um pedido grande demais vira partes menores: resolva cada uma e junte tudo num plano.",
     category: "Pensamento Computacional",
-    points: 65,
+    points: 150,
     icon: "🏗️",
     thumbnail: coverArquitetoDasMissoes,
   },
 ];
 
 /** Próximo id livre. Use ao cadastrar um jogo novo. */
-export const NEXT_FREE_ID = "047";
+export const NEXT_FREE_ID = "054";

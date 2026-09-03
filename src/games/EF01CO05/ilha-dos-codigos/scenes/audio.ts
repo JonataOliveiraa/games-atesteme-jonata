@@ -1,12 +1,9 @@
 import Phaser from 'phaser'
 import { ISLAND } from '../data/island'
-import type { Word } from '../types'
+import type { Code, Word } from '../types'
 
-/**
- * Sem arquivo: tudo WebAudio. O que separa um bip de um som de jogo é o
- * envelope e o filtro — ataque curto, queda exponencial, e ruído passa-banda
- * para o que é ar, água e madeira.
- */
+const BEAT_GAP = 0.22
+
 export function createAudio(scene: Phaser.Scene) {
     let muted = false
 
@@ -58,7 +55,14 @@ export function createAudio(scene: Phaser.Scene) {
         osc.stop(t0 + o.dur + 0.03)
     }
 
-    function noise(o: { dur: number; from: number; to: number; gain?: number; delay?: number; q?: number }) {
+    function noise(o: {
+        dur: number
+        from: number
+        to: number
+        gain?: number
+        delay?: number
+        q?: number
+    }) {
         const audio = ctx()
         if (!audio) return
 
@@ -88,24 +92,23 @@ export function createAudio(scene: Phaser.Scene) {
         source.stop(t0 + o.dur)
     }
 
-    /** Um timbre por símbolo: código que CONTA batidas não emenda mensagem. */
+    const drumHit = (delay: number) => {
+        note({ freq: 178, to: 56, dur: 0.3, type: 'sine', gain: 0.15, cutoff: 620, delay })
+        noise({ dur: 0.05, from: 1900, to: 620, gain: 0.035, delay })
+    }
+
     const voices = {
         chocalho() {
             noise({ dur: 0.09, from: 6200, to: 4200, gain: 0.05, q: 2.2 })
             noise({ dur: 0.09, from: 5400, to: 3800, gain: 0.045, q: 2.2, delay: 0.07 })
             noise({ dur: 0.12, from: 5000, to: 3200, gain: 0.04, q: 2.2, delay: 0.14 })
         },
-        agua() {
-            noise({ dur: 0.3, from: 2300, to: 320, gain: 0.07, q: 0.9 })
-            note({ freq: 520, to: 180, dur: 0.26, type: 'sine', gain: 0.05, cutoff: 900 })
+        splash() {
+            noise({ dur: 0.32, from: 2400, to: 300, gain: 0.075, q: 0.9 })
+            note({ freq: 540, to: 170, dur: 0.28, type: 'sine', gain: 0.05, cutoff: 900 })
         },
         tambor() {
-            note({ freq: 172, to: 58, dur: 0.28, type: 'sine', gain: 0.14, cutoff: 600 })
-            noise({ dur: 0.05, from: 1800, to: 600, gain: 0.03 })
-        },
-        madeira() {
-            note({ freq: 940, to: 700, dur: 0.07, type: 'square', gain: 0.05, cutoff: 2600 })
-            note({ freq: 780, to: 560, dur: 0.07, type: 'square', gain: 0.045, cutoff: 2400, delay: 0.11 })
+            drumHit(0)
         },
     }
 
@@ -114,28 +117,27 @@ export function createAudio(scene: Phaser.Scene) {
             muted = value
         },
 
-        say(word: Word) {
-            voices[ISLAND[word].sound]()
+        beats(count: number) {
+            for (let i = 0; i < count; i++) drumHit(i * BEAT_GAP)
+            return Math.round(count * BEAT_GAP * 1000) + 120
+        },
+
+        speak(word: Word, code: Code) {
+            if (code === 'batidas') return this.beats(ISLAND[word].beats)
+            if (code === 'som') {
+                voices[ISLAND[word].instrument]()
+                return 340
+            }
+            note({ freq: 640, to: 880, dur: 0.08, type: 'triangle', gain: 0.05 })
+            return 220
         },
 
         tap() {
             note({ freq: 720, dur: 0.035, type: 'triangle', gain: 0.05 })
         },
 
-        place() {
-            note({ freq: 540, to: 760, dur: 0.09, type: 'triangle', gain: 0.06 })
-        },
-
-        remove() {
-            note({ freq: 700, to: 420, dur: 0.1, type: 'triangle', gain: 0.05 })
-        },
-
-        keyTurn() {
-            note({ freq: 200, to: 520, dur: 0.22, type: 'sawtooth', gain: 0.05, cutoff: 1400 })
-        },
-
-        check(step: number) {
-            note({ freq: 620 + step * 110, dur: 0.07, type: 'triangle', gain: 0.06 })
+        pick() {
+            note({ freq: 540, to: 780, dur: 0.09, type: 'triangle', gain: 0.06 })
         },
 
         open() {
@@ -145,7 +147,6 @@ export function createAudio(scene: Phaser.Scene) {
             })
         },
 
-        /** O brilho cresce com a sequência: o som sobe junto. */
         streak(count: number) {
             const base = 660 + Math.min(count, 4) * 90
             ;[base, base * 1.25, base * 1.5].forEach((freq, i) => {

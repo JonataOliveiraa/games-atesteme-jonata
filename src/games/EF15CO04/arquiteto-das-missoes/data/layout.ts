@@ -1,198 +1,71 @@
 export const W = 1280
 export const H = 720
 
-export const TOPBAR = 62
-
-export const HEADER = {
-    pillX: 20,
-    pillY: 31,
-    pillW: 152,
-    pillH: 40,
-    dotsX: 202,
-    dotsY: 31,
-    dotR: 8,
-    dotGap: 30,
-    missionX: 480,
-    missionY: 31,
-    helpX: W - 42,
-    helpY: 31,
-    helpR: 24,
+export const DEPTH = {
+    scene: 0,
+    veil: 10,
+    band: 20,
+    panel: 40,
+    card: 60,
+    glyph: 70,
+    hud: 90,
+    fx: 120,
+    edge: 140,
+    overlay: 300,
 }
 
-export const STAGE = {
-    x: W / 2,
-    y: 292,
-    w: 700,
-    h: 430,
-    cardY: 578,
-    cardW: 920,
-    cardH: 136,
-    cardR: 26,
-    fontSize: '28px',
-    typeDelay: 20,
-    btnY: 675,
+export const STATUS = {
+    x: 16,
+    y: 12,
+    w: 210,
+    h: 92,
+    pill: { x: 28, y: 24, w: 186, h: 38, r: 19 },
+    dotY: 82,
+    dotR: 9,
+    dotGap: 34,
 }
 
-export const BOARD = {
-    x: 40,
-    y: 84,
-    w: 1200,
-    h: 348,
-    r: 26,
-    pinR: 11,
+export const HELP = { x: 1216, y: 44, r: 30 }
+
+export const GOAL = { cx: 640, cy: 236, top: 122, w: 300, h: 210 }
+
+export const SLOT = { cy: 316, w: 220, h: 200, gap: 40 }
+
+export const TRAY = { cy: 570, w: 220, h: 200, gap: 26 }
+
+export const STEP = { cy: 300, w: 190, h: 180, gap: 30 }
+
+const MARGIN = 72
+const RATIO = SLOT.h / SLOT.w
+
+/** A bandeja encolhe quando enche: 6 cartas de 220 não cabem em 1280. */
+export const rowWidth = (n: number, max: number, gap: number) =>
+    Math.min(max, (W - MARGIN - (n - 1) * gap) / n)
+
+export const trayCard = (n: number) => {
+    const w = rowWidth(n, TRAY.w, TRAY.gap)
+    return { w, h: w * RATIO }
 }
 
-export const CARD = {
-    cx: W / 2,
-    cy: 214,
-    w: 760,
-    h: 176,
-    r: 24,
-    titleDY: -52,
-    textDY: 6,
-    titleSize: '26px',
-    textSize: '25px',
-    tearGap: 34,
-    tornOffset: 240,
+export const slotCard = (n: number) => {
+    const w = rowWidth(n, SLOT.w, SLOT.gap)
+    return { w, h: w * RATIO }
 }
 
-export const SLOT = {
-    y: 236,
-    w: 296,
-    h: 174,
-    gap: 34,
-    r: 22,
-    labelDY: -46,
-    detailDY: 12,
-    minutesDY: 58,
+export const stepCard = (n: number) => {
+    const w = rowWidth(n, STEP.w, STEP.gap)
+    return { w, h: w * (STEP.h / STEP.w) }
 }
 
-export const STEPS = {
-    listX: 330,
-    listY: 150,
-    slotW: 620,
-    slotH: 66,
-    slotGap: 14,
-    r: 18,
-    numR: 21,
-    fontSize: '22px',
-    trayY: 640,
-    trayW: 240,
-    trayH: 84,
-    trayGap: 20,
-}
+export const LANE = { cx: 640, cy: 300, h: 196, pad: 26, scale: 0.78 }
 
-export const TRAY = {
-    y: 640,
-    cardW: 224,
-    cardH: 116,
-    gap: 18,
-    rowGap: 18,
-    r: 20,
-    labelDY: -20,
-    detailDY: 20,
-    labelSize: '20px',
-    detailSize: '15px',
-}
+export const RUN = { x: 640, y: 560, w: 260, h: 76, r: 38 }
 
-export const SHELF = {
-    y: 500,
-    cardW: 200,
-    cardH: 92,
-    gap: 20,
-    r: 18,
-    fontSize: '19px',
-}
+export const slotX = (i: number, n: number) =>
+    640 + (i - (n - 1) / 2) * (slotCard(n).w + SLOT.gap)
 
-export const TIMELINE = {
-    x: 130,
-    y: 168,
-    twoLaneY: 132,
-    w: 1020,
-    laneH: 104,
-    laneGap: 30,
-    unit: 8,
-    r: 16,
-    labelW: 104,
-    tickGap: 40,
-    blockR: 14,
-    blockFont: '19px',
-    minutesFont: '14px',
-}
+export const trayX = (i: number, n: number) =>
+    640 + (i - (n - 1) / 2) * (trayCard(n).w + TRAY.gap)
 
-export const BOX = {
-    x: 132,
-    y: 640,
-    size: 132,
-    labelDY: 82,
-    popGap: 118,
-}
-
-export const PANEL = {
-    x: 40,
-    y: 442,
-    w: 1200,
-    h: 106,
-    r: 24,
-    pad: 30,
-    barW: 8,
-    fontSize: '25px',
-    typeDelay: 18,
-    iconX: 82,
-    iconR: 25,
-}
-
-export const DOCK = {
-    top: 560,
-    cy: 640,
-    btnH: 88,
-    btnW: 280,
-    btnWide: 330,
-    gap: 40,
-    fontSize: '26px',
-    hintY: 706,
-    hintSize: '16px',
-}
-
-export const CLOCK = {
-    x: 1196,
-    y: 396,
-    r: 46,
-    handW: 6,
-    labelDY: 66,
-    fontSize: '20px',
-}
-
-export const TOAST = {
-    y: 420,
-    w: 660,
-    h: 66,
-    fontSize: '22px',
-    life: 2000,
-}
-
-export const REPORT = {
-    w: 900,
-    h: 560,
-    r: 30,
-    barX: 300,
-    barW: 400,
-    barH: 30,
-    rowY: 190,
-    rowGap: 66,
-    labelSize: '20px',
-}
-
-export const MODAL = {
-    w: 740,
-    r: 30,
-    pad: 40,
-    btnW: 330,
-    btnH: 78,
-}
-
-export const SPARK = {
-    count: 14,
-    spread: 110,
-    life: 500,
-}
+export const stepX = (i: number, n: number) =>
+    640 + (i - (n - 1) / 2) * (stepCard(n).w + STEP.gap)

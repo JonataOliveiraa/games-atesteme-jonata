@@ -1,26 +1,29 @@
 import Phaser from 'phaser'
 import { FX } from '../../../../shared/effects/FX'
 import { DEPTH, H, W } from '../data/layout'
-import { C, CSS, FONT } from '../data/theme'
-import { createCard } from './symbols'
+import { C } from '../data/theme'
+import { drawCodeIcon } from './codeIcon'
+import { createStrip } from './symbols'
 import type { LevelDef } from '../types'
 
-const CARD = 50
-const PITCH = 56
-const ROW_H = 104
+const TILE = 48
+const PITCH = 54
+const ROW_H = 84
+const HEAD_ICON = 34
+const PANEL_W = 560
 
-/**
- * A REPRISE — as três mensagens do nível, cada uma nos dois códigos, uma em
- * cima da outra. É a frase-chave do jogo dita sem palavra nenhuma.
- */
 export function createRecap(scene: Phaser.Scene) {
     let objects: Phaser.GameObjects.GameObject[] = []
 
     return {
         async play(level: LevelDef, onEachRow?: () => void) {
             const rows = level.chests.length
-            const panelH = 130 + rows * ROW_H
-            const panelW = 660
+            const panelH = 150 + rows * ROW_H
+            const top = H / 2 - panelH / 2
+            const side = (level.chests[0].message.length - 1) * PITCH + TILE
+            const offset = side / 2 + 70
+            const leftCx = W / 2 - offset
+            const rightCx = W / 2 + offset
 
             const overlay = scene.add.rectangle(W / 2, H / 2, W, H, C.ink, 0.62)
                 .setDepth(DEPTH.overlay)
@@ -28,55 +31,55 @@ export function createRecap(scene: Phaser.Scene) {
 
             const panel = scene.add.graphics().setDepth(DEPTH.overlay + 1)
             panel.fillStyle(C.ink, 0.3)
-            panel.fillRoundedRect(W / 2 - panelW / 2, H / 2 - panelH / 2 + 9, panelW, panelH, 34)
+            panel.fillRoundedRect(W / 2 - PANEL_W / 2, top + 10, PANEL_W, panelH, 36)
             panel.fillStyle(C.cream, 1)
-            panel.fillRoundedRect(W / 2 - panelW / 2, H / 2 - panelH / 2, panelW, panelH, 34)
+            panel.fillRoundedRect(W / 2 - PANEL_W / 2, top, PANEL_W, panelH, 36)
+            panel.fillStyle(C.white, 0.65)
+            panel.fillRoundedRect(W / 2 - PANEL_W / 2 + 18, top + 11, PANEL_W - 36, 20, 10)
             panel.lineStyle(7, C.woodDark, 1)
-            panel.strokeRoundedRect(W / 2 - panelW / 2, H / 2 - panelH / 2, panelW, panelH, 34)
+            panel.strokeRoundedRect(W / 2 - PANEL_W / 2, top, PANEL_W, panelH, 36)
 
-            const title = scene.add.text(W / 2, H / 2 - panelH / 2 + 52, 'A mesma coisa, dois códigos!', {
-                fontFamily: FONT.black,
-                fontSize: '30px',
-                color: CSS.ink,
-                align: 'center',
-            }).setOrigin(0.5).setDepth(DEPTH.overlay + 2).setResolution(2)
+            const marks = scene.add.graphics().setDepth(DEPTH.overlay + 2)
 
-            objects = [overlay, panel, title]
-            FX.popIn(scene, title, { duration: 300 })
+            const headLeft = scene.add.graphics()
+                .setPosition(leftCx, top + 62)
+                .setDepth(DEPTH.overlay + 2)
+            drawCodeIcon(headLeft, level.from, HEAD_ICON)
+
+            const headRight = scene.add.graphics()
+                .setPosition(rightCx, top + 62)
+                .setDepth(DEPTH.overlay + 2)
+            drawCodeIcon(headRight, level.to, HEAD_ICON)
+
+            const arrow = scene.add.graphics().setDepth(DEPTH.overlay + 2)
+            arrow.fillStyle(C.warnDark, 1)
+            arrow.fillRoundedRect(W / 2 - 26, top + 56, 38, 11, 5)
+            arrow.fillTriangle(W / 2 + 6, top + 48, W / 2 + 6, top + 76, W / 2 + 28, top + 62)
+
+            objects = [overlay, panel, marks, headLeft, headRight, arrow]
+            ;[headLeft, headRight, arrow].forEach(o => FX.popIn(scene, o, { duration: 300 }))
 
             for (let r = 0; r < rows; r++) {
                 const message = level.chests[r].message
-                const y = H / 2 - panelH / 2 + 122 + r * ROW_H
-                const half = (message.length - 1) / 2
-                const leftCx = W / 2 - 150
-                const rightCx = W / 2 + 150
+                const y = top + 128 + r * ROW_H
 
-                const line: Phaser.GameObjects.GameObject[] = []
+                const a = createStrip(scene, message, level.from, TILE, PITCH)
+                a.container.setPosition(leftCx, y).setDepth(DEPTH.overlay + 2)
+                const b = createStrip(scene, message, level.to, TILE, PITCH)
+                b.container.setPosition(rightCx, y).setDepth(DEPTH.overlay + 2)
 
-                message.forEach((word, i) => {
-                    const from = createCard(scene, word, level.from, CARD)
-                    from.container.setPosition(leftCx + (i - half) * PITCH, y)
-                        .setDepth(DEPTH.overlay + 2)
-                    const to = createCard(scene, word, level.to, CARD)
-                    to.container.setPosition(rightCx + (i - half) * PITCH, y)
-                        .setDepth(DEPTH.overlay + 2)
-                    line.push(from.container, to.container)
-                })
+                marks.fillStyle(C.inkSoft, 1)
+                marks.fillRoundedRect(W / 2 - 17, y - 13, 34, 9, 4)
+                marks.fillRoundedRect(W / 2 - 17, y + 4, 34, 9, 4)
 
-                const equals = scene.add.text(W / 2, y, '=', {
-                    fontFamily: FONT.black,
-                    fontSize: '34px',
-                    color: CSS.inkSoft,
-                }).setOrigin(0.5).setDepth(DEPTH.overlay + 2).setResolution(2)
-                line.push(equals)
-
-                objects.push(...line)
-                line.forEach(obj => FX.popIn(scene, obj as never, { from: 0.7, duration: 260 }))
+                objects.push(a.container, b.container)
+                FX.popIn(scene, a.container, { from: 0.7, duration: 260 })
+                FX.popIn(scene, b.container, { from: 0.7, duration: 260 })
                 onEachRow?.()
                 await FX.wait(scene, 620)
             }
 
-            await FX.wait(scene, 700)
+            await FX.wait(scene, 900)
             objects.forEach(obj => obj.destroy())
             objects = []
         },
