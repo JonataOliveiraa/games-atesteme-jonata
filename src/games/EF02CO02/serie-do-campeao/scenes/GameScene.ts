@@ -8,7 +8,7 @@ import { createLives, type Lives } from '../../../../shared/hud/createLives'
 import { vidasIniciais } from '../../../../shared/level/vidasIniciais'
 import { FX } from '../../../../shared/effects/FX'
 import { LEVELS, stepsInLevel, tapResult } from '../data/routines'
-import { ATHLETE, BTN, CARD, HUD, cardH, cardY } from '../data/layout'
+import { ATHLETE, BTN, CARD, HUD, W, cardH, cardY } from '../data/layout'
 import { C, MOVE_LABEL } from '../data/theme'
 import type { LevelDef, LevelNumber, Move, Phase, RoutineStep } from '../types'
 import { createAthlete } from './athlete'
@@ -221,7 +221,9 @@ export class GameScene extends Phaser.Scene {
         this.coach.setMove(this.step.move)
         void this.coach.raise()
         this.hud.setTitle(`${MOVE_LABEL[this.step.move]} — ${this.step.count} ${this.step.count === 1 ? 'vez' : 'vezes'}`)
-        this.hud.setHint('Toque no botão até encher todas as bolinhas.')
+        this.hud.setHint(this.routine.steps.length === 1
+            ? 'Toque no botão até encher todas as bolinhas.'
+            : `Cartão ${this.stepIndex + 1} de ${this.routine.steps.length} — encha as bolinhas dele.`)
         this.hud.resetTime(stepTime(this.step.count))
         this.applyButtons()
     }
@@ -519,28 +521,60 @@ export class GameScene extends Phaser.Scene {
         const y = cardY(0, n)
         const h = cardH(n)
 
+        const column = {
+            x: CARD.cx,
+            y: (CARD.top + CARD.bottom) / 2,
+            w: CARD.w + 26,
+            h: CARD.bottom - CARD.top,
+        }
+
+        if (n === 1) {
+            return [
+                {
+                    text: 'O cartão diz quantas vezes.',
+                    shape: 'rect',
+                    x: CARD.cx, y,
+                    w: CARD.w + 18, h: h + 18,
+                    balloonX: 540, balloonY: 300,
+                },
+                {
+                    text: 'Toque no botão: o atleta faz 1 vez.',
+                    shape: 'rect',
+                    x: btnX, y: BTN.cy,
+                    w: BTN.w + 16, h: BTN.h + 16,
+                    balloonX: 640, balloonY: 320,
+                    pointer: { fromX: btnX, fromY: BTN.cy, toX: btnX, toY: BTN.cy, tap: true },
+                },
+                {
+                    text: 'Encha todas as bolinhas e a série está pronta!',
+                    shape: 'rect',
+                    x: CARD.cx + CARD.dotX, y,
+                    w: CARD.dotGap * 5, h: h - 24,
+                    balloonX: 540, balloonY: 320,
+                    buttonLabel: 'Vamos lá!',
+                },
+            ]
+        }
+
         return [
             {
-                text: 'O cartão diz quantas vezes.',
+                text: `Agora a série tem ${n} cartões.`,
                 shape: 'rect',
-                x: CARD.cx, y,
-                w: CARD.w + 18, h: h + 18,
-                balloonX: 540, balloonY: 300,
+                x: column.x, y: column.y, w: column.w, h: column.h,
+                balloonX: 520, balloonY: 300,
             },
             {
-                text: 'Toque no botão: o atleta faz 1 vez.',
+                text: 'Os dois botões funcionam: use o que o cartão aceso pede.',
                 shape: 'rect',
-                x: btnX, y: BTN.cy,
-                w: BTN.w + 16, h: BTN.h + 16,
-                balloonX: 640, balloonY: 320,
-                pointer: { fromX: btnX, fromY: BTN.cy, toX: btnX, toY: BTN.cy, tap: true },
+                x: W / 2, y: BTN.cy,
+                w: BTN.spinX - BTN.jumpX + BTN.w + 20, h: BTN.h + 16,
+                balloonX: W / 2, balloonY: 330,
             },
             {
-                text: 'Encha todas as bolinhas e a série está pronta!',
+                text: 'Termine um cartão antes de passar para o de baixo.',
                 shape: 'rect',
-                x: CARD.cx + CARD.dotX, y,
-                w: CARD.dotGap * 5, h: h - 24,
-                balloonX: 540, balloonY: 320,
+                x: column.x, y: column.y, w: column.w, h: column.h,
+                balloonX: 520, balloonY: 320,
                 buttonLabel: 'Vamos lá!',
             },
         ]

@@ -352,10 +352,13 @@ Também registrar:
 
 ## 14. O que mudou na construção
 
-Implementado apenas o **nível 1**, conforme a regra do projeto de entregar um
-nível para teste antes de expandir. Os níveis 2 e 3 já estão previstos na
-estrutura: `LevelDef` tem `routines[]` e `soloButton`, e a cena deriva tudo
-disso — nível novo é edição de `data/routines.ts`.
+O **nível 1** saiu primeiro sozinho, conforme a regra do projeto de entregar um
+nível para teste antes de expandir. Os níveis 2 e 3 entraram depois, com o
+conteúdo da tabela da seção 6 sem alteração — e, como previsto, foram edição de
+`data/routines.ts`: `LevelDef` já tinha `routines[]` e `soloButton`, e a cena
+deriva o resto.
+
+Os nomes dos níveis são **Aquecimento**, **Treino** e **Apresentação**.
 
 ### A janela de precisão
 
@@ -413,8 +416,28 @@ vetorial com as cinco poses; sem `icones-serie.png` entram pictogramas
 desenhados; sem `bg-ginasio.png` entra uma quadra com arquibancada. Nenhuma
 textura é dependência estrutural.
 
+### A série virou coluna, e a coluna encolhe
+
+Os cartões moravam numa fileira no topo da tela — que é exatamente onde a
+cabeça do atleta chega no auge do pulo. O painel tapava o movimento que ele
+está contando, então a série passou para uma **coluna à direita**, longe da
+área de salto e longe dos botões.
+
+Empilhada, ela precisa caber entre o header e os botões (y 112 a 512). Por isso
+a altura do cartão é derivada, não fixa: `cardH(n)` divide a faixa disponível
+pelo número de etapas, com teto de 152. Uma etapa fica em 152, três ficam em
+120. Assim o nível 3 entra sem reescrever posição nenhuma.
+
+### O tutorial do nível 2 é outro
+
+Séries de mais de um cartão têm dois conceitos novos que o nível 1 não tem:
+existe uma ORDEM entre cartões, e os dois botões passam a funcionar. Um
+tutorial que só repete "o cartão diz quantas vezes" não cobre isso — então,
+para `n > 1`, ele troca de roteiro: a coluna inteira, os dois botões, e
+"termine um cartão antes de passar para o de baixo". A chave do tutorial já era
+por nível (`ef02co02-serie-lN`), então cada um aparece uma vez.
+
 ### Fora do escopo desta entrega
 
-- Níveis 2 e 3 (`soloButton: false`, 2 e 3 etapas por série).
 - Pódio visual de fim de nível: hoje o fim usa o painel compartilhado
   `showLevelComplete` com as três medalhas já visíveis no HUD.
