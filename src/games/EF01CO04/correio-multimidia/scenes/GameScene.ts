@@ -713,6 +713,10 @@ export class GameScene extends Phaser.Scene {
         if (phrase === item.phrase) { this.playTick(); this.completeRegistration('text'); return }
         this.cameras.main.shake(120, 0.0015)
         this.flashButtonError(btn, 470, btnH)
+        // a alternativa errada sai de circulação: um toque duplo sem querer
+        // cobrava duas vidas pelo mesmo engano
+        btn.disableInteractive()
+        this.registerMistake()
       })
       buttons.push(btn)
     })
@@ -754,7 +758,17 @@ export class GameScene extends Phaser.Scene {
 
     const confirmBtn = this.buildConfirmButton(78, this.actionRowY, () => {
       if (!selected) return
-      if (selected !== item.soundKey) { this.cameras.main.shake(120, 0.002); this.playError(); return }
+      if (selected !== item.soundKey) {
+        this.cameras.main.shake(120, 0.002)
+        this.playError()
+        this.registerMistake()
+        // a escolha errada é desfeita: sem isto, confirmar de novo com o mesmo
+        // som cobraria outra vida pelo mesmo engano
+        selected = null
+        redraws.forEach(fn => fn(false))
+        this.setActionEnabled(confirmBtn, false)
+        return
+      }
       this.completeRegistration('audio')
     })
     this.setActionEnabled(confirmBtn, false)
@@ -1058,18 +1072,28 @@ export class GameScene extends Phaser.Scene {
     this.showSuccessComparison()
   }
 
-  private registerWrongDelivery() {
-    this.clearAccumulatedBadges()
-
+  /**
+   * O ERRO COBRA O MESMO EM QUALQUER LUGAR.
+   *
+   * Só a entrega no canal errado tirava vida. A frase errada e o som errado
+   * balançavam a tela e pronto — dentro do modal dava para chutar até acertar
+   * sem perder nada, e a partida nunca acabava por erro.
+   */
+  private registerMistake() {
     runtimeGameBridge.emit({
       type: 'WRONG_ANSWER',
       gameId: GAME_ID,
       pointsEarned: -WRONG_CHANNEL_PENALTY,
       stage: this.levelConfig.level
     })
-      this.lives.lose()
+    this.lives.lose()
 
     this.points = Math.max(0, this.points - WRONG_CHANNEL_PENALTY)
+  }
+
+  private registerWrongDelivery() {
+    this.clearAccumulatedBadges()
+    this.registerMistake()
     this.showLossComparison()
   }
 
