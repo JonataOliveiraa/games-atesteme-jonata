@@ -63,13 +63,13 @@ fazer esse tipo de instrução?".
 
 ```
 morador entra com problema em pictograma
-→ três máquinas ficam no galpão, cada uma com dois ícones de comando
-→ criança toca uma máquina
-→ máquina vai até o problema
-→ seus dois comandos acendem e são executados
-→ se os comandos resolvem, missão fecha e morador comemora
-→ se não resolvem, falha cômica curta e TRAVA na escolha
-→ depois de 3 missões, catálogo visual das máquinas aparece
+-> máquinas ficam no galpão, cada uma com dois ícones de comando
+-> criança toca uma máquina
+-> máquina vai até o problema
+-> seus dois comandos acendem e são executados
+-> se os comandos resolvem, missão fecha e morador comemora
+-> se não resolvem, falha cômica curta e TRAVA na escolha
+-> depois de 3 missões, catálogo visual das máquinas aparece
 ```
 
 Controle: **um toque em uma máquina visível**. No nível 3, continuam sendo
@@ -80,44 +80,37 @@ foi resolvida.
 
 ## 4. Clareza para criança
 
-O jogo não deve depender de leitura constante.
-
 | Conceito | Como a tela mostra |
 |---|---|
-| problema | pictograma grande: folhas, telhado, pão cru, janela alta, massa do bolo |
-| comando da máquina | dois ícones fixos sob a máquina |
-| máquina certa | seus ícones combinam visualmente com o problema |
+| problema | pictograma grande no pedido e a cena real no palco da vila |
+| comando da máquina | dois ícones fixos sob a máquina, na ordem em que ela executa |
+| máquina certa | seus ícones combinam com o que o problema pede |
 | execução | ícones acendem um por um enquanto a máquina age |
 | erro | a máquina tenta usar seus próprios comandos e falha de forma engraçada |
-| algoritmo de 2 etapas | trilha com dois cartões: etapa 1 acesa, etapa 2 apagada até chegar sua vez |
+| progresso | um selo por missão, preenchido com a máquina que resolveu |
 
-Texto durante a partida deve ser legenda curta, nunca frase longa:
-`FOLHAS`, `TELHADO`, `PÃO`, `JANELA`, `BOLO`.
+Texto durante a partida é legenda curta, nunca frase longa: `FOLHAS`, `PÃO`,
+`GATINHO`.
 
 ---
 
 ## 5. A grade
 
-Tela fixa de **1280 x 720** com `Phaser.Scale.FIT`. Num celular em pé, a tela
-vira uma faixa 16:9; ela não recompõe. A coluna "No celular" usa fator 0,30.
+Tela fixa de **1280 x 720** com `Phaser.Scale.FIT`.
 
-| Faixa | y | Conteúdo | Tamanho | No celular |
-|---|---|---|---|---|
-| HUD | 0 - 82 | 3 casas/selo de missão, botão `?` em (1210, 42) | `?` hitbox 144 x 144 | 43 x 43 toque |
-| Pedido | 82 - 210 | morador + pictograma grande do problema + legenda de 1 palavra | pictograma 96; fonte 40 | 29; fonte 12 |
-| Vila | 210 - 470 | área de execução: calçada, telhado, janela, forninho ou mesa | alvo 560 x 240 | 170 x 73 |
-| Galpão | 470 - 720 | três máquinas em botões grandes, com dois comandos sob cada uma | botão 320 x 190 | 97 x 58 |
+| Faixa | y | Conteúdo |
+|---|---|---|
+| HUD | 0 - 82 | nível, 3 selos de missão, botão `?` em (1210, 42) |
+| Pedido | 82 - 200 | morador + pictograma do problema + legenda de 1 palavra |
+| Vila | 201 - 479 | palco da execução: chão em y 430, cena do problema, máquina em ação |
+| Galpão | 474 - 720 | máquinas em botões de 320 x 190, com dois comandos sob cada uma |
 
-Botões das máquinas:
+Posição dos botões, conforme quantas máquinas a missão mostra:
 
-| Máquina | Área |
+| Máquinas | Centros |
 |---|---|
-| robô-vassoura | x 80 - 400, y 500 - 690 |
-| drone | x 480 - 800, y 500 - 690 |
-| forninho | x 880 - 1200, y 500 - 690 |
-
-O pedido fica no alto e o galpão sempre no rodapé. A criança não precisa
-procurar máquina em mapa.
+| 2 | 400, 880 |
+| 3 | 240, 640, 1040 |
 
 ---
 
@@ -125,12 +118,12 @@ procurar máquina em mapa.
 
 | Máquina | Comandos fixos | O que resolve |
 |---|---|---|
-| robô-vassoura | `VARRER`, `GIRAR` | folhas, poeira, sujeira em cantos |
+| robô-vassoura | `GIRAR`, `VARRER` | folhas, poeira, sujeira em cantos |
 | drone | `VOAR`, `SOLTAR` | entregar item em lugar alto, levar algo leve |
 | forninho | `ASSAR`, `APITAR` | pão, bolo, comida crua |
 
-Os comandos são sempre os mesmos. A criança aprende por repetição visual: cada
-máquina tem uma "língua" própria.
+A ordem das plaquinhas é a ordem de execução: a criança lê da esquerda para a
+direita e vê acontecer nessa ordem.
 
 ---
 
@@ -141,57 +134,32 @@ A **fase deste jogo é uma micro-missão**. Cada nível tem 3 missões.
 | Nível | Missões | Máquinas visíveis | O que cresce |
 |---|---|---|---|
 | 1 | 3 missões 1-a-1 | 2 máquinas por missão | associar comando óbvio ao problema |
-| 2 | 3 missões com 3 máquinas | 3 máquinas | comparar comandos parecidos e escolher pelo que a máquina entende |
-| 3 | 3 missões, uma com 2 etapas | 3 máquinas | ver que algoritmo pode combinar máquinas, mas uma etapa de cada vez |
+| 2 | 3 missões com 3 máquinas | 3 máquinas | comparar comandos parecidos |
+| 3 | 3 missões, uma com 2 etapas | 3 máquinas | algoritmo que combina máquinas, uma etapa por vez |
 
-Conteúdo:
+Conteúdo do nível 1, o único implementado:
 
-| Missão | Problema visual | Máquina certa | Comandos que acendem |
-|---|---|---|---|
-| 1.1 | folhas na calçada | robô-vassoura | `GIRAR -> VARRER` |
-| 1.2 | pão cru na mesa | forninho | `ASSAR -> APITAR` |
-| 1.3 | lanchinho para gatinho no telhado | drone | `VOAR -> SOLTAR` |
-| 2.1 | poeira atrás do sofá | robô-vassoura | `GIRAR -> VARRER` |
-| 2.2 | bilhete na janela alta | drone | `VOAR -> SOLTAR` |
-| 2.3 | bolo cru da festa | forninho | `ASSAR -> APITAR` |
-| 3.1 | folhas no canto apertado | robô-vassoura | `GIRAR -> VARRER` |
-| 3.2 | presente leve na varanda | drone | `VOAR -> SOLTAR` |
-| 3.3a | massa precisa chegar ao forninho | drone | `VOAR -> SOLTAR` |
-| 3.3b | massa chegou crua ao forninho | forninho | `ASSAR -> APITAR` |
-
-Na missão 3.3, a tela mostra dois cartões pequenos no topo:
-`LEVAR` e `ASSAR`. Só `LEVAR` fica aceso no começo. Depois que o drone completa,
-`ASSAR` acende. A criança não precisa guardar a sequência.
+| Missão | Problema visual | Máquina certa | Distrator | Comandos que acendem |
+|---|---|---|---|---|
+| 1.1 | folhas na calçada | robô-vassoura | forninho | `GIRAR -> VARRER` |
+| 1.2 | pão cru na mesa | forninho | drone | `ASSAR -> APITAR` |
+| 1.3 | lanchinho para o gatinho no telhado | drone | robô-vassoura | `VOAR -> SOLTAR` |
 
 ---
 
 ## 8. As regras, em código
 
-A regra compara o problema com os comandos que a máquina executa.
+A regra compara o que a etapa pede com os comandos que a máquina executa.
 
 ```ts
-type MachineId = 'sweeper' | 'drone' | 'oven'
-type Command = 'sweep' | 'turn' | 'fly' | 'drop' | 'bake' | 'beep'
-type Need = 'clean' | 'highDelivery' | 'bakeFood'
-
-type Machine = {
-  id: MachineId
-  commands: Command[]
-}
-
-type MissionStep = {
-  need: Need
-  requiredCommands: Command[]
-}
-
-function canRunStep(machine: Machine, step: MissionStep) {
-  return step.requiredCommands.every((command) => machine.commands.includes(command))
+export function canRunStep(machine: MachineDef, step: MissionStep) {
+    return step.requiredCommands.every(command => machine.commands.includes(command))
 }
 ```
 
-O veredito sai dos comandos, não de um campo `correctMachineId`. Isso preserva a
-ideia BNCC: a máquina é escolhida porque entende o conjunto necessário de
-instruções.
+O veredito sai dos comandos, não de um campo `correctMachineId`. É isso que
+preserva a ideia da habilidade: a máquina é escolhida porque entende o conjunto
+necessário de instruções.
 
 Pontuação interna:
 
@@ -199,7 +167,7 @@ Pontuação interna:
 |---|---|---|
 | etapa correta de primeira | `CORRECT_ANSWER` | +10 |
 | etapa correta depois da TRAVA | `CORRECT_ANSWER` | +5 |
-| máquina sem comandos necessários | `WRONG_ANSWER` + `lives.lose()` | 0 |
+| máquina sem os comandos necessários | `WRONG_ANSWER` + `lives.lose()` | 0 |
 
 Nenhum número de ponto aparece na tela.
 
@@ -207,162 +175,185 @@ Nenhum número de ponto aparece na tela.
 
 ## 9. O erro
 
-Erro precisa mostrar "essa máquina não entende esse comando", sem muito texto.
-
-TRAVA:
-
 1. A máquina escolhida vai até o problema.
 2. Seus dois comandos acendem, porque ela sempre tenta fazer o que sabe.
-3. O comando que não serve fica cinza e a cena faz uma gag curta.
-4. O problema original pulsa com o pictograma do comando necessário.
-5. A máquina volta ao galpão.
-6. Só tocar uma máquina que tenha os comandos necessários destrava.
-7. Depois de 2 erros na mesma etapa, a plaquinha correta pulsa.
+3. A gag curta acontece, e o problema continua igual.
+4. Os dois comandos ficam cinza: eles rodaram e não serviram.
+5. O pictograma do comando que faltou pulsa em cima do problema.
+6. A máquina volta ao galpão e o botão dela fica gasto até o fim da missão.
+7. Depois de 2 erros na mesma etapa, a máquina certa pulsa.
 
-Exemplos de gag:
+O botão gasto existe para o erro custar UMA vida, e não uma por toque repetido
+na mesma máquina que a criança já viu falhar.
+
+Gags do nível 1:
 
 | Escolha incompatível | Cena |
 |---|---|
-| forninho nas folhas | forninho apita, esquenta um pouco e as folhas continuam lá |
-| vassoura no telhado | robô-vassoura gira no chão e olha para cima sem alcançar |
-| drone no pão cru | drone voa com o pão, mas ele continua cru |
-| forninho no bilhete alto | forninho apita embaixo da janela e não consegue subir |
+| forninho nas folhas | esquenta, apita e as folhas continuam lá |
+| drone no pão cru | levanta a massa, solta de volta e ela continua crua |
+| vassoura no telhado | gira, varre o chão e olha para cima sem alcançar |
 
-Frase opcional, no máximo 5 palavras:
-
-| Erro | Frase |
-|---|---|
-| precisa limpar | `Procure quem varre.` |
-| precisa levar alto | `Procure quem voa.` |
-| precisa assar | `Procure quem assa.` |
+Frase de apoio, no máximo 3 palavras: `Procure quem varre.`, `Procure quem
+voa.`, `Procure quem assa.`
 
 ---
 
-## 10. Feedback e diversão
+## 9b. O modo cena
+
+Quando a criança toca numa máquina, o jogo **apaga a interface inteira e fecha
+a câmera na ação**. Some o nível, os selos, o `?`, o painel do pedido, o galpão,
+a moldura do palco e os corações. Ficam a máquina, as duas plaquinhas dela e o
+problema.
+
+A razão é a de sempre neste jogo: o que precisa ser visto é o comando
+acontecendo. Com a tela cheia de interface, a execução vira um detalhe no meio
+do resto.
+
+O enquadramento tem três tempos, e cada missão declara os seus em
+`problems.ts`:
+
+| Tempo | O que mostra | Como |
+|---|---|---|
+| abertura | a máquina chegando e o problema | `shot`, entre 1.42x e 1.5x |
+| trabalho | fecha na máquina enquanto os comandos acendem | 1.8x em cima dela |
+| detalhe | o problema mudando de estado | `detail`, de 1.5x a 1.85x |
+
+A câmera **acompanha** quem se move: a vassoura atravessando a calçada e o drone
+subindo ao telhado têm o mesmo tempo de tween da máquina e do enquadramento.
+
+Três regras que o código garante sozinho:
+
+- **A câmera nunca mostra o vazio.** Todo alvo passa por um `clamp` que o prende
+  ao retângulo que ainda cabe naquele zoom, porque o `bg-vila.png` cobre
+  exatamente 1280 x 720 e um pixel a mais é faixa preta.
+- **As plaquinhas acompanham a máquina** quando ela atravessa a cena — menos no
+  drone, onde subir junto as faria bater no balão do desejo do gatinho.
+- **O erro e o acerto são contados fora da cena.** `WRONG_ANSWER`, a perda de
+  vida, o selo e a frase de apoio acontecem depois que a câmera volta: com o
+  zoom aberto, o painel de fim de nível e a frase nasceriam fora de quadro.
+
+Com `prefers-reduced-motion`, o zoom cai para 30% da aproximação pedida.
+
+---
+
+## 10. Feedback
 
 | Momento | Visual | Som |
 |---|---|---|
-| missão aparece | morador acena e pictograma pula | sino curto |
-| toque na máquina | botão afunda e comandos brilham | clique macio |
-| robô-vassoura acerta | gira, varre folhas e deixa rastro limpo | motorzinho + vassoura |
-| drone acerta | voa em arco e solta item no alvo | zumbido leve + plim |
-| forninho acerta | luz aquece, comida cresce e apita | calor suave + bip |
-| erro | máquina tenta seu próprio comando e falha engraçado | boing curto |
-| etapa dupla avança | cartão `LEVAR` fecha, cartão `ASSAR` acende | plim de troca |
-| fim do nível | catálogo das 3 máquinas com comandos acesos | fanfarra curta |
-
-Diversão com clareza:
-
-| Recurso | Como usar |
-|---|---|
-| máquinas com personalidade | vassoura gira, drone balança no ar, forninho pisca a luz |
-| comandos que acendem | criança vê a "linguagem" da máquina funcionando |
-| problema muda de estado | folhas somem, bilhete chega, pão assa |
-| falhas bobas | erro ensina sem susto e sem humilhar |
-| catálogo final | mostra cada máquina com seus dois comandos como coleção visual |
+| missão aparece | morador acena e o pictograma pula | sino curto |
+| toque na máquina | botão afunda e a máquina sai do galpão | clique macio |
+| comando acende | plaquinha ganha cor, anel e brilho | plim curto |
+| vassoura acerta | gira, atravessa a calçada e as folhas voam | motor + vassoura |
+| drone acerta | sobe em arco com o pacote e solta no telhado | zumbido + plim |
+| forninho acerta | luz aquece, a massa doura e cresce | calor + bip |
+| erro | comandos ficam cinza e a cena não muda | boing curto |
+| missão fecha | selo enche com a máquina que resolveu | acorde curto |
+| fim do nível | catálogo das máquinas com comandos acesos | fanfarra |
 
 ---
 
 ## 11. Tutorial
 
-Exemplo animado de 5 segundos, pulável:
+Quatro passos curtos, disparados na primeira missão e reabertos pelo `?`:
 
-| Passo | Frase curta | Cena |
+| Passo | Frase | Alvo |
 |---|---|---|
-| 1 | `FOLHAS` | folhas aparecem na calçada |
-| 2 | `QUEM VARRE?` | comando `VARRER` pulsa na plaquinha da vassoura |
-| 3 | `TOQUE` | dedo toca o robô-vassoura |
-| 4 | `LIMPOU!` | robô gira, varre e o selo acende |
-
-O botão `?` pausa e reabre o tutorial. Sem narração e sem painel longo.
+| 1 | `O morador tem um problema.` | painel do pedido |
+| 2 | `Cada máquina sabe dois comandos.` | plaquinhas da máquina certa |
+| 3 | `Toque na máquina que resolve.` | botão da máquina certa, com dedo |
+| 4 | `Ela resolve e o selo acende!` | fileira de selos |
 
 ---
 
-## 12. Textura mínima e o que fica no código
+## 12. Texturas
 
-Pouca textura. A vila deve funcionar em `Graphics`, e as máquinas podem ter
-sprites para carisma.
+Seis arquivos, todos já entregues em
+`src/assets/games/EF02CO03/vila-das-maquinas/`:
 
-| Elemento | Fazer em |
+| Arquivo | Grade real | Uso |
+|---|---|---|
+| `maquinas.png` | 900 x 600, quadros de 300 x 300 | 3 máquinas em repouso + 3 em ação |
+| `icones-comandos.png` | 1536 x 256, quadros de 256 x 256 | varrer, girar, voar, soltar, assar, apitar |
+| `itens.png` | 600 x 400, quadros de 200 x 200 | folhas, massa e pacote, antes e depois |
+| `morador.png` | 750 x 250, quadros de 250 x 250 | pedindo, comemorando, preocupado |
+| `gato-e-peixe.png` | 500 x 250, quadros de 250 x 250 | o gatinho e o petisco do desejo |
+| `bg-vila.png` | 1672 x 941 | fundo da vila |
+| `cover-vila-das-maquinas.png` | 1672 x 941 | capa do catálogo |
+
+Todo o resto é `Graphics`: palco, chão, galpão, mesa, calçada, casa, telhado,
+gatinho, balão de desejo, plaquinhas, selos, botões e catálogo final.
+
+Cada consumo passa por `textures.exists()`, e o desenho antigo continua no
+código como reserva — o jogo roda igual se uma folha faltar.
+
+---
+
+## 13. Registro
+
+| Onde | O que entrou |
 |---|---|
-| vila, chão, casas simples, galpão | Graphics |
-| moradores | Graphics simples |
-| problemas: folhas, pão, gatinho, bilhete, massa | Graphics/pictogramas |
-| cartões de missão e plaquinhas de comando | Graphics |
-| ícones de comando | spritesheet pequena opcional, fallback em Graphics |
-| máquinas | spritesheet única |
-| efeitos, brilho, cadeado, selo, estrelas | Graphics/shared |
-| background da vila | opcional |
-| capa | PNG |
-
-Sem textura para plaquinhas completas, balões, botões, catálogo, `?`, estrelas
-ou cadeado. Esses elementos mudam de estado e ficam mais seguros em código.
-
-Todo carregamento de textura usa `import.meta.glob`, e todo consumo passa por
-`textures.exists()`.
+| `src/data/catalog.ts` | id `055`, order `105`, `module: "EF02CO03/vila-das-maquinas"` |
+| `src/data/gameInstructions.ts` | 3 linhas de como jogar |
+| `src/pages/GameDetailsPage.tsx` | slug em `GAMES_WITH_IN_GAME_COMPLETION_SCREEN` |
 
 ---
 
-## 13. Produção
+## 14. O que mudou na construção
 
-Ordem recomendada:
+**O palco não é um painel opaco.** A primeira ideia era um cartão cremoso
+cobrindo a faixa da vila. Ele apagava o `bg-vila.png` inteiro, que é a coisa
+mais bonita da tela. Virou um véu claro com borda: a vila continua aparecendo e
+o palco continua se distinguindo do fundo.
 
-1. dados das máquinas e função `canRunStep`;
-2. layout com pedido, área de execução e três botões de máquina;
-3. placeholders em Graphics para máquinas, comandos e problemas;
-4. animação de sucesso das três máquinas;
-5. TRAVA e falhas cômicas;
-6. nível 1 completo;
-7. missão dupla simplificada do nível 3;
-8. catálogo final e eventos da plataforma;
-9. texturas opcionais.
+**As plaquinhas viajam com a máquina.** Deixá-las paradas no botão enquanto a
+máquina trabalhava lá em cima quebrava o elo entre "o que ela sabe" e "o que ela
+está fazendo". Agora elas sobem junto e param acima da máquina, e é lá que
+acendem.
 
-Para implementação inicial, seguir a regra do projeto: construir **1 nível só
-para teste**, avisar o usuário e mostrar o resultado antes de expandir para os
-3 níveis planejados.
+**A máquina errada gasta o botão.** Sem isso, tocar duas vezes na mesma máquina
+que já falhou custava duas vidas pelo mesmo engano. O botão gasto encerra o
+assunto: aquela máquina já mostrou o que sabe.
 
----
+**A ordem das plaquinhas é a ordem da execução.** O briefing listava
+`VARRER, GIRAR` para a vassoura mas mandava executar `GIRAR -> VARRER`. Ler numa
+ordem e ver noutra é ruído para criança de 7 anos; o código usa a ordem da
+execução nos dois lugares.
 
-## 14. Registro
+**O giro não é `angle`.** Rodar 360° no `angle` deixava o robô de cabeça para
+baixo no meio do movimento — a única pose que uma vassoura de chão nunca faz. O
+`GIRAR` virou uma volta no próprio eixo, com `scaleX` indo de 1 a -1 e voltando
+duas vezes.
 
-Pasta do jogo:
+**A tira de comandos é presa ao palco.** Ela para acima da máquina, mas com a
+posição limitada às bordas do palco: no primeiro layout a plaquinha da esquerda
+saía do painel e ficava boiando em cima da vila.
 
-```
-src/games/EF02CO03/vila-das-maquinas/
-```
+**O quadro de `maquinas.png` é quadrado, não 3:2.** Declarei `frameHeight: 200`
+numa folha de 900 x 600 em grade 3 x 2, e o Phaser não reclama: ele divide, acha
+3 x 3 = 9 quadros, e o "quadro 0" vira o terço de cima do robô. A pose de ação
+ficou pior ainda, porque o índice 3 caiu na faixa do meio, metade de uma máquina
+e metade da outra. Grade 3 x 2 em 600 de altura dá quadros de 300.
 
-Pasta de assets:
+**O tinte não varia a cor de um sprite colorido, escurece.** As folhas soltas
+levavam `setTint` com laranja e vermelho para parecerem diferentes entre si; o
+tinte multiplica, e sobre uma folha que já é laranja o resultado é marrom. Só
+tons quase brancos passam.
 
-```
-src/assets/games/EF02CO03/vila-das-maquinas/
-```
+**O pictograma do pedido do gatinho continua em `Graphics`.** `itens.png` traz o
+lanchinho, e o lanchinho é a SOLUÇÃO. O balão do morador precisa mostrar quem
+está com fome, não o que resolve. (Isso valeu até o `gato-e-peixe.png` chegar;
+agora o pedido usa o gatinho de sprite, e a regra continua: o que aparece no
+balão é o problema.)
 
-Slug: `vila-das-maquinas`
+**A fumaça branca sumia dentro das nuvens.** O `bg-vila.png` tem nuvens brancas
+bem em cima da chaminé. A fumacinha virou cinza-azulada com contorno, que lê
+tanto no céu quanto na nuvem.
 
-Título: `Vila das Máquinas`
+**A chaminé mudou de lugar duas vezes.** No topo do telhado o gatinho a
+escondia; à direita, ela caía justo onde o pacote pousa. Ficou no caimento da
+esquerda, que é o único trecho de telhado que nada mais usa.
 
-Entrada futura no catálogo:
-
-| Campo | Valor |
-|---|---|
-| `slug` | `vila-das-maquinas` |
-| `module` | `EF02CO03/vila-das-maquinas` |
-| `skill` | `EF02CO03` |
-| `years` | `[2]` |
-| `tags` | `["máquinas", "instruções", "algoritmos", "toque"]` |
-| `category` | `Mundo Digital` |
-| `points` | `60` |
-| `icon` | sugerido: engrenagem ou máquina |
-
-Também registrar:
-
-| Arquivo | O que entra |
-|---|---|
-| `src/data/gameInstructions.ts` | 3 linhas: veja o problema, toque na máquina, observe os comandos |
-| `src/pages/GameDetailsPage.tsx` | incluir em `GAMES_WITH_IN_GAME_COMPLETION_SCREEN` se usar painel interno |
-
----
-
-## 15. O que mudou na construção
-
-Preencher depois da implementação.
+**O balão do desejo e a tira de comandos brigavam pelo mesmo canto.** Na missão
+do gatinho a tira agora não sobe com o drone, e o plano de detalhe é o mais
+aberto dos três — é o único que precisa caber quatro coisas ao mesmo tempo.
