@@ -38,9 +38,9 @@ const POR_SLUG: Record<string, string[]> = {
     "Complete a imagem escondida para avançar.",
   ],
   "base-dos-classificadores": [
-    "Observe as características de cada item.",
-    "Arraste para a base correspondente.",
-    "Classifique tudo para concluir a fase.",
+    "A placa acima de cada cesto mostra três exemplos do que ele aceita.",
+    "Arraste cada pedrinha até o cesto que combina com ela.",
+    "Guarde todas as pedras para concluir a fase.",
   ],
   "corrida-dos-parecidos": [
     "Observe a placa no topo: ela mostra quem combina com a rodada.",

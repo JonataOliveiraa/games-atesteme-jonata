@@ -101,7 +101,7 @@ export const catalog: Game[] = [
     status: "published",
     title: "Base dos Classificadores",
     description:
-      "Arraste figuras e personagens para as bases certas, separando por cor, forma ou tamanho.",
+      "Cada cesto da clareira mostra o que aceita: leve cada pedrinha para o cesto que combina com ela.",
     category: "Pensamento Computacional",
     points: 60,
     icon: "🗂️",
