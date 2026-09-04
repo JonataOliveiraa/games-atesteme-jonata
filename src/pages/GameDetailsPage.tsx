@@ -21,6 +21,8 @@ const GAMES_WITH_IN_GAME_COMPLETION_SCREEN = new Set([
   "desfile-do-robo-repetidor",
   "serie-do-campeao",
   "fabrica-de-maquinas",
+  "vila-das-maquinas",
+  "fuga-do-laboratorio",
   "corrida-dos-parecidos",
   "ritmo-da-rotina",
   "pulo-programado",

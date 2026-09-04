@@ -54,6 +54,8 @@ import ilhaDosCodigosThumbnail from "../assets/games/EF01CO05/ilha-dos-codigos/c
 import coverMeuBichinhoConectado from "../assets/games/EF01CO06/meu-bichinho-conectado/cover-meu-bichinho-conectado.png";
 import coverEscondeDados from "../assets/games/EF01CO07/esconde-dados/cover-esconde-dados.png";
 import coverDetetiveDosModelos from "../assets/games/EF02CO01/detetive-dos-modelos/cover-detetive-dos-modelos.png";
+import coverVilaDasMaquinas from "../assets/games/EF02CO03/vila-das-maquinas/cover-vila-das-maquinas.png";
+import coverFugaDoLaboratorio from "../assets/games/EF02CO04/fuga-do-laboratorio/cover-fuga-do-laboratorio.png";
 /**
  * 1. `id` nunca muda e nunca é reaproveitado. Se um jogo for removido,
  *    marque status "draft" — não devolva o id para a fila.
@@ -411,6 +413,23 @@ export const catalog: Game[] = [
     thumbnail: machineFactoryThumbnail,
   },
   {
+    id: "055",
+    slug: "vila-das-maquinas",
+    module: "EF02CO03/vila-das-maquinas",
+    skill: "EF02CO03",
+    years: [2],
+    tags: ["máquinas", "instruções", "algoritmos", "toque"],
+    order: 105,
+    status: "published",
+    title: "Vila das Máquinas",
+    description:
+      "O morador mostra o problema e você toca na máquina que sabe os comandos para resolver.",
+    category: "Mundo Digital",
+    points: 60,
+    icon: "⚙️",
+    thumbnail: coverVilaDasMaquinas,
+  },
+  {
     id: "011",
     slug: "museu-vivo-do-computador",
     module: "EF02CO04/museu-vivo-do-computador",
@@ -426,6 +445,23 @@ export const catalog: Game[] = [
     points: 60,
     icon: "🏛️",
     thumbnail: museumThumbnail,
+  },
+  {
+    id: "056",
+    slug: "fuga-do-laboratorio",
+    module: "EF02CO04/fuga-do-laboratorio",
+    skill: "EF02CO04",
+    years: [2],
+    tags: ["hardware", "software", "montagem", "toque"],
+    order: 115,
+    status: "published",
+    title: "Fuga do Laboratório",
+    description:
+      "Monte a máquina: uma peça na bandeja, um programa no leitor, e aperte o TESTAR para ver se ela funciona.",
+    category: "Mundo Digital",
+    points: 60,
+    icon: "🔧",
+    thumbnail: coverFugaDoLaboratorio,
   },
   {
     id: "012",

@@ -105,11 +105,22 @@ const POR_SLUG: Record<string, string[]> = {
     "Desvie dos cones e respeite o limite de comandos do nível.",
     "Execute o programa para levar o robô até a estrela.",
   ],
+  "vila-das-maquinas": [
+    "O morador mostra o problema da vez em um pictograma grande.",
+    "Cada máquina do galpão tem dois comandos na plaquinha embaixo dela.",
+    "Toque na máquina cujos comandos resolvem aquele problema e veja eles acenderem.",
+  ],
   "fabrica-de-maquinas": [
     "Observe qual produto a fábrica precisa produzir.",
     "Arraste as máquinas embaralhadas para a esteira na ordem correta.",
     "Clique em Iniciar Produção para testar a sequência.",
     "Se a esteira parar, leia a dica e reorganize as etapas.",
+  ],
+  "fuga-do-laboratorio": [
+    "Veja no visor o que a máquina precisa fazer.",
+    "Toque numa coisa do rack e depois em onde ela entra.",
+    "A bandeja azul só aceita peça; o leitor roxo só aceita programa.",
+    "Com as duas cheias, aperte o botão verde e veja a máquina funcionar.",
   ],
   "museu-vivo-do-computador": [
     "Leia a pergunta no painel à direita.",
