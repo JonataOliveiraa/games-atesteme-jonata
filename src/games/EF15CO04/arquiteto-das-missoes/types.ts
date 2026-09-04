@@ -5,11 +5,14 @@ export type LevelNumber = 1 | 2 | 3
 export interface StepDef {
     id: string
     icon: IconId
+    label: string
 }
 
 export interface PartDef {
     id: string
     label: string
+    task: string
+    done: string
     icon: IconId
     steps: StepDef[]
 }
