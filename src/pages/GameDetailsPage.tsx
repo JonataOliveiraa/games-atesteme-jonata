@@ -19,6 +19,7 @@ const GAMES_WITH_IN_GAME_COMPLETION_SCREEN = new Set([
   "ilha-dos-codigos",
   "guardioes-dos-dados",
   "desfile-do-robo-repetidor",
+  "serie-do-campeao",
   "fabrica-de-maquinas",
   "corrida-dos-parecidos",
   "ritmo-da-rotina",

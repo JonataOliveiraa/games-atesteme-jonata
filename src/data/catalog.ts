@@ -13,6 +13,7 @@ import desktopThumbnail from "../assets/games/EF01CO06/desktop-digital-infantil/
 import guardiansThumbnail from "../assets/games/EF01CO07/guardioes-dos-dados/cover.png";
 import hangarThumbnail from "../assets/games/EF02CO01/hangar-dos-modelos/cover-hangar.png";
 import robotParadeThumbnail from "../assets/games/EF02CO02/desfile-do-robo-repetidor/cover.png";
+import coverSerieDoCampeao from "../assets/games/EF02CO02/serie-do-campeao/cover-serie-do-campeao.png";
 import machineFactoryThumbnail from "../assets/games/EF02CO03/fabrica-de-maquinas/cover.png";
 import museumThumbnail from "../assets/games/EF02CO04/museu-vivo-do-computador/cover.png";
 import cityThumbnail from "../assets/games/EF02CO05/cidade-das-tecnologias/cover.png";
@@ -375,6 +376,23 @@ export const catalog: Game[] = [
     points: 55,
     icon: "🤖",
     thumbnail: robotParadeThumbnail,
+  },
+  {
+    id: "054",
+    slug: "serie-do-campeao",
+    module: "EF02CO02/serie-do-campeao",
+    skill: "EF02CO02",
+    years: [2],
+    tags: ["algoritmos", "repetição", "sequência", "toque"],
+    order: 95,
+    status: "published",
+    title: "Série do Campeão",
+    description:
+      "O treinador mostra a série em cartões: toque o movimento a quantidade exata de vezes.",
+    category: "Pensamento Computacional",
+    points: 60,
+    icon: "🏅",
+    thumbnail: coverSerieDoCampeao,
   },
   {
     id: "010",
@@ -989,4 +1007,4 @@ export const catalog: Game[] = [
 ];
 
 /** Próximo id livre. Use ao cadastrar um jogo novo. */
-export const NEXT_FREE_ID = "054";
+export const NEXT_FREE_ID = "055";

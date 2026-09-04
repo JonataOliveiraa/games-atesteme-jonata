@@ -32,6 +32,12 @@ const POR_SLUG: Record<string, string[]> = {
     "No fim, ponha as partes prontas no plano e toque em VAI!",
     "A cada nível o pedido cresce: duas partes, depois três, depois quatro.",
   ],
+  "serie-do-campeao": [
+    "O cartão mostra o movimento e quantas vezes repetir.",
+    "Toque no botão: cada toque é uma repetição do atleta.",
+    "Encha todas as bolinhas para fechar a etapa com o selo.",
+    "Um toque a mais trava o cartão: as bolinhas esvaziam e você refaz só aquela etapa.",
+  ],
   "pixel-secreto": [
     "Observe a legenda de cores.",
     "Pinte os espaços corretos da grade.",
