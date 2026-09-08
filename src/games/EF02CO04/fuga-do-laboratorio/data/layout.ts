@@ -18,14 +18,26 @@ export const DEPTH = {
 
 /**
  * ══════════════════════════════════════════════════════════════════════════
- *  TRÊS MÓVEIS, E NÃO TRÊS PLACAS
+ *  DUAS COLUNAS: DE ONDE SE TIRA, E ONDE SE MONTA
  * ══════════════════════════════════════════════════════════════════════════
  *
- * A versão anterior empilhava quatro faixas de interface — header, tira da
- * porta, laje da mesa, dois botões — e nenhuma delas era uma coisa do
- * laboratório. Aqui a tela tem uma barra fina de plataforma no topo e, embaixo
- * dela, três MÓVEIS: a prateleira alta onde as máquinas revividas moram, o
- * chassi no meio da bancada, e o rack baixo de onde saem as peças.
+ * A tela é lida da esquerda para a direita, e a partida também: a criança PEGA
+ * à esquerda e MONTA à direita.
+ *
+ * A versão anterior era horizontal — prateleira em cima, máquina no meio, rack
+ * embaixo — e pagava caro por isso: a máquina tinha 437px de altura espremidos
+ * entre dois móveis, e ela é a coisa que a criança precisa enxergar. Virando a
+ * composição, o chassi ganhou a metade direita inteira e cresceu para 560, e o
+ * rack virou estante: duas colunas de fichas, que é como material fica guardado
+ * numa bancada de verdade.
+ *
+ *   ┌──────────────┬──────────────────────────┐
+ *   │  prateleira  │                          │
+ *   ├──────────────┤   o chassi, grande       │
+ *   │              │                          │
+ *   │  o rack      │   mascote no vão         │
+ *   │  (2 colunas) │                          │
+ *   └──────────────┴──────────────────────────┘
  */
 
 /** Fina de propósito: o jogo se explica pelos móveis, não pelo cabeçalho. */
@@ -51,47 +63,80 @@ export const HUD = {
     livesX: 1040,
 }
 
-/** A prateleira de parede: o progresso mora aqui, e ele é mobília. */
+/**
+ * A prateleira de parede: o progresso mora aqui, e ele é mobília.
+ *
+ * Ela coroa a coluna da esquerda, alinhada com o rack — as três máquinas
+ * ligadas ficam logo acima de onde saíram as peças que as ligaram.
+ */
 export const SHELF = {
-    cx: 640,
-    cy: 132,
-    w: 1000,
-    h: 112,
+    cx: 208,
+    cy: 146,
+    w: 344,
+    h: 108,
 
-    nicheY: 122,
-    nicheGap: 244,
-    nicheSize: 116,
-    trophy: 86,
+    /** O nicho apoia na tábua e começa em y=94, livre da sombra do header. */
+    nicheY: 137,
+    nicheGap: 104,
+    nicheSize: 86,
+    trophy: 68,
 }
 
 /** O chassi, no meio da bancada. Tudo dentro dele é relativo a S. */
+/**
+ * O chassi, na metade direita. Tudo dentro dele é relativo a S.
+ *
+ * Os deslocamentos internos são medidos NA ARTE, em pixels — então quando o
+ * `s` muda, todos eles mudam junto, pelo mesmo fator. Da última afinação
+ * (tecla P, com s=437) para estes números foi exatamente isso: x 1,281.
+ */
 export const MACHINE = {
-    cx: 640,
-    cy: 392,
-    s: 400,
+    cx: 900,
+    cy: 400,
+    s: 560,
 
-    displayDX: 0,
-    displayDY: -140,
-    displayW: 190,
-    displayH: 70,
+    /** A arte do chassi dentro do container: os vãos dela raramente caem no centro. */
+    bodyDX: 0,
+    bodyDY: -19,
 
-    trayDX: -95,
-    trayDY: -10,
-    trayW: 150,
-    trayH: 104,
+    displayDX: -5,
+    displayDY: -118,
+    displayW: 232,
+    displayH: 86,
 
-    readerDX: 95,
-    readerDY: -10,
-    readerW: 114,
-    readerH: 114,
+    trayDX: -81,
+    trayDY: 40,
+    trayW: 170,
+    trayH: 118,
 
-    buttonDY: 110,
-    buttonD: 120,
+    readerDX: 106,
+    readerDY: 40,
+    readerW: 113,
+    readerH: 113,
 
-    /** Alvos de toque bem maiores que o desenho, para o dedo de 7 anos. */
-    trayHit: { w: 176, h: 136 },
-    readerHit: { w: 146, h: 146 },
-    buttonHit: { w: 152, h: 152 },
+    buttonDX: -1,
+    buttonDY: 151,
+    buttonD: 97,
+
+    /**
+     * O símbolo dentro do visor tem medida própria, e não a do vão.
+     *
+     * O quadro da folha 'pedidos.png' traz margem vazia em volta da silhueta,
+     * então o tamanho aqui é do QUADRO, não do desenho: 86 de quadro dá uns 64
+     * de símbolo. E o vão da arte não é simétrico — a moldura de cima é mais
+     * grossa —, por isso o empurrão para baixo.
+     */
+    goalBox: 86,
+    goalDY: 25,
+
+    /**
+     * Alvos de toque maiores que o desenho, para o dedo de 7 anos — mas não
+     * tão maiores que se encostem: entre a bandeja e o leitor sobram 7px, e
+     * quem estivesse por cima roubaria o toque do vizinho.
+     */
+    trayHit: { w: 180, h: 126 },
+    readerHit: { w: 180, h: 150 },
+    buttonHit: { w: 150, h: 112 },
 }
 
 export const machinePoint = (dx: number, dy: number) => ({
@@ -101,43 +146,60 @@ export const machinePoint = (dx: number, dy: number) => ({
 
 export const TRAY = machinePoint(MACHINE.trayDX, MACHINE.trayDY)
 export const READER = machinePoint(MACHINE.readerDX, MACHINE.readerDY)
-export const BUTTON = machinePoint(0, MACHINE.buttonDY)
+export const BUTTON = machinePoint(MACHINE.buttonDX, MACHINE.buttonDY)
 export const DISPLAY = machinePoint(MACHINE.displayDX, MACHINE.displayDY)
 
 /**
- * O rack baixo: é daqui que a criança tira as coisas.
+ * O rack, agora em pé: é daqui que a criança tira as coisas.
  *
- * As fichas não têm nome escrito embaixo. Seis rótulos de 18px numa fileira
- * viram uma linha de texto que ninguém lê, e o desenho já diz o que é. O nome
- * aparece uma vez só, no recado do topo, no instante em que a criança escolhe
- * — que é quando ela está olhando.
+ * Duas colunas, e quantas fileiras a montagem pedir — quatro fichas viram 2x2,
+ * seis viram 2x3, sempre centradas na estante. Em fileira única, seis fichas
+ * ocupavam a largura inteira da tela e empurravam a máquina para o meio de um
+ * corredor.
+ *
+ * As fichas não têm nome escrito embaixo. Seis rótulos de 18px viram texto que
+ * ninguém lê, e o desenho já diz o que é. O nome aparece uma vez só, no recado
+ * do topo, no instante em que a criança escolhe — que é quando ela olha.
  */
 export const RACK = {
-    cx: 640,
-    cy: 656,
-    w: 1160,
-    h: 124,
+    cx: 208,
+    cy: 428,
+    w: 344,
+    h: 436,
 
-    tileY: 650,
-    tile: 118,
-    gap: 24,
-    icon: 92,
-    lift: 16,
+    cols: 2,
+    colGap: 152,
+    rowGap: 142,
+    tile: 122,
+    /** Sem a carta atrás, o desenho é a ficha inteira. */
+    icon: 104,
+    lift: 12,
 }
 
-export const rackX = (i: number, n: number) => {
-    const span = n * RACK.tile + (n - 1) * RACK.gap
-    return RACK.cx - span / 2 + RACK.tile / 2 + i * (RACK.tile + RACK.gap)
+/** Onde cai a ficha `i` de `n`, na grade da estante. */
+export const rackSlot = (i: number, n: number) => {
+    const cols = Math.min(RACK.cols, n)
+    const rows = Math.ceil(n / cols)
+    return {
+        x: RACK.cx + ((i % cols) - (cols - 1) / 2) * RACK.colGap,
+        y: RACK.cy + (Math.floor(i / cols) - (rows - 1) / 2) * RACK.rowGap,
+    }
 }
 
 export const nicheX = (i: number, n: number) =>
     SHELF.cx + (i - (n - 1) / 2) * SHELF.nicheGap
 
-/** A mascote numa tela de parede: ela é um móvel do laboratório, não adesivo. */
+/**
+ * A mascote numa tela de parede: ela é um móvel do laboratório, não adesivo.
+ *
+ * Mora no vão entre as duas colunas, que é de onde ela consegue apontar para
+ * os dois lados — para o rack quando é hora de escolher, para a máquina
+ * quando é hora de olhar o que aconteceu.
+ */
 export const MASCOT = {
-    cx: 122,
-    cy: 348,
-    r: 90,
-    size: 170,
-    bezel: 226,
+    cx: 508,
+    cy: 230,
+    r: 74,
+    size: 140,
+    bezel: 186,
 }

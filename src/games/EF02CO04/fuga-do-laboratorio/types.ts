@@ -34,20 +34,23 @@ export interface LabItem {
      * música" — em vez de "tente de novo".
      */
     verb?: string
+    /**
+     * Só para programa: qual pedido ele atende. É este campo, e não uma peça
+     * escolhida a dedo na montagem, que decide se a máquina fez o que pediram.
+     */
+    goal?: Goal
 }
 
-/** Quem manda em quem. */
-export interface Pair {
-    softwareId: string
-    hardwareId: string
-}
-
-/** Uma montagem: um pedido, o par que atende, e a prateleira de onde escolher. */
+/**
+ * Uma montagem: um pedido e a prateleira de onde escolher.
+ *
+ * NÃO existe "a resposta" gravada aqui. Certo é qualquer par cujo programa
+ * atenda o pedido e que mande na peça encaixada — e quase sempre há mais de
+ * um. Escrever se faz com teclado, com tela ou com impressora.
+ */
 export interface Build {
     id: string
     goal: Goal
-    hardwareId: string
-    softwareId: string
     shelf: string[]
 }
 

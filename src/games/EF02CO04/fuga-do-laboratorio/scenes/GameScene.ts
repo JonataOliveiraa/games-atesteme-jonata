@@ -22,6 +22,7 @@ import { createRack, type Rack } from './rack'
 import { createItemIcon } from './itemIcon'
 import { playResult, playWrong } from './results'
 import { showTrava, type TravaSpec } from './trava'
+import { createTuner } from './tuner'
 
 const GAME_ID = 'fuga-do-laboratorio'
 
@@ -109,6 +110,15 @@ export class GameScene extends Phaser.Scene {
         })
         this.machine.setEnabled(false)
         this.rack.setEnabled(false)
+
+        if (import.meta.env.DEV) {
+            const stopTuner = createTuner(this, this.machine, on => {
+                const playing = on && this.phase === 'playing' && !this.busy
+                this.machine.setEnabled(playing)
+                this.rack.setEnabled(playing)
+            })
+            this.events.once('shutdown', stopTuner)
+        }
 
         this.bindPlatform()
         EventBus.on('mute-audio', this.onMute, this)
@@ -343,7 +353,8 @@ export class GameScene extends Phaser.Scene {
         this.loaded = { tray: null, reader: null }
 
         this.audio.trophy()
-        await this.shelf.place(this.buildIndex, item(this.build.hardwareId), this.build.goal)
+        // a peça do troféu é a que ELA encaixou, não uma resposta de gabarito
+        await this.shelf.place(this.buildIndex, item(hardwareId), this.build.goal)
         if (gen !== this.gen) return
 
         this.award()
@@ -512,46 +523,86 @@ export class GameScene extends Phaser.Scene {
 
     // ─────────────────────────────────────────────── tutorial
 
+    /** Um toque parado no alvo — o traço de A para B ensinaria a arrastar. */
+    private tapAt(at: { x: number; y: number }) {
+        return { fromX: at.x, fromY: at.y, toX: at.x, toY: at.y, tap: true }
+    }
+
+    /**
+     * ══════════════════════════════════════════════════════════════════════
+     *  O TUTORIAL MOSTRA, E QUASE NÃO FALA
+     * ══════════════════════════════════════════════════════════════════════
+     *
+     * Eram cinco falas no nível 1 e duas em cada um dos outros — texto demais
+     * para quem tem 7 anos e ainda soletra cada palavra. São três no 1 e uma
+     * nos outros, e quem carrega a explicação é o DEDO: cada passo acende um
+     * lugar só e bate nele, na ordem exata do gesto — escolhe, encaixa, liga.
+     *
+     * A regra das cores saiu do texto e foi para o desenho. Desde que as
+     * gravuras viraram a folha `tipos.png`, a bandeja mostra um punhado de
+     * coisas que se pega e o leitor mostra tiles de app: quem olha, vê. E o
+     * que o desenho não disser, a TRAVA diz na hora do erro, que é quando a
+     * criança quer saber.
+     */
     private tutorialSteps(): TutorialStep[] {
+        const display = this.machine.displayBounds()
+
+        // nos níveis 2 e 3 a máquina já foi montada três vezes: uma fala basta
+        if (this.level.level > 1) {
+            return [{
+                text: this.level.level === 2
+                    ? 'Mais de um par funciona. Faça o que o visor pediu.'
+                    : 'Quem decide é o programa, não a peça.',
+                shape: 'rect',
+                x: display.x, y: display.y, w: display.w, h: display.h,
+                balloonX: 640,
+                buttonLabel: 'Vamos lá!',
+            }]
+        }
+
+        const rack = this.rack.bounds()
+        const button = this.machine.buttonBounds()
+
+        const firstId = this.build.shelf[0]
+        const firstTile = this.rack.tileAt(firstId)
+
+        /*
+         * O dedo bate na entrada que serve para a PRIMEIRA ficha do rack, e o
+         * holofote acende as duas: a criança vê a escolha e vê o alvo dela na
+         * mesma imagem.
+         */
+        const target = this.machine.slotBounds(SLOT_OF[item(firstId).kind])
         const tray = this.machine.slotBounds('tray')
         const reader = this.machine.slotBounds('reader')
-        const button = this.machine.buttonBounds()
-        const rack = this.rack.bounds()
-        const first = this.rack.tileAt(this.build.shelf[0])
+        const left = Math.min(tray.x - tray.w / 2, reader.x - reader.w / 2)
+        const right = Math.max(tray.x + tray.w / 2, reader.x + reader.w / 2)
+        const top = Math.min(tray.y - tray.h / 2, reader.y - reader.h / 2)
+        const bottom = Math.max(tray.y + tray.h / 2, reader.y + reader.h / 2)
 
         return [
             {
-                text: 'Esta máquina só liga com DUAS coisas.',
-                shape: 'rect',
-                ...this.machine.bounds(),
-                balloonX: 640,
-            },
-            {
-                text: 'A bandeja azul só aceita PEÇA: o que dá para pegar na mão.',
-                shape: 'rect',
-                x: tray.x, y: tray.y, w: tray.w, h: tray.h,
-                balloonX: 640,
-                pointer: { fromX: tray.x, fromY: tray.y, toX: tray.x, toY: tray.y, tap: true },
-            },
-            {
-                text: 'O leitor roxo só aceita PROGRAMA: quem dá as ordens.',
-                shape: 'rect',
-                x: reader.x, y: reader.y, w: reader.w, h: reader.h,
-                balloonX: 640,
-                pointer: { fromX: reader.x, fromY: reader.y, toX: reader.x, toY: reader.y, tap: true },
-            },
-            {
-                text: 'Toque numa coisa daqui e depois onde ela entra.',
+                text: 'Escolha uma coisa aqui.',
                 shape: 'rect',
                 x: rack.x, y: rack.y, w: rack.w, h: rack.h,
                 balloonX: 640,
-                pointer: { fromX: first.x, fromY: first.y, toX: first.x, toY: first.y, tap: true },
+                pointer: this.tapAt(firstTile),
             },
             {
-                text: 'Com as duas cheias, aperte o botão verde!',
+                text: 'E toque onde ela entra.',
+                shape: 'rect',
+                x: (left + right) / 2,
+                y: (top + bottom) / 2,
+                w: right - left + 24,
+                h: bottom - top + 24,
+                balloonX: 640,
+                pointer: this.tapAt(target),
+            },
+            {
+                text: 'Com as duas cheias, aperte o verde!',
                 shape: 'rect',
                 x: button.x, y: button.y, w: button.w, h: button.h,
                 balloonX: 640,
+                pointer: this.tapAt(button),
                 buttonLabel: 'Vamos lá!',
             },
         ]

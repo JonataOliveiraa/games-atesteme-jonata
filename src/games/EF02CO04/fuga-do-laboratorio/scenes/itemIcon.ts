@@ -47,6 +47,14 @@ function drawSoftware(g: Phaser.GameObjects.Graphics, size: number) {
     g.fillCircle(0, 0, 9 * u)
 }
 
+/**
+ * As peças vêm com mais margem vazia dentro do quadro que os tiles de
+ * programa, que ocupam a célula inteira. Desenhadas na mesma caixa, ficavam
+ * visivelmente menores — e sem a carta atrás para igualar, a fileira do rack
+ * saía desalinhada. O empurrão iguala o que o olho vê, não o que a caixa mede.
+ */
+const HARDWARE_BOOST = 1.15
+
 export function createItemIcon(
     scene: Phaser.Scene,
     target: LabItem,
@@ -54,7 +62,8 @@ export function createItemIcon(
 ): ItemIcon {
     const frame = String(target.frame)
     if (scene.textures.exists(ITEM_SHEET) && scene.textures.get(ITEM_SHEET).has(frame)) {
-        return scene.add.sprite(0, 0, ITEM_SHEET, frame).setDisplaySize(size, size)
+        const box = target.kind === 'hardware' ? size * HARDWARE_BOOST : size
+        return scene.add.sprite(0, 0, ITEM_SHEET, frame).setDisplaySize(box, box)
     }
     const g = scene.add.graphics()
     if (target.kind === 'hardware') drawHardware(g, size)

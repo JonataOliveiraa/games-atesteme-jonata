@@ -1,6 +1,6 @@
 import Phaser from 'phaser'
 import { C } from '../data/theme'
-import type { Goal } from '../types'
+import type { Goal, ItemKind } from '../types'
 
 /**
  * Os desenhos que carregam a regra, e o símbolo do pedido.
@@ -155,4 +155,84 @@ export function drawGoal(
     color: number,
 ) {
     GOAL_PAINTER[goal](g, size / 100, color)
+}
+
+export const KIND_SHEET = 'tipos'
+export const KIND_COLUMNS = 2
+export const KIND_ROWS = 1
+
+const KIND_FRAME: Record<ItemKind, number> = { hardware: 0, software: 1 }
+
+/**
+ * ══════════════════════════════════════════════════════════════════════════
+ *  O QUE CADA ENTRADA ACEITA
+ * ══════════════════════════════════════════════════════════════════════════
+ *
+ * A mão e a seta diziam o GESTO — encostar, mandar. A folha 'tipos.png' diz a
+ * CATEGORIA: um punhado de coisas que se pega, um punhado de tiles de app. É
+ * a mesma língua do 'itens.png', que é onde a criança aprendeu a diferença.
+ *
+ * Sem a folha, os dois desenhos de reserva continuam valendo — eles ensinam a
+ * mesma regra por outro caminho.
+ */
+export const hasKindArt = (scene: Phaser.Scene) =>
+    scene.textures.exists(KIND_SHEET) && scene.textures.get(KIND_SHEET).has('0')
+
+export function createKindIcon(
+    scene: Phaser.Scene,
+    kind: ItemKind,
+    size: number,
+): Phaser.GameObjects.Sprite | Phaser.GameObjects.Graphics {
+    const frame = String(KIND_FRAME[kind])
+    if (scene.textures.exists(KIND_SHEET) && scene.textures.get(KIND_SHEET).has(frame)) {
+        return scene.add.sprite(0, 0, KIND_SHEET, frame).setDisplaySize(size, size)
+    }
+    const g = scene.add.graphics()
+    if (kind === 'hardware') drawHandTouch(g, size)
+    else drawOrder(g, size)
+    return g
+}
+
+export const GOAL_SHEET = 'pedidos'
+export const GOAL_COLUMNS = 3
+export const GOAL_ROWS = 2
+
+/** A ordem dos quadros na folha, da esquerda para a direita, linha a linha. */
+const GOAL_FRAME: Record<Goal, number> = {
+    music: 0,
+    photo: 1,
+    dance: 2,
+    draw: 3,
+    print: 4,
+    write: 5,
+}
+
+/**
+ * ══════════════════════════════════════════════════════════════════════════
+ *  O PEDIDO NO VISOR
+ * ══════════════════════════════════════════════════════════════════════════
+ *
+ * A folha vem em SILHUETA BRANCA, e é disso que ela vive: o visor escolhe a
+ * cor com 'setTint', exatamente como o 'drawGoal' recebia 'color'. Uma arte,
+ * qualquer cor — hoje o amarelo do visor aceso, amanhã o verde de quando a
+ * máquina funciona, sem gerar quadro novo.
+ *
+ * Sem a folha, cai no desenho de reserva e o jogo continua.
+ */
+export function createGoalIcon(
+    scene: Phaser.Scene,
+    goal: Goal,
+    size: number,
+    color: number,
+): Phaser.GameObjects.Sprite | Phaser.GameObjects.Graphics {
+    const frame = String(GOAL_FRAME[goal])
+    if (scene.textures.exists(GOAL_SHEET) && scene.textures.get(GOAL_SHEET).has(frame)) {
+        return scene.add
+            .sprite(0, 0, GOAL_SHEET, frame)
+            .setDisplaySize(size, size)
+            .setTint(color)
+    }
+    const g = scene.add.graphics()
+    drawGoal(g, goal, size, color)
+    return g
 }

@@ -96,26 +96,49 @@ rótulo embaixo: seis textos de 18px numa fileira viram uma linha que ninguém l
 
 ---
 
-## 5. A grade: três móveis, não quatro placas
+## 5. A grade: duas colunas, e não quatro faixas
 
 Tela fixa de **1280 x 720** com `Phaser.Scale.FIT`. A coluna "No celular" usa
 fator 0,30.
 
-| Faixa | y | Conteúdo | Tamanho | No celular |
-|---|---|---|---|---|
-| Header | 0 - 72 | pílula do nível, recado, `?` em (1218, 36) | `?` toque 122 x 122 | 37 x 37 |
-| Prateleira | 76 - 188 | 3 nichos: as máquinas vivas | nicho 116; troféu 86 | 35; 26 |
-| Bancada | 192 - 592 | o chassi (400 x 400) e a mascote na parede | ver abaixo | — |
-| Rack | 594 - 718 | 4 a 6 fichas de peça e programa | ficha 118 | 35 |
+A tela é lida da esquerda para a direita, e a partida também: **pega à esquerda,
+monta à direita.**
 
-Dentro do chassi, relativo ao centro (640, 392):
+```
+┌──────────────┬──────────────────────────┐
+│  prateleira  │                          │
+├──────────────┤   o chassi, grande       │
+│   o rack     │   mascote no vão         │
+│  (2 colunas) │                          │
+└──────────────┴──────────────────────────┘
+```
+
+| Móvel | Centro | Tamanho | Conteúdo | No celular |
+|---|---|---|---|---|
+| Header | — | 1280 x 72 | pílula do nível, recado, `?` em (1218, 36) | `?` toque 122 x 122 → 37 |
+| Prateleira | (208, 146) | 344 x 108 | 3 nichos de 86; troféu 68 | 26; 20 |
+| Rack | (208, 428) | 344 x 436 | 4 a 6 fichas de 122 em 2 colunas | 37 |
+| Mascote | (508, 230) | ø 148 | a tela de parede | — |
+| Chassi | (900, 400) | 560 x 560 | a máquina | — |
+
+A composição anterior era horizontal — prateleira em cima, máquina no meio, rack
+embaixo — e a máquina, que é a coisa que a criança precisa enxergar, ficava com
+437px espremidos entre dois móveis. Em pé, o chassi tem a metade direita inteira
+e 560.
+
+Dentro do chassi, relativo ao centro (900, 400):
 
 | Peça | Deslocamento | Desenho | Área de toque | No celular |
 |---|---|---|---|---|
-| visor do pedido | (0, -140) | 190 x 70 | — | — |
-| bandeja azul | (-95, -10) | 150 x 104 | 176 x 136 | 53 x 41 |
-| leitor roxo | (+95, -10) | 114 x 114 | 146 x 146 | 44 x 44 |
-| TESTAR | (0, +110) | ø 120 | 152 x 152 | 46 x 46 |
+| arte do chassi | (0, -19) | 560 x 560 | — | — |
+| visor do pedido | (-5, -118) | 232 x 86 | — | — |
+| bandeja azul | (-81, +40) | 170 x 118 | 180 x 126 | 54 x 38 |
+| leitor roxo | (+106, +40) | 113 x 113 | 180 x 150 | 54 x 45 |
+| TESTAR | (-1, +151) | ø 97 | 150 x 112 | 45 x 34 |
+
+Estes deslocamentos são medidos **na arte**, com a tecla `P` (ver
+`scenes/tuner.ts`). Quando o `s` muda, todos mudam junto pelo mesmo fator — foi
+assim que se passou de 437 para 560.
 
 Não existe barra, bolinha nem porcentagem de progresso em lugar nenhum. O que a
 criança tem para olhar é a prateleira.
@@ -124,21 +147,60 @@ criança tem para olhar é a prateleira.
 
 ## 6. Níveis
 
-**Só o nível 1 existe.** Regra do projeto: um nível para validação antes de
-expandir.
+Três níveis, três montagens cada. A escada tem um degrau por nível, e cada um
+tira uma muleta da criança.
 
-| Nível | Montagem | Pedido | Par certo | Rack |
+| Nível | O que resolve a montagem | O que deixa de bastar |
+|---|---|---|
+| 1 | acertar o TIPO de cada entrada | — |
+| 2 | escolher o par que atende o pedido | ter um par que funciona |
+| 3 | escolher o PROGRAMA certo para a peça | olhar a peça |
+
+### Nível 1 — Laboratório
+
+Quatro fichas: 2 peças e 2 programas. **Um par completo por rack** — acertar o
+tipo de cada entrada já resolve quase tudo.
+
+| Montagem | Pedido | Par certo | Rack |
+|---|---|---|---|
+| 1 | tocar música | caixinha + app de música | mouse, caixinha, app de música, app de desenho |
+| 2 | tirar uma foto | câmera + app de fotos | câmera, teclado, app de música, app de fotos |
+| 3 | dançar | robô + dancinha | impressora, robô, dancinha, app de escrever |
+
+### Nível 2 — Galpão
+
+Seis fichas: 3 peças e 3 programas, e **mais de um par que funciona de
+verdade**. A decisão deixa de ser "o que cabe aqui" e vira "o que faz o que foi
+pedido".
+
+| Montagem | Pedido | Par certo | Rack | O que ela ensina |
 |---|---|---|---|---|
-| 1 | 1 | tocar música | caixinha + app de música | mouse, caixinha, app de música, app de desenho |
-| 1 | 2 | tirar uma foto | câmera + app de fotos | câmera, teclado, app de música, app de fotos |
-| 1 | 3 | dançar | robô + dancinha | impressora, robô, dancinha, app de escrever |
+| 1 | tirar uma foto | câmera + app de fotos | caixinha, câmera, robô, app de música, app de fotos, dancinha | três pares completos: dois funcionam e nenhum dos dois é o pedido |
+| 2 | desenhar | tela + app de desenho | impressora, mouse, tela, app de escrever, joguinho, app de desenho | o mouse e o joguinho não mandam em nada que esteja ali |
+| 3 | escrever | impressora + app de escrever | teclado, impressora, tela, app de desenho, app de escrever, app de música | a peça menos óbvia: quem põe a palavra no papel não é o teclado |
 
-Sempre 2 peças e 2 programas no rack: a decisão de **tipo** e a de **par** são
-as duas reais.
+O nível 2 é o que finalmente usa o veredito **`off-goal`**. Até aqui ele era um
+ramo do `outcomeOf` que nenhuma partida alcançava, porque nunca havia um segundo
+par certo no rack para a criança montar por engano — e é ele que produz a frase
+"Funcionou, mas eu pedi outra coisa."
 
-Ideias para 2 e 3, quando o 1 passar: seis fichas no rack; dois programas que
-servem para a mesma peça mas atendem pedidos diferentes; uma montagem em que a
-peça certa é a menos óbvia (impressora para "escrever").
+O tutorial do 2 não reensina a máquina: são duas falas, uma no rack e uma no
+visor, sobre o que mudou.
+
+### Nível 3 — Depósito
+
+Seis fichas, e agora **a mesma peça aparece em pedidos diferentes**. A tela
+desenha e a tela escreve; a caixinha toca música e a caixinha desperta. Olhar a
+peça deixa de bastar: quem decide é o programa.
+
+| Montagem | Pedido | O que fecha | O que engana |
+|---|---|---|---|
+| 1 | desenhar | tela + app de desenho | tela + app de escrever — a mesma peça, e escreve de verdade |
+| 2 | escrever | tela **ou** impressora + app de escrever | tela + app de desenho; câmera + app de fotos |
+| 3 | tocar música | caixinha + app de música | caixinha + despertador — desperta, e desperta não é tocar |
+
+O tutorial do 3 troca as duas falas: "aqui a mesma peça serve para mais de um
+pedido" e "quem decide é o programa; olhe o visor antes de escolher".
 
 ---
 
@@ -154,15 +216,32 @@ export const fits = (target: LabItem, slot: Slot) =>
   target.kind === SLOT_KIND[slot]
 
 export function outcomeOf(build: Build, hardwareId: string, softwareId: string) {
-  if (hardwareId === build.hardwareId && softwareId === build.softwareId) return 'ok'
-  if (commands(softwareId, hardwareId)) return 'off-goal'
-  return 'mismatch'
+  if (!commands(softwareId, hardwareId)) return 'mismatch'
+  return item(softwareId).goal === build.goal ? 'ok' : 'off-goal'
 }
 ```
 
 O veredito é **função do que está encaixado no instante do toque**. Não existe
-campo `correto` em botão nenhum: a mesma caixinha de som é o acerto do pedido de
-música e o fracasso engraçado do pedido de foto.
+campo `correto` em botão nenhum, e a montagem **não guarda a resposta**: a mesma
+caixinha de som é o acerto do pedido de música e o fracasso engraçado do pedido
+de foto.
+
+### Um programa manda em várias peças
+
+`COMMANDS` é de um para muitos, porque o mundo é assim: para escrever serve o
+teclado, serve a tela, serve a impressora.
+
+```ts
+'app-escrever': ['teclado', 'tela', 'impressora'],
+```
+
+Quando a lista era um par só, o jogo respondia "Teclado não sabe escrever" — uma
+frase que a criança sabe que é falsa, e frase falsa ensina errado. **Quase toda
+montagem tem mais de uma resposta certa**, e o troféu que sobe para a prateleira
+é a peça que ela encaixou, não um gabarito.
+
+O que continua errado é o que continua errado de verdade: mandar tocar música
+num mouse, mandar desenhar num robô.
 
 Pontuação interna:
 
@@ -222,15 +301,36 @@ O erro não pode ser:
 
 ## 10. Tutorial
 
-Cinco falas de uma linha, puláveis, no primeiro nível:
+**Três falas no nível 1, uma em cada um dos outros.** Todas puláveis, todas de
+uma linha, e todas com o dedo batendo no lugar.
 
-| Passo | Frase | Recorte |
-|---|---|---|
-| 1 | `Esta máquina só liga com DUAS coisas.` | o chassi inteiro |
-| 2 | `A bandeja azul só aceita PEÇA: o que dá para pegar na mão.` | a bandeja, com dedo |
-| 3 | `O leitor roxo só aceita PROGRAMA: quem dá as ordens.` | o leitor, com dedo |
-| 4 | `Toque numa coisa daqui e depois onde ela entra.` | o rack, com dedo |
-| 5 | `Com as duas cheias, aperte o botão verde!` | o TESTAR |
+Quem carrega a explicação é o gesto, não a frase: cada passo acende UM lugar e
+bate nele, na ordem exata do que a criança vai fazer.
+
+| Nível | Passo | Frase | Recorte, e onde o dedo bate |
+|---|---|---|---|
+| 1 | 1 | `Escolha uma coisa aqui.` | o rack; dedo na primeira ficha |
+| 1 | 2 | `E toque onde ela entra.` | as DUAS entradas juntas; dedo na que serve para aquela ficha |
+| 1 | 3 | `Com as duas cheias, aperte o verde!` | o TESTAR; dedo nele |
+| 2 | 1 | `Mais de um par funciona. Faça o que o visor pediu.` | o visor |
+| 3 | 1 | `Quem decide é o programa, não a peça.` | o visor |
+
+O dedo é sempre **toque parado com ondinha**, nunca trajeto de A para B: o
+trajeto é o desenho universal de arrastar, e este jogo não tem arrasto.
+
+### O que saiu do texto
+
+Eram cinco falas no 1 e duas em cada um dos outros — leitura demais para quem
+tem 7 anos e ainda soletra. Três coisas saíram, e nenhuma se perdeu:
+
+| Saiu | Quem ensina agora |
+|---|---|
+| "Esta máquina só liga com DUAS coisas" | as duas entradas vazias e o botão apagado |
+| "A bandeja azul só aceita PEÇA" | a gravura da `tipos.png`: um punhado de coisas que se pega |
+| "O leitor roxo só aceita PROGRAMA" | a gravura da `tipos.png`: tiles de app |
+
+E o que o desenho não disser, a TRAVA diz na hora do erro — que é quando a
+criança quer saber.
 
 O botão `?` reabre. Sem narração.
 

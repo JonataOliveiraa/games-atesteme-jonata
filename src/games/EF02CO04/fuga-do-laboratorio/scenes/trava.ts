@@ -3,8 +3,9 @@ import { FX } from '../../../../shared/effects/FX'
 import { DEPTH, H, W } from '../data/layout'
 import { C, CSS, FONT, SLOT_PHRASE } from '../data/theme'
 import type { LabItem, Slot } from '../types'
+import { SLOT_KIND } from '../data/items'
 import { createItemIcon } from './itemIcon'
-import { drawHandTouch, drawOrder } from './glyphs'
+import { createKindIcon } from './glyphs'
 
 export type TravaSpec =
     /** A entrada recusou o tipo: é a regra da habilidade, dita na própria entrada. */
@@ -58,9 +59,7 @@ export function showTrava(scene: Phaser.Scene, spec: TravaSpec): Promise<void> {
         const icon = createItemIcon(scene, spec.target, 140)
         icon.setPosition(-158, 0)
 
-        const glyph = scene.add.graphics().setPosition(140, 0)
-        if (spec.slot === 'tray') drawHandTouch(glyph, 158)
-        else drawOrder(glyph, 158)
+        const glyph = createKindIcon(scene, SLOT_KIND[spec.slot], 158).setPosition(140, 0)
 
         // a seta cortada: aquilo não entra ali
         arrow.fillStyle(C.warn, 1)

@@ -10,6 +10,10 @@ import {
     UI_COLUMNS, UI_ROWS, UI_SHEET,
 } from './machine'
 import { MOVEIS_COLUMNS, MOVEIS_ROWS, MOVEIS_SHEET } from './furniture'
+import {
+    GOAL_COLUMNS, GOAL_ROWS, GOAL_SHEET,
+    KIND_COLUMNS, KIND_ROWS, KIND_SHEET,
+} from './glyphs'
 
 const FILES = import.meta.glob(
     '../../../../assets/games/EF02CO04/fuga-do-laboratorio/*.png',
@@ -31,6 +35,8 @@ const SHEETS: Record<string, { columns: number; rows: number }> = {
     [CHASSI_SHEET]: { columns: CHASSI_COLUMNS, rows: CHASSI_ROWS },
     [UI_SHEET]: { columns: UI_COLUMNS, rows: UI_ROWS },
     [MOVEIS_SHEET]: { columns: MOVEIS_COLUMNS, rows: MOVEIS_ROWS },
+    [GOAL_SHEET]: { columns: GOAL_COLUMNS, rows: GOAL_ROWS },
+    [KIND_SHEET]: { columns: KIND_COLUMNS, rows: KIND_ROWS },
 }
 
 /** Corta a folha em quadros numerados da esquerda para a direita, linha a linha. */

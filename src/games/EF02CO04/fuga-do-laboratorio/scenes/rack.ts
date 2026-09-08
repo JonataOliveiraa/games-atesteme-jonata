@@ -1,6 +1,6 @@
 import Phaser from 'phaser'
 import { FX } from '../../../../shared/effects/FX'
-import { DEPTH, RACK, rackX } from '../data/layout'
+import { DEPTH, RACK, rackSlot } from '../data/layout'
 import { C } from '../data/theme'
 import { item } from '../data/items'
 import { createItemIcon } from './itemIcon'
@@ -19,22 +19,23 @@ interface Tile {
     chosen: boolean
 }
 
-function paintTile(g: Phaser.GameObjects.Graphics, kind: 'hardware' | 'software', chosen: boolean) {
-    const dark = kind === 'hardware' ? C.hardDark : C.softDark
-    const body = chosen ? C.gold : C.cream
-    const edge = chosen ? C.goldDark : dark
-
+/**
+ * A FICHA NÃO É UMA CARTA.
+ *
+ * Cada item ganhava um retângulo creme atrás. Quatro cartas numa fileira, com
+ * o desenho pequeno no meio de cada uma, e o que a criança via primeiro era a
+ * carta — não a coisa. O ícone do 'itens.png' já é a ficha: azul se é peça,
+ * tile roxo se é programa.
+ *
+ * Fica só o halo de escolhido, porque esse não é fundo: é o estado.
+ */
+function paintTile(g: Phaser.GameObjects.Graphics, chosen: boolean) {
     g.clear()
-    g.fillStyle(C.ink, 0.34)
-    g.fillRoundedRect(-HALF, -HALF + 8, RACK.tile, RACK.tile, 20)
-    g.fillStyle(C.ink, 1)
-    g.fillRoundedRect(-HALF, -HALF, RACK.tile, RACK.tile, 20)
-    g.fillStyle(edge, 1)
-    g.fillRoundedRect(-HALF + 6, -HALF + 6, RACK.tile - 12, RACK.tile - 12, 15)
-    g.fillStyle(body, 1)
-    g.fillRoundedRect(-HALF + 6, -HALF + 6, RACK.tile - 12, RACK.tile - 20, 15)
-    g.fillStyle(C.white, 0.55)
-    g.fillRoundedRect(-HALF + 20, -HALF + 14, RACK.tile - 40, 10, 5)
+    if (!chosen) return
+    g.fillStyle(C.gold, 0.2)
+    g.fillRoundedRect(-HALF, -HALF, RACK.tile, RACK.tile, 26)
+    g.lineStyle(5, C.gold, 0.95)
+    g.strokeRoundedRect(-HALF + 4, -HALF + 4, RACK.tile - 8, RACK.tile - 8, 22)
 }
 
 export interface RackOptions {
@@ -62,16 +63,16 @@ export function createRack(scene: Phaser.Scene, options: RackOptions) {
     if (fallback) {
         const x = RACK.cx - RACK.w / 2
         const y = RACK.cy - RACK.h / 2
-        fallback.fillStyle(C.ink, 0.34)
-        fallback.fillRoundedRect(x, y + 10, RACK.w, RACK.h, 26)
-        fallback.fillStyle(C.ink, 1)
-        fallback.fillRoundedRect(x, y, RACK.w, RACK.h, 26)
+        // uma tábua fina sob os ícones, e não a laje que competia com eles
+        // uma estante encostada na parede: fundo, batente e a sombra dela
+        fallback.fillStyle(C.ink, 0.28)
+        fallback.fillRoundedRect(x + 7, y + 12, RACK.w, RACK.h, 28)
+        fallback.fillStyle(C.woodDeep, 1)
+        fallback.fillRoundedRect(x, y, RACK.w, RACK.h, 28)
         fallback.fillStyle(C.woodDark, 1)
-        fallback.fillRoundedRect(x + 7, y + 7, RACK.w - 14, RACK.h - 14, 20)
-        fallback.fillStyle(C.wood, 1)
-        fallback.fillRoundedRect(x + 7, y + 7, RACK.w - 14, RACK.h - 30, 20)
-        fallback.fillStyle(C.white, 0.2)
-        fallback.fillRoundedRect(x + 30, y + 14, RACK.w - 60, 12, 6)
+        fallback.fillRoundedRect(x + 9, y + 9, RACK.w - 18, RACK.h - 18, 21)
+        fallback.fillStyle(C.wood, 0.55)
+        fallback.fillRoundedRect(x + 9, y + 9, RACK.w - 18, 18, 9)
     }
     root.add(board ?? fallback!)
 
@@ -80,20 +81,20 @@ export function createRack(scene: Phaser.Scene, options: RackOptions) {
     const build = (ids: string[]) => {
         ids.forEach((id, i) => {
             const target = item(id)
-            const x = rackX(i, ids.length)
-            const holder = scene.add.container(x, RACK.tileY).setDepth(DEPTH.item)
+            const at = rackSlot(i, ids.length)
+            const holder = scene.add.container(at.x, at.y).setDepth(DEPTH.item)
 
             const art = scene.add.graphics()
-            paintTile(art, target.kind, false)
+            paintTile(art, false)
             const icon = createItemIcon(scene, target, RACK.icon)
             holder.add([art, icon])
 
-            const zone = scene.add.zone(x, RACK.tileY, RACK.tile + 18, RACK.tile + 18)
+            const zone = scene.add.zone(at.x, at.y, RACK.tile + 16, RACK.tile + 16)
                 .setOrigin(0.5)
                 .setDepth(DEPTH.item + 1)
                 .setInteractive({ useHandCursor: true })
 
-            const tile: Tile = { id, root: holder, art, zone, x, y: RACK.tileY, taken: false, chosen: false }
+            const tile: Tile = { id, root: holder, art, zone, x: at.x, y: at.y, taken: false, chosen: false }
             tiles.push(tile)
 
             zone.on('pointerdown', () => {
@@ -146,7 +147,7 @@ export function createRack(scene: Phaser.Scene, options: RackOptions) {
                 const next = tile.id === id && !tile.taken
                 if (tile.chosen === next) return
                 tile.chosen = next
-                paintTile(tile.art, item(tile.id).kind, next)
+                paintTile(tile.art, next)
                 scene.tweens.killTweensOf(tile.root)
                 void FX.to(scene, tile.root, {
                     y: next ? tile.y - RACK.lift : tile.y,
@@ -163,7 +164,7 @@ export function createRack(scene: Phaser.Scene, options: RackOptions) {
             tile.chosen = false
             tile.zone.input!.enabled = false
             tile.root.setVisible(false).setScale(1).setY(tile.y)
-            paintTile(tile.art, item(id).kind, false)
+            paintTile(tile.art, false)
         },
 
         /** E volta para o mesmo vão quando a criança desencaixa. */
@@ -179,11 +180,11 @@ export function createRack(scene: Phaser.Scene, options: RackOptions) {
 
         tileAt(id: string) {
             const tile = find(id)
-            return { x: tile?.x ?? RACK.cx, y: tile?.y ?? RACK.tileY }
+            return { x: tile?.x ?? RACK.cx, y: tile?.y ?? RACK.cy }
         },
 
         bounds() {
-            return { x: RACK.cx, y: RACK.cy, w: RACK.w + 16, h: RACK.h + 26 }
+            return { x: RACK.cx, y: RACK.cy, w: RACK.w + 16, h: RACK.h + 16 }
         },
 
         destroy() {

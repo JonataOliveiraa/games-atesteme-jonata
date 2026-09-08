@@ -10,17 +10,23 @@ import { UI, UI_SHEET } from './machine'
 const hasFrame = (scene: Phaser.Scene, key: string, frame: number) =>
     scene.textures.exists(key) && scene.textures.get(key).has(String(frame))
 
+/**
+ * O nicho é um REBAIXO, não um buraco preto.
+ *
+ * Três quadrados escuros numa tábua clara viravam três furos na parede, e a
+ * máquina que mora dentro sumia contra eles. Agora é uma sombra suave com
+ * borda, que acende quando enche.
+ */
 function paintNiche(g: Phaser.GameObjects.Graphics, size: number, full: boolean) {
     const half = size / 2
     g.clear()
-    g.fillStyle(C.ink, 1)
-    g.fillRoundedRect(-half, -half, size, size, 22)
-    g.fillStyle(full ? C.woodDark : C.woodDeep, 1)
-    g.fillRoundedRect(-half + 6, -half + 6, size - 12, size - 12, 16)
-    if (full) {
-        g.fillStyle(C.light, 0.42)
-        g.fillRoundedRect(-half + 12, -half + 12, size - 24, size - 24, 13)
-    }
+    g.fillStyle(C.ink, full ? 0.16 : 0.3)
+    g.fillRoundedRect(-half, -half, size, size, 20)
+    g.lineStyle(4, full ? C.gold : C.woodDeep, full ? 0.95 : 0.8)
+    g.strokeRoundedRect(-half, -half, size, size, 20)
+    if (!full) return
+    g.fillStyle(C.light, 0.2)
+    g.fillRoundedRect(-half + 8, -half + 8, size - 16, size - 16, 14)
 }
 
 /**
@@ -49,14 +55,15 @@ export function createShelf(scene: Phaser.Scene, count: number) {
     if (fallback) {
         const x = SHELF.cx - SHELF.w / 2
         const y = SHELF.cy - SHELF.h / 2
+        // só a tábua e a sombra dela: o resto da faixa era slab de madeira
+        const plank = 26
+        const top = y + SHELF.h - plank
         fallback.fillStyle(C.ink, 0.3)
-        fallback.fillRect(x, y + SHELF.h - 12, SHELF.w, 16)
+        fallback.fillRoundedRect(x, top + 8, SHELF.w, plank, 13)
         fallback.fillStyle(C.woodDeep, 1)
-        fallback.fillRoundedRect(x, y, SHELF.w, SHELF.h, 14)
-        fallback.fillStyle(C.woodDark, 1)
-        fallback.fillRoundedRect(x + 6, y + 6, SHELF.w - 12, SHELF.h - 12, 10)
+        fallback.fillRoundedRect(x, top, SHELF.w, plank, 13)
         fallback.fillStyle(C.wood, 1)
-        fallback.fillRoundedRect(x + 6, y + SHELF.h - 30, SHELF.w - 12, 22, 10)
+        fallback.fillRoundedRect(x + 5, top + 4, SHELF.w - 10, plank - 12, 9)
     }
     root.add(plank ?? fallback!)
 
