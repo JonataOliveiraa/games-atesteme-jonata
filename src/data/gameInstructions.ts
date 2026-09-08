@@ -140,6 +140,12 @@ const POR_SLUG: Record<string, string[]> = {
     "Compras, câmera e conversas com estranhos devem ficar desativados.",
     "Fique atento: novos avisos de risco podem aparecer durante a rodada.",
   ],
+  "cabo-de-guerra-da-verdade": [
+    "O robô levanta uma placa: VERDADEIRO ou FALSO.",
+    "A frase aparece com um buraco no meio.",
+    "Toque na palavra que deixa a frase do jeito que ele pediu.",
+    "Cada acerto puxa a corda para o seu lado.",
+  ],
   "tribunal-do-verdadeiro-ou-falso": [
     "Leia a sentença apresentada com atenção.",
     "Fique de olho na palavra NÃO — ela pode inverter o sentido da frase.",
@@ -162,6 +168,11 @@ const POR_SLUG: Record<string, string[]> = {
     "Organize-as na ordem certa para resolver a missão principal.",
     "Toque em uma subtarefa já colocada para devolvê-la e trocar a ordem.",
     "No nível 3, duas subtarefas podem ocupar a mesma faixa paralela.",
+  ],
+  "corra-enquanto": [
+    "Leia a regra no alto da tela: ela diz quando o robô pode andar.",
+    "Segure o dedo na tela enquanto a condição da regra estiver valendo.",
+    "Solte assim que ela deixar de valer: o laço tem que parar junto.",
   ],
   "labirinto-do-enquanto": [
     "Observe a condição do bloco 'enquanto' antes de executar.",

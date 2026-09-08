@@ -21,7 +21,9 @@ import coverCorridaDoCotidiano from "../assets/games/EF02CO05/corrida-do-cotidia
 import coverBolhasDaSeguranca from "../assets/games/EF02CO06/bolhas-da-seguranca/cover-bolhas-da-seguranca.png";
 import checklistThumbnail from "../assets/games/EF02CO06/checklist-do-jogador-seguro/cover.png";
 import tribunalThumbnail from "../assets/games/EF03CO01/tribunal-do-verdadeiro-ou-falso/cover.png";
+import caboDeGuerraThumbnail from "../assets/games/EF03CO01/cabo-de-guerra-da-verdade/cover-cabo-de-guerra-da-verdade.png";
 import mazeThumbnail from "../assets/games/EF03CO02/labirinto-do-enquanto/cover-labirinto-do-enquanto.png";
+import coverCorraEnquanto from "../assets/games/EF03CO02/corra-enquanto/cover-corra-enquanto.png";
 import chefThumbnail from "../assets/games/EF03CO03/chef-dos-subproblemas/cover-chef-dos-subproblemas.png";
 import informationBuilderThumbnail from "../assets/games/EF03CO04/montador-de-informacoes/cover-montador-informacoes.png";
 import correctFormatThumbnail from "../assets/games/EF03CO05/formato-certo/cover-formato-certo.png";
@@ -551,6 +553,23 @@ export const catalog: Game[] = [
     thumbnail: tribunalThumbnail,
   },
   {
+    id: "059",
+    slug: "cabo-de-guerra-da-verdade",
+    module: "EF03CO01/cabo-de-guerra-da-verdade",
+    skill: "EF03CO01",
+    years: [3],
+    tags: ["lógica", "negação", "disputa", "toque"],
+    order: 145,
+    status: "published",
+    title: "Cabo de Guerra da Verdade",
+    description:
+      "O robô pede uma frase verdadeira ou falsa: escolha a palavra que faz isso e puxe a corda.",
+    category: "Pensamento Computacional",
+    points: 55,
+    icon: "🪢",
+    thumbnail: caboDeGuerraThumbnail,
+  },
+  {
     id: "015",
     slug: "labirinto-do-enquanto",
     module: "EF03CO02/labirinto-do-enquanto",
@@ -566,6 +585,23 @@ export const catalog: Game[] = [
     points: 60,
     icon: "🤖",
     thumbnail: mazeThumbnail,
+  },
+  {
+    id: "060",
+    slug: "corra-enquanto",
+    module: "EF03CO02/corra-enquanto",
+    skill: "EF03CO02",
+    years: [3],
+    tags: ["laço", "enquanto", "condição", "segurar"],
+    order: 155,
+    status: "published",
+    title: "Corra Enquanto...",
+    description:
+      "Segure o dedo enquanto a condição da regra valer — e solte na hora exata em que ela deixar de valer.",
+    category: "Pensamento Computacional",
+    points: 60,
+    icon: "⏳",
+    thumbnail: coverCorraEnquanto,
   },
   {
     id: "016",
