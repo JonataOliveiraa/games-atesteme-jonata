@@ -23,6 +23,8 @@ const GAMES_WITH_IN_GAME_COMPLETION_SCREEN = new Set([
   "fabrica-de-maquinas",
   "vila-das-maquinas",
   "fuga-do-laboratorio",
+  "bolhas-da-seguranca",
+  "corrida-do-cotidiano",
   "corrida-dos-parecidos",
   "ritmo-da-rotina",
   "pulo-programado",

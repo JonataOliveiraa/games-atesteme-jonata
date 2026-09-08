@@ -17,6 +17,8 @@ import coverSerieDoCampeao from "../assets/games/EF02CO02/serie-do-campeao/cover
 import machineFactoryThumbnail from "../assets/games/EF02CO03/fabrica-de-maquinas/cover.png";
 import museumThumbnail from "../assets/games/EF02CO04/museu-vivo-do-computador/cover.png";
 import cityThumbnail from "../assets/games/EF02CO05/cidade-das-tecnologias/cover.png";
+import coverCorridaDoCotidiano from "../assets/games/EF02CO05/corrida-do-cotidiano/cover-corrida-do-cotidiano.png";
+import coverBolhasDaSeguranca from "../assets/games/EF02CO06/bolhas-da-seguranca/cover-bolhas-da-seguranca.png";
 import checklistThumbnail from "../assets/games/EF02CO06/checklist-do-jogador-seguro/cover.png";
 import tribunalThumbnail from "../assets/games/EF03CO01/tribunal-do-verdadeiro-ou-falso/cover.png";
 import mazeThumbnail from "../assets/games/EF03CO02/labirinto-do-enquanto/cover-labirinto-do-enquanto.png";
@@ -481,6 +483,23 @@ export const catalog: Game[] = [
     thumbnail: cityThumbnail,
   },
   {
+    id: "057",
+    slug: "corrida-do-cotidiano",
+    module: "EF02CO05/corrida-do-cotidiano",
+    skill: "EF02CO05",
+    years: [2],
+    tags: ["tecnologia", "cotidiano", "corrida", "toque"],
+    order: 122,
+    status: "published",
+    title: "Corrida do Cotidiano",
+    description:
+      "Corra pelo bairro e desvie para a placa da tecnologia que resolve a situação do balão.",
+    category: "Cultura Digital",
+    points: 55,
+    icon: "🏃",
+    thumbnail: coverCorridaDoCotidiano,
+  },
+  {
     id: "013",
     slug: "checklist-do-jogador-seguro",
     module: "EF02CO06/checklist-do-jogador-seguro",
@@ -496,6 +515,23 @@ export const catalog: Game[] = [
     points: 60,
     icon: "🛡️",
     thumbnail: checklistThumbnail,
+  },
+  {
+    id: "058",
+    slug: "bolhas-da-seguranca",
+    module: "EF02CO06/bolhas-da-seguranca",
+    skill: "EF02CO06",
+    years: [2],
+    tags: ["segurança", "cuidado", "tablet", "toque"],
+    order: 135,
+    status: "published",
+    title: "Bolhas da Segurança",
+    description:
+      "Toque nos perigos que passam pelo tablet gigante para envolvê-los em bolhas — e deixe o que é seguro em paz.",
+    category: "Cultura Digital",
+    points: 60,
+    icon: "🫧",
+    thumbnail: coverBolhasDaSeguranca,
   },
   {
     id: "014",

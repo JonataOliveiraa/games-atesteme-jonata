@@ -128,6 +128,12 @@ const POR_SLUG: Record<string, string[]> = {
     "Clique em Confirmar para validar sua escolha.",
     "Hardware você toca; software é o programa que roda dentro dele.",
   ],
+  "bolhas-da-seguranca": [
+    "Situações passam devagar pela tela do tablet gigante.",
+    "Toque no que é perigo para envolvê-lo numa bolha.",
+    "No que é seguro, não toque: a bolha estoura à toa.",
+    "Perigo que chega na borda fica preso até você tocar nele.",
+  ],
   "checklist-do-jogador-seguro": [
     "Toque em cada item para ativar ou desativar a configuração.",
     "Senha forte e perfil privado devem ficar ativados.",
@@ -139,6 +145,11 @@ const POR_SLUG: Record<string, string[]> = {
     "Fique de olho na palavra NÃO — ela pode inverter o sentido da frase.",
     "Toque em Verdadeiro ou Falso para julgar.",
     "No nível 3 você tem 10 segundos por sentença!",
+  ],
+  "corrida-do-cotidiano": [
+    "O balão no alto mostra a situação para resolver.",
+    "Toque no lado da placa com a tecnologia que resolve.",
+    "Se a cancela fechar, toque no outro lado para seguir correndo.",
   ],
   "cidade-das-tecnologias": [
     "Toque em cada local do mapa para ver a situação.",
