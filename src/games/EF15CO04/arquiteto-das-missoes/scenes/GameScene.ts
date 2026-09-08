@@ -12,9 +12,14 @@ import {
     DEPTH,
     GOAL,
     LANE,
+    PICK,
+    RAIL,
     RUN,
     SLOT,
+    SPLIT_HINT,
     STEP,
+    TAG,
+    TASK,
     TRAY,
     W,
     slotCard,
@@ -25,11 +30,23 @@ import {
     trayX,
 } from '../data/layout'
 import { C, CSS, FONT } from '../data/theme'
-import type { LevelDef, LevelNumber, MissionDef, PartDef, Phase } from '../types'
+import type {
+    IconId, LevelDef, LevelNumber, MissionDef, PartDef, Phase, StepDef,
+} from '../types'
 import { createAudio } from './audio'
+import { createPillButton } from './button'
 import { createCard, applySheet, type Card } from './cards'
 import { createHud } from './hud'
+import { createPrompt } from './prompt'
+import { createShelf } from './shelf'
 import { createStage } from './stage'
+
+interface Pick {
+    card: Card
+    step: StepDef
+    home: number
+    taken: boolean
+}
 
 const GAME_ID = 'arquiteto-das-missoes'
 
@@ -53,10 +70,18 @@ export class GameScene extends Phaser.Scene {
 
     private stage!: ReturnType<typeof createStage>
     private hud!: ReturnType<typeof createHud>
+    private shelf!: ReturnType<typeof createShelf>
     private audio!: ReturnType<typeof createAudio>
 
     private work: Phaser.GameObjects.GameObject[] = []
     private slots: Card[] = []
+    private solveCards: Card[] = []
+    private pending: Pick | null = null
+    private current = 0
+    private ring: Phaser.GameObjects.Container | null = null
+    private prompt: ReturnType<typeof createPrompt> | null = null
+    private runner: ReturnType<typeof createPillButton> | null = null
+    private taskBar: Phaser.GameObjects.Container | null = null
     private filled: string[] = []
     private laneOrder: string[] = []
     private laneCards: Card[] = []
@@ -98,6 +123,7 @@ export class GameScene extends Phaser.Scene {
         this.audio = createAudio(this)
         applySheet(this.mission.sheet, iconOrder(this.mission))
         this.stage = createStage(this, this.mission)
+        this.shelf = createShelf(this, this.mission.parts)
         this.hud = createHud(this, () => this.replayTutorial())
         this.hud.setLevel(this.level.level, LEVELS.length)
         this.hud.setPhases(2 + this.mission.parts.length)
@@ -129,6 +155,7 @@ export class GameScene extends Phaser.Scene {
         this.gen++
         this.clearWork()
         this.stage?.destroy()
+        this.shelf?.destroy()
         this.hud?.destroy()
         EventBus.off('mute-audio', this.onMute, this)
         EventBus.off('show-tutorial', this.replayTutorial, this)
@@ -136,9 +163,62 @@ export class GameScene extends Phaser.Scene {
     }
 
     private clearWork() {
+        this.prompt?.destroy()
+        this.prompt = null
+        this.runner?.destroy()
+        this.runner = null
         this.work.forEach(o => o.destroy())
         this.work = []
         this.slots = []
+        this.solveCards = []
+        this.pending = null
+        this.ring = null
+        this.taskBar = null
+    }
+
+    /**
+     * A faixa que diz, com todas as letras, o que fazer agora. Sem ela a
+     * criança vê três cartas soltas e não sabe que está fazendo um bolo.
+     */
+    private showTask(text: string, icon?: IconId, y = TASK.cy) {
+        const label = this.add.text(0, 1, text, {
+            fontFamily: FONT.black,
+            fontSize: '30px',
+            color: CSS.ink,
+        }).setOrigin(0.5).setResolution(2)
+
+        const head = icon ? TASK.badge + 12 : TASK.pad
+        const width = head + label.width + TASK.pad
+        const left = -width / 2
+        label.x = left + head + label.width / 2
+
+        const g = this.add.graphics()
+        g.fillStyle(C.ink, 0.3)
+        g.fillRoundedRect(left, -TASK.h / 2 + 9, width, TASK.h, TASK.h / 2)
+        g.fillStyle(C.woodDark, 1)
+        g.fillRoundedRect(left, -TASK.h / 2, width, TASK.h, TASK.h / 2)
+        g.fillStyle(C.cream, 1)
+        g.fillRoundedRect(left + 6, -TASK.h / 2 + 6, width - 12, TASK.h - 16, TASK.h / 2 - 6)
+        g.fillStyle(C.white, 0.7)
+        g.fillRoundedRect(left + 24, -TASK.h / 2 + 13, width - 48, 13, 7)
+
+        const root = this.add.container(W / 2, y, [g, label]).setDepth(DEPTH.card)
+
+        if (icon) {
+            const badge = createCard(this, {
+                icon,
+                w: TASK.badge,
+                h: TASK.badge,
+                iconScale: 0.78,
+            })
+            badge.root.setPosition(left + TASK.badge / 2 + 2, 0)
+            root.add(badge.root)
+        }
+
+        this.keep(root)
+        this.taskBar = root
+        FX.popIn(this, root, { from: 0.72, duration: 340 })
+        return root
     }
 
     private keep<T extends Phaser.GameObjects.GameObject>(o: T): T {
@@ -186,6 +266,28 @@ export class GameScene extends Phaser.Scene {
         return tray
     }
 
+    /** Etiqueta acima do pedido: sem ela o cartão do topo é só mais um cartão. */
+    private showTag(text: string) {
+        const label = this.add.text(0, 0, text, {
+            fontFamily: FONT.black,
+            fontSize: '23px',
+            color: CSS.cream,
+        }).setOrigin(0.5).setResolution(2)
+
+        const width = label.width + 56
+        const g = this.add.graphics()
+        g.fillStyle(C.ink, 1)
+        g.fillRoundedRect(-width / 2, -TAG.h / 2, width, TAG.h, TAG.h / 2)
+        g.fillStyle(C.tealDark, 1)
+        g.fillRoundedRect(-width / 2 + 4, -TAG.h / 2 + 4, width - 8, TAG.h - 8, TAG.h / 2 - 4)
+        g.fillStyle(C.teal, 1)
+        g.fillRoundedRect(-width / 2 + 4, -TAG.h / 2 + 4, width - 8, TAG.h - 14, TAG.h / 2 - 4)
+
+        const root = this.add.container(W / 2, TAG.cy, [g, label]).setDepth(DEPTH.card)
+        this.keep(root)
+        FX.popIn(this, root, { from: 0.7, duration: 320 })
+    }
+
     // ─────────────────────────────────────────────── fase 1: dividir
 
     private async startSplit() {
@@ -221,13 +323,15 @@ export class GameScene extends Phaser.Scene {
             this.tweens.add({
                 targets: goal.root,
                 y: GOAL.top,
-                scale: 0.62,
                 duration: FX.ms(this, 420),
                 ease: 'Back.easeInOut',
                 onComplete: () => resolve(),
             })
         })
         if (gen !== this.gen) return
+
+        this.showTag('O PEDIDO')
+        this.showTask('Toque no que faz parte', undefined, SPLIT_HINT.cy)
 
         const slotSize = slotCard(n)
         this.slots = mission.parts.map((_, i) => {
@@ -333,15 +437,8 @@ export class GameScene extends Phaser.Scene {
 
         const part = this.mission.parts[index]
 
-        const head = createCard(this, {
-            icon: part.icon,
-            label: part.label,
-            w: SLOT.w,
-            h: SLOT.h,
-        })
-        head.root.setPosition(W / 2, 128).setScale(0.72).setDepth(DEPTH.card)
-        this.keep(head.root)
-        FX.popIn(this, head.root, { from: 0.6, duration: 320 })
+        this.showTask(part.task, part.icon)
+        this.shelf.show()
 
         const n = part.steps.length
         const stepSize = stepCard(n)
@@ -357,79 +454,225 @@ export class GameScene extends Phaser.Scene {
         })
 
         const shuffled = [part.steps[2], part.steps[0], part.steps[1]]
-        let placed = 0
+        this.solveCards = []
+        this.pending = null
+        this.current = 0
 
         shuffled.forEach((step, i) => {
             const card = createCard(this, { icon: step.icon, w: stepSize.w, h: stepSize.h })
             const x = stepX(i, shuffled.length)
-            card.root.setPosition(x, TRAY.cy).setDepth(DEPTH.card)
+            card.root.setPosition(x, PICK.cy).setDepth(DEPTH.card)
             this.keep(card.root)
             FX.popIn(this, card.root, { from: 0.6, delay: 220 + i * 90, duration: 320 })
 
-            const zone = this.tapZone(x, TRAY.cy, stepSize.w, stepSize.h, () => {
+            const entry: Pick = { card, step, home: x, taken: false }
+            this.tapZone(x, PICK.cy, stepSize.w, stepSize.h, () => {
                 if (this.phase !== 'solve' || this.busy) return
-
-                if (step.id !== part.steps[placed].id) {
-                    this.reject(card, false)
-                    return
-                }
-
-                const target = placed
-                placed++
-                zone.destroy()
-                this.audio.step(target)
-                void this.flyToSlot(card, target, () => {
-                    if (placed < part.steps.length) return
-                    void this.finishSolve(part)
-                })
+                void this.choose(entry)
             })
         })
+
+        this.aimAt(0, n)
+        this.prompt = createPrompt(this, () => this.confirmStep())
+        this.prompt.set(1, part.steps[0].label)
 
         await FX.wait(this, 400)
         if (gen !== this.gen) return
     }
 
-    private async flyToSlot(card: Card, index: number, onDone: () => void) {
-        const gen = this.gen
-        this.busy = true
-        const slot = this.slots[index]
+    /** O anel que diz "é este espaço agora". Anda junto com o passo atual. */
+    private aimAt(index: number, n: number) {
+        const size = stepCard(n)
+        const x = stepX(index, n)
 
-        await new Promise<void>(resolve => {
+        if (!this.ring) {
+            const g = this.add.graphics()
+            g.lineStyle(10, C.warnDark, 1)
+            g.strokeRoundedRect(-size.w / 2 - 13, -size.h / 2 - 13, size.w + 26, size.h + 26, 36)
+            g.lineStyle(5, C.warn, 1)
+            g.strokeRoundedRect(-size.w / 2 - 13, -size.h / 2 - 13, size.w + 26, size.h + 26, 36)
+            this.ring = this.keep(
+                this.add.container(x, STEP.cy, [g]).setDepth(DEPTH.glyph),
+            )
+            this.tweens.add({
+                targets: this.ring,
+                scale: 1.045,
+                duration: FX.ms(this, 720),
+                yoyo: true,
+                repeat: -1,
+                ease: 'Sine.easeInOut',
+            })
+            return
+        }
+
+        this.tweens.add({
+            targets: this.ring,
+            x,
+            duration: FX.ms(this, 300),
+            ease: 'Back.easeOut',
+        })
+    }
+
+    private move(card: Card, x: number, y: number, ms = 320) {
+        return new Promise<void>(resolve => {
             this.tweens.add({
                 targets: card.root,
-                x: slot.root.x,
-                y: slot.root.y,
-                duration: FX.ms(this, 300),
+                x,
+                y,
+                duration: FX.ms(this, ms),
                 ease: 'Back.easeOut',
                 onComplete: () => resolve(),
             })
         })
+    }
+
+    /** Escolher é só pôr no espaço; quem julga é o CONFIRMAR. */
+    private async choose(entry: Pick) {
+        if (entry.taken || this.pending === entry) return
+
+        const gen = this.gen
+        this.busy = true
+        const leaving = this.pending
+        this.pending = entry
+        this.audio.place()
+
+        const n = this.mission.parts[this.solveIndex].steps.length
+        const jobs = [this.move(entry.card, stepX(this.current, n), STEP.cy)]
+        if (leaving) jobs.push(this.move(leaving.card, leaving.home, PICK.cy))
+
+        await Promise.race([Promise.all(jobs), FX.wait(this, 700)])
         if (gen !== this.gen) return
 
-        slot.root.setVisible(false)
-        card.setTone('ok')
-        card.setBadge('number', index + 1)
-        FX.popIn(this, card.root, { from: 1.14, duration: 280 })
+        leaving?.card.setTone('idle')
+        this.slots[this.current].root.setVisible(false)
+        entry.card.setTone('hot')
+        this.prompt?.setReady(true)
         this.busy = false
-        onDone()
+    }
+
+    private confirmStep() {
+        if (this.phase !== 'solve' || this.busy || !this.pending) return
+
+        const part = this.mission.parts[this.solveIndex]
+        const entry = this.pending
+        this.pending = null
+        this.prompt?.setReady(false)
+
+        if (entry.step.id !== part.steps[this.current].id) {
+            void this.refuse(entry)
+            return
+        }
+
+        const at = this.current
+        entry.taken = true
+        entry.card.setTone('ok')
+        entry.card.setBadge('number', at + 1)
+        FX.popIn(this, entry.card.root, { from: 1.14, duration: 280 })
+        this.audio.step(at)
+        this.solveCards[at] = entry.card
+        this.current = at + 1
+
+        if (this.current < part.steps.length) {
+            this.aimAt(this.current, part.steps.length)
+            this.prompt?.set(this.current + 1, part.steps[this.current].label)
+            return
+        }
+
+        this.ring?.setVisible(false)
+        void this.finishSolve(part)
+    }
+
+    private async refuse(entry: Pick) {
+        const gen = this.gen
+        this.busy = true
+        this.slots[this.current].root.setVisible(true)
+        this.reject(entry.card, false)
+
+        await FX.wait(this, 640)
+        if (gen !== this.gen) return
+
+        await Promise.race([
+            this.move(entry.card, entry.home, PICK.cy),
+            FX.wait(this, 620),
+        ])
+        if (gen !== this.gen) return
+
+        entry.card.setTone('idle')
+        this.busy = false
     }
 
     private async finishSolve(part: PartDef) {
         const gen = this.gen
+        const index = this.solveIndex
         this.audio.solved()
         this.hud.flash(C.ok)
         this.awardPhase()
 
-        await FX.wait(this, 900)
+        void FX.popText(this, W / 2, PICK.cy, part.done, {
+            color: CSS.cream, size: '40px', rise: 46, duration: 620,
+        })
+
+        await FX.wait(this, 620)
         if (gen !== this.gen) return
 
-        const next = this.solveIndex + 1
+        await this.gatherSteps(index)
+        if (gen !== this.gen) return
+
+        await this.shelf.fill(index)
+        if (gen !== this.gen) return
+
+        await FX.wait(this, 520)
+        if (gen !== this.gen) return
+
+        const next = index + 1
         if (next < this.mission.parts.length) {
             await this.startSolve(next)
             return
         }
-        void part
         await this.startCombine()
+    }
+
+    /**
+     * Os três passos viram uma coisa só e descem para a prateleira. É o
+     * momento em que "fiz o café" deixa de ser uma frase e vira um objeto.
+     */
+    private async gatherSteps(index: number) {
+        const target = this.shelf.slotAt(index)
+        const cards = this.solveCards.filter(Boolean)
+
+        this.prompt?.dismiss()
+        if (this.ring) {
+            this.tweens.add({
+                targets: this.ring,
+                alpha: 0,
+                duration: FX.ms(this, 240),
+            })
+        }
+
+        if (this.taskBar) {
+            this.tweens.add({
+                targets: this.taskBar,
+                alpha: 0,
+                y: TASK.cy - 24,
+                duration: FX.ms(this, 320),
+            })
+        }
+
+        const jobs = cards.map((card, i) => new Promise<void>(resolve => {
+            this.tweens.add({
+                targets: card.root,
+                x: target.x,
+                y: target.y,
+                scale: RAIL.cardW / STEP.w,
+                alpha: 0.15,
+                delay: FX.ms(this, i * 90),
+                duration: FX.ms(this, 460),
+                ease: 'Back.easeIn',
+                onComplete: () => resolve(),
+            })
+        }))
+
+        await Promise.race([Promise.all(jobs), FX.wait(this, 1000)])
     }
 
     // ─────────────────────────────────────────────── fase 3: combinar
@@ -445,6 +688,8 @@ export class GameScene extends Phaser.Scene {
 
         const parts = this.mission.parts
         const n = parts.length
+
+        this.showTask('Junte as partes no plano')
 
         const lane = this.keep(this.add.graphics().setDepth(DEPTH.panel - 1))
         const laneW = n * (slotCard(n).w + SLOT.gap) + LANE.pad * 2
@@ -469,6 +714,8 @@ export class GameScene extends Phaser.Scene {
 
         this.laneCards = []
 
+        this.shelf.dismiss()
+
         parts.forEach((part, i) => {
             const card = createCard(this, {
                 icon: part.icon,
@@ -478,9 +725,20 @@ export class GameScene extends Phaser.Scene {
             })
             card.setBadge('check')
             const x = trayX(i, n)
-            card.root.setPosition(x, TRAY.cy).setDepth(DEPTH.card)
+            const from = this.shelf.slotAt(i)
+            card.root.setPosition(from.x, from.y)
+                .setScale(RAIL.cardW / combSize.w)
+                .setDepth(DEPTH.card)
             this.keep(card.root)
-            FX.popIn(this, card.root, { from: 0.6, delay: i * 110, duration: 320 })
+            this.tweens.add({
+                targets: card.root,
+                x,
+                y: TRAY.cy,
+                scale: 1,
+                delay: FX.ms(this, i * 120),
+                duration: FX.ms(this, 440),
+                ease: 'Back.easeOut',
+            })
 
             const zone = this.tapZone(x, TRAY.cy, combSize.w, combSize.h, () => {
                 if (this.phase !== 'combine' || this.busy) return
@@ -509,43 +767,19 @@ export class GameScene extends Phaser.Scene {
     }
 
     private showRun() {
-        const root = this.keep(this.add.container(RUN.x, RUN.y).setDepth(DEPTH.card))
-
-        const g = this.add.graphics()
-        g.fillStyle(C.ink, 0.3)
-        g.fillRoundedRect(-RUN.w / 2, -RUN.h / 2 + 8, RUN.w, RUN.h, RUN.r)
-        g.fillStyle(C.okDark, 1)
-        g.fillRoundedRect(-RUN.w / 2, -RUN.h / 2, RUN.w, RUN.h, RUN.r)
-        g.fillStyle(C.ok, 1)
-        g.fillRoundedRect(-RUN.w / 2, -RUN.h / 2, RUN.w, RUN.h - 10, RUN.r)
-        g.fillStyle(C.white, 0.3)
-        g.fillRoundedRect(-RUN.w / 2 + 16, -RUN.h / 2 + 10, RUN.w - 32, 14, 7)
-        g.fillStyle(C.white, 1)
-        g.fillTriangle(-84, -20, -84, 20, -52, 0)
-
-        const label = this.add.text(22, -2, 'VAI!', {
-            fontFamily: FONT.black,
-            fontSize: '30px',
-            color: CSS.white,
-        }).setOrigin(0.5).setResolution(2)
-        label.setStroke('#1f8b87', 6)
-
-        root.add([g, label])
-
-        FX.popIn(this, root, { from: 0.7, duration: 320 })
-        this.tweens.add({
-            targets: root,
-            scale: 1.05,
-            duration: FX.ms(this, 620),
-            yoyo: true,
-            repeat: -1,
-            ease: 'Sine.easeInOut',
+        this.runner = createPillButton(this, {
+            x: RUN.x,
+            y: RUN.y,
+            w: RUN.w,
+            h: RUN.h,
+            label: 'VAI!',
+            arrow: true,
+            onTap: () => {
+                if (this.phase !== 'combine' || this.busy) return
+                void this.runPlan()
+            },
         })
-
-        this.tapZone(RUN.x, RUN.y, RUN.w + 20, RUN.h + 20, () => {
-            if (this.phase !== 'combine' || this.busy) return
-            void this.runPlan()
-        })
+        this.runner.setEnabled(true)
     }
 
     private async runPlan() {
@@ -553,6 +787,7 @@ export class GameScene extends Phaser.Scene {
         this.phase = 'running'
         this.busy = true
         this.hud.setPhase(2 + this.mission.parts.length)
+        this.clearPrompts()
 
         for (let i = 0; i < this.laneCards.length; i++) {
             const card = this.laneCards[i]
@@ -568,7 +803,10 @@ export class GameScene extends Phaser.Scene {
 
         this.awardPhase()
         this.hud.flash(C.ok)
-        this.audio.fanfare()
+
+        await this.mergeIntoGoal()
+        if (gen !== this.gen) return
+
         this.hud.fade(0, 320)
 
         await FX.wait(this, 320)
@@ -588,6 +826,68 @@ export class GameScene extends Phaser.Scene {
         this.endLevel()
     }
 
+    /** Faixa e botão saem de cena antes do plano rodar: agora é só o plano. */
+    private clearPrompts() {
+        this.runner?.destroy()
+        this.runner = null
+        if (!this.taskBar) return
+        this.tweens.killTweensOf(this.taskBar)
+        this.tweens.add({
+            targets: this.taskBar,
+            alpha: 0,
+            scale: 0.8,
+            duration: FX.ms(this, 260),
+            ease: 'Back.easeIn',
+        })
+        this.taskBar = null
+    }
+
+    /**
+     * O fecho do nível: as partes prontas convergem para o meio e viram de
+     * novo o pedido inteiro que foi partido lá no começo.
+     */
+    private async mergeIntoGoal() {
+        const gen = this.gen
+        const jobs = this.laneCards.map((card, i) => new Promise<void>(resolve => {
+            this.tweens.add({
+                targets: card.root,
+                x: LANE.cx,
+                y: LANE.cy,
+                scale: 0.22,
+                alpha: 0,
+                delay: FX.ms(this, i * 120),
+                duration: FX.ms(this, 520),
+                ease: 'Back.easeIn',
+                onComplete: () => resolve(),
+            })
+        }))
+
+        await Promise.race([Promise.all(jobs), FX.wait(this, 1500)])
+        if (gen !== this.gen) return
+
+        this.audio.fanfare()
+        void FX.sparks(this, LANE.cx, LANE.cy, {
+            color: C.warn, count: 26, spread: 230, depth: DEPTH.fx,
+        })
+        void FX.ping(this, LANE.cx, LANE.cy, C.teal, {
+            radius: 170, duration: 640, depth: DEPTH.fx,
+        })
+
+        const goal = createCard(this, {
+            icon: this.mission.goalIcon,
+            label: this.mission.goalLabel,
+            w: GOAL.w,
+            h: GOAL.h,
+        })
+        goal.root.setPosition(LANE.cx, LANE.cy).setDepth(DEPTH.card + 1)
+        goal.setTone('ok')
+        goal.setBadge('check')
+        this.keep(goal.root)
+        FX.popIn(this, goal.root, { from: 0.24, duration: 460 })
+
+        await FX.wait(this, 1200)
+    }
+
     private async nextMission() {
         const gen = this.gen
         this.missionIndex++
@@ -595,8 +895,10 @@ export class GameScene extends Phaser.Scene {
 
         this.clearWork()
         this.stage.destroy()
+        this.shelf.destroy()
         applySheet(this.mission.sheet, iconOrder(this.mission))
         this.stage = createStage(this, this.mission)
+        this.shelf = createShelf(this, this.mission.parts)
         this.hud.fade(1, 320)
 
         await FX.wait(this, 420)
@@ -725,15 +1027,15 @@ export class GameScene extends Phaser.Scene {
                 text: 'Este pedido é grande demais.',
                 shape: 'rect',
                 x: GOAL.cx, y: GOAL.top,
-                w: GOAL.w * 0.72, h: GOAL.h * 0.72,
-                balloonX: W / 2, balloonY: 300,
+                w: GOAL.w + 30, h: GOAL.h + 30,
+                balloonX: W / 2, balloonY: 452,
             },
             {
                 text: 'Toque nas partes que ele tem dentro.',
                 shape: 'rect',
                 x: W / 2, y: TRAY.cy,
                 w: (TRAY.w + TRAY.gap) * (n + 2), h: TRAY.h + 26,
-                balloonX: W / 2, balloonY: 300,
+                balloonX: W / 2, balloonY: 330,
                 pointer: {
                     fromX: W / 2, fromY: TRAY.cy,
                     toX: trayX(0, n + 2), toY: TRAY.cy,

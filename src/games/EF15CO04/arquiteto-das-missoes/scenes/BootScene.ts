@@ -2,6 +2,7 @@ import Phaser from 'phaser'
 import { createLoadingScreen } from '../../../../shared/loading/createLoadingScreen'
 import { faseInicial } from '../../../../shared/level/faseInicial'
 import { preloadLives } from '../../../../shared/hud/createLives'
+import questionIconUrl from '../../../../assets/global/question-icon.png'
 import { C } from '../data/theme'
 import { ICON_SHEETS } from './cards'
 
@@ -50,6 +51,7 @@ export class BootScene extends Phaser.Scene {
             }
             this.load.image(key, url)
         })
+        this.load.image('icone-vazio', questionIconUrl)
         preloadLives(this)
     }
 

@@ -27,18 +27,27 @@ export const STATUS = {
 
 export const HELP = { x: 1216, y: 44, r: 30 }
 
-export const GOAL = { cx: 640, cy: 236, top: 122, w: 300, h: 210 }
+/** O pedido entra grande no meio e sobe inteiro: ele é o enunciado. */
+export const GOAL = { cx: 640, cy: 320, top: 176, w: 300, h: 190 }
 
-export const SLOT = { cy: 316, w: 220, h: 200, gap: 40 }
+export const TAG = { cy: 46, h: 38 }
 
-export const TRAY = { cy: 570, w: 220, h: 200, gap: 26 }
+export const SLOT = { cy: 436, w: 152, h: 138, gap: 36 }
 
-export const STEP = { cy: 300, w: 190, h: 180, gap: 30 }
+export const TRAY = { cy: 594, w: 164, h: 149, gap: 26 }
+
+export const STEP = { cy: 282, w: 170, h: 160, gap: 30 }
+
+export const PICK = { cy: 456 }
+
+export const TASK = { cy: 116, h: 70, badge: 96, pad: 30 }
+
+export const SPLIT_HINT = { cy: 322 }
 
 const MARGIN = 72
 const RATIO = SLOT.h / SLOT.w
 
-/** A bandeja encolhe quando enche: 6 cartas de 220 não cabem em 1280. */
+/** A bandeja encolhe quando enche: 6 cartas de 164 não cabem em 1280. */
 export const rowWidth = (n: number, max: number, gap: number) =>
     Math.min(max, (W - MARGIN - (n - 1) * gap) / n)
 
@@ -56,6 +65,32 @@ export const stepCard = (n: number) => {
     const w = rowWidth(n, STEP.w, STEP.gap)
     return { w, h: w * (STEP.h / STEP.w) }
 }
+
+/**
+ * O "já fiz" saiu do rodapé para a lateral: o rodapé virou o lugar da
+ * instrução do passo, que é o que a criança precisa ler agora.
+ */
+export const RAIL = {
+    x: 946,
+    w: 300,
+    top: 150,
+    head: 46,
+    rowH: 118,
+    pad: 14,
+    cardW: 104,
+    cardH: 92,
+    labelGap: 14,
+}
+
+export const railHeight = (n: number) => RAIL.head + n * RAIL.rowH + RAIL.pad
+
+export const railRowY = (i: number) => RAIL.top + RAIL.head + RAIL.rowH * i + RAIL.rowH / 2
+
+export const RAIL_CARD_X = RAIL.x + 24 + RAIL.cardW / 2
+
+export const BAR = { x: 44, y: 598, w: 880, h: 102, r: 34, pipX: 110, textX: 160 }
+
+export const CONFIRM = { x: 800, y: 649, w: 216, h: 74 }
 
 export const LANE = { cx: 640, cy: 300, h: 196, pad: 26, scale: 0.78 }
 

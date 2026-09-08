@@ -122,6 +122,7 @@ Regras práticas:
 - exemplos visuais sempre que possível;
 - botão ou ícone `?` para repetir o tutorial;
 - o tutorial não deve interromper demais o ritmo depois que a criança já sabe jogar.
+- vc pode adicionar tambem tutorial puramente visual com animação. sem texto algum.
 
 ## Mobile Primeiro
 
@@ -405,14 +406,14 @@ Antes de considerar um jogo pronto, confira:
 - tem 3 níveis;
 - cada nível tem no máximo 5 fases ou rodadas;
 - roda bem em mobile;
-- textos estão grandes e legíveis;
+- textos estão grandes e legíveis, por conta que o jogo será jogado no mobile;
 - tutorial é curto;
 - botões e áreas de toque são confortáveis;
 - acertos, erros e conclusão têm feedback visual;
 - há efeitos sonoros;
 - as animações ajudam a jogabilidade;
 - nenhuma tela mostra texto de pontos, acertos ou erros;
-- o código novo usa nomes em inglês;
+- nada de expressões. e nada de texto em inglês;
 - não foram adicionados comentários desnecessários;
 - está registrado em `src/data/catalog.ts`, com `module` apontando para a pasta;
 - abre na fase certa com `faseInicial`, e não sempre no nível 1;

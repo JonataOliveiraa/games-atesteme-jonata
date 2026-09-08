@@ -1,34 +1,43 @@
-export type Attribute = 'cor' | 'forma' | 'tamanho'
+import type Phaser from 'phaser'
 
+export type Attribute = 'cor' | 'forma' | 'tamanho'
 export type Color = 'vermelho' | 'azul' | 'verde' | 'amarelo' | 'roxo'
 export type Shape = 'circulo' | 'quadrado' | 'triangulo' | 'retangulo'
-export type Size = 'pequeno' | 'medio' | 'grande'
+export type Size = 'pequena' | 'media' | 'grande'
 
-export interface GameItem {
-  id: string
-  color: Color
-  shape: Shape
-  size: Size
-  /** Frame no texture atlas — vazio enquanto não houver atlas real */
-  frame: string
+export interface Stone {
+    color: Color
+    shape: Shape
+    size: Size
 }
 
-export interface ClassifierBase {
-  id: string
-  rule: { attribute: Attribute; value: string }
-  /** Chave de texto exibida na UIScene */
-  labelKey: string
-  /** Chave de áudio de narração da regra */
-  audioKey: string
-  x: number
-  y: number
+export interface PhaseDef {
+    id: string
+    rule: Attribute
+    baskets: string[]
+    stones: Stone[]
 }
 
 export interface LevelConfig {
-  level: 1 | 2 | 3
-  criterion: Attribute
-  items: GameItem[]
-  bases: ClassifierBase[]
-  /** Limite de tempo em segundos (somente nível 3) */
-  timeLimit?: number
+    level: number
+    title: string
+    message: string
+    phases: PhaseDef[]
+}
+
+export interface StoneView {
+    sprite: Phaser.GameObjects.Sprite
+    stone: Stone
+    homeX: number
+    homeY: number
+    placed: boolean
+}
+
+export interface BasketView {
+    sprite: Phaser.GameObjects.Sprite
+    glow: Phaser.GameObjects.Graphics
+    sign: Phaser.GameObjects.Container
+    plaque: Phaser.GameObjects.Graphics
+    value: string
+    x: number
 }

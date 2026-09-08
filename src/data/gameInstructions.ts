@@ -32,15 +32,21 @@ const POR_SLUG: Record<string, string[]> = {
     "No fim, ponha as partes prontas no plano e toque em VAI!",
     "A cada nível o pedido cresce: duas partes, depois três, depois quatro.",
   ],
+  "serie-do-campeao": [
+    "O cartão mostra o movimento e quantas vezes repetir.",
+    "Toque no botão: cada toque é uma repetição do atleta.",
+    "Encha todas as bolinhas para fechar a etapa com o selo.",
+    "Um toque a mais trava o cartão: as bolinhas esvaziam e você refaz só aquela etapa.",
+  ],
   "pixel-secreto": [
     "Observe a legenda de cores.",
     "Pinte os espaços corretos da grade.",
     "Complete a imagem escondida para avançar.",
   ],
   "base-dos-classificadores": [
-    "Observe as características de cada item.",
-    "Arraste para a base correspondente.",
-    "Classifique tudo para concluir a fase.",
+    "A placa acima de cada cesto mostra três exemplos do que ele aceita.",
+    "Arraste cada pedrinha até o cesto que combina com ela.",
+    "Guarde todas as pedras para concluir a fase.",
   ],
   "corrida-dos-parecidos": [
     "Observe a placa no topo: ela mostra quem combina com a rodada.",
@@ -99,17 +105,34 @@ const POR_SLUG: Record<string, string[]> = {
     "Desvie dos cones e respeite o limite de comandos do nível.",
     "Execute o programa para levar o robô até a estrela.",
   ],
+  "vila-das-maquinas": [
+    "O morador mostra o problema da vez em um pictograma grande.",
+    "Cada máquina do galpão tem dois comandos na plaquinha embaixo dela.",
+    "Toque na máquina cujos comandos resolvem aquele problema e veja eles acenderem.",
+  ],
   "fabrica-de-maquinas": [
     "Observe qual produto a fábrica precisa produzir.",
     "Arraste as máquinas embaralhadas para a esteira na ordem correta.",
     "Clique em Iniciar Produção para testar a sequência.",
     "Se a esteira parar, leia a dica e reorganize as etapas.",
   ],
+  "fuga-do-laboratorio": [
+    "Veja no visor o que a máquina precisa fazer.",
+    "Toque numa coisa do rack e depois em onde ela entra.",
+    "A bandeja azul só aceita peça; o leitor roxo só aceita programa.",
+    "Com as duas cheias, aperte o botão verde e veja a máquina funcionar.",
+  ],
   "museu-vivo-do-computador": [
     "Leia a pergunta no painel à direita.",
     "Toque nos itens do museu que respondem à pergunta.",
     "Clique em Confirmar para validar sua escolha.",
     "Hardware você toca; software é o programa que roda dentro dele.",
+  ],
+  "bolhas-da-seguranca": [
+    "Situações passam devagar pela tela do tablet gigante.",
+    "Toque no que é perigo para envolvê-lo numa bolha.",
+    "No que é seguro, não toque: a bolha estoura à toa.",
+    "Perigo que chega na borda fica preso até você tocar nele.",
   ],
   "checklist-do-jogador-seguro": [
     "Toque em cada item para ativar ou desativar a configuração.",
@@ -122,6 +145,11 @@ const POR_SLUG: Record<string, string[]> = {
     "Fique de olho na palavra NÃO — ela pode inverter o sentido da frase.",
     "Toque em Verdadeiro ou Falso para julgar.",
     "No nível 3 você tem 10 segundos por sentença!",
+  ],
+  "corrida-do-cotidiano": [
+    "O balão no alto mostra a situação para resolver.",
+    "Toque no lado da placa com a tecnologia que resolve.",
+    "Se a cancela fechar, toque no outro lado para seguir correndo.",
   ],
   "cidade-das-tecnologias": [
     "Toque em cada local do mapa para ver a situação.",
