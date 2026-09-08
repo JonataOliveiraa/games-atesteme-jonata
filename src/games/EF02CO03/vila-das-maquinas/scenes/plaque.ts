@@ -35,10 +35,7 @@ export interface PlaqueOptions {
 
 export function createPlaque(scene: Phaser.Scene, options: PlaqueOptions) {
     const def = COMMANDS[options.command]
-    const w = options.w ?? CREW.plaqueW
-    const h = options.h ?? CREW.plaqueH
     const iconSize = options.icon ?? CREW.plaqueIcon
-    const r = CREW.plaqueR
 
     const root = scene.add.container(options.x, options.y)
     const bg = scene.add.graphics()
@@ -47,27 +44,30 @@ export function createPlaque(scene: Phaser.Scene, options: PlaqueOptions) {
 
     let state: PlaqueState = 'off'
 
-    const paint = () => {
-        const fill = state === 'on' ? def.color : state === 'dead' ? C.grey : C.cream
-        const edge = state === 'on' ? C.white : state === 'dead' ? C.greyDark : C.creamEdge
+    const radius = iconSize * 0.6
 
+    const paint = () => {
         bg.clear()
-        bg.fillStyle(C.ink, 0.26)
-        bg.fillRoundedRect(-w / 2, -h / 2 + 5, w, h, r)
-        bg.fillStyle(C.ink, 1)
-        bg.fillRoundedRect(-w / 2, -h / 2, w, h, r)
-        bg.fillStyle(fill, 1)
-        bg.fillRoundedRect(-w / 2 + 5, -h / 2 + 5, w - 10, h - 10, r - 5)
-        bg.fillStyle(C.white, state === 'on' ? 0.42 : 0.28)
-        bg.fillRoundedRect(-w / 2 + 14, -h / 2 + 10, w - 28, h * 0.24, r * 0.4)
-        bg.lineStyle(4, edge, 1)
-        bg.strokeRoundedRect(-w / 2 + 5, -h / 2 + 5, w - 10, h - 10, r - 5)
+
+        if (state === 'on') {
+            bg.fillStyle(C.ink, 0.3)
+            bg.fillCircle(0, 6, radius)
+            bg.fillStyle(def.color, 1)
+            bg.fillCircle(0, 0, radius)
+            bg.fillStyle(C.white, 0.34)
+            bg.fillEllipse(-radius * 0.3, -radius * 0.42, radius * 0.95, radius * 0.44)
+            bg.lineStyle(5, C.white, 1)
+            bg.strokeCircle(0, 0, radius)
+        } else if (state === 'dead') {
+            bg.fillStyle(C.grey, 0.45)
+            bg.fillCircle(0, 0, radius * 0.94)
+        }
 
         if ('setTint' in icon) {
             if (state === 'dead') icon.setTint(C.greyDark)
             else icon.clearTint()
         }
-        icon.setAlpha(state === 'dead' ? 0.55 : 1)
+        icon.setAlpha(state === 'dead' ? 0.5 : 1)
     }
     paint()
 

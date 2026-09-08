@@ -1,8 +1,11 @@
 import type { LevelDef, MissionDef } from '../types'
 
 /**
- * NÍVEL 1 DE TESTE. O planejamento prevê três níveis; este arquivo é o único
- * lugar onde eles moram, e os níveis 2 e 3 entram aqui como mais dois objetos.
+ * Do 1 para o 2 muda uma coisa só, e ela é a que importa: entram TRÊS máquinas
+ * na prateleira. Com duas, eliminar uma já entrega a resposta; com três, a
+ * criança tem que casar o comando com o problema de verdade.
+ *
+ * O nível 3 entra aqui como mais um objeto, com uma missão de duas etapas.
  */
 export const LEVELS: LevelDef[] = [
     {
@@ -46,6 +49,61 @@ export const LEVELS: LevelDef[] = [
                         need: 'highDelivery',
                         requiredCommands: ['fly', 'drop'],
                         hints: { sweeper: 'Procure quem voa.' },
+                    },
+                ],
+            },
+        ],
+    },
+    {
+        level: 2,
+        name: 'Vila Cheia',
+        message: 'Agora as três máquinas estão no galpão!',
+        missions: [
+            {
+                id: '2.1',
+                problem: 'leaves',
+                label: 'FOLHAS',
+                shelf: ['drone', 'sweeper', 'oven'],
+                steps: [
+                    {
+                        need: 'clean',
+                        requiredCommands: ['turn', 'sweep'],
+                        hints: {
+                            drone: 'Voar não limpa o chão.',
+                            oven: 'Assar não limpa o chão.',
+                        },
+                    },
+                ],
+            },
+            {
+                id: '2.2',
+                problem: 'roofCat',
+                label: 'GATINHO',
+                shelf: ['drone', 'oven', 'sweeper'],
+                steps: [
+                    {
+                        need: 'highDelivery',
+                        requiredCommands: ['fly', 'drop'],
+                        hints: {
+                            oven: 'O forninho não sai do lugar.',
+                            sweeper: 'A vassoura não alcança o telhado.',
+                        },
+                    },
+                ],
+            },
+            {
+                id: '2.3',
+                problem: 'rawBread',
+                label: 'PÃO',
+                shelf: ['sweeper', 'drone', 'oven'],
+                steps: [
+                    {
+                        need: 'bakeFood',
+                        requiredCommands: ['bake', 'beep'],
+                        hints: {
+                            sweeper: 'Varrer não assa o pão.',
+                            drone: 'Voar não assa o pão.',
+                        },
                     },
                 ],
             },

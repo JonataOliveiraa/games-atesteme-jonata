@@ -79,13 +79,13 @@ export const SHED = {
  */
 export const CREW = {
     machineH: 108,
-    machineDY: -35,
-    plaqueW: 124,
-    plaqueH: 66,
-    plaqueDX: 66,
-    plaqueDY: 57,
-    plaqueIcon: 52,
-    plaqueR: 20,
+    machineDY: -30,
+    /** Sem a caixa branca, a medida do grupo é o próprio ícone. */
+    plaqueW: 78,
+    plaqueH: 78,
+    plaqueDX: 46,
+    plaqueDY: 58,
+    plaqueIcon: 64,
 }
 
 export const crewHomeY = SHED.cy + CREW.machineDY
