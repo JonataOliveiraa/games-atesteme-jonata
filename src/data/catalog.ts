@@ -64,7 +64,7 @@ import coverCavernaDosDados from "../assets/games/EF03CO04/caverna-dos-dados/cov
 import coverMissaoEmPedacos from "../assets/games/EF03CO03/missao-em-pedacos/cover-missao-em-pedacos.png";
 // PROVISÓRIO: o fundo do galpão no lugar da capa, que ainda não foi gerada.
 // O prompt dela está em src/games/EF03CO05/torres-dos-formatos/TEXTURAS.md §9.
-import coverTorresDosFormatos from "../assets/games/EF03CO05/torres-dos-formatos/bg-galpao-triagem.png";
+import coverTorresDosFormatos from "../assets/games/EF03CO05/torres-dos-formatos/cover-torre-dos-formatos.png";
 /**
  * 1. `id` nunca muda e nunca é reaproveitado. Se um jogo for removido,
  *    marque status "draft" — não devolva o id para a fila.

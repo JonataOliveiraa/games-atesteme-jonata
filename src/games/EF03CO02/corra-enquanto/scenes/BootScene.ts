@@ -39,7 +39,7 @@ export class BootScene extends Phaser.Scene {
     preload() {
         createLoadingScreen(this, {
             title: 'Corra Enquanto...',
-            subtitle: 'Segure enquanto a regra valer!',
+            subtitle: 'Só avançe quando pode!',
             description: 'Ligando o robô...',
             theme: {
                 background: { kind: 'solid', color: C.sky },

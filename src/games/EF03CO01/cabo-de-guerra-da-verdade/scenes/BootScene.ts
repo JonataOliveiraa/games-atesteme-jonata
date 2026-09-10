@@ -39,7 +39,7 @@ export class BootScene extends Phaser.Scene {
     preload() {
         createLoadingScreen(this, {
             title: 'Cabo de Guerra da Verdade',
-            subtitle: 'Monte a frase que o robô pediu!',
+            subtitle: 'Monte a frase!',
             description: 'Esticando a corda...',
             theme: {
                 background: { kind: 'dots', color: 0xd9a85f, base: 0x2f4a63 },

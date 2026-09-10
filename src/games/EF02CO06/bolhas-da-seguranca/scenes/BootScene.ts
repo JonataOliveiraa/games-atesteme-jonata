@@ -39,7 +39,7 @@ export class BootScene extends Phaser.Scene {
     preload() {
         createLoadingScreen(this, {
             title: 'Bolhas da Segurança',
-            subtitle: 'Proteja o tablet dos perigos!',
+            subtitle: 'Cuidado ao usar tablet!',
             description: 'Enchendo as bolhas...',
             theme: {
                 background: { kind: 'dots', color: 0x9bd8ff, base: 0x1c3a52 },
