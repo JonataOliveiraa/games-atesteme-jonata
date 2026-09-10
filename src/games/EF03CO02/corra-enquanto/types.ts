@@ -1,14 +1,18 @@
 export type LevelNumber = 1 | 2 | 3
 
-export type SignalId = 'chuva' | 'esteira' | 'semaforo'
+export type SignalId = 'chuva' | 'luz' | 'semaforo'
 
 export type RuleId =
     | 'enquanto-chove'
     | 'enquanto-sol'
-    | 'enquanto-esteira-ligada'
-    | 'enquanto-esteira-parada'
+    | 'enquanto-luz-acesa'
+    | 'enquanto-luz-apagada'
     | 'enquanto-sinal-verde'
     | 'enquanto-sinal-vermelho'
+    | 'ate-chuva-parar'
+    | 'ate-chuva-comecar'
+    | 'ate-luz-acender'
+    | 'ate-sinal-fechar'
 
 export interface Rule {
     id: RuleId
@@ -41,7 +45,9 @@ export interface LevelDef {
     name: string
     windowMs: number
     speed: number
+    /** Quanto tempo o cronômetro dá, em cima do tempo ideal do trecho. */
+    timeFactor: number
     stretches: Stretch[]
 }
 
-export type Mode = 'intro' | 'running' | 'blocked' | 'demo' | 'done'
+export type Mode = 'intro' | 'running' | 'demo' | 'done'

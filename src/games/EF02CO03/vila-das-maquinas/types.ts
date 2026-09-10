@@ -47,6 +47,8 @@ export interface LevelDef {
     level: LevelNumber
     name: string
     message: string
+    /** O relógio do nível. Ele só anda enquanto a criança escolhe. */
+    seconds: number
     missions: MissionDef[]
 }
 

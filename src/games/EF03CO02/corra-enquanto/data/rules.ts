@@ -4,7 +4,24 @@ import type { Rule, RuleId, SignalId, Stretch } from '../types'
 export const SIGNAL_FRAME: Record<SignalId, { on: number; off: number }> = {
     chuva: { on: 0, off: 1 },
     semaforo: { on: 2, off: 3 },
-    esteira: { on: 4, off: 5 },
+    luz: { on: 4, off: 5 },
+}
+
+/**
+ * A caixa alfa de cada quadro de `sinais.png`, medida no arquivo, em fração do
+ * quadro de 400. Sem isso o objeto flutua, e a lâmpada tem outro motivo para
+ * estar aqui: acesa ela ganha raios e fica mais alta que apagada, então a
+ * escala sai sempre do quadro APAGADO — senão ela encolhe ao acender.
+ */
+export const SIGNAL_BOX: Record<number, { h: number; base: number }> = {
+    0: { h: 0.84, base: 0.955 },
+    1: { h: 0.745, base: 0.9 },
+    2: { h: 0.8675, base: 0.9325 },
+    3: { h: 0.8675, base: 0.9125 },
+    4: { h: 0.935, base: 0.9725 },
+    5: { h: 0.7975, base: 0.975 },
+    6: { h: 0.8475, base: 0.9325 },
+    7: { h: 0.79, base: 0.9225 },
 }
 
 export const FLAG_FRAME = 6
@@ -26,21 +43,21 @@ export const RULES: Record<RuleId, Rule> = {
         text: 'ENQUANTO fizer sol',
         action: 'corra com o guarda-chuva',
     },
-    'enquanto-esteira-ligada': {
-        id: 'enquanto-esteira-ligada',
+    'enquanto-luz-acesa': {
+        id: 'enquanto-luz-acesa',
         kind: 'enquanto',
-        watches: 'esteira',
+        watches: 'luz',
         keepsWhile: true,
-        text: 'ENQUANTO a esteira estiver ligada',
-        action: 'ande junto',
+        text: 'ENQUANTO a lâmpada estiver acesa',
+        action: 'corra na luz',
     },
-    'enquanto-esteira-parada': {
-        id: 'enquanto-esteira-parada',
+    'enquanto-luz-apagada': {
+        id: 'enquanto-luz-apagada',
         kind: 'enquanto',
-        watches: 'esteira',
+        watches: 'luz',
         keepsWhile: false,
-        text: 'ENQUANTO a esteira estiver parada',
-        action: 'atravesse por cima',
+        text: 'ENQUANTO a lâmpada estiver apagada',
+        action: 'corra no escuro',
     },
     'enquanto-sinal-verde': {
         id: 'enquanto-sinal-verde',
@@ -56,6 +73,39 @@ export const RULES: Record<RuleId, Rule> = {
         watches: 'semaforo',
         keepsWhile: false,
         text: 'ENQUANTO o sinal estiver vermelho',
+        action: 'atravesse',
+    },
+
+    'ate-chuva-parar': {
+        id: 'ate-chuva-parar',
+        kind: 'ate',
+        watches: 'chuva',
+        keepsWhile: true,
+        text: 'corra ATÉ a chuva parar',
+        action: 'corra com o guarda-chuva',
+    },
+    'ate-chuva-comecar': {
+        id: 'ate-chuva-comecar',
+        kind: 'ate',
+        watches: 'chuva',
+        keepsWhile: false,
+        text: 'corra ATÉ a chuva começar',
+        action: 'corra no sol',
+    },
+    'ate-luz-acender': {
+        id: 'ate-luz-acender',
+        kind: 'ate',
+        watches: 'luz',
+        keepsWhile: false,
+        text: 'corra ATÉ a lâmpada acender',
+        action: 'corra no escuro',
+    },
+    'ate-sinal-fechar': {
+        id: 'ate-sinal-fechar',
+        kind: 'ate',
+        watches: 'semaforo',
+        keepsWhile: true,
+        text: 'atravesse ATÉ o sinal fechar',
         action: 'atravesse',
     },
 }

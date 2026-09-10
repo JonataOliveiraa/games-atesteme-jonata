@@ -199,7 +199,7 @@ function drawCat(scene: Phaser.Scene, box: number) {
     return cat
 }
 
-/** O gatinho do telhado. */
+/** O gatinho da encomenda. */
 export function makeCat(scene: Phaser.Scene, box: number) {
     if (!scene.textures.exists(PETS)) return drawCat(scene, box)
     const root = scene.add.container(0, 0)

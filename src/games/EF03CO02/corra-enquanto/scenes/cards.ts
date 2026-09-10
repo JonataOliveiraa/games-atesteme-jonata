@@ -65,6 +65,15 @@ export function createRuleCard(scene: Phaser.Scene) {
     paint(false)
 
     const chip = scene.add.graphics()
+    const before = scene.add
+        .text(0, 0, '', {
+            fontFamily: FONT.black,
+            fontSize: '34px',
+            color: CSS.ink,
+        })
+        .setOrigin(0, 0.5)
+        .setResolution(2)
+
     const keyword = scene.add
         .text(0, 0, '', {
             fontFamily: FONT.black,
@@ -85,7 +94,7 @@ export function createRuleCard(scene: Phaser.Scene) {
 
     const spinner = loopGlyph(scene).setPosition(hw - 62, 0).setAlpha(0.25)
 
-    root.add([panel, chip, keyword, rest, spinner])
+    root.add([panel, before, chip, keyword, rest, spinner])
 
     let icon: Phaser.GameObjects.Image | null = null
     let spin: Phaser.Tweens.Tween | null = null
@@ -95,14 +104,17 @@ export function createRuleCard(scene: Phaser.Scene) {
             const parts = splitKeyword(rule.text)
             const x0 = -hw + 140
 
+            before.setText(parts.before)
             keyword.setText(parts.keyword)
             rest.setText(parts.after)
 
-            keyword.setX(x0 + 18)
+            before.setX(x0)
+            const chipX = x0 + (parts.before ? before.width + 16 : 0)
+            keyword.setX(chipX + 18)
             chip.clear()
             chip.fillStyle(C.ink, 1)
-            chip.fillRoundedRect(x0, -25, keyword.width + 36, 50, 14)
-            rest.setX(x0 + keyword.width + 52)
+            chip.fillRoundedRect(chipX, -25, keyword.width + 36, 50, 14)
+            rest.setX(chipX + keyword.width + 52)
 
             icon?.destroy()
             icon = signalIcon(scene, rule, 78)
@@ -159,6 +171,7 @@ export function createRuleCard(scene: Phaser.Scene) {
             paint(on)
             keyword.setColor(CSS.white)
             rest.setColor(on ? CSS.white : CSS.ink)
+            before.setColor(on ? CSS.white : CSS.ink)
         },
 
         bounds() {

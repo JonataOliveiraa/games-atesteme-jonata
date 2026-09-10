@@ -1,15 +1,13 @@
 import Phaser from 'phaser'
 import { FX, Ease, type FxTarget } from '../../../../shared/effects/FX'
-import { MACHINES } from '../data/machines'
 import { DEPTH, HUD, W, stampX } from '../data/layout'
 import { C, CSS, FONT, SIZE, hex } from '../data/theme'
-import type { MachineId } from '../types'
 
 type StampState = 'empty' | 'current' | 'done'
 
 interface Stamp {
     ring: Phaser.GameObjects.Graphics
-    badge?: Phaser.GameObjects.GameObject
+    done?: boolean
 }
 
 function paintStamp(g: Phaser.GameObjects.Graphics, size: number, state: StampState) {
@@ -109,7 +107,7 @@ export function createHud(scene: Phaser.Scene, options: HudOptions) {
             pulse?.remove()
             pulse = null
             stamps.forEach((stamp, i) => {
-                if (stamp.badge) return
+                if (stamp.done) return
                 FX.kill(scene, stamp.ring)
                 stamp.ring.setScale(1)
                 paintStamp(stamp.ring, HUD.stampSize, i === index ? 'current' : 'empty')
@@ -119,31 +117,19 @@ export function createHud(scene: Phaser.Scene, options: HudOptions) {
             })
         },
 
-        /** O selo enche com a máquina que resolveu a missão. */
-        fill(index: number, machineId: MachineId) {
+        /** O selo acende verde, e é só isso: a máquina não fica morando nele. */
+        fill(index: number) {
             const stamp = stamps[index]
-            if (!stamp || stamp.badge) return
+            if (!stamp || stamp.done) return
 
             pulse?.remove()
             pulse = null
             FX.kill(scene, stamp.ring)
             stamp.ring.setScale(1)
             paintStamp(stamp.ring, HUD.stampSize, 'done')
+            stamp.done = true
 
-            const machine = MACHINES[machineId]
-            const badge = scene.textures.exists('maquinas')
-                ? scene.add.image(stampX(index), HUD.cy, 'maquinas', machine.frame)
-                : scene.add.circle(stampX(index), HUD.cy, 16, machine.color)
-
-            if (badge instanceof Phaser.GameObjects.Image) {
-                badge.setScale(Math.min(44 / badge.width, 32 / badge.height))
-            }
-            badge.setDepth(DEPTH.hud + 2)
-            stamp.badge = badge
-            parts.push(badge)
-
-            void FX.popIn(scene, badge, { from: 0.3, duration: 420 })
-            void FX.impact(scene, stamp.ring, 0.24)
+            void FX.impact(scene, stamp.ring, 0.3)
         },
 
         stampPoint(index: number) {

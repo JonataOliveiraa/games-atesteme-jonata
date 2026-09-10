@@ -24,125 +24,6 @@ function makeWish(scene: Phaser.Scene) {
     return { wish, grant: fish.grant }
 }
 
-/**
- * A casinha do gatinho.
- *
- * O telhado é feito de fileiras de telhas em vez de um triângulo chapado: o
- * `bg-vila.png` tem telhado assim, e um triângulo liso no meio da tela
- * denunciava que aquela casa era de outro desenho.
- */
-function makeHouse(scene: Phaser.Scene) {
-    const house = scene.add.container(0, 0)
-    const g = scene.add.graphics()
-
-    const left = 692
-    const right = 908
-    const wallTop = 372
-    const wallBottom = 432
-    const apexX = 800
-    const apexY = 300
-    const eaveL = 654
-    const eaveR = 946
-    const eaveY = 388
-
-    g.fillStyle(C.ink, 0.16)
-    g.fillEllipse(800, 434, 268, 22)
-
-    g.fillStyle(C.ink, 1)
-    g.fillRoundedRect(left - 5, wallTop - 5, right - left + 10, wallBottom - wallTop + 10, 12)
-    g.fillStyle(0xf7e6c8, 1)
-    g.fillRoundedRect(left, wallTop, right - left, wallBottom - wallTop, 8)
-    g.fillStyle(0xe6d0ad, 1)
-    g.fillRect(left, wallBottom - 14, right - left, 14)
-    for (let i = 0; i < 5; i++) {
-        g.fillStyle(0xe0c8a2, 0.85)
-        g.fillRoundedRect(left + 10 + i * 42, wallBottom - 12, 30, 9, 4)
-    }
-
-    g.fillStyle(C.ink, 1)
-    g.fillTriangle(eaveL - 6, eaveY + 6, eaveR + 6, eaveY + 6, apexX, apexY - 12)
-    g.fillStyle(C.roofDark, 1)
-    g.fillTriangle(eaveL, eaveY, eaveR, eaveY, apexX, apexY)
-
-    /* As telhas: quatro fileiras de meias-luas, encolhendo em direção ao topo. */
-    const rows = 4
-    for (let r = 0; r < rows; r++) {
-        const t = r / rows
-        const y = eaveY - 4 - r * 21
-        const spread = (1 - t) * ((eaveR - eaveL) / 2) * 0.94
-        const count = Math.max(3, Math.round(11 - r * 2))
-        const step = (spread * 2) / count
-        g.fillStyle(r % 2 === 0 ? C.roofRed : 0xe25c5c, 1)
-        for (let i = 0; i <= count; i++) {
-            g.fillCircle(apexX - spread + i * step, y, step * 0.62)
-        }
-    }
-    g.fillStyle(C.white, 0.14)
-    g.fillTriangle(eaveL + 30, eaveY - 10, apexX - 6, apexY + 14, apexX - 6, eaveY - 10)
-
-    /* A chaminé fica no caimento da esquerda: no topo, o gatinho a esconde. */
-    g.fillStyle(C.ink, 1)
-    g.fillRoundedRect(758, 262, 36, 58, 8)
-    g.fillStyle(0xc98d6b, 1)
-    g.fillRoundedRect(762, 266, 28, 52, 6)
-    g.fillStyle(C.ink, 1)
-    g.fillRoundedRect(752, 258, 48, 18, 8)
-    g.fillStyle(0xdba884, 1)
-    g.fillRoundedRect(756, 262, 40, 12, 6)
-
-    g.fillStyle(C.ink, 1)
-    g.fillRoundedRect(768, 384, 64, 52, 10)
-    g.fillStyle(C.wood, 1)
-    g.fillRoundedRect(772, 388, 56, 48, 8)
-    g.fillStyle(C.woodDark, 0.6)
-    g.fillRect(798, 390, 4, 44)
-    g.fillStyle(C.ovenLight, 1)
-    g.fillCircle(790, 412, 4)
-
-    for (const wx of [724, 876]) {
-        g.fillStyle(C.ink, 1)
-        g.fillCircle(wx, 398, 20)
-        g.fillStyle(0x9fd7ef, 1)
-        g.fillCircle(wx, 398, 15)
-        g.fillStyle(C.white, 0.5)
-        g.fillCircle(wx - 4, 394, 6)
-        g.fillStyle(C.ink, 1)
-        g.fillRect(wx - 16, 396, 32, 4)
-        g.fillRect(wx - 2, 383, 4, 30)
-    }
-
-    house.add(g)
-    return house
-}
-
-/**
- * A fumacinha da chaminé: três baforadas subindo em laço.
- *
- * Cinza-azulada, e não branca: o céu do `bg-vila.png` tem nuvens brancas
- * exatamente ali, e a fumaça branca sumia dentro delas.
- */
-function makeSmoke(scene: Phaser.Scene, at: Point) {
-    const puffs: Phaser.GameObjects.Arc[] = []
-    for (let i = 0; i < 3; i++) {
-        const puff = scene.add.circle(at.x, at.y, 11, 0xccdae5, 0.9).setDepth(DEPTH.problem)
-        puff.setStrokeStyle(3, 0x9fb2c2, 0.55)
-        puff.setScale(0.5).setAlpha(0)
-        puffs.push(puff)
-        scene.tweens.add({
-            targets: puff,
-            y: at.y - 62,
-            x: at.x + 20,
-            scale: 1.25,
-            alpha: { from: 0.85, to: 0 },
-            duration: FX.ms(scene, 2600),
-            delay: FX.ms(scene, i * 860),
-            repeat: -1,
-            ease: 'Sine.easeOut',
-        })
-    }
-    return puffs
-}
-
 export interface ProblemHandle {
     root: Phaser.GameObjects.Container
     anchors: Anchors
@@ -152,7 +33,7 @@ export interface ProblemHandle {
     detail: Shot
     /** Para onde a máquina certa se desloca enquanto executa. Opcional. */
     workTo?: Point
-    solve: () => Promise<void>
+    solve: (step: number) => Promise<void>
     nudge: () => Promise<void>
     hoist?: (to: Point) => Promise<void>
     settle?: () => Promise<void>
@@ -279,6 +160,9 @@ function createRawBread(scene: Phaser.Scene): ProblemHandle {
     dough.setPosition(home.x, home.y)
     root.add(dough)
 
+    /* Na segunda etapa o próprio pão é a carga do drone. */
+    const delivered = { x: 470, y: STAGE.ground - 34 }
+
     const steam = scene.add.graphics().setAlpha(0)
     steam.lineStyle(7, C.white, 0.9)
     for (let i = -1; i <= 1; i++) {
@@ -302,7 +186,18 @@ function createRawBread(scene: Phaser.Scene): ProblemHandle {
         /* Enquadra o forninho E o pão: é a luz dele que doura a massa. */
         detail: { at: { x: 722, y: 350 }, zoom: 1.8 },
 
-        async solve() {
+        parcel: dough,
+        parcelLand: delivered,
+        hover: { x: 640, y: 248 },
+
+        async solve(step: number) {
+            if (step > 0) {
+                void FX.to(scene, steamBox, { alpha: 0 }, { duration: 200 })
+                void FX.ping(scene, delivered.x, delivered.y, C.ok, { radius: 104 })
+                await FX.sparks(scene, delivered.x, delivered.y, { color: C.ok, count: 16, spread: 140 })
+                return
+            }
+
             await bread.bake()
             void FX.to(scene, steamBox, { alpha: 1, y: 282 }, { duration: 700 })
             void FX.ping(scene, home.x, home.y, C.ovenLight, { radius: 110 })
@@ -330,56 +225,63 @@ function createRawBread(scene: Phaser.Scene): ProblemHandle {
     }
 }
 
+/**
+ * O gatinho espera no chão, e não em cima de uma casa.
+ *
+ * A casa era desenhada em código — parede, telhas, chaminé, porta e duas
+ * janelas — e disputava com as casas pintadas do `bg-vila.png`, que estão
+ * logo atrás. Estrutura desse tamanho é trabalho de textura, não de Graphics.
+ *
+ * O drone continua fazendo sentido: ele é quem LEVA a encomenda, e nenhuma das
+ * outras duas sai do lugar carregando coisa.
+ */
 function createRoofCat(scene: Phaser.Scene): ProblemHandle {
     const root = scene.add.container(0, 0).setDepth(DEPTH.problem)
 
-    root.add(makeHouse(scene))
-    const smoke = makeSmoke(scene, { x: 776, y: 250 })
-
-    const catHome = 306
+    const catHome = STAGE.ground - 52
     const cat = makeCat(scene, 104)
-    cat.setPosition(832, catHome)
+    cat.setPosition(820, catHome)
     root.add(cat)
     const breathe = FX.breathe(scene, cat, { grow: 1.04, duration: 2200 })
 
     const { wish, grant } = makeWish(scene)
-    wish.setPosition(676, 258)
+    wish.setPosition(722, catHome - 98)
     root.add(wish)
     const bob = FX.float(scene, wish, { amount: 6, duration: 2400 })
 
-    const box = makeBox(scene, 78)
+    const box = makeBox(scene, 96)
     const parcel = box.root
-    parcel.setPosition(496, 399)
+    parcel.setPosition(496, STAGE.ground - 48)
     root.add(parcel)
 
-    const parcelLand = { x: 894, y: 342 }
+    const parcelLand = { x: 892, y: STAGE.ground - 44 }
 
     return {
         root,
         parcel,
         parcelLand,
-        hover: { x: 880, y: 256 },
+        hover: { x: 884, y: 250 },
         anchors: {
             machine: { x: 500, y: crewStageY },
             strip: { x: 500, y: 286 },
-            focus: { x: 800, y: 320 },
+            focus: { x: 820, y: 352 },
         },
-        shot: { at: { x: 686, y: 344 }, zoom: 1.42 },
+        shot: { at: { x: 700, y: 356 }, zoom: 1.42 },
         /*
          * Mais aberto que os outros dois de propósito: aqui o quadro precisa
-         * caber o drone lá em cima, o gatinho no telhado, o balão do desejo e
-         * as plaquinhas — fechar mais deixaria alguma dessas coisas de fora.
+         * caber o drone lá em cima, o gatinho no chão, o balão do desejo e as
+         * plaquinhas — fechar mais deixaria alguma dessas coisas de fora.
          */
-        detail: { at: { x: 706, y: 306 }, zoom: 1.5 },
+        detail: { at: { x: 744, y: 320 }, zoom: 1.44 },
 
         async solve() {
             breathe.remove()
             await box.open()
             void FX.sparks(scene, parcelLand.x, parcelLand.y, { color: C.ovenLight, count: 14, spread: 110 })
 
-            await FX.to(scene, cat, { x: 866 }, { duration: 420, ease: Ease.smooth })
+            await FX.to(scene, cat, { x: 848 }, { duration: 420, ease: Ease.smooth })
             await FX.to(scene, cat, { y: catHome - 30 }, { duration: 220, yoyo: true, repeat: 1, ease: Ease.back(2.2) })
-            cat.setPosition(866, catHome)
+            cat.setPosition(848, catHome)
 
             grant()
             void FX.to(scene, wish, { scale: 1.24 }, { duration: 220, yoyo: true, ease: Ease.back(2.4) })
@@ -395,10 +297,6 @@ function createRoofCat(scene: Phaser.Scene): ProblemHandle {
         destroy() {
             breathe.remove()
             bob.remove()
-            smoke.forEach(puff => {
-                scene.tweens.killTweensOf(puff)
-                puff.destroy()
-            })
             FX.kill(scene, [cat, wish, parcel])
             root.destroy(true)
         },

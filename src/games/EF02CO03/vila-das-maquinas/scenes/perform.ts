@@ -15,6 +15,8 @@ export interface PerformContext {
     button: MachineButton
     problem: ProblemHandle
     cinema: Cinema
+    /** Qual etapa da missão está rodando. O problema decide o que fazer nela. */
+    step: number
 }
 
 const clampToStage = (point: Point) => ({
@@ -105,7 +107,7 @@ export async function performCorrect(ctx: PerformContext) {
         await Promise.all([
             FX.to(scene, crew, { x: to.x }, { duration: 950, ease: 'Sine.easeInOut' }),
             button.trackStrip({ x: to.x, y: problem.anchors.strip.y }, 950),
-            problem.solve(),
+            problem.solve(ctx.step),
         ])
         dust(scene, { x: crew.x, y: crew.y + 40 }, 12)
         return
@@ -146,7 +148,7 @@ export async function performCorrect(ctx: PerformContext) {
             void FX.ping(scene, problem.parcelLand.x, problem.parcelLand.y, C.white, { radius: 64 })
         }
 
-        await problem.solve()
+        await problem.solve(ctx.step)
         return
     }
 
@@ -158,7 +160,7 @@ export async function performCorrect(ctx: PerformContext) {
     void FX.to(scene, crew, { scaleX: 1.07, scaleY: 0.94 }, { duration: 260, yoyo: true, repeat: 1 })
 
     await cinema.look(problem.detail, 480)
-    await problem.solve()
+    await problem.solve(ctx.step)
 
     audio.command(1)
     await button.light(1)

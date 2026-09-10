@@ -1,7 +1,7 @@
 import Phaser from 'phaser'
-import { DEPTH, GROUND_Y, H, ROBOT_X, SIGNAL, W, WORLD } from '../data/layout'
+import { DEPTH, GROUND_Y, H, ROBOT_X, W, WORLD } from '../data/layout'
 import { C } from '../data/theme'
-import { FLAG_FRAME, SIGNAL_FRAME } from '../data/rules'
+import { FLAG_FRAME, SIGNAL_BOX, SIGNAL_FRAME } from '../data/rules'
 import type { SignalId } from '../types'
 
 interface Drop {
@@ -10,6 +10,21 @@ interface Drop {
     len: number
     vy: number
 }
+
+/**
+ * Cada condição aparece do jeito dela. A chuva é o próprio clima — molha a
+ * tela inteira e escurece o dia; o semáforo e a lâmpada são coisas plantadas
+ * na beira da pista. Nenhuma delas vira selo de canto.
+ */
+const PROP: Record<SignalId, { x: number; y: number; h: number; post?: boolean } | null> = {
+    chuva: null,
+    /** O poste do semáforo já chega no chão sozinho. */
+    semaforo: { x: 1024, y: GROUND_Y + 14, h: 292 },
+    /** A lâmpada é objeto solto: quem a planta no chão é o poste do §paintShade. */
+    luz: { x: 1012, y: GROUND_Y - 148, h: 152, post: true },
+}
+
+const GROUND = GROUND_Y + 14
 
 export function createWorld(scene: Phaser.Scene) {
     const hasBackground = scene.textures.exists('fundo')
@@ -36,79 +51,47 @@ export function createWorld(scene: Phaser.Scene) {
         scenery = g
     }
 
+    const flagFull = 200 / SIGNAL_BOX[FLAG_FRAME].h
     const flag = hasSignals
         ? scene.add
-              .image(W + 400, GROUND_Y + 12, 'sinais', FLAG_FRAME)
+              .image(
+                  W + 400,
+                  GROUND_Y + 14 + flagFull * (1 - SIGNAL_BOX[FLAG_FRAME].base),
+                  'sinais',
+                  FLAG_FRAME,
+              )
               .setOrigin(0.5, 1)
-              .setDisplaySize(210, 210)
+              .setDisplaySize(flagFull, flagFull)
               .setDepth(DEPTH.prop)
         : null
 
-    const badge = scene.add.graphics().setDepth(DEPTH.prop)
-    const icon = hasSignals
-        ? scene.add
-              .image(SIGNAL.x, SIGNAL.y, 'sinais', 0)
-              .setDisplaySize(SIGNAL.size, SIGNAL.size)
-              .setDepth(DEPTH.prop + 1)
+    const shade = scene.add.graphics().setDepth(DEPTH.prop - 1)
+    const prop = hasSignals
+        ? scene.add.image(0, 0, 'sinais', 2).setOrigin(0.5, 1).setDepth(DEPTH.prop).setVisible(false)
         : null
-    const iconText = hasSignals
+    const propText = hasSignals
         ? null
         : scene.add
-              .text(SIGNAL.x, SIGNAL.y, '', {
+              .text(1010, GROUND_Y - 60, '', {
                   fontFamily: '"Arial Black", Arial',
-                  fontSize: '40px',
+                  fontSize: '34px',
                   color: '#1f2a37',
               })
               .setOrigin(0.5)
-              .setDepth(DEPTH.prop + 1)
+              .setDepth(DEPTH.prop)
 
-    const r = SIGNAL.size / 2
-    const paintBadge = () => {
-        badge.clear()
-        badge.fillStyle(C.ink, 0.2)
-        badge.fillCircle(5, 10, r + 16)
-        badge.fillStyle(C.ink, 1)
-        badge.fillCircle(0, 0, r + 16)
-        badge.fillStyle(C.cream, 1)
-        badge.fillCircle(0, 0, r + 6)
-        badge.fillStyle(C.white, 0.8)
-        badge.fillEllipse(-18, -r + 16, SIGNAL.size * 0.6, 22)
-        badge.setPosition(SIGNAL.x, SIGNAL.y)
-    }
-
-    paintBadge()
-    badge.setAlpha(0)
-    if (icon) icon.setAlpha(0)
+    /** O dia fecha quando chove. É a mudança mais visível do jogo. */
+    const gloom = scene.add
+        .rectangle(W / 2, WORLD.top + WORLD.h / 2, W, WORLD.h, 0x2b4b6b, 0)
+        .setDepth(DEPTH.rain - 1)
 
     const shock = scene.add.graphics().setDepth(DEPTH.prop + 2).setAlpha(0)
     shock.lineStyle(12, C.white, 1)
-    shock.strokeCircle(0, 0, SIGNAL.size / 2 + 20)
-    shock.setPosition(SIGNAL.x, SIGNAL.y)
+    shock.strokeCircle(0, 0, 120)
 
     const flash = scene.add
         .rectangle(W / 2, WORLD.top + WORLD.h / 2, W, WORLD.h, C.white, 0)
         .setDepth(DEPTH.rain + 1)
-
-    const announce = () => {
-        shock.setAlpha(0.9).setScale(0.7)
-        scene.tweens.killTweensOf(shock)
-        scene.tweens.add({
-            targets: shock,
-            alpha: 0,
-            scale: 1.9,
-            duration: 560,
-            ease: 'Cubic.easeOut',
-        })
-        flash.setAlpha(0.5)
-        scene.tweens.killTweensOf(flash)
-        scene.tweens.add({ targets: flash, alpha: 0, duration: 320, ease: 'Cubic.easeOut' })
-        scene.tweens.add({
-            targets: badge,
-            scale: { from: 1.16, to: 1 },
-            duration: 420,
-            ease: 'Back.easeOut',
-        })
-    }
 
     const rain = scene.add.graphics().setDepth(DEPTH.rain)
     const drops: Drop[] = Array.from({ length: 90 }, () => ({
@@ -128,36 +111,86 @@ export function createWorld(scene: Phaser.Scene) {
         flag.setX(ROBOT_X + (goal - traveled))
     }
 
+    const paintShade = (spot: { x: number; y: number; post?: boolean } | null) => {
+        shade.clear()
+        if (!spot) return
+
+        shade.fillStyle(C.ink, 0.18)
+        shade.fillEllipse(spot.x, GROUND - 6, spot.post ? 120 : 150, 30)
+
+        if (!spot.post) return
+
+        // um poste: pé no asfalto, haste, e o bocal onde a lâmpada rosqueia
+        const top = spot.y - 10
+
+        shade.fillStyle(C.ink, 1)
+        shade.fillRoundedRect(spot.x - 36, GROUND - 24, 72, 26, 11)
+        shade.fillRoundedRect(spot.x - 13, top, 26, GROUND - top - 14, 9)
+        shade.fillStyle(C.steelDark, 1)
+        shade.fillRoundedRect(spot.x - 29, GROUND - 19, 58, 16, 8)
+        shade.fillRoundedRect(spot.x - 8, top + 5, 16, GROUND - top - 24, 6)
+        shade.fillStyle(C.steel, 1)
+        shade.fillRoundedRect(spot.x - 5, top + 9, 5, GROUND - top - 34, 3)
+
+        shade.fillStyle(C.ink, 1)
+        shade.fillRoundedRect(spot.x - 23, top - 10, 46, 22, 8)
+        shade.fillStyle(C.steelDark, 1)
+        shade.fillRoundedRect(spot.x - 18, top - 6, 36, 12, 5)
+    }
+
+    const announce = (x: number, y: number) => {
+        shock.setPosition(x, y).setAlpha(0.9).setScale(0.6)
+        scene.tweens.killTweensOf(shock)
+        scene.tweens.add({
+            targets: shock,
+            alpha: 0,
+            scale: 2.1,
+            duration: 560,
+            ease: 'Cubic.easeOut',
+        })
+        flash.setAlpha(0.45)
+        scene.tweens.killTweensOf(flash)
+        scene.tweens.add({ targets: flash, alpha: 0, duration: 340, ease: 'Cubic.easeOut' })
+    }
+
     return {
         setSignal(id: SignalId, on: boolean, loud = false) {
             signal = id
             raining = id === 'chuva' && on
-            const frame = on ? SIGNAL_FRAME[id].on : SIGNAL_FRAME[id].off
-            if (icon) {
-                scene.tweens.killTweensOf(icon)
-                icon.setFrame(frame)
-                icon.setDisplaySize(SIGNAL.size, SIGNAL.size)
-            }
-            iconText?.setText(on ? 'LIGADO' : 'PARADO')
-            if (!raining) rain.clear()
-            if (loud) announce()
-        },
 
-        /** O selo entra quando o laço começa a rodar, e some na hora de escolher. */
-        setBadgeVisible(value: boolean) {
-            scene.tweens.killTweensOf(badge)
-            const targets = icon ? [badge, icon] : [badge]
+            const spot = PROP[id]
+            const frame = on ? SIGNAL_FRAME[id].on : SIGNAL_FRAME[id].off
+
+            if (prop) {
+                if (spot) {
+                    const box = SIGNAL_BOX[frame]
+                    const full = spot.h / SIGNAL_BOX[SIGNAL_FRAME[id].off].h
+                    prop.setVisible(true).setFrame(frame)
+                    prop.setDisplaySize(full, full)
+                    prop.setPosition(spot.x, spot.y + full * (1 - box.base))
+                } else {
+                    prop.setVisible(false)
+                }
+            }
+            paintShade(spot)
+            propText?.setText(spot ? (on ? 'ACESA' : 'APAGADA') : '')
+
+            scene.tweens.killTweensOf(gloom)
             scene.tweens.add({
-                targets,
-                alpha: value ? 1 : 0,
-                duration: 260,
-                ease: 'Cubic.easeOut',
+                targets: gloom,
+                alpha: raining ? 0.3 : 0,
+                duration: loud ? 420 : 0,
             })
-            if (value) {
-                badge.setScale(0.8)
+
+            if (!raining) rain.clear()
+
+            if (!loud) return
+            announce(spot ? spot.x : W / 2, spot ? spot.y - spot.h * 0.55 : WORLD.top + 130)
+            if (spot && prop) {
+                scene.tweens.killTweensOf(prop)
                 scene.tweens.add({
-                    targets: badge,
-                    scale: 1,
+                    targets: prop,
+                    scale: { from: prop.scale * 1.18, to: prop.scale },
                     duration: 420,
                     ease: 'Back.easeOut',
                 })
@@ -209,16 +242,18 @@ export function createWorld(scene: Phaser.Scene) {
         },
 
         destroy() {
-            scene.tweens.killTweensOf(icon ?? badge)
             scene.tweens.killTweensOf(shock)
             scene.tweens.killTweensOf(flash)
+            scene.tweens.killTweensOf(gloom)
+            if (prop) scene.tweens.killTweensOf(prop)
             shock.destroy()
             flash.destroy()
+            gloom.destroy()
+            shade.destroy()
             scenery.destroy()
             flag?.destroy()
-            icon?.destroy()
-            iconText?.destroy()
-            badge.destroy()
+            prop?.destroy()
+            propText?.destroy()
             rain.destroy()
         },
     }

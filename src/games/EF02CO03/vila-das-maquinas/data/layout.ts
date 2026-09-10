@@ -31,6 +31,20 @@ export const HUD = {
     helpHit: 128,
 }
 
+/**
+ * O relógio do nível, entre os selos e o `?`.
+ *
+ * Ele mede o tempo de ESCOLHA: para enquanto a cena roda, porque ali a criança
+ * só assiste, e voltar a correr durante a animação seria cobrar por um tempo
+ * que ela não controla.
+ */
+export const TIME = {
+    cx: 800,
+    cy: 42,
+    w: 400,
+    h: 26,
+}
+
 export const ASK = {
     cx: 640,
     cy: 148,
@@ -62,9 +76,10 @@ export const STAGE = {
 export const SHED = {
     top: 474,
     btnW: 320,
-    btnH: 190,
-    btnR: 30,
-    cy: 595,
+    /** Sem as plaquinhas, o bay é só a máquina: 40px mais baixo. */
+    btnH: 150,
+    btnR: 28,
+    cy: 592,
 }
 
 /**
@@ -79,10 +94,13 @@ export const SHED = {
  */
 export const CREW = {
     machineH: 108,
-    machineDY: -30,
-    /** Sem a caixa branca, a medida do grupo é o próprio ícone. */
+    machineDY: -6,
+    /**
+     * As plaquinhas não aparecem no galpão: elas nascem invisíveis no botão e
+     * só acendem quando a máquina sobe para o palco. `plaqueDY` continua sendo
+     * a casa delas, que é para onde voltam ao pousar.
+     */
     plaqueW: 78,
-    plaqueH: 78,
     plaqueDX: 46,
     plaqueDY: 58,
     plaqueIcon: 64,

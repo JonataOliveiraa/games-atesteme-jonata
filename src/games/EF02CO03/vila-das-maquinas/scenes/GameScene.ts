@@ -7,9 +7,10 @@ import { showLevelComplete } from '../../../../shared/level/showLevelComplete'
 import { createLives, type Lives } from '../../../../shared/hud/createLives'
 import { vidasIniciais } from '../../../../shared/level/vidasIniciais'
 import { FX } from '../../../../shared/effects/FX'
+import { createTimeBar, type TimeBar } from '../../../../shared/hud/createTimeBar'
 import { LEVELS } from '../data/levels'
 import { MACHINES, canRunStep } from '../data/machines'
-import { ASK, DEPTH, DRONE_HOVER, HUD, buttonX } from '../data/layout'
+import { ASK, DEPTH, DRONE_HOVER, HUD, TIME, buttonX } from '../data/layout'
 import { C } from '../data/theme'
 import { createVillage } from './village'
 import { createAsk, type Ask } from './ask'
@@ -28,6 +29,7 @@ export class GameScene extends Phaser.Scene {
     private lives!: Lives
     private livesTotal = 3
     private livesLeft = 3
+    private clock!: TimeBar
 
     private level!: LevelDef
     private missionIndex = 0
@@ -118,10 +120,54 @@ export class GameScene extends Phaser.Scene {
         })
         this.events.once('shutdown', () => this.lives.destroy())
 
+        this.clock = createTimeBar(this, {
+            cx: TIME.cx,
+            cy: TIME.cy,
+            w: TIME.w,
+            h: TIME.h,
+            duration: this.level.seconds * 1000,
+            depth: DEPTH.hud + 1,
+            icon: true,
+            onDanger: () => this.audio.beep(),
+            onEmpty: () => this.timeOut(),
+        })
+        this.events.once('shutdown', () => this.clock.destroy())
+
         runtimeGameBridge.emit({ type: 'GAME_READY', gameId: GAME_ID })
         this.emitCheckpoint()
 
         void this.startMission(0)
+    }
+
+    update(_time: number, delta: number) {
+        if (!this.clock) return
+        this.clock.setRunning(this.phase === 'choosing' && !this.busy)
+        this.clock.tick(delta)
+    }
+
+    /**
+     * Tempo esgotado é o único caso em que o jogo reprova por conta própria.
+     *
+     * Só congela e avisa: quem desenha a tela de fim é a plataforma, que já
+     * responde ao `GAME_OVER` e volta para a atividade. Um cartão daqui com
+     * "Tentar de novo" apareceria POR CIMA do dela e prometeria uma partida
+     * que não vai acontecer.
+     */
+    private timeOut() {
+        if (this.phase === 'done') return
+        this.gen++
+        this.phase = 'done'
+        this.busy = true
+        this.setButtonsEnabled(false)
+        this.hud.setEnabled(false)
+        this.audio.wrong()
+        void this.ask.worry()
+
+        runtimeGameBridge.emit({
+            type: 'GAME_OVER',
+            gameId: GAME_ID,
+            stage: this.level.level,
+        })
     }
 
     private shutdownScene() {
@@ -236,6 +282,7 @@ export class GameScene extends Phaser.Scene {
             button,
             problem,
             cinema: this.cinema,
+            step: this.stepIndex,
         }
         const solved = canRunStep(button.machine, this.step)
 
@@ -339,7 +386,7 @@ export class GameScene extends Phaser.Scene {
         await FX.to(this, badge, { scale: base * 0.4, alpha: 0 }, { duration: 220 })
         badge.destroy()
 
-        this.hud.fill(this.missionIndex, machineId)
+        this.hud.fill(this.missionIndex)
         await FX.wait(this, 420)
     }
 
@@ -456,7 +503,6 @@ export class GameScene extends Phaser.Scene {
 
     private tutorialSteps(): TutorialStep[] {
         const target = this.correctButton() ?? this.buttons[0]
-        const strip = target.stripBounds()
         const bounds = target.buttonBounds()
         const stamps = this.hud.stampsBounds()
 
@@ -467,13 +513,6 @@ export class GameScene extends Phaser.Scene {
                 x: ASK.cx, y: ASK.cy,
                 w: ASK.w + 22, h: ASK.h + 22,
                 balloonY: 330,
-            },
-            {
-                text: 'Cada máquina sabe dois comandos.',
-                shape: 'rect',
-                x: strip.x, y: strip.y,
-                w: strip.w, h: strip.h,
-                balloonX: 640, balloonY: 330,
             },
             {
                 text: 'Toque na máquina que resolve.',

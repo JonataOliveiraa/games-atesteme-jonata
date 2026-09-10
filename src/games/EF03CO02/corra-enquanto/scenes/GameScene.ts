@@ -48,7 +48,9 @@ export class GameScene extends Phaser.Scene {
     private advancing = false
     private demoHolding = false
     private travaOpen: { destroy: () => void } | null = null
-    private stretchErrors = 0
+    private explainTimer?: Phaser.Time.TimerEvent
+    private armed = false
+    private travas = 0
     private pendingTutorial = true
 
     private score = 0
@@ -89,7 +91,8 @@ export class GameScene extends Phaser.Scene {
         this.advancing = false
         this.demoHolding = false
         this.travaOpen = null
-        this.stretchErrors = 0
+        this.armed = false
+        this.travas = 0
         this.score = data?.points ?? 0
         this.hits = 0
         this.errors = 0
@@ -124,6 +127,19 @@ export class GameScene extends Phaser.Scene {
             h: CLOCK.h,
             duration: 20000,
             depth: 520,
+            theme: {
+                track: C.ink,
+                trackAlpha: 0.16,
+                border: C.ink,
+                borderAlpha: 0.3,
+                fill: C.blue,
+                warn: C.gold,
+                danger: C.stop,
+                idle: C.steelDark,
+                icon: C.inkSoft,
+                gloss: C.white,
+                glossAlpha: 0.4,
+            },
             onEmpty: () => this.timeOver(),
         })
         this.timeBar.setRunning(false)
@@ -154,6 +170,7 @@ export class GameScene extends Phaser.Scene {
     private shutdownScene() {
         this.gen++
         this.audio?.loopStop()
+        this.explainTimer?.remove()
         this.travaOpen?.destroy()
         this.pedal?.destroy()
         this.card?.destroy()
@@ -173,19 +190,23 @@ export class GameScene extends Phaser.Scene {
         this.stretchIndex = index
         this.mode = 'intro'
         this.pending = null
-        this.stretchErrors = 0
         this.advancing = false
         this.audio.loopStop()
+        this.pedal.setUrgent(false)
+        this.armed = false
+        this.explainTimer?.remove()
+        this.travaOpen?.destroy()
+        this.travaOpen = null
+        this.lock.hide()
 
         const stretch = this.stretch
         this.rule = RULES[stretch.rule]
         this.world.setSignal(stretch.signal, stretch.segments[0].on)
         this.world.setGoal(4200)
-        this.world.setBadgeVisible(false)
         this.robot.stand()
         this.pedal.setEnabled(false)
         this.timeBar.setRunning(false)
-        this.timeBar.reset(Math.round(totalMs(stretch) * 2))
+        this.timeBar.reset(Math.round(totalMs(stretch) * this.level.timeFactor))
 
         this.card.alert(false)
         this.card.show(this.rule)
@@ -211,7 +232,6 @@ export class GameScene extends Phaser.Scene {
         this.signalOn = this.segments[0].on
         this.world.setSignal(stretch.signal, this.signalOn)
         this.world.setGoal((runningMs(stretch) / 1000) * this.level.speed)
-        this.world.setBadgeVisible(true)
         this.pedal.setEnabled(true)
 
         if (this.pendingTutorial) {
@@ -242,9 +262,13 @@ export class GameScene extends Phaser.Scene {
 
     private nextSegment() {
         if (this.segIndex >= this.segments.length - 1) return
+        const antes = this.signalOn
         this.segIndex += 1
         this.segLeft = this.segments[this.segIndex].ms
         this.signalOn = this.segments[this.segIndex].on
+        if (antes === this.signalOn) return
+
+        this.armed = true
         this.world.setSignal(this.stretch.signal, this.signalOn, true)
         this.audio.change()
         this.card.pulse()
@@ -281,6 +305,7 @@ export class GameScene extends Phaser.Scene {
         const running = holding && should
 
         this.setAdvancing(running)
+        this.pedal.setUrgent(holding && !should)
 
         if (running) {
             this.world.scroll(this.level.speed * dt)
@@ -296,7 +321,7 @@ export class GameScene extends Phaser.Scene {
             } else {
                 this.pending.left -= dtMs
                 if (this.pending.left <= 0) {
-                    if (holding && !should) this.blockLoop()
+                    if (holding && !should) this.missedRelease()
                     else this.resolveChange(false)
                 }
             }
@@ -337,22 +362,38 @@ export class GameScene extends Phaser.Scene {
         this.emitCheckpoint()
     }
 
-    private blockLoop() {
+    /**
+     * Passou da janela ainda segurando. O robo ja esta parado -- o laco nao
+     * roda com a condicao falsa -- entao aqui nao ha o que punir: o mundo
+     * segue, o pedal continua pedindo SOLTE e a plaquinha explica por que.
+     */
+    private missedRelease() {
         this.pending = null
-        this.mode = 'blocked'
-        this.stretchErrors += 1
-        this.errors += 1
-        this.setAdvancing(false)
-
-        this.robot.stand()
-        this.lock.show(ROBOT_X, this.robot.top - 26)
-        this.card.alert(true)
+        this.explain(this.travaLine())
         this.card.pulse()
+    }
+
+    /**
+     * TEIMOSIA: soltou e apertou de novo com a condicao falsa.
+     *
+     * Aqui a crianca nao esta lenta, esta insistindo em rodar o laco onde a
+     * regra proibe. O robo e puxado para a frente, tropeca, e custa uma vida
+     * -- com a vida unica da plataforma isso e o fim da partida, que e o
+     * peso certo para o unico gesto que o jogo pede para nao fazer.
+     */
+    private stubborn() {
+        this.errors += 1
+        this.travas += 1
+
+        this.robot.stumble()
+        this.card.alert(true)
+        this.time.delayedCall(900, () => this.card.alert(false))
+        this.lock.show(ROBOT_X, this.robot.top - 26)
+        this.time.delayedCall(900, () => this.lock.hide())
         this.hud.flash(C.warn)
         this.audio.wrong()
-        FX.shakeCam(this, 'leve')
-
-        this.travaOpen = showTrava(this, this.travaLine())
+        FX.shakeCam(this, 'medio')
+        this.explain('Você segurou fora da regra: o laço não podia rodar aqui.')
 
         runtimeGameBridge.emit({
             type: 'WRONG_ANSWER',
@@ -364,44 +405,36 @@ export class GameScene extends Phaser.Scene {
         this.livesLeft = this.lives.remaining
     }
 
+    /** Plaquinha que explica e sai sozinha. Nao para o mundo. */
+    private explain(line: string) {
+        this.travaOpen?.destroy()
+        this.travaOpen = showTrava(this, line)
+        this.explainTimer?.remove()
+        this.explainTimer = this.time.delayedCall(2600, () => {
+            this.travaOpen?.destroy()
+            this.travaOpen = null
+        })
+    }
+
     private travaLine() {
         const rule = this.rule
         if (!rule) return 'O laço tinha que parar.'
-        return `${rule.text} deixou de valer. O laço tinha que parar aqui.`
-    }
-
-    private unblock() {
-        if (this.mode !== 'blocked') return
-        this.mode = 'running'
-        this.travaOpen?.destroy()
-        this.travaOpen = null
-        this.lock.hide()
-        this.card.alert(false)
-        this.audio.unlock()
-
-        this.score += 5
-        this.hits += 1
-        this.stepsDone += 1
-        runtimeGameBridge.emit({
-            type: 'CORRECT_ANSWER',
-            gameId: GAME_ID,
-            pointsEarned: 5,
-            stage: this.level.level,
-        })
-        this.emitCheckpoint()
+        return `${rule.text} deixou de valer — o laço tinha que parar aqui.`
     }
 
     private onDown() {
-        if (this.mode === 'running' && this.pending && this.pending.needHold) {
+        if (this.mode !== 'running' || !this.rule) return
+
+        if (this.pending && this.pending.needHold) {
             this.resolveChange(true)
+            return
         }
+
+        // so vira teimosia depois que o trecho ja mostrou uma mudanca
+        if (this.armed && !this.pending && !holds(this.rule, this.signalOn)) this.stubborn()
     }
 
     private onUp() {
-        if (this.mode === 'blocked') {
-            this.unblock()
-            return
-        }
         if (this.mode === 'running' && this.pending && !this.pending.needHold) {
             this.resolveChange(true)
         }
@@ -413,6 +446,7 @@ export class GameScene extends Phaser.Scene {
     private finishStretch() {
         this.mode = 'done'
         this.setAdvancing(false)
+        this.pedal.setUrgent(false)
         this.pedal.setEnabled(false)
         this.timeBar.setRunning(false)
         this.robot.cheer()

@@ -66,6 +66,30 @@ export function createRobot(scene: Phaser.Scene, onStep: () => void) {
             setFrame(4)
         },
 
+        /** Foi puxado para a frente e tropeçou: o laço rodou onde não podia. */
+        stumble() {
+            elapsed = 0
+            setFrame(0)
+            scene.tweens.killTweensOf(sprite)
+            sprite.setAngle(0)
+            scene.tweens.add({
+                targets: sprite,
+                x: ROBOT_X + 86,
+                angle: 12,
+                duration: 260,
+                ease: 'Cubic.easeOut',
+                yoyo: true,
+                hold: 120,
+                onComplete: () => {
+                    sprite.setPosition(ROBOT_X, GROUND_Y).setAngle(0)
+                    setFrame(4)
+                },
+            })
+            for (let i = 0; i < 5; i++) {
+                puffs.push({ x: ROBOT_X + 20 + i * 12, y: GROUND_Y - 6, r: 10, life: 1 })
+            }
+        },
+
         cheer() {
             elapsed = 0
             setFrame(5)

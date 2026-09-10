@@ -61,7 +61,10 @@ import coverDetetiveDosModelos from "../assets/games/EF02CO01/detetive-dos-model
 import coverVilaDasMaquinas from "../assets/games/EF02CO03/vila-das-maquinas/cover-vila-das-maquinas.png";
 import coverFugaDoLaboratorio from "../assets/games/EF02CO04/fuga-do-laboratorio/cover-fuga-do-laboratorio.png";
 import coverCavernaDosDados from "../assets/games/EF03CO04/caverna-dos-dados/cover-caverna-dos-dados.png";
-import coverMissaoEmPedaços from "../assets/games/EF03CO03/missao-em-pedacos/cover-missao-em-pedacos.png";
+import coverMissaoEmPedacos from "../assets/games/EF03CO03/missao-em-pedacos/cover-missao-em-pedacos.png";
+// PROVISÓRIO: o fundo do galpão no lugar da capa, que ainda não foi gerada.
+// O prompt dela está em src/games/EF03CO05/torres-dos-formatos/TEXTURAS.md §9.
+import coverTorresDosFormatos from "../assets/games/EF03CO05/torres-dos-formatos/bg-galpao-triagem.png";
 /**
  * 1. `id` nunca muda e nunca é reaproveitado. Se um jogo for removido,
  *    marque status "draft" — não devolva o id para a fila.
@@ -637,7 +640,7 @@ export const catalog: Game[] = [
     category: "Pensamento Computacional",
     points: 60,
     icon: "🎒",
-    thumbnail: coverMissaoEmPedaços,
+    thumbnail: coverMissaoEmPedacos,
   },
   {
     id: "017",
@@ -705,6 +708,7 @@ export const catalog: Game[] = [
     category: "Mundo Digital",
     points: 90,
     icon: "🗼",
+    thumbnail: coverTorresDosFormatos,
   },
   {
     id: "019",

@@ -99,12 +99,14 @@ linha dos pés. Os seis precisam bater na mesma linha.
 
 Oito quadros de 350 x 350. São os **estados das condições** — o que a criança
 olha para decidir se a frase ainda vale. Cada dupla é o mesmo objeto ligado e
-desligado, e a diferença entre os dois precisa ser visível a 45 px reais.
+desligado, e a diferença entre os dois precisa ser visível a 45 px reais. O par
+da lâmpada tem uma regra a mais: **o bulbo tem que ter o mesmo tamanho nos dois
+quadros** — só os raios entram e saem —, senão ela muda de tamanho ao acender.
 
 | Frame | Estado | Frame | Estado |
 |---|---|---|---|
-| 0 | nuvem chovendo | 4 | esteira ligada |
-| 1 | nuvem sem chuva | 5 | esteira parada |
+| 0 | nuvem chovendo | 4 | lâmpada acesa |
+| 1 | nuvem sem chuva | 5 | lâmpada apagada |
 | 2 | semáforo verde | 6 | bandeira de chegada |
 | 3 | semáforo vermelho | 7 | balde com marca |
 
@@ -125,11 +127,10 @@ Frames, left to right then top to bottom:
    with a soft halo, the other two dark and dull.
 4. The SAME traffic light with the TOP lamp glowing bright red #EF4444 with a soft
    halo, the other two dark and dull. Identical box and position to frame 3.
-5. A short CONVEYOR BELT seen from the side, with rollers and an arrow-shaped tread
-   pattern, drawn as clearly RUNNING: small motion marks above it and a bright green
-   lamp on its motor.
-6. The SAME conveyor belt clearly STOPPED: no motion marks, tread flat, the motor lamp
-   dark and grey.
+5. A round LIGHT BULB glowing bright yellow, with short rays around it, the glass
+   clearly lit from inside and a metal screw base at the bottom.
+6. The SAME bulb switched OFF: white-grey glass, no rays, same shape and same screw
+   base in the same place.
 7. A CHECKERED FINISH FLAG on a pole, black and white squares, planted in a small
    rounded base, waving to the right.
 8. A metal BUCKET seen from the front, half filled with blue water, with a single bold

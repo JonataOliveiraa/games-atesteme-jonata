@@ -30,8 +30,7 @@ mudaria**: seria reflexo puro, e a criança obedeceria a um sinal sem ler nada.
 
 O que impede isso é a **polaridade da regra virar de trecho para trecho**. No
 trecho da chuva o laço roda com o sinal LIGADO (`ENQUANTO estiver chovendo`);
-no da esteira, roda com o sinal DESLIGADO (`ENQUANTO a esteira estiver parada`,
-porque só dá para atravessar quando ela para). O mundo mostra o mesmo tipo de
+no da lâmpada, roda com o sinal DESLIGADO (`ENQUANTO a lâmpada estiver apagada`). O mundo mostra o mesmo tipo de
 mudança nos dois, e o dedo tem que fazer o **contrário** num e no outro. Sem ler
 a frase não existe como saber qual é qual — a bolinha não resolve.
 
@@ -112,14 +111,14 @@ nenhuma tela de menu antes de correr.
 | Conceito | Como a tela mostra |
 |---|---|
 | a regra que estou rodando | a ficha grande no topo, o trecho inteiro, nunca some |
-| a condição vale agora | o mundo mostra: chuva caindo, sinal verde, esteira andando |
+| a condição vale agora | o mundo mostra: chuva caindo, sinal verde, lâmpada acesa |
 | o laço está rodando | o robô corre, o pedal acende, um som contínuo suave |
 | o laço parou | o robô para de pé, o pedal apaga, o som some |
 | a condição mudou | o mundo muda **e** a ficha dá um pulso — dois avisos, não um |
 | rodei uma volta a mais | cadeado no robô, mundo congelado, a ficha piscando |
 
 O selo da condição **não tem cor de veredito**. Ele mostra o objeto — chuva,
-esteira, sinal — e nunca diz se a regra vale agora. Se dissesse, a criança leria
+lâmpada, sinal — e nunca diz se a regra vale agora. Se dissesse, a criança leria
 a cor em vez da frase, e a regra viraria enfeite.
 
 ---
@@ -152,49 +151,58 @@ se vê.
 
 ## 6. Níveis e fases
 
-**Fase = um trecho.** Três trechos por nível, e o trecho dura de 12 a 18
-segundos.
+**Fase = um trecho.** Três trechos por nível, os mesmos três sinais em todos —
+chuva, lâmpada e semáforo. O que muda de nível para nível é a frase que governa
+o dedo, quantas vezes o mundo vira e quanto tempo ela tem para reagir.
 
-| Nível | Tipo de regra | Mudanças por trecho | Janela | Cronômetro |
-|---|---|---|---|---|
-| 1 | só `ENQUANTO`, com a polaridade virando entre trechos | 2 | 1,2 s | 2x o tempo ideal |
-| 2 | só `ATÉ` | 3 | 1,0 s | 1,8x |
-| 3 | `ENQUANTO` e `ATÉ` alternando | 4 | 0,8 s | 1,6x |
+| Nível | Frase | Mudanças por trecho | Janela | Velocidade | Cronômetro |
+|---|---|---|---|---|---|
+| 1 | só `ENQUANTO` | 2 | 1,8 s | 260 | 2,0x o tempo ideal |
+| 2 | só `ATÉ` | 3 | 1,4 s | 290 | 1,9x |
+| 3 | `ENQUANTO` e `ATÉ` misturados | 4 | 1,1 s | 320 | 1,8x |
 
 ### Nível 1 — o dedo aprende o laço
 
-| Trecho | Regra | O laço roda quando | Mudanças |
-|---|---|---|---|
-| 1 | `ENQUANTO estiver chovendo` | está chovendo | chove → para → volta |
-| 2 | `ENQUANTO a esteira estiver parada` | a esteira está **parada** | parada → liga → para |
-| 3 | `ENQUANTO o sinal estiver verde` | o sinal está verde | verde → vermelho → verde |
+| Trecho | Regra | O laço roda quando |
+|---|---|---|
+| 1 | `ENQUANTO estiver chovendo` | está chovendo |
+| 2 | `ENQUANTO a lâmpada estiver apagada` | a lâmpada está **apagada** |
+| 3 | `ENQUANTO o sinal estiver verde` | o sinal está verde |
 
-O trecho 2 é o que segura o jogo de pé: ele inverte o que o trecho 1 ensinou.
-Quem decorou "segure quando estiver acontecendo alguma coisa" segura na hora
-errada e trava — e é a leitura da frase, não o reflexo, que corrige.
+O trecho 2 inverte o que o trecho 1 ensinou: quem decorou "segure quando estiver
+acontecendo alguma coisa" segura na hora errada.
 
 ### Nível 2 — o `ATÉ`
 
-`ATÉ` é a mesma repetição com a condição negada, e é onde mora a confusão que a
-telemetria pede para medir.
+`ATÉ` é o mesmo laço com a condição dita pelo **fim** dele. Nenhuma linha de
+código nova: `corra ATÉ a chuva parar` é `{ watches: 'chuva', keepsWhile: true }`,
+exatamente como `ENQUANTO estiver chovendo`. A frase muda, o teste é o mesmo — e
+é isso que a criança precisa descobrir.
 
-| Trecho | Problema | Regra certa | Ficha errada |
-|---|---|---|---|
-| 1 | chegar na linha de chegada | `corra ATÉ a bandeira` | `corra ATÉ o poste` |
-| 2 | encher o balde | `encha ATÉ a marca` | `encha ATÉ transbordar` |
-| 3 | pular corda no recreio | `pule ATÉ o apito` | `pule ATÉ cansar` |
+| Trecho | Regra | O laço roda quando |
+|---|---|---|
+| 1 | `corra ATÉ a chuva parar` | está chovendo |
+| 2 | `corra ATÉ a lâmpada acender` | a lâmpada está apagada |
+| 3 | `atravesse ATÉ o sinal fechar` | o sinal está verde |
 
-A ficha errada do trecho 2 é a melhor do nível: segurar até transbordar é um
-laço que roda **de propósito** uma volta a mais, e a criança vê a água derramar.
+Os três trechos deste nível **começam parados**: a primeira mudança é a senha
+para começar a correr. Como são três mudanças por trecho e a última faixa tem
+que ser a que corre, a conta só fecha começando no estado errado — e isso vira
+um teste a mais, o de esperar.
 
-### Nível 3 — misturado
+### Nível 3 — tudo misturado
 
-Quatro mudanças por trecho, janela de 0,8 s, e a ficha muda de tipo entre um
-trecho e outro: `ENQUANTO o sinal estiver verde`, depois `corra ATÉ a bandeira`,
-depois `ENQUANTO a esteira andar`. Três fichas na mesa, sempre com um `ENQUANTO`
-e um `ATÉ` que descrevem o mesmo mundo.
+Cada regra aqui é o contrário da que a criança viu para aquele mesmo sinal:
 
----
+| Trecho | Regra | Contra o que ela aprendeu |
+|---|---|---|
+| 1 | `corra ATÉ a chuva começar` | no 1 e no 2, chuva era para correr |
+| 2 | `ENQUANTO a lâmpada estiver acesa` | no 1 e no 2, a luz acesa era para parar |
+| 3 | `atravesse ATÉ o sinal fechar` | mesma do nível 2, agora com quatro viradas e 1,1 s |
+
+Quatro mudanças por trecho, janela de 1,1 s e o mundo 23% mais rápido que o
+nível 1. Não dá para jogar de reflexo: a frase decide, e ela muda de sentido a
+cada trecho.
 
 ## 7. As regras, em código
 
@@ -207,7 +215,7 @@ export type RuleKind = 'enquanto' | 'ate'
 export interface Rule {
     id: RuleId
     kind: RuleKind
-    /** O que a frase observa: 'chuva', 'sinal', 'esteira', 'bandeira', 'balde'. */
+    /** O que a frase observa: 'chuva', 'luz', 'semaforo'. */
     watches: SignalId
     /** O valor que mantém o laço rodando. */
     keepsWhile: boolean
@@ -242,29 +250,35 @@ Nenhum número de ponto, acerto ou porcentagem aparece na tela.
 
 ## 8. O erro, e o que ele NÃO é
 
-**Existe um erro só: continuar segurando depois que a condição virou falsa.** É
-a volta do laço que a regra proibia — o pecado exato que o texto oficial
-descreve ("caso contrário, ele será interrompido").
+Quando a condição deixa de valer, **o laço para de rodar na mesma hora**: o robô
+fica parado e segurar não faz mais nada. O mundo continua andando — nada
+congela, nada trava para sempre.
 
-A trava: o mundo congela, o robô ganha cadeado e poeirinha, a ficha da regra
-pulsa, e **só soltar o dedo destrava**. Volta a correr com +5.
+A partir daí existem três caminhos, e só um deles é erro:
 
-O que **não** é erro:
-
-| Situação | Por quê |
+| O que ela faz | O que acontece |
 |---|---|
-| soltar cedo demais | o laço só parou antes; o mundo espera, a ficha pulsa, e ela segura de novo |
-| demorar para retomar quando a condição volta | não fazer nada não roda volta nenhuma — não há o que punir |
-| soltar dentro da janela | é a resposta certa, e a janela existe porque dedo de criança de 8 anos não é cronômetro |
+| solta dentro da janela (1,8 s) | laço fechado certo, bônus de reflexo |
+| continua segurando | nada: o robô já está parado. O pedal fica âmbar escrito **SOLTE** e a plaquinha explica qual regra deixou de valer |
+| **solta e aperta de novo** | **teimosia**: o robô é puxado para a frente, tropeça, e cai uma vida |
 
-Essa assimetria é de propósito: **o laço rodar a menos é hesitação; rodar a mais
-é quebrar a regra.** Punir os dois igual transformaria um jogo de raciocínio num
-jogo de reflexo — que é justamente o que o §1 corrigiu.
+A diferença entre a segunda e a terceira linha é a diferença entre dedo lento e
+decisão. Quem continua segurando pode simplesmente não ter reagido a tempo —
+punir isso é punir o dedo. Quem solta e aperta de novo está dizendo "eu quero
+rodar o laço mesmo assim", com o pedal âmbar na frente pedindo o contrário, e é
+o único gesto que este jogo existe para impedir.
 
-Depois de **dois erros no mesmo trecho**, a ficha certa fica pulsando desde a
-mudança seguinte. O contador zera no começo de cada trecho.
+Com a vida única que a plataforma costuma mandar, essa vida é a partida
+inteira: **teimar uma vez é fim de jogo**. É de propósito.
 
----
+O erro não pode ser:
+
+| Não fazer | Motivo |
+|---|---|
+| travar o mundo até a criança soltar | ela fica sem entender por que o botão morreu |
+| cobrar por soltar cedo | o laço só parou antes; o mundo espera |
+| cobrar por demorar a retomar | não fazer nada não roda volta nenhuma |
+| cobrar sem avisar antes | por isso o pedal vira âmbar e escreve SOLTE no instante em que o dedo está sobrando |
 
 ## 9. Feedback
 
@@ -296,7 +310,7 @@ Nenhuma palavra, nenhum botão de avançar. O `?` repete.
 
 ## 11. Textura e Graphics
 
-**É textura:** o robô, os objetos de condição (nuvem, sinal, esteira, bandeira,
+**É textura:** o robô, os objetos de condição (nuvem, sinal, lâmpada, bandeira,
 balde) e o fundo da pista. Estão no [TEXTURAS.md](./TEXTURAS.md).
 
 **É Graphics:** ficha de regra, pedal, linha do tempo, balão, cadeado, rastro,
@@ -406,6 +420,69 @@ o dobro do tempo ideal do trecho. Ele existe para não deixar a partida parar,
 não para apressar: quem espera direito na condição falsa gasta tempo previsto,
 e só quem simplesmente não joga chega no zero. No zero sai `GAME_OVER` — o
 único caso em que este jogo emite isso por conta própria.
+
+**`ATÉ` não ganhou código próprio.** Ele é `ENQUANTO não`, e o jogo prova isso
+sendo literalmente o mesmo teste: as regras `ATÉ` só trocam a frase e o valor
+esperado. A arte também não pediu nada novo — os três sinais que existem
+(`chuva`, `luz`, `semaforo`) servem para as duas formas, e é justamente
+ver o mesmo mundo governado por duas frases diferentes que faz o nível 3.
+
+**A punição por teimosia só arma depois da primeira mudança do trecho.** Os
+trechos do nível 2 começam parados, e apertar no primeiro segundo é exploração,
+não teimosia: a criança ainda não viu o mundo mudar. Depois da primeira virada,
+vale a regra do §8.
+
+**A esteira virou lâmpada.** O sinal do meio deixou de ser uma máquina deitada
+e passou a ser uma lâmpada acesa/apagada. Ela é um objeto solto — não tem pé —,
+então o mundo desenha um **poste** embaixo dela: sapata no asfalto, haste e o
+bocal onde ela rosqueia. A bancada que a esteira usava saiu junto.
+
+**A escala da lâmpada sai do quadro APAGADO, não do quadro atual.** Acesa ela
+ganha raios e fica 14% mais alta; se cada quadro mandasse na escala, a lâmpada
+encolheria no instante em que acendesse — exatamente no momento que precisa
+chamar atenção. O tamanho vem sempre do quadro apagado, e cada quadro é
+ancorado pela própria base.
+
+**Os objetos são ancorados pela CAIXA ALFA, não pela borda do quadro.** A
+esteira terminava em 77% da altura do quadro dela, então plantar pelo quadro a
+deixava um quarto da própria altura no ar — flutuando. As oito caixas foram
+medidas no arquivo e moram em `SIGNAL_BOX`, e o mundo pede a altura VISÍVEL do
+objeto, não a do quadro. A bandeira de chegada tinha o mesmo problema, menor.
+
+**Objeto solto precisa de apoio desenhado.** A esteira, quando existia, ganhou
+uma bancada; a lâmpada que a substituiu ganhou um poste. O semáforo não precisa
+de nada — o poste dele já vem no desenho.
+
+**O cronômetro trocou de cor.** Ele vinha creme sobre trilho escuro, do tema
+padrão, e brigava com o cabeçalho claro. Agora é azul do jogo sobre trilho
+claro, virando dourado e depois vermelho conforme esvazia.
+
+**A trava que parava o mundo saiu.** Ela existia para o caso de segurar depois
+da mudança, e confundia: o botão parecia quebrado e a criança levava uma vida
+sem ter feito escolha nenhuma. Hoje esse caso é mudo por design — o robô para,
+o pedal pede SOLTE, e a plaquinha explica.
+
+**A vida agora sai da teimosia**: soltar e apertar de novo com a condição
+falsa. O robô é puxado para a frente e tropeça, para a consequência ser vista e
+não só contada. É o único gesto punido no jogo, e é o único que a regra proíbe
+de propósito.
+
+**O pedal passou a pedir o contrário.** Jogado, o trecho entre a condição
+virar e a trava era mudo: o robô parava, o pedal continuava verde dizendo
+SEGURE, e o instinto da criança era apertar de novo — que é exatamente o
+contrário do que a regra pede. Agora, no instante em que ela está segurando e a
+condição deixa de valer, o pedal fica âmbar, escreve **SOLTE** e pulsa para
+fora. A janela do nível 1 subiu de 1,2 s para 1,8 s.
+
+Medido no navegador para não corrigir o que não estava quebrado: apertar de
+novo depois de soltar **não** custa vida (segurar 2,6 s com a condição falsa e
+sem janela aberta deu zero erro). A vida sai numa situação só, a de sempre:
+segurar ATRAVÉS da mudança até a janela fechar.
+
+**Cada condição virou o que ela é.** O selo de canto sumiu. A chuva é o clima —
+chove na tela inteira e o dia escurece; quando para, o sol da arte aparece. O
+semáforo e a lâmpada são objetos plantados na beira da pista, do tamanho de
+coisa de verdade, e é neles que a onda de choque da mudança estoura.
 
 **O id do catálogo virou 060**: 058 e 059 já tinham dono quando o jogo entrou.
 

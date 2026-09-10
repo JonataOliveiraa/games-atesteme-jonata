@@ -29,18 +29,22 @@ export function createPedal(
 
     let held = false
     let enabled = true
+    let urgent = false
 
     const paint = () => {
         const drop = held ? 4 : 12
+        const face = !enabled ? C.steel : urgent ? C.warn : C.ok
+        const edge = !enabled ? C.steelDark : urgent ? C.warnDark : C.okDark
+
         g.clear()
 
         g.fillStyle(C.ink, 0.28)
         g.fillRoundedRect(PEDAL.x + 4, PEDAL.y + 12, PEDAL.w, PEDAL.h, 28)
 
-        g.fillStyle(enabled ? C.okDark : C.steelDark, 1)
+        g.fillStyle(edge, 1)
         g.fillRoundedRect(PEDAL.x, PEDAL.y + 8, PEDAL.w, PEDAL.h, 28)
 
-        g.fillStyle(enabled ? C.ok : C.steel, 1)
+        g.fillStyle(face, 1)
         g.fillRoundedRect(PEDAL.x, PEDAL.y + 8 - drop, PEDAL.w, PEDAL.h - 6, 26)
 
         g.fillStyle(C.white, enabled ? 0.34 : 0.2)
@@ -50,10 +54,13 @@ export function createPedal(
         g.fillStyle(C.white, enabled ? 0.9 : 0.45)
         for (const side of [-1, 1]) {
             for (let i = 0; i < 3; i++) {
-                g.fillCircle(cx + side * (150 + i * 34), dotY, 6 - i)
+                const x = cx + side * (150 + i * 34)
+                if (urgent) g.fillCircle(x, dotY - 10 + i * 6, 6 - i)
+                else g.fillCircle(x, dotY, 6 - i)
             }
         }
 
+        label.setText(urgent ? 'SOLTE' : 'SEGURE')
         label.setY(cy + 4 - drop)
     }
 
@@ -89,6 +96,7 @@ export function createPedal(
     keys?.on('keyup-SPACE', release)
 
     let beat: Phaser.Tweens.Tween | null = null
+    let alarm: Phaser.Tweens.Tween | null = null
 
     return {
         get held() {
@@ -105,8 +113,57 @@ export function createPedal(
             paint()
         },
 
+        /**
+         * O dedo está na tela e a condição não vale mais. O pedal para de
+         * convidar e passa a pedir o contrário — é o aviso que faltava entre a
+         * mudança e a trava.
+         */
+        setUrgent(value: boolean) {
+            if (value === urgent) return
+            urgent = value
+            paint()
+
+            alarm?.stop()
+            alarm = null
+            if (!value) {
+                ring.setAlpha(0).setScale(1)
+                return
+            }
+
+            ring.clear()
+            ring.lineStyle(10, C.warn, 1)
+            ring.strokeRoundedRect(
+                -PEDAL.w / 2 - 10,
+                -PEDAL.h / 2 - 10,
+                PEDAL.w + 20,
+                PEDAL.h + 20,
+                34,
+            )
+            ring.setAlpha(0.95).setScale(1)
+            alarm = scene.tweens.add({
+                targets: ring,
+                alpha: 0.2,
+                scaleX: 1.03,
+                scaleY: 1.22,
+                duration: 320,
+                yoyo: true,
+                repeat: -1,
+                ease: 'Sine.easeInOut',
+            })
+        },
+
         /** Um pulso por volta do laço: a repetição vira coisa que se vê. */
         beat() {
+            if (urgent) return
+            ring.clear()
+            ring.lineStyle(10, C.ok, 1)
+            ring.strokeRoundedRect(
+                -PEDAL.w / 2 - 10,
+                -PEDAL.h / 2 - 10,
+                PEDAL.w + 20,
+                PEDAL.h + 20,
+                34,
+            )
             ring.setAlpha(0.9).setScale(1)
             beat?.stop()
             beat = scene.tweens.add({
@@ -120,7 +177,7 @@ export function createPedal(
         },
 
         shine(value: number) {
-            if (value <= 0) return
+            if (value <= 0 || urgent) return
             ring.setAlpha(value)
         },
 
@@ -132,6 +189,7 @@ export function createPedal(
 
         destroy() {
             beat?.stop()
+            alarm?.stop()
             scene.input.off('pointerupoutside', release)
             keys?.off('keydown-SPACE', press)
             keys?.off('keyup-SPACE', release)

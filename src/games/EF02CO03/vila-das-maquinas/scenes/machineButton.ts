@@ -66,13 +66,13 @@ export function createMachineButton(scene: Phaser.Scene, options: MachineButtonO
         shell.fillStyle(C.white, spent ? 0.1 : 0.22)
         shell.fillRoundedRect(
             bx - halfW + 24,
-            SHED.cy - halfH + 18 + drop,
+            SHED.cy - halfH + 14 + drop,
             SHED.btnW - 48,
-            18,
-            9,
+            15,
+            8,
         )
         shell.fillStyle(machine.color, spent ? 0.16 : 0.4)
-        shell.fillRoundedRect(bx - halfW + 22, SHED.cy - halfH + 42 + drop, SHED.btnW - 44, 84, 26)
+        shell.fillRoundedRect(bx - halfW + 22, SHED.cy - halfH + 34 + drop, SHED.btnW - 44, 90, 26)
         shell.lineStyle(5, spent ? C.greyDark : C.ink, spent ? 0.5 : 0.85)
         shell.strokeRoundedRect(bx - halfW, SHED.cy - halfH, SHED.btnW, SHED.btnH, SHED.btnR)
     }
@@ -85,7 +85,7 @@ export function createMachineButton(scene: Phaser.Scene, options: MachineButtonO
         if (sprite instanceof Phaser.GameObjects.Sprite) sprite.setFrame(frame)
     }
 
-    const strip = scene.add.container(bx, stripHomeY).setDepth(DEPTH.strip)
+    const strip = scene.add.container(bx, stripHomeY).setDepth(DEPTH.strip).setAlpha(0)
     const plaques: Plaque[] = machine.commands.map((command, i) =>
         createPlaque(scene, {
             command,
@@ -163,7 +163,7 @@ export function createMachineButton(scene: Phaser.Scene, options: MachineButtonO
         fade(alpha: number, ms: number, withCrew = true) {
             FX.to(scene, shell, { alpha }, { duration: ms })
             if (withCrew) {
-                FX.to(scene, [crew, strip], { alpha: alpha * (spent ? 0.42 : 1) }, { duration: ms })
+                FX.to(scene, crew, { alpha: alpha * (spent ? 0.42 : 1) }, { duration: ms })
             }
         },
 
@@ -174,7 +174,6 @@ export function createMachineButton(scene: Phaser.Scene, options: MachineButtonO
             await FX.wait(scene, delay)
             FX.to(scene, shell, { alpha: 1 }, { duration: 240 })
             void FX.popIn(scene, crew, { from: 0.7, duration: 380 })
-            void FX.popIn(scene, strip, { from: 0.7, delay: 90, duration: 380 })
         },
 
         /** A máquina sobe para o palco e as plaquinhas param acima dela. */
@@ -185,9 +184,11 @@ export function createMachineButton(scene: Phaser.Scene, options: MachineButtonO
             crew.setDepth(DEPTH.machine)
             strip.setDepth(DEPTH.strip)
 
+            strip.setAlpha(0)
             await Promise.all([
                 FX.arcTo(scene, crew, spot, { height: 130, duration: 520 }),
                 FX.arcTo(scene, strip, stripInStage(stripAt), { height: 90, duration: 520 }),
+                FX.to(scene, strip, { alpha: 1 }, { duration: 300, delay: 140 }),
             ])
         },
 
@@ -208,6 +209,7 @@ export function createMachineButton(scene: Phaser.Scene, options: MachineButtonO
             await Promise.all([
                 FX.arcTo(scene, crew, { x: bx, y: crewHomeY }, { height: 120, duration: 480 }),
                 FX.arcTo(scene, strip, { x: bx, y: stripHomeY }, { height: 80, duration: 480 }),
+                FX.to(scene, strip, { alpha: 0 }, { duration: 260 }),
             ])
             plaques.forEach(plaque => plaque.reset())
             startIdle()
@@ -233,7 +235,7 @@ export function createMachineButton(scene: Phaser.Scene, options: MachineButtonO
             stopHint()
             if (value) stopIdle()
             else startIdle()
-            FX.to(scene, [crew, strip], { alpha: value ? 0.42 : 1 }, { duration: 260 })
+            FX.to(scene, crew, { alpha: value ? 0.42 : 1 }, { duration: 260 })
         },
 
         setHint(on: boolean) {
@@ -256,15 +258,6 @@ export function createMachineButton(scene: Phaser.Scene, options: MachineButtonO
             paintShell(true, spent)
             scene.time.delayedCall(FX.ms(scene, 130), () => paintShell(false, spent))
             return FX.press(scene, crew, 0.94)
-        },
-
-        stripBounds() {
-            return {
-                x: bx,
-                y: stripHomeY,
-                w: CREW.plaqueDX * 2 + CREW.plaqueW + 18,
-                h: CREW.plaqueH + 18,
-            }
         },
 
         buttonBounds() {
