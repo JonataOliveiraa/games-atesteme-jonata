@@ -169,6 +169,12 @@ const POR_SLUG: Record<string, string[]> = {
     "Toque em uma subtarefa já colocada para devolvê-la e trocar a ordem.",
     "No nível 3, duas subtarefas podem ocupar a mesma faixa paralela.",
   ],
+  "missao-em-pedacos": [
+    "Toque numa coisa da mesa e depois no painel que leva ela.",
+    "Corte a tarefa no meio: cada painel leva a metade que faz a mesma coisa.",
+    "Cada painel vira uma viagem: corra, pule as pedras e desvie do lixo.",
+    "No fim, faça a tarefa na bancada tocando no que vem agora.",
+  ],
   "corra-enquanto": [
     "Leia a regra no alto da tela: ela diz quando o robô pode andar.",
     "Segure o dedo na tela enquanto a condição da regra estiver valendo.",
@@ -185,6 +191,18 @@ const POR_SLUG: Record<string, string[]> = {
     "Arraste cada dado solto para o campo correto.",
     "Clique em Validar informação para testar a combinação.",
     "Dados isolados podem não informar muito, mas juntos formam uma informação útil.",
+  ],
+  "caverna-dos-dados": [
+    "Toque numa pedra que brilha: o explorador vai até ela e mina com a picareta.",
+    "De dentro da pedra cai uma palavra, que vai para a bolsa.",
+    "No altar, toque nas palavras que contam a mesma coisa e depois em JUNTAR.",
+    "Uma palavra sozinha não abre nada: a porta só aparece quando a informação fica inteira.",
+  ],
+  "torres-dos-formatos": [
+    "Um arquivo cai por vez. Olhe no corpo dele como os dados estão arrumados.",
+    "Use as setas para mover o arquivo de pista.",
+    "Deixe ele pousar na caixa do formato certo: som, imagem, texto ou vídeo.",
+    "Se pousar na caixa errada, ele trava ali até você levá-lo para a caixa certa.",
   ],
   "formato-certo": [
     "Observe qual informação precisa ser guardada.",

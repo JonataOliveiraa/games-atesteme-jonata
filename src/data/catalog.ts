@@ -60,6 +60,8 @@ import coverEscondeDados from "../assets/games/EF01CO07/esconde-dados/cover-esco
 import coverDetetiveDosModelos from "../assets/games/EF02CO01/detetive-dos-modelos/cover-detetive-dos-modelos.png";
 import coverVilaDasMaquinas from "../assets/games/EF02CO03/vila-das-maquinas/cover-vila-das-maquinas.png";
 import coverFugaDoLaboratorio from "../assets/games/EF02CO04/fuga-do-laboratorio/cover-fuga-do-laboratorio.png";
+import coverCavernaDosDados from "../assets/games/EF03CO04/caverna-dos-dados/cover-caverna-dos-dados.png";
+import coverMissaoEmPedaços from "../assets/games/EF03CO03/missao-em-pedacos/cover-missao-em-pedacos.png";
 /**
  * 1. `id` nunca muda e nunca é reaproveitado. Se um jogo for removido,
  *    marque status "draft" — não devolva o id para a fila.
@@ -621,6 +623,23 @@ export const catalog: Game[] = [
     thumbnail: chefThumbnail,
   },
   {
+    id: "061",
+    slug: "missao-em-pedacos",
+    module: "EF03CO03/missao-em-pedacos",
+    skill: "EF03CO03",
+    years: [3],
+    tags: ["decomposição", "plataforma", "pulo", "partes"],
+    order: 165,
+    status: "published",
+    title: "Missão em Pedaços",
+    description:
+      "Corte a tarefa no meio e vá buscar cada metade correndo e pulando pelo mundo.",
+    category: "Pensamento Computacional",
+    points: 60,
+    icon: "🎒",
+    thumbnail: coverMissaoEmPedaços,
+  },
+  {
     id: "017",
     slug: "montador-de-informacoes",
     module: "EF03CO04/montador-de-informacoes",
@@ -638,6 +657,23 @@ export const catalog: Game[] = [
     thumbnail: informationBuilderThumbnail,
   },
   {
+    id: "062",
+    slug: "caverna-dos-dados",
+    module: "EF03CO04/caverna-dos-dados",
+    skill: "EF03CO04",
+    years: [3],
+    tags: ["dados", "informação", "relação", "exploração", "toque"],
+    order: 175,
+    status: "published",
+    title: "Caverna dos Dados",
+    description:
+      "Recolha os dados que brilham na caverna e junte os que contam a mesma coisa: a informação abre a porta.",
+    category: "Mundo Digital",
+    points: 90,
+    icon: "💎",
+    thumbnail: coverCavernaDosDados,
+  },
+  {
     id: "018",
     slug: "formato-certo",
     module: "EF03CO05/formato-certo",
@@ -653,6 +689,22 @@ export const catalog: Game[] = [
     points: 60,
     icon: "[]",
     thumbnail: correctFormatThumbnail,
+  },
+  {
+    id: "063",
+    slug: "torres-dos-formatos",
+    module: "EF03CO05/torres-dos-formatos",
+    skill: "EF03CO05",
+    years: [3],
+    tags: ["formatos", "estrutura", "dados", "pistas", "toque"],
+    order: 185,
+    status: "published",
+    title: "Torres dos Formatos",
+    description:
+      "Os arquivos caem pelas pistas: olhe como os dados estão arrumados e leve cada um para a caixa do seu formato.",
+    category: "Mundo Digital",
+    points: 90,
+    icon: "🗼",
   },
   {
     id: "019",
@@ -1115,4 +1167,4 @@ export const catalog: Game[] = [
 ];
 
 /** Próximo id livre. Use ao cadastrar um jogo novo. */
-export const NEXT_FREE_ID = "055";
+export const NEXT_FREE_ID = "062";
