@@ -216,6 +216,33 @@ const POR_SLUG: Record<string, string[]> = {
     "Entrada leva informação para o computador; Saída mostra ou toca informação para fora.",
     "Clique em Testar conexão para verificar sua escolha.",
   ],
+  "fase-de-entrada-e-saida": [
+    "Leia o pedido da Lia.",
+    "Toque no cartão do aparelho que resolve o pedido.",
+    "Nível 1 falta a ENTRADA, nível 2 falta a SAÍDA, nível 3 tem um aparelho que não serve: troque.",
+    "Se errar, a dica diz o que o aparelho faz. Tente o outro.",
+  ],
+  "a-busca-do-bibliotecario": [
+    "O resultado com o coração é o que o visitante quer.",
+    "Quem fica no 1º lugar, com a moldura dourada, vai para o visitante.",
+    "Toque numa palavra: ela entra na busca e muda a ordem dos resultados.",
+    "Quando o coração chegar ao 1º lugar, o achado é entregue sozinho.",
+  ],
+  "ache-o-suspeito": [
+    "Cada placa mostra um dado seu, uma frase e para onde ela iria.",
+    "Uma das placas é um compartilhamento suspeito. Toque nela.",
+    "A bolinha de papel voa sozinha até a placa que você tocou.",
+    "Se acertar, a placa vai para a reciclagem e o impacto evitado aparece.",
+    "Se tocar numa placa segura, a dica diz por que ela pode ser enviada.",
+  ],
+  "show-de-formatos": [
+    "Cada cena do show leva três formatos: uma imagem, uma frase e um som.",
+    "Toque numa das duas opções. Nenhuma é errada — a escolha é sua.",
+    "Para trocar, toque na aba IMAGEM, FRASE ou SOM e escolha de novo.",
+    "Com os três prontos, toque em APRESENTAR e veja a cena no telão.",
+    "No fim, as três cenas tocam juntas como um clipe, e o palco apaga para você assistir.",
+    "No nível 3 você escolhe o tema do show antes de começar.",
+  ],
   "detetives-da-busca": [
     "Leia a pergunta da missão.",
     "Escolha palavras-chave e filtros para melhorar os resultados.",

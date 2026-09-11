@@ -1140,9 +1140,9 @@ Content-Security-Policy: frame-ancestors 'self' https://app.exemplo.com
 | EF03CO07 | Detetives da Busca | R1 | Busca guiada com refinamento |
 | EF03CO07 | A Busca do Bibliotecário | R2 | RPG leve (micro-missões) |
 | EF03CO08 | Estúdio Multiformato | R1 | Criação livre orientada |
-| EF03CO08 | Show de Formatos | R2 | Ritmo / música |
+| EF03CO08 | Show de Formatos | R2 | Criação audiovisual (imagem + frase + som) |
 | EF03CO09 | Investigação: Dados em Risco | R1 | Jogo investigativo por evidências |
-| EF03CO09 | Um Dia Online | R2 | Simulador de vida |
+| EF03CO09 | Ache o Suspeito | R2 | Tiro ao alvo educativo (atenção e interpretação) |
 | EF04CO01 | Batalha das Coordenadas | R1 | Tabuleiro matricial por coordenadas |
 | EF04CO01 | Canhão de Coordenadas | R2 | FPS adaptado (mira, sem violência) |
 | EF04CO02 | Arquivo dos Registros | R1 | Consulta e filtragem de registros |
