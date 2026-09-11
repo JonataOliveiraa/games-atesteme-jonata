@@ -1,711 +1,991 @@
-# Fase de Entrada e Saída - prompts das texturas
+# Fase de Entrada e Saída — TEXTURAS.md
 
-Documento irmão: [PLANEJAMENTO.md](./PLANEJAMENTO.md)
+Este documento especifica somente a arte do jogo descrito em
+[PLANEJAMENTO.md](./PLANEJAMENTO.md).
 
-Destino: `src/assets/games/EF03CO06/fase-de-entrada-e-saida/`
-
-**Versão: escape room de uma bancada.** Este documento substitui integralmente
-a lista e os prompts da antiga versão de plataforma.
-
----
-
-## 0. A lista
-
-Cinco arquivos: um fundo, três folhas de objetos e a capa.
-**Todos estão a gerar.** A pasta de assets deste jogo ainda não existe;
-as medidas abaixo são pedidos de produção, não medidas de imagens entregues.
-
-| # | Arquivo | Tamanho | Grade | Para quê | Quando | Prompt |
-|---|---|---|---|---|---|---|
-| 1 | `bg-bancada.png` | 1672 x 941 | — | parede do laboratório atrás da bancada | **primeiro** | seção 5 |
-| 2 | `computador-guia.png` | 1024 x 256 | 4 x 1 de 256 | gabinete em quatro estados | **primeiro** | seção 6 |
-| 3 | `aparelhos.png` | 1280 x 512 | 5 x 2 de 256 | cinco aparelhos, neutros e ativos | **primeiro** | seção 7 |
-| 4 | `caixinha-de-som.png` | 768 x 256 | 3 x 1 de 256 | fonte sonora em três estados | depois do teste do nível 1 | seção 8 |
-| 5 | `cover-fase-de-entrada-e-saida.png` | 1672 x 941 | — | capa do catálogo | por último | seção 9 |
-
-Gerar as folhas inteiras. O nível 1 usa o gabinete e os cinco aparelhos, mesmo
-que nem todos precisem animar em todas as tarefas. A caixinha só é necessária
-para o som dos níveis 2 e 3; o placeholder permite testar a simulação antes.
-
-**Nada de bancada, mesa, porta, fecho, encaixe, cabo, seta, botão, cartão,
-balão, rótulo, estrela, papel, onda ou partícula nas folhas.** Tudo isso é
-Graphics ou Phaser.Text. O fundo também não traz esses elementos embutidos.
-
-A caixinha é um brinquedo-fonte de som, não um sexto periférico da bandeja.
-A criança continua escolhendo somente entre os cinco aparelhos.
-
-### O que deixa de ser pedido
-
-A lista antiga do vale, corredor, interfaces básicas/ampliadas e sinais
-básicos/ampliados foi aposentada. Não produzir esses arquivos para esta versão.
-O nome computador-guia permanece, mas o prompt agora descreve um gabinete de
-bancada, sem tela de conteúdo nem rosto. O prompt da capa também é novo.
-
-Nenhum PNG foi apagado: não há arte entregue nesta pasta.
+A prioridade desta revisão é **reconhecimento imediato**. Nenhuma textura
+principal pode parecer um aparelho inventado. Teclado deve parecer teclado,
+microfone deve parecer microfone, monitor deve parecer monitor e o computador
+central deve parecer uma torre de desktop amigável.
 
 ---
 
-## 1. A regra que não pode ser quebrada
+## 0. Estado e lista fechada
 
-> **O resultado vem do programa; o aparelho não chega pintado com a resposta.**
+| Arquivo | Dimensão | Grade | Fundo | Função |
+|---|---:|---:|---|---|
+| `bg-laboratorio.png` | 1672 × 941 | imagem única | opaco | parede do laboratório |
+| `personagem-lia.png` | 1024 × 256 | 4 × 1 | transparente | fonte humana da informação |
+| `computador-central.png` | 1024 × 256 | 4 × 1 | transparente | recebe, processa e envia |
+| `dispositivos-entrada.png` | 1024 × 512 | 4 × 2 | transparente | teclado, mouse, microfone e câmera |
+| `dispositivos-saida.png` | 768 × 512 | 3 × 2 | transparente | monitor, alto-falante e impressora |
+| `cover-fase-de-entrada-e-saida.png` | 1672 × 941 | imagem única | opaco | capa do catálogo |
 
-A mesma impressora pode ser uma escolha útil para levar papel e inadequada
-para ouvir uma gravação. Monitor e impressora podem mostrar a mesma imagem em
-suportes diferentes. Nenhum aparelho tem borda verde, X, expressão triste,
-cor de erro ou aspecto inferior.
+**Total: seis arquivos.**
 
-Todos compartilham materiais, paleta e acabamento. Entrada e saída não são
-separadas em famílias cromáticas nas texturas. Seus rótulos e setas aparecem
-pelo código.
+Ainda não considerar nenhuma arte anterior como aprovada. Em especial:
 
-### As janelas precisam ficar vazias
+- a caixa metálica clara com três luzes não é o computador deste plano;
+- o objeto marrom com manivela não é usado no jogo;
+- não adaptar esses desenhos; gerar novamente a partir dos prompts abaixo.
 
-- o monitor tem uma área plana livre para receber imagem ou onda;
-- a impressora tem fenda livre para uma folha desenhada pelo código;
-- a câmera tem lente e botão de captura, sem microfone integrado;
-- o microfone não tem tela nem lente;
-- o alto-falante não tem tela;
-- o gabinete central mostra apenas luzes de funcionamento, nunca a foto.
-
-A foto é renderizada pelo mesmo painter no suporte, monitor, papel e registro.
-Se ela vier pintada no aparelho, a relação entre informação e resultado se perde.
-
-### Estado ativo não é estado correto
-
-Os frames ativos indicam funcionamento físico. O Monitor pode estar ativo
-exibindo uma imagem quando o pedido era papel. A Impressora pode estar ativa
-imprimindo quando o pedido era ver na tela.
-
-Não adicionar check, estrela, brilho verde ou celebração aos frames ativos.
+A bancada, a porta, os cabos, as setas, os encaixes, os cartões, os balões,
+os textos, as ondas, o papel e os desenhos são feitos em código. Não criar
+arquivos extras para esses elementos.
 
 ---
 
-## 2. Estilo comum
+## 1. Regra visual que não pode ser quebrada
 
-```text
-Flat 2D cartoon educational game asset for children, chunky rounded shapes,
-bold readable silhouette, thick dark navy outline #203149, friendly controlled
-colors, broad flat color areas, one soft inner shadow, one small painted white
-highlight, minimal detail, polished children's science-workshop style,
-readable at small mobile size, no text.
-```
+A imagem deve comunicar a cadeia abaixo antes mesmo de a criança ler a frase:
 
-O ambiente é uma oficina de brinquedos iluminada, com parede clara, madeira,
-metal pintado e plástico fosco. Os equipamentos têm proporções reconhecíveis
-e poucos detalhes. A descoberta vem de aparelhos físicos fáceis de identificar.
+**pessoa ou objeto no mundo → aparelho de entrada → computador → aparelho de
+saída → resultado no mundo**
 
-**Vista frontal**, com profundidade mínima. Isso permite sobrepor a mesma
-imagem retangular na tela e no papel sem transformações de perspectiva.
+Três decisões sustentam essa leitura:
 
----
+1. aparelhos conhecidos, com silhuetas escolares e domésticas;
+2. entrada e saída em folhas separadas, nunca misturadas;
+3. computador no centro, com porta azul à esquerda e porta laranja à direita.
 
-## 3. Negativo comum
+As cores dos cabos mostram direção de movimento, não “certo” e “errado”.
+Não pintar todos os dispositivos de entrada de azul nem todos os de saída de
+laranja. Cada aparelho usa a mesma família de plástico claro e detalhes
+azulados. A função é reconhecida pelo objeto e pelo efeito.
 
-```text
-3D render, realistic, photorealistic, hyperdetailed, tiny details, dark escape room,
-horror, prison, weapon, cyberpunk, brand logo, text, letters, numbers, words,
-watermark, signature, outer frame, border, grid lines, colored category card,
-green checkmark, red X, correct answer cue, cropped, cut off, merged cells,
-white background on sprite sheets, fake transparency, motion blur, lens flare.
-```
+### Teste de silhueta
 
-Os prompts individuais já incluem estilo e negativo completos. Copiar um
-bloco por pedido, sem precisar colar marcadores como [estilo comum].
+Antes de aprovar cada folha:
 
-Tabelas de frames começam em **0**, como no Phaser. Listas de frames dentro
-dos prompts começam em **1**. A ordem é sempre esquerda para direita,
-de cima para baixo.
+1. reduzir cada frame para 64 × 64;
+2. esconder nome, cabo e brilho;
+3. perguntar a uma pessoa o que é o objeto;
+4. aceitar somente se reconhecer sem alternativas.
 
-Fundo e capa são opacos. Somente as três folhas de objetos pedem alfa real.
+Metas:
 
----
-
-## 4. Paleta
-
-| Uso | Hex | Aplicação |
-|---|---|---|
-| contorno | `#203149` | todos os objetos |
-| plástico claro | `#DCE7EC` | câmera, monitor, impressora e gabinete |
-| metal escuro | `#637B8C` | microfone, alto-falante, bases e parafusos |
-| azul suave | `#6699BF` | detalhes distribuídos entre todos os aparelhos |
-| cobre | `#C68B58` | pequenos detalhes, sem código de categoria |
-| parede | `#E8E5D7` | cenário opaco |
-| madeira | `#B8875B` | detalhe de cenário e mesa em código |
-| tela vazia | `#243647` | somente área interna do monitor |
-| luz de funcionamento | `#BDE4EF` | LEDs ativos, sem juízo de acerto |
-| entrada em movimento | `#45B8D6` | Graphics |
-| saída em movimento | `#F1A64A` | Graphics |
-| foco | `#56B8FF` | Graphics |
-| sucesso | `#35D07F` | Graphics |
-| erro | `#EF6D68` | Graphics |
-| trava e dica | `#E8AD49` | Graphics |
-
-Câmera e impressora compartilham plástico claro e detalhe azul; microfone e
-alto-falante compartilham metal escuro. A criança não pode separar entrada e
-saída olhando apenas a cor.
-
-Os desenhos montanha, flor e barco são conteúdo em código. Podem ter cores
-naturais diferentes; essas cores não escolhem qual aparelho serve ao pedido.
-
----
-
-## 5. `bg-bancada.png` - 1672 x 941
-
-Uma parede de oficina clara. O computador, a mesa e a porta são colocados pelo
-jogo. Não pintar um retângulo de mesa que depois precise emendar com Graphics.
-
-| Região | Composição |
+| Frame | Resposta aceitável |
 |---|---|
-| topo, 0–22% | parede suave, pouca informação para header e ? |
-| miolo, 22–72% | espaço livre para fonte, aparelhos e gabinete |
-| lado direito, 75–98% da largura | parede limpa para receber a porta |
-| base, 72–100% | parede um pouco mais escura, atrás da bandeja |
-| decoração | cantos superiores, longe das áreas de decisão |
+| computador central | computador, CPU ou torre de computador |
+| teclado | teclado |
+| mouse | mouse de computador |
+| microfone | microfone |
+| câmera | câmera ou máquina fotográfica |
+| monitor | monitor ou tela de computador |
+| alto-falante | caixa de som ou alto-falante |
+| impressora | impressora |
 
-Prompt copiável:
-
-```text
-A polished 2D background for a children's educational tabletop escape-room game,
-exactly 1672 by 941 pixels, landscape composition, fully opaque image filling
-the entire canvas.
-
-Show the interior back wall of a bright welcoming children's science workshop,
-viewed straight from the front with almost no perspective distortion. Warm pale
-cream wall #E8E5D7, a soft patch of daylight coming from outside the left edge,
-and a few large simple decorative shapes near the upper corners: one small
-wooden wall shelf with a potted plant, and a round plain ventilation grille.
-The room should feel like a cheerful toy workshop, not a prison or a mystery
-horror room.
-
-Keep the central 70 percent of the wall empty and low contrast for the game to
-place a computer, physical devices and connecting cables. Keep the rightmost
-quarter of the wall clear so the game can draw a door there. Keep the lower
-28 percent quiet and slightly darker behind the code-drawn workbench and
-controls. Keep the upper 22 percent calm for the title and help control.
-Do not draw the workbench, tabletop, floor line, door or any playable object.
-
-Flat 2D cartoon educational background, chunky rounded shapes, friendly
-controlled colors, broad flat color areas, one soft painted shadow, subtle
-dark navy outline #203149 on the few decorations, minimal detail, polished
-children's science-workshop art.
-
-Negative: table, desk, workbench, countertop, chair, door, doorway, door frame,
-lock, key, computer, monitor, printer, microphone, camera, speaker, device,
-cable, wire, arrow, card, panel, button, text, letters, numbers, words, logo,
-watermark, signature, border, grid lines, 3D render, realistic, photorealistic,
-hyperdetail, horror, darkness, prison bars, maze, platform, runner, outdoor valley,
-weapon, motion blur, lens flare.
-```
-
-Conferir a área da porta: deve ser parede contínua, sem quadro, prateleira ou
-janela competindo com os três fechos.
+“Máquina”, “caixa”, “robô”, “eletrodoméstico” ou “não sei” exigem refazer.
 
 ---
 
-## 6. `computador-guia.png` - 1024 x 256, grade 4 x 1
+## 2. O que saiu da proposta anterior
 
-Quatro frames de 256 x 256. Gabinete compacto, sem monitor embutido e sem
-personagem. As duas conexões ficam à esquerda e à direita em posição constante.
+### Gabinete metálico abstrato
 
-| Frame | Estado | O que muda |
-|---|---|---|
-| 0 | pronto | luzes discretas apagadas |
-| 1 | recebendo | luz perto da porta esquerda acende |
-| 2 | processando | três luzes centrais acesas |
-| 3 | enviando | luz perto da porta direita acende |
+O pedido anterior de “gabinete sem tela e sem rosto” retirou justamente os
+sinais visuais que fariam o objeto parecer computador. O resultado ficou
+próximo de quadro elétrico, cofre ou aparelho industrial.
 
-Todas as luzes já existem na geometria do frame 0; apenas o preenchimento
-luminoso muda. O corpo nunca infla, gira ou troca de proporção.
+Agora o computador central tem:
 
-Prompt copiável:
+- silhueta vertical de torre de desktop;
+- pequena unidade de DVD ou duas portas frontais;
+- botão circular de energia;
+- grade de ventilação;
+- visor quadrado com rosto simples;
+- base larga e estável;
+- uma porta de cabo em cada lateral.
 
-```text
-Sprite sheet with exactly 4 frames in a strict 4-column by 1-row grid.
-Each frame is exactly 256 by 256 pixels; total image exactly 1024 by 256 pixels.
-True transparent background, no visible grid lines, no cell backgrounds,
-no object crossing between cells.
+O visor de rosto mostra estado, mas **não é o monitor de saída**. Ele nunca
+exibe foto, palavra ou conteúdo da tarefa. O rótulo COMPUTADOR é Phaser.Text.
 
-The exact same compact desktop computer cabinet in all four frames, viewed
-straight from the front. Rounded pale blue-gray case #DCE7EC, dark navy outline
-#203149, a low broad stable base, small blue #6699BF side details and copper
-#C68B58 fasteners. It is a computer case, not a monitor or a robot. There is
-NO screen, no face and no large display window. Three small circular physical
-indicator lamps sit in one horizontal row on the front.
+### Caixinha com manivela
 
-One round cable socket is visible near the middle of the left edge and another
-identical round socket near the middle of the right edge. Keep both socket
-centers at exactly the same coordinates in every frame. Approximate normalized
-socket positions inside each cell are x=0.16 and x=0.84, y=0.60. No cables.
-All frames have identical outline, base position, lamp positions and size.
-Object fills about 80 percent of cell width, with transparent margin.
+Ela parecia torradeira, rádio ou máquina desconhecida e exigia explicar uma
+fonte sonora antes de explicar entrada e saída. Foi removida.
 
-Frames from left to right:
-1. READY: both socket indicators and the three front lamps are dim.
-2. RECEIVING: the small indicator beside the left socket glows pale ice blue
-   #BDE4EF. The other lamps remain dim.
-3. PROCESSING: all three existing front lamps glow softly in pale ice blue.
-   No gears, moving parts or floating symbols.
-4. SENDING: the small indicator beside the right socket glows pale ice blue.
-   The other lamps are dim.
-
-Flat 2D cartoon educational game object for children, chunky rounded shapes,
-thick dark navy outline, broad flat colors, one soft inner shadow, one small
-painted highlight, minimal detail, upper-left lighting, readable silhouette.
-
-Negative: monitor, screen, photograph, display content, face, eyes, mouth,
-robot, arms, legs, laptop, keyboard, mouse, text, letters, numbers, binary code,
-words, logo, watermark, signature, cable, wire, arrow, floating particles,
-green success light, red error light, outer frame, border, grid lines, cropped,
-cut off, merged cells, white background, fake transparency, 3D render,
-realistic, photorealistic, hyperdetail, motion blur, lens flare.
-```
-
-### Depois de medir
-
-Guardar em layout.ts os pontos reais dos soquetes após medir o alfa.
-As coordenadas normalizadas do prompt orientam a arte; não substituem a
-medição do arquivo entregue.
-
-O pacote que representa “há uma informação guardada” é um pequeno desenho
-em Graphics sobre o gabinete. Nunca sobrepor a fotografia ampliada ali.
+A fonte de som agora é Lia falando. A criança vê boca, microfone e
+alto-falante na mesma composição. Ondas animadas em código tornam a cadeia
+compreensível mesmo com o jogo no mudo.
 
 ---
 
-## 7. `aparelhos.png` - 1280 x 512, grade 5 x 2
+## 3. Estilo comum
 
-Dez frames de 256 x 256. As cinco colunas correspondem aos cinco aparelhos.
-A primeira linha mostra repouso; a segunda, atividade.
+Todos os assets devem parecer parte do mesmo jogo:
 
-| Coluna | Frame neutro | Frame ativo | Aparelho | Atividade |
-|---|---|---|---|---|
-| 0 | 0 | 5 | Câmera | obturador e indicador de captura |
-| 1 | 1 | 6 | Microfone | pequeno indicador de captação |
-| 2 | 2 | 7 | Monitor | iluminação interna discreta, conteúdo ainda vazio |
-| 3 | 3 | 8 | Alto-falante | cone deslocado levemente |
-| 4 | 4 | 9 | Impressora | roletes visíveis em outra posição |
+- ilustração 2D infantil polida;
+- formas largas, arredondadas e simples;
+- contorno azul-marinho escuro, espessura consistente;
+- vista frontal ou três quartos muito leve;
+- luz vindo do alto à esquerda;
+- áreas de cor amplas;
+- no máximo uma sombra interna suave;
+- um pequeno brilho pintado por objeto;
+- contraste suficiente sobre fundo claro e escuro;
+- proporções legíveis em tela de celular;
+- sem textura fotográfica;
+- sem excesso de parafusos, grades ou detalhes industriais.
 
-A silhueta do monitor precisa continuar reconhecível com a tela em branco.
-A impressora continua vazia mesmo ativa: a folha é animada pelo código.
-
-### Áreas de sobreposição pedidas
-
-Coordenadas em fração da célula, usadas como orientação artística:
-
-| Área | x | y | largura | altura |
-|---|---|---|---|---|
-| vidro plano do Monitor | 0,18 | 0,20 | 0,64 | 0,44 |
-| fenda de saída da Impressora | 0,25 | 0,55 | 0,50 | 0,08 |
-
-Não escrever esses números na arte. Depois da entrega, medir e guardar as
-áreas reais. O interior do monitor é plano e retangular; evitar perspectiva
-que exija deformar a imagem.
-
-Prompt copiável:
-
-```text
-Sprite sheet with exactly 10 frames in a strict 5-column by 2-row grid.
-Each frame is exactly 256 by 256 pixels; total image exactly 1280 by 512 pixels.
-True transparent background. One complete centered physical computer device
-per frame. No visible grid lines, no cell background and no bleed.
-
-Draw five familiar separate desktop peripherals for a children's educational
-game, viewed straight from the front with minimal depth. Use the same material
-palette across all devices: pale blue-gray plastic #DCE7EC, dark slate metal
-#637B8C, small blue details #6699BF and a few copper accents #C68B58.
-Do not use one color family for inputs and another for outputs.
-Thick dark navy outline #203149, upper-left lighting, consistent visual weight.
-Each object fills about 78 percent of its cell with generous clear margins.
-
-Top row, left to right, neutral states:
-1. CAMERA: a simple still-image camera with one large central round lens,
-   rounded pale case and one small shutter button on top. No microphone grille,
-   speaker, screen, picture, tripod or cable.
-2. MICROPHONE: a separate tabletop microphone, dark rounded mesh capsule on a
-   short sturdy stand, wide pale base and one tiny unlit indicator. No camera,
-   lens, screen or cable.
-3. MONITOR: a broad desktop monitor on a short stable stand. Front-facing flat
-   rectangular dark glass, completely blank. The inner glass rectangle spans
-   approximately x=18 to 82 percent and y=20 to 64 percent of the cell. Keep
-   that entire area unobstructed, with no reflection streaks or icons.
-4. SPEAKER: one separate desktop loudspeaker with a large round dark cone and
-   a small round upper cone, stable rectangular rounded body. No screen,
-   microphone, music note, waves or cable.
-5. PRINTER: a compact pale printer with a broad front output slot, simple dark
-   rollers and short empty output tray. Slot is horizontal and centered,
-   approximately x=25 to 75 percent, y=55 to 63 percent. No paper anywhere.
-
-Bottom row, left to right, active states of the EXACT same five devices:
-6. CAMERA ACTIVE: same camera as frame 1, identical silhouette and position,
-   lens shutter slightly changed and a tiny pale blue capture lamp lit.
-7. MICROPHONE ACTIVE: same microphone as frame 2, identical silhouette and
-   position, tiny pale blue indicator lit. No external sound waves.
-8. MONITOR ACTIVE: same monitor as frame 3, identical frame, stand and inner
-   glass coordinates. Glass is very slightly brighter but remains perfectly
-   blank, flat and unobstructed.
-9. SPEAKER ACTIVE: same speaker as frame 4, identical outer case and position,
-   large cone shifted very slightly forward, no waves or music notes.
-10. PRINTER ACTIVE: same printer as frame 5, identical case, slot and tray,
-    rollers slightly rotated. No sheet, printed content or floating effects.
-
-The five pairs must align perfectly when frames are switched. Only the small
-mechanical change or indicator changes. Active does not mean correct: no green
-glow, celebration, reward, star or facial expression.
-
-Flat 2D cartoon educational game assets, chunky rounded shapes, bold readable
-silhouettes, broad flat color areas, one soft inner shadow, one small painted
-highlight outside the monitor glass, minimal detail, friendly workshop style.
-
-Negative: text, letters, numbers, words, brand logo, watermark, signature,
-screen image, screen writing, waveform on screen, monitor glare, printed page,
-paper, cable, wire, input label, output label, category-colored background,
-green correct mark, red X, happy face, sad face, arms, legs, integrated
-microphone in camera, monitor with speaker grille, music notes, sound waves,
-floating particles, outer frame, border, grid lines, cropped, cut off,
-inconsistent paired geometry, merged cells, white background, fake transparency,
-3D render, realistic, photorealistic, hyperdetail, motion blur, lens flare.
-```
-
-### Os três controles de qualidade mais importantes
-
-1. **Frames 2 e 7:** exatamente a mesma área útil de tela. Trocar o frame não
-   pode mover ou redimensionar o desenho renderizado.
-2. **Frames 4 e 9:** exatamente a mesma fenda. O papel nasce atrás da frente
-   da impressora e passa pela fenda com máscara em Graphics.
-3. **Todos os pares:** mesma escala e base. A função de um aparelho não muda
-   porque o quadro ativo ganhou uma cor de acerto.
-
-Tela e fenda são medidas antes de acertar o tamanho final na bancada. Não
-corrigir o erro da folha arrastando manualmente o conteúdo a cada troca de frame.
+A personagem é humana e cotidiana. Os aparelhos são objetos comuns, não
+criaturas com braços e pernas. Somente o computador central pode ter um
+pequeno rosto no visor, pois ele atua como guia de processamento.
 
 ---
 
-## 8. `caixinha-de-som.png` - 768 x 256, grade 3 x 1
+## 4. Negativo comum
 
-Produzir depois do teste do nível 1. Uma pequena caixinha de música com
-manivela, usada como fonte sonora externa. Ela não se conecta ao computador;
-o microfone precisa captar o som que chega pelo ar.
+Adicionar ao final de todos os prompts quando necessário:
+
+~~~text
+Negative: text, letters, numbers, words, title, caption, brand logo, watermark,
+signature, input label, output label, green correct check, red wrong X,
+traffic-light colors, category-colored background, quiz answer marker,
+floating arrows, cable, wire, plug touching another object, extra device,
+merged devices, hybrid device, anthropomorphic peripheral, arms, legs,
+realistic hands, visible grid lines, frame border, cell background, cropped,
+cut off, inconsistent paired geometry, fake transparency, white background,
+checkerboard painted into image, 3D render, photorealistic, realistic,
+hyperdetail, metal grime, horror, dark scene, motion blur, lens flare.
+~~~
+
+Regras específicas têm precedência. A capa pode conter cabos porque é uma
+ilustração completa; as folhas de sprites não podem.
+
+---
+
+## 5. Paleta
+
+| Uso | Cor |
+|---|---|
+| contorno principal | `#203149` |
+| plástico claro | `#DCE7EC` |
+| plástico azul suave | `#6699BF` |
+| área escura de tela | `#24364D` |
+| cabo / pulso de entrada | `#43B8D8` |
+| cabo / pulso de saída | `#F2A44A` |
+| cobre discreto | `#C68B58` |
+| madeira da bancada | `#B8875B` |
+| parede creme | `#F3E5C8` |
+| destaque âmbar de trava | `#F4B942` |
+| roupa de Lia | coral `#E86F51` e azul `#4E7EA8` |
+
+Azul e laranja aparecem nas portas laterais do computador e nos cabos em
+Graphics. Não transformar o corpo inteiro de cada periférico em uma dessas
+cores.
+
+---
+
+# 6. `bg-laboratorio.png`
+
+## Especificação
+
+| Campo | Valor |
+|---|---|
+| dimensão | 1672 × 941 |
+| transparência | não; imagem totalmente opaca |
+| câmera | frontal |
+| função | parede e profundidade discreta |
+| conteúdo interativo | nenhum |
+| área calma central | x 10%–90%, y 18%–75% |
+
+O fundo mostra uma sala de informática escolar clara, mas **sem computadores,
+periféricos, mesas, cadeiras ou porta principal**. Esses elementos pertencem
+ao código e precisam mudar de estado sem deixar fantasmas pintados.
+
+Pode conter apenas:
+
+- parede creme;
+- rodapé azul;
+- duas janelas altas e simples nas extremidades;
+- dois pôsteres abstratos sem letras;
+- prateleira muito alta com três caixas fechadas;
+- chão claro discreto.
+
+A região do fluxo deve ficar limpa. Nada atrás do computador central pode
+parecer tela, porta, tomada ou aparelho.
+
+## Prompt copiável
+
+~~~text
+A clean background for a children's educational computer-lab game, exactly
+1672 by 941 pixels, landscape, fully opaque and filling the whole canvas.
+
+Front-facing bright elementary-school technology classroom wall. Warm cream
+wall #F3E5C8, soft pale blue baseboard, a calm light floor occupying the bottom
+22 percent. One tall simple window near the far left edge and one near the far
+right edge, both with soft daylight and no visible landscape details. Two tiny
+abstract geometric posters high on the wall, without letters, numbers, icons
+or recognizable devices. One very high narrow shelf with three closed plain
+storage boxes.
+
+Keep the broad central region from x=10 to 90 percent and y=18 to 75 percent
+visually quiet, almost empty and evenly lit. This area will receive a character,
+input devices, a computer tower, output devices, animated cables and a door
+drawn by code. Do not paint any furniture or interactive object into it.
+
+Flat 2D cartoon educational game background, chunky rounded architecture,
+broad matte color fields, thick dark navy accents #203149 only on architectural
+edges, gentle upper-left lighting, one soft ambient shadow, cheerful and calm,
+excellent readability behind sprites, no visual clutter.
+
+Negative: desk, table, workbench, chair, door, computer, computer tower,
+monitor, television, keyboard, mouse, microphone, camera, speaker, printer,
+cable, outlet, socket, text, letters, numbers, alphabet poster, logo, watermark,
+character, child, robot, question card, green check, red X, strong perspective,
+corridor, outdoor valley, cave, platformer, prison, dark room, horror, border,
+white margin, 3D render, realistic, photorealistic, hyperdetail, lens flare.
+~~~
+
+## Conferência
+
+- [ ] a bancada feita por código não duplica outra bancada;
+- [ ] o computador central não fica sobre uma janela ou pôster;
+- [ ] o cabeçalho continua legível;
+- [ ] o fundo cobre 1280 × 720 com `cover` sem faixa vazia;
+- [ ] não existe objeto que a criança tente tocar.
+
+---
+
+# 7. `personagem-lia.png`
+
+## Especificação
+
+| Campo | Valor |
+|---|---|
+| dimensão total | 1024 × 256 |
+| grade | 4 colunas × 1 linha |
+| célula | 256 × 256 |
+| transparência | alfa real |
+| pivô | centro inferior |
+| preenchimento | 82% da altura, 62% da largura |
+| linha do chão | idêntica nos quatro frames |
+
+Lia é uma criança de aproximadamente oito anos, com roupa cotidiana. Ela
+representa o mundo exterior, não um avatar controlável.
 
 | Frame | Estado | Uso |
-|---|---|---|
-| 0 | parada | antes de apresentar a fonte |
-| 1 | tocando A | manivela em uma posição |
-| 2 | tocando B | manivela na posição seguinte |
+|---:|---|---|
+| 0 | esperando | apresentação e escolha |
+| 1 | falando | fonte sonora |
+| 2 | mostrando cartão branco | fonte visual; desenho é sobreposto em código |
+| 3 | comemorando | fim do desafio |
 
-A caixinha fica imóvel na bancada. Só a manivela muda, e as ondas são Graphics.
-Não desenhar nota musical dentro do frame.
+O cartão do frame 2 precisa ter uma área interna branca plana e desobstruída.
+O desenho de flor ou barco é renderizado depois, para permanecer idêntico ao
+que aparece no monitor ou no papel.
 
-Prompt copiável:
+Área útil sugerida do cartão dentro da célula:
+`x=0,44–0,84; y=0,30–0,62`.
 
-```text
-Sprite sheet with exactly 3 frames in a strict 3-column by 1-row grid.
-Each frame is exactly 256 by 256 pixels; total image exactly 768 by 256 pixels.
+## Prompt copiável
+
+~~~text
+Sprite sheet with exactly 4 frames in one strict horizontal row.
+Each frame is exactly 256 by 256 pixels; total image exactly 1024 by 256 pixels.
+True transparent background, no visible grid, no cell background and no bleed.
+
+The exact same friendly eight-year-old Brazilian school child named Lia in all
+four frames. Medium-brown skin, dark curly hair tied in one high puff, coral
+short-sleeve shirt #E86F51, blue overalls #4E7EA8, simple yellow sneakers.
+Front-facing with a very slight three-quarter turn toward the right. Full body
+visible, both feet on exactly the same baseline, same head size and body scale
+in every frame. No cable or computer device attached to her.
+
+Frames left to right:
+1. WAITING: relaxed standing pose, friendly neutral expression, hands visible.
+2. SPEAKING: same stance and scale, mouth open naturally as if saying a short
+   sentence, one hand near the chest. No sound waves and no music notes.
+3. SHOWING A CARD: Lia holds one large horizontal white card toward the viewer
+   at chest height. The card has a thick dark navy border and a perfectly flat,
+   empty, unobstructed white inner rectangle approximately x=44 to 84 percent
+   and y=30 to 62 percent of the cell. Fingers stay outside the inner rectangle.
+4. CELEBRATING: both hands lifted slightly, happy expression, feet still on the
+   exact same baseline. No star, trophy, checkmark or confetti.
+
+Flat 2D cartoon children's educational game character, chunky rounded shapes,
+thick dark navy outline #203149, broad flat colors, one soft inner shadow,
+small upper-left painted highlights, warm friendly face, readable at mobile
+size, consistent proportions and visual weight.
+
+Negative: text, letters, numbers, words, logo, watermark, signature, sound
+waves, speech bubble, microphone, camera, keyboard, mouse, monitor, speaker,
+printer, computer, cable, floating drawing already inside the card, flower,
+boat, mountain, green check, red X, star, trophy, confetti, multiple children,
+adult, cropped feet, cut off hair, moving ground line, different clothes,
+different child, 3D render, realistic, photorealistic, hyperdetail, motion blur.
+~~~
+
+## Controles de qualidade
+
+- [ ] é a mesma Lia nos quatro frames;
+- [ ] pés não saltam ao trocar frame;
+- [ ] cartão está inteiro e grande;
+- [ ] área branca do cartão não tem brilho, mão ou sombra;
+- [ ] falar é reconhecível pelo rosto, sem onda pintada;
+- [ ] a personagem não carrega nenhum periférico.
+
+---
+
+# 8. `computador-central.png`
+
+## Especificação
+
+| Campo | Valor |
+|---|---|
+| dimensão total | 1024 × 256 |
+| grade | 4 × 1 |
+| célula | 256 × 256 |
+| transparência | alfa real |
+| pivô | centro inferior |
+| preenchimento | 82% da altura, 76% da largura |
+| função | processador central e guia |
+| conteúdo proibido | foto, palavra, onda ou resposta |
+
+O computador deve passar no teste “torre de desktop” sem rótulo. Não pedir
+“gabinete genérico”. A combinação de botão de energia, portas frontais,
+ventilação e forma vertical dá identidade ao objeto.
+
+A tela quadrada pequena é apenas um rosto de estado, não o dispositivo de
+saída do jogo. O monitor continua separado.
+
+| Frame | Estado | Diferença permitida |
+|---:|---|---|
+| 0 | repouso | rosto atento; luzes apagadas |
+| 1 | recebendo | porta lateral esquerda e um LED ciano acesos |
+| 2 | processando | olhos concentrados; três pontos do próprio visor |
+| 3 | enviando | porta lateral direita e um LED laranja acesos |
+
+As duas portas laterais permanecem na mesma coordenada em todos os frames.
+Guardar a posição real depois da entrega.
+
+## Prompt copiável
+
+~~~text
+Sprite sheet with exactly 4 frames in one strict horizontal row.
+Each frame is exactly 256 by 256 pixels; total image exactly 1024 by 256 pixels.
 True transparent background, no visible grid lines, no cell backgrounds,
 no bleed between frames.
 
-The exact same small hand-cranked wooden music box in all three frames.
-Front-facing view, rounded warm wooden body #B8875B, pale metal top plate,
-small dark ventilation slits and a short copper crank with a blue handle on
-the right side. It is an acoustic toy that makes sound in the room, not a
-computer peripheral: no plug, socket, electronic display or cable.
-Thick dark navy outline #203149, upper-left lighting, one soft inner shadow
-and one small painted highlight. Stable feet on the same baseline.
-About 75 percent cell fill, including full crank and handle.
+The exact same unmistakable vertical desktop computer tower in every frame,
+designed as a friendly processing mascot for an elementary-school game.
+Front-facing pale blue-gray PC case #DCE7EC with dark navy outline #203149.
+Clearly recognizable computer-tower silhouette: tall rounded rectangular case,
+wide stable base, one circular power button near the upper front, two narrow
+horizontal USB-like ports, one broad ventilation grille near the lower front,
+and one small square dark status display near the top.
+
+The small status display contains only a simple friendly face. It is a status
+panel, not a monitor: never show a picture, word, document, waveform or task
+content in it. A chunky blue input socket protrudes from the LEFT side of the
+tower and a chunky orange output socket protrudes from the RIGHT side. Both
+sockets stay at exactly the same height and coordinates in all frames.
+No attached cables.
 
 Frames left to right:
-1. IDLE: crank handle resting downward, box completely still.
-2. PLAYING A: same box and exact body position, crank handle rotated forward
-   to a horizontal position.
-3. PLAYING B: same box and exact body position, crank handle rotated upward.
-Only the crank angle changes. Do not move, bounce, enlarge or tilt the body.
+1. IDLE: neutral attentive face, side sockets and indicator lights unlit.
+2. RECEIVING: identical tower and face position, left socket glowing cyan
+   #43B8D8 and one tiny cyan indicator lit; right socket remains unlit.
+3. PROCESSING: identical tower, both sockets softly unlit, face looks focused
+   with three tiny neutral dots contained entirely inside its own status panel.
+4. SENDING: identical tower and face position, right socket glowing orange
+   #F2A44A and one tiny orange indicator lit; left socket remains unlit.
 
-Flat 2D cartoon educational game object for children, chunky rounded shapes,
-bold readable silhouette, friendly natural colors, minimal detail,
-polished children's science-workshop style, readable at small mobile size.
+The body geometry, base, power button, grille, ports, display and side sockets
+must align perfectly between frames. Only face expression and small lights
+change. It must read immediately as a desktop PC tower, never as an electrical
+cabinet, safe, refrigerator, toaster, boiler, battery or industrial machine.
 
-Negative: text, letters, numbers, words, musical notes, clef, logo, watermark,
-signature, sound waves, motion lines, electronic speaker cone, microphone,
-plug, cable, socket, screen, computer button, face, eyes, arms, legs, hand,
-green success glow, red error cue, particles, outer frame, border, grid lines,
-cropped crank, cut off, merged cells, white background, fake transparency,
-3D render, realistic, photorealistic, hyperdetail, motion blur, lens flare.
-```
+Flat 2D cartoon educational game asset, chunky rounded shape, broad flat color
+areas, thick dark navy outline, upper-left light, one soft inner shadow, one
+small painted highlight, friendly but technically recognizable, readable at
+64 pixels tall.
 
-A câmera pode capturar a imagem dessa caixinha no desafio 3.2. Usar uma
-miniatura do frame 0 como fotografia; isso mostra que entrou uma imagem,
-enquanto a gravação sonora continua faltando.
+Negative: full-size monitor, laptop, tablet, television, blank industrial box,
+electrical cabinet, fuse box, safe, refrigerator, toaster, server rack, robot
+body, arms, legs, wheels, antenna, keyboard, mouse, microphone, camera,
+speaker, printer, attached cable, plug, picture in status screen, word in
+screen, text, letters, numbers, logo, watermark, green correct glow, red X,
+different case geometry between frames, moving sockets, cropped, cut off,
+white background, fake transparency, 3D render, realistic, photorealistic,
+hyperdetail, grime, motion blur, lens flare.
+~~~
+
+## Testes obrigatórios
+
+- [ ] três avaliadores reconhecem “computador/CPU/torre” em 64 × 64;
+- [ ] ninguém responde apenas “caixa” ou “máquina”;
+- [ ] botão de energia e ventilação estão visíveis;
+- [ ] visor é pequeno o bastante para não competir com o monitor;
+- [ ] porta esquerda e porta direita não mudam de posição;
+- [ ] frame ativo não parece acerto ou erro.
+
+Se falhar no teste, não tentar salvar com um rótulo dentro do PNG. Refazer a
+silhueta; o rótulo em código é reforço, não remendo.
 
 ---
 
-## 9. `cover-fase-de-entrada-e-saida.png` - 1672 x 941
+# 9. `dispositivos-entrada.png`
 
-Capa por último, depois de o usuário testar o nível 1. Mostrar a bancada,
-uma experiência e a porta com progresso. Nenhum corredor nem percurso lateral.
+## Especificação
 
-O elemento central é o mesmo desenho aparecendo fora do computador e no
-monitor após passar pela câmera.
+| Campo | Valor |
+|---|---|
+| dimensão total | 1024 × 512 |
+| grade | 4 colunas × 2 linhas |
+| célula | 256 × 256 |
+| transparência | alfa real |
+| linha 1 | repouso |
+| linha 2 | atividade |
+| ordem | teclado, mouse, microfone, câmera |
 
-Prompt copiável:
+| Coluna | Neutro | Ativo | Aparelho | Alteração ativa |
+|---:|---:|---:|---|---|
+| 0 | 0 | 4 | teclado | três teclas levemente abaixadas |
+| 1 | 1 | 5 | mouse | botão esquerdo abaixado |
+| 2 | 2 | 6 | microfone | LED ciano discreto |
+| 3 | 3 | 7 | câmera | obturador e LED ciano |
 
-```text
-A polished colorful cover illustration for a children's educational
-single-workbench escape-room game, exactly 1672 by 941 pixels, landscape,
-fully opaque image filling the canvas.
+Todos devem ser periféricos externos separados, sem cabo pintado. Não misturar
+monitor, alto-falante ou impressora nesta folha.
 
-Inside a bright friendly toy science workshop, show one broad wooden workbench
-viewed almost straight from the front. On the left of the workbench, a physical
-drawing on a small stand shows one simple mountain with a sun. Beside it sits
-a separate still-image camera with a large round lens. A short glowing cyan
-cable connects the camera to a compact pale blue-gray computer cabinet in the
-middle. The cabinet has three tiny indicator lamps and no display screen.
+## Prompt copiável
 
-A short warm orange cable connects the cabinet to a separate desktop monitor
-on the right. The monitor clearly shows the SAME mountain and sun drawing that
-is on the physical stand. Small picture-like light packets along the cables
-make the direction of information travel visible from the external drawing
-through the camera and computer to the monitor.
+~~~text
+Sprite sheet with exactly 8 frames in a strict 4-column by 2-row grid.
+Each frame is exactly 256 by 256 pixels; total image exactly 1024 by 512 pixels.
+True transparent background. No visible grid lines, no cell background,
+no labels and no bleed. One complete centered input device per frame.
 
-A disconnected desktop loudspeaker and a small printer rest neatly near the
-front of the workbench as alternative tools. They are equally polished and
-neutral, with no wrong-answer marks. At the far right behind the workbench
-stands a friendly rounded workshop door with three simple mechanical latches:
-one latch is open, the other two are still closed. No numeric labels.
+Draw four familiar physical computer INPUT peripherals for a children's
+educational game. All objects use pale blue-gray plastic #DCE7EC, dark slate
+details #637B8C, small blue accents #6699BF and thick dark navy outline #203149.
+Front-facing with only slight depth, stable baseline, about 78 percent cell
+fill, broad readable silhouette, generous clear margins. No attached cables.
 
-Leave calm pale wall across the top 18 percent for the platform title overlay.
-Keep every important object inside generous margins. Clear uncluttered
-composition, only one active circuit, no maze, no character and no floating
-question cards. It should feel like hands-on discovery at a small toy workshop.
+Top row, left to right, neutral:
+1. KEYBOARD: one wide external desktop keyboard, rounded rectangular body,
+   several rows of clearly separated blank keys and one long space bar. No
+   letters or symbols on keys, no screen, no hand.
+2. MOUSE: one standard external computer mouse, rounded oval body, clear seam
+   between left and right buttons and one central scroll wheel. It must look
+   like a computer mouse, not an animal and not a trackpad.
+3. MICROPHONE: one familiar tabletop microphone with a large dark mesh capsule,
+   short straight stem and broad stable round base. No speaker cone, camera
+   lens or headphones.
+4. CAMERA: one familiar compact still-photo camera with a large central round
+   lens, small shutter button on top, simple viewfinder bump and short grip.
+   No microphone mesh, tripod or phone shape.
 
-Flat 2D cartoon educational game cover for children, chunky rounded shapes,
-thick dark navy outline #203149, pale blue-gray devices #DCE7EC, dark slate
-metal #637B8C, blue accents #6699BF, warm wooden bench, broad flat colors,
-one soft inner shadow and small painted highlights, polished friendly style.
+Bottom row, left to right, active versions of the EXACT same devices:
+5. KEYBOARD ACTIVE: same geometry and location as frame 1; three blank keys are
+   pressed a few pixels down. No glowing word.
+6. MOUSE ACTIVE: same geometry and location as frame 2; left button slightly
+   pressed and scroll wheel unchanged. No cursor painted into the frame.
+7. MICROPHONE ACTIVE: same geometry and location as frame 3; one tiny cyan
+   indicator #43B8D8 is lit. No external sound waves.
+8. CAMERA ACTIVE: same geometry and location as frame 4; shutter aperture
+   changes slightly and one tiny cyan capture light is lit. No flash covering
+   the lens and no photograph.
+
+The active row is not a success row. Never add green glow, checkmark, smile,
+reward or celebration. Device pairs must align perfectly when switched.
+
+Flat 2D cartoon educational-game sprites, chunky rounded shapes, broad flat
+colors, one soft inner shadow, small upper-left highlight, polished and
+friendly, immediately recognizable at 64 pixels.
+
+Negative: monitor, screen, television, laptop, speaker, loudspeaker, printer,
+paper, combined keyboard and monitor, microphone shaped like speaker,
+camera shaped like webcam, smartphone, game controller, joystick, cable, wire,
+plug, visible text, letters, numbers, symbols on keys, logo, watermark,
+input arrow, category badge, green check, red X, face, eyes, arms, legs,
+animal mouse, realistic hand, grid line, border, cell background, cropped,
+cut off, different paired scale, white background, fake transparency,
+3D render, realistic, photorealistic, hyperdetail, motion blur, lens flare.
+~~~
+
+## Conferência por aparelho
+
+### Teclado
+
+- quatro fileiras percebidas;
+- barra de espaço longa;
+- nenhuma letra que possa ficar ilegível;
+- largura maior que altura.
+
+### Mouse
+
+- dois botões e roda;
+- não parecer controle remoto, sabonete ou animal;
+- orientação vertical estável nos dois frames.
+
+### Microfone
+
+- malha no topo e pedestal claros;
+- não parecer caixa de som;
+- LED pequeno, nunca halo de resposta.
+
+### Câmera
+
+- lente dominante e botão superior;
+- não parecer webcam integrada;
+- nenhuma imagem dentro da lente.
+
+---
+
+# 10. `dispositivos-saida.png`
+
+## Especificação
+
+| Campo | Valor |
+|---|---|
+| dimensão total | 768 × 512 |
+| grade | 3 colunas × 2 linhas |
+| célula | 256 × 256 |
+| transparência | alfa real |
+| linha 1 | repouso |
+| linha 2 | atividade |
+| ordem | monitor, alto-falante, impressora |
+
+| Coluna | Neutro | Ativo | Aparelho | Alteração ativa |
+|---:|---:|---:|---|---|
+| 0 | 0 | 3 | monitor | vidro um pouco mais claro |
+| 1 | 1 | 4 | alto-falante | cone avança levemente |
+| 2 | 2 | 5 | impressora | roletes giram |
+
+O conteúdo do monitor, as ondas do alto-falante e a folha da impressora nunca
+fazem parte da folha. O jogo os desenha conforme a informação atual.
+
+### Áreas reservadas
+
+| Aparelho | Área normalizada livre |
+|---|---|
+| monitor | vidro: x 0,17–0,83; y 0,19–0,62 |
+| impressora | fenda: x 0,24–0,76; y 0,50–0,59 |
+| alto-falante | centro do cone: aproximadamente x 0,50; y 0,50 |
+
+Medir novamente na arte recebida e registrar a área real.
+
+## Prompt copiável
+
+~~~text
+Sprite sheet with exactly 6 frames in a strict 3-column by 2-row grid.
+Each frame is exactly 256 by 256 pixels; total image exactly 768 by 512 pixels.
+True transparent background. No visible grid lines, no cell background,
+no labels and no bleed. One complete centered output device per frame.
+
+Draw three familiar physical computer OUTPUT peripherals for a children's
+educational game. All objects use pale blue-gray plastic #DCE7EC, dark slate
+details #637B8C, small blue accents #6699BF and thick dark navy outline #203149.
+Front-facing with minimal depth, stable baseline, about 78 percent cell fill,
+broad readable silhouette and generous clear margins. No attached cables.
+
+Top row, left to right, neutral:
+1. MONITOR: one separate wide desktop monitor with a thin rounded bezel and
+   short stable stand. The inner dark glass is perfectly flat, rectangular,
+   completely blank and unobstructed, approximately x=17 to 83 percent and
+   y=19 to 62 percent of the cell. No glare streak crossing the inner glass.
+2. SPEAKER: one separate desktop loudspeaker, a rounded rectangular cabinet
+   with one large circular woofer and one smaller circular tweeter. Clearly a
+   speaker box, not a microphone, radio, toaster or crank device.
+3. PRINTER: one familiar compact desktop inkjet printer with paper input lid,
+   broad front output slot and small empty output tray. The central slot stays
+   open and unobstructed approximately x=24 to 76 percent and y=50 to 59
+   percent. No sheet of paper inside or outside.
+
+Bottom row, left to right, active versions of the EXACT same devices:
+4. MONITOR ACTIVE: identical case, stand and glass coordinates; inner glass
+   becomes slightly brighter but remains perfectly blank and flat.
+5. SPEAKER ACTIVE: identical case and position; large cone shifts forward by
+   only a few pixels. No sound waves or music notes.
+6. PRINTER ACTIVE: identical case, slot and tray; two small rollers change
+   position slightly. No paper appears in the sprite.
+
+Pairs must align perfectly. Active means mechanically operating, not correct.
+No green glow, checkmark, smile, star, confetti or reward.
+
+Flat 2D cartoon educational-game sprites, chunky rounded forms, broad flat
+colors, one soft inner shadow, small upper-left painted highlight outside
+reserved content areas, polished, friendly and recognizable at 64 pixels.
+
+Negative: keyboard, mouse, microphone, camera, laptop, combined all-in-one
+computer, television antenna, radio, crank, music box, toaster, document
+already on screen, waveform on screen, word on screen, picture on screen,
+paper, printed sheet, sound wave, music note, cable, wire, plug, text, letters,
+numbers, logo, watermark, output arrow, category badge, green check, red X,
+face, eyes, arms, legs, grid line, border, cell background, cropped, cut off,
+different paired scale, white background, fake transparency, 3D render,
+realistic, photorealistic, hyperdetail, motion blur, lens flare.
+~~~
+
+## Controles de qualidade
+
+- [ ] monitor parece monitor, não TV ou tablet;
+- [ ] tela útil é plana, vazia e igual nos frames 0 e 3;
+- [ ] alto-falante tem cone evidente e não tem manivela;
+- [ ] impressora tem tampa, fenda e bandeja;
+- [ ] papel pode nascer atrás da máscara da fenda;
+- [ ] os três são externos e separados;
+- [ ] nenhum resultado da tarefa está pintado.
+
+---
+
+# 11. `cover-fase-de-entrada-e-saida.png`
+
+## Objetivo da capa
+
+A capa precisa parecer um jogo de entrada e saída sem depender do título.
+Mostrar **uma única cadeia completa**, não uma coleção de aparelhos soltos.
+
+Cena escolhida:
+
+**Lia falando → microfone → computador → alto-falante reproduzindo.**
+
+Uma segunda evidência discreta pode aparecer no fundo da bancada: câmera,
+monitor e impressora desligados como ferramentas futuras. Não colocar duas
+cadeias acesas ao mesmo tempo.
+
+## Prompt copiável
+
+~~~text
+A polished cover illustration for a children's educational game about physical
+computer input and output devices, exactly 1672 by 941 pixels, landscape,
+fully opaque and filling the entire canvas.
+
+In a bright friendly elementary-school computer lab, show one clear left-to-
+right information chain across a broad wooden workbench.
+
+Far left: the same friendly eight-year-old Brazilian child Lia, medium-brown
+skin, dark curly hair in one high puff, coral shirt and blue overalls. She is
+speaking toward a familiar tabletop MICROPHONE with a dark mesh capsule and
+round base. Simple cyan sound-wave arcs travel from her mouth to the microphone.
+
+Center: a clearly recognizable vertical DESKTOP COMPUTER TOWER, pale blue-gray
+with circular power button, two front ports, lower ventilation grille and one
+small friendly face status display. It must look like a PC tower, not an
+industrial box. A cyan cable travels from the microphone into the LEFT socket
+of the tower. Small cyan pulses move toward the computer.
+
+Right: an orange cable leaves the RIGHT socket of the tower and reaches one
+familiar DESKTOP LOUDSPEAKER with a large woofer and small tweeter. Warm orange
+sound-wave arcs leave the speaker into the room, making the output visible.
+Lia looks pleased but does not point at an answer.
+
+At the far right, a rounded workshop door has three mechanical latches, one
+open and two closed, showing game progress. A familiar camera, blank desktop
+monitor, keyboard, mouse and compact printer can rest neatly and unlit along
+the front edge of the bench as future tools. They must remain secondary and
+must not have glowing cables.
+
+Composition must read instantly from left to right:
+human voice enters through microphone, passes through computer, exits through
+speaker. Leave the top 18 percent calm and light for the platform title overlay.
+Keep all important faces and devices away from crop margins.
+
+Flat 2D cartoon children's educational game cover, chunky rounded shapes,
+thick dark navy outlines #203149, pale blue-gray devices #DCE7EC, cyan input
+signal #43B8D8, orange output signal #F2A44A, warm wood #B8875B, cream classroom
+wall #F3E5C8, broad flat colors, one soft inner shadow, small painted highlights,
+polished, friendly, clear and uncluttered.
 
 Negative: title, text, letters, numbers, words, logo, watermark, signature,
-green checkmark, red X, quiz panel, multiple rooms, platformer, runner,
-outdoor valley, inventory grid, giant maze, trapped frightened child, prison,
-horror, dark escape room, weapons, computer cabinet displaying the mountain,
-camera with microphone, printer producing a key, speaker creating a bridge,
-3D render, realistic, photorealistic, hyperdetail, border, grid lines,
-cropped objects, motion blur, lens flare.
-```
+blank electrical cabinet, safe, refrigerator, toaster, crank music box,
+industrial machine, microphone shaped like speaker, speaker shaped like radio,
+integrated all-in-one device, second active chain, tangled cables, arrows with
+words, green check, red X, quiz cards, platformer, runner, outdoor valley,
+cave, horror, prison, dark room, frightened child, 3D render, realistic,
+photorealistic, hyperdetail, border, white margin, cropped devices, motion blur,
+lens flare.
+~~~
 
-A capa é uma ilustração completa: nela, bancada, cabos e porta podem aparecer
-pintados juntos. Essa exceção vale só para o catálogo; o fundo jogável continua
-limpo e os componentes continuam separados.
+## Conferência
+
+- [ ] a fala nasce em Lia;
+- [ ] microfone aparece antes do computador;
+- [ ] alto-falante aparece depois;
+- [ ] sinais têm sentidos coerentes;
+- [ ] computador passa no teste de torre;
+- [ ] não existe caixinha com manivela;
+- [ ] título pode ser sobreposto sem cobrir a cadeia;
+- [ ] a porta parece progresso, não dispositivo de saída.
 
 ---
 
-## 10. O que continua em `Graphics`
+# 12. O que permanece em Graphics e Text
 
-| Elemento | Como produzir | Por quê |
+| Elemento | Implementação | Motivo |
 |---|---|---|
-| bancada | tampo e frente arredondados | área e profundidade acompanham o layout |
-| porta | moldura simples, folha móvel e três fechos | abertura e progresso mudam |
-| suporte externo | base e folha neutra | recebe qualquer desenho-fonte |
-| montanha, flor, barco | painters simples reutilizáveis | preservar exatamente a mesma informação |
-| cabos | curvas entre pontos medidos | aparelhos trocam, direção anima |
-| portas e presilhas | pontos de conexão e marca de fixo | estado interativo |
-| ondas | arcos e barras com timeline | sincronizar fonte e reprodução |
-| pacote interno | miniatura simbólica sem revelar o conteúdo todo | computador guarda informação |
-| papel impresso | retângulo e sombra com máscara | precisa sair pela fenda |
-| vidro/conteúdo | imagem ou onda recortada sobre a área medida | resultado depende do payload |
-| bandeja e cartões | fundos, hitboxes, nomes e EM USO | alternativa muda de posição e estado |
-| USAR e REPETIR | botão desenhado e texto | normal, pressionado e desabilitado |
-| pedido e dica | balão/texto na faixa reservada | muda a cada tarefa |
-| trava | cadeado e contorno | bloqueio temporário, fora do PNG |
-| ajuda, vidas e estrelas | componentes compartilhados | padrão do catálogo |
+| bancada | formas arredondadas | adapta ao layout |
+| porta e fechos | Graphics + tween | progresso muda |
+| rótulos | Phaser.Text | nitidez e localização |
+| setas | Graphics | direção permanente |
+| cabos | curvas | pontos dependem do aparelho |
+| pulsos | círculos/tweens | mostram movimento |
+| encaixes | formas com presilha | estado editável/fixo |
+| cartões | Graphics + texto | opções e trava |
+| desenhos | funções `drawPicture` | mesma imagem em todos os suportes |
+| cursor | Graphics | resultado do mouse |
+| letras digitadas | Phaser.Text | conteúdo variável |
+| tela do monitor | máscara + conteúdo | saída depende do desafio |
+| ondas de voz | arcos animados | modo mudo |
+| papel | retângulo com máscara | sai pela fenda real |
+| cadeado | Graphics | padrão de TRAVA |
+| ajuda | componentes compartilhados | acessibilidade |
+| vidas e estrelas | componentes compartilhados | padrão do catálogo |
 
-### O mesmo desenho nos quatro lugares
+### O mesmo conteúdo em todos os lugares
 
-Não gerar uma montanha para o suporte e outra montanha para o monitor.
-drawPicture(source.visualId) produz uma composição idêntica em quatro escalas:
-fonte externa, resultado em tela, resultado no papel e registro do circuito.
+`drawPicture('flower')` desenha a mesma flor:
 
-Montanha: dois picos e um sol. Flor: cinco pétalas, miolo, haste e duas folhas.
-Barco: casco, mastro e uma vela. Sem letras, senha, números ou contagem como
-desafio adicional.
+- no cartão segurado por Lia;
+- na miniatura interna do computador;
+- na tela do monitor;
+- na folha impressa;
+- no quadro final.
 
-### Fluxo em modo mudo
+Não gerar versões diferentes da flor. Isso evita ensinar que “imagem” significa
+apenas cor parecida.
 
-As ondas visuais da caixinha e do alto-falante compartilham o mesmo padrão
-de expansão. O destaque da fonte apaga antes da reprodução começar.
-A imagem comunica onde o som está sendo captado ou reproduzido, sem exigir
-áudio para decidir.
+### Camadas
 
----
+Da mais baixa para a mais alta:
 
-## 11. Entrega
+1. fundo;
+2. bancada e porta;
+3. cabos apagados;
+4. personagem e aparelhos;
+5. conteúdo dentro de tela/cartão/papel;
+6. pulsos e ondas;
+7. cartões e pedido;
+8. trava;
+9. ajuda.
 
-| Item | Especificação |
-|---|---|
-| Formato | PNG-24 |
-| Alfa | real nas três folhas de objetos |
-| Opacos | fundo e capa |
-| Células | 256 x 256 em todas as folhas |
-| Quadros | gabinete 4; aparelhos 10; caixinha 3 |
-| Ordem | esquerda para direita, depois linha seguinte |
-| Recorte | sem sangria, corte de extremidade ou linha de grade |
-| Margem | pelo menos 9%; respeitar preenchimento pedido |
-| Luz | alto à esquerda |
-| Peso alvo | até 800 KB por folha; até 1,5 MB no fundo e capa |
-| Sem | texto, número, logo, marca, borda externa ou gabarito visual |
-
-Se a geração entregar fundo branco, refazer com canal alfa. Como alternativa,
-gerar sobre magenta `#FF00FF` e remover a cor. Conferir o resultado sobre
-fundo claro e escuro antes de aceitar.
-
-A grade é um contrato: 5 x 2 continua sendo 5 x 2 mesmo que o gerador entregue
-uma escala maior. Registrar as dimensões reais antes de configurar o
-carregador; não supor que o arquivo recebido mede o que o prompt pediu.
-
-Não deformar a folha para corrigir células inconsistentes. Se um monitor
-mudou de proporção entre neutro e ativo, corrigir a folha.
+Conteúdo de tela usa máscara retangular medida após receber o PNG. Papel começa
+atrás da face da impressora e cruza a fenda; não deve surgir na frente inteira.
 
 ---
 
-## 12. Antes da arte existir
+# 13. Antes de qualquer PNG existir
 
-O jogo precisa funcionar com zero texturas.
+O nível 1 deve funcionar por completo com placeholders feitos em código.
 
-| Objeto ausente | Placeholder no tamanho final |
+| Objeto | Placeholder reconhecível |
 |---|---|
-| fundo | parede creme e duas formas decorativas |
-| gabinete | caixa arredondada, três LEDs e dois soquetes |
-| câmera | corpo, lente e botão de captura |
+| Lia | cabeça, cabelo, corpo e boca |
+| computador | torre vertical, energia, portas, grade e visor |
+| teclado | caixa larga com fileiras de teclas |
+| mouse | oval com dois botões e roda |
 | microfone | cápsula, haste e base |
-| monitor | moldura, área escura e pé |
+| câmera | corpo, lente grande e botão |
+| monitor | moldura, tela vazia e pé |
 | alto-falante | caixa com dois cones |
-| impressora | caixa e fenda com máscara para papel |
-| caixinha | caixa de madeira com manivela |
-| capa | não carregar no jogo; cadastrar quando disponível |
+| impressora | tampa, fenda e bandeja |
 
-Cada aparelho continua com seu nome em Phaser.Text. Nada de emoji como
-substituto gráfico. A ausência de PNG não altera função, posição, alvo ou
-tempo da experiência.
+Cada placeholder recebe nome em Phaser.Text. Não usar emoji. A falta de arte
+não muda hitbox, posição, capacidade, tempo ou regra.
 
-O efeito de fluxo e os três resultados já devem estar completos nessa etapa.
-A integração da arte troca a aparência, não a mecânica.
+Se o placeholder do computador já parecer apenas uma caixa, corrigir antes de
+gerar a textura. A arte não deve esconder um problema de composição.
 
 ---
 
-## 13. Como as texturas entram
+# 14. Como carregar e medir
 
-```ts
+~~~ts
 const ART = import.meta.glob(
     '../../../../assets/games/EF03CO06/fase-de-entrada-e-saida/*.png',
     { eager: true, import: 'default' },
 ) as Record<string, string>
-```
+~~~
 
-BootScene ignora cover-, registra o que existir e mantém fallback para o que
-faltar. Nenhum import estático aponta para PNG ainda não entregue.
+`BootScene` ignora arquivos `cover-`, registra somente os existentes e mantém
+fallback para ausentes.
 
-| Chave local | Arquivo | Frame |
+| Chave | Arquivo | Frame |
 |---|---|---|
-| bench-background | bg-bancada.png | imagem |
-| bench-computer | computador-guia.png | 256 x 256 |
-| bench-devices | aparelhos.png | 256 x 256 |
-| bench-sound-source | caixinha-de-som.png | 256 x 256 |
+| `io-background` | `bg-laboratorio.png` | imagem |
+| `io-lia` | `personagem-lia.png` | 256 × 256 |
+| `io-computer` | `computador-central.png` | 256 × 256 |
+| `io-inputs` | `dispositivos-entrada.png` | 256 × 256 |
+| `io-outputs` | `dispositivos-saida.png` | 256 × 256 |
 
-O registro de dimensões e frames fica centralizado. Nenhuma cena inventa uma
-nova ordem de quadros.
+### Índices
 
-### Medição após receber
+~~~ts
+const LIA_FRAME = {
+    idle: 0,
+    speaking: 1,
+    showingCard: 2,
+    celebrating: 3,
+} as const
 
-1. conferir dimensões totais e grade;
-2. calcular caixa alfa de cada frame;
-3. comparar pares neutro/ativo;
-4. medir os dois soquetes do gabinete;
-5. medir área útil do Monitor nos frames 2 e 7;
-6. medir fenda da Impressora nos frames 4 e 9;
-7. guardar medidas normalizadas em layout.ts;
-8. desenhar o mesmo conteúdo nos dois estados sem deslocamento;
-9. conferir escala de celular antes de reduzir fontes ou alvos.
+const COMPUTER_FRAME = {
+    idle: 0,
+    receiving: 1,
+    processing: 2,
+    sending: 3,
+} as const
 
-### Pivôs e camadas
+const INPUT_FRAME = {
+    keyboard: 0,
+    mouse: 1,
+    microphone: 2,
+    camera: 3,
+} as const
 
-- aparelho: base real, centralizada na área de encaixe;
-- gabinete: centro inferior pela base;
-- caixinha: centro inferior, base imóvel entre frames;
-- fundo: centralizado e ajustado para cobrir 1280 x 720, sem rolagem;
-- cabos atrás dos aparelhos, pulsos sobre os cabos;
-- conteúdo do Monitor sobre o vidro, dentro da máscara;
-- papel sobe atrás da frente da Impressora e aparece pela fenda;
-- ajuda por cima de tudo, preservando ? e controle de fechar.
+const OUTPUT_FRAME = {
+    monitor: 0,
+    speaker: 1,
+    printer: 2,
+} as const
+~~~
 
-O registro de final usa miniaturas das mesmas instâncias visuais reconstruídas
-dos dados, sem captura de tela nem imagem gerada adicional.
+Somar 4 para estado ativo de entrada e 3 para estado ativo de saída.
 
----
+### Medição obrigatória após entrega
 
-## 14. Ordem de produção
+1. confirmar dimensão total e divisibilidade por 256;
+2. verificar alfa real em fundo claro e escuro;
+3. calcular caixa alfa de cada frame;
+4. comparar geometria neutra/ativa;
+5. medir pés e cartão de Lia;
+6. medir portas laterais do computador;
+7. medir vidro útil do monitor;
+8. medir centro do cone do alto-falante;
+9. medir fenda da impressora;
+10. registrar tudo em `layout.ts`;
+11. testar a 100% e a 30% de escala.
 
-Primeira rodada, nível 1:
-
-1. `aparelhos.png` — os dez frames juntos;
-2. `computador-guia.png` — quatro estados com soquetes fixos;
-3. `bg-bancada.png` — parede limpa;
-4. integrar os três desafios do nível 1 e entregar ao usuário.
-
-Depois do teste:
-
-5. ajustar geometria, máscaras e escala conforme a avaliação;
-6. `caixinha-de-som.png` — três estados, para níveis 2 e 3;
-7. integrar os seis desafios restantes com os mesmos aparelhos;
-8. `cover-fase-de-entrada-e-saida.png` por último.
-
-O nível 1 não depende da fonte sonora definitiva. O Alto-falante já aparece
-como alternativa física, mas os desafios sonoros ficam para depois.
-Os cinco aparelhos da folha são reutilizados; não criar folhas “nível 2” e
-“nível 3” para repetir os mesmos objetos.
-
----
-
-## 15. Checklist de conferência
-
-### Lista e identidade
-
-- [ ] exatamente cinco arquivos previstos;
-- [ ] nenhum corredor, vale, motor, sensor ou folha ampliada nova;
-- [ ] fundo limpo, sem bancada nem porta embutida;
-- [ ] gabinete sem monitor de conteúdo;
-- [ ] aparelhos com as mesmas cores materiais, sem separar entrada e saída;
-- [ ] dispositivo ativo não recebe marca de acerto.
-
-### Folhas
-
-- [ ] gabinete 4 x 1, aparelhos 5 x 2, caixinha 3 x 1;
-- [ ] frames batem com os índices da tabela;
-- [ ] todos os objetos têm alfa real e margem;
-- [ ] nenhum texto, letra, número ou linha de grade;
-- [ ] mesma base e silhueta nos pares;
-- [ ] soquetes do gabinete não se movem;
-- [ ] Monitor livre e retangular nos frames 2 e 7;
-- [ ] fenda da Impressora livre nos frames 4 e 9;
-- [ ] caixinha muda só a manivela.
-
-### Integração
-
-- [ ] nome e hitbox pertencem ao código;
-- [ ] foto do suporte é a mesma do Monitor e do papel;
-- [ ] papel sai pela fenda sem cortar o desenho;
-- [ ] ondas são código e respeitam pausa/mudo;
-- [ ] arte ausente não quebra experiência nem confirmação;
-- [ ] modo mudo mantém a relação fonte → captura → reprodução;
-- [ ] nenhum periférico real é acessado;
-- [ ] capa retrata somente a bancada aprovada;
-- [ ] teste do nível 1 precede a expansão.
+Não compensar frame torto com offsets diferentes espalhados pela cena. Corrigir
+a folha ou guardar uma única tabela centralizada de pivôs.
 
 ---
 
-## 16. Registro da revisão
+# 15. Entrega técnica
 
-Oito arquivos da proposta de plataforma deram lugar a cinco na bancada.
-O corredor e as folhas ampliadas saíram do planejamento; o gabinete perdeu
-a tela que poderia competir com o Monitor externo. A folha aparelhos reúne
-os cinco dispositivos em estados neutros e ativos, e uma caixinha serve
-como única fonte sonora.
+| Item | Regra |
+|---|---|
+| formato | PNG-24 |
+| alfa | real nas quatro folhas de sprites |
+| opacos | fundo e capa |
+| célula | exatamente 256 × 256 |
+| margem interna | mínimo 9% |
+| sangria | nenhuma |
+| iluminação | alto à esquerda |
+| contorno | mesma espessura aparente |
+| texto no PNG | nenhum |
+| fundo quadriculado pintado | proibido |
+| peso alvo | até 900 KB por folha; até 1,5 MB por imagem opaca |
 
-Esta revisão altera especificações e prompts. Ainda não há assets gerados
-nem medições reais a registrar. Quando chegarem, acrescentar a medida recebida,
-a grade conferida e qualquer adaptação feita no carregador.
+Se o gerador retornar resolução maior, redimensionar a folha inteira mantendo
+a grade exata. Não redimensionar células separadamente.
+
+Se retornar fundo branco, não aceitar como transparência. Gerar novamente com
+alfa ou usar fundo magenta uniforme para remoção técnica, conferindo halos.
+
+---
+
+# 16. Ordem de produção
+
+### Rodada 1 — provar a leitura
+
+1. `dispositivos-entrada.png`;
+2. `dispositivos-saida.png`;
+3. executar teste de silhueta em 64 × 64;
+4. corrigir objetos ambíguos antes de gerar os demais.
+
+### Rodada 2 — montar o nível 1
+
+5. `computador-central.png`;
+6. `personagem-lia.png`;
+7. integrar os três desafios do nível 1 com placeholders para fundo;
+8. testar fluxo, máscaras, TRAVA e celular.
+
+### Rodada 3 — acabamento
+
+9. `bg-laboratorio.png`;
+10. fazer teste real com o usuário;
+11. ajustar escalas e posições;
+12. `cover-fase-de-entrada-e-saida.png` por último.
+
+Não gerar a capa antes de o computador e os periféricos serem aprovados. A capa
+reutiliza as identidades visuais definitivas.
+
+---
+
+# 17. Checklist final
+
+## Lista e organização
+
+- [ ] exatamente seis arquivos;
+- [ ] entradas e saídas estão em folhas diferentes;
+- [ ] não existe `caixinha-de-som.png`;
+- [ ] não existe folha genérica `aparelhos.png`;
+- [ ] não existe “gabinete sem rosto”;
+- [ ] nomes e categorias são código, não pixels.
+
+## Reconhecimento
+
+- [ ] computador parece torre de desktop;
+- [ ] teclado tem teclas e barra de espaço;
+- [ ] mouse tem dois botões e roda;
+- [ ] microfone tem cápsula e pedestal;
+- [ ] câmera tem lente e botão;
+- [ ] monitor tem tela e pé;
+- [ ] alto-falante tem cones;
+- [ ] impressora tem tampa, fenda e bandeja;
+- [ ] todos passam no teste a 64 × 64.
+
+## Folhas
+
+- [ ] Lia: 4 × 1;
+- [ ] computador: 4 × 1;
+- [ ] entradas: 4 × 2;
+- [ ] saídas: 3 × 2;
+- [ ] pares neutro/ativo têm mesma geometria;
+- [ ] não há linha de grade ou fundo branco;
+- [ ] nenhum ativo indica acerto;
+- [ ] áreas de monitor, cartão e fenda estão livres.
+
+## Integração
+
+- [ ] MUNDO → ENTRADA → COMPUTADOR → SAÍDA → MUNDO permanece visível;
+- [ ] pulsos azuis entram e laranja saem;
+- [ ] o mesmo desenho aparece na fonte e no resultado;
+- [ ] voz e reprodução são distintas no tempo;
+- [ ] papel nasce atrás da impressora;
+- [ ] o jogo funciona no mudo;
+- [ ] nenhuma permissão real é solicitada;
+- [ ] asset ausente usa fallback;
+- [ ] hitboxes continuam grandes no celular.
+
+## Capa
+
+- [ ] Lia fala para o microfone;
+- [ ] microfone liga à esquerda do computador;
+- [ ] alto-falante liga à direita;
+- [ ] computador é reconhecível;
+- [ ] cadeia é única e legível;
+- [ ] porta é apenas progresso;
+- [ ] não há texto embutido;
+- [ ] não há objeto com manivela.
+
+---
+
+## 18. Resumo para quem vai gerar a arte
+
+Se houver dúvida, seguir esta ordem mental:
+
+1. desenhe objetos que uma criança já viu;
+2. teste cada silhueta pequena;
+3. separe ENTRADA e SAÍDA em arquivos;
+4. deixe efeitos e palavras para o código;
+5. mantenha o computador central claramente reconhecível;
+6. mostre uma pessoa falando na capa;
+7. descarte qualquer resultado parecido com caixa industrial, torradeira,
+   rádio de manivela ou aparelho de função desconhecida.
+
+A arte não precisa ensinar sozinha toda a BNCC, mas não pode exigir uma aula
+para que o jogador descubra o que cada objeto representa.
