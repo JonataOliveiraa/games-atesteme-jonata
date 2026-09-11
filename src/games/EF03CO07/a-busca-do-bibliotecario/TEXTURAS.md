@@ -6,11 +6,12 @@ Documento irmão: `PLANEJAMENTO.md`
 
 | Arquivo | Estado | Conteúdo |
 |---|---|---|
-| `personagens.png` | **a gerar** | bibliotecário em 4 poses + 4 visitantes |
-| `resultados.png` | **a gerar** | 24 ilustrações usadas nos resultados |
-| `bg-biblioteca.png` | **a gerar** | cenário da biblioteca mágica |
-
-**Três arquivos, e só.**
+| `personagens.png` | entregue, 1200 × 400 | só a bibliotecária, 4 poses (a linha dos visitantes saiu) |
+| `visitantes-reacoes.png` | entregue, 1254 × 1350 | 4 visitantes × 3 reações — ver §16 |
+| `resultados.png` | entregue, 1536 × 1024 | 24 ilustrações usadas nos resultados |
+| `bg-biblioteca.png` | entregue, 1672 × 941 | cenário da biblioteca mágica |
+| `pedestais.png` | **a gerar** | ver §16 |
+| `cover-a-busca-do-bibliotecario.png` | **a gerar** | ver §16 |
 
 Tudo o mais é `Graphics` ou texto do Phaser:
 
@@ -647,3 +648,104 @@ Se muitos frames exigirem correção grande, refazer a folha.
 - [ ] sem letras
 - [ ] sem interface
 - [ ] sem marcas reais
+
+---
+
+# 16. Pedidos da rodada 2 (11/09/2026)
+
+A tela nova tem uma ideia só: **o card com o coração precisa chegar ao 1º
+lugar, e quem está no 1º lugar vai para o visitante.** Duas coisas dessa ideia
+ainda estão em `Graphics` e ficariam mais óbvias como objeto desenhado.
+
+| Arquivo | Grade | Para quê |
+|---|---|---|
+| `visitantes-reacoes.png` | 4 × 3, célula 300 × 400 (1200 × 1200) | o visitante reage ao que está no 1º lugar |
+| `pedestais.png` | 2 × 1, célula 420 × 180 (840 × 180) | o lugar onde o 1º resultado fica, perto do visitante |
+| `cover-a-busca-do-bibliotecario.png` | imagem única, 1672 × 941 | capa do catálogo, que hoje usa o fundo |
+
+## `visitantes-reacoes.png`
+
+**Entregue em 1254 × 1350**, e não 1200 × 1200: a grade 4 × 3 bateu, mas a
+célula ficou 313,5 × 450. A largura fracionária impede o `spritesheet` de
+quadro fixo (ele escorregaria meio pixel por coluna), então o `BootScene`
+carrega a folha como imagem e corta os 12 quadros com `Math.round` na borda de
+cada coluna (`cutVisitors`).
+
+Duas coisas medidas na caixa alfa, e guardadas em `VISITOR_ART` no `layout.ts`:
+
+- **os pés não estão na mesma linha**: 435–437 na espera, 419–423 na dúvida,
+  427–430 na alegria. Cada quadro é ancorado pelo centro dos próprios pés
+  (`feet` e `footX`), e por isso a troca de reação não faz o visitante pular;
+- **a mão da menina de roxo, na alegria (quadro 9), atravessa 6 px para dentro
+  do quadro 10.** O quadro 9 vai até x = 633 e o 10 começa em 634 — sem isso, a
+  ponta dos dedos dela aparecia colada no menino ao lado.
+
+Os MESMOS quatro visitantes da linha de baixo de `personagens.png`, na mesma
+escala, com a mesma linha do chão e virados para a DIREITA. Uma coluna por
+visitante, uma linha por reação:
+
+| Linha | Reação | Pose |
+|---|---|---|
+| 0 | esperando | igual ao quadro atual, segurando o objeto |
+| 1 | "não é esse" | cabeça levemente inclinada, uma mão aberta com a palma para cima, sobrancelha franzida de dúvida — nunca triste nem bravo |
+| 2 | "é esse!" | os dois braços estendidos para a frente, mãos abertas para receber, sorriso grande |
+
+```text
+Sprite sheet with exactly 12 frames in a strict 4-column by 3-row grid.
+Every frame exactly 300 by 400 pixels, total image exactly 1200 by 1200 pixels.
+True transparent background, no grid lines, no cell backgrounds, no bleed.
+
+Each COLUMN is one of these four elementary-school children, identical to the
+reference sheet, same size, same colors, same ground line, facing slightly RIGHT:
+column 1: boy with brown hair, yellow shirt, blue shorts, green backpack, blank poster tube;
+column 2: girl with long dark ponytail, purple shirt, dark trousers, purple notebook;
+column 3: boy with short curly black hair, orange shirt, teal trousers, clipboard;
+column 4: girl with wavy red hair and a teal flower clip, blue shirt, beige shorts, green book.
+
+ROW 1 (waiting): standing calmly holding the object, friendly smile.
+ROW 2 (not this one): head tilted a little, one open palm raised to the side,
+eyebrows puzzled, small closed mouth; curious, never sad, never angry.
+ROW 3 (that's it!): both arms stretched forward with open hands ready to
+receive something, big happy smile, object tucked under one arm.
+
+Feet on the same invisible ground line in all 12 frames. Same head size in
+all frames. About 8 percent empty margin.
+
+[common style]
+[common negative]
+```
+
+## `pedestais.png`
+
+Dois suportes de madeira, baixos e largos, onde um card de resultado fica
+apoiado. Eles vão EMBAIXO dos cards, então o topo é uma superfície plana e
+vazia — o card é desenhado pelo jogo por cima.
+
+| Quadro | O que é |
+|---|---|
+| 0 | o 1º lugar: madeira clara com faixa dourada na frente e uma estrela dourada grande no meio da faixa |
+| 1 | os outros lugares: a mesma madeira, sem dourado e sem estrela, um pouco mais simples |
+
+```text
+Sprite sheet with exactly 2 frames in one strict horizontal row.
+Each frame exactly 420 by 180 pixels; total image exactly 840 by 180 pixels.
+True transparent background, no grid lines, no bleed.
+
+A low, wide, friendly wooden display stand seen from the front, like a small
+library counter where one picture card rests on top. The TOP surface is flat,
+straight and completely empty. Rounded chunky shapes, warm wood #B8875B, thick
+dark navy outline #1F2A37.
+
+Frame 1: the same stand with a golden front band and one big friendly golden
+star in the middle of the band, soft golden shine.
+Frame 2: the same stand, plain wood, no gold, no star.
+
+Both stands have exactly the same size, shape and position in their frames.
+No text, no numbers, no cards, no books on top.
+
+[common style]
+[common negative]
+```
+
+Até a arte chegar, o jogo continua com a moldura dourada e o balanço do
+visitante em `Graphics` — reserva, não entrega.

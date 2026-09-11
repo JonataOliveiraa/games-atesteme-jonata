@@ -1138,8 +1138,57 @@ Todas as consultas são conteúdos fictícios do jogo.
 
 ## 30. O que mudou na construção
 
-Preencher após a implementação.
+### Rodada 1 — nível 1 jogável (11/09/2026)
 
-| Planejado | Construído | Motivo |
+| Decisão | Por quê |
+|---|---|
+| O nível 1 tem **1, 2 e 2 decisões**, e não 1, 2 e 3 | Com três resultados por busca, uma palavra discriminante já resolve: para um passo NÃO ser decisivo é preciso um concorrente que responda a mesma palavra. O acervo de vulcão tem esse concorrente (a maquete também está em erupção) e sustenta dois passos; os de tucano e baleia, não. A baleia ganhou o segundo passo dando `FOTO` à pelúcia — "a foto da pelúcia também é foto" — que é a melhor lição do nível. Um terceiro passo pediria um quadro de resultado que a folha não tem. |
+| A vida só cai na **segunda** tentativa errada da mesma decisão | O §5 proíbe erro como punição, e experimentar uma palavra para ver o que ela faz com a busca É o exercício. O primeiro tropeço custa os pontos cheios da missão (10 → 5) e ganha a dica; a vida fica para quem insiste. |
+| A palavra errada **não entra** na consulta | Ver a consulta suja com um termo ruim e ter de removê-lo seria um segundo problema em cima do primeiro. A busca não muda, a faixa explica o efeito que aquela palavra teria, e a criança volta para a mesma decisão. |
+| A ação certa muda de botão a cada decisão | Ficou nas posições 2, 1, 2, 3, 2. Com a certa sempre na esquerda, o jogo viraria "toque no primeiro". |
+| A faixa da dica mora **entre** os resultados e os botões | No lugar de cima ela cobria os números de posição dos cards — justamente o que responde "a busca melhorou?". |
+| A posição do resultado aparece em número grande | É o placar real do jogo: o alvo subir de 3º para 2º é a prova de que a palavra ajudou, mesmo antes de ele chegar ao topo. |
+
+Verificado no navegador: os três pedidos do nível 1, a trava com a palavra
+recusada e a dica, a dica de segundo tropeço contornando a ação útil, a entrega
+do achado ao visitante e a reprise das três consultas no fim do nível.
+
+Falta a capa (`cover-a-busca-do-bibliotecario.png`). Como toda entrada do
+catálogo precisa de uma, o salão da biblioteca entrou como provisório, com
+comentário no `catalog.ts` apontando isso.
+
+### Rodada 2 — a tela ficou óbvia (11/09/2026)
+
+O usuário jogou e reprovou a clareza: muitos elementos com o mesmo peso, sem
+dizer onde tocar nem o que o toque faz. O que mudou:
+
+| Antes | Agora | Por quê |
 |---|---|---|
-| | | |
+| nada dizia qual resultado o visitante queria | o resultado pedido tem um **coração** grudado nele | a criança não escolhe o alvo — ela precisa enxergá-lo para saber o que consertar |
+| três cards iguais com números 1, 2, 3 | três **vagas fixas**: o 1º lugar é grande, com moldura dourada, medalha `1º` e uma seta apontando para o visitante; o 2º e o 3º são menores | "a posição" deixou de ser número e virou lugar: quem chega no dourado vai para o visitante, e o card cresce ao subir |
+| o header vazio | o objetivo, sempre visível: `Faça o ♥ chegar ao 1º lugar!` | uma frase só, com o coração desenhado igual ao do card |
+| título e `imagem`/`vídeo` escritos em cada card | só a ilustração; vídeo ganha um ▶ | dois blocos de texto a menos por card, e o formato continua legível |
+| a palavra errada não entrava na busca | ela **entra**, a busca roda, os cards mudam de ordem, o visitante balança a cabeça, a faixa explica — e a palavra volta voando para o botão | "o que isso faz" passou a ser visto, não contado |
+| acerto intermediário mudo | faixa verde `Subiu! Falta mais uma palavra.` e brilho no card do coração | sem isso, a palavra certa que não resolve de uma vez parecia errada |
+| o dedo do tutorial tocava bem no FOTO | o tutorial mostra o coração, o 1º lugar e a fileira de palavras, sem apontar nenhuma | ele entregava a resposta do primeiro pedido |
+| `WRONG_ANSWER` no 1º erro, vida no 2º | os dois juntos, no 2º erro da mesma decisão, e o contador zera depois de cobrar | a `GameDetailsPage` desconta vida a cada `WRONG_ANSWER`; separados, a plataforma e o jogo contavam vidas diferentes |
+| `data/missions.ts` | `data/levels.ts` | regra do `INSTRUCOES.md` |
+
+As falas dos pedidos e das dicas encolheram para uma linha curta, e nenhuma
+dica usa "ele" ou "ela": os visitantes mudam a cada pedido.
+
+### Rodada 2b — o visitante reage (11/09/2026)
+
+Chegou `visitantes-reacoes.png`, e `personagens.png` ficou só com a
+bibliotecária. O visitante agora diz com o rosto o que está no 1º lugar:
+
+| Momento | Reação |
+|---|---|
+| chegando e fazendo o pedido | esperando |
+| os resultados aparecem e o 1º lugar não é o pedido | dúvida — mão aberta, sobrancelha franzida |
+| palavra errada | dúvida, balançando |
+| o coração chega ao 1º lugar | alegria — braços estendidos para receber, com um pulinho |
+
+A dúvida fica desde o primeiro quadro de resultados de propósito: é ela que
+diz, sem texto, "o que está no 1º lugar não é o que eu quero". `visitor` em
+`levels.ts` passou a ser a COLUNA da folha nova (0 a 3).
