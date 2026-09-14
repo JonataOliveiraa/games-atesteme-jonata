@@ -16,7 +16,7 @@ import {
 } from '../data/layout'
 import { slotsOf } from '../data/rules'
 import { C, CSS, FONT, MOVE_NAME, SIGNAL_NAME } from '../data/theme'
-import { drawMove } from './pictogram'
+import { moveIcon } from './pictogram'
 import type { SheetDef, SlotId, SlotValue } from '../types'
 
 /**
@@ -121,26 +121,14 @@ export function createProgram(scene: Phaser.Scene, options: ProgramOptions) {
     let selected: SlotId | null = null
     let locked: SlotId | null = null
 
-    const counter = scene.add.container(0, 0).setDepth(DEPTH.chip).setVisible(false)
-    root.add(counter)
-    const counterBg = scene.add.graphics()
-    counter.add(counterBg)
-    const counterText = scene.add
-        .text(0, 0, '', { fontFamily: FONT.black, fontSize: '30px', color: CSS.white })
-        .setOrigin(0.5)
-        .setResolution(2)
-    counter.add(counterText)
-
-    const innerCounter = scene.add.container(0, 0).setDepth(DEPTH.chip).setVisible(false)
-    root.add(innerCounter)
-    const innerBg = scene.add.graphics()
-    innerCounter.add(innerBg)
-    const innerText = scene.add
-        .text(0, 0, '', { fontFamily: FONT.black, fontSize: '26px', color: CSS.ink })
-        .setOrigin(0.5)
-        .setResolution(2)
-    innerCounter.add(innerText)
-
+    /*
+     * NÃO HÁ CONTADOR NA FICHA.
+     *
+     * Havia um selo "2/3" na moldura de fora e outro na de dentro, que
+     * avançavam durante o ensaio. O ensaio passou a acontecer com a ficha
+     * fora da tela, e contador que ninguém vê é só código para manter — quem
+     * conta os refrões agora é a fileira de pontos, no palco.
+     */
     const clear = () => {
         pieces.forEach(piece => {
             scene.tweens.killTweensOf(piece.body)
@@ -152,8 +140,6 @@ export function createProgram(scene: Phaser.Scene, options: ProgramOptions) {
         tags.removeAll(true)
         arrow.setVisible(false)
         lockMark.setVisible(false)
-        counter.setVisible(false)
-        innerCounter.setVisible(false)
     }
 
     /** A etiqueta FORA / DENTRO. Recebe a borda esquerda e devolve a largura. */
@@ -289,13 +275,6 @@ export function createProgram(scene: Phaser.Scene, options: ProgramOptions) {
                 ate.setStroke(CSS.ink, 5)
             }
 
-            counter.setPosition(SHEET.x + SHEET.w - 66, hy)
-            counterBg.clear()
-            counterBg.fillStyle(C.ink, 1)
-            counterBg.fillRoundedRect(-44, -26, 88, 52, 26)
-            counterBg.fillStyle(C.outerDeep, 1)
-            counterBg.fillRoundedRect(-41, -23, 82, 46, 23)
-
             // ── a moldura de dentro, quando a fase tem uma ───────────────
             if (body.innerFrame) {
                 const f: Rect = body.innerFrame
@@ -327,12 +306,6 @@ export function createProgram(scene: Phaser.Scene, options: ProgramOptions) {
                     .setResolution(2)
                 tags.add(vezes)
 
-                innerCounter.setPosition(f.x + f.w / 2 - 34, f.y - f.h / 2 + 4)
-                innerBg.clear()
-                innerBg.fillStyle(C.ink, 1)
-                innerBg.fillRoundedRect(-33, -21, 66, 42, 21)
-                innerBg.fillStyle(C.sheet, 1)
-                innerBg.fillRoundedRect(-30, -18, 60, 36, 18)
             }
 
             // ── os espaços do corpo, com o rótulo em cima ────────────────
@@ -385,8 +358,8 @@ export function createProgram(scene: Phaser.Scene, options: ProgramOptions) {
                         .setResolution(2)
                     piece.content.add(t)
                 } else {
-                    const icon = scene.add.graphics().setPosition(0, -14)
-                    drawMove(icon, value.move, 66, C.ink, C.inkSoft)
+                    const icon = moveIcon(scene, value.move, 66, C.ink, C.inkSoft)
+                    icon.setPosition(0, -14)
                     piece.content.add(icon)
                     const name = scene.add
                         .text(0, piece.box.h / 2 - 24, MOVE_NAME[value.move], {
@@ -459,28 +432,19 @@ export function createProgram(scene: Phaser.Scene, options: ProgramOptions) {
             })
         },
 
-        /** Os contadores só existem durante o ensaio. */
-        counters(outer: string, inner: string | null) {
-            counterText.setText(outer)
-            counter.setVisible(true)
-            if (inner === null) {
-                innerCounter.setVisible(false)
-                return
-            }
-            innerText.setText(inner)
-            innerCounter.setVisible(true)
-        },
-
-        hideCounters() {
-            counter.setVisible(false)
-            innerCounter.setVisible(false)
-        },
-
         setEnabled(value: boolean) {
             enabled = value
             pieces.forEach(piece => {
                 if (piece.zone.input) piece.zone.input.enabled = value
             })
+        },
+
+        /** A ficha inteira some durante o ensaio, seta e cadeado junto. */
+        fade(on: boolean) {
+            scene.tweens.killTweensOf([root, arrow, lockMark])
+            arrow.setAlpha(on ? 1 : 0)
+            lockMark.setAlpha(on ? 1 : 0)
+            return FX.to(scene, root, { alpha: on ? 1 : 0 }, { duration: 260 })
         },
 
         slotBounds(id: SlotId) {
@@ -507,7 +471,7 @@ export function createProgram(scene: Phaser.Scene, options: ProgramOptions) {
 
         destroy() {
             clear()
-            scene.tweens.killTweensOf([root, counter, innerCounter, lockMark])
+            scene.tweens.killTweensOf([root, lockMark])
             arrow.destroy()
             lockMark.destroy()
             root.destroy(true)

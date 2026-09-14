@@ -14,21 +14,24 @@ Destino dos PNGs futuros: `src/assets/games/EF04CO03/danca-aninhada/`
 |---:|---|---:|---|---|---|---|
 | 1 | `bg-palco-escolar.png` | 1672 × 941 | imagem única | opaco | palco acolhedor e áreas calmas para a interface | após validar N1 |
 | 2 | `dancarino.png` | 1024 × 256 | 4 × 1 de 256 × 256 | alfa real | o **mesmo** dançarino em repouso, passo, palma e giro | após validar N1 |
-| 3 | `cover-danca-aninhada.png` | 1672 × 941 | imagem única | opaco | capa do catálogo | por último |
+| 3 | `icones-dos-movimentos.png` | 768 × 256 | 3 × 1 de 256 × 256 | alfa real | silhueta chapada de PASSO, PALMA e GIRO, tingida pelo código | após validar N1 |
+| 4 | `cover-danca-aninhada.png` | 1672 × 941 | imagem única | opaco | capa do catálogo | por último |
 
-**Total: três PNGs.** Música e efeitos são gerados por WebAudio; não pedir MP3 ou WAV. A folha usa quatro quadros, não quatro personagens separados. Não criar arquivo de textura para cada movimento.
+**Total: quatro PNGs.** Música e efeitos são gerados por WebAudio; não pedir MP3 ou WAV. A folha usa quatro quadros, não quatro personagens separados. Não criar arquivo de textura para cada movimento.
 
 ### Elementos que **não** são PNG
 
 - molduras externa/interna de `REPITA`, título delas e contadores;
 - comandos, rótulos, números, cartões de opções e espaços editáveis;
-- tiras do pedido, barras de refrão, pictogramas PASSO/PALMA/GIRO;
+- tiras do pedido, molduras dos cartões e barras de refrão;
 - lâmpada ACESA/APAGADA e feixe de luz interativo;
 - botão DANÇAR, `?`, mudo, vidas, estrelas, progresso e tutorial;
 - cadeado, dica, setas, brilho, partículas, sombra de seleção, replay;
 - pisada no chão, nota musical e marca de palco que respondam ao algoritmo.
 
-Essas peças mudam conforme o programa e ficam em `Graphics`/`Phaser.Text`. **Nenhum texto deve estar embutido na imagem.** O pedido e a ficha são a parte pedagógica; precisam permanecer nítidos e editáveis.
+Os **pictogramas** saíram desta lista: são a mesma figura em quatro tamanhos e duas cores, e uma silhueta desenhada lê melhor que uma vetorial montada em código. Continuam sendo UM arquivo, em preto, tingido pelo jogo — ver §5.
+
+As demais peças mudam conforme o programa e ficam em `Graphics`/`Phaser.Text`. **Nenhum texto deve estar embutido na imagem.** O pedido e a ficha são a parte pedagógica; precisam permanecer nítidos e editáveis.
 
 ---
 
@@ -226,7 +229,103 @@ Se o gerador produzir um quadro muito diferente, **reprovar a folha inteira** e 
 
 ---
 
-## 5. `cover-danca-aninhada.png`
+## 5. `icones-dos-movimentos.png`
+
+### Contrato
+
+| Campo | Exigência |
+|---|---|
+| canvas | 768 × 256 |
+| grade lógica | 3 colunas × 1 linha, 256 × 256 por célula |
+| ordem | 0 PASSO, 1 PALMA, 2 GIRO |
+| fundo | alfa verdadeiro, sem branco e sem xadrez pintado |
+| cor | **uma só**: preto `#000000` chapado, sem contorno, sombra ou degradê |
+| área segura | a figura cabe em 200 × 200 no centro da célula |
+| espessura mínima | nada mais fino que 14 px na escala 256 |
+
+### Por que preto, e por que uma folha só
+
+Os três ícones aparecem em **quatro tamanhos** — 44 px no pedido, 66 px na
+ficha, 84 px na bandeja e 96 px na legenda do ensaio — e em **duas cores**:
+azul-marinho sobre papel claro e branco sobre o palco escurecido do ensaio.
+Um PNG por cor seriam seis arquivos que precisariam concordar entre si.
+
+Com a silhueta em preto, quem dá a cor é o `setTint` do Phaser: um arquivo e
+uma linha de código. Por isso o pedido é de **silhueta chapada**, e não de
+ilustração — qualquer sombra, brilho ou contorno de outra cor sobrevive ao
+tint e reaparece como sujeira cinza sobre o papel claro.
+
+Uma folha só, e não três arquivos, porque o que precisa concordar entre os
+três é o **peso visual**: ícones gerados em passadas separadas voltam com
+traços de espessuras diferentes, e na tira do pedido eles ficam lado a lado.
+
+### O que cada quadro é
+
+| Frame | Ícone | Leitura |
+|---:|---|---|
+| 0 | `PASSO` | uma pegada vista de cima, com os cinco dedos separados |
+| 1 | `PALMA` | duas mãos de frente, palmas se encontrando, com três traços curtos de estalo saindo do encontro |
+| 2 | `GIRO` | uma seta circular quase fechada, com a ponta bem marcada |
+
+Símbolos, e não bonequinhos fazendo o movimento: a ~35 px físicos num celular
+uma figura humana inteira vira borrão, enquanto pegada, mãos e seta
+sobrevivem. O corpo que dança é o sprite do §4; estes aqui são o vocabulário
+escrito da coreografia.
+
+### Prompt copiável
+
+~~~text
+Create ONE horizontal sprite sheet PNG of exactly THREE equal square icon
+cells in a single row, total size 768 by 256 pixels, each cell exactly 256 by
+256. REAL TRANSPARENT BACKGROUND (true alpha channel).
+
+Every icon is a SOLID FLAT SILHOUETTE filled with PURE BLACK #000000 and
+nothing else: no outline, no second color, no gray, no gradient, no shading,
+no highlight, no drop shadow, no texture. Flat vector pictogram style, like a
+clean mobile app icon set. Bold chunky shapes; no shape or gap thinner than 14
+pixels at this size, so the icons survive being scaled down to 35 pixels.
+
+Left to right:
+cell 0 - a FOOTPRINT seen from above: the sole of a bare foot with five
+separate round toes above it, standing upright, tilted a few degrees;
+cell 1 - TWO HANDS clapping, seen from the front, both palms flat and
+touching each other in the middle, thumbs visible on the outer edges, plus
+THREE short straight impact strokes radiating upward and outward from the
+point where the hands meet;
+cell 2 - a ROTATION ARROW: one thick circular arc going almost all the way
+around, about 300 degrees, with a clear solid triangular arrowhead at one end.
+
+Center each icon inside its own 256 by 256 cell and keep every figure inside a
+200 by 200 safe area, with equal visual weight and equal apparent size across
+all three. Do not let any shape cross into a neighboring cell. No visible cell
+borders, no separators, no grid lines.
+
+Negative: color, colored fill, gray, gradient, shading, highlight, outline,
+stroke of another color, drop shadow, glow, 3D, bevel, photorealism, texture,
+noise, text, letters, numbers, labels, caption, watermark, logo, frame,
+border, cell divider, grid, background, white background, colored background,
+fake checkerboard transparency, human figure, full body, face, dancer,
+musical notes, extra objects, more than three icons, uneven line weights,
+thin hairlines, tiny details.
+~~~
+
+### Verificação
+
+- [ ] o PNG tem 768 × 256 e o alfa é real, conferido sobre fundo claro **e** escuro;
+- [ ] há exatamente três figuras, uma por célula, sem nada cruzando a divisa;
+- [ ] a cor é uma só — nenhum pixel cinza ou colorido fora do antialiasing;
+- [ ] os três têm o mesmo peso: nenhum parece mais fino ou menor que os outros;
+- [ ] a 35 px de altura, pegada, mãos e seta ainda se distinguem sem legenda;
+- [ ] tingidos de branco sobre o palco escurecido, os três continuam legíveis;
+- [ ] medir a caixa alfa de cada célula antes de fixar a escala no Phaser.
+
+Se um dos três voltar com espessura diferente dos outros, **reprovar a folha
+inteira** e refazer na mesma passada — pedir "só o ícone do giro de novo" é
+como o conjunto perde a unidade.
+
+---
+
+## 6. `cover-danca-aninhada.png`
 
 ### Contrato
 
@@ -271,9 +370,9 @@ strobe, microphone, photorealism, 3D, blur, white margin.
 
 ---
 
-## 6. Integração e fallback
+## 7. Integração e fallback
 
-No primeiro corte, o `BootScene` procura PNGs por `import.meta.glob` e carrega só o que existe. Se não existir nenhum, usa fundo, corpo simplificado, pictogramas e efeitos em `Graphics`/`Phaser.Text` com **as mesmas caixas de layout**. O placeholder não deve mudar a lógica nem a área clicável.
+No primeiro corte, o `BootScene` procura PNGs por `import.meta.glob` e carrega só o que existe. A folha de ícones é fatiada em três colunas iguais a partir da **largura entregue**, e não de um 256 escrito no código — a folha do dançarino já veio com outra medida, e largura fixa quebraria a próxima do mesmo jeito. Sem ela, `moveIcon` desenha os três pictogramas em `Graphics`, nas mesmas caixas. Se não existir nenhum, usa fundo, corpo simplificado, pictogramas e efeitos em `Graphics`/`Phaser.Text` com **as mesmas caixas de layout**. O placeholder não deve mudar a lógica nem a área clicável.
 
 Quando a folha chegar, medir a caixa alfa de cada célula, conferir linha do pé e ancorar o sprite pela base. O quadro do dançarino é **visual**, nunca hitbox de resposta. O toque acontece só nos espaços da ficha, opções grandes, DANÇAR e `?`. A luz de parada e os contadores ficam no código e devem continuar visíveis sobre qualquer arte.
 

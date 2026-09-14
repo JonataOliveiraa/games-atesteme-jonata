@@ -7,17 +7,45 @@ import type { Move } from '../types'
  *  OS TRÊS PICTOGRAMAS
  * ══════════════════════════════════════════════════════════════════════════
  *
- * Desenhados, nunca PNG — o §0 do TEXTURAS.md é explícito, e a razão é que
- * eles aparecem em quatro tamanhos diferentes (pedido, ficha, bandeja e a
- * comparação do erro) e em três estados. Textura para isso seria doze
- * arquivos que precisariam concordar entre si.
+ * Aparecem em quatro tamanhos — pedido, ficha, bandeja e a legenda do ensaio
+ * — e em duas cores. Por isso `moveIcon` devolve um objeto pronto e ninguém
+ * mais sabe como o desenho é feito.
  *
- * Cada um sai CENTRADO na origem e cabe num quadrado de lado `s`, para o
- * chamador só precisar posicionar o Graphics.
+ * ── SILHUETA TINGIDA, NÃO UM PNG POR COR ─────────────────────────────────
  *
- * A silhueta tem de resolver sozinha: a palavra embaixo é reforço, e num
- * celular a 0,30 ela fica pequena demais para carregar o significado.
+ * Quando `icone-dos-movimentos.png` existir, cada quadro é uma silhueta CHAPADA
+ * em preto sobre alfa real, e quem dá a cor é o `setTint`. Um PNG por cor
+ * seriam seis arquivos que precisariam concordar entre si; um PNG preto e um
+ * tint são um arquivo e uma linha.
+ *
+ * Enquanto a folha não chega, o desenho vetorial abaixo ocupa a mesma caixa.
+ * A silhueta tem de resolver sozinha: a palavra embaixo é reforço e, num
+ * celular a 0,30, ela fica pequena demais para carregar o significado.
  */
+
+export const ICON_SHEET = 'dance-move-icons'
+
+/** A ordem dos quadros na folha, fixada aqui e conferida no BootScene. */
+export const ICON_FRAME: Record<Move, string> = {
+    step: 'step',
+    clap: 'clap',
+    spin: 'spin',
+}
+
+export type MoveIcon = Phaser.GameObjects.Image | Phaser.GameObjects.Graphics
+
+/** Um pictograma centrado na origem, cabendo num quadrado de lado `size`. */
+export function moveIcon(scene: Phaser.Scene, move: Move, size: number, face = C.ink, deep = C.inkSoft): MoveIcon {
+    if (scene.textures.exists(ICON_SHEET)) {
+        const image = scene.add.image(0, 0, ICON_SHEET, ICON_FRAME[move])
+        image.setTint(face)
+        image.setDisplaySize(size, size)
+        return image
+    }
+    const g = scene.add.graphics()
+    drawMove(g, move, size, face, deep)
+    return g
+}
 
 export function drawMove(
     g: Phaser.GameObjects.Graphics,

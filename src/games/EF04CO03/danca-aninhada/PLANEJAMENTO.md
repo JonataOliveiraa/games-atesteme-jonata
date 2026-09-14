@@ -271,7 +271,7 @@ Nos níveis 2 e 3, mostrar só a novidade: **“O laço de dentro reinicia em ca
 
 O jogo deve funcionar sem PNG: palco plano em `Graphics`, dançarino como boneco simples de círculos/linhas com rótulo **DANÇARINO**, movimentos como pictogramas vetoriais e palavras, molduras e cartões em `Graphics`/`Phaser.Text`. Texturas opcionais entram via `import.meta.glob`; import estático para imagem ainda inexistente quebra o build.
 
-Planejar três imagens: fundo do palco, folha do dançarino e capa. **Molduras, números, cartões, lâmpada, luz, estrelas, efeitos, setas, botões e pictogramas de comando não são texturas.** Ver contratos e prompts em [TEXTURAS.md](./TEXTURAS.md). Produzir a capa por último.
+Planejar quatro imagens: fundo do palco, folha do dançarino, folha de ícones dos movimentos e capa. **Molduras, números, cartões, lâmpada, luz, estrelas, efeitos, setas e botões não são texturas.** Ver contratos e prompts em [TEXTURAS.md](./TEXTURAS.md). Produzir a capa por último.
 
 ---
 

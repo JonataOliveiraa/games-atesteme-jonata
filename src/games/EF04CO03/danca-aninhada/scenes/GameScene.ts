@@ -181,7 +181,6 @@ export class GameScene extends Phaser.Scene {
         void this.stage.spotlight(false)
         this.request.show(phase)
         this.program.build(phase.sheet)
-        this.program.hideCounters()
         this.options.setDance(false)
         this.applyInput()
 
@@ -286,61 +285,94 @@ export class GameScene extends Phaser.Scene {
         this.program.select(null)
         this.program.settle()
         this.request.unmark()
-        void this.options.hide()
-        void this.options.say('Vendo a coreografia...')
 
         const trace = simulate(program, planOf(phase, 0))
         const bad = firstDivergence(phase, trace, 0)
         const lastGood = (bad ? bad.index : trace.beats.length) - 1
-        const total = this.values.outer?.kind === 'times' ? this.values.outer.times : null
+        const total = this.values.outer?.kind === 'times' ? this.values.outer.times : trace.rounds
+
+        /*
+         * ══════════════════════════════════════════════════════════════════
+         *  O ENSAIO LIMPA A TELA
+         * ══════════════════════════════════════════════════════════════════
+         *
+         * Cabeçalho, pedido, ficha e bandeja saem; sobra o palco. É o pedido
+         * do autor do jogo, e a troca tem sentido: enquanto ela monta, o que
+         * importa é a ficha; quando ela toca DANÇAR, o que importa é se a
+         * dança saiu como o pedido.
+         *
+         * O que continua na tela é a LEGENDA do movimento e os pontos dos
+         * refrões — a única coisa que amarra a dança ao algoritmo que a
+         * produziu. Sem eles o ensaio provaria que o dançarino dança, não que
+         * a ficha dela faz aquilo.
+         */
+        await this.showUi(false)
+        if (gen !== this.gen) return
 
         this.audio.countIn()
         void this.stage.spotlight(true)
-        await FX.wait(this, 560)
+        this.stage.beads(0, total)
+        await FX.wait(this, 520)
         if (gen !== this.gen) return
 
-        for (let k = 0; k <= lastGood; k++) {
+        const dance = async (k: number) => {
             const beat = trace.beats[k]
-            this.program.counters(total ? `${beat.outer}/${total}` : `${beat.outer}`, this.innerLabel(beat.inner))
-            void this.request.beat(k)
-            void this.program.flash(beat.slot)
+            void this.stage.say(beat.move)
             this.audio.beat(beat.move)
             await this.stage.pose(beat.move, BEAT_MS)
+            return beat
+        }
+
+        for (let k = 0; k <= lastGood; k++) {
+            const beat = await dance(k)
             if (gen !== this.gen) return
 
             const next = trace.beats[k + 1]
             if (!next || next.outer !== beat.outer) {
                 this.audio.roundClose()
-                await this.request.seal(beat.outer - 1)
-                if (gen !== this.gen) return
+                this.stage.beads(beat.outer, total)
             } else if (beat.inner !== null && next.inner === null) {
                 this.audio.innerClose()
             }
+        }
+
+        // o movimento que divergiu também é dançado: é ele que a criança
+        // precisa ver para entender a comparação "pedido × saiu"
+        if (bad && bad.got !== null && trace.beats[bad.index]) {
+            await dance(bad.index)
+            if (gen !== this.gen) return
+        }
+
+        await FX.wait(this, 420)
+        if (gen !== this.gen) return
+
+        void this.stage.spotlight(false)
+        await this.showUi(true)
+        if (gen !== this.gen) return
+
+        // os selos só agora: durante o ensaio a tira estava fora da tela
+        const sealed = bad ? Math.floor(bad.index / phase.pattern.length) : trace.rounds
+        for (let r = 0; r < sealed; r++) {
+            await this.request.seal(r)
+            if (gen !== this.gen) return
         }
 
         if (!bad) {
             await this.succeed()
             return
         }
-
-        // o movimento que divergiu também é dançado: é ele que a criança
-        // precisa ver para entender a comparação "pedido × saiu"
-        if (bad.got !== null && trace.beats[bad.index]) {
-            const beat = trace.beats[bad.index]
-            this.program.counters(total ? `${beat.outer}/${total}` : `${beat.outer}`, this.innerLabel(beat.inner))
-            void this.program.flash(beat.slot)
-            this.audio.beat(beat.move)
-            await this.stage.pose(beat.move, BEAT_MS)
-            if (gen !== this.gen) return
-        }
-
         await this.fail(bad)
     }
 
-    private innerLabel(inner: number | null): string | null {
-        if (inner === null) return null
-        const times = this.values.innerTimes?.kind === 'times' ? this.values.innerTimes.times : null
-        return times ? `${inner}/${times}` : `${inner}`
+    /** A interface inteira entra ou sai, e o dançarino troca de lugar junto. */
+    private async showUi(on: boolean) {
+        await FX.all(
+            this.hud.fade(on),
+            this.request.fade(on),
+            this.program.fade(on),
+            this.options.fade(on),
+            this.stage.focus(!on),
+        )
     }
 
     /* ───────────────────────────── TRAVA e acerto ─────────────────────── */
@@ -360,7 +392,6 @@ export class GameScene extends Phaser.Scene {
         this.audio.stall()
         this.stage.rest()
         void this.stage.spotlight(false)
-        this.program.hideCounters()
         this.request.mark(bad.index, bad.expected, bad.got)
         this.program.lock(bad.slot)
         this.locked = bad.slot
@@ -411,7 +442,6 @@ export class GameScene extends Phaser.Scene {
 
         this.mode = 'reveal'
         this.applyInput()
-        this.program.hideCounters()
         void this.stage.spotlight(false)
         this.audio.phase()
         void this.options.say(this.doneText())
@@ -517,7 +547,9 @@ export class GameScene extends Phaser.Scene {
         const free = !this.tutorialOpen && this.mode === 'building'
         this.program.setEnabled(free)
         this.options.setEnabled(free)
-        this.hud.setEnabled(!this.tutorialOpen && this.mode !== 'done')
+        // o `?` fica desligado durante o ensaio: ele está fora da tela, e um
+        // alvo invisível que responde ao toque é armadilha, não ajuda
+        this.hud.setEnabled(!this.tutorialOpen && this.mode !== 'done' && this.mode !== 'dancing')
     }
 
     /**

@@ -1,8 +1,9 @@
 import Phaser from 'phaser'
 import { FX } from '../../../../shared/effects/FX'
+import { moveIcon, type MoveIcon } from './pictogram'
 import { CUTS, SHEET as ART, dancerScale, originOf, type PoseKey } from '../data/art'
-import { DANCER, DEPTH, H, STAGE, W } from '../data/layout'
-import { C, CSS, FONT } from '../data/theme'
+import { DANCER, DEPTH, FOCUS, H, STAGE, W } from '../data/layout'
+import { C, CSS, FONT, MOVE_NAME } from '../data/theme'
 import type { Move } from '../types'
 
 /**
@@ -55,22 +56,38 @@ export function createStage(scene: Phaser.Scene) {
      * contadores da ficha aparecem.
      */
     const spot = scene.add.graphics().setDepth(DEPTH.floor).setAlpha(0)
-    spot.fillStyle(C.warm, 0.24)
-    spot.beginPath()
-    spot.moveTo(DANCER.x - 52, STAGE.y - 6)
-    spot.lineTo(DANCER.x + 52, STAGE.y - 6)
-    spot.lineTo(DANCER.x + 138, DANCER.footY + 12)
-    spot.lineTo(DANCER.x - 138, DANCER.footY + 12)
-    spot.closePath()
-    spot.fillPath()
+    const paintSpot = (x: number, spread: number) => {
+        spot.clear()
+        spot.fillStyle(C.warm, 0.24)
+        spot.beginPath()
+        spot.moveTo(x - 52, STAGE.y - 40)
+        spot.lineTo(x + 52, STAGE.y - 40)
+        spot.lineTo(x + spread, DANCER.footY + 12)
+        spot.lineTo(x - spread, DANCER.footY + 12)
+        spot.closePath()
+        spot.fillPath()
+    }
+    paintSpot(DANCER.x, 138)
 
+    /*
+     * A sombra e o cone seguem o dançarino.
+     *
+     * Os dois eram desenhados na posição de montar, e no ensaio ele saía de
+     * dentro da própria sombra — que ficava para trás, no canto esquerdo,
+     * como se pertencesse a outra pessoa.
+     */
     const shadow = scene.add.graphics().setDepth(DEPTH.floor + 1)
     const paintShadow = (squash: number) => {
+        const x = focusedX()
+        const width = focusedWide() ? 190 : 128
         shadow.clear()
         shadow.fillStyle(C.ink, 0.26)
-        shadow.fillEllipse(DANCER.x, DANCER.footY + 6, 128 * squash, 26)
+        shadow.fillEllipse(x, DANCER.footY + 6, width * squash, focusedWide() ? 34 : 26)
     }
-    paintShadow(1)
+
+    let focusOn = false
+    const focusedX = () => (focusOn ? FOCUS.x : DANCER.x)
+    const focusedWide = () => focusOn
 
     let sprite: Phaser.GameObjects.Sprite | null = null
     let doll: Phaser.GameObjects.Container | null = null
@@ -121,6 +138,8 @@ export function createStage(scene: Phaser.Scene) {
         g.fillCircle(0, -h * 0.82, 21)
     }
 
+    paintShadow(1)
+
     const setPose = (pose: PoseKey) => {
         if (sprite) sprite.setFrame(pose)
         else paintDoll(pose)
@@ -129,6 +148,49 @@ export function createStage(scene: Phaser.Scene) {
 
     const target = (): Phaser.GameObjects.Sprite | Phaser.GameObjects.Container => (sprite ?? doll)!
     let facing = 1
+
+    /*
+     * ══════════════════════════════════════════════════════════════════════
+     *  O ENSAIO ESVAZIA A TELA
+     * ══════════════════════════════════════════════════════════════════════
+     *
+     * Quando a criança toca DANÇAR, painéis, ficha e bandeja saem de cena e
+     * só o palco fica. O véu escurece o resto do cenário, o dançarino vem
+     * para o meio e cresce.
+     *
+     * O que NÃO sai é a leitura do algoritmo: o nome e o pictograma do
+     * movimento aparecem ao lado dele e o refrão vira uma fileira de pontos.
+     * Sem isso, o ensaio provaria que o dançarino dança, e não que a ficha da
+     * criança produz aquela dança — que é a evidência da habilidade.
+     */
+    const veil = scene.add.graphics().setDepth(DEPTH.veil).setAlpha(0)
+    veil.fillStyle(C.ink, 0.62)
+    veil.fillRect(0, 0, W, H)
+
+    const caption = scene.add.container(0, 0).setDepth(DEPTH.lamp).setAlpha(0)
+    let captionIcon: MoveIcon | null = null
+    const captionText = scene.add
+        .text(0, 62, '', { fontFamily: FONT.black, fontSize: '44px', color: CSS.white })
+        .setOrigin(0.5)
+        .setResolution(2)
+    captionText.setStroke(CSS.ink, 7)
+    caption.add(captionText)
+
+    const beads = scene.add.graphics().setDepth(DEPTH.lamp).setAlpha(0)
+    const paintBeads = (current: number, total: number) => {
+        beads.clear()
+        if (total <= 0) return
+        const gap = 44
+        const y = FOCUS.footY + 68
+        const left = FOCUS.x - ((total - 1) * gap) / 2
+        for (let i = 0; i < total; i++) {
+            const x = left + i * gap
+            beads.fillStyle(C.ink, 1)
+            beads.fillCircle(x, y, 18)
+            beads.fillStyle(i < current ? C.warm : C.wall, 1)
+            beads.fillCircle(x, y, 14)
+        }
+    }
 
     return {
         /**
@@ -140,14 +202,16 @@ export function createStage(scene: Phaser.Scene) {
          */
         async pose(move: Move, ms: number) {
             const t = target()
+            const home = focusOn ? FOCUS.x : DANCER.x
+            const base = sprite ? (focusOn ? dancerScale(FOCUS.height) : baseScale) : focusOn ? 1.5 : 1
             setPose(POSE_OF[move])
 
             if (move === 'step') {
                 facing *= -1
                 if (sprite) sprite.setFlipX(facing < 0)
                 paintShadow(0.86)
-                await FX.to(scene, t, { x: DANCER.x + facing * 26 }, { duration: ms * 0.42, ease: 'Sine.easeOut' })
-                await FX.to(scene, t, { x: DANCER.x }, { duration: ms * 0.38, ease: 'Sine.easeInOut' })
+                await FX.to(scene, t, { x: home + facing * 30 }, { duration: ms * 0.42, ease: 'Sine.easeOut' })
+                await FX.to(scene, t, { x: home }, { duration: ms * 0.38, ease: 'Sine.easeInOut' })
             } else if (move === 'clap') {
                 paintShadow(1)
                 await FX.to(scene, t, { y: DANCER.footY - 14 }, { duration: ms * 0.3, ease: 'Sine.easeOut' })
@@ -155,7 +219,6 @@ export function createStage(scene: Phaser.Scene) {
             } else {
                 // a volta inteira: o corpo vira e volta, em vez de girar a
                 // imagem, que numa figura frontal pareceria tombo
-                const base = sprite ? baseScale : 1
                 paintShadow(0.8)
                 await FX.to(scene, t, { scaleX: -base }, { duration: ms * 0.38, ease: 'Sine.easeInOut' })
                 await FX.to(scene, t, { scaleX: base }, { duration: ms * 0.38, ease: 'Sine.easeInOut' })
@@ -168,9 +231,10 @@ export function createStage(scene: Phaser.Scene) {
         rest() {
             const t = target()
             scene.tweens.killTweensOf(t)
-            t.setPosition(DANCER.x, DANCER.footY)
-            if (sprite) sprite.setScale(baseScale).setFlipX(false)
-            else t.setScale(1)
+            t.setPosition(focusOn ? FOCUS.x : DANCER.x, DANCER.footY)
+            const scale = focusOn ? dancerScale(FOCUS.height) : baseScale
+            if (sprite) sprite.setScale(scale).setFlipX(false)
+            else t.setScale(focusOn ? 1.5 : 1)
             facing = 1
             paintShadow(1)
             setPose('idle')
@@ -183,6 +247,47 @@ export function createStage(scene: Phaser.Scene) {
             await FX.to(scene, t, { y: DANCER.footY - 26 }, { duration: 240, ease: 'Sine.easeOut' })
             await FX.to(scene, t, { y: DANCER.footY }, { duration: 260, ease: 'Bounce.easeOut' })
             setPose('clap')
+        },
+
+        /** A troca entre a tela de montar e a tela do ensaio. */
+        async focus(on: boolean) {
+            focusOn = on
+            paintSpot(focusedX(), on ? 210 : 138)
+            paintShadow(1)
+            const t = target()
+            const scale = on ? dancerScale(FOCUS.height) : baseScale
+            scene.tweens.killTweensOf([veil, caption, beads])
+            void FX.to(scene, veil, { alpha: on ? 1 : 0 }, { duration: 320 })
+            if (!on) {
+                caption.setAlpha(0)
+                void FX.to(scene, beads, { alpha: 0 }, { duration: 200 })
+            }
+            await FX.to(
+                scene,
+                t,
+                { x: on ? FOCUS.x : DANCER.x, scaleX: sprite ? scale : (on ? 1.5 : 1), scaleY: sprite ? scale : (on ? 1.5 : 1) },
+                { duration: 420, ease: 'Sine.easeInOut' },
+            )
+            paintShadow(1)
+        },
+
+        /** O nome e o desenho do movimento que está saindo agora. */
+        async say(move: Move) {
+            captionIcon?.destroy()
+            captionIcon = moveIcon(scene, move, 96, C.white, C.warm)
+            captionIcon.setPosition(0, -34)
+            caption.add(captionIcon)
+            captionText.setText(MOVE_NAME[move])
+            caption.setPosition(FOCUS.x + 268, FOCUS.footY - FOCUS.height * 0.52)
+            scene.tweens.killTweensOf(caption)
+            caption.setAlpha(0).setScale(0.8)
+            await FX.to(scene, caption, { alpha: 1, scale: 1 }, { duration: 160, ease: 'Back.easeOut' })
+        },
+
+        /** Os refrões já fechados, em pontos — sem número e sem painel. */
+        beads(current: number, total: number) {
+            paintBeads(current, total)
+            if (beads.alpha < 1) void FX.to(scene, beads, { alpha: 1 }, { duration: 200 })
         },
 
         spotlight(on: boolean) {
@@ -200,7 +305,11 @@ export function createStage(scene: Phaser.Scene) {
         },
 
         destroy() {
-            scene.tweens.killTweensOf([root, spot, sprite ?? root, doll ?? root])
+            scene.tweens.killTweensOf([root, spot, veil, caption, beads, sprite ?? root, doll ?? root])
+            captionIcon?.destroy()
+            caption.destroy(true)
+            beads.destroy()
+            veil.destroy()
             spot.destroy()
             shadow.destroy()
             sprite?.destroy()

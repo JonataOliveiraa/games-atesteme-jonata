@@ -43,7 +43,7 @@ export const HUD = {
  * MESMO TEMPO durante o ensaio — é assim que a criança liga o bloco que
  * acende ao passo que sai. A bandeja e o DANÇAR ocupam a faixa de baixo.
  */
-export const REQUEST = { x: 40, y: 96, w: 1060, h: 104 }
+export const REQUEST = { x: 40, y: 106, w: 1060, h: 96 }
 export const STAGE = { x: 36, y: 212, w: 452, h: 302 }
 export const SHEET = { x: 514, y: 212, w: 728, h: 302 }
 export const TRAY = { x: 40, y: 536, w: 980, h: 172 }
@@ -52,8 +52,27 @@ export const DANCE = { x: 1040, y: 536, w: 200, h: 172 }
 /** Onde o pé do dançarino toca o piso do palco desenhado no fundo. */
 export const DANCER = { x: 218, footY: 496, height: 224 }
 
+/**
+ * ── O LUGAR DO DANÇARINO DURANTE O ENSAIO ────────────────────────────────
+ *
+ * Com a interface fora do caminho, ele vem para o meio e cresce. O pé fica na
+ * MESMA linha do piso: é o que impede a troca de parecer um corte de câmera
+ * em vez de um foco.
+ */
+export const FOCUS = { x: 624, footY: 496, height: 344 }
+
 /** A lâmpada do nível 3 — desenhada, nunca parte do fundo. */
 export const LAMP = { x: 418, y: 286, r: 40 }
+
+/**
+ * A comparação da TRAVA, no vão vazio do palco.
+ *
+ * Pendurada no cartão que divergiu, ela caía em cima do cabeçalho da ficha —
+ * escondia justamente o espaço travado de que estava falando. Aqui ela fica
+ * na metade da tela que não tem nada, ao lado do dançarino, e o cartão
+ * continua marcado de âmbar lá em cima.
+ */
+export const COMPARE = { x: 388, y: 304 }
 
 /** Alvos editáveis: 156 × 132 dão ~47 × 40 px reais no celular a 0,30. */
 export const SLOT = { w: 156, h: 132 }

@@ -3,6 +3,7 @@ import { createLoadingScreen } from '../../../../shared/loading/createLoadingScr
 import { faseInicial } from '../../../../shared/level/faseInicial'
 import { preloadLives } from '../../../../shared/hud/createLives'
 import { CUTS, SHEET } from '../data/art'
+import { ICON_FRAME, ICON_SHEET } from './pictogram'
 import { C } from '../data/theme'
 
 /**
@@ -21,6 +22,7 @@ const ART = import.meta.glob('../../../../assets/games/EF04CO03/danca-aninhada/*
 const KEY_OF: Record<string, string> = {
     'bg-palco-escolar': SHEET.stage,
     dancarino: SHEET.dancer,
+    'icones-dos-movimentos': ICON_SHEET,
 }
 
 const nameOf = (path: string) => path.split('/').pop()!.replace(/\.png$/i, '')
@@ -63,6 +65,23 @@ export class BootScene extends Phaser.Scene {
     }
 
     create() {
+        /*
+         * OS ÍCONES SÃO TRÊS COLUNAS IGUAIS, DE QUALQUER LARGURA.
+         *
+         * O quadro sai da divisão da folha entregue por três, e não de um
+         * 256 escrito no código: a folha do dançarino já veio com outra
+         * medida, e uma largura fixa quebraria a próxima do mesmo jeito.
+         */
+        if (this.textures.exists(ICON_SHEET)) {
+            const sheet = this.textures.get(ICON_SHEET)
+            const source = sheet.getSourceImage()
+            const w = Math.floor(source.width / 3)
+            const names = [ICON_FRAME.step, ICON_FRAME.clap, ICON_FRAME.spin]
+            names.forEach((name, i) => {
+                if (!sheet.has(name)) sheet.add(name, 0, i * w, 0, w, source.height)
+            })
+        }
+
         /*
          * OS QUADROS SÃO RECORTES, NÃO UMA GRADE.
          *

@@ -1,9 +1,9 @@
 import Phaser from 'phaser'
 import { FX } from '../../../../shared/effects/FX'
-import { DEPTH, REQUEST } from '../data/layout'
+import { COMPARE, DEPTH, REQUEST, W } from '../data/layout'
 import { wantedMoves } from '../data/rules'
 import { C, CSS, FONT, MOVE_NAME } from '../data/theme'
-import { drawMove } from './pictogram'
+import { moveIcon } from './pictogram'
 import type { Move, PhaseDef } from '../types'
 
 /**
@@ -20,24 +20,22 @@ import type { Move, PhaseDef } from '../types'
  * quando o refrão tem mais de um movimento. Ela mostra o agrupamento sem
  * entregar as molduras: é a barra vertical do §4, não um comando.
  *
- * ── A CAIXA DA ESQUERDA TEM DOIS EMPREGOS ────────────────────────────────
+ * ── O FUNDO ABRAÇA OS CARTÕES, E NÃO A LARGURA DA TELA ───────────────────
  *
- * Enquanto a criança monta, ela traz a frase do pedido. Na TRAVA, ela vira a
- * comparação lado a lado que o §4 pede — o que o pedido queria e o que saiu.
- * São dois usos do mesmo canto porque a frase não é necessária no instante em
- * que a dança parou, e porque a comparação precisa ficar perto da tira.
+ * Era uma faixa de ponta a ponta com uma caixa de texto grudada na esquerda.
+ * Com o palco, a ficha e a bandeja, davam quatro painéis na tela e o olho não
+ * sabia onde pousar. Agora a sombra tem o tamanho dos cartões: o que chama
+ * atenção são eles.
  */
 
-const PAD = 18
-const ASK_W = 336
 const CARD_H = 84
 const CARD_MAX = 116
 const CARD_GAP = 10
-const BREAK = 22
+const BREAK = 24
+const PAD = 16
 
 interface Card {
     body: Phaser.GameObjects.Container
-    face: Phaser.GameObjects.Graphics
     ring: Phaser.GameObjects.Graphics
     move: Move
     round: number
@@ -45,8 +43,6 @@ interface Card {
 
 function paintCard(g: Phaser.GameObjects.Graphics, w: number, h: number) {
     g.clear()
-    g.fillStyle(C.ink, 0.2)
-    g.fillRoundedRect(-w / 2 + 3, -h / 2 + 6, w, h, 14)
     g.fillStyle(C.ink, 1)
     g.fillRoundedRect(-w / 2 - 3, -h / 2 - 3, w + 6, h + 6, 16)
     g.fillStyle(C.sheetDeep, 1)
@@ -58,42 +54,29 @@ function paintCard(g: Phaser.GameObjects.Graphics, w: number, h: number) {
 export function createRequest(scene: Phaser.Scene) {
     const root = scene.add.container(0, 0).setDepth(DEPTH.panel)
 
-    const band = scene.add.graphics()
-    band.fillStyle(C.ink, 0.3)
-    band.fillRoundedRect(REQUEST.x + 4, REQUEST.y + 7, REQUEST.w, REQUEST.h, 24)
-    band.fillStyle(C.ink, 1)
-    band.fillRoundedRect(REQUEST.x - 4, REQUEST.y - 4, REQUEST.w + 8, REQUEST.h + 8, 26)
-    band.fillStyle(C.curtain, 1)
-    band.fillRoundedRect(REQUEST.x, REQUEST.y, REQUEST.w, REQUEST.h, 22)
-    band.fillStyle(C.white, 0.1)
-    band.fillRoundedRect(REQUEST.x + 16, REQUEST.y + 9, REQUEST.w - 32, 12, 6)
-    root.add(band)
+    const bed = scene.add.graphics()
+    root.add(bed)
 
-    const ask = scene.add
-        .text(REQUEST.x + PAD + 6, REQUEST.y + REQUEST.h / 2, '', {
-            fontFamily: FONT.body,
-            fontStyle: 'bold',
-            fontSize: '23px',
-            color: CSS.white,
-            wordWrap: { width: ASK_W - 24 },
-            lineSpacing: 3,
-        })
-        .setOrigin(0, 0.5)
-        .setResolution(2)
-    root.add(ask)
-
-    /** A comparação da TRAVA, escondida enquanto a criança monta. */
-    const compare = scene.add.container(REQUEST.x + PAD + ASK_W / 2 - 10, REQUEST.y + REQUEST.h / 2).setVisible(false)
-    root.add(compare)
-
+    /*
+     * SEM RÓTULO.
+     *
+     * Havia um "O PALCO PEDIU" em cima da tira. Entre a barra do cabeçalho e
+     * a altura dos cartões não sobravam os 22 px dele sem empurrar a ficha
+     * para baixo — e a faixa de pictogramas no topo da tela, com o passo a
+     * passo do tutorial explicando, não precisava da legenda para ser lida.
+     */
     const strip = scene.add.container(0, 0)
     root.add(strip)
+
+    const bars = scene.add.graphics()
+    root.add(bars)
+
+    /** O aviso do §4: o que o pedido queria ali e o que saiu no lugar. */
+    const callout = scene.add.container(0, 0).setDepth(DEPTH.fly).setVisible(false)
 
     let cards: Card[] = []
     let badges: Phaser.GameObjects.Graphics[] = []
     let cardW = CARD_MAX
-    const seals = scene.add.graphics()
-    root.add(seals)
 
     const dropBadges = () => {
         badges.forEach(b => {
@@ -110,79 +93,88 @@ export function createRequest(scene: Phaser.Scene) {
         })
         cards = []
         dropBadges()
-        seals.clear()
+        bars.clear()
+        bed.clear()
+        callout.removeAll(true)
+        callout.setVisible(false)
     }
 
     /**
-     * A frase cabe na faixa, custe o que custar.
+     * O PEDIDO E O QUE SAIU, LADO A LADO.
      *
-     * A altura do pedido é fixa e a frase muda a cada fase; uma linha a mais
-     * do que o previsto cortava o texto em cima e embaixo. Em vez de contar
-     * caracteres no arquivo de dados, mede-se e encolhe-se até caber.
+     * Fica no vão do palco, ao lado do dançarino. Foi pendurado no cartão que
+     * divergiu e caía sobre o cabeçalho da ficha — escondia o espaço travado
+     * de que estava falando. Quem aponta o lugar na sequência é o âmbar no
+     * cartão; aqui mora só a comparação.
      */
-    const setAsk = (text: string) => {
-        const room = REQUEST.h - 14
-        for (let size = 23; size >= 17; size -= 2) {
-            ask.setStyle({ fontSize: `${size}px`, wordWrap: { width: ASK_W - 24 } })
-            ask.setText(text)
-            if (ask.height <= room) break
-        }
-        ask.setVisible(true)
-    }
+    const buildCallout = (wanted: Move | null, got: Move | null) => {
+        callout.removeAll(true)
+        const w = 244
+        const h = 96
+        callout.setPosition(COMPARE.x, COMPARE.y)
 
-    const buildCompare = (wanted: Move | null, got: Move | null) => {
-        compare.removeAll(true)
-        const slot = (dx: number, tag: string, move: Move | null, tint: number) => {
-            const box = scene.add.container(dx, 0)
-            const g = scene.add.graphics()
-            g.fillStyle(C.ink, 1)
-            g.fillRoundedRect(-52, -40, 104, 84, 15)
-            g.fillStyle(tint, 1)
-            g.fillRoundedRect(-52, -40, 104, 78, 15)
-            box.add(g)
+        const box = scene.add.graphics()
+        box.fillStyle(C.ink, 1)
+        box.fillRoundedRect(-w / 2 - 4, -h / 2 - 4, w + 8, h + 8, 20)
+        box.fillStyle(C.sheet, 1)
+        box.fillRoundedRect(-w / 2, -h / 2, w, h, 17)
+        callout.add(box)
 
-            const label = scene.add
-                .text(0, -28, tag, { fontFamily: FONT.black, fontSize: '17px', color: CSS.ink })
+        const half = (dx: number, tag: string, move: Move | null, tint: number, ink: string) => {
+            const chip = scene.add.graphics()
+            chip.fillStyle(tint, 1)
+            chip.fillRoundedRect(dx - 52, -h / 2 + 8, 104, h - 16, 13)
+            callout.add(chip)
+
+            const t = scene.add
+                .text(dx, -h / 2 + 22, tag, { fontFamily: FONT.black, fontSize: '16px', color: ink })
                 .setOrigin(0.5)
                 .setResolution(2)
-            box.add(label)
+            callout.add(t)
 
-            const icon = scene.add.graphics().setPosition(0, 12)
-            if (move) drawMove(icon, move, 46, C.ink, C.ink)
-            else {
-                icon.lineStyle(6, C.ink, 0.8)
-                icon.lineBetween(-14, 0, 14, 0)
+            if (move) {
+                const icon = moveIcon(scene, move, 42, C.ink, C.ink)
+                icon.setPosition(dx, 12)
+                callout.add(icon)
+            } else {
+                const dash = scene.add.graphics().setPosition(dx, 12)
+                dash.lineStyle(6, C.ink, 0.8)
+                dash.lineBetween(-14, 0, 14, 0)
+                callout.add(dash)
             }
-            box.add(icon)
-            compare.add(box)
         }
-        slot(-58, 'PEDIDO', wanted, C.sheet)
-        slot(58, 'SAIU', got, C.stall)
+        half(-58, 'PEDIDO', wanted, C.sheetDeep, CSS.ink)
+        half(58, 'SAIU', got, C.stall, CSS.stallInk)
+
+        callout.setVisible(true)
+        callout.setScale(0.7).setAlpha(0)
+        void FX.to(scene, callout, { scale: 1, alpha: 1 }, { duration: 240, ease: 'Back.easeOut' })
     }
 
     return {
         /** Monta a tira inteira do ensaio pedido. */
         show(phase: PhaseDef, rehearsal = 0) {
             clear()
-            setAsk(phase.ask)
-            compare.setVisible(false)
 
             const moves = wantedMoves(phase, rehearsal)
             const per = phase.pattern.length
             const grouped = per > 1
             const breaks = grouped ? Math.max(0, moves.length / per - 1) : 0
 
-            const left = REQUEST.x + PAD + ASK_W
-            const right = REQUEST.x + REQUEST.w - PAD
-            const room = right - left
+            const room = REQUEST.w - PAD * 2
             const w = Math.min(
                 CARD_MAX,
                 Math.floor((room - CARD_GAP * (moves.length - 1) - BREAK * breaks) / Math.max(1, moves.length)),
             )
             cardW = w
             const total = w * moves.length + CARD_GAP * (moves.length - 1) + BREAK * breaks
-            let cursor = left + (room - total) / 2
+            const left = REQUEST.x + (REQUEST.w - total) / 2
+            let cursor = left
             const cy = REQUEST.y + REQUEST.h / 2
+
+            // a sombra tem o tamanho dos cartões, com uma folga de respiro
+            bed.fillStyle(C.ink, 0.42)
+            bed.fillRoundedRect(left - PAD, REQUEST.y, total + PAD * 2, REQUEST.h, 22)
 
             moves.forEach((move, i) => {
                 const round = Math.floor(i / per)
@@ -194,8 +186,8 @@ export function createRequest(scene: Phaser.Scene) {
                 const ring = scene.add.graphics()
                 body.add(ring)
 
-                const icon = scene.add.graphics().setPosition(0, -9)
-                drawMove(icon, move, w * 0.42, C.ink, C.inkSoft)
+                const icon = moveIcon(scene, move, w * 0.42, C.ink, C.inkSoft)
+                icon.setPosition(0, -9)
                 body.add(icon)
 
                 const name = scene.add
@@ -209,7 +201,7 @@ export function createRequest(scene: Phaser.Scene) {
                 body.add(name)
 
                 strip.add(body)
-                cards.push({ body, face, ring, move, round })
+                cards.push({ body, ring, move, round })
 
                 cursor += w + CARD_GAP
                 if (grouped && i % per === per - 1 && i < moves.length - 1) cursor += BREAK - CARD_GAP
@@ -220,12 +212,10 @@ export function createRequest(scene: Phaser.Scene) {
              *
              * Vêm DEPOIS da ação final de cada refrão e só existem quando o
              * refrão tem mais de um movimento — com um movimento só, separar
-             * cada cartão do seguinte não agruparia nada, apenas encheria a
-             * faixa de traços.
+             * cada cartão do seguinte não agruparia nada.
              *
              * São claras e grossas de propósito: é por elas que a criança
-             * conta quantos refrões existem, e um fio fino sobre o índigo do
-             * painel some no celular.
+             * conta quantos refrões existem, e um fio fino some no celular.
              */
             if (grouped) {
                 for (let i = per - 1; i < moves.length - 1; i += per) {
@@ -234,19 +224,12 @@ export function createRequest(scene: Phaser.Scene) {
                     const x = (a + b) / 2
                     const top = cy - CARD_H / 2 + 2
                     const bottom = cy + CARD_H / 2 - 2
-                    seals.fillStyle(C.ink, 1)
-                    seals.fillRoundedRect(x - 5, top - 2, 10, bottom - top + 4, 5)
-                    seals.fillStyle(C.warm, 1)
-                    seals.fillRoundedRect(x - 3, top, 6, bottom - top, 3)
+                    bars.fillStyle(C.ink, 1)
+                    bars.fillRoundedRect(x - 5, top - 2, 10, bottom - top + 4, 5)
+                    bars.fillStyle(C.warm, 1)
+                    bars.fillRoundedRect(x - 3, top, 6, bottom - top, 3)
                 }
             }
-        },
-
-        /** O movimento que está saindo agora: a tira acompanha a dança. */
-        async beat(index: number) {
-            const card = cards[index]
-            if (!card) return
-            await FX.to(scene, card.body, { scale: 1.12 }, { duration: 130, yoyo: true, ease: 'Sine.easeOut' })
         },
 
         /**
@@ -279,30 +262,27 @@ export function createRequest(scene: Phaser.Scene) {
             strip.add(badge)
             badges.push(badge)
             badge.setScale(0.3)
-            await FX.to(scene, badge, { scale: 1 }, { duration: 240, ease: 'Back.easeOut' })
+            await FX.to(scene, badge, { scale: 1 }, { duration: 200, ease: 'Back.easeOut' })
         },
 
-        /** O cartão onde a dança divergiu, e o que saiu no lugar. */
+        /** O cartão onde a dança divergiu, e o balão com o que saiu. */
         mark(index: number, wanted: Move | null, got: Move | null) {
             const card = cards[Math.min(index, cards.length - 1)]
-            if (card) {
-                card.ring.clear()
-                card.ring.lineStyle(7, C.stall, 1)
-                card.ring.strokeRoundedRect(-cardW / 2 - 4, -CARD_H / 2 - 4, cardW + 8, CARD_H + 8, 16)
-                scene.tweens.killTweensOf(card.body)
-                card.body.setScale(1)
-                void FX.to(scene, card.body, { scale: 1.08 }, { duration: 420, yoyo: true, repeat: -1 })
-            }
-            ask.setVisible(false)
-            buildCompare(wanted, got)
-            compare.setScale(0.8).setAlpha(0).setVisible(true)
-            void FX.to(scene, compare, { scale: 1, alpha: 1 }, { duration: 240, ease: 'Back.easeOut' })
+            if (!card) return
+            card.ring.clear()
+            card.ring.lineStyle(7, C.stall, 1)
+            card.ring.strokeRoundedRect(-cardW / 2 - 4, -CARD_H / 2 - 4, cardW + 8, CARD_H + 8, 16)
+            scene.tweens.killTweensOf(card.body)
+            card.body.setScale(1)
+            void FX.to(scene, card.body, { scale: 1.08 }, { duration: 420, yoyo: true, repeat: -1 })
+            buildCallout(wanted, got)
         },
 
-        /** Volta ao estado de montar: some a comparação, some o âmbar. */
+        /** Volta ao estado de montar: some o balão, somem selos e âmbar. */
         unmark() {
-            compare.setVisible(false)
-            ask.setVisible(true)
+            scene.tweens.killTweensOf(callout)
+            callout.setVisible(false)
+            callout.removeAll(true)
             dropBadges()
             cards.forEach(card => {
                 scene.tweens.killTweensOf(card.body)
@@ -311,31 +291,35 @@ export function createRequest(scene: Phaser.Scene) {
             })
         },
 
-        bounds() {
-            return {
-                x: REQUEST.x + REQUEST.w / 2,
-                y: REQUEST.y + REQUEST.h / 2,
-                w: REQUEST.w + 26,
-                h: REQUEST.h + 26,
-            }
+        fade(on: boolean) {
+            scene.tweens.killTweensOf(root)
+            callout.setVisible(on && callout.length > 0)
+            return FX.to(scene, root, { alpha: on ? 1 : 0 }, { duration: 260 })
         },
 
-        /** Só a tira, sem a frase — para o tutorial apontar os movimentos. */
+        bounds() {
+            return this.stripBounds()
+        },
+
+        /** Só a tira, para o tutorial apontar os movimentos. */
         stripBounds() {
-            if (!cards.length) return this.bounds()
+            if (!cards.length) {
+                return { x: W / 2, y: REQUEST.y + REQUEST.h / 2, w: REQUEST.w, h: REQUEST.h + 24 }
+            }
             const first = cards[0].body.x
             const last = cards[cards.length - 1].body.x
             return {
                 x: (first + last) / 2,
                 y: REQUEST.y + REQUEST.h / 2,
-                w: last - first + CARD_MAX + 40,
-                h: REQUEST.h + 18,
+                w: last - first + cardW + PAD * 2 + 20,
+                h: REQUEST.h + 22,
             }
         },
 
         destroy() {
             clear()
-            scene.tweens.killTweensOf([root, compare])
+            scene.tweens.killTweensOf([root, callout])
+            callout.destroy(true)
             root.destroy(true)
         },
     }

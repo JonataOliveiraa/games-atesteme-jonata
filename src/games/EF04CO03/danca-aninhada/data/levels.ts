@@ -27,7 +27,6 @@ export const LEVELS: LevelDef[] = [
             {
                 id: '1.1',
                 title: 'O passo que se repete',
-                ask: 'Faça o dançarino repetir este passo.',
                 // três PASSOS: o refrão tem um movimento só, e o laço conta 3
                 pattern: ['step'],
                 rounds: 3,
@@ -36,7 +35,6 @@ export const LEVELS: LevelDef[] = [
             {
                 id: '1.2',
                 title: 'A palma que se repete',
-                ask: 'Agora é outro movimento — e outra quantidade.',
                 pattern: ['clap'],
                 rounds: 4,
                 sheet: { outer: 'times', leading: 1, nested: false, trailing: false },
@@ -51,7 +49,6 @@ export const LEVELS: LevelDef[] = [
                  * cada posição é uma decisão, e trocá-las muda a dança.
                  */
                 title: 'Dois movimentos no laço',
-                ask: 'O laço repete os dois, na ordem que você puser.',
                 pattern: ['step', 'clap'],
                 rounds: 2,
                 sheet: { outer: 'times', leading: 2, nested: false, trailing: false },

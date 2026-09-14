@@ -97,8 +97,6 @@ export interface PhaseDef {
     id: string
     /** O nome da coreografia, no cabeçalho e no fecho da fase. */
     title: string
-    /** A frase curta ao lado do pedido. */
-    ask: string
     /** O refrão: a sequência que se repete. */
     pattern: Move[]
     /** Quantas vezes o refrão aparece. Ausente no nível 3: quem decide é a luz. */

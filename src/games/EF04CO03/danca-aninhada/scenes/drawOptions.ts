@@ -2,7 +2,7 @@ import Phaser from 'phaser'
 import { FX } from '../../../../shared/effects/FX'
 import { DANCE, DEPTH, TRAY } from '../data/layout'
 import { C, CSS, FONT, MOVE_NAME, SIGNAL_NAME } from '../data/theme'
-import { drawMove } from './pictogram'
+import { moveIcon } from './pictogram'
 import type { SlotValue } from '../types'
 
 /**
@@ -90,13 +90,14 @@ function paintDance(g: Phaser.GameObjects.Graphics, on: boolean, pressed: boolea
 export function createOptions(scene: Phaser.Scene, handlers: OptionsHandlers) {
     const root = scene.add.container(0, 0).setDepth(DEPTH.tray)
 
-    const bed = scene.add.graphics()
-    bed.fillStyle(C.ink, 0.22)
-    bed.fillRoundedRect(TRAY.x, TRAY.y + 6, TRAY.w, TRAY.h, 26)
-    bed.fillStyle(C.curtain, 0.92)
-    bed.fillRoundedRect(TRAY.x, TRAY.y, TRAY.w, TRAY.h, 24)
-    root.add(bed)
-
+    /*
+     * A BANDEJA NÃO TEM PAINEL.
+     *
+     * Tinha uma cama índigo de 980 px atrás dos cartões. Somada ao pedido, à
+     * ficha e ao cabeçalho, davam quatro retângulos escuros na tela. Os
+     * cartões já são grandes, claros e contornados de azul-marinho: eles se
+     * separam do piso sozinhos, e o que sobra é palco.
+     */
     const line = scene.add
         .text(TRAY.x + TRAY.w / 2, LINE_Y, '', {
             fontFamily: FONT.body,
@@ -108,6 +109,8 @@ export function createOptions(scene: Phaser.Scene, handlers: OptionsHandlers) {
         })
         .setOrigin(0.5)
         .setResolution(2)
+    // sem painel atrás, o contorno é o que segura a frase sobre o piso
+    line.setStroke(CSS.ink, 6)
     root.add(line)
 
     const danceG = scene.add.graphics()
@@ -158,8 +161,8 @@ export function createOptions(scene: Phaser.Scene, handlers: OptionsHandlers) {
 
     const fillCard = (body: Phaser.GameObjects.Container, value: SlotValue) => {
         if (value.kind === 'move') {
-            const icon = scene.add.graphics().setPosition(-88, -2)
-            drawMove(icon, value.move, 84, C.ink, C.inkSoft)
+            const icon = moveIcon(scene, value.move, 84, C.ink, C.inkSoft)
+            icon.setPosition(-88, -2)
             body.add(icon)
             const name = scene.add
                 .text(22, 0, MOVE_NAME[value.move], {
@@ -291,6 +294,11 @@ export function createOptions(scene: Phaser.Scene, handlers: OptionsHandlers) {
                 if (card.zone.input) card.zone.input.enabled = value
             })
             if (danceZone.input) danceZone.input.enabled = value && danceOn
+        },
+
+        fade(on: boolean) {
+            scene.tweens.killTweensOf(root)
+            return FX.to(scene, root, { alpha: on ? 1 : 0 }, { duration: 260 })
         },
 
         bounds() {

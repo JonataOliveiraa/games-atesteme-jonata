@@ -113,6 +113,11 @@ export function createHud(scene: Phaser.Scene, options: HudOptions) {
             await FX.ping(scene, markX(index), HUD.cy, C.good, { radius: 34, depth: DEPTH.hud + 2 })
         },
 
+        fade(on: boolean) {
+            scene.tweens.killTweensOf(root)
+            return FX.to(scene, root, { alpha: on ? 1 : 0 }, { duration: 260 })
+        },
+
         setEnabled(value: boolean) {
             enabled = value
             helpG.setAlpha(value ? 1 : 0.5)
