@@ -62,22 +62,10 @@ export function createHud(scene: Phaser.Scene, options: HudOptions) {
         root.add(photo)
     }
 
-    const chip = scene.add.graphics()
-    chip.fillStyle(C.ink, 1)
-    chip.fillRoundedRect(HUD.ownerX, HUD.cy - HUD.ownerH / 2, HUD.ownerW, HUD.ownerH, HUD.ownerH / 2)
-    chip.fillStyle(C.amber, 1)
-    chip.fillRoundedRect(HUD.ownerX + 3, HUD.cy - HUD.ownerH / 2 + 3, HUD.ownerW - 6, HUD.ownerH - 6, HUD.ownerH / 2 - 3)
-    root.add(chip)
-
-    const owner = scene.add
-        .text(HUD.ownerX + HUD.ownerW / 2 + 8, HUD.cy, 'VOCÊ', {
-            fontFamily: FONT.black,
-            fontSize: '18px',
-            color: CSS.ink,
-        })
-        .setOrigin(0.5)
-        .setResolution(2)
-    root.add(owner)
+    const halo = scene.add.graphics().setPosition(HUD.avatarX, HUD.cy).setAlpha(0)
+    halo.lineStyle(6, C.green, 1)
+    halo.strokeCircle(0, 0, HUD.avatarR + 8)
+    root.add(halo)
 
     const dots = scene.add.graphics()
     const dotX = (index: number) => HUD.dotX + index * HUD.dotGap
@@ -134,6 +122,19 @@ export function createHud(scene: Phaser.Scene, options: HudOptions) {
     return {
         setDone(done: number) {
             paintDots(done)
+        },
+
+        /**
+         * O avatar recebe de volta o dado que a placa derrubada levaria.
+         *
+         * Quem cresce é o anel, e não o `frame`: aquele Graphics desenha em
+         * coordenadas de tela, e escalar um desses o manda para fora do
+         * cabeçalho, porque a escala parte de (0, 0) e não do círculo.
+         */
+        async catchData() {
+            scene.tweens.killTweensOf(halo)
+            halo.setAlpha(1).setScale(0.5)
+            await FX.to(scene, halo, { scale: 1.5, alpha: 0 }, { duration: 520 })
         },
 
         async celebrate(index: number) {

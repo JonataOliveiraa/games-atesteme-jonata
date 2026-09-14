@@ -23,11 +23,13 @@ jogo nunca solicita webcam, upload, nome ou fotografia real da criança.
 | `destinos-da-rede.png` | 1024 × 512 | 4 × 2 | transparente | professora, grupo, site escolar e público |
 | `dados-suspeitos.png` | 768 × 768 | 3 × 3 | transparente | pictogramas das informações |
 | `cover-ache-o-suspeito.png` | 1672 × 941 | imagem única | opaco | capa fiel ao jogo |
+| `placa-de-madeira.png` | 1600 × 700 | 2 × 1 | transparente | **PEDIDA — §7**, a moldura pendurada, larga e estreita |
+| `bandeja-de-papeis.png` | 512 × 256 | imagem única | transparente | **PEDIDA — §7**, de onde a bolinha sai |
 
-**Total: seis arquivos.**
+**Total: oito arquivos** — seis entregues, dois pedidos em §7.
 
-Placas, textos, molduras, trajetória da bolinha, efeitos de impacto, caixa de
-reciclagem, botões, cadeado, HUD, vidas e estrelas são feitos em
+Trajetória da bolinha, rastro, poeira da queda, faíscas, anel de mira, fios das
+placas, faixa de dica, cadeado, HUD, vidas e estrelas são feitos em
 `Phaser.GameObjects.Graphics` e `Phaser.Text`.
 
 Não produzir texturas de:
@@ -56,8 +58,11 @@ BOLINHA SURGE EMBAIXO E VOA SOZINHA
 IMPACTO NA PRÓPRIA PLACA
 ~~~
 
-As placas são interfaces digitais sobrepostas pelo código. Elas não ficam
-penduradas, pregadas nem encaixadas em estruturas físicas do cenário.
+> **Revisto em 12/09/2026 (ver §7).** As placas passaram a ser objetos FÍSICOS
+> pendurados por dois fios, porque elas caem quando a suspeita é acertada — e
+> nada que flutue sozinho pode cair. O fundo continua sem trilhos, ganchos ou
+> furos: quem desenha os fios é o código, e eles nascem da borda superior da
+> própria placa.
 
 ### O alvo é a situação, nunca a pessoa
 
@@ -868,3 +873,139 @@ A imagem principal deve mostrar exatamente o que o jogador verá:
 Se aparecer mão, braço, personagem, lançador, trilho ou suporte, a imagem não
 atende ao jogo. Se a bolinha não parecer papel amassado ou estiver indo em
 direção a uma pessoa, a imagem também deve ser rejeitada.
+
+---
+
+# 7. Folhas pedidas pela mecânica de arremesso (12/09/2026)
+
+A mecânica mudou: as informações deixaram de ser cartões e viraram **placas
+penduradas**, que recebem a bolinha e **caem** quando são a suspeita. A bolinha
+deixou de nascer a cada tiro e passou a morar numa **bandeja**, de onde a
+criança a puxa para trás e solta.
+
+Duas peças novas ficaram em `Graphics` só porque o jogo precisa rodar antes da
+arte chegar. **As duas são móveis parados que a criança lê como objeto, então as
+duas são textura.** O desenho de reserva está no código e continua funcionando
+se as folhas não vierem — mas reserva é reserva, não entrega.
+
+O que NÃO vira textura, e por quê: os fios são duas linhas retas que o balanço
+já move; a trajetória, o rastro, a poeira e as faíscas nascem e morrem em menos
+de um segundo; a faixa de dica e o cabeçalho são a UI de plataforma, igual nos
+49 jogos.
+
+---
+
+## 7.1 `placa-de-madeira.png` — 1600 × 700, grade 2 × 1, fundo transparente
+
+### Função
+
+A moldura pendurada no quadro da sala. O jogo desenha DENTRO dela o pictograma
+do dado, a frase e a tira de destino — a textura é só a madeira e o papel
+vazio, nunca o texto.
+
+Dois quadros porque a placa tem duas larguras: o nível 1 mostra duas placas
+grandes, os níveis 2 e 3 mostram três placas estreitas.
+
+| Quadro | Célula | Proporção do corpo útil | Onde aparece |
+|---:|---|---|---|
+| 0 | 800 × 700 | 356 × 268 mais moldura de 17 | níveis com 2 placas |
+| 1 | 800 × 700 | 245 × 268 mais moldura de 17 | níveis com 3 placas |
+
+### Composição
+
+- moldura de madeira clara, larga e chanfrada, com veio horizontal suave;
+- borda inferior um tom mais escura, como se a luz viesse de cima;
+- quatro parafusos redondos, um em cada canto da moldura;
+- duas argolas metálicas no topo, onde os fios prendem — centradas a 22 px de
+  cada ponta da moldura;
+- por dentro, uma chapa de papel claro quase branco, com o canto superior
+  levemente destacado;
+- a área de papel precisa ficar LIMPA: nada de linhas, pautas, ícones ou
+  sombras fortes, porque é ali que o texto do jogo entra;
+- sombra própria suave por fora, deslocada para baixo e para a direita.
+
+### Prompt copiável
+
+~~~text
+Folha de sprites 1600x700 px, grade 2 colunas x 1 linha, células de 800x700,
+fundo totalmente transparente, ilustração vetorial infantil, traço escuro
+uniforme, cores chapadas, sem gradiente forte, sem texto.
+
+Cada célula mostra UMA placa de aviso escolar pendurada, vista de frente,
+centrada na célula:
+
+Célula 1 (esquerda): placa LARGA, formato deitado, corpo interno de proporção
+aproximada 4:3.
+Célula 2 (direita): placa ESTREITA, formato quase quadrado em pé, corpo interno
+de proporção aproximada 9:10.
+
+As duas têm exatamente os mesmos elementos:
+- moldura de madeira clara cor caramelo, larga, cantos arredondados, com veios
+  horizontais discretos em tom mais escuro;
+- a faixa inferior da moldura um pouco mais escura que o resto;
+- quatro parafusos circulares metálicos, um em cada canto da moldura;
+- duas argolas metálicas pequenas no topo da moldura, próximas das pontas, como
+  pontos de pendurar;
+- painel interno de papel branco levemente creme, liso e VAZIO, sem nenhuma
+  escrita, linha, pauta, ícone ou desenho;
+- sombra suave por baixo da placa.
+
+Nada de corda, fio, barbante, gancho, prego ou parede: só a placa recortada no
+transparente. Sem pessoas, sem mãos, sem setas, sem alvo de tiro, sem números.
+~~~
+
+### Conferência
+
+- [ ] as duas células dividem exatamente 800 px cada;
+- [ ] o painel branco está completamente vazio;
+- [ ] não há fio nem prego desenhado;
+- [ ] as argolas ficam no topo da moldura, não no papel;
+- [ ] o fundo é transparente de verdade, não branco.
+
+---
+
+## 7.2 `bandeja-de-papeis.png` — 512 × 256, imagem única, fundo transparente
+
+### Função
+
+A bandeja no chão da sala, de onde a bolinha de papel sai quando a criança toca
+em JOGAR. Ela não é botão: quem dispara é a barra de controle logo abaixo.
+
+O jogo desenha a bolinha ATIVA por cima dela, então a bandeja precisa de espaço
+visual no centro para essa bolinha aparecer.
+
+### Composição
+
+- bandeja rasa de madeira clara, vista de cima e um pouco de frente, como uma
+  caixinha de papéis de carteira escolar;
+- dentro dela, duas ou três bolinhas de papel amassado PARADAS, encostadas nas
+  bordas, deixando o centro livre;
+- borda frontal levemente mais escura, dando profundidade;
+- sombra elíptica suave embaixo.
+
+### Prompt copiável
+
+~~~text
+Imagem única 512x256 px, fundo totalmente transparente, ilustração vetorial
+infantil, traço escuro uniforme, cores chapadas, sem texto.
+
+Uma bandeja rasa de madeira clara cor caramelo, vista de cima e ligeiramente de
+frente, ocupando a largura da imagem e a metade inferior da altura. Cantos
+arredondados. A borda da frente é um tom mais escura que o interior.
+
+Dentro da bandeja, duas ou três bolinhas de papel branco amassado, pequenas,
+paradas e encostadas nas laterais da bandeja — o CENTRO da bandeja fica livre,
+sem nada em cima.
+
+Sombra elíptica suave sob a bandeja.
+
+Sem pessoas, sem mãos, sem estilingue, sem elástico, sem arma, sem alvo, sem
+setas, sem texto, sem chão ou parede ao redor.
+~~~
+
+### Conferência
+
+- [ ] o centro da bandeja está livre para a bolinha do jogo entrar ali;
+- [ ] as bolinhas desenhadas são discretas e não competem com a bolinha ativa;
+- [ ] não existe elástico, forquilha ou qualquer coisa que leia como estilingue;
+- [ ] o fundo é transparente.

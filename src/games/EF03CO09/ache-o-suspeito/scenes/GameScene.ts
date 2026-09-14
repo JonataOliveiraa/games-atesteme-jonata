@@ -9,18 +9,23 @@ import { createTutorial } from '../../../../shared/tutorial/createTutorial'
 import { FX } from '../../../../shared/effects/FX'
 import { LEVELS, POINTS_AFTER_STALL, POINTS_CLEAN } from '../data/levels'
 import { isSuspicious, shuffled, validateLevels } from '../data/rules'
-import { CARD, DEPTH, HUD } from '../data/layout'
+import { DEPTH, FIRE, HUD, PREV } from '../data/layout'
 import { C } from '../data/theme'
 import type { LevelDef, LevelNumber, Mode, TargetCard, Wave } from '../types'
 import { createRoom, type Room } from './room'
-import { createCards, type Cards } from './cards'
+import { createSigns, type Signs } from './signs'
 import { createBall, type Ball } from './ball'
-import { createImpact, type Impact } from './impact'
+import { createControls, type Controls } from './controls'
+import { createRescue, type Rescue } from './rescue'
 import { createBand, type Band } from './band'
 import { createHud, type Hud } from './hud'
 import { createAudio, type Audio } from './audio'
+import type { Point } from './arc'
 
 const GAME_ID = 'ache-o-suspeito'
+
+/** Sem puxada não há força para medir: todo arremesso sai igual. */
+const THROW_POWER = 0.62
 
 export class GameScene extends Phaser.Scene {
     private lives!: Lives
@@ -45,9 +50,10 @@ export class GameScene extends Phaser.Scene {
     private pendingTutorial = true
 
     private room!: Room
-    private cards!: Cards
+    private signs!: Signs
     private ball!: Ball
-    private impact!: Impact
+    private controls!: Controls
+    private rescue!: Rescue
     private band!: Band
     private hud!: Hud
     private audio!: Audio
@@ -90,9 +96,17 @@ export class GameScene extends Phaser.Scene {
 
         this.room = createRoom(this)
         this.audio = createAudio(this)
-        this.cards = createCards(this, index => void this.pick(index))
+        this.signs = createSigns(this, index => this.pick(index))
         this.ball = createBall(this)
-        this.impact = createImpact(this)
+        this.rescue = createRescue(this)
+        this.controls = createControls(this, {
+            probe: (x, y) => this.signs.hitAt(x, y),
+            onAim: index => {
+                this.signs.aimAt(index)
+                if (index !== null) this.audio.tap()
+            },
+            onFire: at => void this.shoot(at),
+        })
         this.band = createBand(this)
         this.hud = createHud(this, {
             waves: this.level.waves.length,
@@ -126,9 +140,10 @@ export class GameScene extends Phaser.Scene {
     private shutdownScene() {
         this.gen++
         this.band?.destroy()
-        this.impact?.destroy()
+        this.rescue?.destroy()
+        this.controls?.destroy()
         this.ball?.destroy()
-        this.cards?.destroy()
+        this.signs?.destroy()
         this.hud?.destroy()
         this.room?.destroy()
         EventBus.off('mute-audio', this.onMute, this)
@@ -144,17 +159,22 @@ export class GameScene extends Phaser.Scene {
         this.stalled = false
         this.applyInput()
 
-        this.cards.hideLock()
+        this.signs.hideLock()
         void this.band.hush()
-        this.impact.clear()
+        this.rescue.clear()
         this.hud.setDone(this.done)
 
         this.deck = shuffled(this.wave.cards)
+        this.signs.setMode(this.wave.movement, this.level.covered === true)
         this.audio.slide()
-        await this.cards.show(this.deck)
+        await this.signs.show(this.deck)
+        if (gen !== this.gen) return
+
+        await this.ball.rest()
         if (gen !== this.gen) return
 
         this.mode = 'choosing'
+        this.controls.reset()
         this.applyInput()
 
         if (this.pendingTutorial && index === 0) {
@@ -163,26 +183,90 @@ export class GameScene extends Phaser.Scene {
         }
     }
 
-    private async pick(index: number) {
+    /* ─────────────────────────── escolha e arremesso ──────────────────── */
+
+    /**
+     * Tocar na placa LEVA A MIRA até ela, não dispara.
+     *
+     * É um atalho para quem não quer percorrer a parede de seta em seta, e ele
+     * não anula nada: a mira vai para onde a placa está AGORA, e com placas em
+     * movimento continua sendo o instante do arremesso que decide.
+     */
+    private pick(index: number) {
         if (this.mode !== 'choosing' || this.tutorialOpen) return
+        this.controls.aimAtX(this.signs.centerOf(index).x)
+    }
+
+    private async shoot(at: Point) {
+        if (this.tutorialOpen || this.mode !== 'choosing') return
         const gen = this.gen
-        const card = this.deck[index]
 
         this.mode = 'flying'
         this.applyInput()
-        this.audio.tap()
-        this.cards.press(index)
-        this.cards.focus(index)
-        this.cards.hideLock()
+        this.signs.hideLock()
+        this.signs.aimAt(null)
         void this.band.hush()
 
-        this.audio.fly()
-        await this.ball.launch(this.cards.centerOf(index))
+        this.audio.release()
+        await this.ball.wind()
         if (gen !== this.gen) return
 
-        if (isSuspicious(card)) await this.succeed(index, card)
-        else await this.stall(index, card)
+        const struck = await this.ball.throwAt(at, (x, y) => this.signs.hitAt(x, y), THROW_POWER)
+        if (gen !== this.gen) return
+
+        const card = struck === null ? null : this.deck[struck]
+        if (struck === null || !card) {
+            await this.missed()
+            return
+        }
+        if (!this.signs.isRevealed(struck)) {
+            await this.uncover(struck)
+            return
+        }
+        if (isSuspicious(card)) await this.succeed(struck, card)
+        else await this.stall(struck, card)
     }
+
+    /**
+     * Acertou uma placa que ainda estava coberta.
+     *
+     * ABRIR NÃO É RESPONDER. A bolinha derruba a tampa, a placa mostra o que
+     * estava escrito e o jogo espera de novo — sem emitir nada, sem tirar vida
+     * e sem contar tentativa. A criança abre quantas quiser antes de acusar; o
+     * que o nível 3 cobra é ter LIDO antes de decidir, e cobrar isso seria
+     * impossível se o primeiro arremesso já valesse como acusação.
+     */
+    private async uncover(index: number) {
+        const gen = this.gen
+        this.audio.bounce()
+        await FX.all(this.ball.bounceOff(), this.signs.reveal(index))
+        if (gen !== this.gen) return
+        this.audio.save()
+        await this.ball.rest()
+        if (gen !== this.gen) return
+        this.mode = 'choosing'
+        this.applyInput()
+    }
+
+    /**
+     * A bolinha atravessou a parede vazia.
+     *
+     * Nada é emitido, nenhuma vida cai, a tentativa não conta e a onda não
+     * anda. Errar a pontaria não é errar a resposta: a EF03CO09 pergunta qual
+     * compartilhamento é arriscado, não se a criança tem mira boa.
+     */
+    private async missed() {
+        const gen = this.gen
+        this.audio.bounce()
+        await this.ball.fallShort()
+        if (gen !== this.gen) return
+        await this.ball.rest()
+        if (gen !== this.gen) return
+        this.mode = 'choosing'
+        this.applyInput()
+    }
+
+    /* ────────────────────────────── resultado ─────────────────────────── */
 
     private async succeed(index: number, card: TargetCard) {
         const gen = this.gen
@@ -194,18 +278,38 @@ export class GameScene extends Phaser.Scene {
         this.hits += 1
         this.done += 1
 
-        const from = this.cards.centerOf(index)
-        this.audio.crumple()
-        await FX.all(this.ball.vanish(), this.cards.crumple(index))
+        await FX.all(
+            this.ball.vanish(),
+            this.signs.fall(index, () => this.audio.crash()),
+        )
+        if (gen !== this.gen) return
+        this.audio.thump()
+
+        const where = this.signs.centerOf(index)
+        void FX.sparks(this, where.x, where.y, { color: C.green, count: 16, spread: 150, depth: DEPTH.fx })
+        await FX.wait(this, 420)
         if (gen !== this.gen) return
 
-        void FX.sparks(this, from.x, from.y, { color: C.green, count: 16, spread: 150, depth: DEPTH.fx })
-        await this.impact.play(from, card.kind, card.audience, () => this.audio.copies(1))
+        /*
+         * A ORDEM AQUI É O CONTEÚDO.
+         *
+         * A placa caída, deitada, ocupa a faixa da tela onde a dica aparece. Se
+         * a frase entrasse antes de ela sumir, a explicação do impacto — que é
+         * o motivo do jogo existir — nasceria atrás de uma placa de madeira.
+         * Por isso `sink` vem primeiro, e só então a faixa e o resgate.
+         */
+        await this.signs.sink(index)
         if (gen !== this.gen) return
 
         void this.band.say(card.note, 'good')
+        await this.rescue.play(where, card.kind, () => {
+            this.audio.save()
+            void this.hud.catchData()
+        })
+        if (gen !== this.gen) return
+
         this.audio.deliver()
-        await this.cards.deliver()
+        await this.signs.deliver()
         if (gen !== this.gen) return
 
         runtimeGameBridge.emit({
@@ -219,10 +323,11 @@ export class GameScene extends Phaser.Scene {
         this.audio.wave()
         await this.hud.celebrate(this.done - 1)
         if (gen !== this.gen) return
-        await FX.wait(this, 1200)
+        await FX.wait(this, 1100)
         if (gen !== this.gen) return
 
         void this.band.hush()
+        this.ball.hide()
         const next = this.index + 1
         if (next < this.level.waves.length) void this.playWave(next)
         else void this.endLevel()
@@ -233,11 +338,10 @@ export class GameScene extends Phaser.Scene {
         this.tries += 1
 
         this.audio.bounce()
-        void this.ball.bounceOff()
-        await this.cards.shake(index)
+        await FX.all(this.ball.bounceOff(), this.signs.shake(index))
         if (gen !== this.gen) return
 
-        this.cards.showLock(index)
+        this.signs.showLock(index)
         void this.band.say(card.note, 'warn')
 
         if (!this.stalled) {
@@ -258,9 +362,14 @@ export class GameScene extends Phaser.Scene {
 
         if (this.tries >= 2) {
             const right = this.deck.findIndex(isSuspicious)
-            if (right >= 0) this.cards.pulse(right)
+            if (right >= 0) this.signs.pulse(right)
         }
 
+        // a bolinha volta ANTES de o modo abrir. Na ordem trocada havia um
+        // vão de meio segundo em que o jogo já se dizia jogável e os botões
+        // ainda estavam desligados: quem apertasse ali não era atendido
+        await this.ball.rest()
+        if (gen !== this.gen) return
         this.mode = 'choosing'
         this.applyInput()
     }
@@ -270,6 +379,8 @@ export class GameScene extends Phaser.Scene {
         this.mode = 'done'
         this.applyInput()
         this.hud.setEnabled(false)
+
+        const last = this.level.level >= LEVELS.length
 
         runtimeGameBridge.emit({
             type: 'GAME_COMPLETED',
@@ -282,7 +393,7 @@ export class GameScene extends Phaser.Scene {
         this.emitCheckpoint(true)
 
         this.audio.fanfare()
-        void FX.confetti(this, { colors: [C.cyan, C.green, C.amber, C.blue] })
+        if (last) void FX.confetti(this, { colors: [C.cyan, C.green, C.amber, C.blue] })
 
         await FX.wait(this, 1100)
         if (gen !== this.gen) return
@@ -292,37 +403,77 @@ export class GameScene extends Phaser.Scene {
             panelColor: C.paper,
             overlayColor: C.ink,
             depth: 5000,
-            title: 'Protetor de dados!',
-            message: 'Antes de compartilhar, veja qual é o dado, de quem ele é e até onde pode chegar.',
-            progress: { total: LEVELS.length, current: LEVELS.length, size: 9 },
-            buttons: [
-                {
-                    label: 'Jogar de novo',
-                    color: C.green,
-                    onClick: () => this.scene.restart({ lives: this.livesTotal, level: 1, points: 0 }),
-                },
-                {
-                    label: 'Escolher jogo',
-                    color: C.blue,
-                    onClick: () => EventBus.emit('exit-game'),
-                },
-            ],
+            title: last ? 'Protetor de dados!' : 'Sala protegida!',
+            // cada aviso conta o que MUDA no nível seguinte, para a criança não
+            // descobrir a regra nova levando um susto
+            message: last
+                ? 'Antes de compartilhar, veja qual é o dado, de quem ele é e até onde pode chegar.'
+                : this.level.level === 1
+                  ? 'Agora as placas se mexem e o destino muda o risco. Leia antes de arremessar.'
+                  : 'Agora as placas vêm cobertas. Acerte uma para ler, e só depois acuse a suspeita.',
+            progress: { total: LEVELS.length, current: this.level.level, size: 9 },
+            ...(last
+                ? {
+                      buttons: [
+                          {
+                              label: 'Jogar de novo',
+                              color: C.green,
+                              onClick: () => this.scene.restart({ lives: this.livesTotal, level: 1, points: 0 }),
+                          },
+                          {
+                              label: 'Escolher jogo',
+                              color: C.blue,
+                              onClick: () => EventBus.emit('exit-game'),
+                          },
+                      ],
+                  }
+                : {
+                      autoAdvance: {
+                          delay: 2200,
+                          onComplete: () =>
+                              this.scene.restart({
+                                  lives: this.livesLeft,
+                                  level: this.level.level + 1,
+                                  points: this.score,
+                              }),
+                      },
+                  }),
         })
+    }
+
+    /* ──────────────────────────────── resto ───────────────────────────── */
+
+    /**
+     * As placas andam SEMPRE que a onda está em jogo, inclusive com a bolinha
+     * no ar — é disso que depende a colisão do instante — e inclusive durante o
+     * tutorial, porque uma parede congelada ensinaria um jogo que não existe.
+     * Param no fim do nível e enquanto a placa derrubada cai.
+     */
+    update(_time: number, delta: number) {
+        if (this.mode !== 'done' && this.mode !== 'impact') this.signs.update(delta)
+        if (this.mode === 'choosing' && !this.tutorialOpen) this.controls.tick(delta)
     }
 
     private applyInput() {
         const free = !this.tutorialOpen && this.mode === 'choosing'
-        this.cards.setEnabled(free, !this.tutorialOpen && this.mode === 'flying')
+        this.signs.setEnabled(free, this.mode === 'flying' || this.mode === 'impact')
+        this.controls.setEnabled(free)
+        // a mira continua desenhada no tutorial, que fala dela; some é no voo
+        this.controls.setSight(this.mode === 'choosing')
+        this.hud.setEnabled(!this.tutorialOpen && this.mode !== 'done')
     }
 
     private tutorialSteps(full: boolean) {
+        const right = this.deck.findIndex(isSuspicious)
+        const target = this.signs.centerOf(right >= 0 ? right : 0)
+        const width = this.signs.width()
         const steps = [
             {
                 text: 'Leia o dado e o destino de cada placa.',
                 shape: 'rect' as const,
-                ...this.cards.bounds(),
+                ...this.signs.bounds(),
                 balloonX: 640,
-                balloonY: 600,
+                balloonY: 540,
             },
             {
                 text: 'Ache o compartilhamento suspeito.',
@@ -332,20 +483,34 @@ export class GameScene extends Phaser.Scene {
                 balloonY: 260,
             },
             {
-                text: 'Toque na placa: a bolinha vai sozinha até ela.',
+                text: 'As setas movem a mira. Pare em cima da placa.',
                 shape: 'rect' as const,
-                x: CARD.xs[0],
-                y: CARD.y + CARD.h / 2,
-                w: CARD.w + 26,
-                h: CARD.h + 26,
-                balloonX: 900,
-                balloonY: 600,
+                ...this.controls.arrowsBounds(),
+                balloonX: 700,
+                balloonY: 424,
+                pointer: {
+                    fromX: PREV.x,
+                    fromY: PREV.y,
+                    toX: PREV.x,
+                    toY: PREV.y,
+                    tap: true,
+                },
+            },
+            {
+                text: 'Toque em JOGAR para arremessar.',
+                shape: 'circle' as const,
+                x: FIRE.x,
+                y: FIRE.y,
+                w: FIRE.r * 2 + 44,
+                h: FIRE.r * 2 + 44,
+                balloonX: 540,
+                balloonY: 424,
                 buttonLabel: 'Vamos!',
                 pointer: {
-                    fromX: CARD.xs[0],
-                    fromY: CARD.y + CARD.h / 2,
-                    toX: CARD.xs[0],
-                    toY: CARD.y + CARD.h / 2,
+                    fromX: FIRE.x,
+                    fromY: FIRE.y,
+                    toX: FIRE.x,
+                    toY: FIRE.y,
                     tap: true,
                 },
             },
@@ -356,7 +521,6 @@ export class GameScene extends Phaser.Scene {
     private runTutorial(once: boolean, full = true) {
         this.tutorialOpen = true
         this.applyInput()
-        this.hud.setEnabled(false)
         createTutorial(this, {
             key: `ef03co09-ache-o-suspeito-l${this.level.level}`,
             once,
@@ -365,7 +529,6 @@ export class GameScene extends Phaser.Scene {
             steps: this.tutorialSteps(full),
             onFinish: () => {
                 this.tutorialOpen = false
-                this.hud.setEnabled(true)
                 this.applyInput()
             },
         })

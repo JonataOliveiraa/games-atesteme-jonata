@@ -15,7 +15,15 @@ export type DataKind =
     | 'school-work'
     | 'preference'
 
-export type Movement = 'still' | 'horizontal' | 'vertical'
+/**
+ * `horizontal` é vaivém em BLOCO: as placas mantêm a distância entre si.
+ * `carousel` atravessa a tela e volta pela outra borda.
+ *
+ * O `vertical` que o §9 previa para o nível 3 não existe: lá as placas ficaram
+ * camufladas e em carrossel, o que já pede mira e paciência sem precisar de uma
+ * segunda direção de movimento.
+ */
+export type Movement = 'still' | 'horizontal' | 'carousel'
 
 export interface TargetCard {
     id: string
@@ -36,6 +44,12 @@ export interface Wave {
 
 export interface LevelDef {
     level: LevelNumber
+    /**
+     * As placas entram cobertas e só mostram o conteúdo depois de levarem uma
+     * bolinha. Acertar uma placa coberta REVELA e não julga — quem responde é
+     * o segundo arremesso, naquela mesma placa já aberta.
+     */
+    covered?: boolean
     waves: Wave[]
 }
 

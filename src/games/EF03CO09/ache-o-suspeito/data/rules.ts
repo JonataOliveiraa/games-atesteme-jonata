@@ -36,6 +36,10 @@ export const validateLevels = (levels: LevelDef[] = LEVELS): string[] => {
             if (wave.cards.length < 2) problems.push(`${where}: ${wave.cards.length} placas`)
             const ids = new Set(wave.cards.map(card => card.id))
             if (ids.size !== wave.cards.length) problems.push(`${where}: ids repetidos`)
+            // dois pictogramas iguais na mesma onda fazem a criança comparar
+            // desenho em vez de ler o que está escrito
+            const kinds = new Set(wave.cards.map(card => card.kind))
+            if (kinds.size !== wave.cards.length) problems.push(`${where}: pictograma repetido`)
             wave.cards.forEach(card => {
                 if (card.message.length > MAX.message) problems.push(`${where}/${card.id}: mensagem com ${card.message.length}`)
                 if (card.destination.length > MAX.destination) problems.push(`${where}/${card.id}: destino com ${card.destination.length}`)

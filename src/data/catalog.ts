@@ -67,9 +67,7 @@ import coverTorresDosFormatos from "../assets/games/EF03CO05/torres-dos-formatos
 import coverBuscaDoBibliotecario from "../assets/games/EF03CO07/a-busca-do-bibliotecario/cover-a-busca-da-bibliotecaria.png";
 import coverFaseDeEntradaESaida from "../assets/games/EF03CO06/fase-de-entrada-e-saida/cover-fase-entrada-e-saida.png";
 import coverShowDeFormatos from "../assets/games/EF03CO08/show-de-formatos/cover-show-de-formatos.png";
-// PROVISÓRIO: a sala vazia no lugar da capa. O prompt dela está em
-// src/games/EF03CO09/ache-o-suspeito/TEXTURAS.md §10.
-import coverAcheOSuspeito from "../assets/games/EF03CO09/ache-o-suspeito/bg-sala-de-alvos.png";
+import coverAcheOSuspeito from "../assets/games/EF03CO09/ache-o-suspeito/cover-ache-o-suspeito.png";
 /**
  * 1. `id` nunca muda e nunca é reaproveitado. Se um jogo for removido,
  *    marque status "draft" — não devolva o id para a fila.

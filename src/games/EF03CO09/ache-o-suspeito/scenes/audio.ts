@@ -67,28 +67,37 @@ export function createAudio(scene: Phaser.Scene) {
             note({ freq: 560, dur: 0.06, type: 'triangle', gain: 0.045 })
         },
 
-        crumple() {
-            ;[0, 0.05, 0.1, 0.16].forEach(at => noise({ dur: 0.07, freq: 2600 + Math.random() * 1400, q: 0.8, gain: 0.05, at }))
-        },
 
-        fly() {
-            noise({ dur: 0.4, freq: 1100, q: 0.5, gain: 0.03 })
-            note({ freq: 420, to: 700, dur: 0.4, type: 'sine', gain: 0.02 })
-        },
-
-        thud() {
-            note({ freq: 190, to: 90, dur: 0.16, type: 'sine', gain: 0.08 })
-            noise({ dur: 0.08, freq: 700, gain: 0.04 })
-        },
 
         bounce() {
             note({ freq: 240, to: 150, dur: 0.24, type: 'square', gain: 0.045 })
         },
 
-        copies(count: number) {
-            for (let i = 0; i < count; i++) {
-                note({ freq: 820 + i * 160, dur: 0.1, type: 'triangle', gain: 0.035, at: i * 0.13 })
-            }
+
+        /** O arremesso. */
+        release() {
+            noise({ dur: 0.26, freq: 1500, q: 0.5, gain: 0.05 })
+            note({ freq: 640, to: 320, dur: 0.22, type: 'triangle', gain: 0.035 })
+        },
+
+        /** A placa batendo no chão: madeira grave, sem estrondo. */
+        crash() {
+            note({ freq: 150, to: 66, dur: 0.3, type: 'sine', gain: 0.095 })
+            note({ freq: 240, to: 110, dur: 0.2, type: 'triangle', gain: 0.05 })
+            noise({ dur: 0.2, freq: 520, q: 0.7, gain: 0.06 })
+        },
+
+        /** O quique depois da queda. */
+        thump() {
+            note({ freq: 180, to: 96, dur: 0.14, type: 'sine', gain: 0.055 })
+            noise({ dur: 0.07, freq: 640, gain: 0.03 })
+        },
+
+        /** O dado voltando para o avatar. */
+        save() {
+            ;[660, 880, 1170].forEach((freq, i) =>
+                note({ freq, dur: 0.16, type: 'triangle', gain: 0.045, at: i * 0.085 }),
+            )
         },
 
         deliver() {

@@ -772,3 +772,294 @@ declarado em todo dado de colega.
 2. Níveis 2 e 3: a terceira placa, o movimento horizontal e o vertical (com o
    respeito ao modo de movimento reduzido do §9) e os dados dos colegas.
 3. Teste com criança e no celular.
+
+---
+
+## 29. A mecânica de arremesso (12/09/2026)
+
+O jogo entregue em 11/09 era: leia dois cartões, toque no suspeito, a bolinha
+voa sozinha. O toque continuava sendo o único gesto, e o §8 dizia isso de
+propósito. Esta revisão mantém aquele caminho e acrescenta um **gesto de
+verdade** por cima dele, a pedido do usuário.
+
+### O que mudou
+
+| Antes | Agora |
+|---|---|
+| cartões de papel parados | **placas de madeira penduradas** por dois fios, balançando |
+| chip `MEU` em cada cartão | nada no nível 1; fita `DE UM COLEGA` só quando o dado é de outra pessoa |
+| bolinha nascia a cada tiro | bolinha **mora numa bandeja** e é puxada de lá |
+| só toque | **puxar e soltar**, com linha de mira, ou o toque de sempre |
+| acerto: cópias transparentes viajando até um ícone de desconhecidos | acerto: **os fios arrebentam e a placa cai**, quica e assenta; o dado escapa e volta para o avatar |
+
+### A mira trava, e é isso que salva a habilidade
+
+O ângulo do arrasto não vira a direção do tiro: ele **escolhe uma placa**, e a
+bolinha vai ao centro exato dela. A tolerância é de 55°, sempre pela menor
+diferença angular.
+
+Sem a trava, o jogo passaria a medir pontaria. Uma criança que leu as duas
+placas, entendeu qual era a suspeita e mirou torto perderia uma vida pelo
+pulso — e a EF03CO09 não fala de pulso. O §9 já dizia que a dificuldade é
+conceitual; a trava é o que mantém isso de pé agora que existe um gesto físico.
+
+Puxar para os lados ou para baixo não mira em nada e vira **arremesso de
+treino**: a bolinha voa, bate no chão e volta. Não emite nada, não gasta vida,
+não conta tentativa. O gesto ficou incompleto, não a leitura.
+
+### A ordem da comemoração é o conteúdo
+
+Deitada no chão, a placa derrubada ocupa exatamente a faixa da tela onde a dica
+aparece. Por isso a sequência é: cai → quica → **some** → frase + resgate do
+dado. Se a frase entrasse antes, a explicação do impacto nasceria atrás de uma
+placa de madeira.
+
+A frase agora fica na tela cerca de 3,5 s, contra 2,2 s da versão anterior — ela
+é o ponto pedagógico do jogo e nove palavras não se leem em dois segundos.
+
+### Por que as cópias transparentes saíram
+
+Elas mostravam o que **não** aconteceu: cópias do dado escapando para
+desconhecidos, logo depois de a criança ter impedido a saída. Pedia uma leitura
+invertida. No lugar entrou o pictograma escapando da placa caída e voltando
+para o avatar do cabeçalho — o dado que ia embora continua sendo seu.
+
+### Arquivos
+
+~~~text
+scenes/arc.ts       a curva do arremesso, compartilhada pela mira e pelo voo
+scenes/aim.ts       puxar, soltar, travar alvo, desenhar trajetória e bandeja
+scenes/signs.ts     as placas penduradas (era cards.ts); balanço, queda, quique
+scenes/rescue.ts    o dado voltando para o avatar (era impact.ts)
+scenes/ball.ts      reescrito: a bolinha vive na bandeja e é puxada
+~~~
+
+`cards.ts` e `impact.ts` foram removidos.
+
+### O container mora no pivô
+
+`root` fica onde os fios prendem; `hang` é o corpo, pendurado abaixo. Assim
+`root.angle` balança em torno do prego e `hang.angle` gira em torno do próprio
+centro na queda. Duas rotações independentes, nenhum tween gêmeo — e, como a
+placa se move o tempo todo, a zona de toque vai DENTRO do container.
+
+### O que falta
+
+1. As duas folhas pedidas no §7 do TEXTURAS.md: `placa-de-madeira.png` e
+   `bandeja-de-papeis.png`. As duas peças estão em `Graphics` de reserva, que
+   roda mas não é entrega.
+2. `cover-ache-o-suspeito.png` — o catálogo ainda usa a sala vazia, e a entrada
+   segue em `status: "draft"`.
+3. Níveis 2 e 3. O `endLevel` já tem o ramo de `autoAdvance` esperando, e
+   `SIGN_BY_COUNT` já sabe posicionar três placas dentro do quadro da parede.
+4. Teste com criança. Em retrato de celular a página `/jogos/<slug>` estica o
+   palco; em paisagem está correto. Isso é da camada de embed, não do jogo.
+
+---
+
+## 30. O arrasto saiu; entraram `<`, `>` e JOGAR (12/09/2026)
+
+O puxa-e-solta do §29 durou poucas horas. O usuário testou e disse o essencial:
+**arrastar é difícil**. Está certo, e o motivo tem nome.
+
+Puxar e soltar exige três coisas ao mesmo tempo: segurar sem escorregar, medir
+a distância do arrasto e largar no instante certo. São três habilidades motoras
+para responder uma pergunta de leitura, e a mão de 8 anos falha em qualquer uma
+delas sem ter errado nada do que a EF03CO09 pede. Em tela de celular, com o
+dedo por cima justamente do que precisa ser lido, é pior.
+
+### O que existe agora
+
+Uma barra fixa na base, três botões grandes:
+
+| Botão | Tamanho do alvo | O que faz |
+|---|---|---|
+| `<` | 96 px de diâmetro | anda uma placa para a esquerda |
+| **JOGAR** | 250 × 66 | arremessa na placa escolhida |
+| `>` | 96 px de diâmetro | anda uma placa para a direita |
+
+A placa escolhida acende e uma linha pontilhada sai da bandeja em direção a
+ela. Tocar numa placa também a escolhe, como atalho para as setas. Setas do
+teclado e barra de espaço fazem o mesmo, para quem joga no computador.
+
+### Decisões que vieram junto
+
+- **A volta é circular.** `>` na última placa volta para a primeira. Seta que
+  desliga na ponta parece defeito para quem não conta os itens, e a criança
+  fica batendo num botão morto achando que travou.
+- **A primeira placa já vem escolhida.** Ninguém precisa de um passo extra só
+  para poder jogar, e como a ordem é sorteada a cada onda, começar na primeira
+  não entrega resposta nenhuma.
+- **Tocar na placa escolhe, não lança.** Antes o toque disparava direto. Com a
+  barra na tela, dois gestos fazendo coisas diferentes com a mesma peça
+  confundem: o modelo agora é um só, "escolho e depois jogo".
+- **A força deixou de existir.** Sem puxada não há o que medir: todo arremesso
+  sai com o mesmo arco. Isso também elimina o arremesso de treino do §29, que
+  só fazia sentido quando dava para mirar no vazio.
+- **A linha pontilhada para antes da placa.** Os últimos pontos caíam em cima
+  da frase, e a linha que existe para ajudar a escolher atrapalhava a leitura
+  de que a escolha depende. Quem marca o alvo é o anel da placa.
+
+### O que continua igual
+
+A trava de alvo do §29 continua valendo, agora por construção: não há como
+mirar torto, porque não há mira. Errar segue sendo erro conceitual, com dica,
+cadeado, vida e a onda parada no lugar.
+
+### Geometria que mudou por causa da barra
+
+A barra ocupa a faixa de 624 a 720. Para caber, a placa encurtou de 268 para
+244 px de corpo, o chão da queda subiu para 530 e a faixa de dica desceu para
+492. A conta que governa isso: a base da placa (425) tem de ficar acima do topo
+da faixa de dica mesmo quando ela cresce para duas linhas (440).
+
+---
+
+## 31. Mira de verdade, e os controles em dois cantos (12/09/2026)
+
+Terceira volta na mesma mecânica, e desta vez o pedido veio com o motivo
+junto: *"inves ele ja selecionar quem vai atirar, ele ter uma mira real, onde o
+jogador vai movimentando. pq em proximos niveis irei adicionar mecanica das
+placas se movendo. entao mira assim é essencial."*
+
+O motivo está certo e derruba a solução anterior. Selecionar uma PLACA trava o
+tiro nela; no dia em que as placas andarem, a bolinha perseguiria a peça e o
+movimento viraria enfeite — o acerto não teria nada a ver com o instante do
+arremesso.
+
+### O que existe agora
+
+- **`<` e `>` juntas no canto esquerdo**, movendo um retículo pela parede.
+- **Botão redondo de 136 px no canto direito**, que arremessa.
+- É a divisão do controle de videogame: polegar esquerdo move, direito age. No
+  celular deitado cada mão fica no seu canto, e nada do que precisa ser lido
+  fica debaixo dos dedos.
+- Um toque anda 34 px; **segurar passa a deslizar** a 400 px/s depois de 260 ms.
+  Atravessar a parede com trinta toquinhos cansa antes de ensinar nada.
+
+### A colisão é perguntada quadro a quadro
+
+Esta é a mudança que importa, e ela mora no `travel` de `ball.ts`: a cada
+quadro do voo a bolinha pergunta a `signs.hitAt(x, y)` se há uma placa naquele
+ponto. A primeira que responder é a resposta.
+
+Testado nos dois sentidos, movendo uma placa na mão durante o voo:
+
+| Situação | Resultado |
+|---|---|
+| a placa mirada foge no meio do voo | a bolinha passa reto, e não custa nada |
+| uma placa entra no caminho no meio do voo | a bolinha acerta essa placa |
+
+É por isso que o nível 2 não vai precisar de código novo de acerto: basta as
+placas começarem a andar.
+
+### O que segura a justiça agora que a pontaria é real
+
+1. **O retículo avisa.** Sobre uma placa ele fecha e fica ciano; no vazio, abre
+   e fica cinza. A linha pontilhada muda de cor junto. Sem esse aviso a mira
+   viraria adivinhação.
+2. **Errar o alvo não é errar a resposta.** A bolinha atravessa, cai, volta
+   para a bandeja. Nada é emitido, nenhuma vida cai, a tentativa não conta e a
+   onda não anda. A EF03CO09 pergunta qual compartilhamento é arriscado, não se
+   a criança tem mira boa.
+3. **Tocar na placa leva a mira até ela**, como atalho. Não anula nada: com
+   placas em movimento, apontar para onde a placa estava não garante acerto.
+
+### A mira é desenhada mesmo quando não aceita toque
+
+`setEnabled` cuida dos botões; `setSight` cuida do desenho. O passo do tutorial
+que diz "as setas movem a mira" apaga os botões, e apagar a mira junto deixaria
+a criança lendo sobre uma coisa que não está na tela. Ela some mesmo é durante
+o voo, quando quem importa é a bolinha.
+
+### Para o nível 2 e o nível 3
+
+- O movimento horizontal do §9 entra mexendo em `signs.ts` apenas. O acerto já
+  está resolvido.
+- O movimento VERTICAL do nível 3 vai precisar de `AIM.y` deixar de ser fixo —
+  hoje ele é o centro das placas paradas. Ou a mira ganha controle vertical, ou
+  a criança espera a placa cruzar a altura da mira. A segunda opção é mais
+  simples e já funciona com o código atual.
+
+---
+
+## 32. Os três níveis de pé (12/09/2026)
+
+Botões maiores, o rótulo `JOGAR` trocado pelo desenho de uma mira, e os níveis
+2 e 3 escritos e jogáveis. O jogo deixou de ser um corte de nível 1.
+
+### Controles
+
+| Peça | Antes | Agora |
+|---|---:|---:|
+| setas | 96 px | **116 px** |
+| botão de arremesso | 136 px, escrito `JOGAR` | **164 px, com o símbolo da mira** |
+
+O rótulo escrito saiu porque é uma palavra a mais para ler numa tela que já
+pede leitura em toda placa. O botão passou a mostrar o MESMO símbolo que está
+na parede, e quem ainda não lê liga um ao outro pelo desenho.
+
+O curso da mira também cresceu, de 196–1084 para 130–1150: no carrossel havia
+placas à vista e fora de alcance, e a criança batia na seta contra um limite
+invisível enquanto o alvo desfilava do outro lado.
+
+### Nível 2 — o destino decide o risco
+
+Três placas, dado sempre da própria criança. Duas ondas de **vaivém em bloco** e
+a terceira em **carrossel**, onde a placa sai por uma borda e volta pela outra.
+
+O vaivém é em bloco porque as três placas dividem 866 px de quadro: com fases
+diferentes elas entrariam uma na outra.
+
+### Nível 3 — permissão, e a placa vem tapada
+
+Três placas em carrossel, todas cobertas. **Acertar uma placa coberta REVELA e
+não julga**: não emite nada, não tira vida, não conta tentativa. Só depois de
+aberta a placa pode ser acusada.
+
+Foi assim que a camuflagem virou investigação em vez de chute. Se o primeiro
+arremesso já valesse como acusação, o nível estaria premiando adivinhação —
+justamente o hábito que a EF03CO09 quer desmontar. Do jeito que ficou, a criança
+abre quantas quiser antes de decidir, e o que o nível cobra é ter LIDO antes de
+acusar.
+
+O conteúdo é o do §12: foto do Téo sem permissão, apelido que a Bia não gosta,
+endereço do colega para um desconhecido. O que separa a suspeita das seguras
+deixou de ser o destino e passou a ser o consentimento.
+
+### Dois defeitos que o teste pegou, e as contas que os resolveram
+
+**1. A bolinha batia numa placa no meio do caminho.** O arco era alto
+(`210 − power·118`), então ela entrava na faixa das placas ainda no meio do
+percurso: mirando na placa da ponta, acertava a do meio. A mira prometia um
+alvo e o jogo entregava outro. O arco virou `74 − power·30`, quase a reta que a
+linha pontilhada desenha. Seis tiros mirados no centro de placas seguras, com
+tudo em movimento: zero desvios.
+
+**2. A placa podia derivar para a vizinha durante o voo.** Entre o arremesso e o
+impacto passam ~0,58 s, e a parede anda nesse tempo. A conta que mantém isso
+seguro, e que precisa ser refeita se algum destes números mudar:
+
+~~~text
+deriva = 2·π·swayAmp / (swayMs/1000) · 0,58  ≈  26 px
+vão    = espaçamento (300) − placa com moldura (266)  =  34 px
+~~~
+
+Para fechar essa margem o período subiu de 5,2 s para 8 s e a placa estreitou de
+245 para 232. No carrossel o risco não existe: lá as placas ficam a 520 px uma
+da outra.
+
+### Texto cortado nas placas estreitas
+
+Com três placas, a frase era centrada verticalmente e crescia para os dois
+lados, entrando na tira de destino. Agora ela é ancorada pelo TOPO, com o
+pictograma acima e a tira embaixo, cada um com o seu espaço.
+
+### O que falta
+
+1. As duas folhas do §7 do TEXTURAS.md. A placa coberta do nível 3 também está
+   em `Graphics`, e entra na mesma conversa.
+2. Tirar o `status: "draft"` do catálogo. A capa chegou em 14/09/2026 e o
+   import já aponta para ela; o que segura a publicação são as folhas do item 1.
+3. Teste com criança, principalmente no nível 3: é o único que pede duas
+   decisões seguidas (abrir e acusar).
