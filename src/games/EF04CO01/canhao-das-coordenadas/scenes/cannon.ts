@@ -9,7 +9,7 @@ import {
     SHEET,
 } from '../data/art'
 import { CANNON, DEPTH } from '../data/layout'
-import { C } from '../data/theme'
+import { C, inkOf } from '../data/theme'
 
 /**
  * ══════════════════════════════════════════════════════════════════════════
@@ -274,8 +274,10 @@ export function createCannon(scene: Phaser.Scene) {
          * `hit` falso usa o cinza do erro: a tinta sai, bate e some sem deixar
          * marca — o §10 pede que o erro seja visível sem ser punição.
          */
-        async shoot(to: Point, hit: boolean) {
-            const color = hit ? C.paint : C.miss
+        async shoot(to: Point, hit: boolean, ink: number | null = null) {
+            // a cor do disparo é a da MANCHA que o pedido nomeia, e o cinza do
+            // erro quando a escolha não confere
+            const color = hit ? inkOf(ink ?? 0).face : C.miss
             clearInk()
             scene.tweens.killTweensOf(body)
             body.setPosition(CANNON.x, CANNON.y).setAngle(0)

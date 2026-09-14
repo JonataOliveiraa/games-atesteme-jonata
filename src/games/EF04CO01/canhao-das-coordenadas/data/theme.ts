@@ -14,9 +14,11 @@ export const C = {
 
     /** Azul de seleção: o guia da linha e da coluna que acende antes do tiro. */
     aim: 0x43b8d8,
-    /** Tinta: a única cor de "célula pintada" que existe no jogo. */
+    /** A tinta padrão. Níveis 1 e 2 usam só ela. */
     paint: 0x38a4d4,
     paintDeep: 0x1f6f97,
+    /** Amarelo neutro do nível 2: "esta é a janela", sem dizer certo nem errado. */
+    spot: 0xf7d154,
 
     amber: 0xf4b942,
     amberDeep: 0xb07f16,
@@ -25,6 +27,34 @@ export const C = {
     /** Cinza do erro: a tinta que não pega. Nunca vermelho. */
     miss: 0x9aa8b5,
 }
+
+/**
+ * ══════════════════════════════════════════════════════════════════════════
+ *  AS TINTAS
+ * ══════════════════════════════════════════════════════════════════════════
+ *
+ * O §8 do planejamento tinha decidido uma cor só, para MOVER e COPIAR não
+ * virarem escolha de cor. A regra continua: a criança nunca escolhe tinta. O
+ * que a cor faz é IDENTIFICAR cada mancha, e é justamente isso que separa os
+ * dois verbos — com tudo azul, mover e copiar terminam iguais na tela, uma
+ * célula pintada a mais. Com cor, vê-se a laranja SAIR de um lugar e chegar no
+ * outro, e a verde continuar onde estava enquanto a cópia aparece ao lado.
+ *
+ * Em mover e copiar a cor vem da origem, nunca do disparo.
+ *
+ * Contraste: todas escuras o bastante para o branco do caixilho aparecer por
+ * cima, e distintas por matiz E por luminosidade, para não dependerem de
+ * visão de cor normal.
+ */
+export const INKS = [
+    { face: 0x38a4d4, deep: 0x1f6f97 },
+    { face: 0xe2725b, deep: 0xa8452f },
+    { face: 0x5eae62, deep: 0x357a39 },
+    { face: 0xe09a2c, deep: 0xa66a11 },
+    { face: 0x8a6bc0, deep: 0x5b418c },
+]
+
+export const inkOf = (i = 0) => INKS[i % INKS.length]
 
 export const CSS = {
     ink: '#203149',

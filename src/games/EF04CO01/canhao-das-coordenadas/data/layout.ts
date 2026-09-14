@@ -63,4 +63,27 @@ export const PROMPT = { x: 750, y: 140, w: 450, h: 96 }
 export const HINT = { x: 750, y: 252, w: 450, h: 108 }
 export const CANNON = { x: 985, y: 540, w: 232 }
 
+/**
+ * ══════════════════════════════════════════════════════════════════════════
+ *  OS CARTÕES DO NÍVEL 2
+ * ══════════════════════════════════════════════════════════════════════════
+ *
+ * Em LINHA, e não empilhados como o §7 previa. Empilhados, três cartões de 136
+ * px mais o pedido, a dica e o canhão não cabem nos 620 px de altura da
+ * direita: ou o cartão encolhia para 84 px — 25 px reais num celular, abaixo
+ * do alvo tocável — ou o canhão saía da tela.
+ *
+ * Deitados, cada um fica com 142 × 124, que a 30% dá 43 × 37 px reais, e ainda
+ * sobra faixa para a dica e para o canhão no lugar de sempre.
+ */
+export const CARDS = {
+    y: 244,
+    h: 124,
+    w: 142,
+    xs: [750, 902, 1054],
+}
+
+/** No nível 2 a dica desce, porque os cartões ocupam a faixa do meio. */
+export const HINT_L2 = { x: 750, y: 390, w: 450, h: 96 }
+
 export const HELP = { x: HUD.helpX, y: HUD.cy }

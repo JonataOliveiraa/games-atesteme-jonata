@@ -600,3 +600,75 @@ temporizadores de cena, e avançar o laço com carimbos de tempo artificiais
 desalinha os dois — o jogo parece travado quando na verdade só está esperando
 um timer que nunca chega. O que funciona é pausar a cena no meio do voo
 (`scene.pause()`) e capturar dali.
+
+---
+
+## 21. Níveis 2 e 3, e a cor que virou nome (14/09/2026)
+
+O jogo está completo: localizar, ler e manipular.
+
+### Nível 2 — ler a posição
+
+A janela pulsa em amarelo neutro e três cartões oferecem coordenadas. Cada trio
+traz a resposta, a **inversão** dela e uma vizinha de coluna. A inversão é o
+distrator que importa: é o erro que o jogo inteiro existe para desfazer, e
+escondê-lo das opções deixaria a criança acertar sem decidir. A ordem do trio é
+sorteada a cada tarefa.
+
+Os cartões ficaram **em linha**, e não empilhados como o §7 previa. Empilhados,
+três cartões de 136 px mais o pedido, a dica e o canhão não cabem nos 620 px de
+altura da direita: ou o cartão encolhia para 84 px — 25 px reais num celular,
+abaixo do alvo tocável — ou o canhão saía da tela. Deitados, cada um fica com
+142 × 124, que a 30% dá 43 × 37 px reais.
+
+### Nível 3 — e a decisão sobre cor
+
+O §8 tinha decidido uma cor só, para MOVER e COPIAR não virarem escolha de cor.
+**A regra continua**: a criança nunca escolhe tinta. O que mudou é que cada
+mancha tem a SUA cor, e isso resolve o problema que a decisão original criava.
+
+Com tudo azul, mover e copiar terminam iguais na tela: uma célula pintada a
+mais. Com cor, vê-se a laranja SAIR de um lugar e chegar no outro, e a verde
+continuar onde estava enquanto a cópia aparece ao lado. A cor deixou de ser
+enfeite e virou o NOME da mancha — o pedido diz "MOVER L1, C1", a criança olha,
+vê que o que mora ali é laranja, e depois vê a laranja chegar do outro lado.
+
+Cada mural começa com três manchas de cores diferentes e cada pedido mexe em
+uma delas, então cada disparo sai com uma cor diferente. Em mover e copiar a
+cor vem SEMPRE da origem, nunca do disparo: é isso que mantém a operação
+legível.
+
+No acerto de um MOVER a origem esvazia **antes** de o destino encher. Sem esse
+intervalo, a tinta pareceria ter brotado no destino em vez de ter saído dali.
+
+### O que mudou na estrutura
+
+`painted` deixou de ser `Set<string>` e virou `Map<string, number>`: cada célula
+pintada guarda qual tinta está nela. Sem isso o nível 3 não teria como fazer a
+mancha laranja continuar laranja ao mudar de lugar.
+
+`scenes/cards.ts` é novo, e só o nível 2 usa.
+
+### O tutorial passou a mudar com o nível
+
+O §13 pedia isso e o primeiro corte não fazia: os níveis 2 e 3 mostram só o
+verbo novo, sem repetir os quatro passos de linha e coluna. Quem chega ao nível
+3 já sabe ler uma coordenada; o que ela ainda não viu é a tinta mudar de lugar.
+
+### Conferido
+
+| Nível | Tarefas | Resultado |
+|---|---|---|
+| 1 | 12 pinturas | 120 pontos, nenhum erro |
+| 2 | 9 leituras | 90 pontos, nenhum erro |
+| 3 | 9 manipulações | 90 pontos, nenhum erro |
+
+A partida inteira, com as passagens automáticas entre níveis, fecha em 300
+pontos com as três vidas. `validateLevels()` roda limpo nos três, simulando cada
+mural pedido a pedido.
+
+### O que falta
+
+1. `cover-canhao-das-coordenadas.png`, e tirar o `status: "draft"`.
+2. Teste com criança, principalmente no nível 3.
+3. Medir o contraste das cinco tintas em tela de celular sob sol.

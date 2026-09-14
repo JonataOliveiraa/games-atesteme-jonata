@@ -276,6 +276,8 @@ const POR_SLUG: Record<string, string[]> = {
     "A fachada é uma matriz: cada janela tem uma linha e uma coluna.",
     "L é a linha, que vai de lado. C é a coluna, que desce.",
     "Leia o pedido e toque na janela onde a linha e a coluna se encontram.",
+    "No nível 2 a janela é apontada: toque no cartão com o nome dela.",
+    "No nível 3 cada mancha tem sua cor: MOVER tira a tinta do lugar, COPIAR deixa as duas.",
     "A linha acende primeiro, depois a coluna: é assim que se lê L2, C3.",
     "Se errar, a tinta sai cinza e não pinta. A dica mostra como pensar.",
   ],

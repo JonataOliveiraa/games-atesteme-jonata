@@ -32,9 +32,21 @@ export interface Shift {
     col: -1 | 0 | 1
 }
 
+/**
+ * Uma célula já pintada, com a tinta que está nela.
+ *
+ * `ink` é índice na paleta de `theme.ts`, não uma cor solta: o nível 3 precisa
+ * comparar tintas ("a laranja saiu daqui e chegou ali") e comparar índices é
+ * mais honesto do que comparar números hexadecimais espalhados nos dados.
+ */
+export interface PaintedCell extends Cell {
+    ink?: number
+}
+
 export type Task =
-    | { kind: 'paint'; target: Cell }
-    | { kind: 'read'; highlighted: Cell; options: [Cell, Cell, Cell] }
+    | { kind: 'paint'; target: Cell; ink?: number }
+    | { kind: 'read'; highlighted: Cell; options: [Cell, Cell, Cell]; ink?: number }
+    /** Em mover e copiar a cor NÃO se escolhe: ela vem da célula de origem. */
     | { kind: 'move' | 'copy'; source: Cell; shift: Shift }
 
 export type TaskKind = Task['kind']
@@ -43,7 +55,7 @@ export interface Mural {
     id: string
     /** Nome do padrão que os pedidos constroem, mostrado no fim do mural. */
     title: string
-    initialPainted: Cell[]
+    initialPainted: PaintedCell[]
     tasks: Task[]
 }
 

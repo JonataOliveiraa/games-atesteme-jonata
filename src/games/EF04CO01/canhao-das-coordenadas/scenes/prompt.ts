@@ -1,7 +1,7 @@
 import Phaser from 'phaser'
 import { FX } from '../../../../shared/effects/FX'
-import { DEPTH, HINT, PROMPT } from '../data/layout'
-import { C, CSS, FONT } from '../data/theme'
+import { DEPTH, HINT, HINT_L2, PROMPT } from '../data/layout'
+import { C, CSS, FONT, inkOf } from '../data/theme'
 
 /**
  * ══════════════════════════════════════════════════════════════════════════
@@ -98,21 +98,88 @@ export function createPrompt(scene: Phaser.Scene) {
     lock.fillRect(-2, 2, 4, 9)
     lock.setPosition(HINT.x + 34, HINT.y + HINT.h / 2)
 
+    /** A dica desce no nível 2, onde os cartões ocupam a faixa do meio. */
+    let box = HINT
+
     const paintHint = (tone: Tone) => {
         hintBox.clear()
         if (tone === 'idle') return
         const face = tone === 'warn' ? C.amber : C.green
         const deep = tone === 'warn' ? C.amberDeep : C.greenDeep
         hintBox.fillStyle(C.ink, 0.22)
-        hintBox.fillRoundedRect(HINT.x + 4, HINT.y + 8, HINT.w, HINT.h, 20)
+        hintBox.fillRoundedRect(box.x + 4, box.y + 8, box.w, box.h, 20)
         hintBox.fillStyle(C.ink, 1)
-        hintBox.fillRoundedRect(HINT.x - 4, HINT.y - 4, HINT.w + 8, HINT.h + 8, 22)
+        hintBox.fillRoundedRect(box.x - 4, box.y - 4, box.w + 8, box.h + 8, 22)
         hintBox.fillStyle(deep, 1)
-        hintBox.fillRoundedRect(HINT.x, HINT.y, HINT.w, HINT.h, 18)
+        hintBox.fillRoundedRect(box.x, box.y, box.w, box.h, 18)
         hintBox.fillStyle(face, 1)
-        hintBox.fillRoundedRect(HINT.x, HINT.y, HINT.w, HINT.h - 7, 18)
+        hintBox.fillRoundedRect(box.x, box.y, box.w, box.h - 7, 18)
         hintBox.fillStyle(C.white, 0.24)
-        hintBox.fillRoundedRect(HINT.x + 20, HINT.y + 9, HINT.w - 40, 10, 5)
+        hintBox.fillRoundedRect(box.x + 20, box.y + 9, box.w - 40, 10, 5)
+    }
+
+    /*
+     * A SEGUNDA LINHA DO NÍVEL 3.
+     *
+     * "MOVER L2, C2" em cima e "1 coluna →" embaixo, com a seta desenhada e um
+     * quadradinho da COR da mancha que vai andar. O destino não é escrito: a
+     * criança o deduz da origem mais a direção, que é justamente a manipulação
+     * que a EF04CO01 pede. Escrever o destino faria o pedido responder sozinho.
+     */
+    const shiftBox = scene.add.graphics()
+    const shiftText = scene.add
+        .text(0, 0, '', {
+            fontFamily: FONT.black,
+            fontSize: '28px',
+            color: CSS.ink,
+        })
+        .setOrigin(0, 0.5)
+        .setResolution(2)
+        .setVisible(false)
+    root.add(shiftBox)
+    root.add(shiftText)
+
+    const paintShift = (dr: number, dc: number, ink: number | null) => {
+        shiftBox.clear()
+        if (dr === 0 && dc === 0) {
+            shiftText.setVisible(false)
+            rule.setVisible(true)
+            return
+        }
+        rule.setVisible(false)
+        const palavra = dc !== 0 ? 'coluna' : 'linha'
+        const y = PROMPT.y + PROMPT.h + 30
+        const w = 300
+        const x = PROMPT.x + PROMPT.w / 2 - w / 2
+
+        shiftBox.fillStyle(C.ink, 1)
+        shiftBox.fillRoundedRect(x - 3, y - 27, w + 6, 54, 27)
+        shiftBox.fillStyle(C.wall, 1)
+        shiftBox.fillRoundedRect(x, y - 24, w, 48, 24)
+
+        if (ink !== null) {
+            const tinta = inkOf(ink)
+            shiftBox.fillStyle(C.ink, 1)
+            shiftBox.fillRoundedRect(x + 12, y - 16, 34, 32, 9)
+            shiftBox.fillStyle(tinta.face, 1)
+            shiftBox.fillRoundedRect(x + 15, y - 13, 28, 26, 7)
+        }
+
+        shiftText.setText(`1 ${palavra}`).setPosition(x + 56, y).setVisible(true)
+
+        // a seta: desenhada, nunca escrita como "→" numa fonte que pode faltar
+        const ax = x + w - 54
+        const dirX = dc !== 0 ? Math.sign(dc) : 0
+        const dirY = dr !== 0 ? Math.sign(dr) : 0
+        shiftBox.lineStyle(9, C.paint, 1)
+        shiftBox.lineBetween(ax - dirX * 16, y - dirY * 16, ax + dirX * 16, y + dirY * 16)
+        shiftBox.beginPath()
+        shiftBox.moveTo(ax + dirX * 22, y + dirY * 22)
+        shiftBox.lineTo(ax + dirX * 6 - dirY * 12, y + dirY * 6 - dirX * 12)
+        shiftBox.lineTo(ax + dirX * 6 + dirY * 12, y + dirY * 6 + dirX * 12)
+        shiftBox.closePath()
+        shiftBox.fillStyle(C.paint, 1)
+        shiftBox.fillPath()
     }
 
     return {
@@ -123,12 +190,25 @@ export function createPrompt(scene: Phaser.Scene) {
             return FX.to(scene, ask, { scale: 1 }, { duration: 260, ease: 'Back.easeOut' })
         },
 
+        /** `0, 0` esconde a linha do deslocamento e devolve a convenção L/C. */
+        setShift(dr: number, dc: number, ink: number | null = null) {
+            paintShift(dr, dc, ink)
+        },
+
+        /** No nível 2 a dica desce, para os cartões ocuparem a faixa do meio. */
+        useLowHint(low: boolean) {
+            box = low ? HINT_L2 : HINT
+            hintText.setPosition(box.x + box.w / 2, box.y + box.h / 2)
+            hintText.setStyle({ wordWrap: { width: box.w - 56 } })
+            lock.setPosition(box.x + 34, box.y + box.h / 2)
+        },
+
         /** `withLock` só no erro: o cadeado é o sinal de que a tarefa travou. */
         say(text: string, tone: Exclude<Tone, 'idle'>, withLock = false) {
             paintHint(tone)
             hintText.setText(text)
             hintText.setColor(tone === 'warn' ? CSS.amberInk : CSS.white)
-            hintText.setX(HINT.x + HINT.w / 2 + (withLock ? 22 : 0))
+            hintText.setX(box.x + box.w / 2 + (withLock ? 22 : 0))
             lock.setVisible(withLock)
             if (withLock) {
                 scene.tweens.killTweensOf(lock)
@@ -156,7 +236,7 @@ export function createPrompt(scene: Phaser.Scene) {
         },
 
         destroy() {
-            scene.tweens.killTweensOf([root, ask, hintText, lock])
+            scene.tweens.killTweensOf([root, ask, hintText, lock, shiftBox, shiftText])
             root.destroy(true)
             lock.destroy()
         },

@@ -8,7 +8,18 @@ import { vidasIniciais } from '../../../../shared/level/vidasIniciais'
 import { createTutorial } from '../../../../shared/tutorial/createTutorial'
 import { FX } from '../../../../shared/effects/FX'
 import { LEVELS, POINTS_AFTER_STALL, POINTS_CLEAN } from '../data/levels'
-import { answerOf, applyTask, correct, keyOf, label, validateLevels } from '../data/rules'
+import {
+    answerOf,
+    applyTask,
+    correct,
+    destinationOf,
+    inkFor,
+    label,
+    paintedFrom,
+    shuffled,
+    validateLevels,
+    type Painted,
+} from '../data/rules'
 import { DEPTH, HUD } from '../data/layout'
 import { C } from '../data/theme'
 import type { Cell, LevelDef, LevelNumber, Mode, Mural, Task } from '../types'
@@ -16,6 +27,7 @@ import { createYard, type Yard } from './yard'
 import { createFacade, type Facade } from './facade'
 import { createPrompt, type Prompt } from './prompt'
 import { createCannon, type Cannon } from './cannon'
+import { createCards, type Cards } from './cards'
 import { createHud, type Hud } from './hud'
 import { createAudio, type Audio } from './audio'
 
@@ -37,7 +49,7 @@ export class GameScene extends Phaser.Scene {
     private level!: LevelDef
     private muralIndex = 0
     private taskIndex = 0
-    private painted = new Set<string>()
+    private painted: Painted = new Map()
     private mode: Mode = 'intro'
     private gen = 0
 
@@ -56,6 +68,7 @@ export class GameScene extends Phaser.Scene {
     private facade!: Facade
     private prompt!: Prompt
     private cannon!: Cannon
+    private cards!: Cards
     private hud!: Hud
     private audio!: Audio
 
@@ -86,7 +99,7 @@ export class GameScene extends Phaser.Scene {
 
         this.muralIndex = 0
         this.taskIndex = 0
-        this.painted = new Set()
+        this.painted = new Map()
         this.mode = 'intro'
         this.tries = 0
         this.stalled = false
@@ -109,6 +122,7 @@ export class GameScene extends Phaser.Scene {
         this.facade = createFacade(this, { onPick: cell => void this.pick(cell) })
         this.prompt = createPrompt(this)
         this.cannon = createCannon(this)
+        this.cards = createCards(this, { onPick: cell => void this.pick(cell) })
         this.hud = createHud(this, {
             murals: this.level.murals.length,
             onHelp: () => this.replayTutorial(),
@@ -141,6 +155,7 @@ export class GameScene extends Phaser.Scene {
     private shutdownScene() {
         this.gen++
         this.hud?.destroy()
+        this.cards?.destroy()
         this.cannon?.destroy()
         this.prompt?.destroy()
         this.facade?.destroy()
@@ -159,7 +174,7 @@ export class GameScene extends Phaser.Scene {
         this.mode = 'intro'
         this.applyInput()
 
-        this.painted = new Set(this.mural.initialPainted.map(keyOf))
+        this.painted = paintedFrom(this.mural.initialPainted)
         this.prompt.hush()
         this.cannon.clearInk()
         this.hud.setDone(this.done === 0 ? 0 : index)
@@ -174,14 +189,41 @@ export class GameScene extends Phaser.Scene {
 
     private async askTask() {
         const gen = this.gen
+        const task = this.task
         this.tries = 0
         this.stalled = false
         this.facade.clearPulses()
         this.facade.hideGuides()
         this.prompt.hush()
+        this.prompt.useLowHint(task.kind === 'read')
 
-        await this.prompt.setAsk(this.askText(this.task))
+        /*
+         * CADA VERBO MONTA A TELA DELE.
+         *
+         * `read` acende a janela e abre os três cartões; `move`/`copy` mostram
+         * a direção e a cor da mancha que vai andar; `paint` não precisa de
+         * nada além da frase. Tudo o que não pertence ao verbo é desligado
+         * aqui, e não espalhado pelos outros ramos.
+         */
+        this.facade.highlight(task.kind === 'read' ? task.highlighted : null)
+        if (task.kind === 'move' || task.kind === 'copy') {
+            this.prompt.setShift(task.shift.row, task.shift.col, inkFor(this.painted, task))
+        } else {
+            this.prompt.setShift(0, 0)
+        }
+
+        await this.prompt.setAsk(this.askText(task))
         if (gen !== this.gen) return
+
+        if (task.kind === 'read') {
+            // a ordem do trio é sorteada: a resposta certa não pode morar
+            // sempre no mesmo cartão
+            await this.cards.show(shuffled([...task.options]))
+            if (gen !== this.gen) return
+        } else {
+            await this.cards.hide()
+            if (gen !== this.gen) return
+        }
 
         this.mode = 'asking'
         this.applyInput()
@@ -192,11 +234,49 @@ export class GameScene extends Phaser.Scene {
         }
     }
 
-    /** O texto do cartão. No nível 1 é sempre "Pinte L_, C_". */
     private askText(task: Task): string {
         if (task.kind === 'paint') return `Pinte ${label(task.target)}`
         if (task.kind === 'read') return 'Qual é esta janela?'
         return `${task.kind === 'move' ? 'MOVER' : 'COPIAR'} ${label(task.source)}`
+    }
+
+    /**
+     * A segunda dica nomeia o erro na mesma convenção do pedido.
+     *
+     * No nível 3 ela lembra QUAL passo contar, porque ali o engano quase nunca
+     * é trocar L com C: é contar dois em vez de um, ou para o lado errado.
+     */
+    private againText(cell: Cell, task: Task): string {
+        if (task.kind === 'move' || task.kind === 'copy') {
+            const eixo = task.shift.col !== 0 ? 'coluna' : 'linha'
+            // o destino continua não escrito: dizê-lo aqui resolveria a tarefa
+            // em vez de ensinar a contar o passo
+            return `Você escolheu ${label(cell)}. Conte UM passo de ${eixo} a partir de ${label(task.source)}.`
+        }
+        return `Você tocou ${label(cell)}. Leia de novo o pedido e conte a linha primeiro.`
+    }
+
+    /**
+     * O fecho do mural, dito no verbo daquele nível.
+     *
+     * Era uma frase fixa sobre "quatro posições", que já mentia no nível 2 e no
+     * 3 — os dois têm três pedidos, e nem um nem outro procura posição: um LÊ e
+     * o outro MUDA.
+     */
+    private muralText(): string {
+        const n = this.mural.tasks.length
+        const kind = this.mural.tasks[0].kind
+        if (kind === 'read') return `Você leu ${n} coordenadas da matriz.`
+        if (kind === 'move' || kind === 'copy') return `Você mudou ${n} manchas de lugar.`
+        return `Você encontrou ${n} posições na matriz.`
+    }
+
+    /** O que aconteceu, dito de volta em coordenadas. */
+    private doneText(cell: Cell, task: Task): string {
+        if (task.kind === 'read') return `Esta janela é a ${label(cell)}.`
+        if (task.kind === 'move') return `A tinta saiu de ${label(task.source)} e foi para ${label(cell)}.`
+        if (task.kind === 'copy') return `A cópia de ${label(task.source)} ficou em ${label(cell)}.`
+        return `Linha ${cell.row} com coluna ${cell.col}: ${label(cell)}.`
     }
 
     /* ─────────────────────────────── resposta ─────────────────────────── */
@@ -209,7 +289,8 @@ export class GameScene extends Phaser.Scene {
         this.mode = 'firing'
         this.applyInput()
         this.audio.tap()
-        this.facade.press(cell)
+        if (task.kind === 'read') this.cards.press(task.options.findIndex(o => o.row === cell.row && o.col === cell.col))
+        else this.facade.press(cell)
         this.prompt.hush()
 
         /*
@@ -228,16 +309,19 @@ export class GameScene extends Phaser.Scene {
         if (gen !== this.gen) return
 
         const hit = correct(task, cell)
+        const ink = inkFor(this.painted, task)
         this.audio.turn()
         this.audio.shoot()
-        await this.cannon.shoot(this.facade.centerOf(cell), hit)
+        // o disparo sai com a COR DA MANCHA que o pedido nomeia, e cinza
+        // quando a escolha está errada
+        await this.cannon.shoot(this.facade.centerOf(cell), hit, hit ? ink : null)
         if (gen !== this.gen) return
 
-        if (hit) await this.succeed(cell, task)
+        if (hit) await this.succeed(cell, task, ink)
         else await this.miss(cell, task)
     }
 
-    private async succeed(cell: Cell, task: Task) {
+    private async succeed(cell: Cell, task: Task, ink: number) {
         const gen = this.gen
         const points = this.stalled ? POINTS_AFTER_STALL : POINTS_CLEAN
         this.score += points
@@ -245,11 +329,19 @@ export class GameScene extends Phaser.Scene {
 
         this.audio.splat()
         this.painted = applyTask(this.painted, task)
-        await this.facade.paint(cell)
+        this.facade.highlight(null)
+        void this.cards.hide()
+        // no MOVER a origem esvazia primeiro: é o que deixa ver que a tinta
+        // SAIU de um lugar, em vez de ter brotado no outro
+        if (task.kind === 'move') await this.facade.unpaint(task.source)
+        await this.facade.paint(cell, ink)
         if (gen !== this.gen) return
 
         this.facade.hideGuides()
-        void this.prompt.say(`Linha ${cell.row} com coluna ${cell.col}: ${label(cell)}.`, 'good')
+        this.prompt.setShift(0, 0)
+        // a frase NOMEIA a transformação, que é o que o §8 pede do nível 3: a
+        // criança precisa ouvir de volta o que ela acabou de fazer com a matriz
+        void this.prompt.say(this.doneText(cell, task), 'good')
 
         runtimeGameBridge.emit({
             type: 'CORRECT_ANSWER',
@@ -283,12 +375,18 @@ export class GameScene extends Phaser.Scene {
         this.tries += 1
 
         this.audio.dud()
-        await this.facade.shake(cell)
+        // no nível 2 quem treme é o CARTÃO escolhido, não a janela: foi nele
+        // que a criança tocou, e sacudir a matriz culparia a peça errada
+        if (task.kind === 'read') {
+            await this.cards.shake(task.options.findIndex(o => o.row === cell.row && o.col === cell.col))
+        } else {
+            await this.facade.shake(cell)
+        }
         if (gen !== this.gen) return
         this.facade.hideGuides()
 
         const first = FIRST_HINT[task.kind]
-        const again = `Você tocou ${label(cell)}. Leia de novo o pedido e conte a linha primeiro.`
+        const again = this.againText(cell, task)
         void this.prompt.say(this.tries === 1 ? first : again, 'warn', true)
 
         if (!this.stalled) {
@@ -309,7 +407,10 @@ export class GameScene extends Phaser.Scene {
 
         // depois de duas tentativas a resposta pulsa: a ajuda cresce, mas só
         // depois de a criança ter tido duas chances de raciocinar
-        if (this.tries >= 2) this.facade.pulse(answerOf(task))
+        if (this.tries >= 2) {
+            if (task.kind === 'read') this.cards.pulse(task.highlighted)
+            else this.facade.pulse(answerOf(task))
+        }
 
         this.mode = 'asking'
         this.applyInput()
@@ -322,12 +423,15 @@ export class GameScene extends Phaser.Scene {
         this.done += 1
 
         this.prompt.hush()
+        this.prompt.setShift(0, 0)
+        this.facade.highlight(null)
+        void this.cards.hide()
         void this.prompt.setAsk(this.mural.title)
         this.audio.mural()
         await this.facade.reveal()
         if (gen !== this.gen) return
 
-        void this.prompt.say('Você encontrou quatro posições na matriz.', 'good')
+        void this.prompt.say(this.muralText(), 'good')
         await this.hud.celebrate(this.done - 1)
         if (gen !== this.gen) return
         await FX.wait(this, 1500)
@@ -403,12 +507,81 @@ export class GameScene extends Phaser.Scene {
 
     private applyInput() {
         const free = !this.tutorialOpen && this.mode === 'asking'
-        this.facade.setEnabled(free)
+        // no nível 2 quem responde são os CARTÕES: deixar a matriz tocável ali
+        // daria dois caminhos para a mesma pergunta, e um deles sem resposta
+        const lendo = this.mode !== 'done' && this.task && this.task.kind === 'read'
+        this.facade.setEnabled(free && !lendo)
+        this.cards.setEnabled(free && lendo)
         this.hud.setEnabled(!this.tutorialOpen && this.mode !== 'done')
     }
 
+    /**
+     * ─────────────────────────────────────────────────────────────────────
+     *  O TUTORIAL MUDA COM O NÍVEL
+     * ─────────────────────────────────────────────────────────────────────
+     *
+     * O §13 do planejamento é claro: os níveis 2 e 3 mostram só o VERBO NOVO,
+     * sem repetir os quatro passos de linha e coluna. Quem chega ao nível 3 já
+     * sabe ler uma coordenada — o que ela ainda não viu é a tinta mudar de
+     * lugar, e é disso, e só disso, que o passo precisa falar.
+     */
     private tutorialSteps(full: boolean) {
-        const target = this.task.kind === 'paint' ? this.task.target : { row: 2, col: 3 }
+        const task = this.task
+
+        if (task.kind === 'read') {
+            return [
+                {
+                    text: 'Agora a janela é apontada, e você diz o nome dela.',
+                    shape: 'rect' as const,
+                    ...this.facade.bounds(),
+                    balloonX: 640,
+                    balloonY: 560,
+                },
+                {
+                    text: 'Toque no cartão com a coordenada certa.',
+                    shape: 'rect' as const,
+                    ...this.cards.bounds(),
+                    balloonX: 640,
+                    balloonY: 560,
+                    buttonLabel: 'Vamos!',
+                },
+            ]
+        }
+
+        if (task.kind === 'move' || task.kind === 'copy') {
+            const origem = this.facade.centerOf(task.source)
+            return [
+                {
+                    text: 'Cada mancha tem a sua cor. O pedido diz de qual ele fala.',
+                    shape: 'rect' as const,
+                    x: origem.x,
+                    y: origem.y,
+                    w: 168,
+                    h: 168,
+                    balloonX: 960,
+                    balloonY: 470,
+                },
+                {
+                    text: 'MOVER tira a tinta daqui. COPIAR deixa as duas.',
+                    shape: 'rect' as const,
+                    ...this.prompt.bounds(),
+                    balloonX: 640,
+                    balloonY: 560,
+                },
+                {
+                    text: 'Conte um passo na direção da seta e toque lá.',
+                    shape: 'rect' as const,
+                    ...this.facade.bounds(),
+                    balloonX: 640,
+                    balloonY: 560,
+                    buttonLabel: 'Vamos!',
+                },
+            ]
+        }
+
+        // sobrou o `paint`, mas o compilador não estreita `'move' | 'copy'` por
+        // eliminação: a guarda explícita é o que o convence
+        const target = task.kind === 'paint' ? task.target : { row: 1, col: 1 }
         const steps = [
             {
                 text: 'Esta fachada é uma matriz de janelas.',
