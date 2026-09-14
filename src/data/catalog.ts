@@ -68,10 +68,9 @@ import coverBuscaDoBibliotecario from "../assets/games/EF03CO07/a-busca-do-bibli
 import coverFaseDeEntradaESaida from "../assets/games/EF03CO06/fase-de-entrada-e-saida/cover-fase-entrada-e-saida.png";
 import coverShowDeFormatos from "../assets/games/EF03CO08/show-de-formatos/cover-show-de-formatos.png";
 import coverAcheOSuspeito from "../assets/games/EF03CO09/ache-o-suspeito/cover-ache-o-suspeito.png";
-// PROVISÓRIO: o pátio vazio no lugar da capa, que o §14 do planejamento manda
-// gerar por último. O prompt está em
-// src/games/EF04CO01/canhao-das-coordenadas/TEXTURAS.md §6.
-import coverCanhaoDasCoordenadas from "../assets/games/EF04CO01/canhao-das-coordenadas/bg-patio-da-arte.png";
+import coverCanhaoDasCoordenadas from "../assets/games/EF04CO01/canhao-das-coordenadas/cover-canhao-das-coordenadas.png";
+import coverCofreDosRegistros from "../assets/games/EF04CO02/o-cofre-dos-registros/cover-o-cofre-dos-registros.png";
+import coverDancaAninhada from "../assets/games/EF04CO03/danca-aninhada/cover-danca-aninhada.png";
 /**
  * 1. `id` nunca muda e nunca é reaproveitado. Se um jogo for removido,
  *    marque status "draft" — não devolva o id para a fila.
@@ -905,6 +904,23 @@ export const catalog: Game[] = [
     thumbnail: archiveRecordsThumbnail,
   },
   {
+    id: "069",
+    slug: "o-cofre-dos-registros",
+    module: "EF04CO02/o-cofre-dos-registros",
+    skill: "EF04CO02",
+    years: [4],
+    tags: ["registro", "campo", "preencher"],
+    order: 245,
+    status: "draft",
+    title: "O Cofre dos Registros",
+    description:
+      "Leia a pista do avistamento e coloque cada valor no campo com o nome certo para abrir a cápsula do arquivo.",
+    category: "Pensamento Computacional",
+    points: 90,
+    icon: "🔐",
+    thumbnail: coverCofreDosRegistros,
+  },
+  {
     id: "025",
     slug: "predio-dos-lacos",
     module: "EF04CO03/predio-dos-lacos",
@@ -920,6 +936,23 @@ export const catalog: Game[] = [
     points: 65,
     icon: "🔁",
     thumbnail: buildingLoopsThumbnail,
+  },
+  {
+    id: "070",
+    slug: "danca-aninhada",
+    module: "EF04CO03/danca-aninhada",
+    skill: "EF04CO03",
+    years: [4],
+    tags: ["laço", "repetição", "coreografia", "simulação"],
+    order: 255,
+    status: "draft",
+    title: "Dança Aninhada",
+    description:
+      "Monte a coreografia com blocos REPITA e toque em DANÇAR para ver o dançarino executar o seu algoritmo.",
+    category: "Pensamento Computacional",
+    points: 30,
+    icon: "💃",
+    thumbnail: coverDancaAninhada,
   },
   {
     id: "026",
@@ -1263,4 +1296,4 @@ export const catalog: Game[] = [
 ];
 
 /** Próximo id livre. Use ao cadastrar um jogo novo. */
-export const NEXT_FREE_ID = "069";
+export const NEXT_FREE_ID = "071";

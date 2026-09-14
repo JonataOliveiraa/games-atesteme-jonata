@@ -272,6 +272,16 @@ const POR_SLUG: Record<string, string[]> = {
     "No Nível 3, clique nas células para atacar e encontre todos os navios escondidos.",
     "Coordenadas têm linha (letra) e coluna (número): A-1 é linha A, coluna 1.",
   ],
+  "o-cofre-dos-registros": [
+    "Uma ficha é um registro: cada informação mora num campo com nome.",
+    "Leia a pista da criatura que apareceu no aro de observação.",
+    "Toque numa etiqueta da bandeja para escolhê-la; toque de novo para soltar.",
+    "Depois toque no campo onde esse valor pertence: CRIATURA, COR ou LOCAL.",
+    "Se o campo recusar, a dica conta o que aquele nome guarda. Tente o campo certo.",
+    "Ficha completa fecha um ferrolho. Três fichas abrem a cápsula do arquivo.",
+    "No nível 2 a ficha já vem preenchida e um valor não bate com a pista: toque no campo errado e escolha o valor certo.",
+    "No nível 3 a ficha está certa, mas chega uma novidade: toque no campo que mudou. Os outros campos ficam como estão.",
+  ],
   "canhao-das-coordenadas": [
     "A fachada é uma matriz: cada janela tem uma linha e uma coluna.",
     "L é a linha, que vai de lado. C é a coluna, que desce.",
@@ -286,6 +296,13 @@ const POR_SLUG: Record<string, string[]> = {
     "No Nível 2, examine a ficha aberta e selecione o valor correto do campo perguntado.",
     "No Nível 3, percorra todos os registros e responda à pergunta sobre o conjunto.",
     "Cada ficha é um registro com campos nomeados — como Nome, Cidade, Hobby e Animal.",
+  ],
+  "danca-aninhada": [
+    "O palco pede uma sequência de movimentos: veja os pictogramas lá em cima.",
+    "Toque num espaço vazio da ficha e escolha uma opção na bandeja.",
+    "O bloco REPITA repete tudo o que está dentro dele — e a ordem importa.",
+    "Com a ficha cheia, toque em DANÇAR: o dançarino executa o seu algoritmo.",
+    "Se a dança sair diferente, ela para na primeira diferença e mostra qual espaço trocar.",
   ],
   "predio-dos-lacos": [
     "No Nível 1, escolha quantas vezes o laço deve repetir para limpar todas as janelas.",
