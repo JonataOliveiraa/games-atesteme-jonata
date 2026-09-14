@@ -1,4 +1,5 @@
 import Phaser from 'phaser'
+import { ICON_BOX, ICON_FRAME, SHEET, iconOrigin, iconScale } from '../data/art'
 import { C } from '../data/theme'
 import type { Move } from '../types'
 
@@ -13,33 +14,33 @@ import type { Move } from '../types'
  *
  * ── SILHUETA TINGIDA, NÃO UM PNG POR COR ─────────────────────────────────
  *
- * Quando `icone-dos-movimentos.png` existir, cada quadro é uma silhueta CHAPADA
- * em preto sobre alfa real, e quem dá a cor é o `setTint`. Um PNG por cor
- * seriam seis arquivos que precisariam concordar entre si; um PNG preto e um
- * tint são um arquivo e uma linha.
+ * Em `icones-dos-movimentos.png` cada quadro é uma silhueta CHAPADA em preto
+ * sobre alfa real, e quem dá a cor é o `setTint`. Um PNG por cor seriam seis
+ * arquivos que precisariam concordar entre si; um PNG preto e um tint são um
+ * arquivo e uma linha.
  *
- * Enquanto a folha não chega, o desenho vetorial abaixo ocupa a mesma caixa.
- * A silhueta tem de resolver sozinha: a palavra embaixo é reforço e, num
- * celular a 0,30, ela fica pequena demais para carregar o significado.
+ * O desenho vetorial abaixo é a reserva do §7 do TEXTURAS.md: sem a folha, o
+ * jogo roda igual, nas mesmas caixas. A silhueta tem de resolver sozinha — a
+ * palavra embaixo é reforço e, num celular a 0,30, fica pequena demais para
+ * carregar o significado.
  */
-
-export const ICON_SHEET = 'dance-move-icons'
-
-/** A ordem dos quadros na folha, fixada aqui e conferida no BootScene. */
-export const ICON_FRAME: Record<Move, string> = {
-    step: 'step',
-    clap: 'clap',
-    spin: 'spin',
-}
 
 export type MoveIcon = Phaser.GameObjects.Image | Phaser.GameObjects.Graphics
 
-/** Um pictograma centrado na origem, cabendo num quadrado de lado `size`. */
+/**
+ * Um pictograma centrado na origem, com `size` de altura.
+ *
+ * A escala sai da ALTURA e a âncora do centro da caixa alfa — nunca da
+ * célula. Forçar cada célula a um quadrado achataria a seta do giro e
+ * espremeria a pegada, que são as duas mais fora de esquadro.
+ */
 export function moveIcon(scene: Phaser.Scene, move: Move, size: number, face = C.ink, deep = C.inkSoft): MoveIcon {
-    if (scene.textures.exists(ICON_SHEET)) {
-        const image = scene.add.image(0, 0, ICON_SHEET, ICON_FRAME[move])
+    if (scene.textures.exists(SHEET.icons)) {
+        const image = scene.add.image(0, 0, SHEET.icons, ICON_FRAME[move])
+        const o = iconOrigin(ICON_BOX[move], image.frame.width)
         image.setTint(face)
-        image.setDisplaySize(size, size)
+        image.setOrigin(o.x, o.y)
+        image.setScale(iconScale(size))
         return image
     }
     const g = scene.add.graphics()

@@ -14,7 +14,7 @@ Destino dos PNGs futuros: `src/assets/games/EF04CO03/danca-aninhada/`
 |---:|---|---:|---|---|---|---|
 | 1 | `bg-palco-escolar.png` | 1672 × 941 | imagem única | opaco | palco acolhedor e áreas calmas para a interface | após validar N1 |
 | 2 | `dancarino.png` | 1024 × 256 | 4 × 1 de 256 × 256 | alfa real | o **mesmo** dançarino em repouso, passo, palma e giro | após validar N1 |
-| 3 | `icones-dos-movimentos.png` | 768 × 256 | 3 × 1 de 256 × 256 | alfa real | silhueta chapada de PASSO, PALMA e GIRO, tingida pelo código | após validar N1 |
+| 3 | `icones-dos-movimentos.png` | 900 × 300 ✅ | 3 × 1 de 300 × 300 | alfa real | silhueta chapada de PASSO, PALMA e GIRO, tingida pelo código | **entregue** |
 | 4 | `cover-danca-aninhada.png` | 1672 × 941 | imagem única | opaco | capa do catálogo | por último |
 
 **Total: quatro PNGs.** Música e efeitos são gerados por WebAudio; não pedir MP3 ou WAV. A folha usa quatro quadros, não quatro personagens separados. Não criar arquivo de textura para cada movimento.
@@ -235,13 +235,13 @@ Se o gerador produzir um quadro muito diferente, **reprovar a folha inteira** e 
 
 | Campo | Exigência |
 |---|---|
-| canvas | 768 × 256 |
-| grade lógica | 3 colunas × 1 linha, 256 × 256 por célula |
+| canvas | 768 × 256 no pedido; **veio 900 × 300**, e serve |
+| grade lógica | 3 colunas × 1 linha, quadradas |
 | ordem | 0 PASSO, 1 PALMA, 2 GIRO |
 | fundo | alfa verdadeiro, sem branco e sem xadrez pintado |
 | cor | **uma só**: preto `#000000` chapado, sem contorno, sombra ou degradê |
 | área segura | a figura cabe em 200 × 200 no centro da célula |
-| espessura mínima | nada mais fino que 14 px na escala 256 |
+| espessura mínima | nada mais fino que 14 px na escala da célula |
 
 ### Por que preto, e por que uma folha só
 
@@ -325,6 +325,27 @@ como o conjunto perde a unidade.
 
 ---
 
+
+### O que veio, medido
+
+A folha entregue tem **900 × 300**, três células de 300. O pedido dizia 768 ×
+256 e isso não importa: o quadro sai da divisão da largura entregue por três,
+no `BootScene`. Os 66 537 pixels opacos são `#000000` — as seis outras cores
+que aparecem são antialiasing de um bit.
+
+| Frame | Caixa alfa na célula | Tamanho |
+|---:|---|---|
+| 0 `PASSO` | x 90, y 22 | 136 × 260 |
+| 1 `PALMA` | x 51, y 15 | 204 × 267 |
+| 2 `GIRO` | x 40, y 32 | 219 × 238 |
+
+As três **alturas** batem — 260, 267 e 238 — e as larguras não, porque as
+formas são diferentes. Por isso a escala do código vem da altura e a âncora,
+do centro da caixa: esticar cada célula para um quadrado achataria a seta do
+giro e espremeria a pegada. As medidas estão em `data/art.ts`; trocar a folha
+é medir de novo e editar aquela tabela.
+
+---
 ## 6. `cover-danca-aninhada.png`
 
 ### Contrato

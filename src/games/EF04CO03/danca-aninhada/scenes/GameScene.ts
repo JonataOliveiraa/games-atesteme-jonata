@@ -350,6 +350,10 @@ export class GameScene extends Phaser.Scene {
         await this.showUi(true)
         if (gen !== this.gen) return
 
+        // a faixa ainda trazia "toque em DANÇAR", que já não era verdade: o
+        // ensaio acabou e o que acontece agora é a conferência
+        void this.options.say('Conferindo com o pedido...')
+
         // os selos só agora: durante o ensaio a tira estava fora da tela
         const sealed = bad ? Math.floor(bad.index / phase.pattern.length) : trace.rounds
         for (let r = 0; r < sealed; r++) {

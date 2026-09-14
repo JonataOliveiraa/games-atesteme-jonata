@@ -185,10 +185,19 @@ export function createStage(scene: Phaser.Scene) {
         const left = FOCUS.x - ((total - 1) * gap) / 2
         for (let i = 0; i < total; i++) {
             const x = left + i * gap
-            beads.fillStyle(C.ink, 1)
+            // o refrão que falta é um contorno vazio; o que fechou, cheio de
+            // luz. Dois tons de cinza sobre o palco escuro não se separavam
+            beads.fillStyle(C.ink, 0.75)
             beads.fillCircle(x, y, 18)
-            beads.fillStyle(i < current ? C.warm : C.wall, 1)
-            beads.fillCircle(x, y, 14)
+            if (i < current) {
+                beads.fillStyle(C.warm, 1)
+                beads.fillCircle(x, y, 14)
+            } else {
+                beads.fillStyle(C.white, 0.22)
+                beads.fillCircle(x, y, 14)
+                beads.fillStyle(C.ink, 0.75)
+                beads.fillCircle(x, y, 9)
+            }
         }
     }
 
