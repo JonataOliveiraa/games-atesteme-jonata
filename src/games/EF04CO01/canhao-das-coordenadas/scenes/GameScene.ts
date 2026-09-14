@@ -124,6 +124,7 @@ export class GameScene extends Phaser.Scene {
         this.cannon = createCannon(this)
         this.cards = createCards(this, { onPick: cell => void this.pick(cell) })
         this.hud = createHud(this, {
+            level: this.level.level,
             murals: this.level.murals.length,
             onHelp: () => this.replayTutorial(),
         })

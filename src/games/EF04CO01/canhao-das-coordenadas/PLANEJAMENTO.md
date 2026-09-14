@@ -672,3 +672,29 @@ mural pedido a pedido.
 1. `cover-canhao-das-coordenadas.png`, e tirar o `status: "draft"`.
 2. Teste com criança, principalmente no nível 3.
 3. Medir o contraste das cinco tintas em tela de celular sob sol.
+
+---
+
+## 22. O nível no cabeçalho (14/09/2026)
+
+O cabeçalho mostrava os murais concluídos, mas não em que NÍVEL a criança
+estava. Os pontos contam murais **dentro** do nível e reiniciam a cada um, de
+modo que três pontos apagados significavam a mesma coisa no nível 1 e no
+nível 3 — e quem voltasse ao jogo no dia seguinte não tinha como saber onde
+havia parado.
+
+Entrou uma pílula `NÍVEL n` no canto esquerdo, 132 × 48, texto de 19 px.
+
+### Por que sem o total
+
+O catálogo tem dois formatos. `NÍVEL n` aparece em trinta jogos; `NÍVEL n de
+N`, em quinze. A divisão é geracional: o segundo é da leva EF02/EF03, e a leva
+nova — EF04, EF05, EF15 — usa o primeiro quase sem exceção, deixando o total
+para a barra de progresso da tela de conclusão.
+
+O vizinho direto decidiu o empate: **Batalha das Coordenadas**, do mesmo
+EF04CO01, escreve `NÍVEL ${level}` em pílula de 19 px. Dois jogos da mesma
+habilidade com cabeçalhos diferentes seria o pior dos dois mundos.
+
+Os pontos dos murais correram de 56 para 188 (a pílula termina em 152) e o
+nome do mural foi de 400 para o centro da tela, longe dos dois.

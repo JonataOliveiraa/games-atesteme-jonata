@@ -4,8 +4,8 @@ import { DEPTH, HUD, W } from '../data/layout'
 import { C, CSS, FONT } from '../data/theme'
 
 /**
- * O cabeçalho de ponta a ponta: murais concluídos à esquerda, o nome do mural
- * no meio, vidas e `?` à direita.
+ * O cabeçalho de ponta a ponta: a pílula do NÍVEL e os murais concluídos à
+ * esquerda, o nome do mural no meio, vidas e `?` à direita.
  *
  * Nenhum número de pontos, acertos ou porcentagem aparece aqui — o §11 do
  * planejamento é explícito, e o que a criança deve ler como progresso é a
@@ -29,6 +29,7 @@ function paintDot(g: Phaser.GameObjects.Graphics, x: number, done: boolean) {
 }
 
 export interface HudOptions {
+    level: number
     murals: number
     onHelp: () => void
 }
@@ -48,6 +49,36 @@ export function createHud(scene: Phaser.Scene, options: HudOptions) {
     bar.fillStyle(C.aim, 1)
     bar.fillRect(0, HUD.h - 7, W, 4)
     root.add(bar)
+
+    /*
+     * A PÍLULA DO NÍVEL, NO PADRÃO DO CATÁLOGO.
+     *
+     * Sem ela, a criança que volta ao jogo no dia seguinte não tem como saber
+     * se está no nível que parou — os pontos ao lado contam murais DENTRO do
+     * nível e reiniciam em cada um, então três pontos apagados significam a
+     * mesma coisa no nível 1 e no nível 3.
+     */
+    const pill = scene.add.graphics()
+    pill.fillStyle(C.ink, 1)
+    pill.fillRoundedRect(HUD.pillX, HUD.pillY, HUD.pillW, HUD.pillH, HUD.pillH / 2)
+    pill.fillStyle(C.paintDeep, 1)
+    pill.fillRoundedRect(HUD.pillX + 4, HUD.pillY + 4, HUD.pillW - 8, HUD.pillH - 8, HUD.pillH / 2 - 4)
+    pill.fillStyle(C.aim, 1)
+    pill.fillRoundedRect(HUD.pillX + 4, HUD.pillY + 4, HUD.pillW - 8, HUD.pillH - 13, HUD.pillH / 2 - 4)
+    pill.fillStyle(C.white, 0.32)
+    pill.fillRoundedRect(HUD.pillX + 13, HUD.pillY + 8, HUD.pillW - 26, 9, 5)
+    root.add(pill)
+
+    const levelText = scene.add
+        .text(HUD.pillX + HUD.pillW / 2, HUD.cy - 1, `NÍVEL ${options.level}`, {
+            fontFamily: FONT.black,
+            fontSize: '19px',
+            color: CSS.white,
+        })
+        .setOrigin(0.5)
+        .setResolution(2)
+    levelText.setStroke(CSS.ink, 5)
+    root.add(levelText)
 
     const dots = scene.add.graphics()
     const dotX = (i: number) => HUD.dotX + i * HUD.dotGap

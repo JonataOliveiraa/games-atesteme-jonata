@@ -16,13 +16,39 @@ export const DEPTH = {
     hud: 500,
 }
 
+/**
+ * ══════════════════════════════════════════════════════════════════════════
+ *  O CABEÇALHO
+ * ══════════════════════════════════════════════════════════════════════════
+ *
+ * Da esquerda para a direita: a pílula do NÍVEL, os murais concluídos, o nome
+ * do mural, as vidas e o `?`.
+ *
+ * A pílula segue o formato dominante do catálogo — `NÍVEL n`, sem o total, em
+ * pílula no canto esquerdo. É o que fazem trinta jogos, entre eles o vizinho
+ * direto Batalha das Coordenadas, do mesmo EF04CO01. Os quinze jogos que
+ * escrevem `NÍVEL n de N` são da leva anterior (EF02 e EF03); a leva nova
+ * deixou o total para a barra de progresso da tela de conclusão.
+ *
+ * São duas informações diferentes e as duas precisam estar na tela: a pílula
+ * diz em que NÍVEL a criança está, e os pontos ao lado dizem quantos murais
+ * daquele nível ela já fechou. Sem a pílula, três pontos apagados significam
+ * a mesma coisa no nível 1 e no nível 3.
+ *
+ * Os pontos começam em 188 porque a pílula termina em 152; o nome do mural foi
+ * para o centro da tela, longe dos dois.
+ */
 export const HUD = {
     h: 92,
     cy: 46,
-    dotX: 56,
+    pillX: 20,
+    pillY: 22,
+    pillW: 132,
+    pillH: 48,
+    dotX: 188,
     dotGap: 42,
     dotR: 14,
-    titleX: 400,
+    titleX: 640,
     livesX: 1020,
     helpX: 1206,
     helpR: 30,
