@@ -272,6 +272,13 @@ const POR_SLUG: Record<string, string[]> = {
     "No Nível 3, clique nas células para atacar e encontre todos os navios escondidos.",
     "Coordenadas têm linha (letra) e coluna (número): A-1 é linha A, coluna 1.",
   ],
+  "canhao-das-coordenadas": [
+    "A fachada é uma matriz: cada janela tem uma linha e uma coluna.",
+    "L é a linha, que vai de lado. C é a coluna, que desce.",
+    "Leia o pedido e toque na janela onde a linha e a coluna se encontram.",
+    "A linha acende primeiro, depois a coluna: é assim que se lê L2, C3.",
+    "Se errar, a tinta sai cinza e não pinta. A dica mostra como pensar.",
+  ],
   "arquivo-dos-registros": [
     "No Nível 1, leia a pergunta e toque na ficha que tem o valor correto no campo pedido.",
     "No Nível 2, examine a ficha aberta e selecione o valor correto do campo perguntado.",

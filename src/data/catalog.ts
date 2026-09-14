@@ -68,6 +68,10 @@ import coverBuscaDoBibliotecario from "../assets/games/EF03CO07/a-busca-do-bibli
 import coverFaseDeEntradaESaida from "../assets/games/EF03CO06/fase-de-entrada-e-saida/cover-fase-entrada-e-saida.png";
 import coverShowDeFormatos from "../assets/games/EF03CO08/show-de-formatos/cover-show-de-formatos.png";
 import coverAcheOSuspeito from "../assets/games/EF03CO09/ache-o-suspeito/cover-ache-o-suspeito.png";
+// PROVISÓRIO: o pátio vazio no lugar da capa, que o §14 do planejamento manda
+// gerar por último. O prompt está em
+// src/games/EF04CO01/canhao-das-coordenadas/TEXTURAS.md §6.
+import coverCanhaoDasCoordenadas from "../assets/games/EF04CO01/canhao-das-coordenadas/bg-patio-da-arte.png";
 /**
  * 1. `id` nunca muda e nunca é reaproveitado. Se um jogo for removido,
  *    marque status "draft" — não devolva o id para a fila.
@@ -867,6 +871,23 @@ export const catalog: Game[] = [
     thumbnail: battleCoordsThumbnail,
   },
   {
+    id: "068",
+    slug: "canhao-das-coordenadas",
+    module: "EF04CO01/canhao-das-coordenadas",
+    skill: "EF04CO01",
+    years: [4],
+    tags: ["coordenadas", "matriz", "linha e coluna", "mira"],
+    order: 235,
+    status: "draft",
+    title: "Canhão das Coordenadas",
+    description:
+      "Leia a linha e a coluna, toque na janela certa e veja o canhão de tinta pintar a fachada.",
+    category: "Pensamento Computacional",
+    points: 40,
+    icon: "🎯",
+    thumbnail: coverCanhaoDasCoordenadas,
+  },
+  {
     id: "024",
     slug: "arquivo-dos-registros",
     module: "EF04CO02/arquivo-dos-registros",
@@ -1242,4 +1263,4 @@ export const catalog: Game[] = [
 ];
 
 /** Próximo id livre. Use ao cadastrar um jogo novo. */
-export const NEXT_FREE_ID = "062";
+export const NEXT_FREE_ID = "069";
