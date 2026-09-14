@@ -6,16 +6,16 @@ import {
     FRAME_PAD,
     GAP,
     HEADER_H,
-    SHEET,
     SIGN_CHIP,
     SLOT,
-    TAG_H,
     bodyOf,
+    frameOf,
     innerCounterColumn,
+    type Body,
     type Rect,
 } from '../data/layout'
 import { slotsOf } from '../data/rules'
-import { C, CSS, FONT, MOVE_NAME, SIGNAL_NAME } from '../data/theme'
+import { C, CSS, FONT, SIGNAL_NAME } from '../data/theme'
 import { moveIcon } from './pictogram'
 import type { SheetDef, SlotId, SlotValue } from '../types'
 
@@ -29,8 +29,16 @@ import type { SheetDef, SlotId, SlotValue } from '../types'
  * moldura deixaria de ser lida como aninhamento e passaria a ser lida como
  * enfeite.
  *
- * As duas têm cor E nome escrito. Cor sozinha não distingue — quem não separa
- * ciano de âmbar continuaria lendo FORA e DENTRO.
+ * As duas têm cor E nome escrito — cor sozinha não distingue. Mas as
+ * etiquetas só aparecem quando existem DUAS molduras: com uma só, "FORA" não
+ * se opõe a nada e é palavra na tela sem trabalho a fazer.
+ *
+ * ── A FICHA É PICTOGRÁFICA ───────────────────────────────────────────────
+ *
+ * Os espaços mostram o DESENHO do movimento, sem a palavra embaixo e sem o
+ * rótulo MOVIMENTO/DEPOIS em cima. É o "roteiro pictográfico" do §1 do
+ * planejamento, e é o que a habilidade nomeia. Quem diz a ordem é a posição
+ * dos espaços, que é justamente o que a criança está decidindo.
  *
  * ── ESTE CORTE DESENHA SÓ O QUE O NÍVEL 1 USA ────────────────────────────
  *
@@ -48,8 +56,6 @@ interface Piece {
     face: Phaser.GameObjects.Graphics
     content: Phaser.GameObjects.Container
     zone: Phaser.GameObjects.Zone
-    /** Os espaços do corpo têm rótulo em cima; os do cabeçalho, não. */
-    tagged: boolean
     state: State
 }
 
@@ -117,6 +123,8 @@ export function createProgram(scene: Phaser.Scene, options: ProgramOptions) {
     root.add(tags)
 
     let sheet: SheetDef | null = null
+    let frame: Rect = frameOf({ outer: 'times', leading: 1, nested: false, trailing: false }, 0)
+    let body: Body | null = null
     let enabled = false
     let selected: SlotId | null = null
     let locked: SlotId | null = null
@@ -171,7 +179,7 @@ export function createProgram(scene: Phaser.Scene, options: ProgramOptions) {
         return t
     }
 
-    const addPiece = (id: SlotId, box: Rect, tagged = false) => {
+    const addPiece = (id: SlotId, box: Rect) => {
         const body = scene.add.container(box.x, box.y)
         const face = scene.add.graphics()
         paintSlot(face, box.w, box.h, 'empty', false)
@@ -194,7 +202,7 @@ export function createProgram(scene: Phaser.Scene, options: ProgramOptions) {
             options.onSlot(id)
         })
 
-        pieces.set(id, { id, box, body, face, content, zone, tagged, state: 'empty' })
+        pieces.set(id, { id, box, body, face, content, zone, state: 'empty' })
     }
 
     /**
@@ -205,10 +213,8 @@ export function createProgram(scene: Phaser.Scene, options: ProgramOptions) {
      */
     const drawArrow = (piece: Piece) => {
         arrow.clear()
-        // acima do RÓTULO, não do espaço: a seta encostada no espaço
-        // cairia em cima da palavra MOVIMENTO
-        const top = piece.box.y - piece.box.h / 2 - 22 - (piece.tagged ? TAG_H : 0)
-        const below = top - 16 < SHEET.y + 4
+        const top = piece.box.y - piece.box.h / 2 - 22
+        const below = top - 16 < frame.y - frame.h / 2 + 4
         const y = below ? piece.box.y + piece.box.h / 2 + 22 : top
         const dir = below ? -1 : 1
         arrow.fillStyle(C.select, 1)
@@ -237,43 +243,53 @@ export function createProgram(scene: Phaser.Scene, options: ProgramOptions) {
             selected = null
             locked = null
 
-            const body = bodyOf(next)
+            /*
+             * O CABEÇALHO É MEDIDO ANTES DE A MOLDURA EXISTIR.
+             *
+             * A largura de `REPITA` depende da fonte que o navegador carregou,
+             * então ela não cabe num arquivo de layout. Os textos nascem, são
+             * medidos, e só então a moldura sabe de que tamanho ser e onde o
+             * corpo começa.
+             */
+            const repita = label(0, 0, 'REPITA', 36, CSS.white)
+            repita.setStroke(CSS.ink, 5)
+            const tail = label(0, 0, next.outer === 'times' ? 'VEZES' : 'ATÉ', 36, CSS.white)
+            tail.setStroke(CSS.ink, 5)
+            const chipW = next.outer === 'times' ? CHIP.w : SIGN_CHIP.w
+            const pillW = next.nested ? 112 : 0
+            const headerW = pillW + repita.width + chipW + tail.width + 42
+
+            frame = frameOf(next, headerW)
+            body = bodyOf(next, frame)
+
+            const left = frame.x - frame.w / 2
+            const top = frame.y - frame.h / 2
 
             frames.fillStyle(C.ink, 0.28)
-            frames.fillRoundedRect(SHEET.x + 5, SHEET.y + 9, SHEET.w, SHEET.h, 28)
+            frames.fillRoundedRect(left + 5, top + 9, frame.w, frame.h, 28)
             frames.fillStyle(C.outerDeep, 1)
-            frames.fillRoundedRect(SHEET.x - 5, SHEET.y - 5, SHEET.w + 10, SHEET.h + 10, 30)
+            frames.fillRoundedRect(left - 5, top - 5, frame.w + 10, frame.h + 10, 30)
             frames.fillStyle(C.outer, 1)
-            frames.fillRoundedRect(SHEET.x, SHEET.y, SHEET.w, SHEET.h, 26)
+            frames.fillRoundedRect(left, top, frame.w, frame.h, 26)
             frames.fillStyle(C.sheet, 1)
             frames.fillRoundedRect(
-                SHEET.x + 12,
-                SHEET.y + FRAME_PAD + HEADER_H - 4,
-                SHEET.w - 24,
-                SHEET.h - FRAME_PAD - HEADER_H - 8,
+                left + 12,
+                top + FRAME_PAD + HEADER_H - 4,
+                frame.w - 24,
+                frame.h - FRAME_PAD - HEADER_H - 8,
                 20,
             )
 
-            // ── o cabeçalho: FORA · REPITA [ ] VEZES ─────────────────────
-            const hy = SHEET.y + FRAME_PAD + HEADER_H / 2 - 4
-            let cursor = SHEET.x + 30
-            cursor += pill(cursor, hy, 'FORA', C.sheet, CSS.outer) + 18
-
-            const repita = label(cursor, hy, 'REPITA', 36, CSS.white)
-            repita.setStroke(CSS.ink, 5)
+            // ── o cabeçalho: [FORA] REPITA [ ] VEZES ─────────────────────
+            const hy = top + FRAME_PAD + HEADER_H / 2 - 4
+            let cursor = frame.x - headerW / 2
+            // a etiqueta só existe quando há a de DENTRO para se opor a ela
+            if (next.nested) cursor += pill(cursor, hy, 'FORA', C.sheet, CSS.outer) + 18
+            repita.setPosition(cursor, hy)
             cursor += repita.width + 14
-
-            const chipW = next.outer === 'times' ? CHIP.w : SIGN_CHIP.w
             addPiece('outer', { x: cursor + chipW / 2, y: hy, w: chipW, h: CHIP.h })
             cursor += chipW + 14
-
-            if (next.outer === 'times') {
-                const vezes = label(cursor, hy, 'VEZES', 36, CSS.white)
-                vezes.setStroke(CSS.ink, 5)
-            } else {
-                const ate = label(cursor, hy, 'ATÉ', 36, CSS.white)
-                ate.setStroke(CSS.ink, 5)
-            }
+            tail.setPosition(cursor, hy)
 
             // ── a moldura de dentro, quando a fase tem uma ───────────────
             if (body.innerFrame) {
@@ -305,21 +321,10 @@ export function createProgram(scene: Phaser.Scene, options: ProgramOptions) {
                     .setOrigin(0, 0.5)
                     .setResolution(2)
                 tags.add(vezes)
-
             }
 
-            // ── os espaços do corpo, com o rótulo em cima ────────────────
             body.slots.forEach(slot => {
-                if (!pieces.has(slot.id)) addPiece(slot.id, slot, true)
-                const tag = scene.add
-                    .text(slot.x, slot.y - slot.h / 2 - TAG_H / 2 - 4, slot.tag, {
-                        fontFamily: FONT.black,
-                        fontSize: '20px',
-                        color: slot.id === 'innerMove' ? CSS.inner : CSS.inkSoft,
-                    })
-                    .setOrigin(0.5)
-                    .setResolution(2)
-                tags.add(tag)
+                if (!pieces.has(slot.id)) addPiece(slot.id, slot)
             })
 
             slotsOf(next).forEach(id => {
@@ -358,18 +363,8 @@ export function createProgram(scene: Phaser.Scene, options: ProgramOptions) {
                         .setResolution(2)
                     piece.content.add(t)
                 } else {
-                    const icon = moveIcon(scene, value.move, 66, C.ink, C.inkSoft)
-                    icon.setPosition(0, -14)
+                    const icon = moveIcon(scene, value.move, piece.box.h * 0.76, C.ink, C.inkSoft)
                     piece.content.add(icon)
-                    const name = scene.add
-                        .text(0, piece.box.h / 2 - 24, MOVE_NAME[value.move], {
-                            fontFamily: FONT.black,
-                            fontSize: '24px',
-                            color: CSS.ink,
-                        })
-                        .setOrigin(0.5)
-                        .setResolution(2)
-                    piece.content.add(name)
                 }
             }
 
@@ -459,13 +454,12 @@ export function createProgram(scene: Phaser.Scene, options: ProgramOptions) {
         },
 
         bounds() {
-            return { x: SHEET.x + SHEET.w / 2, y: SHEET.y + SHEET.h / 2, w: SHEET.w + 34, h: SHEET.h + 34 }
+            return { x: frame.x, y: frame.y, w: frame.w + 34, h: frame.h + 34 }
         },
 
         /** Só o corpo, sem o cabeçalho — o tutorial aponta os movimentos. */
         bodyBounds() {
-            if (!sheet) return this.bounds()
-            const body = bodyOf(sheet)
+            if (!body) return this.bounds()
             return { x: body.area.x, y: body.area.y, w: body.area.w + GAP, h: body.area.h + GAP }
         },
 

@@ -14,10 +14,10 @@ import type { Move } from '../types'
  *
  * ── SILHUETA TINGIDA, NÃO UM PNG POR COR ─────────────────────────────────
  *
- * Em `icones-dos-movimentos.png` cada quadro é uma silhueta CHAPADA em preto
- * sobre alfa real, e quem dá a cor é o `setTint`. Um PNG por cor seriam seis
- * arquivos que precisariam concordar entre si; um PNG preto e um tint são um
- * arquivo e uma linha.
+ * Em `icones-dos-movimentos.png` cada quadro é uma silhueta chapada no azul
+ * escuro do jogo, sobre alfa real. A folha já vem na cor certa e nada é
+ * tingido — onde o fundo é escuro, quem muda é o FUNDO: o pictograma ganha um
+ * cartão claro, como em todo o resto do jogo.
  *
  * O desenho vetorial abaixo é a reserva do §7 do TEXTURAS.md: sem a folha, o
  * jogo roda igual, nas mesmas caixas. A silhueta tem de resolver sozinha — a
@@ -38,7 +38,6 @@ export function moveIcon(scene: Phaser.Scene, move: Move, size: number, face = C
     if (scene.textures.exists(SHEET.icons)) {
         const image = scene.add.image(0, 0, SHEET.icons, ICON_FRAME[move])
         const o = iconOrigin(ICON_BOX[move], image.frame.width)
-        image.setTint(face)
         image.setOrigin(o.x, o.y)
         image.setScale(iconScale(size))
         return image

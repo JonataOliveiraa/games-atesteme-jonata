@@ -2,7 +2,7 @@ import Phaser from 'phaser'
 import { FX } from '../../../../shared/effects/FX'
 import { COMPARE, DEPTH, REQUEST, W } from '../data/layout'
 import { wantedMoves } from '../data/rules'
-import { C, CSS, FONT, MOVE_NAME } from '../data/theme'
+import { C, CSS, FONT } from '../data/theme'
 import { moveIcon } from './pictogram'
 import type { Move, PhaseDef } from '../types'
 
@@ -20,6 +20,14 @@ import type { Move, PhaseDef } from '../types'
  * quando o refrão tem mais de um movimento. Ela mostra o agrupamento sem
  * entregar as molduras: é a barra vertical do §4, não um comando.
  *
+ * ── SEM PALAVRA DEBAIXO DO DESENHO ───────────────────────────────────────
+ *
+ * Cada cartão trazia PASSO, PALMA ou GIRO escrito. Numa tela que já tem o
+ * nome da fase, o `REPITA n VEZES` da ficha, a fala da bandeja e a palavra em
+ * cada opção, eram mais quatro palavras repetindo o que a silhueta diz. Aqui
+ * o que se lê é uma SEQUÊNCIA; o vocabulário é ensinado na bandeja, onde a
+ * criança escolhe com o nome do lado.
+ *
  * ── O FUNDO ABRAÇA OS CARTÕES, E NÃO A LARGURA DA TELA ───────────────────
  *
  * Era uma faixa de ponta a ponta com uma caixa de texto grudada na esquerda.
@@ -28,8 +36,9 @@ import type { Move, PhaseDef } from '../types'
  * atenção são eles.
  */
 
-const CARD_H = 84
-const CARD_MAX = 116
+const CARD_H = 78
+// quase quadrado: a largura existia para caber a palavra que saiu
+const CARD_MAX = 92
 const CARD_GAP = 10
 const BREAK = 24
 const PAD = 16
@@ -186,19 +195,8 @@ export function createRequest(scene: Phaser.Scene) {
                 const ring = scene.add.graphics()
                 body.add(ring)
 
-                const icon = moveIcon(scene, move, w * 0.42, C.ink, C.inkSoft)
-                icon.setPosition(0, -9)
+                const icon = moveIcon(scene, move, CARD_H * 0.74, C.ink, C.inkSoft)
                 body.add(icon)
-
-                const name = scene.add
-                    .text(0, CARD_H / 2 - 20, MOVE_NAME[move], {
-                        fontFamily: FONT.black,
-                        fontSize: '18px',
-                        color: CSS.ink,
-                    })
-                    .setOrigin(0.5)
-                    .setResolution(2)
-                body.add(name)
 
                 strip.add(body)
                 cards.push({ body, ring, move, round })

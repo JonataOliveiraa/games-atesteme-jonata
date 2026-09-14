@@ -58,9 +58,9 @@ export const dancerScale = (height: number) => height / BODY_H
  *  A FOLHA DOS PICTOGRAMAS
  * ══════════════════════════════════════════════════════════════════════════
  *
- * Silhueta chapada em preto sobre alfa real, três células. Quem dá a cor é o
- * `setTint`: os três aparecem em quatro tamanhos e em duas cores, e um PNG
- * por cor seriam seis arquivos que precisariam concordar entre si.
+ * Silhueta chapada em `#24334B` — o azul escuro do jogo — sobre alfa real,
+ * três células. A folha JÁ VEM na cor certa, então ninguém tinge nada: tint
+ * multiplica, e multiplicar um azul escuro por outro dá quase preto.
  *
  * O §5 do TEXTURAS.md pediu 768 × 256; veio 900 × 300. Não importa: o quadro
  * sai da divisão da largura entregue por três, no `BootScene`.
@@ -100,7 +100,16 @@ export const ICON_BOX: Record<'step' | 'clap' | 'spin', Box> = {
 /** A maior das três alturas: a referência única de escala. */
 export const ICON_H = 267
 
-export const iconScale = (size: number) => size / ICON_H
+/**
+ * Quanto do espaço pedido o desenho ocupa de fato.
+ *
+ * As silhuetas são bem mais cheias que os vetores que elas substituíram, e a
+ * 100% ficavam pesadas dentro do cartão. O recuo é aqui, num lugar só, e não
+ * espalhado por cinco tamanhos diferentes nos pontos de uso.
+ */
+const ICON_FILL = 0.8
+
+export const iconScale = (size: number) => (size * ICON_FILL) / ICON_H
 
 /** Fração da célula onde está o centro do desenho. */
 export const iconOrigin = (box: Box, cell: number) => ({

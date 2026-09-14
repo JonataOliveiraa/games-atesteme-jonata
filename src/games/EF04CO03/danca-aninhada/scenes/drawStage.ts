@@ -167,13 +167,31 @@ export function createStage(scene: Phaser.Scene) {
     veil.fillStyle(C.ink, 0.62)
     veil.fillRect(0, 0, W, H)
 
+    /*
+     * A LEGENDA É UM CARTÃO, NÃO UM ÍCONE SOLTO.
+     *
+     * A folha de pictogramas vem no azul escuro do jogo, e tint não clareia
+     * nada — então sobre o palco escurecido o desenho sumia. Em vez de pedir
+     * uma segunda folha clara, o FUNDO é que muda: o movimento que está
+     * saindo aparece no mesmo cartão creme dos outros lugares do jogo.
+     */
     const caption = scene.add.container(0, 0).setDepth(DEPTH.lamp).setAlpha(0)
     let captionIcon: MoveIcon | null = null
+
+    const CAP = { w: 214, h: 214 }
+    const captionCard = scene.add.graphics()
+    captionCard.fillStyle(C.ink, 1)
+    captionCard.fillRoundedRect(-CAP.w / 2 - 5, -CAP.h / 2 - 5, CAP.w + 10, CAP.h + 10, 28)
+    captionCard.fillStyle(C.sheetDeep, 1)
+    captionCard.fillRoundedRect(-CAP.w / 2, -CAP.h / 2, CAP.w, CAP.h, 24)
+    captionCard.fillStyle(C.sheet, 1)
+    captionCard.fillRoundedRect(-CAP.w / 2, -CAP.h / 2, CAP.w, CAP.h - 9, 24)
+    caption.add(captionCard)
+
     const captionText = scene.add
-        .text(0, 62, '', { fontFamily: FONT.black, fontSize: '44px', color: CSS.white })
+        .text(0, CAP.h / 2 - 34, '', { fontFamily: FONT.black, fontSize: '38px', color: CSS.ink })
         .setOrigin(0.5)
         .setResolution(2)
-    captionText.setStroke(CSS.ink, 7)
     caption.add(captionText)
 
     const beads = scene.add.graphics().setDepth(DEPTH.lamp).setAlpha(0)
@@ -283,11 +301,11 @@ export function createStage(scene: Phaser.Scene) {
         /** O nome e o desenho do movimento que está saindo agora. */
         async say(move: Move) {
             captionIcon?.destroy()
-            captionIcon = moveIcon(scene, move, 96, C.white, C.warm)
-            captionIcon.setPosition(0, -34)
+            captionIcon = moveIcon(scene, move, 116, C.ink, C.inkSoft)
+            captionIcon.setPosition(0, -26)
             caption.add(captionIcon)
             captionText.setText(MOVE_NAME[move])
-            caption.setPosition(FOCUS.x + 268, FOCUS.footY - FOCUS.height * 0.52)
+            caption.setPosition(FOCUS.x + 296, FOCUS.footY - FOCUS.height * 0.5)
             scene.tweens.killTweensOf(caption)
             caption.setAlpha(0).setScale(0.8)
             await FX.to(scene, caption, { alpha: 1, scale: 1 }, { duration: 160, ease: 'Back.easeOut' })
