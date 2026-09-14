@@ -554,3 +554,49 @@ cometer.
    provisória e `status: "draft"`.
 3. Teste com criança e no celular de verdade. Em paisagem de 844 px a célula
    fica com cerca de 88 px reais, bem acima do piso de toque.
+
+---
+
+## 20. O canhão virado, e o tiro refeito (14/09/2026)
+
+### Ele estava atirando de costas
+
+A folha veio com o cano voltado para a direita e o canhão mora à direita da
+tela — então ele disparava para fora do pátio, de costas para a fachada. Um
+`setFlipX` resolveu, e a animação inteira acompanhou: o recuo foi para o lado
+oposto ao cano, a boca trocou de lado e a fumaça saiu junto.
+
+`FACING` em `scenes/cannon.ts` é a única coisa a mudar se a arte um dia vier já
+virada.
+
+### O tiro ganhou três tempos
+
+Antes era girar, trocar o quadro e soltar uma bolinha. Agora:
+
+1. **Toma impulso.** O canhão agacha e recua um dedo, como quem puxa o braço.
+   São 160 ms, o bastante para o olho registrar que algo vai acontecer.
+2. **Dispara.** Recuo forte para o lado oposto ao cano, corpo esticado na
+   direção do tiro, fumaça saindo da boca e uma tremida leve de câmera.
+3. **Volta quicando** nas rodas com folga elástica — ao mesmo tempo em que a
+   gota voa. Esperar o canhão assentar antes de soltar a tinta deixaria o tiro
+   lento.
+
+### A gota virou lágrima
+
+Não é mais um círculo. A cauda sai de três círculos decrescentes atrás do
+corpo, na direção da velocidade tirada da derivada da curva — o truque mais
+barato de dar direção a algo redondo sem rotacionar um `Graphics` que desenha
+em coordenadas de tela. Atrás dela ficam pingos que escorrem e somem.
+
+No impacto, metade dos respingos voa em leque e a outra metade **escorre para
+baixo**, porque tinta escorre. Sem isso o splash lê como fagulha, e a única
+coisa que este jogo não pode parecer é explosão.
+
+### Nota de método
+
+Tentei capturar a animação congelando o laço do Phaser e avançando quadro a
+quadro. Não funciona aqui: a sequência mistura tweens com `FX.wait`, que usa
+temporizadores de cena, e avançar o laço com carimbos de tempo artificiais
+desalinha os dois — o jogo parece travado quando na verdade só está esperando
+um timer que nunca chega. O que funciona é pausar a cena no meio do voo
+(`scene.pause()`) e capturar dali.
