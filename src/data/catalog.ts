@@ -62,9 +62,12 @@ import coverVilaDasMaquinas from "../assets/games/EF02CO03/vila-das-maquinas/cov
 import coverFugaDoLaboratorio from "../assets/games/EF02CO04/fuga-do-laboratorio/cover-fuga-do-laboratorio.png";
 import coverCavernaDosDados from "../assets/games/EF03CO04/caverna-dos-dados/cover-caverna-dos-dados.png";
 import coverMissaoEmPedacos from "../assets/games/EF03CO03/missao-em-pedacos/cover-missao-em-pedacos.png";
-// PROVISÓRIO: o fundo do galpão no lugar da capa, que ainda não foi gerada.
-// O prompt dela está em src/games/EF03CO05/torres-dos-formatos/TEXTURAS.md §9.
-import coverTorresDosFormatos from "../assets/games/EF03CO05/torres-dos-formatos/bg-galpao-triagem.png";
+import coverTorresDosFormatos from "../assets/games/EF03CO05/torres-dos-formatos/cover-torre-dos-formatos.png";
+// PROVISÓRIO: o salão da biblioteca no lugar da capa, que ainda não foi gerada.
+import coverBuscaDoBibliotecario from "../assets/games/EF03CO07/a-busca-do-bibliotecario/cover-a-busca-da-bibliotecaria.png";
+import coverFaseDeEntradaESaida from "../assets/games/EF03CO06/fase-de-entrada-e-saida/cover-fase-entrada-e-saida.png";
+import coverShowDeFormatos from "../assets/games/EF03CO08/show-de-formatos/cover-show-de-formatos.png";
+import coverAcheOSuspeito from "../assets/games/EF03CO09/ache-o-suspeito/cover-ache-o-suspeito.png";
 /**
  * 1. `id` nunca muda e nunca é reaproveitado. Se um jogo for removido,
  *    marque status "draft" — não devolva o id para a fila.
@@ -728,6 +731,23 @@ export const catalog: Game[] = [
     thumbnail: inputOutputThumbnail,
   },
   {
+    id: "065",
+    slug: "fase-de-entrada-e-saida",
+    module: "EF03CO06/fase-de-entrada-e-saida",
+    skill: "EF03CO06",
+    years: [3],
+    tags: ["entrada", "saída", "computador", "aparelhos", "toque"],
+    order: 195,
+    status: "published",
+    title: "Fase de Entrada e Saída",
+    description:
+      "A Lia faz um pedido: escolha o aparelho que faz a informação entrar no computador, ou o que faz ela sair, e veja o caminho acontecer.",
+    category: "Mundo Digital",
+    points: 60,
+    icon: "🎤",
+    thumbnail: coverFaseDeEntradaESaida,
+  },
+  {
     id: "020",
     slug: "detetives-da-busca",
     module: "EF03CO07/detetives-da-busca",
@@ -743,6 +763,23 @@ export const catalog: Game[] = [
     points: 60,
     icon: "🔍",
     thumbnail: searchDetectivesThumbnail,
+  },
+  {
+    id: "064",
+    slug: "a-busca-do-bibliotecario",
+    module: "EF03CO07/a-busca-do-bibliotecario",
+    skill: "EF03CO07",
+    years: [3],
+    tags: ["busca", "palavras-chave", "refinar", "resultados", "toque"],
+    order: 205,
+    status: "published",
+    title: "A Busca do Bibliotecário",
+    description:
+      "O visitante pede, a busca vem vaga: acrescente as palavras que fazem o resultado certo subir para o primeiro lugar.",
+    category: "Cultura Digital",
+    points: 30,
+    icon: "📚",
+    thumbnail: coverBuscaDoBibliotecario,
   },
   {
     id: "021",
@@ -762,6 +799,23 @@ export const catalog: Game[] = [
     thumbnail: multiFormatStudioThumbnail,
   },
   {
+    id: "066",
+    slug: "show-de-formatos",
+    module: "EF03CO08/show-de-formatos",
+    skill: "EF03CO08",
+    years: [3],
+    tags: ["imagem", "texto", "som", "criação", "toque"],
+    order: 215,
+    status: "draft",
+    title: "Show de Formatos",
+    description:
+      "Escolha uma imagem, uma frase e um som para cada cena do palco e assista ao microclipe que você dirigiu.",
+    category: "Cultura Digital",
+    points: 30,
+    icon: "🎬",
+    thumbnail: coverShowDeFormatos,
+  },
+  {
     id: "022",
     slug: "investigacao-dados-risco",
     module: "EF03CO09/investigacao-dados-risco",
@@ -777,6 +831,23 @@ export const catalog: Game[] = [
     points: 60,
     icon: "🔍",
     thumbnail: investigationThumbnail,
+  },
+  {
+    id: "067",
+    slug: "ache-o-suspeito",
+    module: "EF03CO09/ache-o-suspeito",
+    skill: "EF03CO09",
+    years: [3],
+    tags: ["dados pessoais", "compartilhar", "destino", "impacto", "toque"],
+    order: 225,
+    status: "draft",
+    title: "Ache o Suspeito",
+    description:
+      "Leia as placas da sala e toque no compartilhamento suspeito: uma bolinha de papel voa até ele e mostra o impacto que você evitou.",
+    category: "Cultura Digital",
+    points: 30,
+    icon: "🎯",
+    thumbnail: coverAcheOSuspeito,
   },
   {
     id: "023",

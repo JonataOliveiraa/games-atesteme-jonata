@@ -1,20 +1,25 @@
-# Fase de Entrada e Saída - EF03CO06
+# Fase de Entrada e Saída — EF03CO06
 
 Documento irmão: [TEXTURAS.md](./TEXTURAS.md)
 
-**Versão aprovada para replanejamento: escape room de uma bancada.**
-A criança está diante de um computador de brinquedo, dois lugares para
-aparelhos e uma porta com três fechos. Um aparelho já funciona; ela completa
-ou corrige a outra conexão, observa o resultado e decide se ele atende ao
-pedido. Cada tarefa resolvida libera um fecho. A terceira abre a porta.
+**Versão revisada: bancada de conexões com objetos do cotidiano.**
 
-> A versão de plataforma foi substituída por uma bancada fixa. A descoberta
-> acontece ao experimentar os aparelhos e acompanhar a informação entrando e
-> saindo; a produção usa os mesmos cinco dispositivos nos três níveis.
+A criança ajuda Lia a fazer uma informação sair do mundo, entrar no computador
+por um aparelho de entrada e voltar ao mundo por um aparelho de saída. Em cada
+desafio, uma das duas conexões já está pronta; a criança toca em um entre dois
+aparelhos conhecidos para completar ou consertar o caminho.
+
+A revisão elimina duas imagens difíceis de reconhecer:
+
+- o gabinete metálico genérico dá lugar a um computador central com silhueta
+  explícita de torre de desktop, visor de rosto, botão de energia e o rótulo
+  permanente **COMPUTADOR** feito pelo código;
+- a caixinha de manivela deixa de existir; a própria personagem fala, mostra
+  um desenho ou pede para digitar, tornando a origem da informação evidente.
 
 ---
 
-## 1. A habilidade e a evidência
+## 1. Habilidade BNCC
 
 > (EF03CO06) Reconhecer que, para um computador realizar tarefas, ele se comunica com o mundo exterior com o uso de interfaces físicas (dispositivos de entrada e saída).
 
@@ -22,747 +27,683 @@ Objeto: **Interface física**.
 
 > Exemplificar os diferentes tipos de dispositivos de entrada (teclado, mouse, microfone, sensores, antena etc.) e de dispositivos de saída (monitor, alto-falante, impressora etc.)
 
-A habilidade e o exemplo acima mantêm o texto fornecido. O recorte do jogo é
-câmera, microfone, monitor, alto-falante e impressora. Não é preciso incluir
-todos os exemplos oficiais para trabalhar a relação entre computador e mundo.
+O texto oficial permanece sem alteração. O jogo trabalha exemplos familiares
+e visualmente distintos:
 
-| Conceito | O que a criança observa |
+| Entrada | O que leva ao computador |
 |---|---|
-| mundo exterior | desenho em um suporte ou som de uma caixinha de música |
-| entrada | câmera captura a imagem; microfone capta o som |
-| computador | informação chega ao gabinete e é processada |
-| saída | imagem aparece no monitor, som toca no alto-falante ou imagem sai no papel |
-| tarefa | usar a forma de saída que o pedido exige |
-| reconhecimento | escolher, experimentar e confirmar o aparelho capaz de completar o fluxo |
+| teclado | letras digitadas |
+| mouse | movimento e clique |
+| microfone | som da voz |
+| câmera | imagem de um desenho |
 
-### O teste da bolinha
+| Saída | O que leva do computador ao mundo |
+|---|---|
+| monitor | imagem ou texto na tela |
+| alto-falante | som que pode ser ouvido |
+| impressora | imagem ou texto no papel |
 
-Trocar os aparelhos e suas funções por bolinhas coloridas elimina o sentido
-da experiência. A criança precisa entender o que a câmera capta, o que o
-microfone capta e a diferença entre ver uma imagem, ouvir uma gravação ou levar
-uma cópia no papel. Cores, posições e encaixes não fornecem um gabarito.
-
-Há um risco real: com duas alternativas, dá para descobrir por tentativa.
-Por isso o experimento sempre mostra a causa e o resultado; o quadro final
-reconstitui o fluxo. O objetivo é reconhecer a função pela experiência, sem
-exigir memorização prévia de vocabulário.
-
-### Regra pedagógica de honestidade
-
-Os aparelhos são modelos simplificados de brinquedo:
-
-- a câmera deste kit captura imagem e não tem microfone integrado;
-- o microfone deste kit capta som;
-- o monitor mostra imagem e, quando recebe uma gravação, pode mostrar sua onda;
-- o alto-falante reproduz som;
-- a impressora deste programa imprime imagem; não transcreve som.
-
-Não ensinar que nenhuma câmera grava áudio, que monitor nunca tem
-alto-falante integrado ou que um computador jamais converte som em texto.
-São equipamentos separados e um programa simples, sem conversores.
-
-O fato de um resultado não cumprir o pedido não torna o aparelho defeituoso.
-**Mostrar uma foto na tela funciona; apenas não entrega a cópia de papel
-pedida.** Essa diferença é central nos níveis 2 e 3.
+Sensores e antenas pertencem ao exemplo oficial, mas não entram nesta primeira
+produção. Acrescentá-los agora aumentaria o vocabulário visual sem melhorar a
+evidência central da habilidade.
 
 ---
 
-## 2. Diferença para Central de Entrada e Saída
+## 2. O jogo em uma frase
 
-| Central de Entrada e Saída | Esta versão de Fase de Entrada e Saída |
-|---|---|
-| classificar aparelhos, atender pedidos e montar pares | observar uma bancada incompleta e experimentar uma conexão |
-| dispositivos são respostas em um painel | dispositivos continuam instalados e produzem resultados visíveis |
-| a escolha é julgada ao responder | instalação é experiência; a criança confirma o resultado em USAR |
-| o circuito é montado do começo | uma metade já funciona e permanece na bancada |
-| progressão amplia tipos de atividade | mesmo gesto em nove desafios; muda o defeito ou o resultado necessário |
-
-O parentesco curricular é esperado. A diferença está no ciclo
-**conectar → observar → comparar com a tarefa → usar** e na permanência do
-resultado na bancada. Se a implementação apenas pintar o cartão de verde ao
-tocá-lo, terá perdido a mudança proposta.
+**Veja o pedido de Lia e toque no aparelho que completa o caminho
+ENTRADA → COMPUTADOR → SAÍDA.**
 
 ---
 
-## 3. Limites de produção
+## 3. Por que a mecânica evidencia a habilidade
+
+A criança não separa cartões em duas caixas e não responde apenas a uma
+pergunta escrita. Ela vê uma pequena ação acontecer no mundo:
+
+1. Lia fala, mostra uma imagem, digita ou aponta;
+2. um aparelho físico leva essa informação ao computador;
+3. o computador processa por um instante;
+4. outro aparelho físico devolve o resultado ao mundo;
+5. o resultado concreto confirma por que aquele aparelho serve.
+
+O fluxo permanece escrito e visível durante toda a partida:
+
+**MUNDO → ENTRADA → COMPUTADOR → SAÍDA → MUNDO**
+
+A direção também aparece nos cabos: pulsos azuis entram no computador e pulsos
+laranja saem dele. Cor ajuda a acompanhar o movimento, mas não entrega a
+resposta. Teclado, mouse, microfone, câmera, monitor, alto-falante e impressora
+mantêm cores materiais semelhantes.
+
+### Teste da bolinha
+
+Se os aparelhos forem trocados por círculos coloridos, o jogo perde o sentido.
+A solução depende da função física reconhecível de cada objeto e do efeito
+observado — falar no microfone, ver no monitor, ouvir no alto-falante ou receber
+papel da impressora.
+
+### Regra de honestidade
+
+O jogo representa um kit escolar simplificado:
+
+- a câmera representa captura de imagem;
+- o microfone representa captura de som;
+- o teclado representa entrada de texto;
+- o mouse representa movimento e clique;
+- o monitor representa saída visual;
+- o alto-falante representa saída sonora;
+- a impressora representa saída em papel.
+
+Não afirmar que aparelhos reais nunca combinam funções. O balão inicial diz:
+**“Neste kit, cada aparelho vai mostrar uma função.”**
+
+---
+
+## 4. Gênero e escopo
+
+Gênero: **quebra-cabeça de conexão em uma bancada**, com sensação leve de
+escape room. A porta à direita tem três fechos; cada desafio resolvido abre um.
+Ela é apenas a recompensa de progresso, não um dispositivo de saída.
 
 | Fazer | Limite |
 |---|---|
-| uma sala | câmera fixa, sem deslocamento pelo cenário |
-| uma bancada | mesma posição nos nove desafios |
-| duas conexões | uma entrada à esquerda e uma saída à direita |
-| cinco aparelhos | câmera, microfone, monitor, alto-falante e impressora |
-| um reparo por desafio | a outra conexão fica montada e protegida |
-| duas alternativas | inclusive no nível 3 |
-| uma porta | três fechos representam as três tarefas do nível |
-| duas fontes de informação | imagem de um objeto e som de uma caixinha |
-| três resultados principais | tela, som reproduzido e papel |
-| animações curtas | tweens, recortes e efeitos, sem simulação física |
+| uma sala | câmera fixa, tela única |
+| uma bancada | mesma composição em todos os desafios |
+| um fluxo | entrada à esquerda, computador no centro, saída à direita |
+| uma decisão | tocar em uma entre duas opções |
+| sete aparelhos | quatro entradas e três saídas |
+| um lado editável | o outro já está correto e protegido |
+| três desafios por nível | nove planejados |
+| primeiro corte | implementar e testar somente o nível 1 |
+| animações curtas | tweens e Graphics, sem física |
 
-Não há inventário, navegação entre salas, busca de objetos escondidos, controle
-do personagem, plataforma, motor, sensor, antena, senha digitada ou montagem
-livre das duas pontas. O kit não cresce nos níveis posteriores.
-
-**Nenhum acesso real à câmera, microfone, impressora ou arquivos do usuário.**
-As fontes, capturas, gravações e impressões são simuladas. Tudo funciona
-offline depois do carregamento e sem solicitar permissões do navegador.
+Não há plataforma, auto-runner, inventário, encaixe por arraste, uso de webcam
+ou microfone real, digitação real, impressão real ou permissão do navegador.
 
 ---
 
-## 4. O laço
+## 5. Laço de um desafio
 
-```text
-O PEDIDO ENTRA
-→ a porta destaca o fecho atual
-→ a bancada mostra uma conexão montada e a outra vazia ou inadequada
-→ uma demonstração curta mostra até onde a informação chega
+~~~text
+PEDIDO
+→ Lia demonstra o que quer comunicar
+→ a bancada destaca onde falta um aparelho
+→ duas opções grandes aparecem
 
-EXPERIMENTAR
-→ a criança toca num dos dois aparelhos da bandeja
-→ ele vai automaticamente para a conexão editável
-→ o fio se conecta e o programa executa
-→ o resultado fica visível: tela, som, papel ou falta de informação
-→ a criança pode trocar de aparelho e observar de novo
+UM TOQUE
+→ a criança toca em um aparelho
+→ o aparelho entra automaticamente no encaixe
+→ o fluxo é executado sem botão adicional
 
-USAR
-→ a criança toca em USAR quando considera que cumpriu o pedido
-→ resultado atende: um fecho abre e o circuito vai para o registro
-→ resultado não atende: fecho permanece fechado, trava e dica causal
-→ ela troca o aparelho, observa e toca em USAR novamente
+RESULTADO
+→ a informação percorre entrada → computador → saída
+→ o efeito físico aparece no monitor, alto-falante ou papel
+→ se atende ao pedido, um fecho abre
+→ se não atende, o fluxo para no ponto incompatível e entra em TRAVA
 
-TRÊS TAREFAS
-→ a porta abre
-→ os três fluxos reaparecem no resultado
-```
+CONTINUAR
+→ depois do acerto, próximo pedido
+→ três fechos abertos encerram o nível
+~~~
 
-**Fase = um desafio da bancada**, desde o pedido até abrir um fecho.
-Três fases por nível; nove no planejamento completo.
-
-A porta é uma recompensa de progresso do escape room. Ela não lê a imagem
-do monitor por magia e não exige um sensor escondido no modelo. O efeito
-pedagógico termina no resultado físico do aparelho; abrir o fecho celebra a
-tarefa cumprida.
-
----
-
-## 5. Controle e estados dos objetos
-
-Um gesto: **toque**.
-
-| Toque | Comportamento |
-|---|---|
-| aparelho disponível | instala automaticamente na única conexão editável e experimenta |
-| outro aparelho | substitui o anterior e experimenta |
-| aparelho instalado na bancada | retira e devolve à bandeja |
-| cartão EM USO na bandeja | não repete teste; indica onde está o aparelho |
-| REPETIR no objeto-fonte | reapresenta a fonte e executa a configuração atual |
-| USAR | confirma o resultado atual |
-| ? | pausa e apresenta ajuda |
-
-A ligação automática elimina a necessidade de acertar um pequeno soquete.
-O cabo é visual, sem hitbox. Os cartões mostram o objeto e seu nome.
-Ao instalar, seu lugar na bandeja fica com silhueta e EM USO; não existem duas
-cópias interativas do mesmo aparelho.
-
-A conexão fixa tem uma presilha discreta e não aceita edição. Ela nunca muda
-de estado ao receber toque e não cobra erro. A conexão editável usa o mesmo
-tipo de encaixe em todos os desafios; não há silhueta do aparelho correto.
-
-Durante a execução, os controles da bancada ficam temporariamente inativos.
-O ? continua disponível. Cliques repetidos não enfileiram experiências.
-
-### O botão USAR
-
-- sem aparelho na conexão editável: desabilitado;
-- durante captura/processamento/saída: desabilitado;
-- experiência concluída, mesmo com resultado inadequado: habilitado;
-- após concluir o desafio ou terminar as vidas: desabilitado.
-
-Habilitar USAR somente quando a experiência desse resultado terminou evita
-confirmações sobre uma configuração antiga. Não revelar a resposta ativando
-o botão apenas nos acertos.
+A remoção do antigo botão **USAR** é intencional. Ele criava duas decisões
+para uma atividade que precisa de um gesto único. Agora escolher o aparelho já
+é experimentar e responder.
 
 ---
 
 ## 6. Uma partida concreta do nível 1
 
-### Desafio 1 — Ver o desenho
+### Desafio 1 — A voz de Lia
 
-Pedido: **“Faça o desenho aparecer na tela.”**
+Pedido: **“Faça minha voz sair no alto-falante.”**
 
-A câmera está montada. Um desenho de montanha está no suporte externo.
-A imagem vai da câmera até o gabinete e fica guardada no indicador interno.
-A conexão de saída está vazia.
+Lia aparece falando. O alto-falante já está conectado no lado SAÍDA. O encaixe
+ENTRADA está vazio. As opções são **MICROFONE** e **CÂMERA**.
 
-Na bandeja: Monitor e Alto-falante.
+- Câmera: surge uma miniatura do rosto no computador, mas nenhum som chega ao
+  alto-falante. O caminho para e a dica diz:
+  **“A câmera levou uma imagem. Precisamos levar a voz.”**
+- Microfone: ondas saem da boca de Lia, chegam ao microfone, atravessam o
+  computador e reaparecem no alto-falante. Primeiro fecho aberto.
 
-Ao instalar o Alto-falante, o arquivo continua sendo imagem. O programa não
-envia som; o cone permanece parado. Aparece:
-**“A imagem entrou. Ainda não apareceu numa tela.”**
+### Desafio 2 — O desenho de Lia
 
-Ao instalar o Monitor, o mesmo desenho aparece dentro dele. A informação
-viaja em sentido inverso ao da captura: computador → aparelho → mundo.
-Tocar em USAR abre o primeiro fecho.
+Pedido: **“Faça meu desenho aparecer na tela.”**
 
-### Desafio 2 — Fazer a imagem entrar
+Lia segura um cartão com uma flor. O monitor já está conectado no lado SAÍDA.
+As opções de ENTRADA são **CÂMERA** e **MICROFONE**.
 
-Pedido: **“Capture a imagem da flor.”**
+- Microfone: nada visual é capturado. A dica diz:
+  **“O microfone procura sons. O desenho é uma imagem.”**
+- Câmera: o mesmo desenho aparece dentro do monitor. Segundo fecho aberto.
 
-O monitor está montado, mas vazio. A conexão de entrada está vazia.
-Na bandeja: Câmera e Microfone. Um desenho de flor está no suporte.
+### Desafio 3 — Escrever o nome
 
-O microfone não capta a imagem; a cena está silenciosa. O computador permanece
-sem a informação pedida. A câmera capta o desenho, e ele aparece no monitor.
+Pedido: **“Faça a palavra LIA aparecer na tela.”**
 
-USAR abre o segundo fecho. A forma do fluxo é a mesma do desafio anterior,
-mas agora a parte que faltava está antes do computador.
+O monitor continua como SAÍDA. As opções de ENTRADA são **TECLADO** e
+**MOUSE**.
 
-### Desafio 3 — Levar papel
+- Mouse: uma seta se move na tela, mas não aparecem letras.
+- Teclado: três teclas afundam; o texto **LIA** aparece no monitor.
+  Terceiro fecho aberto e porta aberta.
 
-Pedido: **“Faça uma cópia do barco no papel.”**
-
-Câmera montada, desenho de barco no suporte. Na bandeja: Monitor e Impressora.
-
-O monitor exibe o barco corretamente. A criança pode examiná-lo, mas ele
-continua na tela. A impressora entrega a mesma imagem numa folha.
-
-Somente a folha atende à tarefa. USAR abre o terceiro fecho e a porta.
-Nenhuma tarefa de recortar, arrastar papel ou inserir senha é acrescentada.
+O texto LIA é desenhado por Phaser.Text, nunca incluído na textura.
 
 ---
 
-## 7. Grade fixa: 1280 x 720
+## 7. Layout fixo — 1280 × 720
 
-Phaser.Scale.FIT. Usar fator 0,30 para conferir o tamanho em uma tela de
-aproximadamente 390 px de largura. Sem recomposição ou breakpoint.
+Usar Phaser.Scale.FIT. Conferir também em aproximadamente 390 × 219.
 
-| Faixa | y | Conteúdo | Tamanho base | No celular |
-|---|---|---|---|---|
-| header | 0–160 | título curto, vidas, progresso e ? | ? 140 x 140 | 42 x 42 |
-| pedido | 160–240 | frase e pictograma da tarefa | fonte 40, uma ou duas linhas | 12 px |
-| bancada | 240–520 | fonte, entrada, computador, saída, porta | aparelhos até 200 x 180 | até 60 x 54 |
-| controles | 520–720 | dois cartões de aparelhos e USAR | cartões 320 x 160; USAR 240 x 144 | 96 x 48; 72 x 43 |
+| Faixa | y | Conteúdo |
+|---|---:|---|
+| cabeçalho | 0–92 | título curto, vidas, progresso e ? |
+| pedido | 92–190 | fala de Lia e pictograma do objetivo |
+| fluxo | 190–520 | Lia, entrada, computador, saída e porta |
+| escolhas | 520–720 | dois cartões de aparelho |
 
-### Coordenadas que não podem se sobrepor
+### Áreas principais
 
-| Objeto | Centro / caixa base |
+| Elemento | Caixa base |
 |---|---|
-| ? | centro (1190, 80), caixa 140 x 140 inteira dentro da tela |
-| fonte e REPETIR | caixa (30, 280, 150, 190), alvo visível de pelo menos 140 x 140 |
-| conexão de entrada | centro (300, 380), área (200, 270, 200, 210) |
-| computador | centro (540, 370), área (430, 270, 220, 200) |
-| conexão de saída | centro (800, 380), área (680, 270, 240, 210) |
-| porta e três fechos | área (1010, 254, 240, 250) |
-| cartão A | caixa (40, 540, 320, 160) |
-| cartão B | caixa (400, 540, 320, 160) |
-| USAR | caixa (900, 552, 240, 144) |
+| Lia / fonte no mundo | (24, 220, 180, 270) |
+| encaixe ENTRADA | (225, 250, 210, 220) |
+| computador central | (485, 225, 250, 265) |
+| encaixe SAÍDA | (770, 250, 210, 220) |
+| porta e três fechos | (1040, 205, 210, 300) |
+| cartão A | (220, 545, 360, 150) |
+| cartão B | (700, 545, 360, 150) |
+| botão ? | (1132, 16, 132, 76) |
 
-ENTRADA, COMPUTADOR e SAÍDA são rótulos de 36 px acima dos respectivos
-objetos, dentro da faixa da bancada. O fluxo usa cabos entre esses objetos;
-não repetir um segundo painel completo de cinco nós no header.
+Acima de cada área, manter rótulos grandes feitos em código:
 
-Os aparelhos instalados têm alvos visíveis de pelo menos 140 x 140,
-independentemente de sua silhueta. O papel impresso fica dentro da área da
-saída. Não atravessa a bandeja e não exige toque.
+- **MUNDO**
+- **ENTRADA**
+- **COMPUTADOR**
+- **SAÍDA**
+- **MUNDO**
 
-A explicação de experiência ou trava ocupa a faixa do pedido. Ela não cobre
-aparelhos, cabos ou alternativas. Manter a tarefa visível em uma pequena
-etiqueta persistente junto ao pictograma enquanto a frase muda.
+Setas grossas apontam sempre da esquerda para a direita. O rótulo não some
+durante animações, dicas ou travas. A criança nunca precisa deduzir se o
+computador está à esquerda ou à direita.
 
----
-
-## 8. Progressão: os mesmos cinco aparelhos
-
-| Nível | Situação inicial | Dificuldade |
-|---|---|---|
-| 1 — Faça a conexão | uma conexão vazia e outra correta | imagem, alternância entrada/saída, depois tela versus papel |
-| 2 — Veja o que saiu | uma conexão vazia e outra correta | som, localização da entrada e duas saídas funcionais |
-| 3 — Conserte a bancada | dois aparelhos instalados, um inadequado | observar até onde o sinal chegou e substituir um aparelho |
-
-Sempre duas alternativas e uma conexão editável. O nível 3 não passa a exigir
-montar as duas pontas. A progressão combina conhecimentos com a mesma operação.
-
-### Todos os desafios
-
-A coluna Solução serve ao leitor humano do planejamento. O código calcula o
-resultado por capacidades e objetivo, sem guardar correctDevice na fase.
-
-| ID | Fonte / pedido | Conexão fixa | Editável: opções | Inicial editável | Solução e resultado |
-|---|---|---|---|---|---|
-| 1.1 | montanha; ver na tela | Câmera | saída: Monitor / Alto-falante | vazia | Monitor exibe montanha |
-| 1.2 | flor; captar sua imagem | Monitor | entrada: Câmera / Microfone | vazia | Câmera captura flor |
-| 1.3 | barco; obter papel | Câmera | saída: Monitor / Impressora | vazia | Impressora entrega barco |
-| 2.1 | caixinha; ouvir a gravação | Microfone | saída: Alto-falante / Monitor | vazia | Alto-falante reproduz som |
-| 2.2 | caixinha; captar o som | Alto-falante | entrada: Câmera / Microfone | vazia | Microfone capta som |
-| 2.3 | flor; ver na tela | Câmera | saída: Impressora / Monitor | vazia | Monitor exibe flor |
-| 3.1 | montanha; ver na tela | Câmera | saída: Alto-falante / Monitor | Alto-falante | substituir por Monitor |
-| 3.2 | caixinha; ouvir a gravação | Alto-falante | entrada: Câmera / Microfone | Câmera | substituir por Microfone |
-| 3.3 | barco; obter papel | Câmera | saída: Monitor / Impressora | Monitor | substituir por Impressora |
-
-No nível 3, o aparelho inicialmente inadequado tem aparência normal.
-Ele faz parte de uma bancada a consertar, não de uma escolha anterior da
-criança. A demonstração inicial não custa vida nem reduz pontos.
-
-A ordem esquerda/direita das opções é embaralhada uma vez por desafio e
-permanece estável durante as experiências e a trava.
+Os cartões têm no mínimo 360 × 150 no projeto base. O objeto ocupa a metade
+esquerda do cartão; nome e frase curta ficam na metade direita. No celular,
+cada alvo visível permanece maior que 96 × 40.
 
 ---
 
-## 9. O que cada experiência realmente mostra
+## 8. Controles
 
-O computador desta bancada executa um programa fixo: captar a fonte, guardar
-uma representação e apresentá-la no dispositivo de saída. A animação explica
-as etapas; não há inteligência artificial nem análise de imagem/áudio real.
+Um gesto: **toque**.
 
-| Fonte | Entrada | O que chega ao computador |
-|---|---|---|
-| desenho silencioso | Câmera | imagem do desenho |
-| desenho silencioso | Microfone | nenhum som do alvo; falta a informação pedida |
-| caixinha tocando | Microfone | gravação do som da caixinha |
-| caixinha tocando | Câmera | imagem da caixinha; não sua gravação |
+| Toque | Resultado |
+|---|---|
+| cartão de aparelho | conecta e executa o fluxo |
+| aparelho correto durante TRAVA | conclui o desafio e destrava |
+| aparelho incorreto durante TRAVA | repete o resultado causal; após 2 erros, a opção correta pulsa |
+| ? | pausa e abre painel ilustrado |
+| CONTINUAR no resultado | avança para o próximo desafio |
 
-| Informação disponível | Saída | Resultado da experiência |
-|---|---|---|
-| imagem | Monitor | imagem na tela |
-| imagem | Impressora | imagem numa folha |
-| imagem | Alto-falante | nenhum som; este programa não converte imagem em som |
-| gravação | Alto-falante | reprodução sonora com visual sincronizado |
-| gravação | Monitor | onda visual da gravação, sem tocar som |
-| gravação | Impressora | sem impressão; este programa não prepara papel a partir do áudio |
-| nenhuma | qualquer | aparelho permanece pronto, esperando informação |
-| qualquer | saída vazia | informação permanece dentro do computador |
+Não retirar cabo, arrastar plugue, mover personagem, apertar o computador ou
+tocar diretamente na porta. O encaixe automático evita precisão fina.
 
-Nos desafios de som, a caixinha toca primeiro e para; somente depois a
-gravação pode sair pelo alto-falante. Isso diferencia fonte original e saída
-reproduzida.
-
-O visual funciona em modo mudo: origem e reprodução mostram o mesmo padrão
-de pulsos. Não pedir que a criança reconheça uma melodia, altura ou sequência
-pelo ouvido. A decisão continua sendo sobre microfone e alto-falante.
+Durante o fluxo, cartões ficam temporariamente inativos para impedir callbacks
+duplicados. O ? continua funcional.
 
 ---
 
-## 10. Regras e dados
+## 9. Progressão completa
 
-Tudo que varia fica em data/levels.ts: perfis dos cinco aparelhos, fontes,
-desafios, frases, ordem dos níveis e função de simulação.
+### Nível 1 — O que entra
 
-```ts
-type DeviceId = 'camera' | 'microphone' | 'monitor' | 'speaker' | 'printer'
-type Side = 'input' | 'output'
-type Medium = 'image' | 'sound'
+Uma SAÍDA correta já está conectada. A criança escolhe o aparelho de ENTRADA.
+
+| ID | Pedido / fonte | Saída fixa | Opções de entrada | Resultado correto |
+|---|---|---|---|---|
+| 1.1 | voz de Lia | alto-falante | microfone / câmera | a voz é reproduzida |
+| 1.2 | desenho de flor | monitor | câmera / microfone | a flor aparece |
+| 1.3 | escrever LIA | monitor | teclado / mouse | LIA aparece |
+
+Balões de apoio mostram **“Estamos escolhendo por onde a informação ENTRA.”**
+
+### Nível 2 — O que sai
+
+Uma ENTRADA correta já está conectada. A criança escolhe o aparelho de SAÍDA.
+
+| ID | Pedido / entrada | Entrada fixa | Opções de saída | Resultado correto |
+|---|---|---|---|---|
+| 2.1 | mostrar o desenho | câmera | monitor / alto-falante | desenho na tela |
+| 2.2 | ouvir a voz | microfone | alto-falante / monitor | voz reproduzida |
+| 2.3 | levar a palavra no papel | teclado | impressora / monitor | folha com a palavra |
+
+Balão: **“Agora escolhemos por onde a informação SAI.”**
+
+### Nível 3 — Conserte o caminho
+
+As duas pontas aparecem conectadas, mas uma não cumpre o pedido. O teste
+inicial é automático e não custa vida. Duas peças de reposição aparecem.
+
+| ID | Pedido | Montagem inicial | Lado editável | Reposição correta |
+|---|---|---|---|---|
+| 3.1 | ouvir a voz | microfone → monitor | saída | alto-falante |
+| 3.2 | ver o desenho | microfone → monitor | entrada | câmera |
+| 3.3 | levar LIA no papel | teclado → monitor | saída | impressora |
+
+A progressão muda a leitura do problema, não o gesto. Não acrescentar terceiro
+candidato, combinação livre ou encadeamento de duas respostas.
+
+---
+
+## 10. Modelo de dados e regra
+
+Tudo que varia por desafio fica em `data/levels.ts`.
+
+~~~ts
+type DeviceId =
+    | 'keyboard'
+    | 'mouse'
+    | 'microphone'
+    | 'camera'
+    | 'monitor'
+    | 'speaker'
+    | 'printer'
+
+type Medium = 'typed-text' | 'pointer' | 'sound' | 'image'
 type Carrier = 'screen' | 'audio' | 'paper'
-
-interface Source {
-    id: string
-    visualId: 'mountain' | 'flower' | 'boat' | 'music-box'
-    soundId?: 'short-tune'
-}
-
-interface Payload {
-    sourceId: string
-    medium: Medium
-}
+type Side = 'input' | 'output'
 
 interface Challenge {
     id: string
-    source: Source
+    prompt: string
+    source: Medium
     editableSide: Side
     fixedDevice: DeviceId
     options: [DeviceId, DeviceId]
     initialDevice?: DeviceId
-    goal: { medium: Medium; carrier: Carrier }
-    task: string
-}
-
-interface Circuit {
-    input?: DeviceId
-    output?: DeviceId
-}
-
-interface Simulation {
-    payload?: Payload
-    carrier?: Carrier
-    representation?: 'picture' | 'waveform' | 'recording'
-    stopAt?: 'input' | 'computer' | 'output'
-}
-
-const capture = (source: Source, input?: DeviceId): Payload | undefined => {
-    if (input === 'camera') return { sourceId: source.id, medium: 'image' }
-    if (input === 'microphone' && source.soundId) {
-        return { sourceId: source.id, medium: 'sound' }
+    goal: {
+        medium: Medium
+        carrier: Carrier
     }
-    return undefined
 }
+~~~
 
-const simulate = (source: Source, circuit: Circuit): Simulation => {
-    const payload = capture(source, circuit.input)
-    if (!payload) return { stopAt: 'input' }
-    if (!circuit.output) return { payload, stopAt: 'computer' }
-    if (circuit.output === 'monitor') {
-        return {
-            payload,
-            carrier: 'screen',
-            representation: payload.medium === 'image' ? 'picture' : 'waveform',
-        }
-    }
-    if (circuit.output === 'speaker' && payload.medium === 'sound') {
-        return { payload, carrier: 'audio', representation: 'recording' }
-    }
-    if (circuit.output === 'printer' && payload.medium === 'image') {
-        return { payload, carrier: 'paper', representation: 'picture' }
-    }
-    return { payload, stopAt: 'output' }
-}
+Não guardar `correctDeviceId`. Os dispositivos expõem capacidades:
 
-const solves = (challenge: Challenge, result: Simulation) =>
-    result.payload?.sourceId === challenge.source.id
-    && result.payload.medium === challenge.goal.medium
-    && result.carrier === challenge.goal.carrier
-```
+~~~ts
+const INPUT_CAPABILITY = {
+    keyboard: 'typed-text',
+    mouse: 'pointer',
+    microphone: 'sound',
+    camera: 'image',
+} as const
 
-A meta descreve a tarefa, não o nome do aparelho correto. A mesma Câmera e o
-mesmo Monitor são usados em vários desafios, com resultados que podem cumprir
-ou não a forma de entrega pedida.
+const OUTPUT_CAPABILITY = {
+    monitor: ['typed-text', 'pointer', 'image'],
+    speaker: ['sound'],
+    printer: ['typed-text', 'image'],
+} as const
+~~~
 
-Regras de estado:
+A solução é calculada pelo meio capturado e pelo suporte solicitado. Assim,
+monitor pode funcionar para mostrar texto e ainda ser inadequado quando o
+pedido exige papel.
 
-- trocar qualquer aparelho invalida o resultado anterior;
-- cada experiência recalcula a captura e a saída a partir da fonte atual;
-- nenhum áudio ou imagem antiga resolve outro desafio;
-- USAR só avalia o snapshot da última experiência terminada;
-- token de execução impede callback atrasado de confirmar uma configuração nova;
-- callback de sucesso é idempotente: um fecho e um acerto por desafio.
+Validar na inicialização:
 
-Validar os dados antes de montar a cena: três desafios por nível, dois
-candidatos distintos, uma solução por desafio, conexão fixa compatível,
-initialDevice dentro das opções e nenhuma fase sem saída.
+- exatamente três desafios por nível;
+- exatamente duas opções distintas;
+- as opções pertencem ao lado editável;
+- uma única opção satisfaz a meta;
+- o aparelho fixo pertence ao outro lado;
+- `initialDevice`, quando existe, está entre as opções;
+- nenhum texto de resposta depende da posição esquerda/direita.
 
 ---
 
-## 11. Experiência, confirmação e trava
+## 11. Estados visuais do fluxo
 
-**Experimentar é livre. Confirmar é responder.**
-
-Tocar num aparelho, retirá-lo, trocar e repetir não gera WRONG_ANSWER.
-O resultado é descrito sem marca de certo/errado. A criança pode aprender
-observando e ainda ganhar +10 ao confirmar corretamente pela primeira vez.
-
-Tocar em USAR com resultado inadequado é um erro conceitual:
-
-1. o fecho permanece fechado e o botão afunda;
-2. a execução termina; não deixar áudio ou pulso correndo;
-3. a conexão editável ganha cadeado âmbar, sem cobrir o aparelho;
-4. a faixa explica o limite observado e mantém o pedido à vista;
-5. emitir WRONG_ANSWER e chamar lives.lose();
-6. se há vidas, continuar permitindo trocar, retirar, repetir e usar;
-7. a trava só termina após uma nova experiência que atende à tarefa e USAR;
-8. dois erros no mesmo desafio fazem a alternativa compatível pulsar;
-9. ao concluir o desafio, zerar o contador e guardar o circuito.
-
-A trava bloqueia avanço, não a ação necessária à correção.
-Instalar um aparelho compatível durante a trava não libera o próximo desafio
-automaticamente; a criança ainda precisa observar e confirmar.
-
-| Experiência inadequada | Frase causal |
+| Estado | O que aparece |
 |---|---|
-| imagem no Alto-falante | “Entrou uma imagem. Ainda falta mostrá-la na tela.” |
-| Microfone diante da flor | “O microfone capta som. A imagem ainda ficou fora.” |
-| foto no Monitor quando o pedido é papel | “O desenho está na tela. A tarefa pede uma cópia no papel.” |
-| onda no Monitor quando o pedido é ouvir | “A tela mostra a onda. A gravação ainda não foi ouvida.” |
-| Câmera diante da caixinha | “Entrou a imagem da caixinha. Seu som ainda ficou fora.” |
-| papel quando o pedido é tela | “A cópia saiu no papel. A tarefa pede ver na tela.” |
+| APRESENTAÇÃO | Lia demonstra a fonte; encaixe editável pulsa |
+| ESCOLHA | dois cartões ativos; cabos neutros |
+| CAPTURA | ação de Lia e aparelho de entrada ativo |
+| PROCESSAMENTO | visor do computador anima por 0,5 s |
+| SAÍDA | aparelho de saída produz tela, som ou papel |
+| ACERTO | cadeia inteira acende; um fecho abre |
+| TRAVA | pulso para exatamente onde o meio não atende; cadeado âmbar |
+| CONCLUÍDO | porta abre; cartões desabilitados |
 
-Não usar chapéu impresso aleatoriamente, som de vaca ou folha com transcrição
-que o programa não realizou.
+O computador não precisa “adivinhar” nada. Ele apenas recebe um tipo de
+informação e o encaminha. A tela de rosto muda de expressão durante o processo,
+mas não exibe a foto ou a palavra; isso pertence ao monitor.
 
-Toque fora, demora, montagem vazia, ? e cliques durante animação não cobram
-vida. No zero, createLives encerra a partida; cancelar os callbacks de execução.
+### Resultados causais de erro
 
----
+| Situação | Resultado e dica |
+|---|---|
+| câmera para uma tarefa de voz | miniatura visual chega; “Entrou uma imagem, não a voz.” |
+| microfone para um desenho | sem imagem; “O microfone procura sons.” |
+| mouse para escrever | cursor se move; “O mouse move e clica; precisamos de letras.” |
+| monitor quando é preciso ouvir | onda silenciosa na tela; “A tela mostra; não faz o som sair.” |
+| alto-falante quando é preciso ver | nenhum desenho; “O alto-falante faz som.” |
+| monitor quando é preciso papel | palavra aparece na tela; “Funcionou na tela, mas o pedido é no papel.” |
 
-## 12. Pontos, tempo e eventos
+Um aparelho incorreto não fica vermelho nem quebrado. Ele executa sua função
+normal; apenas não atende à tarefa atual.
 
-| Ação | Pontos | Evento |
+### O que só o nível 3 tem
+
+O N1 e o N2 marcam o encaixe VAZIO — moldura tracejada com `?` pulsando. No N3
+não há vazio: as duas pontas estão montadas e uma delas não serve. A marca,
+então, cai sobre a PEÇA, e nunca como defeito:
+
+| Sinal | O que é | Por que não é “quebrado” |
 |---|---|---|
-| conectar, retirar, repetir ou trocar | 0 | nenhum evento de resposta |
-| USAR correto na primeira confirmação | +10 | CORRECT_ANSWER |
-| USAR inadequado | 0 e uma vida | WRONG_ANSWER, seguido de lives.lose() |
-| USAR correto depois de trava | +5 | CORRECT_ANSWER |
-| fecho aberto | — | CHECKPOINT |
-| três desafios concluídos | — | GAME_COMPLETED do nível |
+| peça acinzentada | tinta cinza-azulada e 88% de alpha | continua inteira e continua funcionando; só perde o destaque |
+| halo âmbar | brilho arredondado atrás da peça, respirando | é a cor de TRAVA do jogo, a mesma do cadeado |
+| inclinação de 3,5° | a peça “desencaixa” de leve | movimento, não avaria |
+| cabo âmbar e parado | o ramo do problema troca de cor e as setas de fluxo somem | diz onde a informação não passa, sem palavra |
 
-Máximo completo: 90 pontos. A versão de teste com apenas um nível tem máximo
-de 30. Calcular pontos possíveis a partir dos desafios realmente presentes.
-Estrelas seguem 90% e 70% desse máximo; não mostrar pontos, erros, acertos ou
-porcentagens em texto na tela.
+A troca também é diferente. No N1/N2 o encaixe está vazio e a peça só ENTRA
+(`dock`). No N3 as duas peças se cruzam no ar (`swap`): a que não serve sai em
+arco para o cartão enquanto a nova vem do cartão para a mesa. É o gesto de
+TROCAR, e ele é o que o nível ensina.
 
-Sem relógio de derrota ou contagem regressiva. A porta tem três fechos,
-também usados como progresso. Tempo de reflexão pode ser guardado internamente,
-sem exibição obrigatória.
-
-- GAME_READY: uma vez, quando a bancada aceita interação.
-- GAME_COMPLETED: a cada nível, stage: this.level.level,
-  totalStages: LEVELS.length.
-- CHECKPOINT: porcentagem acumulada dos desafios presentes em LEVELS.
-- GAME_OVER: somente createLives, sem emissão manual pelo jogo.
-- vidas: vidasIniciais e saldo preservado em scene.restart.
-- não enviar isFinalStage.
-- eventos sempre por runtimeGameBridge.
-
-Número de experiências, aparelhos testados e caminhos de correção podem ser
-medidos no estado. Não acrescentar campos ao contrato de eventos sem uma
-tarefa específica de integração.
+O teste automático que abre o nível não custa vida, e a marca sobrevive a um
+erro: se a criança trocar a ponta errada, a peça marcada volta marcada.
 
 ---
 
-## 13. Tutorial e fluxo de telas
+## 12. TRAVA, vidas e pontuação
 
-```text
-CARREGAMENTO → TÍTULO → EXEMPLO PULÁVEL → BANCADA → PORTA ABERTA → RESULTADO
-```
+A escolha incorreta é erro conceitual:
 
-faseInicial escolhe o nível inicial no BootScene; não é uma tela de título.
-A abertura visual do catálogo e createLoadingScreen seguem os componentes
-existentes. showLevelComplete apresenta a conclusão de cada nível.
+1. completar a demonstração causal;
+2. pausar o avanço;
+3. mostrar cadeado âmbar junto ao encaixe editável;
+4. emitir `WRONG_ANSWER`;
+5. chamar `lives.lose()`;
+6. permitir somente nova escolha e ajuda;
+7. após dois erros no desafio, fazer a alternativa correta pulsar;
+8. destravar apenas quando a criança toca na opção correta.
 
-Tutorial de até cinco segundos, numa cópia visual do desafio 1:
+Pontuação interna, sem números na tela:
 
-1. destacar a câmera já montada e mostrar a imagem entrando;
-2. mão toca o Monitor; fio conecta e imagem aparece;
-3. mão toca USAR; um fecho de demonstração abre.
+- +10 no acerto de primeira;
+- +5 após TRAVA;
+- máximo 90 em nove desafios;
+- estrelas em 90% e 70%.
 
-Três frases curtas, uma por vez: **“Conecte.”**, **“Veja o resultado.”**,
-**“Use quando cumprir o pedido.”**
-
-A demonstração não resolve o desafio real nem cobra vidas. Ao fechar,
-restaurar a bancada inicial. No ?, usar camada de demonstração separada e
-preservar fonte, aparelho instalado, trava e pontuação da partida.
-
-Pausa unificada: suspender tweens, áudio e temporizadores da execução.
-Ao fechar ajuda, continuar no mesmo passo, sem recapturar automaticamente.
+No primeiro corte, o máximo local do nível 1 é 30, mas o registro do catálogo
+usa a normalização compartilhada.
 
 ---
 
-## 14. Feedback e ritmo
+## 13. Tutorial
 
-| Momento | Visual | Som |
-|---|---|---|
-| fonte apresentada | desenho no suporte ou caixinha abrindo | pequeno estalo |
-| aparelho tocado | cartão afunda, objeto vai ao encaixe | clique de encaixe |
-| captura | onda converge ou miniatura entra pelo fio | pulso curto |
-| processamento | luzes internas acendem durante 0,35–0,5 s | trinado discreto |
-| monitor | conteúdo surge recortado na tela | plim leve |
-| alto-falante | cone vibra e o som é reproduzido | frase musical sintetizada |
-| impressora | folha avança pela fenda | ruído filtrado de roletes |
-| resultado não atende | aparelho permanece normal, descrição factual | sem alarme de erro |
-| USAR incorreto | contorno coral curto, cadeado e fecho fechado | baque macio |
-| USAR correto | contorno verde, fecho abre e registro recebe miniatura | acorde curto |
-| terceiro fecho | porta desliza, luz suave e reprise dos circuitos | fanfarra curta |
+Exemplo animado e interativo, pulável:
 
-Experiência visual: aproximadamente 1,8–2,4 s. A gravação de som usa mais
-0,8 s para separar origem e reprodução. Não manter pausas vazias.
+1. Lia fala e o balão diz **“A voz está no mundo.”**
+2. MICROFONE pulsa.
+3. a criança toca no MICROFONE;
+4. pulsos azuis percorrem **ENTRADA → COMPUTADOR**;
+5. pulsos laranja chegam ao ALTO-FALANTE;
+6. ondas aparecem e o balão conclui:
+   **“O microfone fez a voz entrar. O alto-falante fez o som sair.”**
 
-Cabo e áudio usam a mesma sequência lógica. Sons com ataque curto, queda
-exponencial e filtros; tudo WebAudio, sem arquivos, voz gravada ou narração.
-Respeitar mute-audio do EventBus desde o início e durante qualquer experiência.
-
-A celebração pode aumentar discretamente as partículas após confirmações
-corretas consecutivas. Elas não cobrem conteúdo, nomes ou botões.
-Sem personagem, não produzir folha de poses nem efeito de silhueta humana.
+A primeira tela do painel ? repete a mesma composição. A segunda mostra os
+quatro aparelhos de entrada; a terceira, os três de saída. Não usar áudio
+narrado. O tutorial funciona no mudo.
 
 ---
 
-## 15. Arte e componentes reaproveitados
+## 14. Resultado
 
-Cinco arquivos planejados:
+Após três desafios, abrir a porta e mostrar três cartões de fluxo resolvido.
+Cada cartão contém:
 
-1. bg-bancada.png — parede do laboratório;
-2. computador-guia.png — quatro estados do gabinete;
-3. aparelhos.png — cinco aparelhos em repouso e ativos;
-4. caixinha-de-som.png — fonte sonora em três estados;
-5. cover-fase-de-entrada-e-saida.png — capa.
+- fonte no mundo;
+- aparelho de entrada usado;
+- computador central;
+- aparelho de saída usado;
+- resultado no mundo;
+- setas e os termos ENTRADA e SAÍDA.
 
-Bancada, porta, fechos, papéis, fontes visuais simples, cabos, ondas, molduras,
-rótulos, seleção e interface são Graphics ou Phaser.Text. As fontes de imagem
-são três desenhos simples em código: montanha, flor e barco. O mesmo painter
-é usado no suporte, no monitor, no papel e no registro.
+Frase-síntese:
 
-A tela do gabinete só mostra estado do programa, representado por pequenas
-luzes e um pacote de informação. Ela não exibe a foto em tamanho legível:
-a criança precisa do Monitor externo para essa tarefa.
+**“O computador conversa com o mundo: a informação ENTRA por alguns aparelhos
+e SAI por outros.”**
 
-Uma versão inteira deve rodar com zero PNGs: formas geométricas, nome do
-aparelho no tamanho final e animação completa de fluxo.
+Usar `showLevelComplete`, estrelas compartilhadas e botão de repetir.
 
----
+### Entre um nível e o outro não se lê nada
 
-## 16. Arquitetura prevista
+A tela de fim de nível deixou de ser um `showLevelComplete` com título. Entre
+o N1 e o N2, e entre o N2 e o N3, entra o `showNextLevel` (`scenes/levelCard.ts`):
+véu, um painel pequeno e as três bolinhas do percurso — a do nível recém-vencido
+enche com um estalo e faíscas douradas. **Nenhuma palavra.**
 
-```text
-src/games/EF03CO06/fase-de-entrada-e-saida/
-    PLANEJAMENTO.md
-    TEXTURAS.md
-    index.ts
-    types.ts
-    data/layout.ts
-    data/theme.ts
-    data/levels.ts
-    scenes/BootScene.ts
-    scenes/GameScene.ts
-    scenes/bench.ts
-    scenes/devices.ts
-    scenes/source.ts
-    scenes/flow.ts
-    scenes/result.ts
-    scenes/door.ts
-    scenes/hud.ts
-    scenes/audio.ts
-```
+O motivo é que ali não havia nada a dizer. "Muito bem!" é elogio, não
+informação: quem venceu o nível já viu a cadeia acender, a Lia comemorar e o
+confete cair. A bolinha que enche diz a única coisa nova — onde a criança está
+na trilha — e diz isso de relance, sem depender de leitura. É a mesma escolha
+da barra de tempo contra o mostrador `m:ss`.
 
-| Módulo | Responsabilidade |
-|---|---|
-| GameScene | estado, entrada de comandos e orquestração; não desenha |
-| bench | mesa, encaixes e bandeja |
-| devices | aparelhos e registro de áreas de tela/fenda |
-| source | fontes visuais e caixinha simulada |
-| flow | cabos e timeline de captura/processamento/saída |
-| result | renderiza tela, onda, papel e registros do fim |
-| door | três fechos e abertura final |
-| hud | pedido, mensagens, USAR e integração da ajuda |
-| audio | sons sintetizados e ciclo de vida dos nós |
-
-Estados: ready, experimenting, reviewing, locked, celebrating, completed.
-Pausa é uma condição sobre o estado, não um reinício. Durante trava,
-locked permanece como condição de correção enquanto experimenting executa.
-
-Reusar createLoadingScreen, faseInicial, preloadLives, vidasIniciais,
-createLives, createTutorial, showLevelComplete, FX, EventBus e
-runtimeGameBridge. Todo módulo desenhável devolve destroy().
-
-Sem motor de física, mapas, pathfinding, busca de objetos ou biblioteca nova.
-Nenhuma implementação precisa de acesso aos periféricos reais.
+O `showLevelComplete` continua no FIM do jogo, onde há decisão a tomar: ali as
+palavras são dos botões ("Jogar de novo", "Escolher jogo"), e botão sem rótulo
+seria adivinhação.
 
 ---
 
-## 17. Registro futuro
+## 15. Arquitetura prevista
 
-| Campo | Valor |
-|---|---|
-| slug | fase-de-entrada-e-saida |
-| module | EF03CO06/fase-de-entrada-e-saida |
-| title | Fase de Entrada e Saída |
-| skill | EF03CO06 |
-| category | Mundo Digital |
-| years | [3] |
-| tags | interfaces, entrada, saída, bancada, escape room, toque |
-| description | Complete a conexão da bancada e use o resultado para abrir a porta. |
-| order | 195, reconferir ao registrar |
-| points | 30 na versão de teste; 90 com os três níveis |
-| icon | 🔌 |
-| thumbnail | cover-fase-de-entrada-e-saida.png, quando entregue |
-| status | published somente quando jogável |
+~~~text
+fase-de-entrada-e-saida/
+├── Game.ts
+├── PLANEJAMENTO.md
+├── TEXTURAS.md
+├── data/
+│   └── levels.ts
+├── scenes/
+│   ├── BootScene.ts
+│   └── GameScene.ts
+└── ui/
+    ├── buildDeviceCard.ts
+    ├── createFlowBoard.ts
+    └── createHelpPanel.ts
+~~~
 
-Manter o slug existente para que os dois documentos continuem no mesmo lugar.
-Id a escolher no catálogo atual, sem reservar número.
+Obrigatório:
 
-Registrar em catalog.ts, gameInstructions.ts e
-GAMES_WITH_IN_GAME_COMPLETION_SCREEN de GameDetailsPage.tsx.
+- `phaser`;
+- `loading`;
+- `faseInicial`;
+- `createLives`;
+- `createTutorial`;
+- `showLevelComplete`;
+- `runtimeGameBridge`;
+- FX compartilhados;
+- Phaser.Text para nomes e instruções;
+- fallback Graphics para toda textura ainda ausente.
 
-Três instruções para o catálogo:
-
-1. Toque num aparelho para conectá-lo à bancada.
-2. Observe o resultado e troque se precisar.
-3. Toque em USAR para cumprir a tarefa e abrir os fechos.
-
----
-
-## 18. Ordem de produção
-
-**Primeiro implementar apenas o nível 1, com três desafios.**
-
-1. bancada em Graphics, câmera fixa e duas conexões;
-2. simulação dos cinco aparelhos e das duas mídias;
-3. fonte, informação interna e resultados persistentes;
-4. conectar, retirar, trocar, repetir e USAR;
-5. trava, vidas, dica, pontos e eventos;
-6. tutorial, pausa, áudio, porta e conclusão;
-7. integrar arte da primeira rodada;
-8. entregar ao usuário para testar;
-9. ajustar clareza e ritmo;
-10. depois da aprovação, preencher níveis 2 e 3 com os mesmos componentes;
-11. capa por último.
-
-Não colocar níveis futuros incompletos em LEVELS na primeira rodada.
-totalStages e pontuação possível devem representar o conteúdo realmente
-jogável. Planejamento dos nove desafios não obriga ativar todos de uma vez.
+Carregar imagens com `import.meta.glob` e ignorar `cover-` dentro do jogo.
 
 ---
 
-## 19. Verificação antes de considerar jogável
+## 16. Assets planejados
 
-### Mecânica e ensino
+Somente seis arquivos:
 
-- [ ] uma bancada, dois lugares, cinco aparelhos e um reparo por desafio;
-- [ ] cada conexão produz uma experiência visível antes da confirmação;
-- [ ] imagem e som aparecem entrando no computador;
-- [ ] tela, reprodução e papel aparecem saindo pelos aparelhos;
-- [ ] foto no Monitor é uma saída válida mesmo quando o pedido exige papel;
-- [ ] Câmera diante de som capta imagem da fonte, sem inventar gravação;
-- [ ] programa não converte imagem em fala ou áudio em texto;
-- [ ] porta abre como progresso, sem acrescentar outro quebra-cabeça;
-- [ ] modo mudo preserva toda a informação necessária.
+1. `bg-laboratorio.png` — fundo limpo;
+2. `personagem-lia.png` — estados reconhecíveis de Lia;
+3. `computador-central.png` — torre de desktop amigável e inequívoca;
+4. `dispositivos-entrada.png` — teclado, mouse, microfone e câmera;
+5. `dispositivos-saida.png` — monitor, alto-falante e impressora;
+6. `cover-fase-de-entrada-e-saida.png` — capa do catálogo.
 
-### Interação e estado
-
-- [ ] troca antes de USAR não tira vida;
-- [ ] USAR avalia a última configuração executada;
-- [ ] aparelho retirado invalida resultado e desabilita confirmação;
-- [ ] cliques durante execução não duplicam animação nem pontos;
-- [ ] a trava aceita as ações necessárias à correção;
-- [ ] depois de dois erros, dica pulsa;
-- [ ] demonstração inicial do nível 3 não pune;
-- [ ] ? preserva configuração, trava e tempo da animação;
-- [ ] zero vidas cancela qualquer acerto agendado;
-- [ ] alvos ficam inteiros dentro de 1280 x 720.
-
-### Implementação e plataforma
-
-- [ ] npx tsc --noEmit;
-- [ ] lint da pasta do jogo;
-- [ ] build do projeto;
-- [ ] imports de arte por glob com fallback;
-- [ ] ausência de PNG não quebra o build;
-- [ ] faseInicial aceita o nível pedido;
-- [ ] GAME_READY uma vez e um CORRECT_ANSWER por desafio;
-- [ ] GAME_COMPLETED por nível, totalStages derivado de LEVELS.length;
-- [ ] vidas preservadas entre níveis;
-- [ ] sem isFinalStage ou propriedades inventadas em eventos;
-- [ ] nenhum gancho de depuração ou permissão de hardware.
-
-### Primeira rodada com o usuário
-
-- [ ] experimentar os dois aparelhos de 1.1;
-- [ ] concluir 1.2 reconhecendo onde faltava informação;
-- [ ] observar Monitor e Impressora em 1.3;
-- [ ] confirmar um resultado inadequado e corrigir;
-- [ ] abrir ajuda durante um teste e retomar;
-- [ ] concluir o nível em desktop e tela estreita;
-- [ ] validar se a criança entende por que a folha atende e a tela não.
+Bancada, porta, cabos, setas, encaixes, desenhos, palavras, papel, ondas,
+cartões e feedbacks continuam em Graphics/Text. A especificação completa está
+em [TEXTURAS.md](./TEXTURAS.md).
 
 ---
 
-## 20. O que mudou neste replanejamento
+## 17. Critérios de aceite
+
+### Pedagógico
+
+- [ ] a criança vê o caminho MUNDO → ENTRADA → COMPUTADOR → SAÍDA → MUNDO;
+- [ ] entrada e saída são ações observáveis, não cores de categoria;
+- [ ] os sete aparelhos têm funções familiares e exemplos concretos;
+- [ ] o erro mostra o que o aparelho realmente fez;
+- [ ] a porta é recompensa, não “saída do computador”;
+- [ ] não há acesso a dispositivos reais.
+
+### Interação
+
+- [ ] um toque conclui a decisão;
+- [ ] somente duas opções por desafio;
+- [ ] nenhuma hitbox pequena de cabo ou soquete;
+- [ ] TRAVA segue o padrão do catálogo;
+- [ ] ? pausa e abre ajuda;
+- [ ] o jogo continua compreensível sem som.
+
+### Visual
+
+- [ ] ENTRADA, COMPUTADOR e SAÍDA ficam escritos o tempo todo;
+- [ ] o computador parece uma torre de desktop, não uma caixa industrial;
+- [ ] não existe caixinha de música ou aparelho de manivela;
+- [ ] entradas e saídas ficam em folhas de arte separadas;
+- [ ] monitor, alto-falante e impressora são reconhecíveis em miniatura;
+- [ ] nenhuma cor revela a resposta.
+
+### Produção
+
+- [ ] nível 1 é implementado e testado antes dos demais;
+- [ ] todos os níveis futuros são somente dados;
+- [ ] assets faltantes usam fallback;
+- [ ] nenhum PNG contém texto;
+- [ ] o usuário testa o fluxo real antes da expansão.
+
+---
+
+## 18. Decisões desta revisão
 
 | Antes | Agora | Motivo |
 |---|---|---|
-| plataforma com corredor e obstáculos | bancada fixa e porta com três fechos | reduzir arte, animação e lógica espacial |
-| doze tipos de aparelho | cinco aparelhos reutilizados | limitar escopo e carga cognitiva |
-| toque no cartão era resposta | toque experimenta; USAR confirma | permitir descoberta pelo resultado |
-| níveis separados por entrada/saída e circuito duplo | imagem, som e reparo com uma metade fixa | manter uma única operação |
-| efeitos de travessia por estação | três tipos de saída na própria bancada | repetir componentes e mostrar função real |
-| oito assets | cinco assets | eliminar corredor, vale e folhas ampliadas |
+| gabinete sem tela e sem identidade | torre de computador com rosto, energia e rótulo em código | reconhecimento imediato |
+| fonte sonora por caixinha de manivela | Lia fala | ação cotidiana e óbvia |
+| cinco aparelhos numa única folha | entradas e saídas em folhas separadas | planejamento e integração legíveis |
+| conectar, observar e apertar USAR | tocar e ver o fluxo executar | gesto único, menos confusão |
+| desenho e caixinha como fontes | voz, desenho, texto e ponteiro | cobre quatro entradas familiares |
+| cinco periféricos | sete periféricos | inclui teclado e mouse do exemplo oficial |
+| bancada sem fluxo textual completo | MUNDO → ENTRADA → COMPUTADOR → SAÍDA → MUNDO permanente | relação curricular visível |
 
-Esta seção registra a revisão do plano, não uma construção já realizada.
-Após implementar o nível 1, acrescentar somente desvios observados na
-construção e seus motivos.
+As duas imagens geradas a partir da especificação anterior não devem ser
+aproveitadas: elas documentam conceitos retirados deste planejamento.
+
+---
+
+## 19. O que mudou na construção
+
+### Rodada 1 — nível 1 jogável (11/09/2026)
+
+O critério que mandou nesta rodada foi a queixa mais recente sobre o
+Bibliotecário: tela cheia demais, sem dizer onde tocar nem o que o toque faz.
+Toda decisão abaixo tira alguma coisa da tela ou deixa o toque mais óbvio.
+
+| Decisão | Por quê |
+|---|---|
+| **A informação vira uma bolha que viaja** | É o que liga os três aparelhos numa história só. A bolha sai da boca (ou do cartão) da Lia com o que ela quer comunicar, entra no aparelho escolhido, corre pelo cabo azul, some dentro do computador e sai pelo cabo laranja. O desenho dentro dela é a prova: a câmera troca a voz por uma foto, o microfone diante do desenho não captura nada e a bolha se desfaz ali mesmo. |
+| **O erro mostra onde o caminho parou** | Câmera no pedido da voz: a foto chega ao alto-falante, bate e volta com um `?`. Microfone no pedido do desenho: nada entra. Mouse no pedido do nome: a seta anda na tela, mas não aparece letra. É o "resultado causal" do §11, e ele se entende sem ler a dica. |
+| **A dica é montada pela regra, e não escrita por caso** | `explain()` junta o que o aparelho leva com o que o pedido precisa: *"A câmera leva imagens. Precisamos levar a voz."* Os níveis 2 e 3 herdam as frases sem texto novo por desafio. |
+| **Vida e `WRONG_ANSWER` saem juntos, uma vez por desafio** | O primeiro erro custa uma vida e emite o evento; repetir o mesmo aparelho só repete a demonstração. Os dois nunca se separam, para a plataforma e o jogo contarem igual. |
+| **O aparelho errado volta para o cartão** | O encaixe fica vazio de novo, com o cadeado âmbar e o plugue solto: está claro que falta ligar alguma coisa ali. No segundo erro, o cartão certo ganha contorno dourado. |
+| **Sem porta e sem fechos** | A porta ocuparia o lado direito com um objeto que não faz parte do caminho e competiria com a saída — e em `Graphics` ela seria o móvel desenhado em código que já foi reprovado na Fuga do Laboratório. O progresso fica nas três bolinhas do topo. Se a porta voltar, precisa de textura. |
+| **Sem rótulos MUNDO** | ENTRADA → COMPUTADOR → SAÍDA ficam escritos o tempo todo, em placas na frente da bancada, com setas entre elas. "Mundo" é a Lia de um lado e o efeito do outro; escrito, vira mais dois blocos de texto sem ação. |
+| **Sem CONTINUAR** | O acerto segura a tela 1,5 s com o efeito à vista (a voz saindo, a flor na tela, LIA escrito) e avança sozinho. Um toque a mais não ensinaria nada. |
+| **Sem o balão "Neste kit, cada aparelho vai mostrar uma função"** | Era mais uma frase antes do primeiro toque. |
+| **O `?` repete o tutorial** | Como nos outros jogos da família, em vez de um painel de três telas. O tutorial tem três passos: o pedido, o encaixe vazio e os cartões. O último passo **não** tem dedo, para não apontar o cartão certo. |
+| **Cartão com nome, sem frase** | "Leva a voz" no cartão transformaria a decisão em ligar palavra com palavra. O nome e o desenho do aparelho bastam. |
+| **A resposta certa muda de lado** | Direita, esquerda, direita. Voz e desenho usam o mesmo par, câmera e microfone, nas mesmas posições, e a resposta troca. |
+
+A bancada, os cabos, as placas e o encaixe são `Graphics`. A bancada é o único
+móvel desenhado em código; ela ficou limpa, mas uma textura dela (com as três
+placas lisas, sem texto) deixaria a cena mais inteira.
+
+### As folhas chegaram em outro tamanho
+
+A grade bateu com o contrato do `TEXTURAS.md`; só o lado da célula mudou, e
+ele mora em `SHEET` (`data/devices.ts`):
+
+| Folha | Chegou | Célula |
+|---|---|---|
+| `personagem-lia.png` | 1600 × 550 | 400 × 550 |
+| `computador-central.png` | 1600 × 650 | 400 × 650 |
+| `dispositivos-entrada.png` | 1400 × 700 | 350 × 350 |
+| `dispositivos-saida.png` | 1050 × 700 | 350 × 350 |
+
+A caixa alfa de cada quadro foi medida no arquivo. Neutro e ativo têm alturas
+diferentes (o teclado ativo desce 12 px), então cada quadro é ancorado pela
+própria base e pelo próprio centro, e a troca de quadro não pula. Também saíram
+da medição a tela útil do monitor, o cone do alto-falante, as duas portas do
+computador e a área branca do cartão da Lia, onde a flor é desenhada.
+
+O fundo chegou como `bg-labolatorio.png` e foi renomeado para
+`bg-laboratorio.png`, o nome do `TEXTURAS.md`.
+
+A Lia saiu loira e de pele clara; o prompt pedia pele morena e cabelo cacheado
+escuro. O jogo não depende disso, mas a folha não segue a especificação.
+
+Falta a capa. O fundo do laboratório entrou provisório no catálogo, com
+comentário no `catalog.ts`.
+
+Verificado no navegador: os três desafios, os três erros causais (foto batendo
+no alto-falante, microfone sem nada, seta sem letra), uma vida por desafio,
+o segundo erro sem vida e com o contorno no cartão certo, a partida inteira
+acertando de primeira (30 pontos, nenhum erro), o `?` e o `GAME_COMPLETED` com
+`stage: 1` e `totalStages: 1`.
+
+### Rodada 2 — balão, a informação sem disco, setas vivas e o nível 2 (11/09/2026)
+
+O usuário aprovou o nível 1 e pediu três ajustes de acabamento.
+
+| Pedido | O que virou |
+|---|---|
+| **Melhorar o balão da Lia** | A ponta fina e comprida, que saía da borda e terminava no ar, virou um rabinho curto, largo e curvo que nasce do próprio contorno do balão e encosta na cabeça dela. O balão chegou mais para a esquerda (começa logo acima da Lia), ficou em pílula, com sombra e um friso claro embaixo. |
+| **A informação sem o disco branco** | A coisa viaja como ela mesma: a voz são ondas piscando com duas notinhas; o desenho, a folha com a flor; a foto, uma polaroide; as letras, três teclas L‑I‑A pulando; o mouse, a setinha com um anel de clique. Um rastro de pontinhos na cor do cabo (azul entrando, laranja saindo) substitui o anel colorido. A troca no aparelho ficou visível: a voz é engolida pela câmera e sai uma foto do outro lado. |
+| **Setas animadas e mais transparentes** | A ponta branca parada no meio de cada cabo saiu. No lugar, três setinhas brancas translúcidas andam pelo cabo o tempo todo, no sentido da informação, somem nas pontas e aceleram e acendem quando a informação está passando. |
+
+#### Nível 2 — O que sai
+
+A ENTRADA vem ligada e a criança escolhe a SAÍDA. Os pedidos **não dizem o
+aparelho** — no nível 1 eles podiam ("sair no alto-falante"), porque a saída
+era fixa; aqui dizer "na tela" entregaria a resposta.
+
+| Pedido | Entrada fixa | Opções | O erro mostra |
+|---|---|---|---|
+| Quero que todos vejam meu desenho. | câmera | alto-falante / **monitor** | o desenho bate no alto-falante e volta com `?` |
+| Quero que todos ouçam minha voz. | microfone | **alto-falante** / monitor | a voz bate no monitor e volta com `?` |
+| Quero levar meu nome no papel. | teclado | monitor / **impressora** | LIA aparece na tela, mas não no papel |
+
+A resposta certa fica em direita, esquerda, direita. As dicas saem do mesmo
+`explain()`: *"O alto-falante só faz som. Precisamos ver o desenho."*,
+*"O monitor mostra na tela. Precisamos do nome no papel."*
+
+A impressora ganhou efeito: a folha sai pela boca da frente (medida na arte, 80
+px acima da base nos dois quadros), cresce para baixo e sobe acima da
+impressora, com LIA escrito. O tutorial do nível 2 tem dois passos — o encaixe
+de SAÍDA vazio e os cartões — e não repete "leia o pedido".
+
+Cada nível fecha com a sua frase (`summary`): o 1 fala de levar a informação
+para DENTRO, o 2 de levar para FORA. O catálogo subiu para 60 pontos.
+
+Verificado no navegador: o balão novo, a voz saindo como ondas, a câmera
+trocando a voz por uma foto no cabo, a foto e o desenho batendo no
+alto-falante, a folha com LIA saindo da impressora, o nível 2 aberto direto por
+`stage=2`, e o nível 1 passando ao 2 com a vida perdida e os pontos atravessando
+o `scene.restart`. Eventos do nível 2: um `WRONG_ANSWER` por desafio errado e
+`GAME_COMPLETED` com `stage: 2` e `totalStages: 2`.

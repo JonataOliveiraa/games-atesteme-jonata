@@ -32,7 +32,7 @@ export class BootScene extends Phaser.Scene {
     preload() {
         createLoadingScreen(this, {
             title: 'Caverna dos Dados',
-            subtitle: 'Junte os dados que contam a mesma coisa!',
+            subtitle: 'Junte os dados!',
             description: 'Acendendo os cristais...',
             theme: {
                 background: { kind: 'solid', color: C.shadow },
