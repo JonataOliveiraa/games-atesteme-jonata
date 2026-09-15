@@ -950,7 +950,7 @@ export const catalog: Game[] = [
     description:
       "Monte a coreografia com blocos REPITA e toque em DANÇAR para ver o dançarino executar o seu algoritmo.",
     category: "Pensamento Computacional",
-    points: 30,
+    points: 90,
     icon: "💃",
     thumbnail: coverDancaAninhada,
   },

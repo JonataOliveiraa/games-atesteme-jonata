@@ -10,7 +10,7 @@ import { C } from '../data/theme'
  *
  * O `import.meta.glob` não quebra o build quando um PNG ainda não existe, e
  * cada peça confere `textures.exists` antes de desenhar. É o que deixa o
- * nível 1 rodar inteiro com o desenho de reserva, como pede o §6 do
+ * jogo rodar inteiro com o desenho de reserva, como pede o §7 do
  * TEXTURAS.md.
  */
 const ART = import.meta.glob('../../../../assets/games/EF04CO03/danca-aninhada/*.png', {

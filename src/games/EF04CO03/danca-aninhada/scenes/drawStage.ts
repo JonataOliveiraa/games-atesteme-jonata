@@ -2,7 +2,7 @@ import Phaser from 'phaser'
 import { FX } from '../../../../shared/effects/FX'
 import { moveIcon, type MoveIcon } from './pictogram'
 import { CUTS, SHEET as ART, dancerScale, originOf, type PoseKey } from '../data/art'
-import { DANCER, DEPTH, FOCUS, H, STAGE, W } from '../data/layout'
+import { DANCER, DEPTH, FOCUS, H, LAMP, STAGE, W } from '../data/layout'
 import { C, CSS, FONT, MOVE_NAME } from '../data/theme'
 import type { Move } from '../types'
 
@@ -17,12 +17,23 @@ import type { Move } from '../types'
  *
  * ── O JOGO PRECISA RODAR SEM PNG ─────────────────────────────────────────
  *
- * O §13 do planejamento exige isso, e não é zelo: o primeiro corte foi
- * escrito antes de a folha existir. Se nenhuma textura estiver carregada, o
+ * O §13 do planejamento exige isso, e não é zelo: o jogo foi escrito antes de
+ * a folha existir. Se nenhuma textura estiver carregada, o
  * palco vira `Graphics` e o dançarino vira boneco de círculos e linhas com o
  * rótulo DANÇARINO — nas MESMAS caixas de layout, para o teste com criança
  * medir a mesma tela.
  */
+
+/**
+ * A CENA AINDA EXISTE?
+ *
+ * Sair da página no meio de um ensaio destrói o jogo inteiro, e o `displayList`
+ * vira `null`. O contador `gen` da `GameScene` já barra o FLUXO, mas entre a
+ * promessa que resolve e a próxima guarda cabem algumas linhas — e uma delas
+ * cria objeto. Sem isto, fechar a aba no meio da dança deixa um TypeError no
+ * console de quem já foi embora.
+ */
+const vivo = (scene: Phaser.Scene) => Boolean(scene.sys?.displayList)
 
 const POSE_OF: Record<Move, PoseKey> = { step: 'step', clap: 'clap', spin: 'spin' }
 
@@ -83,6 +94,68 @@ export function createStage(scene: Phaser.Scene) {
         shadow.clear()
         shadow.fillStyle(C.ink, 0.26)
         shadow.fillEllipse(x, DANCER.footY + 6, width * squash, focusedWide() ? 34 : 26)
+    }
+
+    /*
+     * ══════════════════════════════════════════════════════════════════════
+     *  A LÂMPADA NÃO É INTERFACE
+     * ══════════════════════════════════════════════════════════════════════
+     *
+     * Ela é do cenário, e por isso continua em cena quando todo o resto sai
+     * no ensaio: o laço do nível 3 para por causa dela, e esconder o sinal
+     * durante a execução tornaria a parada inexplicável.
+     *
+     * Estado escrito, não só desenhado. ACESA e APAGADA embaixo do bulbo são
+     * as duas palavras que o §7 exige — quem não separa amarelo de cinza
+     * continua lendo o que aconteceu.
+     */
+    const lamp = scene.add.container(LAMP.x, LAMP.y).setDepth(DEPTH.lamp).setVisible(false)
+    const lampArt = scene.add.graphics()
+    lamp.add(lampArt)
+    const lampWord = scene.add
+        .text(0, LAMP.r + 34, '', { fontFamily: FONT.black, fontSize: '20px', color: CSS.ink })
+        .setOrigin(0.5)
+        .setResolution(2)
+    lamp.add(lampWord)
+
+    const paintLamp = (on: boolean) => {
+        const g = lampArt
+        const r = LAMP.r
+        g.clear()
+
+        // o fio, que vem da grelha lá em cima e explica por que ela flutua
+        g.lineStyle(6, C.ink, 1)
+        g.lineBetween(0, STAGE.y - LAMP.y - 10, 0, -r - 16)
+        g.fillStyle(C.ink, 1)
+        g.fillRoundedRect(-17, -r - 20, 34, 20, 7)
+
+        g.fillStyle(C.ink, 1)
+        g.fillCircle(0, 0, r + 5)
+        g.fillStyle(on ? C.lampOn : C.lampOff, 1)
+        g.fillCircle(0, 0, r)
+        g.fillStyle(C.white, on ? 0.5 : 0.14)
+        g.fillEllipse(-r * 0.3, -r * 0.34, r * 0.62, r * 0.4)
+
+        if (on) {
+            g.lineStyle(7, C.ink, 1)
+            for (let i = 0; i < 8; i++) {
+                const a = (i / 8) * Math.PI * 2 + Math.PI / 8
+                g.lineBetween(Math.cos(a) * (r + 14), Math.sin(a) * (r + 14), Math.cos(a) * (r + 30), Math.sin(a) * (r + 30))
+            }
+            g.lineStyle(4, C.lampOn, 1)
+            for (let i = 0; i < 8; i++) {
+                const a = (i / 8) * Math.PI * 2 + Math.PI / 8
+                g.lineBetween(Math.cos(a) * (r + 14), Math.sin(a) * (r + 14), Math.cos(a) * (r + 30), Math.sin(a) * (r + 30))
+            }
+        }
+
+        const w = on ? 88 : 116
+        g.fillStyle(C.ink, 1)
+        g.fillRoundedRect(-w / 2, r + 20, w, 30, 15)
+        g.fillStyle(on ? C.lampOn : C.lampOff, 1)
+        g.fillRoundedRect(-w / 2 + 3, r + 23, w - 6, 24, 12)
+        lampWord.setText(on ? 'ACESA' : 'APAGADA')
+        lampWord.setColor(on ? CSS.ink : CSS.white)
     }
 
     let focusOn = false
@@ -194,29 +267,51 @@ export function createStage(scene: Phaser.Scene) {
         .setResolution(2)
     caption.add(captionText)
 
+    /*
+     * DUAS FILEIRAS DE PONTOS, UMA POR LAÇO.
+     *
+     * A de baixo, grande e quente, conta os REFRÕES fechados — o laço de
+     * fora. A de cima, menor e âmbar, conta as voltas do laço de DENTRO e
+     * zera a cada refrão. Sem ela, o §11 do planejamento perderia a única
+     * evidência que o nível 2 existe para dar: a de que o contador interno
+     * reinicia, em vez de continuar somando.
+     *
+     * As duas usam as cores das molduras da ficha — quente para FORA, âmbar
+     * para DENTRO — para o palco e a ficha falarem a mesma língua.
+     */
+    const row = (g: Phaser.GameObjects.Graphics, y: number, current: number, total: number, r: number, face: number) => {
+        const gap = r * 2.4
+        const left = FOCUS.x - ((total - 1) * gap) / 2
+        for (let i = 0; i < total; i++) {
+            const x = left + i * gap
+            // o que falta é um contorno vazio; o que fechou, cheio de luz.
+            // Dois tons de cinza sobre o palco escuro não se separavam
+            g.fillStyle(C.ink, 0.75)
+            g.fillCircle(x, y, r + 4)
+            if (i < current) {
+                g.fillStyle(face, 1)
+                g.fillCircle(x, y, r)
+            } else {
+                g.fillStyle(C.white, 0.22)
+                g.fillCircle(x, y, r)
+                g.fillStyle(C.ink, 0.75)
+                g.fillCircle(x, y, r * 0.64)
+            }
+        }
+    }
+
     const beads = scene.add.graphics().setDepth(DEPTH.lamp).setAlpha(0)
     const paintBeads = (current: number, total: number) => {
         beads.clear()
         if (total <= 0) return
-        const gap = 44
-        const y = FOCUS.footY + 68
-        const left = FOCUS.x - ((total - 1) * gap) / 2
-        for (let i = 0; i < total; i++) {
-            const x = left + i * gap
-            // o refrão que falta é um contorno vazio; o que fechou, cheio de
-            // luz. Dois tons de cinza sobre o palco escuro não se separavam
-            beads.fillStyle(C.ink, 0.75)
-            beads.fillCircle(x, y, 18)
-            if (i < current) {
-                beads.fillStyle(C.warm, 1)
-                beads.fillCircle(x, y, 14)
-            } else {
-                beads.fillStyle(C.white, 0.22)
-                beads.fillCircle(x, y, 14)
-                beads.fillStyle(C.ink, 0.75)
-                beads.fillCircle(x, y, 9)
-            }
-        }
+        row(beads, FOCUS.footY + 70, current, total, 14, C.warm)
+    }
+
+    const inner = scene.add.graphics().setDepth(DEPTH.lamp).setAlpha(0)
+    const paintInner = (current: number, total: number) => {
+        inner.clear()
+        if (total <= 0) return
+        row(inner, FOCUS.footY + 30, current, total, 10, C.inner)
     }
 
     return {
@@ -287,7 +382,7 @@ export function createStage(scene: Phaser.Scene) {
             void FX.to(scene, veil, { alpha: on ? 1 : 0 }, { duration: 320 })
             if (!on) {
                 caption.setAlpha(0)
-                void FX.to(scene, beads, { alpha: 0 }, { duration: 200 })
+                void FX.to(scene, [beads, inner], { alpha: 0 }, { duration: 200 })
             }
             await FX.to(
                 scene,
@@ -300,6 +395,7 @@ export function createStage(scene: Phaser.Scene) {
 
         /** O nome e o desenho do movimento que está saindo agora. */
         async say(move: Move) {
+            if (!vivo(scene)) return
             captionIcon?.destroy()
             captionIcon = moveIcon(scene, move, 116, C.ink, C.inkSoft)
             captionIcon.setPosition(0, -26)
@@ -317,6 +413,36 @@ export function createStage(scene: Phaser.Scene) {
             if (beads.alpha < 1) void FX.to(scene, beads, { alpha: 1 }, { duration: 200 })
         },
 
+        /** As voltas do laço de dentro. `total` 0 esconde a fileira. */
+        innerBeads(current: number, total: number) {
+            paintInner(current, total)
+            void FX.to(scene, inner, { alpha: total > 0 ? 1 : 0 }, { duration: 160 })
+        },
+
+        /** `null` tira a lâmpada de cena: ela só existe no nível 3. */
+        setLamp(state: 'on' | 'off' | null) {
+            if (state === null) {
+                lamp.setVisible(false)
+                return
+            }
+            paintLamp(state === 'on')
+            if (lamp.visible) return
+            lamp.setVisible(true).setAlpha(0).setScale(0.8)
+            void FX.to(scene, lamp, { alpha: 1, scale: 1 }, { duration: 280, ease: 'Back.easeOut' })
+        },
+
+        /** O instante em que o sinal muda: o §11 quer isso visível e sonoro. */
+        async blinkLamp() {
+            paintLamp(false)
+            scene.tweens.killTweensOf(lamp)
+            lamp.setScale(1)
+            await FX.to(scene, lamp, { scale: 1.16 }, { duration: 150, yoyo: true, ease: 'Sine.easeOut' })
+        },
+
+        lampBounds() {
+            return { x: LAMP.x, y: LAMP.y + 10, w: LAMP.r * 2 + 80, h: LAMP.r * 2 + 108 }
+        },
+
         spotlight(on: boolean) {
             scene.tweens.killTweensOf(spot)
             return FX.to(scene, spot, { alpha: on ? 1 : 0 }, { duration: 320 })
@@ -332,7 +458,9 @@ export function createStage(scene: Phaser.Scene) {
         },
 
         destroy() {
-            scene.tweens.killTweensOf([root, spot, veil, caption, beads, sprite ?? root, doll ?? root])
+            scene.tweens.killTweensOf([root, spot, veil, caption, beads, inner, lamp, sprite ?? root, doll ?? root])
+            lamp.destroy(true)
+            inner.destroy()
             captionIcon?.destroy()
             caption.destroy(true)
             beads.destroy()

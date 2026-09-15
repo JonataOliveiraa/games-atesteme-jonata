@@ -25,6 +25,17 @@ import type { SlotValue } from '../types'
  * a cada passo tira o endereço das coisas.
  */
 
+/**
+ * A CENA AINDA EXISTE?
+ *
+ * Sair da página no meio de um ensaio destrói o jogo inteiro, e o `displayList`
+ * vira `null`. O contador `gen` da `GameScene` já barra o FLUXO, mas entre a
+ * promessa que resolve e a próxima guarda cabem algumas linhas — e uma delas
+ * cria objeto. Sem isto, fechar a aba no meio da dança deixa um TypeError no
+ * console de quem já foi embora.
+ */
+const vivo = (scene: Phaser.Scene) => Boolean(scene.sys?.displayList)
+
 const CARD = { w: 302, h: 128, gap: 20 }
 const LINE_Y = TRAY.y + 22
 const CARD_Y = TRAY.y + 106
@@ -208,6 +219,7 @@ export function createOptions(scene: Phaser.Scene, handlers: OptionsHandlers) {
     return {
         /** Troca a bandeja pelas opções do espaço que acabou de ser tocado. */
         async show(values: SlotValue[]) {
+            if (!vivo(scene)) return
             clearCards()
             const list = values.slice(0, 3)
             const total = list.length * CARD.w + (list.length - 1) * CARD.gap
@@ -270,8 +282,19 @@ export function createOptions(scene: Phaser.Scene, handlers: OptionsHandlers) {
             })
         },
 
+        /**
+         * A frase cabe numa linha, custe o que custar.
+         *
+         * Entre a faixa e o topo dos cartões há 20 px: uma segunda linha
+         * passa por baixo deles. Em vez de contar caracteres em cada frase
+         * espalhada pela cena, mede-se e encolhe-se até caber.
+         */
         say(text: string) {
-            line.setText(text)
+            for (let size = 26; size >= 19; size -= 2) {
+                line.setStyle({ fontSize: `${size}px`, wordWrap: { width: TRAY.w - 60 } })
+                line.setText(text)
+                if (line.height <= 40) break
+            }
             scene.tweens.killTweensOf(line)
             line.setAlpha(0)
             return FX.to(scene, line, { alpha: 1 }, { duration: 200 })

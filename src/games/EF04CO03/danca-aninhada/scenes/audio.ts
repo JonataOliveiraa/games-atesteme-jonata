@@ -106,6 +106,18 @@ export function createAudio(scene: Phaser.Scene) {
             ;[523, 659].forEach((freq, i) => note({ freq, dur: 0.16, type: 'triangle', gain: 0.045, at: i * 0.05 }))
         },
 
+        /**
+         * A luz apagando: um clique que DESCE.
+         *
+         * Todos os outros fechamentos deste jogo sobem — o laço de dentro, o
+         * refrão, a fase. O sinal do nível 3 é a única coisa que termina algo
+         * sem ser mérito de ninguém, e descer é o que o separa de um acerto.
+         */
+        lampOff() {
+            note({ freq: 620, to: 210, dur: 0.22, type: 'triangle', gain: 0.055 })
+            noise({ dur: 0.07, freq: 900, q: 1.4, gain: 0.03 })
+        },
+
         /** O erro: som neutro, sem susto, sem alarme. */
         stall() {
             note({ freq: 300, to: 210, dur: 0.2, type: 'sine', gain: 0.045 })

@@ -61,8 +61,14 @@ export const DANCER = { x: 218, footY: 496, height: 224 }
  */
 export const FOCUS = { x: 624, footY: 496, height: 344 }
 
-/** A lâmpada do nível 3 — desenhada, nunca parte do fundo. */
-export const LAMP = { x: 418, y: 286, r: 40 }
+/**
+ * A lâmpada do nível 3 — desenhada, nunca parte do fundo.
+ *
+ * Pendurada na coxia esquerda, longe de duas coisas: do dançarino, que no
+ * ensaio cresce e vem para o meio, e da comparação da TRAVA, que mora no vão
+ * do palco. Ela não é interface: continua em cena quando todo o resto sai.
+ */
+export const LAMP = { x: 108, y: 274, r: 36 }
 
 /**
  * A comparação da TRAVA, no vão vazio do palco.

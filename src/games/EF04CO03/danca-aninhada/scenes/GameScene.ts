@@ -23,7 +23,17 @@ import {
 } from '../data/rules'
 import { DEPTH, HUD } from '../data/layout'
 import { C, MOVE_NAME } from '../data/theme'
-import type { Divergence, LevelDef, LevelNumber, Mode, PhaseDef, SlotId, SlotValue, Values } from '../types'
+import type {
+    Command,
+    Divergence,
+    LevelDef,
+    LevelNumber,
+    Mode,
+    PhaseDef,
+    SlotId,
+    SlotValue,
+    Values,
+} from '../types'
 import { createStage, type Stage } from './drawStage'
 import { createRequest, type Request } from './drawRequest'
 import { createProgram, type Program } from './drawProgram'
@@ -179,6 +189,7 @@ export class GameScene extends Phaser.Scene {
         this.hud.setDone(index)
         this.stage.rest()
         void this.stage.spotlight(false)
+        this.resetLamp()
         this.request.show(phase)
         this.program.build(phase.sheet)
         this.options.setDance(false)
@@ -191,6 +202,17 @@ export class GameScene extends Phaser.Scene {
             this.pendingTutorial = false
             this.runTutorial(true)
         }
+    }
+
+    /**
+     * A lâmpada existe por causa da CONDIÇÃO, não do número do nível.
+     *
+     * Ela volta a acender entre uma tentativa e outra: deixada apagada depois
+     * de um ensaio, ela diria que o sinal já passou quando a dança seguinte
+     * ainda nem começou.
+     */
+    private resetLamp() {
+        this.stage.setLamp(this.phase.sheet.outer === 'until' ? 'on' : null)
     }
 
     /** O que a bandeja pede, em palavras, para o espaço que está ativo. */
@@ -286,38 +308,86 @@ export class GameScene extends Phaser.Scene {
         this.program.settle()
         this.request.unmark()
 
-        const trace = simulate(program, planOf(phase, 0))
-        const bad = firstDivergence(phase, trace, 0)
+        const bad = await this.rehearse(program, 0)
+        if (gen !== this.gen) return
+        if (bad) {
+            await this.fail(bad)
+            return
+        }
+
+        /*
+         * ══════════════════════════════════════════════════════════════════
+         *  O SEGUNDO ENSAIO DO NÍVEL 3
+         * ══════════════════════════════════════════════════════════════════
+         *
+         * A MESMA ficha roda de novo, com a luz apagando noutra hora. A
+         * criança não mexe em nada entre os dois — e é exatamente isso que o
+         * §7 quer que ela veja: o programa não mudou, a dança mudou.
+         *
+         * Um número na moldura não conseguiria fazer isso. É a prova de que a
+         * condição não é um número disfarçado.
+         */
+        if (phase.signalPlans) {
+            void this.options.say('A mesma ficha, de novo — e a luz vai apagar noutra hora.')
+            await FX.wait(this, 1800)
+            if (gen !== this.gen) return
+            this.request.unmark()
+            const outra = await this.rehearse(program, 1)
+            if (gen !== this.gen) return
+            if (outra) {
+                await this.fail(outra)
+                return
+            }
+        }
+
+        await this.succeed()
+    }
+
+    /**
+     * Um ensaio, do apagar da interface ao selo na tira.
+     *
+     * Devolve a divergência, ou `null` quando a dança bateu com o pedido.
+     * Quem decide o que fazer com isso é quem chamou: o nível 3 chama duas
+     * vezes, e o primeiro ensaio precisa passar antes de o segundo começar.
+     */
+    private async rehearse(program: Command, rehearsal: number): Promise<Divergence | null> {
+        const gen = this.gen
+        const phase = this.phase
+        const plan = planOf(phase, rehearsal)
+        const trace = simulate(program, plan)
+        const bad = firstDivergence(phase, trace, rehearsal)
         const lastGood = (bad ? bad.index : trace.beats.length) - 1
-        const total = this.values.outer?.kind === 'times' ? this.values.outer.times : trace.rounds
+        const rounds = this.values.outer?.kind === 'times' ? this.values.outer.times : trace.rounds
+        const innerTotal = this.values.innerTimes?.kind === 'times' ? this.values.innerTimes.times : 0
 
         /*
          * ══════════════════════════════════════════════════════════════════
          *  O ENSAIO LIMPA A TELA
          * ══════════════════════════════════════════════════════════════════
          *
-         * Cabeçalho, pedido, ficha e bandeja saem; sobra o palco. É o pedido
-         * do autor do jogo, e a troca tem sentido: enquanto ela monta, o que
-         * importa é a ficha; quando ela toca DANÇAR, o que importa é se a
-         * dança saiu como o pedido.
+         * Cabeçalho, pedido, ficha e bandeja saem; sobra o palco. Enquanto
+         * ela monta, o que importa é a ficha; quando ela toca DANÇAR, o que
+         * importa é se a dança saiu como o pedido.
          *
-         * O que continua na tela é a LEGENDA do movimento e os pontos dos
-         * refrões — a única coisa que amarra a dança ao algoritmo que a
-         * produziu. Sem eles o ensaio provaria que o dançarino dança, não que
-         * a ficha dela faz aquilo.
+         * O que continua na tela é a LEGENDA do movimento, as duas fileiras
+         * de pontos e a lâmpada — a única coisa que amarra a dança ao
+         * algoritmo que a produziu. Sem elas o ensaio provaria que o
+         * dançarino dança, não que a ficha dela faz aquilo.
          */
         await this.showUi(false)
-        if (gen !== this.gen) return
+        if (gen !== this.gen) return null
 
         this.audio.countIn()
         void this.stage.spotlight(true)
-        this.stage.beads(0, total)
+        this.stage.beads(0, rounds)
+        this.stage.innerBeads(0, innerTotal)
         await FX.wait(this, 520)
-        if (gen !== this.gen) return
+        if (gen !== this.gen) return null
 
         const dance = async (k: number) => {
             const beat = trace.beats[k]
             void this.stage.say(beat.move)
+            if (beat.inner !== null) this.stage.innerBeads(beat.inner, innerTotal)
             this.audio.beat(beat.move)
             await this.stage.pose(beat.move, BEAT_MS)
             return beat
@@ -325,12 +395,24 @@ export class GameScene extends Phaser.Scene {
 
         for (let k = 0; k <= lastGood; k++) {
             const beat = await dance(k)
-            if (gen !== this.gen) return
+            if (gen !== this.gen) return null
 
             const next = trace.beats[k + 1]
             if (!next || next.outer !== beat.outer) {
                 this.audio.roundClose()
-                this.stage.beads(beat.outer, total)
+                this.stage.beads(beat.outer, rounds)
+                // o contador de dentro ZERA no fim do refrão: é a evidência
+                // do nível 2, e ela some se a fileira continuar somando
+                this.stage.innerBeads(0, innerTotal)
+
+                // a luz apaga ao fim do refrão que o plano marcou, e a dança
+                // só termina DEPOIS dele — a condição é testada no fim da
+                // volta, nunca no meio
+                if (plan !== undefined && beat.outer >= plan) {
+                    this.audio.lampOff()
+                    await this.stage.blinkLamp()
+                    if (gen !== this.gen) return null
+                }
             } else if (beat.inner !== null && next.inner === null) {
                 this.audio.innerClose()
             }
@@ -340,32 +422,37 @@ export class GameScene extends Phaser.Scene {
         // precisa ver para entender a comparação "pedido × saiu"
         if (bad && bad.got !== null && trace.beats[bad.index]) {
             await dance(bad.index)
-            if (gen !== this.gen) return
+            if (gen !== this.gen) return null
         }
 
         await FX.wait(this, 420)
-        if (gen !== this.gen) return
+        if (gen !== this.gen) return null
 
         void this.stage.spotlight(false)
         await this.showUi(true)
-        if (gen !== this.gen) return
+        if (gen !== this.gen) return null
 
         // a faixa ainda trazia "toque em DANÇAR", que já não era verdade: o
         // ensaio acabou e o que acontece agora é a conferência
         void this.options.say('Conferindo com o pedido...')
 
-        // os selos só agora: durante o ensaio a tira estava fora da tela
-        const sealed = bad ? Math.floor(bad.index / phase.pattern.length) : trace.rounds
-        for (let r = 0; r < sealed; r++) {
-            await this.request.seal(r)
-            if (gen !== this.gen) return
+        /*
+         * OS SELOS SÓ AGORA: durante o ensaio a tira estava fora da tela.
+         *
+         * No nível 3 a tira mostra UM refrão, e não a fila inteira — então
+         * não há refrão 2 para selar. Ou o refrão bateu, e o selo é um só, ou
+         * não bateu, e quem fala é o âmbar.
+         */
+        if (phase.signalPlans) {
+            if (!bad) await this.request.seal(0)
+        } else {
+            const sealed = bad ? Math.floor(bad.index / phase.pattern.length) : trace.rounds
+            for (let r = 0; r < sealed; r++) {
+                await this.request.seal(r)
+                if (gen !== this.gen) return null
+            }
         }
-
-        if (!bad) {
-            await this.succeed()
-            return
-        }
-        await this.fail(bad)
+        return bad
     }
 
     /** A interface inteira entra ou sai, e o dançarino troca de lugar junto. */
@@ -396,6 +483,7 @@ export class GameScene extends Phaser.Scene {
         this.audio.stall()
         this.stage.rest()
         void this.stage.spotlight(false)
+        this.resetLamp()
         this.request.mark(bad.index, bad.expected, bad.got)
         this.program.lock(bad.slot)
         this.locked = bad.slot
@@ -476,11 +564,37 @@ export class GameScene extends Phaser.Scene {
 
     /** O fecho da fase, dito no que a ficha fez — nunca em pontos. */
     private doneText(): string {
-        const phase = this.phase
-        if (phase.sheet.leading >= 2) {
-            return `O laço repetiu os dois movimentos, na sua ordem, ${phase.rounds} vezes.`
+        const { sheet, pattern, rounds, signalPlans } = this.phase
+        const primeiro = MOVE_NAME[pattern[0]]
+        const ultimo = MOVE_NAME[pattern[pattern.length - 1]]
+
+        if (signalPlans) {
+            return `A mesma ficha: ${signalPlans[0]} refrões numa vez, ${signalPlans[1]} na outra. Quem mandou parar foi a luz.`
         }
-        return `O laço repetiu ${MOVE_NAME[phase.pattern[0]]} ${phase.rounds} vezes. Igualzinho ao pedido!`
+        if (sheet.nested) {
+            return `Cada refrão: ${primeiro} ${pattern.length - 1} vezes e ${ultimo}. O de fora repetiu ${rounds}.`
+        }
+        if (sheet.leading >= 2) {
+            return `O laço repetiu os dois movimentos, na sua ordem, ${rounds} vezes.`
+        }
+        return `O laço repetiu ${primeiro} ${rounds} vezes. Igualzinho ao pedido!`
+    }
+
+    /**
+     * O fecho do NÍVEL, que é onde a síntese do §10 mora.
+     *
+     * Cada uma nomeia só o que aquele nível ensinou. A do nível 3 é a frase
+     * inteira do planejamento, porque é ali que os dois laços e a condição já
+     * foram todos vistos.
+     */
+    private levelText(): string {
+        if (this.level.level === 2) {
+            return 'O bloco de DENTRO repete um movimento. O de FORA repete o refrão inteiro — e o de dentro recomeça em cada um.'
+        }
+        if (this.level.level === 3) {
+            return 'O bloco de dentro repete movimentos. O de fora repete o refrão — ou espera a luz apagar.'
+        }
+        return 'O bloco REPITA faz o dançarino repetir o que está dentro dele — e a ordem dos movimentos muda a dança.'
     }
 
     private async endLevel() {
@@ -514,7 +628,7 @@ export class GameScene extends Phaser.Scene {
             overlayColor: C.ink,
             depth: 5000,
             title: 'Coreografia no palco!',
-            message: 'O bloco REPITA faz o dançarino repetir o que está dentro dele — e a ordem dos movimentos muda a dança.',
+            message: this.levelText(),
             progress: { total: LEVELS.length, current: this.level.level, size: 9 },
             ...(last
                 ? {
@@ -557,11 +671,59 @@ export class GameScene extends Phaser.Scene {
     }
 
     /**
-     * Os quatro passos do §12, na ordem da entrada: pedido → ficha → opções →
-     * DANÇAR. Cada um aponta uma peça REAL da tela do momento, e não uma
-     * posição fixa — a ficha muda de formato entre as fases.
+     * ─────────────────────────────────────────────────────────────────────
+     *  O TUTORIAL MOSTRA SÓ A NOVIDADE
+     * ─────────────────────────────────────────────────────────────────────
+     *
+     * O §12 é explícito: os níveis 2 e 3 mostram apenas o que mudou. Quem
+     * chegou ao nível 3 já montou seis fichas — repetir "toque num espaço
+     * vazio" ali não ensina nada e atrasa quem já sabe.
+     *
+     * Cada passo aponta uma peça REAL da tela do momento, e não uma posição
+     * fixa: a ficha muda de formato entre os níveis, e a moldura de dentro
+     * nem existe no nível 1.
      */
     private tutorialSteps() {
+        if (this.level.level === 2) {
+            return [
+                {
+                    text: 'Agora há um laço DENTRO do outro.',
+                    shape: 'rect' as const,
+                    ...this.program.innerBounds(),
+                    balloonX: 560,
+                    balloonY: 590,
+                },
+                {
+                    text: 'O de dentro repete um movimento. O de fora repete o refrão inteiro.',
+                    shape: 'rect' as const,
+                    ...this.program.bounds(),
+                    balloonX: 560,
+                    balloonY: 590,
+                    buttonLabel: 'Vamos!',
+                },
+            ]
+        }
+
+        if (this.level.level === 3) {
+            return [
+                {
+                    text: 'Esta luz começa acesa — e vai apagar no meio da dança.',
+                    shape: 'rect' as const,
+                    ...this.stage.lampBounds(),
+                    balloonX: 700,
+                    balloonY: 420,
+                },
+                {
+                    text: 'ATÉ não conta vezes: o laço para quando a luz apagar.',
+                    shape: 'rect' as const,
+                    ...this.program.slotBounds('outer'),
+                    balloonX: 620,
+                    balloonY: 590,
+                    buttonLabel: 'Vamos!',
+                },
+            ]
+        }
+
         const first = this.program.firstEmpty() ?? slotsOf(this.phase.sheet)[0]
         return [
             {

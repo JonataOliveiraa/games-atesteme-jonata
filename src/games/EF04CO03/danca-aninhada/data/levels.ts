@@ -2,13 +2,12 @@ import type { LevelDef } from '../types'
 
 /**
  * ══════════════════════════════════════════════════════════════════════════
- *  NÍVEL 1 — UM LAÇO SIMPLES
+ *  OS TRÊS NÍVEIS
  * ══════════════════════════════════════════════════════════════════════════
  *
- * Este é o primeiro corte que o §14 do planejamento pede: só o nível 1, para
- * o teste real com criança antes de o aninhamento e o sinal indefinido
- * entrarem. Os níveis 2 e 3 estão desenhados no §7 e a máquina de `rules.ts`
- * já os executa; o que falta é a arte de tela deles e o teste deste aqui.
+ *   1  um laço só, com o número escrito na ficha
+ *   2  um laço DENTRO do outro
+ *   3  o laço de fora troca o número por uma CONDIÇÃO
  *
  * ── O QUE UMA FASE GUARDA, E O QUE ELA NÃO GUARDA ────────────────────────
  *
@@ -19,6 +18,13 @@ import type { LevelDef } from '../types'
  *
  * `sheet` é o FORMATO da ficha — quantos espaços existem e de que tipo. O
  * conteúdo é sempre da criança.
+ *
+ * ── O NÍVEL 3 NÃO TEM `rounds` ───────────────────────────────────────────
+ *
+ * Ele tem `signalPlans`: em quantos refrões a luz apaga, em cada um dos dois
+ * ensaios. A mesma ficha roda duas vezes com durações diferentes, e é essa
+ * repetição que prova que o número não está no programa. Se `rounds`
+ * existisse ali, a fase estaria dizendo a resposta que ela quer esconder.
  */
 export const LEVELS: LevelDef[] = [
     {
@@ -52,6 +58,96 @@ export const LEVELS: LevelDef[] = [
                 pattern: ['step', 'clap'],
                 rounds: 2,
                 sheet: { outer: 'times', leading: 2, nested: false, trailing: false },
+            },
+        ],
+    },
+
+    /*
+     * ══════════════════════════════════════════════════════════════════════
+     *  NÍVEL 2 — UM LAÇO DENTRO DO OUTRO
+     * ══════════════════════════════════════════════════════════════════════
+     *
+     * O refrão passa a ter DOIS papéis: um movimento que se repete e um que
+     * vem depois dele, uma vez só. O de depois fica fora do laço de dentro e
+     * dentro do de fora — é esse encaixe que a criança precisa enxergar, e é
+     * por isso que todas as três fases têm o mesmo formato de ficha.
+     *
+     * O que muda entre elas é onde está a dificuldade: a 2.1 apresenta o
+     * encaixe, a 2.2 mexe no laço DE FORA (três refrões em vez de dois) e a
+     * 2.3 mexe no DE DENTRO (três repetições em vez de duas). Separar os dois
+     * números em fases diferentes é o que deixa o erro ser diagnóstico.
+     */
+    {
+        level: 2,
+        phases: [
+            {
+                id: '2.1',
+                title: 'Um laço dentro do outro',
+                pattern: ['step', 'step', 'clap'],
+                rounds: 2,
+                sheet: { outer: 'times', leading: 0, nested: true, trailing: true },
+            },
+            {
+                id: '2.2',
+                // o de FORA é que cresce: três refrões, o de dentro continua 2
+                title: 'Mais refrões',
+                pattern: ['clap', 'clap', 'spin'],
+                rounds: 3,
+                sheet: { outer: 'times', leading: 0, nested: true, trailing: true },
+            },
+            {
+                id: '2.3',
+                // e agora o de DENTRO: três passos por refrão, dois refrões
+                title: 'Mais repetições dentro',
+                pattern: ['step', 'step', 'step', 'clap'],
+                rounds: 2,
+                sheet: { outer: 'times', leading: 0, nested: true, trailing: true },
+            },
+        ],
+    },
+
+    /*
+     * ══════════════════════════════════════════════════════════════════════
+     *  NÍVEL 3 — REPETIR ATÉ O SINAL
+     * ══════════════════════════════════════════════════════════════════════
+     *
+     * A moldura de fora troca o número por uma condição, e o pedido deixa de
+     * dizer quantos refrões haverá. Cada fase roda a MESMA ficha duas vezes,
+     * com a luz apagando em momentos diferentes: é a única maneira de mostrar
+     * que a quantidade não está escrita no programa.
+     *
+     * `ATÉ A LUZ ACENDER` é o distrator, e ele é plausível de propósito — só
+     * que a luz já começa acesa, então esse programa encerra depois do
+     * primeiro refrão. A conferência de `validateLevels` exige que ele erre.
+     *
+     * A 3.1 repete o formato mais simples do jogo para a novidade ser SÓ a
+     * condição; as 3.2 e 3.3 trazem de volta o aninhamento do nível 2.
+     */
+    {
+        level: 3,
+        phases: [
+            {
+                id: '3.1',
+                title: 'Até a luz apagar',
+                pattern: ['step'],
+                signalPlans: [2, 4],
+                sheet: { outer: 'until', leading: 1, nested: false, trailing: false },
+            },
+            {
+                id: '3.2',
+                title: 'O refrão até o sinal',
+                pattern: ['step', 'step', 'clap'],
+                signalPlans: [2, 3],
+                sheet: { outer: 'until', leading: 0, nested: true, trailing: true },
+            },
+            {
+                id: '3.3',
+                // a ordem dos ensaios inverte: primeiro o longo, depois o curto,
+                // para a criança não ler "o segundo é sempre maior"
+                title: 'O sinal manda parar',
+                pattern: ['clap', 'clap', 'spin'],
+                signalPlans: [3, 2],
+                sheet: { outer: 'until', leading: 0, nested: true, trailing: true },
             },
         ],
     },

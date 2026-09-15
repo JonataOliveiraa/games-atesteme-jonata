@@ -40,11 +40,10 @@ import type { SheetDef, SlotId, SlotValue } from '../types'
  * planejamento, e é o que a habilidade nomeia. Quem diz a ordem é a posição
  * dos espaços, que é justamente o que a criança está decidindo.
  *
- * ── ESTE CORTE DESENHA SÓ O QUE O NÍVEL 1 USA ────────────────────────────
+ * ── O NÍVEL 1 TEM UMA MOLDURA SÓ ─────────────────────────────────────────
  *
- * O nível 1 tem uma moldura só. A de dentro está aqui porque o `bodyOf` já a
- * posiciona e porque desenhá-la é o mesmo laço dos espaços — mas quem a
- * exercita é o nível 2, que ainda não foi ao teste.
+ * E é por isso que as etiquetas somem lá: sem a de dentro, "FORA" não se
+ * opõe a nada. Do nível 2 em diante as duas aparecem, com os nomes escritos.
  */
 
 type State = 'empty' | 'filled' | 'select' | 'lock'
@@ -251,13 +250,22 @@ export function createProgram(scene: Phaser.Scene, options: ProgramOptions) {
              * medidos, e só então a moldura sabe de que tamanho ser e onde o
              * corpo começa.
              */
-            const repita = label(0, 0, 'REPITA', 36, CSS.white)
+            /*
+             * A ORDEM DAS PALAVRAS MUDA COM O LAÇO.
+             *
+             * `REPITA 3 VEZES` tem o número no meio; `REPITA ATÉ A LUZ
+             * APAGAR` tem a condição no fim. Escrever "REPITA [ ] ATÉ" — que
+             * foi o primeiro corte — deixava a ficha com uma frase que
+             * ninguém fala.
+             */
+            const conta = next.outer === 'times'
+            const repita = label(0, 0, conta ? 'REPITA' : 'REPITA ATÉ', 36, CSS.white)
             repita.setStroke(CSS.ink, 5)
-            const tail = label(0, 0, next.outer === 'times' ? 'VEZES' : 'ATÉ', 36, CSS.white)
-            tail.setStroke(CSS.ink, 5)
-            const chipW = next.outer === 'times' ? CHIP.w : SIGN_CHIP.w
+            const tail = conta ? label(0, 0, 'VEZES', 36, CSS.white) : null
+            tail?.setStroke(CSS.ink, 5)
+            const chipW = conta ? CHIP.w : SIGN_CHIP.w
             const pillW = next.nested ? 112 : 0
-            const headerW = pillW + repita.width + chipW + tail.width + 42
+            const headerW = pillW + repita.width + chipW + (tail?.width ?? 0) + 42
 
             frame = frameOf(next, headerW)
             body = bodyOf(next, frame)
@@ -289,7 +297,7 @@ export function createProgram(scene: Phaser.Scene, options: ProgramOptions) {
             cursor += repita.width + 14
             addPiece('outer', { x: cursor + chipW / 2, y: hy, w: chipW, h: CHIP.h })
             cursor += chipW + 14
-            tail.setPosition(cursor, hy)
+            tail?.setPosition(cursor, hy)
 
             // ── a moldura de dentro, quando a fase tem uma ───────────────
             if (body.innerFrame) {
@@ -455,6 +463,13 @@ export function createProgram(scene: Phaser.Scene, options: ProgramOptions) {
 
         bounds() {
             return { x: frame.x, y: frame.y, w: frame.w + 34, h: frame.h + 34 }
+        },
+
+        /** A moldura de DENTRO, para o tutorial do nível 2 apontar. */
+        innerBounds() {
+            if (!body?.innerFrame) return this.bodyBounds()
+            const f = body.innerFrame
+            return { x: f.x, y: f.y, w: f.w + 26, h: f.h + 26 }
         },
 
         /** Só o corpo, sem o cabeçalho — o tutorial aponta os movimentos. */

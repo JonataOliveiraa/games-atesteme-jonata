@@ -20,6 +20,17 @@ import type { Move, PhaseDef } from '../types'
  * quando o refrão tem mais de um movimento. Ela mostra o agrupamento sem
  * entregar as molduras: é a barra vertical do §4, não um comando.
  *
+ * ── NO NÍVEL 3 A TIRA NÃO TERMINA ────────────────────────────────────────
+ *
+ * Lá o pedido não pode dizer quantos refrões haverá — é justamente o que a
+ * criança não deve saber, e o que a condição existe para descobrir. Então a
+ * tira mostra UM refrão e, depois da barra, uma placa de reticências com a
+ * lâmpada apagada: "e continua, até a luz apagar".
+ *
+ * Expandir a sequência ali, como nos níveis 1 e 2, entregaria a resposta
+ * antes de o ensaio começar — e entregaria uma resposta DIFERENTE em cada um
+ * dos dois ensaios, que é a única coisa que o nível 3 quer provar.
+ *
  * ── SEM PALAVRA DEBAIXO DO DESENHO ───────────────────────────────────────
  *
  * Cada cartão trazia PASSO, PALMA ou GIRO escrito. Numa tela que já tem o
@@ -36,6 +47,17 @@ import type { Move, PhaseDef } from '../types'
  * atenção são eles.
  */
 
+/**
+ * A CENA AINDA EXISTE?
+ *
+ * Sair da página no meio de um ensaio destrói o jogo inteiro, e o `displayList`
+ * vira `null`. O contador `gen` da `GameScene` já barra o FLUXO, mas entre a
+ * promessa que resolve e a próxima guarda cabem algumas linhas — e uma delas
+ * cria objeto. Sem isto, fechar a aba no meio da dança deixa um TypeError no
+ * console de quem já foi embora.
+ */
+const vivo = (scene: Phaser.Scene) => Boolean(scene.sys?.displayList)
+
 const CARD_H = 78
 // quase quadrado: a largura existia para caber a palavra que saiu
 const CARD_MAX = 92
@@ -48,6 +70,19 @@ interface Card {
     ring: Phaser.GameObjects.Graphics
     move: Move
     round: number
+}
+
+/** A placa de "e continua": reticências em cima, lâmpada apagada embaixo. */
+function paintTail(g: Phaser.GameObjects.Graphics, w: number, h: number) {
+    paintCard(g, w, h)
+    g.fillStyle(C.inkSoft, 1)
+    for (let i = -1; i <= 1; i++) g.fillCircle(i * 15, -h * 0.26, 5)
+    g.fillStyle(C.ink, 1)
+    g.fillCircle(0, h * 0.1, 17)
+    g.fillStyle(C.lampOff, 1)
+    g.fillCircle(0, h * 0.1, 13)
+    g.fillStyle(C.ink, 1)
+    g.fillRoundedRect(-8, h * 0.1 + 11, 16, 9, 4)
 }
 
 function paintCard(g: Phaser.GameObjects.Graphics, w: number, h: number) {
@@ -86,6 +121,9 @@ export function createRequest(scene: Phaser.Scene) {
     let cards: Card[] = []
     let badges: Phaser.GameObjects.Graphics[] = []
     let cardW = CARD_MAX
+    let per = 1
+    /** Nível 3: a tira mostra um refrão só, e não a sequência inteira. */
+    let open = false
 
     const dropBadges = () => {
         badges.forEach(b => {
@@ -161,22 +199,29 @@ export function createRequest(scene: Phaser.Scene) {
     }
 
     return {
-        /** Monta a tira inteira do ensaio pedido. */
-        show(phase: PhaseDef, rehearsal = 0) {
+        /**
+         * Monta a tira do pedido.
+         *
+         * Nos níveis 1 e 2 ela traz a sequência inteira; no 3, um refrão e a
+         * placa de continuação, porque lá a quantidade é o segredo da fase.
+         */
+        show(phase: PhaseDef) {
             clear()
 
-            const moves = wantedMoves(phase, rehearsal)
-            const per = phase.pattern.length
+            open = Boolean(phase.signalPlans)
+            const moves = open ? phase.pattern.slice() : wantedMoves(phase, 0)
+            per = phase.pattern.length
             const grouped = per > 1
-            const breaks = grouped ? Math.max(0, moves.length / per - 1) : 0
+            const tiles = moves.length + (open ? 1 : 0)
+            const breaks = open ? 1 : grouped ? Math.max(0, moves.length / per - 1) : 0
 
             const room = REQUEST.w - PAD * 2
             const w = Math.min(
                 CARD_MAX,
-                Math.floor((room - CARD_GAP * (moves.length - 1) - BREAK * breaks) / Math.max(1, moves.length)),
+                Math.floor((room - CARD_GAP * (tiles - 1) - BREAK * breaks) / Math.max(1, tiles)),
             )
             cardW = w
-            const total = w * moves.length + CARD_GAP * (moves.length - 1) + BREAK * breaks
+            const total = w * tiles + CARD_GAP * (tiles - 1) + BREAK * breaks
             const left = REQUEST.x + (REQUEST.w - total) / 2
             let cursor = left
             const cy = REQUEST.y + REQUEST.h / 2
@@ -202,30 +247,43 @@ export function createRequest(scene: Phaser.Scene) {
                 cards.push({ body, ring, move, round })
 
                 cursor += w + CARD_GAP
-                if (grouped && i % per === per - 1 && i < moves.length - 1) cursor += BREAK - CARD_GAP
+                const fechaRefrao = i % per === per - 1
+                if (fechaRefrao && (open || (grouped && i < moves.length - 1))) cursor += BREAK - CARD_GAP
             })
+
+            if (open) {
+                const body = scene.add.container(cursor + w / 2, cy)
+                const face = scene.add.graphics()
+                paintTail(face, w, CARD_H)
+                body.add(face)
+                strip.add(body)
+            }
 
             /*
              * AS BARRAS DE REFRÃO.
              *
              * Vêm DEPOIS da ação final de cada refrão e só existem quando o
              * refrão tem mais de um movimento — com um movimento só, separar
-             * cada cartão do seguinte não agruparia nada.
+             * cada cartão do seguinte não agruparia nada. No nível 3 há uma
+             * barra sempre: ela separa o refrão da placa de continuação.
              *
              * São claras e grossas de propósito: é por elas que a criança
              * conta quantos refrões existem, e um fio fino some no celular.
              */
-            if (grouped) {
+            const bar = (a: number, b: number) => {
+                const x = (a + b) / 2
+                const top = cy - CARD_H / 2 + 2
+                const bottom = cy + CARD_H / 2 - 2
+                bars.fillStyle(C.ink, 1)
+                bars.fillRoundedRect(x - 5, top - 2, 10, bottom - top + 4, 5)
+                bars.fillStyle(C.warm, 1)
+                bars.fillRoundedRect(x - 3, top, 6, bottom - top, 3)
+            }
+            if (open) {
+                bar(cards[cards.length - 1].body.x + w / 2, cursor)
+            } else if (grouped) {
                 for (let i = per - 1; i < moves.length - 1; i += per) {
-                    const a = cards[i].body.x + w / 2
-                    const b = cards[i + 1].body.x - w / 2
-                    const x = (a + b) / 2
-                    const top = cy - CARD_H / 2 + 2
-                    const bottom = cy + CARD_H / 2 - 2
-                    bars.fillStyle(C.ink, 1)
-                    bars.fillRoundedRect(x - 5, top - 2, 10, bottom - top + 4, 5)
-                    bars.fillStyle(C.warm, 1)
-                    bars.fillRoundedRect(x - 3, top, 6, bottom - top, 3)
+                    bar(cards[i].body.x + w / 2, cards[i + 1].body.x - w / 2)
                 }
             }
         },
@@ -238,6 +296,7 @@ export function createRequest(scene: Phaser.Scene) {
          * criança precisa ver ganhar o selo.
          */
         async seal(round: number) {
+            if (!vivo(scene)) return
             const inRound = cards.filter(c => c.round === round)
             if (!inRound.length) return
             inRound.forEach(card => {
@@ -263,9 +322,17 @@ export function createRequest(scene: Phaser.Scene) {
             await FX.to(scene, badge, { scale: 1 }, { duration: 200, ease: 'Back.easeOut' })
         },
 
-        /** O cartão onde a dança divergiu, e o balão com o que saiu. */
+        /**
+         * O cartão onde a dança divergiu, e o balão com o que saiu.
+         *
+         * O índice vem da sequência inteira do ensaio. Com a tira aberta do
+         * nível 3, que mostra um refrão só, ele é dobrado para dentro do
+         * refrão: o lugar do erro ali é uma POSIÇÃO no refrão, não uma
+         * posição numa fila que a criança não pode ver.
+         */
         mark(index: number, wanted: Move | null, got: Move | null) {
-            const card = cards[Math.min(index, cards.length - 1)]
+            const alvo = open ? index % per : index
+            const card = cards[Math.min(alvo, cards.length - 1)]
             if (!card) return
             card.ring.clear()
             card.ring.lineStyle(7, C.stall, 1)

@@ -28,9 +28,9 @@ import type {
  * Nada aqui toca em Phaser. A simulação é testável sem animação, como pede o
  * §8 do planejamento — a `GameScene` apenas anima o traço que sai daqui.
  *
- * O primeiro corte publica só o nível 1, mas a máquina já é a geral: o laço
- * aninhado e o laço por condição não são um segundo motor, são dois ramos
- * deste. Escrever um motor só para contar até três seria ter de jogá-lo fora.
+ * O laço aninhado e o laço por condição não são um segundo motor: são dois
+ * ramos deste. A máquina nasceu geral no corte em que só o nível 1 existia, e
+ * quando os outros dois chegaram não houve o que reescrever — só telas.
  */
 
 /** A trava contra laço sem fim. Atingi-la para a cena com aviso, não congela. */

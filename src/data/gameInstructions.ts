@@ -303,6 +303,8 @@ const POR_SLUG: Record<string, string[]> = {
     "O bloco REPITA repete tudo o que está dentro dele — e a ordem importa.",
     "Com a ficha cheia, toque em DANÇAR: o dançarino executa o seu algoritmo.",
     "Se a dança sair diferente, ela para na primeira diferença e mostra qual espaço trocar.",
+    "No Nível 2 há um laço DENTRO do outro: o de dentro repete um movimento, o de fora repete o refrão inteiro.",
+    "No Nível 3 o laço de fora não conta vezes — ele espera a luz apagar, e a mesma ficha dança durações diferentes.",
   ],
   "predio-dos-lacos": [
     "No Nível 1, escolha quantas vezes o laço deve repetir para limpar todas as janelas.",
