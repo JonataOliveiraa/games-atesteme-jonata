@@ -35,6 +35,7 @@ import battleCoordsThumbnail from "../assets/games/EF04CO01/batalha-das-coordena
 import archiveRecordsThumbnail from "../assets/games/EF04CO02/arquivo-dos-registros/cover-arquivo-registros.png";
 import buildingLoopsThumbnail from "../assets/games/EF04CO03/predio-dos-lacos/cover-predio-dos-lacos.png";
 import machineTranslatorThumbnail from "../assets/games/EF04CO04/tradutor-da-maquina/cover-tradutor-da-maquina.png";
+import binaryTrackThumbnail from "../assets/games/EF04CO04/pista-binaria/cover-pista-binaria.png";
 import digitalAtelierThumbnail from "../assets/games/EF04CO05/atelier-codigos-digitais/cover-atelier-codigos-digitais.png";
 import digitalStudioThumbnail from "../assets/games/EF04CO06/estudio-producao-digital/cover-estudio-producao-digital.png";
 import coverMissaoEticaDigital from "../assets/games/EF04CO07/missao-etica-digital/cover-missao-etica-digital.png";
@@ -71,6 +72,8 @@ import coverAcheOSuspeito from "../assets/games/EF03CO09/ache-o-suspeito/cover-a
 import coverCanhaoDasCoordenadas from "../assets/games/EF04CO01/canhao-das-coordenadas/cover-canhao-das-coordenadas.png";
 import coverCofreDosRegistros from "../assets/games/EF04CO02/o-cofre-dos-registros/cover-o-cofre-dos-registros.png";
 import coverDancaAninhada from "../assets/games/EF04CO03/danca-aninhada/cover-danca-aninhada.png";
+import coverExpedicaoPixel from "../assets/games/EF04CO05/expedicao-pixel/cover-expedicao-pixel.png";
+import coverMesaDeEdicao from "../assets/games/EF04CO06/mesa-de-edicao/cover-mesa-de-edicao.png";
 /**
  * 1. `id` nunca muda e nunca é reaproveitado. Se um jogo for removido,
  *    marque status "draft" — não devolva o id para a fila.
@@ -972,6 +975,23 @@ export const catalog: Game[] = [
     thumbnail: machineTranslatorThumbnail,
   },
   {
+    id: "071",
+    slug: "pista-binaria",
+    module: "EF04CO04/pista-binaria",
+    skill: "EF04CO04",
+    years: [4],
+    tags: ["binário", "pixel", "codificação", "transmissão"],
+    order: 265,
+    status: "draft",
+    title: "Pista Binária",
+    description:
+      "Atire 1 no quadradinho cheio e 0 no vazio: a fila de caixas vira código, e o código vira desenho na máquina.",
+    category: "Mundo Digital",
+    points: 90,
+    icon: "🚀",
+    thumbnail: binaryTrackThumbnail,
+  },
+  {
     id: "027",
     slug: "atelier-codigos-digitais",
     module: "EF04CO05/atelier-codigos-digitais",
@@ -989,6 +1009,23 @@ export const catalog: Game[] = [
     thumbnail: digitalAtelierThumbnail,
   },
   {
+    id: "072",
+    slug: "expedicao-pixel",
+    module: "EF04CO05/expedicao-pixel",
+    skill: "EF04CO05",
+    years: [4],
+    tags: ["rgb", "cor", "binário", "pixel"],
+    order: 275,
+    status: "draft",
+    title: "Expedição Pixel",
+    description:
+      "Na festa da praça, a cor do fogo é feita de três luzes: abra as torneiras vermelha, verde e azul e solte o fogo que a festa pediu.",
+    category: "Mundo Digital",
+    points: 90,
+    icon: "🎆",
+    thumbnail: coverExpedicaoPixel,
+  },
+  {
     id: "028",
     slug: "estudio-producao-digital",
     module: "EF04CO06/estudio-producao-digital",
@@ -1004,6 +1041,23 @@ export const catalog: Game[] = [
     points: 65,
     icon: "🎬",
     thumbnail: digitalStudioThumbnail,
+  },
+  {
+    id: "073",
+    slug: "mesa-de-edicao",
+    module: "EF04CO06/mesa-de-edicao",
+    skill: "EF04CO06",
+    years: [4],
+    tags: ["edição", "ferramentas", "slides", "vídeo"],
+    order: 285,
+    status: "draft",
+    title: "Mesa de Edição",
+    description:
+      "Cartaz, slides e vídeo: o cliente diz o que incomoda, você aperta as ferramentas do editor até ficar bom e entrega.",
+    category: "Cultura Digital",
+    points: 90,
+    icon: "🛠️",
+    thumbnail: coverMesaDeEdicao,
   },
   {
     id: "029",
@@ -1296,4 +1350,4 @@ export const catalog: Game[] = [
 ];
 
 /** Próximo id livre. Use ao cadastrar um jogo novo. */
-export const NEXT_FREE_ID = "071";
+export const NEXT_FREE_ID = "073";
