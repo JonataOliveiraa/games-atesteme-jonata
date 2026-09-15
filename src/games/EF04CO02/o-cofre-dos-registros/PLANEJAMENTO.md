@@ -651,3 +651,49 @@ pisca. O que a primeira faz é dizer por que AQUELE não é:
 - avaliação com criança nos três níveis;
 - `cover-o-cofre-dos-registros.png`, por último;
 - status `published` depois do teste real.
+
+---
+
+## 21. A placa da pista mede a frase (15/09/2026)
+
+Duas das dez frases do jogo vazavam da placa. Medido: a caixa tinha 134 px de
+altura e o texto, com corpo fixo de 38 px, ocupava
+
+| Linhas | Altura |
+|---:|---|
+| 2 | 86 px |
+| 3 | 130 px — encostado na borda |
+| **4** | **174 px — 40 px para fora** |
+
+As quatro linhas apareciam em `Avistei o caranguejo vermelho na caverna.` e em
+`Caranguejo vermelho, na caverna, observando.`
+
+### Por que encurtar as frases não era a correção
+
+O §9 limita a pista a 58 caracteres, mas **o número de linhas não sai do
+número de letras**: sai de onde as palavras cabem. A primeira frase tem 41
+caracteres e quebrava em quatro porque `caranguejo` não divide. Encurtar as
+duas deixaria a próxima frase um pouco mais longa vazar de novo, e a do nível
+2 nem pode encurtar — a validação exige que ela diga os quatro valores.
+
+### Quem cede é a fonte
+
+`drawSighting` passou a medir a frase COMPLETA antes de escrevê-la e a baixar
+o corpo de 38 px até caber, com piso de 26 px. A medição roda antes da máquina
+de escrever: durante a digitação a frase só tem menos letras, logo nunca mais
+linhas do que o que foi medido.
+
+É a mesma técnica que as etiquetas da bandeja e os títulos dos cartões do
+arquivo já usavam. A caixa passou a ser dimensionada pelo espaço disponível na
+coluna, e não pela frase mais longa de hoje.
+
+### O ajuste melhorou a leitura em vez de piorar
+
+As duas frases de quatro linhas passaram a **duas linhas a 34 px**: um corpo
+um pouco menor cabe mais palavras por linha e desfaz as quebras ruins. Nenhuma
+das dez desceu de 34 px, e o pior caso sintético que a validação aceita — 57
+caracteres, incluindo palavras que não dividem — para em 32 px, longe do piso.
+
+Para abrir espaço, o aro encolheu de 104 para 96 de raio e subiu 6 px; sem
+isso, a fita da placa ficava escondida atrás da borda do aro, e é a cor dela
+que distingue PISTA (ciano) de NOVIDADE (âmbar) no nível 3.

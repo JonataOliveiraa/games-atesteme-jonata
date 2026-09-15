@@ -20,6 +20,18 @@ import type { CreatureId } from '../types'
  * exercício de memória.
  */
 
+/**
+ * O corpo da fonte da pista é uma FAIXA, não um número.
+ *
+ * 38 px é o alvo do §7; o piso de 26 px é o ponto em que a frase ainda é
+ * legível num celular a 30% (cerca de 8 px reais). Entre os dois, quem manda
+ * é a altura da caixa.
+ */
+const CLUE_FONT = { base: 38, min: 26, step: 2 }
+
+/** A altura útil da placa, descontada a margem de respiro. */
+const CLUE_ROOM = CLUE.h - 22
+
 const COLOR_OF: Record<CreatureId, number> = {
     octopus: C.octopus,
     fish: C.fish,
@@ -138,7 +150,7 @@ export function createSighting(scene: Phaser.Scene) {
     const clueText = scene.add
         .text(0, 0, '', {
             fontFamily: FONT.black,
-            fontSize: '38px',
+            fontSize: `${CLUE_FONT.base}px`,
             color: CSS.ink,
             align: 'center',
             wordWrap: { width: CLUE.w - 40 },
@@ -147,6 +159,33 @@ export function createSighting(scene: Phaser.Scene) {
         .setOrigin(0.5)
         .setResolution(2)
     plateRoot.add(clueText)
+
+    /**
+     * ── A PLACA MEDE A FRASE ANTES DE ESCREVÊ-LA ─────────────────────────
+     *
+     * Com corpo fixo de 38 px, uma frase de quatro linhas mede 174 px numa
+     * placa de 144: ela vazava por baixo, por cima da faixa de dica. E não
+     * era hipótese — duas das dez frases do jogo faziam isso.
+     *
+     * Encurtar as duas não resolveria: a validação aceita até 58 caracteres,
+     * e a quebra depende de ONDE as palavras cabem, não de quantas letras a
+     * frase tem. "Avistei o caranguejo vermelho na caverna." tem 41 e quebra
+     * em quatro linhas porque `caranguejo` não divide.
+     *
+     * Então quem cede é a fonte. A medição roda com o texto COMPLETO e antes
+     * da máquina de escrever: durante a digitação a frase só tem menos
+     * letras, logo nunca mais linhas do que o que foi medido aqui.
+     */
+    const fitClue = (text: string) => {
+        let size = CLUE_FONT.base
+        clueText.setFontSize(size)
+        clueText.setText(text)
+        while (size > CLUE_FONT.min && clueText.height > CLUE_ROOM) {
+            size -= CLUE_FONT.step
+            clueText.setFontSize(size)
+        }
+        clueText.setText('')
+    }
 
     let writer: Typewriter | undefined
 
@@ -191,7 +230,7 @@ export function createSighting(scene: Phaser.Scene) {
 
             plateRoot.setScale(0.9).setAlpha(0)
             paintPlate(plateG, tone)
-            clueText.setText('')
+            fitClue(sentence)
             await FX.to(scene, plateRoot, { scale: 1, alpha: 1 }, { duration: 260, ease: 'Back.easeOut' })
             writer?.skip()
             writer = FX.type(scene, clueText, sentence, { delay: 16 })
@@ -209,7 +248,7 @@ export function createSighting(scene: Phaser.Scene) {
         async setNote(text: string, tone: PlateTone = 'note') {
             writer?.skip()
             paintPlate(plateG, tone)
-            clueText.setText('')
+            fitClue(text)
             plateRoot.setAlpha(1)
             await FX.impact(scene, plateRoot, 0.08)
             writer = FX.type(scene, clueText, text, { delay: 16 })

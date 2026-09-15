@@ -67,13 +67,21 @@ export const HUD = {
  */
 
 /** O aro de observação, na parede à esquerda. Graphics, nunca textura. */
-export const RING = { x: 236, y: 216, r: 104 }
+export const RING = { x: 236, y: 210, r: 96 }
 
 /** A criatura, enquadrada dentro do aro com folga. */
-export const CREATURE_SPAN = 182
+export const CREATURE_SPAN = 168
 
-/** A pista, logo abaixo do aro. Até três linhas de 38 px. */
-export const CLUE = { x: 24, y: 344, w: 424, h: 134 }
+/**
+ * A pista, logo abaixo do aro.
+ *
+ * A altura é o teto do que cabe entre o aro (a borda externa dele termina em
+ * 322) e a faixa de
+ * dica, e NÃO o tamanho de uma frase em particular: quem se ajusta à caixa é
+ * o corpo da fonte, medido em `drawSighting`. Com caixa dimensionada para a
+ * frase mais longa de hoje, a próxima frase um pouco maior voltaria a vazar.
+ */
+export const CLUE = { x: 24, y: 334, w: 424, h: 146 }
 
 /**
  * A ficha, sobre o painel liso do casco.
@@ -104,7 +112,7 @@ export const fieldOffset = (slot: number) => ({
 })
 
 /** A dica, numa faixa que não passa por baixo da cápsula. */
-export const HINT = { x: 24, y: 486, w: 916, h: 58 }
+export const HINT = { x: 24, y: 492, w: 916, h: 58 }
 
 /**
  * A bandeja, deitada no balcão de madeira.
