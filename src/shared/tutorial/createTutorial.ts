@@ -62,6 +62,15 @@ export interface TutorialOptions {
     accent?: number
     once?: boolean
     safeTop?: number
+    /**
+     * Corpo do texto do balão. O padrão 21 é o histórico dos 49 jogos — e é
+     * pequeno: numa grade de 1280 ele dá ~6px reais num celular de 390. Jogo
+     * novo passa 32–38 aqui. Fica como opção, e não como troca do padrão, para
+     * não mexer no balão dos 48 outros sem os ver acontecendo.
+     */
+    textSize?: number
+    /** Largura do balão. Cresce junto com `textSize`. */
+    balloonWidth?: number
     onFinish: () => void
 }
 function ensureMasks(scene: Phaser.Scene) {
@@ -111,30 +120,35 @@ export function createTutorial(scene: Phaser.Scene, options: TutorialOptions) {
         scene.add.renderTexture(0, 0, W, H).setOrigin(0).setDepth(9001)
     )
 
+    const textSize = options.textSize ?? 21
+    const bw = options.balloonWidth ?? (textSize > 21 ? Math.min(920, 580 + (textSize - 21) * 12) : 580)
+    const btnW = Math.max(280, Math.round(textSize * 9))
+    const btnH = Math.max(54, Math.round(textSize * 1.9))
+
     const balloon = keep(scene.add.container(W / 2, 0).setDepth(9010))
     const balloonBg = scene.add.graphics()
     const balloonTxt = scene.add.text(0, 0, '', {
         fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif',
-        fontSize: '21px',
+        fontSize: `${textSize}px`,
         color: '#0f172a',
         align: 'center',
-        wordWrap: { width: 520 },
+        wordWrap: { width: bw - 60 },
     }).setOrigin(0.5).setResolution(2)
     balloon.add([balloonBg, balloonTxt])
 
     const button = keep(scene.add.container(W / 2, 0).setDepth(9011))
     const buttonBg = scene.add.graphics()
     buttonBg.fillStyle(accent, 1)
-    buttonBg.fillRoundedRect(-140, -27, 280, 54, 27)
+    buttonBg.fillRoundedRect(-btnW / 2, -btnH / 2, btnW, btnH, btnH / 2)
     buttonBg.fillStyle(0xffffff, 0.18)
-    buttonBg.fillRoundedRect(-134, -21, 268, 20, 10)
+    buttonBg.fillRoundedRect(-btnW / 2 + 6, -btnH / 2 + 6, btnW - 12, Math.round(btnH * 0.36), 10)
     const buttonTxt = scene.add.text(0, 0, 'Próximo', {
         fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif',
-        fontSize: '19px',
+        fontSize: `${Math.round(textSize * 0.86)}px`,
         color: '#ffffff',
     }).setOrigin(0.5).setResolution(2)
     button.add([buttonBg, buttonTxt])
-    button.setSize(280, 58)
+    button.setSize(btnW, btnH + 4)
     button.setInteractive({ useHandCursor: true })
 
     let pointer: Phaser.GameObjects.GameObject | undefined
@@ -188,7 +202,6 @@ export function createTutorial(scene: Phaser.Scene, options: TutorialOptions) {
     const placeBalloon = (step: TutorialStep) => {
         balloonTxt.setText(step.text)
 
-        const bw = 580
         const bh = Math.max(84, balloonTxt.height + 46)
 
         balloonBg.clear()
