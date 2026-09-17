@@ -14,6 +14,10 @@ import { gameBridge } from "../shared/bridge/gameBridge";
 import { useBeepSound } from "../hooks/useBeepSound";
 
 const GAMES_WITH_IN_GAME_COMPLETION_SCREEN = new Set([
+  "raio-x-da-maquina",
+  "robo-sorrateiro",
+  "portoes-logicos",
+  "metro-mirim",
   "oficina-dos-algoritmos",
   "pixel-secreto",
   "ilha-dos-codigos",
@@ -55,6 +59,9 @@ const GAMES_WITH_IN_GAME_COMPLETION_SCREEN = new Set([
   "estudio-producao-digital",
   "mesa-de-edicao",
   "missao-etica-digital",
+  "guardiao-etico",
+  "duelo-das-fontes",
+  "revezamento-em-lista",
   "caca-fonte-confiavel",
   "baralho-das-listas",
   "mapas-em-rede",
