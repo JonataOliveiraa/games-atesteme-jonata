@@ -690,12 +690,27 @@ export class FX {
         let finish: () => void = () => { }
         const promise = new Promise<void>(resolve => { finish = resolve })
 
-        const skip = () => {
+        /*
+         * CANCELAR NÃO ESCREVE NADA.
+         *
+         * Quando o Text morre — troca de cena com a frase ainda sendo escrita,
+         * um `PULAR` no meio da digitação —, ele emite `destroy` com a textura
+         * dele já desmontada. Escrever ali estoura em `drawImage` de `null`, e
+         * o jogo cai ao sair do tutorial. Aqui só apaga o timer e resolve a
+         * promessa; quem chama `skip()` de verdade é que completa o texto.
+         */
+        const cancel = () => {
             if (done) return
             done = true
-            if (timer) { timer.remove(); sceneTimers.get(scene).delete(timer) }
-            if (label.active) label.setText(text)
+            if (timer) { timer.remove(); sceneTimers.get(scene)?.delete(timer) }
             finish()
+        }
+
+        const skip = () => {
+            if (done) return
+            const alive = label.active && !!label.frame?.source?.image
+            cancel()
+            if (alive) label.setText(text)
         }
 
         label.setText('')
@@ -709,13 +724,13 @@ export class FX {
                 delay: passo,
                 repeat: text.length - 1,
                 callback: () => {
-                    if (!label.active) { skip(); return }
+                    if (!label.active) { cancel(); return }
                     label.setText(text.slice(0, ++i))
                     onChar?.(i)
                     if (i >= text.length) skip()
                 },
             }))
-            label.once('destroy', skip)
+            label.once('destroy', cancel)
         }
 
         return { skip, then: (a, b) => promise.then(a, b) }

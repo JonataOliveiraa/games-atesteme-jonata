@@ -5,53 +5,53 @@ Documento irmão: [TEXTURAS.md](./TEXTURAS.md)
 **EF04CO07 · 4º ano · Cultura Digital · Segurança e responsabilidade no uso da
 tecnologia**
 
----
+> **Revisão 2 (16/09/2026) — a lupa, e o corte.** A revisão 1 tinha três
+> etiquetas para ligar, um botão de recusar, quatro alcances de destino, uma
+> prateleira e quatro colegas reagindo: cinco coisas na tela e uma regra que
+> precisava de dois parágrafos para ser explicada. Esta versão guarda a ideia —
+> *dado tem gente dentro, e só sai o que pode sair* — e joga o resto fora.
+> **Chega um papel por fase, a criança varre com a lupa e tapa o que é de outra
+> pessoa.** Um gesto para olhar, um toque para tapar, um botão para aprovar.
 
-## 0. Duas frases sobre o briefing, antes de tudo
-
-O briefing é um teste de múltipla escolha moral: lê-se a situação e toca-se numa
-das três atitudes — e a atitude certa é a que qualquer criança de nove anos
-reconhece como "a resposta que o adulto quer ouvir": devolver sem ler, não
-enviar, pedir permissão. **Isso não ensina postura ética com dados: ensina a
-achar a carta bonitinha**, e o catálogo já tem exatamente esse jogo nesta
-habilidade (§3).
-
-**A troca:** a criança não escolhe uma atitude — ela **monta o que vai junto**.
-O dado fica na mesa com as partes dele em etiquetas que se ligam e desligam, o
-colega diz no balão o que ele precisa, e as pessoas que estão dentro do dado
-reagem **antes** de qualquer envio. Depois ela MANDA, ou diz que NÃO DÁ. O resto
-deste documento planeja essa versão.
-
-O que mais caiu do briefing, e por quê:
-
-| Briefing | Aqui | Por quê |
-|---|---|---|
-| medidor de CONFIANÇA com 5 corações | não existe | é uma segunda barra de vida por cima do `createLives`, que já é quem reprova no catálogo |
-| DILEMA: a carta vantajosa dá **+10 pontos** e **−1 coração** | o pedido tentador continua, sem número nenhum | número de ponto na tela é proibido pelo `INSTRUCOES.md`, e era o placar que tornava o dilema legível |
-| 5 rodadas por partida, sorteadas de um banco de 12 | 3 níveis × 3 fases, escritas | o catálogo manda no máximo 5 fases por nível, e sorteio esconde a progressão |
-| 3 cartas de atitude com frase pronta | 3 etiquetas com **uma palavra** e um pictograma | três frases lado a lado viram leitura comparada, que é o que uma criança de nove anos ainda não faz de graça |
-| efeito atrasado ("lembra do caderno?") no N2 | a **prateleira**: o que saiu fica lá até o fim da partida | o eco do briefing era texto; a prateleira é objeto |
-| "final dourado / os colegas conversam com você" | `showLevelComplete` do catálogo, com a prateleira dentro | fechamento igual ao dos outros 49 jogos |
-
-O que ficou inteiro do briefing: a sala do clube, os quatro colegas cuja cara
-muda, a TRAVA antes de o gesto comprometer, a recusa como resposta legítima, e as
-quatro ações da habilidade — coletar, guardar, transferir e usar (§2).
-
-**As sete linhas de `gameInstructions.ts` para `guardiao-etico` já estão escritas
-na árvore** e descrevem esta versão. Este plano as honra à letra, com uma
-correção: quem pede é **sempre um dos quatro colegas** (§16), então "os quatro
-colegas" são as quatro pessoas que estão dentro do dado — e é a cara deles que a
-criança lê.
+> **Revisão 3 (16/09/2026) — a bancada, e a lupa que se arrasta.** O primeiro
+> corte tinha uma lupa que perseguia o dedo e um anel que alternava a tarja: dois
+> gestos invisíveis, e a criança não sabia o que estava fazendo. Agora a lupa é
+> um objeto que se **arrasta**, e embaixo do papel existe uma **bancada com três
+> ferramentas** — LUPA, MARCADOR e BORRACHA. A ferramenta escolhida é o que o
+> toque no papel faz, e é ela que responde "o que eu faço aqui?" sem nenhuma
+> frase de instrução.
 
 ---
 
 ## 1. O jogo em três regras
 
-1. **Um colega pede alguma coisa. O balão diz o que ele PRECISA — nunca em qual etiqueta tocar.**
-2. **As três etiquetas dizem o que vai junto. Toque põe, toque tira, e a cópia na mesa muda na hora.**
-3. **Olhe a cara dos quatro antes de MANDAR. Quem fica exposto encolhe. Quando não tem jeito, NÃO MANDAR é a resposta.**
+1. **Cada fase chega um papel para ser publicado. A letra miúda dele não se lê de longe.**
+2. **Arraste a lupa pelo papel. O que ela acha fica marcado com um anel.**
+3. **Pegue o MARCADOR e toque no que é de outra pessoa; a BORRACHA desfaz. Depois, APROVE.**
 
 Não existe mais nada para aprender, do primeiro ao último nível.
+
+~~~text
+┌──────────────────────────────────────────────────────────────────────┐
+│ NÍVEL 1  ●○○      Confira antes de aprovar      ♥♥♥             ?   │
+├──────────────────────────────────────────┬───────────────────────────┤
+│ ┌──────────────────────────────────────┐ │  ┌─────────────────────┐  │
+│ │ ┌──────┐  CAMPEONATO DE QUEIMADA     │ │  │  MURAL DA SALA      │  │
+│ │ │ foto │  quinta, no recreio         │ │  │  a nossa turma vê   │  │
+│ │ │      │  A lista fica no tablet.    │ │  └─────────────────────┘  │
+│ │ └──────┘  Senha: ╭─────────╮         │ │  ┌─────────────────────┐  │
+│ │                  │  ◯ lupa  │        │ │  │ Posso pôr no mural? │  │
+│ │  Organiza: Duda  ╰─────────╯         │ │  ╰──────────▽──────────╯  │
+│ └──────────────────────────────────────┘ │       ( a Duda )          │
+├──────────────────────────────────────────┤                           │
+│  [ LUPA ]  [ MARCADOR ]  [ BORRACHA ]    │      (   APROVAR   )      │
+└──────────────────────────────────────────┴───────────────────────────┘
+~~~
+
+Quatro coisas na tela: **o papel** (grande, à esquerda), **a bancada** (embaixo
+dele, com as três ferramentas), **quem trouxe e para onde vai** (coluna da
+direita) e **o APROVAR**. Mais a lupa, que fica em cima do papel, onde a criança
+a largou.
 
 ---
 
@@ -62,133 +62,134 @@ Não existe mais nada para aprender, do primeiro ao último nível.
 >
 > Objeto: **Segurança e responsabilidade no uso da tecnologia**. Exemplo oficial:
 > um painel, feito a partir de imagens de celular e computador, em que os alunos
-> destacam ações importantes de quando se manipula um dado — verificar as
-> permissões, a autoria, entre outras.
+> destacam ações importantes de quando se manipula um dado — **verificar as
+> permissões, a autoria**, entre outras.
+
+O exemplo oficial usa duas vezes o verbo **verificar**. Este jogo é o verbo
+verificar virado mecânica: **não dá para responder sem olhar.**
 
 | O verbo oficial | Onde ele está na mecânica |
 |---|---|
-| **coletar** | as etiquetas: só entra na cópia o que o pedido precisa. Ligar o que ninguém pediu já expõe alguém |
-| **transferir** | o **destino** de cada pedido, e o alcance dele: a mesma etiqueta serve para o mural da sala e não serve para o site |
-| **guardar** | a **prateleira**: o que saiu fica lá, do jeito que saiu, até o fim da partida — e não volta |
-| **usar** | o nível 3: o desenho é de alguém, o nome do autor vai junto, e quem decide se pode é ele |
-| "verificar as permissões e a autoria" | não é um cartaz na parede: é a **cara das pessoas mudando** enquanto a criança monta a cópia |
+| **coletar** | o papel chega com mais informação do que a publicação precisa, e é isso que a criança descobre olhando |
+| **transferir** | o **nível é o destino**: mural da sala, jornal da escola, site da escola. O mesmo dado muda de resposta conforme a distância |
+| **guardar** | o papel carimbado vai para o mural e **não volta**: a bolinha da fase acende com ele dentro |
+| **usar** | a assinatura do autor, que **nunca** pode ser tapada — tapar o crédito é erro igual a deixar o telefone à mostra |
+| "verificar as permissões e a autoria" | é o gesto principal: a lupa |
 
 ### O teste da bolinha
 
-> Troque a foto, a lista e o desenho por bolinhas coloridas sem significado. O
-> jogo muda?
+> Troque o papel por bolinhas coloridas sem significado. O jogo muda?
 
-**Acaba.** A regra inteira sai de quem está dentro do dado: ligar uma etiqueta é
-mexer no que é de alguém, e é a reação dessa pessoa que diz se pode. **Bolinha
-não tem cara.** Sem gente, sobram três interruptores e um botão verde, e não há
-como saber o que está certo — nem como errar de propósito.
+**Acaba.** O que se procura é informação escrita que pertence a alguém: um
+telefone, um endereço, o rosto de quem não é da turma, a assinatura de quem
+desenhou. Tirando o conteúdo, sobra um círculo passeando por um retângulo, e não
+há como saber o que tapar — a decisão sai de **de quem é aquilo** e de **até onde
+o papel vai**.
 
-O contrário também vale, e é o que reprova o briefing: naquele formato, trocar as
-situações por bolinhas **não muda nada**. As três cartas continuam sendo três
-cartas, uma delas marcada como certa, e a criança continua tocando na que parece
-mais gentil. A situação é decoração.
+**O briefing falhava aqui.** Lá eram três cartas de atitude, uma marcada como
+certa; trocar as situações por bolinhas não mudaria nada, porque a criança acerta
+procurando a carta mais bonitinha. **A correção: a resposta deixou de estar
+escrita numa carta e passou a estar escondida na letra miúda do papel.**
 
-### O que a correção comprou
+### O que mudou em relação ao briefing
 
-- a resposta **não está escrita em lugar nenhum** — nem na carta, nem na
-  etiqueta. Ela é o cruzamento de três coisas visíveis: o que o pedido precisa,
-  para onde vai, e quem está dentro;
-- a mesma etiqueta é **certa numa fase e errada na outra** (o `ORIGINAL` do
-  desenho, §7), porque quem mudou foi o dono e o destino;
-- **recusar é uma resposta**, e recusar sempre também é errado;
-- e não existe "atitude bonitinha" para chutar: as três etiquetas são neutras —
-  `ROSTOS`, `NOMES` e `ONDE FOI` não têm lado moral até alguém pedir alguma coisa.
+| Briefing | Aqui | Por quê |
+|---|---|---|
+| ler a situação e tocar em 1 de 3 cartas de atitude | varrer o papel com a lupa e tapar o que é de outra pessoa | carta de atitude se resolve pelo tom da frase, sem olhar dado nenhum |
+| medidor de CONFIANÇA com 5 corações | não existe | é uma segunda barra de vida por cima do `createLives`, que já é quem reprova |
+| DILEMA: **+10 pontos** e **−1 coração** | não existe | número de ponto na tela é proibido, e era o placar que tornava o dilema legível |
+| 5 rodadas sorteadas de um banco de 12 | 3 níveis × 3 papéis, escritos | o catálogo manda no máximo 5 fases por nível, e sorteio esconde a progressão |
+| sala do clube com 4 colegas ao fundo | a mesa do guardião do mural; o colega que trouxe fica na coluna da direita | quatro figuras paradas atrás do papel roubariam o olho do lugar onde o jogo acontece |
+| "cena curta de 3 s" a cada escolha | a reação acontece **debaixo da lupa**, no instante do achado | cena que interrompe repete nove vezes e vira espera |
 
 ---
 
 ## 3. Como isso não vira o jogo irmão
 
 `EF04CO07` já tem jogo publicado: **Missão Ética Digital** (id `029`,
-`points: 65`). Sem esta tabela, os dois seriam o mesmo jogo com outra arte.
+`points: 65`).
 
 | | Missão Ética Digital | Guardião Ético |
 |---|---|---|
-| **gesto** | escolher 1 de 3 ações prontas | ligar/desligar as partes do dado e então MANDAR — ou NÃO MANDAR |
-| **onde está a resposta** | na etiqueta do arquivo: autor, permissão e aviso, escritos | na cara das pessoas que estão dentro do dado, ao vivo |
-| **o que a criança produz** | nada: a ação já vem escrita | a cópia — ela monta o que sai |
-| **quem decide o certo** | o campo `certa: boolean` da ação | uma função do pedido + destino + dono (§8) |
-| **a consequência** | acontece com o arquivo e passa | fica na prateleira até o fim da partida |
-| **recusar** | não existe | é um botão, e às vezes é a única resposta certa |
-| **quantos dados por partida** | seis arquivos diferentes | **um só por nível**, passando de mão em mão |
+| **gesto** | escolher 1 de 3 ações prontas | arrastar a lupa, tocar no achado, aprovar |
+| **onde está a resposta** | escrita na etiqueta do arquivo: autor, permissão, aviso | escondida na letra miúda do papel — e só existe depois de procurada |
+| **o que a criança faz** | julga uma frase | **prepara o papel**: ele sai da mesa diferente do que entrou |
+| **quem decide o certo** | o campo `certa: boolean` da ação | uma função do dado e do destino do nível (§8) |
+| **o erro possível** | escolher a ação errada | deixar passar **e também** tapar demais |
+| **o papel do destino** | não existe | é o nível inteiro: o mesmo dado passa no mural e não passa no site |
 
-Restrições que valem para a implementação, para a distância não encolher durante
-a construção: **nada de etiqueta com a permissão escrita atrás da ficha**, **nada
-de ação pronta em forma de frase**, e **nenhum campo `certa` em lugar nenhum do
-`levels.ts`**.
+Restrições para a distância não encolher durante a construção: **nada de etiqueta
+com a permissão escrita**, **nada de ação pronta em forma de frase**, e **nenhum
+campo `certa` em lugar nenhum do `levels.ts`**.
 
 ---
 
-## 4. A tela
+## 4. A lupa, e a bancada
 
-~~~text
-┌──────────────────────────────────────────────────────────────────────┐
-│ NÍVEL 1  ●○○            O que vai junto?            ♥♥♥          ?   │
-├──────────────────────────────────────────────────────────────────────┤
-│ ┌──────────────────┐                                ┌──────────────┐ │
-│ │ A gente podia    │   (☺)   (･_･)   (☺)   (☺)      │ PRA ONDE VAI │ │
-│ │ lembrar do       │   Téo    Bia    Rafa  Duda     │  ▤ o mural   │ │
-│ │ passeio todo dia │                                │    da sala   │ │
-│ └────────▽─────────┘  ┌───────────────────────────┐ ├──────────────┤ │
-│                       │   ▨▨ a cópia ▨▨   •nomes  │ │  PRATELEIRA  │ │
-│                       │   [ conteúdo ]    •onde   │ │  ▭ ▭ ▭       │ │
-│                       └───────────────────────────┘ │              │ │
-├──────────────────────────────────────────────────────────────────────┤
-│ [ NÃO MANDAR ]      [ROSTOS] [NOMES] [ONDE]           (  MANDAR  )   │
-└──────────────────────────────────────────────────────────────────────┘
-~~~
+### A lupa é um objeto, não um cursor
 
-Cinco coisas, e elas não trocam de lugar em nenhuma das nove fases: **o pedido**
-(balão à esquerda, com o rabicho apontando para quem falou), **os quatro
-colegas** (em cima, atrás da mesa), **a cópia** (no meio da mesa, grande), **para
-onde ela vai e o que já saiu** (coluna da direita) e **os controles** (embaixo).
+- **A criança agarra e ARRASTA.** A lupa não persegue o dedo: ela fica onde foi
+  deixada, como uma lupa de verdade largada em cima do papel. Perseguir o dedo
+  fazia o jogo parecer que ele estava se mexendo sozinho.
+- **Ela só olha. Nunca responde nada**: não custa vida, não conta tentativa, não
+  emite evento. É por isso que ela pode ser arrastada num jogo em que arrastar é
+  proibido por padrão — **errar a mira aqui não é errar a resposta**.
+- **Um toque no papel, longe dela, a chama até lá** (`glide`, 260 ms). Ninguém
+  precisa acertar a lupa com o dedo para começar a procurar.
+- **Um toque NO VIDRO aplica a ferramenta no que está embaixo.** A lente fica por
+  cima justamente do que a criança quer marcar, e dedo não atravessa vidro: sem
+  isso, o marcador nunca alcançaria o item que está debaixo da lupa.
+- **O dedo que agarra o vidro empurra a lente 74 px para cima**, senão o polegar
+  tapa exatamente o que ela aumenta. Com o mouse, ela segue o ponto agarrado.
+- **Aumento de 1,9 ×**, com máscara circular sobre uma cópia do papel:
+  `P = c − 1,9 × (c − papel)`. O papel vira um `RenderTexture` redesenhado só
+  quando uma tarja ou um anel muda — nunca a cada quadro.
+- **Quando um item entra na lente, ele ganha um anel e um "tin" — e nada mais.**
+  Quem lê é o vidro: a letra do item tem 24 px no papel e 50 px debaixo da lente
+  (15 px reais no celular). **Não existe janela dizendo o que é suspeito**: essa
+  decisão é da criança, e é ela que o jogo está ensinando.
+- **No começo da fase ela balança**, pedindo para ser puxada.
 
-O que compromete fica nos dois cantos de baixo, um em cada polegar: **NÃO
-MANDAR** à esquerda, debaixo de quem pediu, porque é uma resposta à pessoa;
-**MANDAR** à direita, debaixo da porta, porque é o que empurra a cópia para lá.
+### A bancada: três ferramentas
 
-### Medidas (1280 × 720) — a última coluna é o que o dedo encontra no celular
+A ferramenta escolhida é **o que o toque no papel faz** — e é ela que responde
+"o que eu faço aqui?" sem nenhuma frase de instrução. Arrastar a lupa funciona
+com qualquer uma delas escolhida: a lupa é um objeto na mesa, não um modo.
 
-| Faixa | y | x | Conteúdo | Tamanho | No celular (× 0,30) |
-|---|---:|---|---|---:|---:|
-| cabeçalho | 0–82 | 0–1280 | pílula do nível (20), bolinhas das fases (188+), "O que vai junto?" (meio), vidas (1020), `?` (1206) | alvo do `?` 136 × 136 | 41 × 41 |
-| balão do pedido | 100–256 | 20–350 | até 3 linhas de 32 px; rabicho aponta para quem falou | 330 × 156 | 99 × 47 |
-| os quatro colegas | 96–270 | 375–1005 | bustos, cx 450 / 610 / 770 / 930 | 150 × 174 | 45 × 52 |
-| a cópia (o dado) | 286–548 | 420–980 | o que está sendo montado | 560 × 262 | 168 × 79 |
-| — o conteúdo | dentro | 440–740 | a foto, a lista ou o desenho | 300 × 200 | 90 × 60 |
-| — as marcas | dentro | 760–960 | uma tira por etiqueta ligada | 200 × 52 | 60 × 16 |
-| a porta (o destino) | 96–248 | 1020–1264 | pictograma + duas palavras | 244 × 152 | 73 × 46 |
-| a prateleira | 264–548 | 1020–1264 | 3 vagas de 88; cada cópia enviada 212 × 72 | 244 × 284 | 73 × 85 |
-| **NÃO MANDAR** | cy 638 | cx 150 | o único jeito de responder "não dá" | 240 × 148 | **72 × 44** |
-| **etiquetas** | cy 638 | cx 480 / 650 / 820 | uma palavra + pictograma + estado | 156 × 148 | **47 × 44** |
-| **MANDAR** | cy 638 | cx 1150 | o botão que compromete | 236 × 160 | **71 × 48** |
+| Ferramenta | O toque no papel faz | Custa |
+|---|---|---|
+| **LUPA** (padrão) | chama a lente até ali | nada |
+| **MARCADOR** | põe a tarja no achado | nada |
+| **BORRACHA** | tira a tarja do achado | nada |
 
-Medidas que não se negociam:
+**O anel mostra onde a ferramenta funciona:** com o MARCADOR escolhido, os
+achados ainda descobertos engrossam o contorno; com a BORRACHA, os já tapados.
+A criança vê o alvo do gesto antes de fazer o gesto.
 
-- **A mesa de controles começa em y = 560 e a cópia termina em y = 548.** Doze
-  pixels de folga, e nada desce para dentro dessa faixa: a cópia enviada sobe em
-  arco **para a porta**, nunca para baixo. Painel cortando área de jogo já custou
-  caro duas vezes neste projeto.
-- **134 px (40 reais) entre a última etiqueta e o MANDAR**, e 132 px entre o NÃO
-  MANDAR e a primeira etiqueta. Mexer é de graça; só quem compromete precisa de
-  distância.
-- **Os dois botões que comprometem não têm a mesma silhueta.** MANDAR é largo,
-  verde, com o desenho de um envelope saindo; NÃO MANDAR é mais baixo, de
-  contorno, com a mão aberta. Dois botões iguais em cantos diferentes é o erro
-  que a criança comete com o polegar, não com a cabeça.
-- **Os quatro colegas nunca mudam de posição**, em nenhum nível e em nenhuma
-  fase: é a fileira que a criança aprende a varrer com o olho. Tocar num deles
-  **não muda estado nenhum** — ele olha para a própria etiqueta e ela pulsa uma
-  vez. Toque livre e sem consequência, porque a criança vai tocar.
-- **A etiqueta mostra o estado dentro dela**: acesa com o pictograma cheio,
-  apagada com o pictograma vazado e um risco. E a cópia mostra a consequência —
-  a mesma informação nos dois lugares.
-- **O balão fica sempre no mesmo canto.** O rabicho é que se dobra na direção de
-  quem falou. Texto que anda pela tela é texto que a criança perde.
+**A lupa sai da mesa quando a ferramenta é outra.** Ela é grande e fica por cima
+do papel: parada ali enquanto a criança marca, esconde justamente o que ela
+precisa ver para decidir. Sai desbotando, volta no lugar onde estava, e enquanto
+está fora **não acha nada** — nem se a criança tocar no papel.
+
+**O marcador tem traço de marcador:** a tarja entra varrendo da esquerda para a
+direita em 190 ms, com ponta grossa, cantos redondos e um brilho por cima. A
+borracha tira o traço com ele subindo e desbotando.
+
+**O traço segue o TEXTO MEDIDO, não a caixa declarada.** A caixa do `levels.ts`
+diz onde o item começa; o tamanho de verdade só existe depois de o texto ser
+escrito na tela. Com a caixa declarada, o marcador riscava papel vazio à direita
+e encostava na linha de cima — rabisco em cima do que não era para tapar. O
+mesmo vale para o anel e para a zona de toque.
+
+**Não existe popup de veredito.** Houve um: um cartão que abria a cada achado
+dizendo, com selo e cor, se aquilo podia sair. Ele resolvia a leitura e
+**entregava a resposta** — a criança parava de julgar e passava a esperar o
+selo. O que ficou no lugar é a lupa, que aumenta, e a TRAVA, que ensina quando
+alguma coisa passou batido.
+
+**Marcador e borracha são ferramentas separadas de propósito.** Um toque que
+alterna esconde o estado — a criança toca, alguma coisa acontece, e ela descobre
+o que era depois. Com duas ferramentas, o que vai acontecer está escolhido antes.
 
 ---
 
@@ -196,416 +197,396 @@ Medidas que não se negociam:
 
 ~~~text
 A FASE COMEÇA
-→ o colega dá um passo à frente, o balão datilografa o pedido
-→ a porta da direita mostra PARA ONDE vai
-→ a cópia aparece na mesa, vazia: só o conteúdo, sem nenhuma etiqueta
+→ o colega entra na coluna da direita e o balão diz uma frase curta
+→ a placa mostra PARA ONDE o papel vai (é o destino do nível inteiro)
+→ o papel desce na mesa, com a letra miúda ilegível de longe
 
-A CRIANÇA LIGA E DESLIGA AS ETIQUETAS
-→ a cópia muda no mesmo quadro: o nome aparece, o rosto sai de trás da tarja
-→ quem fica exposto ENCOLHE na hora — antes de qualquer envio
-→ quem autorizou ACENA com a cabeça
-→ mexer é de graça: não conta tentativa, não tira vida, não emite nada
+A CRIANÇA VARRE O PAPEL COM A LUPA
+→ cada item que entra na lente abre um cartão e deixa um anel
+→ quem é dono reage no cartão: balança a cabeça, ou acena orgulhoso
+→ varrer é de graça: não conta tentativa, não tira vida, não emite nada
 
-ELA APERTA MANDAR                          ou APERTA NÃO MANDAR
-→ a cópia descola da mesa                  → ela levanta a mão, a porta se fecha
-  e sobe em arco até a porta
-     ↳ certo : a porta abre, a cópia          ↳ certo : o colega faz cara de
-               entra e cai na prateleira                quem entendeu
-     ↳ errado: uma mão segura a cópia         ↳ errado: o colega fica chateado,
-               na soleira e devolve                     e o bilhete diz o que
-                                                        dava para mandar
+ELA TOCA NUM ANEL
+→ entra uma tarja preta por cima do item. Toca de novo, a tarja sai.
+→ também de graça, ilimitado
+
+ELA APERTA APROVAR
+     ↳ certo : o carimbo desce, o papel ganha o selo e voa para o mural
+     ↳ errado: o carimbo bate e NÃO deixa tinta; o papel treme e volta,
+               com um bilhete dizendo QUE TIPO de coisa está errada
 ~~~
 
-**Montar e mandar são coisas separadas, e essa é a única regra fina do jogo.** Se
-cada toque numa etiqueta fosse uma tentativa, experimentar — que é como a criança
-descobre quem se incomoda com o quê — custaria vida, e ela pararia de
-experimentar exatamente onde o jogo ensina.
-
-**A cópia errada nunca chega na prateleira.** Ela é segurada na soleira da porta
-e volta. Sem isso, "o que sai não volta mais" tornaria a fase impossível de
-terminar depois de um erro — e o §5 do PLANEJAMENTO MODAL é claro: nenhum estado
-sem saída. O que a criança vê, por um instante, é a cópia parada na porta com a
-exposição à mostra: o quase-acontecido é o que ensina.
+**Olhar e responder são coisas separadas, e essa é a única regra fina do jogo.**
+Se passar a lupa por cima de um telefone já contasse como resposta, procurar
+custaria vida — e procurar é justamente o que a habilidade pede.
 
 ---
 
-## 6. Controle — um toque
+## 6. Controle — arrastar, tocar, aprovar
 
 | Alvo | O que faz | Custa |
 |---|---|---|
-| **etiqueta** (3) | liga / desliga; a cópia muda no mesmo quadro | nada |
-| **MANDAR** | envia a cópia como ela está | é a resposta |
-| **NÃO MANDAR** | responde "não dá" ao pedido | é a resposta |
-| colega (4) | ele olha para a própria etiqueta, que pulsa uma vez | nada |
+| **arrastar a lupa** | move a lente pelo papel | nada |
+| **tocar no papel** | chama a lente até ali | nada |
+| **tocar num achado** (ou no vidro em cima dele) | aplica a ferramenta escolhida | nada |
+| **tocar numa ferramenta** | troca o que o toque faz | nada |
+| **APROVAR** | publica o papel como ele está | é a resposta |
 | `?` | pausa e repete o tutorial | nada |
 
-No computador: **1 / 2 / 3** nas etiquetas, **barra de espaço** manda, **N**
-recusa — exatamente o que as instruções do catálogo já prometem.
+No computador: a lupa se arrasta com o mouse e a **barra de espaço** aprova.
 
-**Nada de arrastar, em nenhum nível.** Reorganizar não existe: um toque põe, um
-toque tira.
-
-**O NÃO MANDAR aparece do nível 2 em diante, e aí aparece em TODAS as fases do
-nível.** Botão que só nasce na fase em que ele é a resposta entrega a resposta.
-No nível 1 ele não existe, e o jogo é só "o que vai junto".
+**Não existe mais nada.** Não há botão de recusar, não há seleção, não há zoom
+manual, não há rolagem: o papel inteiro cabe na tela.
 
 ---
 
-## 7. Três níveis, três dados
+## 7. A grade: 1280 × 720
 
-**Fase = um pedido.** O nível acaba quando os três pedidos daquele dado foram
-respondidos. **Uma partida inteira é um dado só por nível**, passando de mão em
-mão — é o que faz a criança olhar a mesma coisa de três ângulos, em vez de
-conhecer seis arquivos por cima.
+`Phaser.Scale.FIT`, coordenada absoluta em `data/layout.ts`. A última coluna é o
+tamanho real num celular de 390 px (fator **0,30**).
 
-| Nível | O dado | Etiquetas | O que entra |
+| Faixa | y | x | Conteúdo | Tamanho | No celular |
+|---|---:|---|---|---:|---:|
+| cabeçalho | 0–82 | 0–1280 | pílula do nível (20), bolinhas das fases (188+), "Confira antes de aprovar" (meio), vidas (1020), `?` (1206) | alvo do `?` 136 × 136 | 41 × 41 |
+| **o papel** | 96–548 | 24–880 | a folha inteira, sem rolagem | 856 × 452 | 257 × 136 |
+| — letra miúda | dentro | — | o corpo do texto do papel; o do item tem 24 | **18–24 px** | **5–7** |
+| — item | dentro | — | a caixa do que é achável | ~210 × 36 | 63 × 11 |
+| — zona de toque do anel | dentro | — | **sempre maior que o desenho** | **170 × 140** | **51 × 42** |
+| a lupa | onde foi deixada | — | vidro ø 192, aumento 2,1 ×, cabo para baixo à direita | 224 | 67 |
+| **a bancada** | 548–708 | 16–872 | três ferramentas, com o nome embaixo | 856 × 160 | 257 × 48 |
+| — **ferramenta** | cy 635 | cx 130 / 350 / 570 | zona de toque | **206 × 162** | **62 × 49** |
+| a placa do destino | 96–226 | 900–1264 | pictograma + duas palavras | 364 × 130 | 109 × 39 |
+| o balão | 238–334 | 900–1264 | uma linha de 24 px | 364 × 96 | 109 × 29 |
+| quem trouxe | 344–508 | cx 1082 | o colega, virado para o papel | 300 × 164 | 90 × 49 |
+| **APROVAR** | cy 620 | cx 1082 | o único botão que compromete | 300 × 150 | **90 × 45** |
+
+Medidas que não se negociam:
+
+- **O papel termina em y = 548 e a bancada começa em 548.** A bancada é a borda
+  de baixo do mundo: nada do papel desce para dentro dela, e o carimbo, que é o
+  gesto que compromete, mora do outro lado da tela.
+- **Dois itens nunca ficam a menos de 170 px um do outro.** As zonas de toque dos
+  anéis são grandes de propósito (51 × 42 reais), e anel colado em anel faria o
+  dedo tapar o item errado — que aqui é resposta errada.
+- **A ferramenta tem 62 × 49 px reais** e o vão entre elas é de 30 px. Trocar de
+  ferramenta é de graça, então um toque trocado não custa nada — mas o nome
+  embaixo de cada uma existe justamente para o toque não ser às cegas.
+- **A letra miúda é ilegível de propósito**, mas o **layout** do papel não é: a
+  criança vê que ali existe uma linha, uma foto, um rodapé.
+
+---
+
+## 8. Níveis e fases — o nível É o destino
+
+**Fase = um papel.** Cada nível tem três, e o que muda de um nível para o outro
+é **para onde o papel vai**:
+
+| Nível | Vai pro… | Quem vê | Os três papéis |
 |---|---|---|---|
-| **1** | a **foto do passeio** ao parque, com os quatro | `ROSTOS` · `NOMES` · `ONDE FOI` | só vai o que o pedido precisa |
-| **2** | a **lista da turma** para a festa junina | `NOMES` · `TELEFONES` · `ENDEREÇOS` | o dono e o alcance do destino — e o **NÃO MANDAR** |
-| **3** | o **desenho do Rafa** (o dragão) | `AUTOR` · `ORIGINAL` · `CONTATO` | o autor, e a autorização dele |
+| **1** | o mural da sala | só a turma | o cartaz do campeonato · a ficha do passeio · a foto do passeio |
+| **2** | o jornal da escola | a escola inteira | a lista de quem leva o quê · a página do jornal da turma · o aviso do passeio |
+| **3** | o site da escola | o mundo | o cartaz do concurso · a ficha de inscrição · a foto da turma |
 
-### Nível 1 — a foto do passeio · *só vai o que precisa*
+**É a mesma regra nos três, e a resposta muda sozinha.** O nome completo da Bia
+pode ficar no mural da sala e no jornal da escola, e precisa de tarja no site.
+A criança descobre isso sem ninguém explicar — e é aí que o "transferir" da
+habilidade acontece.
 
-| Fase | Quem pede, e o que sente | Pra onde vai | Precisa de |
-|---|---|---|---|
-| 1.1 | **Duda:** *"A gente podia lembrar do passeio todo dia na sala."* | o mural da sala (a turma) | `ROSTOS` |
-| 1.2 | **Rafa:** *"O jornal da escola perguntou pra onde a nossa turma foi."* | o jornal da escola | `ONDE FOI` |
-| 1.3 | **Téo:** *"Quero combinar o próximo passeio com quem foi nesse."* | o caderno do clube | `NOMES` |
+### O nível 1, papel por papel
 
-Cada fase precisa de **uma** etiqueta, e nunca a mesma — não dá para vencer o
-nível decorando uma combinação. O distrator é o mesmo nas três: a cópia fica mais
-bonita com tudo ligado, e ligar o que ninguém pediu faz três pessoas encolherem
-de uma vez.
-
-A 1.1 começa com o tutorial.
-
-### Nível 2 — a lista da turma · *o dono, e até onde ele deixa*
-
-| Fase | Quem pede | Pra onde vai | Precisa de | Resposta |
+| Fase | O papel | Tapa | Deixa | O que estreia |
 |---|---|---|---|---|
-| 2.1 | **Bia:** *"Se a festa mudar de dia, alguém tem que avisar os pais."* | o grupo dos pais | `NOMES` + `TELEFONES` | mandar |
-| 2.2 | **Téo:** *"O tio da van quer buscar todo mundo em casa."* | o motorista, fora da escola | `NOMES` + `ENDEREÇOS` | **NÃO MANDAR** |
-| 2.3 | **Duda:** *"Preciso saber quem traz o bolo pra barraca."* | o mural da festa | `NOMES` | mandar |
+| **1.1** | cartaz do **campeonato de queimada** | a **senha do tablet da sala** (`pipoca7`) | "Organiza: Duda Lima" | o gesto: achar, marcar, aprovar |
+| **1.2** | a **ficha do passeio** | a **alergia da Bia** e o **endereço do Téo** | "Desenho do cartaz: Rafa" | dois de uma vez, e a **assinatura**, que nunca se tapa |
+| **1.3** | a **foto do passeio** | **duas crianças de outra turma** que apareceram no fundo | "Quem aparece: Bia e Téo" | o dado deixa de ser texto: **rosto é dado** |
 
-A 2.1 é a primeira fase que precisa de **duas** etiquetas — e é ela que ensina
-que "menos" não é a regra: a regra é "o que precisa". A 2.2 é a primeira em que
-**não existe combinação que sirva**: o endereço é justamente o que o pedido
-precisa, e a família da Bia não deixa o endereço dela sair da escola. Ela encolhe
-assim que a etiqueta acende, e continua encolhida enquanto estiver acesa. Depois
-da recusa, o Téo entende: *"É... melhor cada família falar com ele."*
+**A fase 1.1 tem UM dado sensível, e ele é uma senha.** Fase de estreia é para
+aprender o gesto, não para caçar — e senha é o caso em que nenhuma criança
+titubeia: aquilo não vai na parede, ponto. Telefone num convite de festa junina
+não serve aqui: o número do contato num convite é normal, e um exemplo ambíguo
+na primeira fase ensina a coisa errada.
 
-### Nível 3 — o desenho do Rafa · *o autor decide*
+**A 1.3 é o degrau de verdade.** Até ali tudo que se acha é escrito; agora o item
+é **uma pessoa desenhada dentro da foto**. Ela é achada pela lupa como qualquer
+outra coisa, e a tarja cai em cima dela como cai em cima de um telefone — que é,
+aliás, como se tampa rosto em foto no mundo real. As duas crianças são desenhadas
+de costas e sem rosto: são justamente quem a turma **não** conhece.
 
-| Fase | Quem pede | Pra onde vai | Precisa de | Resposta |
-|---|---|---|---|---|
-| 3.1 | **Duda:** *"Esse dragão ia ficar lindo no cartaz da festa."* | o cartaz, no pátio da escola | `AUTOR` | mandar |
-| 3.2 | **Téo:** *"Um site de figurinhas dá figurinha pra turma toda se a gente mandar um desenho!"* | o site, fora | `AUTOR` + `ORIGINAL` | **NÃO MANDAR** |
-| 3.3 | **Bia:** *"A cidade abriu um concurso de desenho, e o Rafa quer entrar."* | o concurso, fora | `AUTOR` + `ORIGINAL` + `CONTATO` | mandar |
+**A assinatura estreia na 1.2 e volta no nível 3.** Ela é o único item que a
+criança pode achar e **não deve** tapar — é o que impede o jogo de virar
+"tape tudo".
 
-**A 3.2 e a 3.3 são o jogo inteiro em duas fases.** A combinação recusada na 3.2
-é a certa na 3.3 — mesmas etiquetas, mesmo alcance, resposta contrária — porque
-quem mudou foi o dono: na 3.2 o Rafa encolhe quando o `ORIGINAL` acende, na 3.3
-ele **acena com a cabeça** e sorri. Não é o dado que decide, é a pessoa.
+### Pontuação
 
-E é a 3.1 que quebra o hábito construído nos dois primeiros níveis: até aqui,
-ligar etiqueta incomodava alguém; agora **tem coisa que precisa ir junto**, e o
-autor fica orgulhoso quando o nome dele vai. Ética de dados não é mandar o mínimo
-possível — é mandar o que a pessoa combinou.
-
-A 3.2 é o dilema do briefing, sem número nenhum: um amigo querendo muito, uma
-recompensa para a turma toda, e uma pessoa que não quer. Depois da recusa, o Téo
-faz cara feia por um segundo e depois dá de ombros — **recusar não faz a criança
-perder amigo**, e ela precisa ver isso.
-
-### As três fases de cada nível somam 30; os três níveis somam 90
-
-`points: 90` na ficha do catálogo, estrelas 90 / 70, dez por fase. O valor por
-fase sai de `30 / fases.length`, nunca escrito na mão: acrescentar uma quarta
-fase continua fechando 90.
+Nove fases, **dez pontos cada**, fechando os **90** da ficha. O valor por fase sai
+de `30 / fases.length`, nunca escrito na mão. Estrelas 90 / 70.
 
 ### O cabeçalho, no padrão da família
 
 ~~~text
-[NÍVEL 1]  ●○○        O que vai junto?        ♥♥♥        ( ? )
+[NÍVEL 1]  ●○○     Confira antes de aprovar     ♥♥♥      ( ? )
 ~~~
 
 Pílula do nível, uma bolinha por fase, o que fazer no meio, vidas e `?` — a mesma
-ordem do Canhão das Coordenadas, do Cofre dos Registros e da Pista Binária. A
-bolinha acende quando a fase é respondida, e **a cópia que saiu fica na
-prateleira**, que é o álbum deste jogo.
+ordem do Canhão das Coordenadas, do Cofre dos Registros e da Pista Binária. **A
+bolinha é o álbum:** ao aprovar, o papel voa para ela e ela acende com a folha
+dentro. No fim do nível, as três saem de lá e vão para o mural.
 
 ---
 
-## 8. As regras, em código
+## 9. As regras, em código
 
-Nenhuma ação guarda se é certa. O veredito é calculado no instante em que a
-criança aperta, a partir de três coisas visíveis na tela: o que o pedido precisa,
-o alcance do destino e quem é dono do quê.
+Nenhum item guarda se deve ser tapado. Isso é calculado no instante do carimbo, a
+partir de duas coisas: **de quem é o dado** e **até onde este nível publica**.
 
 ~~~ts
-type Alcance = 'turma' | 'escola' | 'familia' | 'fora'
-const LONGE: Record<Alcance, number> = { turma: 0, escola: 1, familia: 2, fora: 3 }
+type Alcance = 'turma' | 'escola' | 'mundo'
+const LONGE: Record<Alcance, number> = { turma: 0, escola: 1, mundo: 2 }
 
-interface Dono {
-    pessoa: PessoaId
-    /** Até onde o dado DESTA pessoa pode ir, neste dado. */
+type TipoItem = 'telefone' | 'endereco' | 'rosto' | 'nomeCompleto' | 'assinatura'
+
+interface Item {
+    id: string
+    tipo: TipoItem
+    /** Onde ele está no papel, em coordenada do papel. */
+    caixa: { x: number; y: number; w: number; h: number }
+    /** O que a criança lê debaixo da lente, em corpo grande. */
+    leitura: string
+    dono: PessoaId | 'estranho'
+    /** Até onde este dado pode aparecer. A assinatura vai a 'mundo'. */
     ate: Alcance
+    /** Só muda o feedback: o autor acena em vez de balançar a cabeça. */
+    credito?: boolean
 }
 
-interface Dado {
-    conteudo: 'foto' | 'lista' | 'desenho'
-    etiquetas: EtiquetaDef[]        // exatamente 3
-    donos: Record<EtiquetaId, Dono[]>
+interface Papel {
+    id: string
+    quem: PessoaId          // quem trouxe
+    fala: string            // uma linha, curta
+    itens: Item[]
 }
 
-interface Pedido {
-    quem: PessoaId
-    fala: string                    // o que ele SENTE. Nunca o nome de uma etiqueta
+interface Level {
+    level: number
     destino: DestinoId
-    precisa: EtiquetaId[]
-    /** O que o dono autorizou EXPRESSAMENTE neste pedido — e acena na tela. */
-    autorizadas?: EtiquetaId[]
+    alcance: Alcance        // o nível INTEIRO tem um alcance
+    papeis: Papel[]         // 3
 }
 
-/** Alguém fica exposto quando o dado dele sai SEM PRECISAR, ou vai LONGE DEMAIS. */
-const expoe = (id: EtiquetaId, marcadas: Set<EtiquetaId>, p: Pedido, d: Dado) =>
-    marcadas.has(id)
-    && !(p.autorizadas ?? []).includes(id)
-    && (!p.precisa.includes(id)
-        || d.donos[id].some(dono => LONGE[alcance(p.destino)] > LONGE[dono.ate]))
+/** Precisa de tarja quando o papel vai mais longe do que aquele dado pode ir. */
+const precisaTarja = (item: Item, nivel: Level) =>
+    LONGE[nivel.alcance] > LONGE[item.ate]
 
-/** Quem encolhe AGORA, antes de qualquer envio. É isto que a tela desenha. */
-const incomodados = (marcadas: Set<EtiquetaId>, p: Pedido, d: Dado) =>
-    d.etiquetas
-        .filter(e => expoe(e.id, marcadas, p, d))
-        .flatMap(e => d.donos[e.id].map(dono => dono.pessoa))
+/** O veredito: cada item tapado exatamente quando devia. */
+const podeCarimbar = (papel: Papel, tapados: Set<string>, nivel: Level) =>
+    papel.itens.every(item => precisaTarja(item, nivel) === tapados.has(item.id))
 
-const podeMandar = (marcadas: Set<EtiquetaId>, p: Pedido, d: Dado) =>
-    p.precisa.every(id => marcadas.has(id))
-    && d.etiquetas.every(e => !expoe(e.id, marcadas, p, d))
-
-/** Recusar é a resposta quando nem o que o pedido PRECISA pode sair. */
-const deveRecusar = (p: Pedido, d: Dado) =>
-    !podeMandar(new Set(p.precisa), p, d)
-
-const veredito = (acao: 'mandar' | 'recusar', marcadas: Set<EtiquetaId>, p: Pedido, d: Dado) =>
-    acao === 'recusar'
-        ? deveRecusar(p, d)
-        : !deveRecusar(p, d) && podeMandar(marcadas, p, d)
+/** O que falta, para o bilhete falar do TIPO sem dizer onde. */
+const pendencias = (papel: Papel, tapados: Set<string>, nivel: Level) =>
+    papel.itens.filter(item => precisaTarja(item, nivel) !== tapados.has(item.id))
 ~~~
 
 Três consequências que valem mais que o código:
 
-1. **`deveRecusar` é derivado, não escrito.** Nenhuma fase declara "esta é de
-   recusar": isso sai do próprio pedido. Uma fase não fica com a resposta trocada
-   por engano de digitação.
-2. **A mesma etiqueta muda de veredito** quando muda o destino ou o dono — é o
-   que o §11 do PLANEJAMENTO MODAL exige ("a regra é uma função, nunca um
-   campo"), e é o que faz a 3.2 e a 3.3 serem fases diferentes com a mesma
-   combinação.
-3. **`autorizadas` não é gabarito escondido**, porque está na tela: a pessoa
-   acena com a cabeça quando a etiqueta dela acende. A criança lê a autorização
-   do mesmo jeito que lê o incômodo — na cara.
+1. **A assinatura não é caso especial.** Ela é um item com `ate: 'mundo'`, então
+   `precisaTarja` dá `false` em qualquer nível — e tapá-la vira erro pela mesma
+   linha que deixa o telefone à mostra virar erro. Uma regra, dois erros
+   simétricos.
+2. **O mesmo item muda de veredito entre níveis**, porque quem mudou foi o
+   destino. É o que o §11 do PLANEJAMENTO MODAL exige: a regra é uma função,
+   nunca um campo.
+3. **Não achar é deixar à mostra.** Item não encontrado é item não tapado, e o
+   veredito não pergunta se a criança olhou — ele olha o papel. É assim que
+   "ignorar não é responder" entra sem nenhuma regra nova.
 
 ### Validação ao carregar
 
 O nível não sobe se alguma destas falhar:
 
-- o nível tem de 1 a 5 fases, e o dado tem exatamente 3 etiquetas;
-- todo `precisa` é não-vazio e só cita etiquetas que existem no dado;
-- entre as **8 combinações** possíveis, mais a recusa, **exatamente uma** passa no
-  `veredito` — se duas passassem, a TRAVA seria injusta; se nenhuma passasse, a
-  fase seria impossível; e se a combinação vazia passasse, não fazer nada venceria
-  a fase;
-- o nível 1 não tem nenhuma fase de recusar; os níveis 2 e 3 têm **pelo menos uma
-  e no máximo duas** — recusa em todas ensinaria "nunca mande nada", que é tão
-  errado quanto mandar tudo;
-- nenhuma `fala` contém o rótulo de uma etiqueta. O balão diz a necessidade, nunca
-  o botão.
+- o nível tem de 1 a 5 papéis, e o alcance do nível está declarado;
+- **todo papel tem pelo menos um item que precisa de tarja** — senão aprovar sem
+  olhar venceria a fase;
+- **todo papel tem pelo menos um item que não precisa** — senão tapar tudo
+  venceria a fase;
+- nenhum par de itens fica a menos de 160 px de distância;
+- toda `caixa` cabe dentro do papel, com 20 px de margem;
+- do nível 2 em diante, existe pelo menos uma `assinatura`.
 
 ---
 
-## 9. O erro, a TRAVA e as vidas
+## 10. O erro, a TRAVA e as vidas
 
-### Mandar com a cópia errada
+Carimbar com pendência:
 
-1. A cópia sobe até a porta e **uma mão a segura na soleira** — o gesto acontece
-   inteiro, sem bronca, e a criança vê o que quase saiu.
-2. Ela volta para a mesa. O balão troca para o **bilhete**, âmbar, uma linha:
-   *"A Bia ia junto sem ter combinado."* / *"O jornal não pediu os nomes."* /
-   *"Falta o que o Téo precisa pra saber quem foi."*
-   Nunca "tente de novo", nunca o nome do botão, nunca a combinação.
-3. O MANDAR ganha um cadeado. **Mexer em qualquer etiqueta destrava**, porque
-   mexer é o único jeito de corrigir.
-4. **No segundo erro da mesma fase**, a etiqueta que está atrapalhando pulsa — a
-   primeira que estiver faltando, ou a primeira que estiver expondo alguém. Ela
-   pulsa, não se resolve sozinha: quem liga ou desliga continua sendo a criança.
+1. O carimbo desce e **não deixa tinta**. O papel treme uma vez e fica onde está
+   — nada é desfeito, nenhuma tarja some.
+2. O balão da direita vira **bilhete âmbar**, uma linha, dizendo **o tipo**:
+   *"Tem um telefone nesse papel."* · *"Tem alguém de outra turma nessa foto."* ·
+   *"Assim ninguém vai saber quem desenhou."*
+   Nunca "tente de novo", nunca onde está, nunca quantos faltam.
+3. O APROVAR ganha um cadeado. **Ele destrava quando algo muda no papel** — uma
+   tarja que entra ou sai, ou um achado novo. Mexer só a lupa não destrava: nada
+   mudou.
+4. **No segundo erro da mesma fase**, uma **lupa-fantasma** varre devagar a região
+   onde está a pendência — mostra **onde olhar**, não o que fazer.
 
-### Recusar quando dava para mandar
-
-Mesma coreografia, com o bilhete do outro lado: *"Mas o que o Téo precisa dava
-pra mandar sem incomodar ninguém."* **Ignorar não é responder** — recusar por
-precaução é uma decisão, e custa igual.
-
-### O que a TRAVA não pode ser
+O que a TRAVA não pode ser:
 
 - **nunca vermelho de bronca**: o bilhete é âmbar de dica, como no resto do
   catálogo;
-- **nunca a resposta**: nem o bilhete nem o pulso da etiqueta dizem ligar ou
-  desligar;
-- **nenhum estado sem saída**: toda etiqueta volta com um toque, e a cópia errada
-  nunca chega na prateleira;
-- **demorar não trava.** Não há relógio: o tempo seria contado justamente enquanto
-  a criança olha a cara da Bia e decide, que é o momento em que ela aprende.
+- **nunca a resposta**: o bilhete diz o tipo, e a lupa-fantasma diz a região;
+- **nenhum estado sem saída**: toda tarja sai com um toque, e nenhum achado se
+  perde;
+- **demorar não trava.** Não há relógio: o tempo seria contado justamente
+  enquanto a criança procura, que é o jogo inteiro.
 
-### Contabilidade
+Contabilidade:
 
 - **`WRONG_ANSWER` + `lives.lose()` uma vez por fase**, no primeiro erro. Os
-  seguintes na mesma fase não custam outra vida, e **o contador zera em toda
+  seguintes na mesma fase não custam outra vida, e o contador **zera em toda
   fase**.
 - **`CORRECT_ANSWER` uma vez por fase:** **+10** de primeira, **+5** depois de
-  travar. Nove fases fecham 90.
-- **Não são erro:** ligar e desligar etiqueta, tocar num colega, abrir o `?`,
-  demorar, mudar de ideia.
+  travar.
+- **Não são erro:** mover a lupa, achar coisas, pôr e tirar tarja, demorar, abrir
+  o `?`.
 - `createLives` decide o `GAME_OVER` no zero. O jogo não o emite nunca.
-- **Nenhum ponto, porcentagem ou contagem em texto na tela.** O placar é a
-  prateleira.
+- **Nenhum ponto, porcentagem ou contagem em texto na tela.** O placar é o mural.
 
 ---
 
-## 10. Feedback
+## 11. Feedback
 
 | Momento | Visual | Som |
 |---|---|---|
-| a fase começa | o colega dá um passo à frente e cresce 6 %; o balão datilografa; a porta mostra o destino | duas notas curtas, subindo |
-| toque na etiqueta | o botão afunda e volta (`back`); a marca entra ou sai da cópia no mesmo quadro | clique seco — **agudo ao ligar, grave ao desligar** |
-| **alguém fica exposto** | a pessoa **encolhe**: ombros para dentro, mãos no rosto; uma linha fina liga a etiqueta acesa até ela | nota curta e baixa, **nunca alarme** |
-| **alguém autorizou** | a pessoa **acena com a cabeça** e o contorno dela pulsa em verde | duas notas, curtas e claras |
-| MANDAR | a cópia descola da mesa e sobe em arco até a porta | "clac" de envelope |
-| **certo** | a porta abre, a cópia entra, cai na prateleira e acende; quem pediu comemora; faíscas na **silhueta dele**; a moldura da tela pisca verde | fanfarra `[523, 659, 784, 1047]` a cada 110 ms |
-| **errado** | uma mão segura a cópia na soleira, a porta fecha, a cópia volta girando; cadeado no MANDAR; bilhete âmbar | "hm?" grave curto |
-| NÃO MANDAR certo | a criança levanta a mão, a porta fecha devagar, quem pediu faz cara de quem entendeu e dá de ombros | dois toques secos, calmos |
-| NÃO MANDAR errado | quem pediu cruza os braços; bilhete âmbar dizendo o que dava para mandar | "hm?" grave curto |
-| fase concluída | a bolinha do cabeçalho acende; a cópia fica visível na prateleira | gole curto |
-| **fim do nível** | a prateleira cresce até o meio da tela e as três cópias se abrem, uma a uma, mostrando o que saiu de cada vez; os quatro colegas entram atrás | fanfarra e confete |
+| o papel chega | desce na mesa com uma pequena queda e um repique | papel batendo na mesa |
+| a lupa anda | o vidro tem um brilho que acompanha o movimento | — |
+| **acha um item** | o aro da lupa pisca âmbar e o item ganha um anel no papel | "tin" curto e claro |
+| marcar sem ter achado | a bancada **pisca na LUPA**: nada acontece, e o jogo diz onde começar | — |
+| troca de ferramenta | a escolhida sobe e acende; **a lupa sai da mesa** se a escolhida não for ela | clique seco |
+| **põe a tarja** | o traço varre da esquerda para a direita, com ponta grossa e brilho | "tchac" seco |
+| tira a tarja | o traço sobe e desbota | o mesmo "tchac", mais grave |
+| **APROVAR certo** | o carimbo desce e a tinta pega | "toc" grave |
+| **o que foi tapado SAI** | um a um: o texto some por baixo do traço, e o traço é levantado para fora do papel — sobra papel em branco | raspar curto a cada um |
+| depois disso | o papel **voa para a bolinha** da fase | gole |
+| **APROVAR errado** | o carimbo desce e sobe **sem tinta**; o papel treme; cadeado; bilhete âmbar | "hm?" grave, **nunca alarme** |
+| segundo erro | a lupa-fantasma varre a região devagar, pulsando | sopro curto |
+| **fim do nível** | o mural cresce até o meio da tela e os **três papéis sobem**, um a um, com as tarjas à mostra | fanfarra `[523, 659, 784, 1047]` e confete |
 | painel | `showLevelComplete`, título curto, bolinhas de nível | fanfarra |
 
-O "uau" é o penúltimo: **as três cópias que a criança montou, lado a lado, com o
-que ela deixou ir em cada uma.** É a prova de que aquilo tudo era um dado só, e é
-o painel que o exemplo oficial da BNCC pede — feito pela criança, não pendurado
-na parede pelo jogo.
+O "uau" é o penúltimo: **os três papéis que a criança preparou, pendurados lado a
+lado, com as tarjas que ela mesma pôs.** É o painel que o exemplo oficial da BNCC
+pede — feito por ela, não pendurado na parede pelo jogo.
 
 Tudo sintetizado em WebAudio, sem arquivo, respeitando `mute-audio` do
-`EventBus`. Sem narração: balão e pictograma. O brilho de vitória é a **silhueta
-de quem pediu** — círculo destaca um lugar, silhueta destaca ELE.
-
-E o contrário, que também é regra: **o brilho da porta não pode cobrir os
-colegas.** A cara deles é a regra do jogo; tapar a regra no instante da decisão
-foi o erro que o Ritmo da Rotina já cometeu com o brilho amarelo.
+`EventBus`. Sem narração. O brilho de vitória é a **silhueta do papel**, não um
+círculo genérico. E o brilho do carimbo **não pode cobrir o papel**: é ele que a
+criança precisa ver ganhando o selo.
 
 ---
 
-## 11. Tutorial e `?`
+## 12. Tutorial e `?`
 
-**Três passos**, na fase 1.1, com a cena já montada — o tabuleiro entra **antes**
-do tutorial, senão o recorte ilumina tela vazia. Cada fala diz o que FAZER ou
-qual é o objetivo:
+**Cinco passos**, no papel 1.1, com a cena já montada — o papel entra **antes**
+do tutorial, senão o recorte ilumina mesa vazia. Cada fala diz o que FAZER:
 
-1. *"A Duda quer a foto no mural da sala."* — recorte no balão e na Duda.
-2. *"Toque numa etiqueta e olhe a foto mudar."* — recorte na etiqueta `ROSTOS`,
-   dedo batendo (`tap: true`).
-3. *"Se ninguém ficar encolhido, é só MANDAR."* — recorte nos quatro colegas e
-   depois no MANDAR.
+1. *"A Duda quer o convite no mural da sala."* — recorte na coluna da direita:
+   quem pediu e para onde vai.
+2. *"Arraste a lupa pelo papel."* — recorte redondo **na lupa**, com o ponteiro
+   fazendo o trajeto. É o único passo do catálogo em que o ponteiro **não** é
+   `tap`: aqui o gesto é mesmo levar uma coisa de um lugar a outro.
+3. *"Achou algo de outra pessoa? Pegue o MARCADOR e toque nela."* — recorte no
+   botão do marcador, dedo batendo.
+4. *"A BORRACHA tira a tarja."* — recorte no botão da borracha.
+5. *"Quando estiver tudo certo, é só APROVAR."* — recorte no botão.
 
-**O balão do tutorial nunca cobre o que ele explica:** no passo 2 ele fica em
-cima à esquerda, fora da cópia; no passo 3, embaixo à esquerda, fora da fileira.
+Ao fechar, **a lupa balança** — a mesma piscadela que abre as fases seguintes.
 
-Um passo extra por nível (`key: 'ef04co07ge-lN'`), com uma frase só:
+Um passo por nível (`key: 'ef04co07ge-lN'`), com uma frase só:
 
-- **N2:** *"Quando não tem jeito de mandar, diga NÃO DÁ."* — recorte no NÃO
-  MANDAR, que estreia aqui.
-- **N3:** *"Este desenho é do Rafa. Pergunte pra ele com os olhos."* — recorte no
-  Rafa.
+- **N2:** *"Agora vai pro jornal da escola. A escola inteira vê."*
+- **N3:** *"Agora vai pro site. O mundo vê — mas o nome de quem desenhou fica."*
 
-Antes do primeiro pedido do nível 1, **uma demonstração muda de 5 s, pulável**: a
-mão-fantasma liga `NOMES`, a Bia encolhe, a mão desliga, a Bia relaxa. Sem uma
-palavra — é a regra inteira do jogo em cinco segundos.
-
-O `?` fica sempre visível no cabeçalho com alvo de 136 px, pausa o jogo por flag
-(nunca `scene.pause()`, que mataria tween e toque) e reabre o painel.
+O `?` fica sempre visível no cabeçalho com alvo de 136 px, pausa por flag (nunca
+`scene.pause()`, que mataria tween e toque) e reabre o painel.
 
 ---
 
-## 12. Antes da arte existir
+## 13. Antes da arte existir
 
-Reserva em `Graphics` para tudo, no tamanho final: o colega vira uma cápsula com
-cabeça redonda e duas cores (e **encolhe do mesmo jeito**, porque a reação é
-tween, não desenho); a cópia vira um cartão claro com o retângulo do conteúdo; o
-conteúdo vira um retângulo com o nome do dado; o destino vira um quadrado com o
-pictograma desenhado. As texturas entram por `import.meta.glob` +
-`textures.exists()`, **nunca por `import` estático** — um arquivo que ainda não
-existe quebraria o `vite build` inteiro.
+**Quase tudo aqui é `Graphics`, e a lupa é o melhor exemplo:** ela muda de estado
+a cada quadro, e um PNG não muda.
 
-**O jogo tem de ser jogável e vencível com zero textura carregada.** São
-`Graphics`: os botões, as etiquetas, o cartão da cópia, as marcas, o balão, o
-bilhete, o cadeado, a porta, a prateleira, as cópias guardadas, o `?`, o
-cabeçalho, as vidas, as bolinhas, as estrelas, as faíscas e a moldura da tela.
+- **o vidro** é uma máscara circular que anda com o dedo;
+- **o aumento** é a cópia do papel em escala 1,9 dentro da máscara;
+- **o aro, o cabo e o reflexo** são `strokeCircle`, um retângulo arredondado e um
+  arco branco fino;
+- **o estado**: aro cinza parado, âmbar e pulsando quando encontra.
+
+Também são `Graphics`: o papel e todo o texto dele, as tarjas, os anéis, o cartão
+do achado, o carimbo, o selo, a placa do destino, o balão, o bilhete, o cadeado,
+o mural, o `?`, o cabeçalho, as vidas, as bolinhas, as estrelas e a moldura da
+tela.
+
+Reserva para as três texturas: a mesa vira um degradê com uma faixa de madeira, o
+colega vira uma cápsula com cabeça redonda, a foto colada no papel vira um
+retângulo com uma moldura. As texturas entram por `import.meta.glob` +
+`textures.exists()`, **nunca por `import` estático**.
+
+**O jogo tem de ser jogável e vencível com zero textura carregada.**
 
 ### Ordem de produção
 
 1. **Só o nível 1**, com reserva em `Graphics`, jogado de ponta a ponta — é o que
-   o `INSTRUCOES.md` manda, e é o que o usuário avalia antes de existir arte.
-2. A TRAVA vista acontecendo, e a reação de encolher vista **antes** do envio.
-3. As texturas do [TEXTURAS.md](./TEXTURAS.md), medidas pela caixa alfa e
-   ancoradas no layout — nunca esticadas para caber.
-4. Níveis 2 e 3, que não acrescentam nenhum desenho novo: só pedidos, destinos e
-   donos.
+   o `INSTRUCOES.md` manda e é o que o usuário avalia antes de existir arte.
+2. A TRAVA vista acontecendo, e a letra do item lida debaixo da lupa no tamanho de celular.
+3. As texturas do [TEXTURAS.md](./TEXTURAS.md), medidas pela caixa alfa.
+4. Níveis 2 e 3, que não acrescentam desenho novo: só papéis, itens e alcance.
 
 ---
 
-## 13. Arquitetura
+## 14. Arquitetura
 
 ~~~text
 src/games/EF04CO07/guardiao-etico/
 ├── PLANEJAMENTO.md · TEXTURAS.md
 ├── index.ts          1280 × 720, Scale.FIT + CENTER_BOTH, [BootScene, GameScene]
-├── types.ts          Alcance, Dono, Dado, Pedido, LevelDef, Fase
+├── types.ts          Alcance, Item, Papel, Level
 ├── data/
-│   ├── layout.ts     as coordenadas do §4, com o porquê dos números
+│   ├── layout.ts     as coordenadas do §7, com o porquê dos números
 │   ├── theme.ts      cores, fontes, tamanhos
-│   ├── elenco.ts     as quatro pessoas e os destinos (nome, pictograma, alcance)
-│   └── levels.ts     LEVELS + as funções puras do §8 + a validação
+│   ├── elenco.ts     as pessoas e os destinos
+│   └── levels.ts     LEVELS + as funções puras do §9 + a validação
 └── scenes/
     ├── BootScene.ts  import.meta.glob + createLoadingScreen + faseInicial
     ├── GameScene.ts  orquestra e não desenha nada
-    ├── room.ts       o clube, a mesa e a luz
-    ├── cast.ts       os quatro, e as reações (encolher, acenar, comemorar)
-    ├── record.ts     a cópia: o conteúdo, as marcas e o voo até a porta
-    ├── door.ts       o destino, a abertura, a mão que segura na soleira
-    ├── shelf.ts      a prateleira e as cópias guardadas
-    ├── controls.ts   etiquetas, MANDAR, NÃO MANDAR, teclado
-    ├── balloon.ts    o pedido, o bilhete e o rabicho que aponta
+    ├── desk.ts       a mesa e o mural ao fundo
+    ├── sheet.ts      o papel: o texto, os itens, as tarjas e o RenderTexture
+    ├── lens.ts       a lupa: máscara, aumento, estado
+    ├── stamp.ts      o carimbo, o selo e a recusa sem tinta
+    ├── visitor.ts    quem trouxe, o balão e o bilhete
+    ├── hud.ts        cabeçalho, bolinhas, placa do destino
     ├── effects.ts    painters puros e FX locais
     └── audio.ts      WebAudio direto
 ~~~
 
-**A `GameScene` não desenha.** Se ela precisar de um `fillRoundedRect`, falta um
-painter num módulo de `scenes/`. Todo `createX` devolve
+**A `GameScene` não desenha.** Todo `createX` devolve
 `{ container, ...métodos, destroy() }`.
 
 ~~~ts
-type Fase = 'entrando' | 'montando' | 'enviando' | 'travado' | 'resolvido' | 'pausado'
+type Fase = 'entrando' | 'procurando' | 'carimbando' | 'travado' | 'resolvido' | 'pausado'
 ~~~
 
 Cuidados que já custaram caro em jogos deste projeto:
 
 - congelar com **flag**, nunca `scene.pause()`;
-- as zonas de toque são **zonas soltas de cena**, criadas na posição definitiva e
-  destruídas na mão no `destroy()` — nada de zona invisível maior que o desenho;
-- a reação dos colegas é recalculada **a cada toque**, a partir do estado, e nunca
-  guardada num campo do sprite;
-- o `gen` (contador de geração) protege todo `await`, senão uma animação de envio
-  atrasada escreve na fase seguinte;
+- o `RenderTexture` do papel é redesenhado **só quando uma tarja muda**, não a
+  cada quadro — senão o celular derrete;
+- a detecção do achado é por **interseção da caixa com o círculo da lente**, com
+  uma flag `achado` no item: nunca por igualdade de posição;
+- o `pointermove` fora do papel **não move a lupa para fora**: ela para na borda;
+- a zona de toque do anel é uma **zona solta de cena**, criada na posição
+  definitiva e destruída na mão no `destroy()`;
+- o `gen` protege todo `await`;
 - o saldo de vidas atravessa o `scene.restart` (`lives: this.livesLeft`).
 
 Reusar sem reimplementar: `createLoadingScreen`, `faseInicial`, `vidasIniciais`,
@@ -616,99 +597,245 @@ Reusar sem reimplementar: `createLoadingScreen`, `faseInicial`, `vidasIniciais`,
 
 | Evento | Quando |
 |---|---|
-| `GAME_READY` | uma vez, com o primeiro pedido na tela |
-| `CORRECT_ANSWER` | uma vez por fase respondida certo |
-| `WRONG_ANSWER` | no primeiro erro de cada fase |
-| `CHECKPOINT` | a cada fase, `progress: Math.round(feitas / fases * 100)` |
+| `GAME_READY` | uma vez, com o primeiro papel na mesa |
+| `CORRECT_ANSWER` | uma vez por papel carimbado certo |
+| `WRONG_ANSWER` | no primeiro erro de cada papel |
+| `CHECKPOINT` | a cada papel, `progress: Math.round(feitos / papeis * 100)` |
 | `GAME_COMPLETED` | ao fim de **cada** nível, `stage: this.level.level`, `totalStages: LEVELS.length` |
 | `GAME_OVER` | nunca à mão — é do `createLives` |
 
-`stage` sai de `this.level.level`, nunca escrito na mão. Nunca escrever
-`isFinalStage`. Importar `runtimeGameBridge`, nunca `gameBridge`.
-
-**Sobre a telemetria do briefing:** "escolhas por tema, comportamento no dilema,
-corações finais" não existe — a ponte tem os eventos da tabela acima e mais nada.
-O que a plataforma mede é acerto e erro por fase, e é melhor dizer isso aqui do
-que planejar um relatório que ninguém vai receber.
+`stage` sai de `this.level.level`. Nunca escrever `isFinalStage`. Importar
+`runtimeGameBridge`, nunca `gameBridge`.
 
 ---
 
-## 14. Registro
+## 15. Registro
 
 | Onde | O que |
 |---|---|
-| `src/data/catalog.ts` | entrada nova: id **`074`**, slug `guardiao-etico`, module `EF04CO07/guardiao-etico`, skill `EF04CO07`, `years: [4]`, `order: 295` (entre o 290 do irmão e o 300 do EF04CO08), `status: "draft"`, `points: 90`, ícone 🛡️, tags `["dados", "ética", "privacidade", "autoria"]`, thumbnail `coverGuardiaoEtico` |
-| `src/data/gameInstructions.ts` | **já existe** — as sete linhas de `guardiao-etico`. Conferir no fim se ainda batem com o jogo construído |
+| `src/data/catalog.ts` | entrada nova: id **`074`**, slug `guardiao-etico`, module `EF04CO07/guardiao-etico`, skill `EF04CO07`, `years: [4]`, `order: 295`, `status: "draft"`, `points: 90`, ícone 🔍, tags `["dados", "ética", "privacidade", "autoria"]` |
+| `src/data/gameInstructions.ts` | **reescrever**: as sete linhas atuais descrevem a revisão 1 (etiquetas e prateleira) e não valem mais |
 | `src/pages/GameDetailsPage.tsx` | acrescentar `guardiao-etico` ao `GAMES_WITH_IN_GAME_COMPLETION_SCREEN` |
 | `src/assets/games/EF04CO07/guardiao-etico/` | a pasta já existe, vazia — ver [TEXTURAS.md](./TEXTURAS.md) |
 
-Título: **Guardião Ético**. Descrição: *"Um colega pede, e você decide o que vai
-junto: ligue só as etiquetas que o pedido precisa, olhe quem fica exposto e mande
-— ou diga que não dá."*
+Descrição: *"Chegou um papel para publicar. Passe a lupa, ache o que é de outra
+pessoa, tape — e aprove."*
 
 ---
 
-## 15. Critérios de aceite
+## 16. Critérios de aceite
 
 ### A criança entende sozinha
 
-- [ ] a tela tem cinco coisas, e nenhuma troca de lugar nas nove fases;
-- [ ] existe **um** gesto: tocar;
-- [ ] o balão nunca diz o nome de um botão;
-- [ ] quem entra sem ler nada liga uma etiqueta e vê alguma coisa mudar em menos
-      de dois segundos;
-- [ ] a demonstração muda de 5 s explica a regra inteira sem uma palavra;
-- [ ] nenhum texto da tela de jogo passa de três linhas.
+- [ ] a tela tem três coisas: o papel, quem trouxe com o destino, e o carimbo;
+- [ ] a demonstração muda de 5 s explica o jogo inteiro sem uma palavra;
+- [ ] quem entra sem ler nada arrasta o dedo no papel e acha algo em segundos;
+- [ ] a letra do item se lê debaixo da lupa no celular (24 px × 2,1 = 15 px reais);
+- [ ] nenhum texto fora do papel passa de uma linha.
 
 ### É justo
 
-- [ ] ligar e desligar é ilimitado e não custa nada;
-- [ ] a cópia errada **nunca** chega na prateleira;
+- [ ] mover a lupa nunca custa nada e nunca responde nada;
+- [ ] pôr e tirar tarja é ilimitado e grátis;
+- [ ] nenhum achado se perde quando a lupa sai de cima;
 - [ ] uma vida por fase, no máximo, e o contador zera a cada fase;
-- [ ] o NÃO MANDAR existe em todas as fases dos níveis 2 e 3, e em nenhuma do 1;
-- [ ] em cada fase existe **exatamente uma** resposta aceita, verificada pela
-      validação das 8 combinações;
+- [ ] a TRAVA diz o tipo, e só no segundo erro mostra a região;
+- [ ] aprovar sem olhar nunca vence; tapar tudo nunca vence;
 - [ ] nenhum ponto, porcentagem ou contagem em texto na tela;
 - [ ] o jogo roda e vence inteiro sem nenhum PNG carregado.
 
 ### BNCC
 
-- [ ] nenhuma fase tem campo `certa`: o veredito é a função do §8;
-- [ ] a mesma etiqueta é certa numa fase e errada em outra, e a criança consegue
+- [ ] nenhum item guarda se deve ser tapado: sai da função do §9;
+- [ ] o mesmo item muda de resposta entre o nível 1 e o 3, e a criança consegue
       dizer por quê;
-- [ ] a reação acontece **antes** do envio, sempre;
-- [ ] a prateleira mostra, no fim do nível, o que saiu em cada pedido;
-- [ ] recusar é certo pelo menos uma vez, e errado pelo menos uma vez;
-- [ ] os quatro verbos da habilidade têm lugar na mecânica (§2), e não só no texto.
+- [ ] a assinatura do autor nunca pode ser tapada, e tapá-la dá erro;
+- [ ] o fim do nível mostra os três papéis preparados por ela.
 
 ### Antes de dizer que está pronto
 
 - [ ] `npx tsc --noEmit` limpo para os arquivos do jogo;
 - [ ] `npx eslint src/games/EF04CO07/guardiao-etico` limpo;
 - [ ] uma fase inteira jogada no navegador, e a TRAVA vista acontecendo;
+- [ ] a lupa testada com o dedo num celular de verdade, não só com o mouse;
 - [ ] mudo funciona; `?` pausa e repete o tutorial; retomada por `?stage=2`;
-- [ ] `?embed=1&inline=1&stage=1&points=0&lives=3` com o console aberto: um
-      `GAME_COMPLETED` por nível, `totalStages: 3`, placar fechando em 90;
+- [ ] `?embed=1&inline=1&stage=1&points=0&lives=3`: um `GAME_COMPLETED` por
+      nível, `totalStages: 3`, placar fechando em 90;
 - [ ] nenhum gancho de depuração sobrou (`window.__algo`).
 
 ---
 
-## 16. O que ficou para decidir
+## 17. O que ficou para decidir
 
-1. **Os quatro nomes.** Téo, Bia, Rafa e Duda vieram por continuidade com a Mesa
-   de Edição (mesmo traço, mesma idade). Se o elenco for outro, muda só o
-   `elenco.ts` e a folha de sprites.
-2. **A professora saiu.** Todos os pedidos vêm dos quatro colegas, para a fileira
-   de caras ser a mesma do começo ao fim. Se ela voltar, vira uma quinta coluna
-   na folha e um busto a mais na esquerda.
-3. **O eco da prateleira** — uma frase no começo da fase citando uma cópia que já
-   saiu ("a foto que você mandou pro jornal") — está fora do primeiro corte. Ele é
-   enfeite e **nunca pode mudar o veredito**; se entrar, entra depois dos três
-   níveis jogados.
+1. **O texto do papel é escrito pelo jogo, em português, e a criança precisa
+   ler.** É a primeira vez que este catálogo pede leitura de verdade de uma
+   criança de 9 anos. O que existe para quem lê devagar é a lupa, que aumenta a
+   letra do item em 2,1 ×, e itens curtos: um telefone, um endereço, um nome.
+   Se na avaliação isso ainda pesar, o caminho é encurtar os itens, nunca
+   aumentar a letra do papel (ela é ilegível de propósito).
+2. **Os quatro nomes** — Téo, Bia, Rafa e Duda — vieram por continuidade com a
+   Mesa de Edição. Trocar o elenco muda só o `elenco.ts` e a folha de sprites.
+3. **O papel não rola.** Se algum dia um papel precisar ser maior que a tela, a
+   lupa vira câmera e o jogo muda de natureza — é melhor dividir em dois papéis.
 
 ---
 
-## 17. O que mudou na construção
+## 18. O que mudou na construção
 
-*(a preencher depois de construir: as decisões que saíram diferentes do plano e o
-motivo de cada uma — é a parte que mais serve para o próximo jogo)*
+### O corte de teste (16/09/2026) — nível 1, um papel
+
+Construído e jogado inteiro no navegador: tutorial, varredura, três achados,
+duas tarjas, a TRAVA duas vezes, o carimbo e o fim de nível. O que saiu diferente
+do plano:
+
+1. **O `Reach` ganhou um degrau: `ninguem`.** O plano tinha três alcances
+   (turma, escola, mundo) e o nível 1 publica na `turma` — que é o menor deles.
+   Com isso `precisaTarja` dava `false` para tudo e **nenhum papel do nível 1
+   teria tarja nenhuma**. Telefone e endereço não vão nem para o mural da sala:
+   eles são `ninguem`, e é isso que dá trabalho já na primeira fase.
+2. **O anel entrou no retrato do papel.** Ele estava numa camada por cima
+   (`marks`), e o vidro da lupa — que é opaco — tapava justamente o anel do item
+   que estava embaixo dela. Agora o anel é desenhado dentro do conteúdo e entra
+   no `RenderTexture`: ele aparece no papel **e** aumentado dentro do vidro. A
+   camada `marks` deixou de existir.
+3. **O cartão do achado nasceu pequeno demais.** Com 330 px o texto quebrava no
+   meio de um telefone (`9` numa linha, `9999-0000` na outra). Virou 440 px com
+   corpo 36, e o selo cabe ao lado sem espremer a leitura.
+4. **O cartão abre para o lado do PAPEL, não para o lado com mais espaço.**
+   Abrindo para fora ele tapava a coluna da direita bem na hora em que a criança
+   estava lendo. Agora, item na metade direita do papel → cartão à esquerda.
+5. **O carimbo desceu 22 px** (cy 574 → 596, altura 172 → 160): o nome do
+   visitante batia na borda de cima do botão.
+6. **O destravamento é por mudança no papel**, não por mexer a lupa. Como a lupa
+   se move o tempo todo, destravar com ela deixaria o cadeado sem sentido: ele
+   sai quando entra ou sai uma tarja, ou quando um achado novo aparece.
+7. **O título do papel caiu para 32 px.** Em 36 ele quebrava em duas linhas e a
+   segunda encostava no subtítulo.
+
+### Revisão 3 — a bancada, e a lupa que se arrasta
+
+8. **A lupa deixou de perseguir o dedo.** Ela virou objeto: a criança agarra e
+   arrasta, e ela fica onde foi largada. Um toque no papel longe dela a chama
+   (`glide`), para ninguém precisar acertar a lupa com o dedo.
+9. **Apareceu a bancada com três ferramentas.** O jogo estava confuso não por
+   falta de instrução, mas por falta de VERBO visível: agora LUPA, MARCADOR e
+   BORRACHA estão desenhados embaixo do papel, com o nome de cada um, e a
+   escolhida diz o que o toque faz.
+10. **O anel deixou de alternar.** Alternar esconde o estado — toca-se e
+    descobre-se depois o que aconteceu. Com marcador e borracha separados, o que
+    vai acontecer está escolhido antes do toque.
+11. **O anel mostra onde a ferramenta funciona:** com o MARCADOR, os achados
+    ainda descobertos engrossam; com a BORRACHA, os já tapados.
+12. **O vidro da lupa virou o cursor da ferramenta.** A lente fica por cima
+    justamente do item que a criança quer marcar, e a zona de toque dela engolia
+    o toque do marcador — o item debaixo da lupa era inalcançável. Agora um
+    toque no vidro (sem arrastar) aplica a ferramenta no que está embaixo.
+13. **A tela foi refeita para caber a bancada:** o papel cresceu na largura
+    (720 → 856), encolheu na altura (500 → 452) e passou a começar em x 24; a
+    bancada ocupa 548–708. O papel 1.1 foi redesenhado nessa folha nova.
+14. **O colega e o retrato do cartão cresceram** (132 → 164 e 96 → 122 px), que
+    é o que faz a reação ser legível no celular.
+15. **A lupa ganhou desenho de lupa**: aro escuro com brilho metálico, virola e
+    cabo de madeira na diagonal, reflexo na borda de dentro e sombra no papel.
+    E ganhou um `lupa.png` opcional (§7 do TEXTURAS), com o **vidro vazado**.
+
+### A arte entrou (16/09/2026)
+
+16. **A lupa desenhada virou reserva.** Com a `lupa.png` na pasta, o código
+    desenha só a sombra e um véu leve no vidro; aro, cabo e reflexo vêm da arte.
+    O brilho branco que o código fazia foi desligado quando há arte — dois
+    reflexos brigavam no mesmo vidro.
+17. **O PNG é ancorado pelo BURACO, não pelo centro da imagem.** A lupa chegou em
+    800 × 800 (pedimos 512) e com o vidro em 0,4025 × 0,3956, raio 0,3019 — os
+    números foram medidos pelo canal alfa no navegador e moram em
+    `data/art.ts`. É isso que faz o aumento cair exatamente dentro do vidro
+    com qualquer enquadramento que a arte traga.
+18. **A lente encolheu de 104 para 92 de raio.** Com o aro e o cabo da arte, a
+    lupa inteira passou a ocupar quase 350 px e tapava metade do papel.
+19. **Ela passou a dormir no canto vazio de baixo à esquerda** (antes ficava em
+    cima, sobre a foto colada) — parada ali, ela não esconde nada e não acha
+    nada por acidente.
+
+### Revisão 4 — a lupa some, e o que foi tapado sai do papel
+
+20. **A lupa sai da mesa com o MARCADOR ou a BORRACHA escolhidos.** Ela é grande,
+    fica por cima do papel e escondia justamente o que a criança precisava ver
+    para decidir o que marcar. Enquanto está fora ela **não acha nada**: o toque
+    no papel só a chama de volta quando a ferramenta é a LUPA.
+21. **A tarja virou traço de marcador**: entra varrendo da esquerda para a
+    direita em 190 ms, com ponta grossa, sobra arredondada nas pontas e um
+    brilho por cima. A borracha tira com o traço subindo e desbotando. Antes era
+    um retângulo preto que aparecia de uma vez, e ninguém via o gesto acontecer.
+22. **No fim do carimbo, o que foi tapado SAI do papel.** Um a um, o texto some
+    por baixo do traço e o traço é levantado para fora — e sobra papel em
+    branco. É a parte que fecha a lição: o que ela tapou **não foi publicado**,
+    e isso passou a ser uma coisa que se vê, não uma coisa que se supõe.
+
+### Revisão 5 — o traço mede o texto, e o cartão perde o rosto
+
+23. **O traço passou a seguir o texto medido.** Ele usava a caixa declarada no
+    `levels.ts`, que é maior que a frase: o marcador riscava papel vazio à
+    direita e chegava perto da linha de cima. Agora cada item guarda a caixa
+    **medida depois de escrito**, e o anel e a zona de toque usam a mesma —
+    a caixa do arquivo virou só o lugar onde o item começa.
+24. **O cartão do achado perdeu o retrato.** No lugar do dono se encolhendo com
+    as mãos no rosto entrou um selo: **cadeado** para o que não pode sair,
+    **olho** para o que pode ser visto. Diz a mesma coisa, lê-se a 25 px e não
+    põe cara de ninguém numa janelinha que abre a cada achado.
+25. **Marcar sem ter achado nada deixou de não fazer nada.** Tocar no papel com
+    o MARCADOR ou a BORRACHA na mão **pisca a LUPA** na bancada: o jogo aponta
+    a ferramenta que resolve em vez de ficar mudo.
+
+### Revisão 6 — o veredito sai da tela, e a ação ganha o nome certo
+
+26. **O cartão do achado foi embora inteiro.** Ele dizia, com selo e cor, se
+    aquilo podia sair — e com isso **entregava a resposta**: a criança parava de
+    julgar e passava a esperar o selo aparecer. Sem ele, quem lê é a lupa e quem
+    decide é ela. O aumento subiu de 1,9 × para **2,1 ×** e a letra do item de
+    20 para **24 px**, porque agora é debaixo do vidro que se lê (50 px na
+    grade, 15 px reais no celular).
+27. **A fase de estreia tem UMA informação sensível.** Tinha duas — telefone e
+    endereço — e fase 1 é introdução: a criança precisa entender o gesto antes
+    de precisar procurar muito. O endereço volta na fase 1.2.
+28. **CARIMBAR virou APROVAR**, com o ícone de carimbo da folha de ferramentas
+    dentro do botão. Carimbar é o que a mão faz; **aprovar é o que a decisão
+    é** — e é a palavra que combina com um guardião que confere antes de
+    publicar. O selo verde no papel continua sendo um carimbo, que é o desenho
+    de "aprovado" que uma criança reconhece.
+
+### Revisão 7 — o nível 1 inteiro, e um bug que só aparecia no nível 2
+
+29. **A senha entrou no lugar do telefone.** Um número de contato num convite de
+    festa junina é normal — e exemplo ambíguo na fase de estreia ensina a coisa
+    errada. A 1.1 agora tem **um** dado sensível, e ele é a senha do tablet da
+    sala: nenhuma criança titubeia diante disso.
+30. **As três fases do nível 1 estão escritas** (§8): cartaz do campeonato,
+    ficha do passeio e a foto do passeio. A 1.2 estreia a **assinatura**, que
+    nunca se tapa; a 1.3 estreia o **rosto como dado** — duas crianças de outra
+    turma, desenhadas dentro da foto, achadas pela lupa e tapadas pela tarja
+    como se tapa um telefone.
+31. **O de outra turma é sempre desenhado em `Graphics`**, de costas e sem
+    rosto, mesmo com a folha de colegas carregada: é justamente quem a turma
+    **não** conhece.
+32. **Bug achado ao construir a segunda fase: a lupa congelava no papel
+    anterior.** O `RenderTexture` do papel salva a textura com uma chave fixa, e
+    `scene.restart` — que é o que o jogo faz entre NÍVEIS — criava um
+    RenderTexture novo com a chave já ocupada. A lupa continuava lendo a textura
+    da cena morta. Agora a chave é liberada ao criar e ao destruir o papel. Sem
+    isso, o nível 2 abriria com a lupa mostrando o nível 1.
+33. **O retrato do papel é tirado depois de ele voltar ao tamanho normal.** A
+    fase anterior termina com o papel encolhido voando para a bolinha, e o
+    retrato tirado naquele instante saía minúsculo.
+
+### O que o teste no navegador confirmou
+
+Um `GAME_READY`, um `CHECKPOINT` em 0, **um** `WRONG_ANSWER` (dois erros na mesma
+fase custaram uma vida só), um `CORRECT_ANSWER` de 5 pontos (10 menos a trava),
+`CHECKPOINT` em 100 e um `GAME_COMPLETED` com `stage: 1` e
+`totalStages: LEVELS.length`. O `?` reabre o tutorial e congela o jogo; nenhum
+número apareceu na tela.
+
+**O painel do navegador só desenha quadro quando alguém tira screenshot.** Para
+andar de verdade é preciso bombear `game.loop.step(t)` com um relógio próprio; a
+cena é alcançável pelo fiber do React a partir do `canvas`, o que dispensou
+qualquer gancho de depuração no código do jogo.

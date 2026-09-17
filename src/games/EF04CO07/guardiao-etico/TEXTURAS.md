@@ -3,17 +3,25 @@
 Documento irmão: [PLANEJAMENTO.md](./PLANEJAMENTO.md)
 Destino: `src/assets/games/EF04CO07/guardiao-etico/`
 
-**Quatro arquivos para jogar, mais a capa do catálogo.**
+**Cinco arquivos para jogar, mais a capa do catálogo.**
 
-> **A unidade de custo é o arquivo, não o desenho.** Uma folha de dezesseis
-> células custa a mesma geração que um ícone solto — então tudo que é pequeno e
-> do mesmo estilo entra na mesma folha. É por isso que os nove destinos e os
-> dezesseis quadros do elenco são dois arquivos, e não vinte e cinco.
+> **Revisão 2 (16/09/2026).** A lista da revisão 1 tinha cinco arquivos e incluía
+> uma folha de nove destinos. Com o destino virando o **nível** — e não o pedido
+> — os nove viraram três placas desenhadas em `Graphics`, e a folha saiu.
 
-> **Nada aqui é obrigatório para o jogo rodar.** Toda a interface é `Graphics` e
-> há reserva desenhada para os quatro arquivos: o nível 1 é jogável e vencível
-> com a pasta vazia. A arte entra para o jogo deixar de parecer interface e
-> passar a parecer o clube.
+> **A lupa continua funcionando sem arte nenhuma.** Ela nasceu em `Graphics` —
+> aro, cabo, vidro e brilho — e o `lupa.png` (§7) só troca esse desenho. O que
+> NUNCA vem de PNG é o aumento: ele é o papel de verdade, por dentro do vidro.
+> Também são `Graphics` o papel, as tarjas, os anéis, o cartão do achado, os
+> botões da bancada, o carimbo e o selo.
+
+> **Os cinco chegaram (16/09/2026), e as grades bateram.** Só a `lupa.png` veio
+> com outro tamanho — 800 × 800 no lugar de 512 — e isso não atrapalhou nada,
+> porque o jogo se guia pelo **buraco do vidro medido**, não pelo tamanho do
+> arquivo: centro em 0,4025 × 0,3956 e raio 0,3019 da largura, guardados em
+> `data/art.ts`. O vidro veio vazado de verdade: 179 371 pixels transparentes
+> cercados por desenho. A **capa** chegou depois, também 1672 × 941, e já está
+> na ficha do catálogo. **A arte deste jogo está completa.**
 
 ---
 
@@ -21,106 +29,148 @@ Destino: `src/assets/games/EF04CO07/guardiao-etico/`
 
 | # | Arquivo | Dimensão | Grade | Fundo | O que é |
 |---:|---|---:|---|---|---|
-| 1 | `bg-clube.png` | 1672 × 941 | imagem única | opaco | a sala do clube: parede calma em cima, mesa de madeira embaixo |
-| 2 | `colegas.png` | 1152 × 1152 | 4 × 4 de 288 | alfa real | os quatro colegas, cada um em quatro estados |
-| 3 | `destinos.png` | 768 × 768 | 3 × 3 de 256 | alfa real | os nove lugares para onde uma cópia pode ir |
-| 4 | `acervo.png` | 1024 × 1024 | 2 × 2 de 512 | alfa real | o que aparece DENTRO da cópia: o parque e o dragão |
-| 5 | `cover-guardiao-etico.png` | 1672 × 941 | imagem única | opaco | a capa do catálogo |
+| 1 | `bg-mesa.png` ✔ | 1672 × 941 | imagem única | opaco | a mesa do guardião, com o mural da escola ao fundo |
+| 2 | `colegas.png` ✔ | 1152 × 864 | 4 × 3 de 288 | alfa real | os quatro colegas, cada um em três estados |
+| 3 | `acervo.png` ✔ | 1024 × 1024 | 2 × 2 de 512 | alfa real | as fotos e o desenho que ficam **colados** nos papéis |
+| 4 | `ferramentas.png` ✔ | 512 × 512 | 2 × 2 de 256 | alfa real | os ícones da bancada: lupa, marcador, borracha, carimbo |
+| 5 | `lupa.png` ✔ | **800 × 800** | imagem única | **alfa real, vidro vazado** | a lupa grande, a que a criança arrasta |
+| 6 | `cover-guardiao-etico.png` ✔ | 1672 × 941 | imagem única | opaco | a capa do catálogo |
 
-**O #2 é o mais importante e o mais difícil.** A cara dos quatro é a regra do
-jogo: se as quatro linhas não se lerem a 52 px de altura num celular, o jogo
-perde a mecânica, não o acabamento.
-
-O **#4 é o que pode esperar**: sem ele a cópia mostra um retângulo de reserva com
-o nome do conteúdo e o jogo continua inteiro.
+**O #2 é o que carrega a mecânica**: é a cara de quem é dono que diz, debaixo da
+lupa, se aquilo pode sair ou não. O **#4 é o que mais ajuda a criança a entender
+o que fazer**, porque é o ícone da ferramenta escolhida. O **#3 e o #5 podem
+esperar**: sem eles a foto vira um retângulo com moldura e a lupa continua sendo
+a desenhada pelo código.
 
 ### O que é `Graphics`, e por quê
 
-- **as três etiquetas**, porque elas são mostradores de estado — acesa, apagada,
-  pulsando, e o pictograma muda de preenchimento junto;
-- **a cópia** inteira: o cartão, a tarja que cobre os rostos, as tiras de marca
-  que entram e saem, a sombra dela na mesa;
-- **a porta do destino**, que abre, fecha e segura a cópia na soleira;
-- **a prateleira** e cada cópia guardada — elas são o placar, e placar muda;
-- o balão, o bilhete, o cadeado, o rabicho, o `?`, o cabeçalho, as vidas, as
-  bolinhas de fase, as estrelas, as faíscas, o confete e a moldura da tela.
+- **a lupa** — vidro, aro, cabo, reflexo e o aumento (máscara circular sobre uma
+  cópia do papel em escala 1,9);
+- **o papel e todo o texto dele**, porque o texto precisa ser texto de verdade:
+  é ele que fica ilegível a 18 px e legível debaixo da lente;
+- **as tarjas, os anéis e o cartão do achado**, que entram e saem a cada toque;
+- **o carimbo, o selo, a placa do destino, o balão, o bilhete, o cadeado, o
+  mural, o `?`, o cabeçalho, as vidas, as bolinhas, as estrelas, o confete e a
+  moldura da tela**.
 
-**A foto do passeio não é um PNG.** Ela é o parque (#4) com os quatro colegas
-desenhados por cima, em pequeno, tirados da mesma folha #2 — porque os rostos
-precisam poder **sumir atrás de uma tarja** quando a etiqueta `ROSTOS` está
-apagada, e porque a mesma cara tem de aparecer na foto e na fileira de cima.
+> **Nenhuma letra em nenhum PNG.** Aqui isso é mais grave que nos outros jogos: a
+> lupa aumentaria uma letra **borrada** em vez de aumentar uma letra. Onde um
+> desenho precisar parecer escrito, use **linhas cinzas onduladas**.
 
 ---
 
-## 1. As quatro regras que governam esta arte
+## 1. As três regras que governam esta arte
 
-> **1. A cara é a mecânica.**
+> **1. As fotos não têm gente pintada dentro.**
 
-Nos quatro estados, o que muda é grande e legível de longe: ombros, braços,
-cabeça, olhos. Nada de diferença que só exista na sobrancelha — no celular, a
-figura tem 45 × 52 px reais, e uma sobrancelha ali não existe.
+O parque e a quadra do #3 chegam **vazios**. As crianças que aparecem nas fotos
+coladas nos papéis são desenhadas pelo jogo, com os sprites do #2 — porque o
+rosto de alguém é um **item achável**, com caixa e posição conhecidas. Uma
+criança pintada no PNG seria um rosto que o jogo não sabe onde está, e a lupa
+passaria por cima dele sem achar nada.
 
-> **2. Nenhuma letra em nenhum arquivo.**
+> **2. A cara é a mecânica.**
 
-Nem na lista, nem no jornal, nem na camiseta de ninguém, nem no cartaz do pátio.
-Letra dentro de PNG vira lixo por baixo do texto de verdade, e neste jogo o texto
-é o que muda a cada toque. Onde o desenho precisar parecer escrito, use **linhas
-cinzas onduladas**, como fazem as outras capas do catálogo.
+Nos três estados, o que muda é grande: ombros, braços, cabeça. O colega aparece
+na coluna da direita a **164 px** (49 px reais) — diferença que só existe na
+sobrancelha não existe a esse tamanho.
 
-> **3. Ninguém aponta, ninguém julga.**
+> **3. A mesa é de trabalho, e é acolhedora.**
 
-Nenhum personagem faz cara de bravo com quem está jogando, nenhum dedo em riste,
-nenhum `X` vermelho, nenhuma carinha chorando. O colega exposto **se protege**;
-o colega contrariado **cruza os braços**. Este jogo não dá bronca em criança —
-é a diferença entre ensinar ética e dar sermão.
-
-> **4. O clube é dos meninos e meninas, não é um escritório.**
-
-Sala de clube de jogos numa escola: mesa grande, tapete, caixas de jogo
-empilhadas, um cartaz de cortiça vazio ao fundo. Nada de tela de computador com
-interface, nada de janela de programa, nada de ícone de aplicativo.
+Mesa de guardião do mural: madeira clara, um pote de lápis, fita crepe, o mural
+de cortiça na parede ao fundo. Nada de escritório, nada de tela de computador,
+nada de cara de repartição.
 
 ---
 
 ## 2. Estilo e paleta
 
-Visual: **jogo 2D infantil polido**, formas arredondadas, áreas foscas amplas,
+### A referência é uma imagem, e ela vai anexada em TODOS os prompts
+
+O estilo deste jogo não é descrito só por palavras: ele é a imagem de referência
+**"Elementary — Class of '26"**, que deve ser **anexada junto com o texto em cada
+uma das gerações**. Guarde-a em `references/` (junto das outras do
+projeto, fora de `src/`, para não entrar no bundle) — por exemplo
+`references/13-elementary.png` — e anexe sempre a mesma.
+
+Do que se trata, em palavras, para o caso de o gerador ignorar o anexo:
+
+- **traço de graphic novel infantil**: contorno preto firme, de espessura
+  variável — grosso na silhueta, fino dentro da figura;
+- **cor chapada com sombreado de desenho animado**: duas ou três faixas de
+  sombra, degradê suave dentro da área chapada, sem pintura realista;
+- **paleta quente e saturada**, com vermelho, laranja e verde-água puxando o
+  olho, e fundos mais lavados que as figuras;
+- **rostos muito expressivos**, olhos grandes e arredondados, sobrancelha que
+  conta a emoção sozinha;
+- **formas encorpadas e arredondadas**, anatomia simplificada, mãos gordinhas;
+- **textura leve de papel** por baixo, e o fundo com um padrão discreto de
+  caderno, bem apagado.
+
+> **Da referência se tira o TRAÇO, nunca o elenco.** A imagem tem dragão, elfa e
+> criatura alada, e o nosso elenco é de **crianças brasileiras comuns**: nada de
+> asa, orelha pontuda, chifre, cauda, focinho ou pele colorida. Também não se
+> copia a composição de capa, o letreiro nem o enquadramento dela.
+
+### Linha de estilo — cole em todos os prompts
+
+~~~text
+STYLE: match the drawing style of the ATTACHED REFERENCE IMAGE — children's
+graphic-novel / animated-cartoon art: confident black ink outlines of varying
+weight (heavier on the silhouette, lighter inside), flat colour with clean
+cel-shaded steps and soft gradients, warm saturated palette, very expressive
+faces with large rounded eyes, chunky rounded shapes and simplified anatomy, a
+faint paper grain. Take ONLY the drawing style from the reference: do NOT copy
+its characters, its creatures, its cover layout, its lettering or its subject.
+All characters here are ordinary human Brazilian schoolchildren — no wings, no
+pointed ears, no horns, no tails, no animal or fantasy features.
+~~~
+
+### As cores do jogo
+
+Visual: **jogo 2D infantil polido**, formas arredondadas, áreas chapadas amplas,
 contorno firme, leitura fácil em celular. Luz quente vinda de cima à esquerda.
 
 | Uso | Hex |
 |---|---|
 | contorno | `#2a2233` |
-| parede do clube | `#dfe6ee` |
-| sombra na parede | `#c6d2e0` |
-| madeira da mesa | `#8a5f3c` |
-| tampo da mesa | `#a97a4f` |
-| papel da cópia | `#fffaf0` |
-| cortiça | `#c9a06a` |
+| parede | `#dfe6ee` |
+| madeira da mesa | `#a97a4f` |
+| frente da mesa | `#8a5f3c` |
+| cortiça do mural | `#c9a06a` |
+| papel (código) | `#fffaf0` |
+| tarja (código) | `#2a2233` |
+| achado e TRAVA (código) | `#e59a52` |
 | acerto (código) | `#4eaa78` |
-| dica e TRAVA (código) | `#e59a52` |
-| seleção e foco (código) | `#4b8fe0` |
-| recusa (código) | `#d4626a` |
+| foco (código) | `#4b8fe0` |
 
 ### Negativo comum a todos os arquivos
 
 ~~~text
 text, letters, words, labels, digits, numbers, captions, signature, watermark,
-logo, brand, user interface, app window, browser, toolbar, menu bar, app icons,
+logo, brand, user interface, app window, browser, toolbar, app icons,
 computer screen with interface, cursor, mouse pointer, emoji, speech bubble,
-thought bubble, red X mark, green check mark, warning sign, exclamation mark,
+red X mark, green check mark, warning sign,
 angry face pointing at the viewer, crying child, scolding adult,
-HUD, life icon, heart meter, star rating, question mark button, tutorial panel,
+dragons, elves, griffins, wings, pointed ears, horns, tails, animal features,
+fantasy creatures, comic book cover layout, title banner, lettering,
+HUD, life icon, star rating, question mark button, tutorial panel,
 grid lines, visible sprite-sheet borders, cropped edges, drop shadow on the cell,
 white backing in transparent assets, painted checkerboard,
 3D render, photorealistic, blur, lens flare, noise, gradient banding.
 ~~~
+
+**Nenhuma lupa no fundo, nos colegas ou no acervo.** A lupa do jogo é uma só, e
+uma segunda pintada no cenário confundiria a criança sobre qual delas se move —
+por isso `magnifying glass, lens, loupe` entra no negativo desses três arquivos.
+Nos §6 e §7, ao contrário, a lupa é justamente o assunto.
 
 Se o gerador não entregar transparência real, peça sobre magenta `#FF00FF` e
 remova a cor.
 
 ---
 
-## 3. `bg-clube.png` — a sala do clube
+## 3. `bg-mesa.png` — a mesa do guardião
 
 ### Contrato
 
@@ -128,77 +178,72 @@ remova a cor.
 |---|---|
 | tamanho | 1672 × 941, paisagem, borda a borda |
 | fundo | opaco |
-| **faixa dos colegas** | y 8 %–32 %, x 28 %–80 %: parede **lisa e vazia**, onde os quatro ficam de pé |
-| **a mesa** | y 36 %–60 %: tampo de madeira atravessando a tela, **liso**, onde a cópia é desenhada |
-| **coluna da direita** | x 78 %–100 %, y 8 %–60 %: parede calma, onde o jogo desenha a porta e a prateleira |
-| **canto esquerdo** | x 0 %–26 %, y 10 %–38 %: parede calma, onde fica o balão |
-| clima | clube de jogos de escola: caixas de jogo empilhadas no chão, tapete, uma plantinha |
+| **área do papel** | x 8 %–68 %, y 10 %–84 %: **tampo de mesa liso**, onde a folha é desenhada |
+| **coluna da direita** | x 70 %–100 %, y 10 %–92 %: parede e um canto de mesa calmos |
+| o mural | no alto à direita ou ao fundo, de cortiça, **vazio** |
+| clima | cantinho de trabalho de escola: pote de lápis, rolo de fita crepe, uma plantinha |
 
-Mais da metade da imagem é "lugar onde o jogo desenha". O que a arte entrega é a
-**sala em volta** — e a mesa, que é a única coisa que encosta em desenho do
-código.
+Dois terços da imagem são "lugar onde o jogo desenha".
 
-> **A regra da emenda:** a cópia é `Graphics` deitada sobre a mesa que é PNG. Por
-> isso o tampo tem de ser **liso, de tom uniforme e sem sombra pintada no meio**:
-> a sombra da cópia é desenhada pelo jogo, e duas sombras diferentes na mesma
+> **A regra da emenda:** o papel é `Graphics` deitado sobre a mesa que é PNG. Por
+> isso o tampo tem de ser **liso, de tom uniforme e sem sombra pintada no meio** —
+> a sombra da folha é desenhada pelo jogo, e duas sombras diferentes na mesma
 > madeira é a primeira coisa que o olho acha.
 
 ### Prompt copiável
 
 ~~~text
-A cosy school game-club room background for a children's game, exactly 1672 by
-941 pixels, landscape, fully opaque. Calm light blue-grey walls #dfe6ee, a warm
-wooden floor with a soft round rug, a stack of closed plain board-game boxes in
-the lower left corner, a small potted plant, warm light falling from the upper
-left.
+STYLE: match the drawing style of the ATTACHED REFERENCE IMAGE — children's
+graphic-novel / animated-cartoon art: confident black ink outlines of varying
+weight, flat colour with clean cel-shaded steps and soft gradients, warm
+saturated palette, chunky rounded shapes, a faint paper grain. Take ONLY the
+drawing style: do NOT copy its characters, creatures, cover layout or lettering.
 
-THE UPPER MIDDLE OF THE WALL MUST STAY EMPTY: from x=28% to x=80% and y=8% to
-y=32% leave plain, clean, undecorated wall — no posters, no pictures, no shelves,
-no windows. Characters will stand there.
+A cosy school noticeboard-keeper's desk, seen from above at a slight angle, as a
+background for a children's game. Exactly 1672 by 941 pixels, landscape, fully
+opaque. Warm wooden desktop #a97a4f filling most of the frame, calm light
+blue-grey wall #dfe6ee behind it, warm light from the upper left.
 
-The RIGHT COLUMN, x=78% to 100%, y=8% to 60%, must also stay plain empty wall,
-and so must the LEFT CORNER, x=0% to 26%, y=10% to 38%. The game draws things
-over both.
+THE MAIN AREA MUST STAY EMPTY: from x=8% to x=68% and y=10% to y=84% the desktop
+must be plain, flat, evenly lit wood — no papers, no objects, no painted shadows,
+no highlights in the middle. The game draws a sheet of paper there.
 
-Across the middle, from y=36% to y=60%, there is a LARGE WOODEN TABLE seen from
-the front, spanning the whole width: warm wood #a97a4f with a darker front edge
-#8a5f3c, visible grain, one soft even highlight. Its surface must be COMPLETELY
-EMPTY and FLAT — no objects, no papers, no cards, no painted shadows in the
-middle of the tabletop.
+Keep the RIGHT COLUMN, x=70% to 100%, calm as well: a little wall and a clean
+corner of the desk, where a character will stand.
 
-Polished flat 2D children's game art, rounded shapes, broad matte colour areas,
-dark outline #2a2233 on the major shapes, gentle warm ambient light. Friendly and
+Around the edges, and only there: a cup with pencils, a roll of masking tape, a
+small potted plant, and on the wall an EMPTY cork noticeboard with two round pins
+and nothing pinned to it.
+
+Dark ink outline #2a2233 on the major shapes, warm ambient light, friendly and
 calm. Readable when scaled down to a 390-pixel-wide mobile display.
 
-Negative: posters on the wall, framed pictures, windows, computer, monitor,
-screen, interface, papers or objects on the table, painted shadows on the
-tabletop, clutter, text, letters, numbers, logo, HUD, grid, 3D, photorealism,
-blur, watermark.
+Negative: papers on the desk, notes, documents, clutter, painted shadows on the
+desktop, magnifying glass, lens, loupe, computer, screen, interface, text, letters, numbers,
+logo, HUD, grid, 3D, photorealism, blur, watermark.
 ~~~
 
 ### Conferência
 
-- [ ] a faixa de parede do meio está **vazia de verdade**;
-- [ ] o tampo da mesa está limpo e de tom uniforme, sem sombra pintada;
-- [ ] a coluna da direita e o canto esquerdo estão calmos;
-- [ ] lê-se "clube de jogos" em dois segundos, e não "sala de aula".
+- [ ] a área central do tampo está **vazia e de tom uniforme**;
+- [ ] não há nenhuma lupa pintada;
+- [ ] o mural de cortiça está vazio;
+- [ ] a coluna da direita está calma;
+- [ ] lê-se "mesa de trabalho de escola" em dois segundos.
 
 ---
 
-## 4. `colegas.png` — os quatro, e a cara deles
-
-**É o arquivo que carrega a mecânica.** Cada coluna é uma pessoa; cada linha é um
-estado que o jogo troca dezenas de vezes por partida.
+## 4. `colegas.png` — quem traz, e quem é dono
 
 ### Contrato da folha
 
 | Campo | Exigência |
 |---|---|
-| canvas | 1152 × 1152 |
-| grade | 4 colunas × 4 linhas; células de 288 × 288 |
+| canvas | 1152 × 864 |
+| grade | 4 colunas × 3 linhas; células de 288 × 288 |
 | fundo | alfa real |
-| enquadramento | **meio corpo**, da cintura para cima, centrado, mesma escala nas 16 células |
-| direção | todos virados ligeiramente para a **frente-esquerda**, na direção da mesa |
+| enquadramento | **meio corpo**, da cintura para cima, centrado, mesma escala nas 12 células |
+| direção | virados ligeiramente para a **esquerda**, na direção do papel |
 
 | Coluna | Personagem |
 |---:|---|
@@ -207,32 +252,46 @@ estado que o jogo troca dezenas de vezes por partida.
 | 3 | **Rafa**, menino de 10 anos, óculos, cabelo crespo, camiseta lisa verde |
 | 4 | **Duda**, menina de 9 anos, tranças, camiseta com um dinossauro |
 
-| Linha | Estado | O que o corpo faz | Quando o jogo usa |
+| Linha | Estado | O que o corpo faz | Onde o jogo usa |
 |---:|---|---|---|
-| 1 | **calmo** | de pé, ombros soltos, olhando para a mesa, sorriso leve | o tempo todo |
-| 2 | **contente** | acena com uma das mãos, cabeça um pouco inclinada, sorriso grande | quando autorizou, e no acerto |
-| 3 | **encolhido** | ombros para dentro, **as duas mãos cobrindo metade do rosto**, corpo um palmo menor, olhar para baixo | quando fica exposto |
-| 4 | **chateado** | **braços cruzados**, boca de lado, sobrancelhas caídas, olhando para o lado | quando o pedido dele foi recusado |
+| 1 | **calmo** | de pé, mãos juntas, esperando, sorriso leve | quem trouxe o papel, o tempo todo |
+| 2 | **contente** | acena com uma das mãos, sorriso grande | o autor quando a lupa acha a assinatura dele; e o acerto |
+| 3 | **encolhido** | ombros para dentro, **mãos cobrindo metade do rosto**, corpo menor, olhar para baixo | o dono, no cartão do achado, quando aquele dado não pode sair |
 
 Três exigências que decidem se a folha serve:
 
-1. **As quatro células de uma coluna são a MESMA pessoa**: mesma roupa, mesma
-   altura de cabeça, mesma distância da cintura à base da célula. O jogo troca o
-   quadro no mesmo lugar, e qualquer deslocamento vira um pulo.
-2. **Os estados 3 e 4 se leem pela silhueta.** Tape o rosto com o polegar: ainda
-   dá para dizer qual é o encolhido e qual é o de braços cruzados. Se não der, a
-   mecânica morre no celular.
-3. **Ninguém acusa ninguém.** O encolhido se protege, o chateado se fecha. Nada
-   de dedo apontado, nada de choro, nada de cara de bravo para quem joga.
+1. **As três células de uma coluna são a MESMA pessoa**: mesma roupa, mesma
+   altura de cabeça, mesma distância da cintura à base. O jogo troca o quadro no
+   mesmo lugar.
+2. **A linha 3 se lê pela silhueta.** Tape o rosto com o polegar: ainda dá para
+   dizer que aquela pessoa está se encolhendo. Ela aparece quando o papel volta
+   sem carimbo, e é a linha que volta a valer muito nos níveis 2 e 3, quando o
+   dono do dado estiver na própria foto.
+3. **Ninguém acusa ninguém.** O dono se protege, e é só. Nada de dedo apontado,
+   nada de choro, nada de cara de bravo para quem joga — este jogo não dá bronca
+   em criança.
+
+**Falta um quinto rosto, e ele não está aqui:** o "estranho", a criança de outra
+turma que aparece no fundo de uma foto. Ele é desenhado em `Graphics`, de costas
+e sem traço de rosto, exatamente porque **não é ninguém que a criança conheça** —
+e é isso que o torna um dado que não pode ser publicado.
 
 ### Prompt copiável
 
 ~~~text
-Create ONE character sprite sheet on a grid of 4 columns by 4 rows, exactly 1152
-by 1152 pixels, each cell exactly 288 by 288, TRUE transparent PNG background, no
-cell borders and no gaps. Four friendly Brazilian children, each drawn FOUR times
-down their own column, from the waist up, centred in the cell, all at the SAME
-scale, all turned slightly towards the front-left.
+STYLE: match the drawing style of the ATTACHED REFERENCE IMAGE — children's
+graphic-novel / animated-cartoon art: confident black ink outlines of varying
+weight, flat colour with clean cel-shaded steps, warm saturated palette, very
+expressive faces with large rounded eyes, chunky rounded shapes and simplified
+anatomy. Take ONLY the drawing style: do NOT copy its characters or creatures.
+These are ordinary HUMAN Brazilian schoolchildren — no wings, no pointed ears,
+no horns, no tails, no animal or fantasy features of any kind.
+
+Create ONE character sprite sheet on a grid of 4 columns by 3 rows, exactly 1152
+by 864 pixels, each cell exactly 288 by 288, TRUE transparent PNG background, no
+cell borders and no gaps. Four friendly Brazilian children, each drawn THREE
+times down their own column, from the waist up, centred in the cell, all at the
+SAME scale, all turned slightly towards the LEFT.
 
 Column 1 — Téo, a cheerful 9-year-old boy, short dark hair, striped t-shirt.
 Column 2 — Bia, a 10-year-old girl, curly hair tied up, denim dungarees.
@@ -240,115 +299,40 @@ Column 3 — Rafa, a 10-year-old boy with glasses and short curly hair, plain gr
 t-shirt.
 Column 4 — Duda, a 9-year-old girl with braids, t-shirt with a small dinosaur.
 
-Row 1 (CALM) — standing relaxed, shoulders loose, looking down towards a table,
-soft smile.
-Row 2 (HAPPY) — waving with one hand, head slightly tilted, big warm smile.
+Row 1 (CALM) — standing, hands together, waiting politely, soft smile.
+Row 2 (HAPPY) — waving with one hand, big warm smile, proud.
 Row 3 (SHRINKING BACK) — shoulders pulled in, BOTH HANDS COVERING HALF OF THE
-FACE, body noticeably smaller and lower in the cell, eyes looking down,
-uncomfortable but not crying.
-Row 4 (UPSET) — ARMS FIRMLY CROSSED, mouth pressed to one side, eyebrows down,
-looking away to the side, sulking but gentle.
+FACE, body noticeably smaller and lower in the cell, eyes down, uncomfortable but
+not crying.
 
-CRITICAL: within each column all four drawings are the SAME child at the SAME
+CRITICAL: within each column all three drawings are the SAME child at the SAME
 scale, same clothes, same head size, waist at the SAME height in the cell — only
-pose and expression change. Rows 3 and 4 must be recognisable from the SILHOUETTE
-alone, at very small size.
+pose and expression change. Row 3 must be recognisable from the SILHOUETTE alone
+at very small size.
 
-Polished flat 2D children's game art, rounded friendly proportions, broad matte
-colours, dark outline #2a2233, soft upper-left light, very expressive faces and
-body language, warm and kind. Nobody points at the viewer, nobody scolds, nobody
-cries.
+Rounded friendly proportions, dark ink outline #2a2233, soft upper-left light,
+warm and kind. Nobody holds anything, nobody points at the viewer, nobody scolds,
+nobody cries.
 
-Negative: pointing fingers, angry faces towards the viewer, tears, crying,
-scolding, red X marks, speech bubbles, emoji, held objects, phones, papers,
-text, letters, numbers, logos on clothes, shadows painted on the ground, cell
-borders, grid, 3D, photorealism, blur, watermark.
+Negative: wings, pointed ears, horns, tails, animal features, fantasy creatures,
+pointing fingers, angry faces towards the viewer, tears, crying,
+scolding, held objects, papers, phones, speech bubbles, emoji, text, letters,
+numbers, logos on clothes, shadows painted on the ground, cell borders, grid, 3D,
+photorealism, blur, watermark.
 ~~~
 
 ### Conferência
 
-- [ ] as quatro células de cada coluna são inequivocamente a mesma criança;
-- [ ] a cintura está na mesma altura nas 16 células;
-- [ ] encolhido e chateado se distinguem **de silhueta**, com o rosto tapado;
+- [ ] as três células de cada coluna são inequivocamente a mesma criança;
+- [ ] a cintura está na mesma altura nas 12 células;
+- [ ] a linha 3 se distingue **de silhueta**, com o rosto tapado pelo polegar;
 - [ ] ninguém aponta, ninguém chora, ninguém repreende;
-- [ ] a 52 px de altura (o tamanho real no celular) ainda dá para dizer quem está
-      encolhido.
+- [ ] a 27 px (o retrato no cartão, no celular) ainda dá para dizer quem está
+      se protegendo.
 
 ---
 
-## 5. `destinos.png` — os nove lugares
-
-Cada pedido mostra, na porta da direita, **para onde a cópia vai**. É a
-informação que muda o veredito (§8 do planejamento), então o pictograma tem de
-dizer o lugar sem uma letra.
-
-### Contrato da folha
-
-| Campo | Exigência |
-|---|---|
-| canvas | 768 × 768 |
-| grade | 3 colunas × 3 linhas; células de 256 × 256 |
-| fundo | alfa real |
-| estilo | objetos isolados, mesma escala aparente, mesmo traço |
-
-| Célula | Destino | Alcance | Desenho |
-|---:|---|---|---|
-| 1 | o mural da sala | turma | quadro de cortiça pequeno com dois prendedores, vazio |
-| 2 | o caderno do clube | turma | caderno aberto, folhas lisas |
-| 3 | o mural da festa | escola | quadro com bandeirinhas de festa junina em volta, vazio |
-| 4 | o jornal da escola | escola | jornal dobrado, colunas indicadas por **linhas cinzas onduladas** |
-| 5 | o cartaz do pátio | escola | cavalete com uma folha grande e lisa |
-| 6 | o grupo dos pais | família | celular de frente, tela lisa com três balõezinhos vazios |
-| 7 | a van do tio | fora | van escolar de perfil, amigável |
-| 8 | o site de figurinhas | fora | tela de computador com um álbum de figurinhas aberto ao lado |
-| 9 | o concurso da cidade | fora | um prédio de prefeitura simpático com uma faixa lisa e uma fita de prêmio |
-
-Uma exigência: **os quatro "fora" não podem parecer maus.** A van é simpática, o
-site é colorido, a prefeitura é alegre. O jogo não ensina que a internet é
-perigosa — ensina que dado de outra pessoa não vai para longe sem ela combinar.
-
-### Prompt copiável
-
-~~~text
-Create ONE icon sprite sheet on a grid of 3 columns by 3 rows, exactly 768 by 768
-pixels, each cell exactly 256 by 256, TRUE transparent PNG background, no cell
-borders and no gaps. Nine friendly objects in one consistent style, each centred
-and filling most of its cell:
-
-Cell 1 — a small empty cork notice board with two round pins, warm wooden frame.
-Cell 2 — an open notebook with completely blank pages.
-Cell 3 — an empty notice board framed by small triangular party bunting flags.
-Cell 4 — a folded newspaper, its columns suggested ONLY by soft grey wavy lines,
-never by letters.
-Cell 5 — a wooden easel holding one large blank sheet of paper.
-Cell 6 — a chunky friendly mobile phone seen from the front, plain screen with
-three small EMPTY rounded chat bubbles.
-Cell 7 — a cheerful little school van seen from the side.
-Cell 8 — a friendly desktop computer screen next to an open sticker album with
-blank colourful sticker shapes.
-Cell 9 — a cheerful small town-hall building with a blank banner and a round
-prize ribbon.
-
-Polished flat 2D children's game art, rounded shapes, broad matte colours, dark
-outline #2a2233, soft upper-left light, cheerful palette. All nine objects look
-friendly and inviting — none of them should look dangerous, dark or scary.
-
-Negative: text, letters, numbers, captions, app icons, interface elements inside
-the phone or computer, warning signs, padlocks, dark or menacing atmosphere,
-frames around the cells, grid, visible cell borders, 3D, photorealism, blur,
-watermark.
-~~~
-
-### Conferência
-
-- [ ] os nove se leem a 73 × 46 px reais, que é o tamanho da porta no celular;
-- [ ] nenhum deles tem letra, nem no jornal, nem na faixa, nem na tela;
-- [ ] os quatro de "fora" parecem simpáticos;
-- [ ] o mural da sala e o mural da festa não se confundem.
-
----
-
-## 6. `acervo.png` — o que aparece dentro da cópia
+## 5. `acervo.png` — o que fica colado nos papéis
 
 ### Contrato da folha
 
@@ -361,79 +345,247 @@ watermark.
 
 | Célula | Imagem | Onde é usada |
 |---:|---|---|
-| 1 | **o parque do passeio**: gramado, árvores, um lago ao fundo, banco de praça — **e nenhuma pessoa** | o fundo da foto do nível 1; os quatro colegas entram por cima, desenhados pelo jogo |
-| 2 | **o dragão do Rafa**: desenho de criança de 10 anos, giz de cera, dragão verde sorrindo | a peça do nível 3 |
-| 3 | **a mesa da festa junina**: bolo, quentão, milho, bandeirinhas | reserva: o cabeçalho da lista do nível 2 |
-| 4 | **a caixa de jogos do clube** | reserva |
+| 1 | **o parque do passeio**: gramado, árvores, um lago ao fundo, um banco — **e nenhuma pessoa** | a foto colada no papel 1.3 e no 3.3 |
+| 2 | **a quadra de queimada**: piso de quadra, linhas do chão, uma bola parada, alambrado — **e nenhuma pessoa** | a foto do papel 1.2 |
+| 3 | **o dragão do Rafa**: desenho de criança de 10 anos, giz de cera, dragão verde sorrindo | o desenho colado nos papéis 2.2 e 3.1 |
+| 4 | **a mesa da festa junina**: bolo, quentão, milho, bandeirinhas | o papel 1.1 e reserva |
 
 Duas exigências:
 
-1. **A célula 1 não tem gente.** Se vierem crianças pintadas no parque, os quatro
-   sprites por cima viram oito crianças, e a tarja que cobre os rostos deixa
-   quatro rostos descobertos — a mecânica inteira cai.
-2. **A célula 2 tem de parecer feita por uma criança**, não por um ilustrador:
-   traço trêmulo, cor saindo da linha, papel de caderno. É ela que faz a autoria
-   do Rafa ser acreditável.
+1. **As células 1 e 2 não têm gente.** As crianças que aparecem nessas fotos são
+   sprites que o jogo posiciona — inclusive **o rosto que é um item achável**. Uma
+   criança pintada no PNG viraria um rosto que a lupa nunca acha.
+2. **A célula 3 tem de parecer feita por uma criança**, não por um ilustrador:
+   traço trêmulo, cor saindo da linha. É ela que faz a autoria do Rafa ser
+   acreditável — e a assinatura, que é o item que não se pode tapar, é escrita
+   pelo jogo no cantinho, em texto de verdade.
 
 ### Prompt copiável
 
 ~~~text
+STYLE: match the drawing style of the ATTACHED REFERENCE IMAGE — children's
+graphic-novel / animated-cartoon art: confident black ink outlines of varying
+weight, flat colour with clean cel-shaded steps, warm saturated palette, chunky
+rounded shapes. Take ONLY the drawing style: do NOT copy its characters,
+creatures, cover layout or lettering. Cell 3 is the one exception below.
+
 Create ONE sprite sheet on a grid of 2 columns by 2 rows, exactly 1024 by 1024
 pixels, each cell exactly 512 by 512, TRUE transparent PNG background, no cell
 borders and no gaps. Four illustrations, each centred and filling most of its
 cell:
 
-Cell 1 — a sunny park scene: green lawn, two or three round leafy trees, a small
-lake in the background, one park bench. ABSOLUTELY NO PEOPLE, no children, no
-adults, no animals — the park must be completely empty.
+Cell 1 — a sunny park: green lawn, two or three round leafy trees, a small lake
+in the background, one park bench. ABSOLUTELY NO PEOPLE, no children, no adults,
+no animals — completely empty.
 
-Cell 2 — a CHILD'S OWN DRAWING of a friendly green dragon, as if drawn with wax
-crayons by a ten-year-old on a sheet of notebook paper: wobbly outlines, colour
-going outside the lines, simple shapes, cheerful.
+Cell 2 — an outdoor school ball court: flat court floor with painted line
+markings, a simple fence behind, one ball resting on the ground. ABSOLUTELY NO
+PEOPLE — completely empty.
 
-Cell 3 — a Brazilian June-festival table: a cake, a jug of hot spiced drink, corn
+Cell 3 — a CHILD'S OWN DRAWING of a friendly green dragon, as if drawn with wax
+crayons by a ten-year-old: wobbly outlines, colour going outside the lines,
+simple shapes, cheerful. No signature, no writing anywhere.
+
+Cell 4 — a Brazilian June-festival table: a cake, a jug of hot spiced drink, corn
 cobs, small triangular bunting flags above.
 
-Cell 4 — a stack of closed, plain board-game boxes.
+Cells 1, 2 and 4 follow the reference style above, with dark ink outline
+#2a2233 and soft upper-left light. Cell 3 IGNORES the reference style on purpose
+and is drawn in a naive child's crayon style, clearly different from the others.
 
-Cells 1, 3 and 4 in polished flat 2D children's game art, rounded shapes, broad
-matte colours, dark outline #2a2233, soft upper-left light. Cell 2 deliberately
-in a naive child's crayon style, clearly different from the others.
-
-Negative: people in the park, children, figures, animals, text, letters, numbers,
-captions, frames, picture borders, photo corners, drop shadows on the cell, grid,
-visible cell borders, 3D, photorealism, blur, watermark.
+Negative: people, children, figures, faces, animals, signatures, text, letters,
+numbers, captions, frames, picture borders, photo corners, drop shadows on the
+cell, grid, visible cell borders, 3D, photorealism, blur, watermark.
 ~~~
 
----
+### Conferência
 
-## 7. `cover-guardiao-etico.png` — a capa
-
-1672 × 941, opaca, no mesmo estilo. A cena: a **mesa do clube** vista de frente,
-com uma foto de papel no meio e uma mão infantil pousada nela; os **quatro
-colegas** atrás, três sorrindo e **uma com as mãos no rosto**; à direita, uma
-portinhola de onde sai um envelope. Luz quente, clima de "peraí, deixa eu
-pensar".
-
-A capa precisa contar o jogo sem uma palavra: **tem gente dentro do que você vai
-mandar.** Se o gerador insistir em escrever no papel, peça o papel com **manchas
-e linhas onduladas** no lugar do texto — é assim que as outras capas do catálogo
-resolvem.
+- [ ] as células 1 e 2 estão **vazias de gente**, sem exceção;
+- [ ] o dragão parece desenho de criança, e não tem nenhuma assinatura pintada;
+- [ ] as quatro se leem dentro de uma área de ~200 × 140 px do papel;
+- [ ] transparência de verdade, sem borda branca em volta.
 
 ---
 
-## 8. Depois que a arte chegar
+## 6. `ferramentas.png` — os ícones da bancada
 
-1. Medir a **caixa alfa** de cada quadro num canvas e ancorar o layout nela, em
+A bancada tem três botões — **LUPA**, **MARCADOR** e **BORRACHA** — e a
+ferramenta escolhida é o que o toque no papel FAZ. O botão inteiro (painel,
+relevo, estado aceso e apagado) é `Graphics`; o que vem da arte é **só o ícone
+dentro dele**, que aparece a 84 × 84 px na grade (25 px reais no celular).
+
+### Contrato da folha
+
+| Campo | Exigência |
+|---|---|
+| canvas | 512 × 512 |
+| grade | 2 colunas × 2 linhas; células de 256 × 256 |
+| fundo | alfa real |
+| enquadramento | cada objeto **centrado e inteiro** na célula, com margem transparente |
+| leitura | reconhecível a 25 px: silhueta clara, nada de detalhe fino |
+
+| Célula | Ícone | Exigência |
+|---:|---|---|
+| 1 · linha 1 | **lupa** | de lado, vidro para cima à esquerda e cabo de madeira para baixo à direita — **a mesma lupa do jogo, em miniatura** |
+| 2 · linha 1 | **marcador** | caneta marca-texto grossa, de ponta chanfrada, inclinada, com tampa; a ponta é escura |
+| 1 · linha 2 | **borracha** | borracha de escola chanfrada, clara com uma faixa azul, inclinada, com farelinhos soltos |
+| 2 · linha 2 | **carimbo** | carimbo de madeira de cabo redondo, visto de lado, com a almofada embaixo |
+
+> **O carimbo é reserva.** O botão CARIMBAR é desenhado pelo código; a célula
+> custa zero porque está na mesma folha, e serve se um dia ele virar arte.
+
+### Prompt copiável
+
+~~~text
+STYLE: match the drawing style of the ATTACHED REFERENCE IMAGE — children's
+graphic-novel / animated-cartoon art: confident black ink outlines of varying
+weight, flat colour with clean cel-shaded steps, warm saturated palette, chunky
+rounded shapes. Take ONLY the drawing style: do NOT copy its characters,
+creatures, cover layout or lettering.
+
+Create ONE icon sprite sheet on a grid of 2 columns by 2 rows, exactly 512 by
+512 pixels, each cell exactly 256 by 256, TRUE transparent PNG background, no
+cell borders and no gaps. Four chunky school-desk objects, each centred in its
+cell with a small transparent margin, each drawn at a slight three-quarter
+angle, all lit from the upper left:
+
+Cell 1 (top left) — a classic MAGNIFYING GLASS seen from the side: a round lens
+with pale blue-white glass, a thick dark metal rim, and a warm wooden handle
+pointing to the lower right.
+
+Cell 2 (top right) — a fat HIGHLIGHTER MARKER pen, tilted, with a chisel tip
+pointing to the lower left, a coloured barrel and a small cap ring; the tip is
+dark, as if it draws a black bar.
+
+Cell 3 (bottom left) — a chunky school ERASER, tilted, pale cream with a blue
+band across it, softly rounded corners, three tiny eraser crumbs beside it.
+
+Cell 4 (bottom right) — a wooden RUBBER STAMP seen from the side: a round wooden
+knob handle on top, a wider base, and a dark ink pad surface underneath.
+
+Each object must read clearly at 25 pixels wide: bold silhouette, few internal
+details, strong contrast against transparency.
+
+Negative: text, letters, numbers, labels, brand names, hands holding the
+objects, backgrounds, panels, buttons, frames around the objects, drop shadows
+on the cell, grid, visible cell borders, 3D, photorealism, blur, watermark.
+~~~
+
+### Conferência
+
+- [ ] os quatro se leem a 25 px de largura;
+- [ ] a lupa do ícone é a mesma lupa do jogo (vidro claro, aro escuro, cabo de madeira);
+- [ ] nenhum deles tem mão segurando, nem fundo, nem moldura;
+- [ ] transparência de verdade.
+
+---
+
+## 7. `lupa.png` — a lupa que a criança arrasta
+
+A lupa é o gesto principal do jogo. Ela já existe desenhada em `Graphics` e
+continua funcionando assim; esta arte **substitui só o aro, o cabo e o brilho** —
+o aumento continua sendo o papel de verdade, desenhado por dentro do vidro.
+
+> **Esta é a exigência que decide tudo: o miolo do vidro é VAZADO.** Se o vidro
+> vier pintado, mesmo que claro, ele tapa o que a lupa aumenta e o jogo perde a
+> mecânica. Alfa zero no centro.
+
+### Contrato
+
+| Campo | Exigência |
+|---|---|
+| canvas | 512 × 512 |
+| fundo | alfa real |
+| **o vidro** | círculo **completamente transparente**, centrado em 42 % × 42 % do canvas, com raio de **30 % da largura** |
+| o aro | anel escuro com brilho metálico em volta desse círculo, espessura ~5 % da largura |
+| o cabo | sai do aro na diagonal para **baixo à direita**, madeira quente, com uma virola de metal na emenda |
+| o brilho | um risco branco fino **na borda de dentro do aro**, no canto de cima à esquerda — nunca atravessando o meio do vidro |
+
+Os números de posição são o contrato com o código: o jogo ancora a arte pelo
+**centro do vidro**, não pelo centro do PNG. Se vierem diferentes, eles são
+medidos e corrigidos em `data/art.ts` — nunca esticando o PNG.
+
+### Prompt copiável
+
+~~~text
+STYLE: match the drawing style of the ATTACHED REFERENCE IMAGE — children's
+graphic-novel / animated-cartoon art: confident black ink outlines of varying
+weight, flat colour with clean cel-shaded steps, warm saturated palette, chunky
+rounded shapes. Take ONLY the drawing style: do NOT copy its characters,
+creatures, cover layout or lettering.
+
+A single big cartoon MAGNIFYING GLASS, exactly 512 by 512 pixels, TRUE
+transparent PNG background, seen straight on, tilted so the handle points to the
+lower right.
+
+CRITICAL: the inside of the lens must be COMPLETELY EMPTY AND TRANSPARENT — no
+glass colour, no tint, no shine across the middle, no reflection, no white fill,
+nothing at all. It is a hole. A drawing will be shown through it.
+
+The empty circular hole is centred at 42% across and 42% down the canvas and its
+radius is 30% of the canvas width. Around that hole: a thick dark metal ring with
+a soft chrome gradient, a darker outline on both edges, and a thin white
+highlight arc on the INNER edge of the ring at the upper left only.
+
+The handle leaves the ring diagonally towards the lower right: a short metal
+ferrule with two rings, then a warm wooden grip with a rounded end and visible
+grain, thick and chunky like a toy.
+
+Friendly, sturdy, toy-like. No hand holding it, no background, no surface, no
+shadow cast on anything.
+
+Negative: glass fill, tinted lens, reflections across the lens, shine over the
+middle, white circle inside the ring, magnified content drawn inside, hand,
+fingers, background, desk, paper, shadow, text, letters, numbers, sparkles,
+3D render, photorealism, blur, watermark.
+~~~
+
+### Conferência
+
+- [ ] o meio do vidro é **transparente de verdade** (abra num editor e confirme alfa 0);
+- [ ] o brilho está na borda de dentro, e não atravessando o vidro;
+- [ ] o cabo aponta para baixo à direita;
+- [ ] não há mão, mesa, sombra nem fundo;
+- [ ] a lupa inteira ainda se lê com o vidro medindo 208 px na grade.
+
+---
+
+## 8. `cover-guardiao-etico.png` — a capa
+
+1672 × 941, opaca, com a mesma imagem de referência anexada e a mesma linha de
+estilo do §2 — e é a única das quatro em que a composição pode ser mais de capa,
+com a figura maior e a luz mais dramática. A cena: a **mesa de madeira** vista de frente
+com um papel grande no meio, uma **lupa** pousada em cima dele aumentando um
+pedaço (aqui a lupa **pode** ser desenhada — é capa, não é jogo), o mural de
+cortiça ao fundo e o **Téo** no canto direito, esperando com o sorriso de quem
+trouxe. Luz quente, clima de "deixa eu conferir".
+
+A capa precisa contar o jogo sem uma palavra: **alguém olhando de perto antes de
+publicar.** Se o gerador insistir em escrever no papel, peça o papel com
+**linhas onduladas e manchas** no lugar do texto — é assim que as outras capas do
+catálogo resolvem.
+
+---
+
+## 9. Depois que a arte chegar
+
+1. **Pôr os quatro arquivos lado a lado com a referência** e conferir que são do
+   mesmo mundo: espessura de contorno, número de faixas de sombra e temperatura
+   da cor. Se um deles sair mais lavado ou mais duro que os outros, refaça esse —
+   arquivo fora de tom estraga o conjunto mais do que arquivo faltando.
+2. Medir a **caixa alfa** de cada quadro num canvas e ancorar o layout nela, em
    vez de chutar `setScale`. As dimensões entregues **nunca** batem com as
-   pedidas: em outro jogo deste projeto vieram 1480 × 1040 no lugar de 1024 × 768,
-   e o que salvou foi o jogo se guiar pelos números medidos, guardados num
-   `data/art.ts`.
-2. Conferir que a **cintura** dos 16 quadros do elenco cai na mesma fração da
-   célula. Se não cair, corrigir no `data/art.ts` com um deslocamento por linha —
-   nunca esticando o PNG.
-3. Conferir no celular, com a tarja preta: o colega a 45 × 52 px reais ainda tem
-   cara; a porta a 73 × 46 px ainda diz que lugar é aquele; a cópia a 168 × 79 px
-   ainda mostra qual marca entrou.
-4. **A reserva em `Graphics` fica.** É ela que mantém o jogo de pé quando um
+   pedidas: em outro jogo deste projeto vieram 1480 × 1040 no lugar de
+   1024 × 768, e o que salvou foi o jogo se guiar pelos números medidos, guardados
+   num `data/art.ts`.
+3. Conferir que a **cintura** dos 12 quadros cai na mesma fração da célula; se
+   não cair, corrigir com um deslocamento por linha no `data/art.ts`, nunca
+   esticando o PNG.
+4. Conferir no celular, com a tarja preta: o colega da coluna da direita a
+   49 px ainda tem cara; a foto colada no papel ainda se entende a 200 × 140 px
+   da grade (60 × 42 reais).
+5. Passar a lupa por cima de cada foto colada e confirmar que **o aumento de 1,9 ×
+   não borra o PNG** a ponto de parecer defeito. Se borrar, a foto do papel entra
+   em resolução maior — nunca o aumento diminui, porque é ele que faz o jogo.
+6. **A reserva em `Graphics` fica.** É ela que mantém o jogo de pé quando um
    arquivo falta, e o `import.meta.glob` já prevê isso.

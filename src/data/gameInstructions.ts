@@ -14,6 +14,13 @@
  */
 
 const POR_SLUG: Record<string, string[]> = {
+  "portoes-logicos": [
+    "Uma criaturinha marcha pela trilha até a bifurcação.",
+    "Cada portão tem uma placa, e a de baixo é sempre o AVESSO da de cima.",
+    "Toque no portão cuja frase for verdadeira para a criaturinha da vez.",
+    "Errou? A placa mostra o porquê, termo a termo, e ela volta para tentar de novo.",
+    "No fim da onda, os dois currais mostram as turmas separadas.",
+  ],
   "oficina-dos-algoritmos": [
     "Arraste os cartões para os espaços numerados.",
     "Monte todos os passos antes de testar.",
@@ -299,14 +306,45 @@ const POR_SLUG: Record<string, string[]> = {
     "Fogo da cor errada estoura do mesmo jeito, ao lado da cor pedida — dá para ver o que faltou.",
     "No computador: 1, 2 e 3 abrem cada torneira e a barra de espaço lança.",
   ],
+  "duelo-das-fontes": [
+    "O robô espalha tudo sem conferir, e joga uma notícia no seu balcão.",
+    "Antes de decidir, toque nos vizinhos: cada um levanta a plaquinha do que sabe.",
+    "Alguém que podia saber confirmou? ESPALHE. Ninguém? SEGURE.",
+  ],
+  "raio-x-da-maquina": [
+    "Cada máquina chega para revisão, e o raio-X mostra as peças de dentro dela.",
+    "No nível 1 ela diz o nome da peça. No 2, só o que precisa. No 3, não diz nada.",
+    "Toque na peça certa. Se errar, ela conta o que faz de verdade e você tenta a outra.",
+    "A cada acerto vem um desafio rápido, para ver a peça trabalhando de perto.",
+    "No fim, arraste os cabos na cor certa: sem energia, nenhuma peça funciona.",
+  ],
+  "robo-sorrateiro": [
+    "O robô anda sozinho até a placa SE — ali o tempo para e sobem as cartas.",
+    "Cada carta tem duas linhas: o que fazer SE a coruja estiver acordada, e o que fazer SENÃO.",
+    "A carta vale o trecho todo: a cada passo ela decide, e a linha que decidiu acende.",
+  ],
+  "revezamento-em-lista": [
+    "A escalação embaixo é a sua lista: o 1º nada primeiro, o último fecha a prova.",
+    "Antes de cada volta a técnica pede uma mudança — toque no nadador para pegar e no lugar onde ele entra, ou no banco para ele sair.",
+    "Quando a lista estiver como ela pediu, toque no apito: a prova nada a sua lista, na ordem dela.",
+  ],
   "guardiao-etico": [
-    "Uma partida inteira é UM dado só: a foto, a ficha ou o desenho, passando de mão em mão.",
-    "Um colega pede alguma coisa no balão — e diz o que ele sente, nunca em qual etiqueta tocar.",
-    "As três etiquetas dizem o que vai junto: toque para pôr, toque de novo para tirar. O dado muda na hora.",
-    "Olhe a cara dos quatro colegas: quem fica exposto encolhe antes de você apertar qualquer coisa.",
-    "Mexer é de graça — só o botão do canto compromete. Em alguns pedidos dá para NÃO MANDAR, e recusar é uma resposta.",
-    "O que sai vai para a prateleira da direita do jeito que você mandou, e não volta mais.",
-    "No computador: 1, 2 e 3 são as etiquetas, a barra de espaço manda e a tecla N recusa.",
+    "Cada fase chega um papel para ser publicado, e a letra miúda dele não se lê de longe.",
+    "Arraste a lupa pelo papel: debaixo do vidro a letra fica grande, e o que ela encontra fica marcado com um anel.",
+    "Embaixo do papel ficam as ferramentas. A escolhida é o que o seu toque faz.",
+    "Com o MARCADOR, toque no que é de outra pessoa para tapar. A BORRACHA desfaz. Tudo de graça.",
+    "O nome de quem desenhou ou organizou nunca se tapa — senão ninguém vai saber de quem é.",
+    "Quando o papel estiver pronto, aperte APROVAR. Só ele conta como resposta.",
+    "A placa da direita diz para onde o papel vai: quanto mais longe, mais coisa precisa de tarja.",
+  ],
+  "metro-mirim": [
+    "Primeiro os passageiros aparecem e dizem para onde precisam ir.",
+    "Depois vem o mapa da cidade, que é maior que a tela: arraste o mapa para ver o resto.",
+    "Arraste uma peça de trilho da bandeja até uma ligação tracejada — é por ali que cabe trilho.",
+    "Também dá para tocar numa estação e depois na outra. Tocar no meio do trilho devolve a peça.",
+    "As peças são contadas: gastar uma no lugar errado deixa alguma estação de fora.",
+    "Com a bandeja vazia, o PARTIR acende. Os trens saem, e quem tiver caminho chega.",
+    "No fim do nível a cidade some e sobra o desenho: bolinhas ligadas por linhas, a sua rede.",
   ],
   "mesa-de-edicao": [
     "Alguém traz uma peça quase pronta e diz, no balão, o que está incomodando.",

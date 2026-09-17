@@ -40,11 +40,16 @@ import digitalAtelierThumbnail from "../assets/games/EF04CO05/atelier-codigos-di
 import digitalStudioThumbnail from "../assets/games/EF04CO06/estudio-producao-digital/cover-estudio-producao-digital.png";
 import coverMissaoEticaDigital from "../assets/games/EF04CO07/missao-etica-digital/cover-missao-etica-digital.png";
 import sourceHuntThumbnail from "../assets/games/EF04CO08/caca-fonte-confiavel/cover-caca-fonte-confiavel.png";
+import coverDueloDasFontes from "../assets/games/EF04CO08/duelo-das-fontes/cover-duelo-das-fontes.png";
 import cardListThumbnail from "../assets/games/EF05CO01/baralho-das-listas/cover-baralho-das-listas.png";
+import coverRevezamentoEmLista from "../assets/games/EF05CO01/revezamento-em-lista/cover-revezamento-em-lista.png";
 import networkMapsThumbnail from "../assets/games/EF05CO02/mapas-em-rede/cover-mapas-em-rede.png";
 import coverLogicArena from "../assets/games/EF05CO03/arena-da-logica/cover-arena-da-logica.png";
+import coverPortoesLogicos from "../assets/games/EF05CO03/portoes-logicos/cover-portoes-logicos.png";
 import coverCidadeDasDecisoes from "../assets/games/EF05CO04/cidade-das-decisoes/cover-cidade-das-decisoes.png";
+import coverRoboSorrateiro from "../assets/games/EF05CO04/robo-sorrateiro/cover-robo-sorrateiro.png";
 import coverMonteSeuComputador from "../assets/games/EF05CO05/monte-seu-computador/cover-monte-seu-computador.png";
+import coverRaioXDaMaquina from "../assets/games/EF05CO05/raio-x-da-maquina/cover-raio-x-da-maquina.png";
 import coverMissaoArquivoSeguro from "../assets/games/EF05CO06/missao-arquivo-seguro/cover-missao-arquivo-seguro.png";
 import sistemaOperacionalThumbnail from "../assets/games/EF05CO07/sistema-operacional/cover-sistema-operacional.png";
 import coverRadarDeConfiabilidade from "../assets/games/EF05CO08/radar-de-confiabilidade/cover-radar-de-confiabilidade.png";
@@ -74,6 +79,8 @@ import coverCofreDosRegistros from "../assets/games/EF04CO02/o-cofre-dos-registr
 import coverDancaAninhada from "../assets/games/EF04CO03/danca-aninhada/cover-danca-aninhada.png";
 import coverExpedicaoPixel from "../assets/games/EF04CO05/expedicao-pixel/cover-expedicao-pixel.png";
 import coverMesaDeEdicao from "../assets/games/EF04CO06/mesa-de-edicao/cover-mesa-de-edicao.png";
+import coverGuardiaoEtico from "../assets/games/EF04CO07/guardiao-etico/cover-guardiao-etico.png";
+import coverMetroMirim from "../assets/games/EF05CO02/metro-mirim/cover-metro-mirim.png";
 /**
  * 1. `id` nunca muda e nunca é reaproveitado. Se um jogo for removido,
  *    marque status "draft" — não devolva o id para a fila.
@@ -1077,6 +1084,23 @@ export const catalog: Game[] = [
     thumbnail: coverMissaoEticaDigital,
   },
   {
+    id: "074",
+    slug: "guardiao-etico",
+    module: "EF04CO07/guardiao-etico",
+    skill: "EF04CO07",
+    years: [4],
+    tags: ["dados", "ética", "privacidade", "autoria"],
+    order: 295,
+    status: "draft",
+    title: "Guardião Ético",
+    description:
+      "Chegou um papel para publicar. Passe a lupa, ache o que é de outra pessoa, tape — e aprove.",
+    category: "Cultura Digital",
+    points: 90,
+    icon: "🔎",
+    thumbnail: coverGuardiaoEtico,
+  },
+  {
     id: "030",
     slug: "caca-fonte-confiavel",
     module: "EF04CO08/caca-fonte-confiavel",
@@ -1092,6 +1116,23 @@ export const catalog: Game[] = [
     points: 65,
     icon: "🔍",
     thumbnail: sourceHuntThumbnail,
+  },
+  {
+    id: "075",
+    slug: "duelo-das-fontes",
+    module: "EF04CO08/duelo-das-fontes",
+    skill: "EF04CO08",
+    years: [4],
+    tags: ["fonte", "confiabilidade", "boato", "checagem"],
+    order: 305,
+    status: "draft",
+    title: "Duelo das Fontes",
+    description:
+      "O robô solta um boato e quer que você espalhe. Pergunte aos vizinhos, descubra quem podia saber — e veja o robô murchar.",
+    category: "Cultura Digital",
+    points: 90,
+    icon: "📣",
+    thumbnail: coverDueloDasFontes,
   },
   {
     id: "031",
@@ -1110,6 +1151,23 @@ export const catalog: Game[] = [
     thumbnail: cardListThumbnail,
   },
   {
+    id: "077",
+    slug: "revezamento-em-lista",
+    module: "EF05CO01/revezamento-em-lista",
+    skill: "EF05CO01",
+    years: [5],
+    tags: ["lista", "posição", "inserir", "remover"],
+    order: 315,
+    status: "draft",
+    title: "Revezamento em Lista",
+    description:
+      "A escalação é uma lista. Tire o cansado, ponha o reserva, mude de lugar — e veja a prova nadar na ordem que você montou.",
+    category: "Pensamento Computacional",
+    points: 90,
+    icon: "🏊",
+    thumbnail: coverRevezamentoEmLista,
+  },
+  {
     id: "032",
     slug: "mapas-em-rede",
     module: "EF05CO02/mapas-em-rede",
@@ -1124,6 +1182,23 @@ export const catalog: Game[] = [
     points: 65,
     icon: "🗺️",
     thumbnail: networkMapsThumbnail,
+  },
+  {
+    id: "076",
+    slug: "metro-mirim",
+    module: "EF05CO02/metro-mirim",
+    skill: "EF05CO02",
+    years: [5],
+    tags: ["grafo", "rede", "caminho", "mapa"],
+    order: 325,
+    status: "draft",
+    title: "Metrô Mirim",
+    description:
+      "Os passageiros dizem aonde precisam ir. Arraste trilhos pelo mapa da cidade, aperte PARTIR — e veja a rede que você montou.",
+    category: "Pensamento Computacional",
+    points: 80,
+    icon: "🚇",
+    thumbnail: coverMetroMirim,
   },
   {
     id: "033",
@@ -1145,6 +1220,23 @@ export const catalog: Game[] = [
     thumbnail: coverLogicArena,
   },
   {
+    id: "078",
+    slug: "portoes-logicos",
+    module: "EF05CO03/portoes-logicos",
+    skill: "EF05CO03",
+    years: [5],
+    tags: ["lógica", "não", "verdadeiro e falso"],
+    order: 331,
+    status: "published",
+    title: "Portões Lógicos",
+    description:
+      "Cada criaturinha marcha até dois portões: abra o da frase que for verdadeira para ela.",
+    category: "Pensamento Computacional",
+    points: 65,
+    icon: "🚪",
+    thumbnail: coverPortoesLogicos,
+  },
+  {
     id: "034",
     slug: "cidade-das-decisoes",
     module: "EF05CO04/cidade-das-decisoes",
@@ -1162,6 +1254,23 @@ export const catalog: Game[] = [
     thumbnail: coverCidadeDasDecisoes,
   },
   {
+    id: "079",
+    slug: "robo-sorrateiro",
+    module: "EF05CO04/robo-sorrateiro",
+    skill: "EF05CO04",
+    years: [5],
+    tags: ["condicional", "se-senão", "simular", "algoritmo"],
+    order: 345,
+    status: "published",
+    title: "Robô Sorrateiro",
+    description:
+      "A biblioteca fechou e o robô precisa chegar à porta. Ensine a ele o que fazer quando a coruja acordar — e veja a regra decidir a cada passo.",
+    category: "Pensamento Computacional",
+    points: 90,
+    icon: "🤖",
+    thumbnail: coverRoboSorrateiro,
+  },
+  {
     id: "035",
     slug: "monte-seu-computador",
     module: "EF05CO05/monte-seu-computador",
@@ -1177,6 +1286,23 @@ export const catalog: Game[] = [
     points: 65,
     icon: "💻",
     thumbnail: coverMonteSeuComputador,
+  },
+  {
+    id: "080",
+    slug: "raio-x-da-maquina",
+    module: "EF05CO05/raio-x-da-maquina",
+    skill: "EF05CO05",
+    years: [5],
+    tags: ["hardware", "entrada e saída", "memória", "armazenamento"],
+    order: 355,
+    status: "draft",
+    title: "Raio-X da Máquina",
+    description:
+      "A máquina chega para revisão e o raio-X abre ela. Diga quem recebe, quem pensa, quem segura, quem guarda e quem mostra — e teste cada peça trabalhando.",
+    category: "Pensamento Computacional",
+    points: 90,
+    icon: "🩻",
+    thumbnail: coverRaioXDaMaquina,
   },
   {
     id: "036",
@@ -1350,4 +1476,4 @@ export const catalog: Game[] = [
 ];
 
 /** Próximo id livre. Use ao cadastrar um jogo novo. */
-export const NEXT_FREE_ID = "073";
+export const NEXT_FREE_ID = "081";
