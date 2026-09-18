@@ -81,6 +81,10 @@ import coverExpedicaoPixel from "../assets/games/EF04CO05/expedicao-pixel/cover-
 import coverMesaDeEdicao from "../assets/games/EF04CO06/mesa-de-edicao/cover-mesa-de-edicao.png";
 import coverGuardiaoEtico from "../assets/games/EF04CO07/guardiao-etico/cover-guardiao-etico.png";
 import coverMetroMirim from "../assets/games/EF05CO02/metro-mirim/cover-metro-mirim.png";
+// PROVISÓRIO: a quadra no lugar da capa, que ainda não foi gerada.
+import coverMaestroDoSistema from "../assets/games/EF05CO07/maestro-do-sistema/cover-maestro-do-sistema.png";
+import coverODiaSemInternet from "../assets/games/EF05CO06/dia-sem-internet/cover-dia-sem-internet.png";
+import coverOlhaOJornal from "../assets/games/EF05CO08/olha-o-jornal/cover-olha-o-jornal.png";
 /**
  * 1. `id` nunca muda e nunca é reaproveitado. Se um jogo for removido,
  *    marque status "draft" — não devolva o id para a fila.
@@ -1322,6 +1326,23 @@ export const catalog: Game[] = [
     thumbnail: coverMissaoArquivoSeguro,
   },
   {
+    id: "090",
+    slug: "dia-sem-internet",
+    module: "EF05CO06/dia-sem-internet",
+    skill: "EF05CO06",
+    years: [5],
+    tags: ["armazenamento", "local ou remoto", "internet"],
+    order: 365,
+    status: "draft",
+    title: "O Dia Sem Internet",
+    description:
+      "Uns arquivos moram aqui, na sua mesa. Outros moram longe, lá em cima na nuvem. Suba até o céu para descobrir onde cada um está — e o que sobra quando o fio arrebenta.",
+    category: "Mundo Digital",
+    points: 90,
+    icon: "🔌",
+    thumbnail: coverODiaSemInternet,
+  },
+  {
     id: "037",
     slug: "sistema-operacional",
     module: "EF05CO07/sistema-operacional",
@@ -1339,6 +1360,23 @@ export const catalog: Game[] = [
     thumbnail: sistemaOperacionalThumbnail,
   },
   {
+    id: "082",
+    slug: "maestro-do-sistema",
+    module: "EF05CO07/maestro-do-sistema",
+    skill: "EF05CO07",
+    years: [5],
+    tags: ["sistema operacional", "hardware", "processos", "fila"],
+    order: 375,
+    status: "published",
+    title: "Maestro do Sistema",
+    description:
+      "O computador é uma orquestra e você é o maestro: toque no programa aceso, espere a peça voltar e faça todo mundo tocar junto.",
+    category: "Mundo Digital",
+    points: 90,
+    icon: "🎼",
+    thumbnail: coverMaestroDoSistema,
+  },
+  {
     id: "038",
     slug: "radar-de-confiabilidade",
     module: "EF05CO08/radar-de-confiabilidade",
@@ -1354,6 +1392,39 @@ export const catalog: Game[] = [
     points: 65,
     icon: "🔍",
     thumbnail: coverRadarDeConfiabilidade,
+  },
+  {
+    id: "085",
+    slug: "olha-o-jornal",
+    module: "EF05CO08/olha-o-jornal",
+    skill: "EF05CO08",
+    years: [5],
+    tags: ["fonte", "confiabilidade", "checagem", "notícia"],
+    order: 385,
+    status: "draft",
+    title: "Olha o Jornal!",
+    description:
+      "O carteiro traz dois jornais sobre a mesma coisa. Leia os dois, escolha um e saia espalhando pela praça.",
+    category: "Cultura Digital",
+    points: 90,
+    icon: "📰",
+    thumbnail: coverOlhaOJornal,
+  },
+  {
+    id: "091",
+    slug: "guilda-dos-criadores",
+    module: "EF05CO09/guilda-dos-criadores",
+    skill: "EF05CO09",
+    years: [5],
+    tags: ["direitos autorais", "crédito", "autoria", "licença"],
+    order: 391,
+    status: "draft",
+    title: "A Guilda dos Criadores",
+    description:
+      "Toda obra tem um verso, e é lá que está de quem ela é. Vire, copie o carimbo e o nome na plaquinha, e a obra sobe para o mural da festa.",
+    category: "Cultura Digital",
+    points: 30,
+    icon: "🖼️",
   },
   {
     id: "039",
@@ -1476,4 +1547,4 @@ export const catalog: Game[] = [
 ];
 
 /** Próximo id livre. Use ao cadastrar um jogo novo. */
-export const NEXT_FREE_ID = "081";
+export const NEXT_FREE_ID = "083";

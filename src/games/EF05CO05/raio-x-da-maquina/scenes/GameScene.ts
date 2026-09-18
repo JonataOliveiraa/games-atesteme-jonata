@@ -15,7 +15,8 @@ import { DEPTH, H, HUD, W } from '../data/layout'
 import { A, C, CSS } from '../data/theme'
 import type { LevelDef, MachineDef, Mode, PartDef, RequestDef } from '../types'
 
-import { hasTrial, powerTrial, runTrial, trialFor } from './trials'
+import { hasTrial, powerTrial, runTrial, trialFor, type TrialDef } from './trials'
+import { createStart, type StartGate } from './start'
 import { createXRay, type XRay } from './xray'
 import { createRequest, type Request } from './request'
 import { createSign, type Sign } from './sign'
@@ -48,6 +49,7 @@ export class GameScene extends Phaser.Scene {
     private xray!: XRay
     private request!: Request
     private sign!: Sign
+    private start!: StartGate
     private hud!: Hud
     private audio!: Audio
     private frame!: Phaser.GameObjects.Graphics
@@ -101,6 +103,7 @@ export class GameScene extends Phaser.Scene {
         })
         this.request = createRequest(this, this.machine.requests.length)
         this.sign = createSign(this)
+        this.start = createStart(this, { onTap: () => this.audio.tap() })
         this.hud = createHud(this, {
             level: this.level.level,
             machines: this.level.machines.length,
@@ -154,6 +157,7 @@ export class GameScene extends Phaser.Scene {
     private shutdownScene() {
         this.gen++
         this.idle?.remove()
+        this.start?.destroy()
         this.sign?.destroy()
         this.hud?.destroy()
         this.request?.destroy()
@@ -207,14 +211,7 @@ export class GameScene extends Phaser.Scene {
             if (trial) {
                 await this.request.say('Olhe o que eu preciso fazer.')
                 if (gen !== this.gen) return
-                await runTrial(this, {
-                    trial: trial.run,
-                    title: trial.prompt,
-                    audio: this.audio,
-                    quiet: true,
-                    alive: () => gen === this.gen,
-                })
-                if (gen !== this.gen) return
+                if (!(await this.openTrial(trial, gen, true))) return
             }
         }
 
@@ -256,13 +253,7 @@ export class GameScene extends Phaser.Scene {
             if (trial) {
                 await this.request.say(trial.prompt)
                 if (gen !== this.gen) return
-                await runTrial(this, {
-                    trial: trial.run,
-                    title: trial.prompt,
-                    audio: this.audio,
-                    alive: () => gen === this.gen,
-                })
-                if (gen !== this.gen) return
+                if (!(await this.openTrial(trial, gen))) return
             }
 
             const next = this.requestIndex + 1
@@ -299,6 +290,28 @@ export class GameScene extends Phaser.Scene {
         this.armIdle()
     }
 
+    /**
+     * A máquina fala, e o desafio só abre quando a criança manda.
+     *
+     * Sem o botão a tela do desafio cobre o balão em cima da última letra, e
+     * quem lê devagar perde a frase inteira. Devolve `false` se a cena virou.
+     */
+    private async openTrial(trial: TrialDef, gen: number, quiet = false): Promise<boolean> {
+        this.xray.dim(true)
+        await this.start.ask('COMEÇAR')
+        if (gen !== this.gen) return false
+        this.xray.dim(false)
+
+        await runTrial(this, {
+            trial: trial.run,
+            title: trial.prompt,
+            audio: this.audio,
+            quiet,
+            alive: () => gen === this.gen,
+        })
+        return gen === this.gen
+    }
+
     private async finishMachine() {
         const gen = ++this.gen
         this.mode = 'busy'
@@ -308,14 +321,7 @@ export class GameScene extends Phaser.Scene {
         if (this.level.mode !== 'nome') {
             await this.request.say(powerTrial.prompt)
             if (gen !== this.gen) return
-
-            await runTrial(this, {
-                trial: powerTrial.run,
-                title: powerTrial.prompt,
-                audio: this.audio,
-                alive: () => gen === this.gen,
-            })
-            if (gen !== this.gen) return
+            if (!(await this.openTrial(powerTrial, gen))) return
         }
 
         const points = pointsFor(this.level.machines.length, !this.chargedHere)

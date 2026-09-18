@@ -887,3 +887,27 @@ O que os desafios **não** podem virar, e está travado no código:
   um fundo a 98% de opacidade. O teto de alvos do §5 vale lá dentro também;
 - **não têm texto longo.** Uma linha de 32 px no topo do palco, trocada conforme
   o desafio anda, e o balão da máquina por cima dizendo o que fazer.
+
+### Revisão 7 — o botão antes do palco, e o corredor do baú (18/09/2026)
+
+Duas coisas vistas jogando, as duas sobre **tempo de leitura**.
+
+**A máquina falava e o desafio engolia a frase.** No nível 3 isso doía mais: a
+fala é sempre a mesma ("Olhe o que eu preciso fazer"), o palco abre por cima do
+balão, e quem lê devagar perdia a deixa. Agora existe um passo no meio —
+`scenes/start.ts`, um `COMEÇAR` no centro da tela do raio-X, sobre o véu que já
+escurece as baias. O desafio só abre no toque.
+
+Vale para os **três** lugares onde um desafio nasce, e não só para o nível 3:
+o desafio da peça no nível 2, o desafio-pergunta no nível 3 e o da ENERGIA no
+fim de cada máquina. Todos passam por `GameScene.openTrial`, que dá a pausa,
+espera o toque e só então chama `runTrial`. É um alvo só, de 380 × 110 px —
+cerca de 116 × 33 px no celular de 390, dentro do teto do §5.
+
+**O desafio do disco não dizia onde soltar.** A criança via o arquivo passeando
+no trilho e o baú embaixo, e tinha de adivinhar a janela de acerto. Agora ela
+está **desenhada**: um corredor com as bordas tracejadas, com exatamente a
+mesma meia-largura que a conta do acerto usa (`laneHalf`), e três setas
+descendo para dentro do baú. Quando o arquivo entra no corredor, o corredor e
+as setas acendem — o aviso de soltar é visual, e não de reflexo. O recado de
+erro passou a apontar para elas: "Espere ele chegar entre as setas".

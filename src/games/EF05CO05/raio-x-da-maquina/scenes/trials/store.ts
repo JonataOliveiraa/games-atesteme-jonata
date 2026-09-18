@@ -12,11 +12,13 @@ export const diskTrial: TrialDef = {
         let stored = 0
         let busy = false
 
-        ctx.note('Toque na tela para soltar o arquivo em cima do baú.')
+        ctx.note('Toque na tela quando o arquivo estiver entre as setas.')
 
         const boxCy = AREA.y + AREA.h - 130
         const boxW = 300
         const boxH = 170
+        /** A meia-largura da janela de acerto. As setas desenham exatamente ela. */
+        const laneHalf = boxW / 2 - 40
 
         const box = ctx.scene.add.graphics()
         ctx.layer.add(box)
@@ -71,7 +73,57 @@ export const diskTrial: TrialDef = {
         rail.fillStyle(C.cyan, 0.16)
         rail.fillRoundedRect(AREA.x + 120, dropCy - 7, AREA.w - 240, 14, 7)
 
+        /*
+         * O corredor de queda, desenhado com a mesma conta do acerto: duas
+         * bordas tracejadas e três setas descendo para dentro do baú. Elas
+         * acendem quando o arquivo entra no corredor — é o aviso de soltar.
+         */
+        const chestTop = boxCy - boxH / 2
+        const laneTop = dropCy + 24
+        const chevronY = [laneTop + 40, laneTop + 80, laneTop + 120]
+
+        const arrows = ctx.scene.add.graphics()
+        ctx.layer.add(arrows)
+
+        const paintArrows = (hot: boolean, tick: number) => {
+            arrows.clear()
+            const tone = TONE.armazenamento
+
+            arrows.fillStyle(tone, hot ? 0.18 : 0.07)
+            arrows.fillRect(AREA.cx - laneHalf, laneTop, laneHalf * 2, chestTop - laneTop)
+
+            arrows.fillStyle(tone, hot ? 0.95 : 0.4)
+            for (let y = laneTop; y < chestTop - 12; y += 28) {
+                arrows.fillRect(AREA.cx - laneHalf - 3, y, 6, 16)
+                arrows.fillRect(AREA.cx + laneHalf - 3, y, 6, 16)
+            }
+
+            chevronY.forEach((y, i) => {
+                const lead = tick % chevronY.length === i
+                const alpha = hot ? (lead ? 1 : 0.5) : lead ? 0.7 : 0.32
+                arrows.fillStyle(C.shadow, alpha * 0.35)
+                arrows.fillTriangle(AREA.cx - 42, y - 13, AREA.cx + 42, y - 13, AREA.cx, y + 25)
+                arrows.fillStyle(tone, alpha)
+                arrows.fillTriangle(AREA.cx - 42, y - 18, AREA.cx + 42, y - 18, AREA.cx, y + 20)
+            })
+        }
+        paintArrows(false, 0)
+
         const file = thing(ctx, AREA.cx, dropCy, 0, 130)
+
+        let tick = 0
+        const beat = ctx.scene.time.addEvent({
+            delay: 250,
+            loop: true,
+            callback: () => {
+                if (!ctx.alive()) {
+                    beat.remove()
+                    return
+                }
+                tick += 1
+                paintArrows(Math.abs(file.x - AREA.cx) < laneHalf, tick)
+            },
+        })
 
         const slide = ctx.scene.tweens.add({
             targets: file,
@@ -89,7 +141,7 @@ export const diskTrial: TrialDef = {
             slide.pause()
             ctx.audio.tap()
 
-            const hit = Math.abs(file.x - AREA.cx) < boxW / 2 - 40
+            const hit = Math.abs(file.x - AREA.cx) < laneHalf
             void (async () => {
                 await FX.all(
                     FX.to(ctx.scene, file, { y: boxCy - 30 }, { duration: 340, ease: Ease.smooth }),
@@ -110,7 +162,7 @@ export const diskTrial: TrialDef = {
                     ctx.note(stored >= need ? 'Tudo guardado!' : 'Guardado! Vai o próximo.')
                 } else {
                     ctx.audio.wrong()
-                    ctx.note('Caiu fora do baú. Tente de novo.')
+                    ctx.note('Caiu fora do baú. Espere ele chegar entre as setas.')
                     await FX.to(ctx.scene, file, { y: dropCy }, { duration: 320, ease: Ease.back(1.4) })
                 }
 
@@ -131,6 +183,8 @@ export const diskTrial: TrialDef = {
 
         await finished
         slide.remove()
+        beat.remove()
+        arrows.clear()
         if (!ctx.alive()) return
 
         ctx.note('Agora a máquina desliga...')

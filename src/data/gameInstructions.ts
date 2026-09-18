@@ -14,6 +14,18 @@
  */
 
 const POR_SLUG: Record<string, string[]> = {
+  "guilda-dos-criadores": [
+    "Uma obra da caixa pousa na mesa. Ela não é sua.",
+    "Toque na obra para virar: o verso diz de quem ela é.",
+    "Copie o verso na plaquinha — primeiro o carimbo, depois o nome.",
+    "Nome errado? A plaquinha não gruda, e o verso continua lá para conferir.",
+    "Com a plaquinha pronta, a obra sobe para o mural da festa.",
+  ],
+  "olha-o-jornal": [
+    "O carteiro traz dois jornais sobre a mesma coisa.",
+    "Leia os dois e toque no que você acredita.",
+    "Espalhe pela praça: mire com as setas e solte o jornal.",
+  ],
   "portoes-logicos": [
     "Uma criaturinha marcha pela trilha até a bifurcação.",
     "Cada portão tem uma placa, e a de baixo é sempre o AVESSO da de cima.",
@@ -311,12 +323,25 @@ const POR_SLUG: Record<string, string[]> = {
     "Antes de decidir, toque nos vizinhos: cada um levanta a plaquinha do que sabe.",
     "Alguém que podia saber confirmou? ESPALHE. Ninguém? SEGURE.",
   ],
+
+  "dia-sem-internet": [
+    "Os seus arquivos moram em três lugares: no computador e no pen drive, aqui na mesa, e na nuvem, lá longe no céu.",
+    "Arraste a tela para cima e para baixo até achar o que o pedido pediu.",
+    "Toque no botão do lugar onde você achou, e o jogo viaja até lá para abrir.",
+    "Mais para a frente o fio arrebenta, e o que estava na nuvem tranca.",
+  ],
   "raio-x-da-maquina": [
     "Cada máquina chega para revisão, e o raio-X mostra as peças de dentro dela.",
     "No nível 1 ela diz o nome da peça. No 2, só o que precisa. No 3, não diz nada.",
     "Toque na peça certa. Se errar, ela conta o que faz de verdade e você tenta a outra.",
     "A cada acerto vem um desafio rápido, para ver a peça trabalhando de perto.",
     "No fim, arraste os cabos na cor certa: sem energia, nenhuma peça funciona.",
+  ],
+  "maestro-do-sistema": [
+    "Cada programa levanta um balão com a peça de que precisa para tocar.",
+    "Toque no programa e a peça voa do atril até ele — aí ele começa a tocar.",
+    "A peça fica ocupada um tempinho e volta sozinha quando ele termina.",
+    "Quanto mais programas tocando ao mesmo tempo, mais cheia a orquestra soa.",
   ],
   "robo-sorrateiro": [
     "O robô anda sozinho até a placa SE — ali o tempo para e sobem as cartas.",
