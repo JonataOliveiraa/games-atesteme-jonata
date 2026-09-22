@@ -16,6 +16,15 @@ function getSeenSet(scene: Phaser.Scene): Set<string> {
     return seen
 }
 
+/*
+ * TUDO AQUI E FIXO NA TELA (`setScrollFactor(0)`).
+ *
+ * O tutorial e uma camada de INTERFACE: as coordenadas dos passos sao as da
+ * tela, nao as do mundo. Sem isso, num jogo com camera rolada a vinheta, o
+ * balao e o recorte saem deslocados pelo `scrollX` — a vinheta deixa uma
+ * faixa clara na borda e o recorte ilumina o lugar errado. Nos jogos de tela
+ * parada o `scrollX` e zero e nada muda.
+ */
 const MASK_CIRCLE = '__tut_mask_circle'
 const MASK_RECT = '__tut_mask_rect'
 
@@ -113,11 +122,12 @@ export function createTutorial(scene: Phaser.Scene, options: TutorialOptions) {
     keep(
         scene.add.rectangle(W / 2, H / 2, W, H, 0x000000, 0.001)
             .setDepth(9000)
+            .setScrollFactor(0)
             .setInteractive()
     )
 
     const spot = keep(
-        scene.add.renderTexture(0, 0, W, H).setOrigin(0).setDepth(9001)
+        scene.add.renderTexture(0, 0, W, H).setOrigin(0).setDepth(9001).setScrollFactor(0)
     )
 
     const textSize = options.textSize ?? 21
@@ -125,7 +135,7 @@ export function createTutorial(scene: Phaser.Scene, options: TutorialOptions) {
     const btnW = Math.max(280, Math.round(textSize * 9))
     const btnH = Math.max(54, Math.round(textSize * 1.9))
 
-    const balloon = keep(scene.add.container(W / 2, 0).setDepth(9010))
+    const balloon = keep(scene.add.container(W / 2, 0).setDepth(9010).setScrollFactor(0))
     const balloonBg = scene.add.graphics()
     const balloonTxt = scene.add.text(0, 0, '', {
         fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif',
@@ -136,7 +146,7 @@ export function createTutorial(scene: Phaser.Scene, options: TutorialOptions) {
     }).setOrigin(0.5).setResolution(2)
     balloon.add([balloonBg, balloonTxt])
 
-    const button = keep(scene.add.container(W / 2, 0).setDepth(9011))
+    const button = keep(scene.add.container(W / 2, 0).setDepth(9011).setScrollFactor(0))
     const buttonBg = scene.add.graphics()
     buttonBg.fillStyle(accent, 1)
     buttonBg.fillRoundedRect(-btnW / 2, -btnH / 2, btnW, btnH, btnH / 2)
@@ -269,8 +279,9 @@ export function createTutorial(scene: Phaser.Scene, options: TutorialOptions) {
             pointer = scene.add.image(p.fromX, p.fromY, p.textureKey)
                 .setDisplaySize(58, (src.height / src.width) * 58)
                 .setDepth(9005)
+                .setScrollFactor(0)
         } else {
-            const g = scene.add.graphics().setDepth(9005)
+            const g = scene.add.graphics().setDepth(9005).setScrollFactor(0)
             g.fillStyle(0xffffff, 0.32)
             g.fillCircle(0, 0, 24)
             g.lineStyle(4, 0xffffff, 0.95)
@@ -302,7 +313,7 @@ export function createTutorial(scene: Phaser.Scene, options: TutorialOptions) {
              */
             const base = obj.scaleX || 1
 
-            ripple = scene.add.graphics().setDepth(9004)
+            ripple = scene.add.graphics().setDepth(9004).setScrollFactor(0)
             ripple.lineStyle(4, 0xffffff, 0.95)
             ripple.strokeCircle(0, 0, 26)
             ripple.setPosition(p.toX, p.toY).setAlpha(0)
