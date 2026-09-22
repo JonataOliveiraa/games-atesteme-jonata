@@ -873,3 +873,385 @@ quatro vezes seguidas.
 **A armadilha que isso criou**, e que virou asserção na validação: numa fase de
 assinatura por LETRAS, quem fala **nunca** pode ser o autor. O nome dele no balão
 entregaria a resposta, e a criança copiaria da fala em vez do verso.
+
+---
+
+## 20. O verso e o guia (19/09/2026)
+
+Três pedidos do dono do projeto depois de ver o nível 1 pronto: *"a trás da
+plaquinha está mt mal organizado, com a logo de copyright (©) está grande, e a
+criança nem sabe oq significa. a criança do tutorial deveria explicar isso. e
+tbm, logo na fase 1 do n1 (…) ela deveria já ensinar a criança em interação
+real como fazer todo processo."*
+
+### O verso virou dois campos com nome
+
+Ele tinha três coisas soltas no papel: um © de 62 px no canto, a legenda dele
+encostada na MARGEM do cartão (e não no símbolo), e a marca de 94 px do outro
+lado — maior que o selo, e sem nada dizendo o que era. A legenda chegava a 4 px
+da marca. Sem hierarquia, a criança tinha de adivinhar qual desenho era a
+permissão e qual era o dono, que é exatamente o que ela ainda não sabe fazer.
+
+Agora:
+
+```
+   A LICENÇA          │        DE QUEM É
+       ©              │          [sol]
+ pode usar dando      │
+    o crédito         │
+ ─────────────────────────────────────────
+ "Tirei no quintal da vovó. Põe minha marca!"
+```
+
+- **A ordem é a da cópia.** A licença fica à esquerda porque o carimbo mora à
+  esquerda da plaquinha (`PLAQUE.stampDX`), e o dono à direita porque a
+  assinatura mora à direita (`PLAQUE.signDX`). O verso virou o mapa da
+  plaquinha, e copiar deixou de ter ordem para decorar.
+- **O © encolheu de 62 para 40.** Tamanho não é ênfase: o © grande roubava a
+  página sendo o elemento que a criança MENOS entende. Quem ensina é a legenda
+  embaixo dele — agora centrada COM ele, não com a margem — e a fala da Lia.
+- **A marca caiu de 94 para 72** e ganhou rótulo. O nome de letras passou a ser
+  centrado na coluna, o que aposentou a correção `- (len - 3) * 13` que a régua
+  antiga precisava para `NINA` não escorregar.
+- A régua saiu do `artwork.ts` e virou `VERSO`, em `data/layout.ts`, como todo
+  o resto das coordenadas deste catálogo.
+- O `versoBox()` era API morta — ninguém chamava. Ele deu lugar a `seloPos()` e
+  `signPos()`, que é o que o guia usa para apontar.
+
+### A fase 1.1 é ensinada FAZENDO
+
+As três cartelas escuras do `createTutorial` contavam o jogo antes de ele
+começar: a criança lia *"toque na obra"*, tocava em Próximo três vezes e só
+então jogava — com tudo já esquecido, porque ler sobre um gesto não é fazê-lo.
+
+O `guiar()` conduz a fase inteira, e cada instrução PARA até o gesto de verdade
+acontecer:
+
+| # | A Lia diz | O jogo espera |
+|---|---|---|
+| 1 | Toque na obra para ver o verso. | a virada de verdade |
+| 2 | Achou o ©? Ele diz que a obra tem dono. | — (halo no selo) |
+| 3 | Pode usar, sim — mas dizendo quem fez. Isso é dar o crédito. | — |
+| 4 | E deste lado fica a marca de quem fez. | — (halo na assinatura) |
+| 5 | Agora copie na plaquinha. Comece pelo carimbo. | o carimbo de verdade |
+| 6 | Isso! O carimbo já diz que a obra tem dono. | — |
+| 7 | Falta o nome. Olhe o verso e ache a marca na bandeja. | o guia ACABA aqui |
+
+**O © é explicado na hora em que ele aparece pela primeira vez.** Uma legenda de
+19 px é o lembrete que fica; ela não é a primeira apresentação de um símbolo que
+a criança nunca viu. Isso é a fala 2 e 3, e é o pedido atendido.
+
+**O guia nunca aponta para a resposta.** No passo da assinatura o halo fica em
+cima do VERSO — *a resposta está aí, procure* —, nunca na peça certa da bandeja.
+Ensinar o caminho não é andar por ele: a escolha da marca é a única decisão do
+jogo, e ela continua sendo da criança.
+
+**A bandeja só abre na fala que pede aquele gesto.** Primeiro ela ficava
+visível e desligada enquanto a Lia falava, e peça que não responde ao toque lê
+como *"o jogo travou"*, nunca como *"ainda não é a hora"*. Agora o carimbo entra
+com a fala 5, e as marcas com a fala 7.
+
+### Duas coisas que o teste pegou
+
+**A obra tocada antes da fala acabar travava o jogo.** A obra continua tocável
+enquanto a Lia fala — e tem de continuar, senão o guia vira a cartela escura de
+novo. Só que virar ANTES de a fala 1 terminar fazia o `esperar('virar')` ficar
+pendurado num gesto que já tinha passado, com a bandeja fechada e nada a fazer.
+Agora o gesto fica REGISTRADO em `feitos`, e `esperar` segue direto se ele já
+aconteceu. Conferido jogando, de propósito, nessa ordem.
+
+**O `?` dorme enquanto o guia conduz.** Ele abre a cartela escura, que bloqueia
+o toque — e o guia está justamente esperando um toque. Os dois no ar ao mesmo
+tempo é uma tela travada.
+
+### A menina não reentra mais entre duas falas
+
+`speak` sempre chamava `entrar()`, então duas falas seguidas a faziam sair de
+cena e voltar deslizando — o que lê como *"chegou outra pessoa"*. Com cinco
+falas no guia, viravam um piscar. Já estando na tela, só o balão troca de
+conteúdo com um pulso curto. A apresentação do nível ganhou isso de graça.
+
+---
+
+## 21. A menina passou a se mexer, e parou de falar difícil (19/09/2026)
+
+Dois pedidos: *"gostaria de ver a garota mais movimentada, e os outros
+personagens tbm (…) de forma dinâmica e interativa"* e *"a comunicação dela tá
+difícil. ela diz 'obra', isso pode dificultar o aprendizado das crianças."*
+
+### Três camadas, um trabalho cada
+
+Ela quase não se mexia por um motivo estrutural: era tudo um container só, e as
+animações se matavam. A entrada tuitava `scale`, a respiração também, e o gesto
+mexia em `y` — quem chegasse por último ganhava. A respiração inteira era de
+**2%**, o que é indistinguível de estar parada.
+
+| Camada | Trabalho |
+|---|---|
+| `container` | ONDE ela está: entra, sai, **anda**. O balão mora aqui, e por isso não herda o bambolear — texto que balança não se lê. |
+| `corpo` | a VIDA PARADA: respira, flutua e ginga, para sempre. |
+| `figura` | o GESTO e a FALA: o pulo, a inclinação, o pulsinho de cada sílaba. |
+
+Como cada camada mexe numa propriedade, as três acontecem ao mesmo tempo — e é
+a soma que faz a menina parecer gente em vez de cartaz.
+
+### A vida parada são três ondas que nunca batem juntas
+
+Respirar (1,3 s), flutuar (1,7 s) e gingar (2,3 s). Os períodos são primos entre
+si de propósito: iguais, as três somariam sempre no mesmo instante e o resultado
+seria um pulso mecânico. A respiração é assimétrica — cresce em x, encolhe em y
+—, porque bicho que respira muda de forma, não de tamanho; crescer nos dois
+eixos lê como zoom.
+
+### Ela se mexe enquanto fala
+
+A máquina de escrever avisa cada letra (`onChar`), e a cada quatro sai um pulso
+na `figura`. É o bastante para a boca do desenho parecer estar dizendo aquilo —
+antes, o texto aparecia sozinho e ela ficava parada olhando, que é a cara de um
+cartaz com legenda. De quatro em quatro e não a cada letra: a cada letra vira
+tremida, e tremida cansa em duas frases.
+
+### Ela anda até o que está apontando
+
+`ARTIST.cx` estava escrito em sete lugares, e era por isso que ela nunca saía do
+lugar. Virou `posto`, uma variável, e nasceu o `moveTo`: ela **anda** — com dois
+passos e inclinação para o lado do destino, que é o que transforma um tween de
+`x` em alguém andando.
+
+No guia ela vai até `ARTIST.minX` (1004) para explicar o ©, e volta para casa
+antes de mandar copiar. O 1004 não é estético: a obra vai até 856 com a moldura
+e ela mede 286 de largura, então ali sobra um vão de 5 px — perto o bastante
+para *"ele está apontando AQUILO"*, longe o bastante para não tapar a coisa.
+
+**E ela deixou de piscar para dentro e fora da tela.** O guia usava `beat`
+(falar e sumir) a cada instrução, cinco vezes. Nasceu o `hideBalloon`: o balão
+sai, a menina FICA. Uma professora não desaparece quando a criança começa a
+fazer — e é por ela ficar que o andar pode ser VISTO acontecendo, em vez de
+ocorrer com ela invisível.
+
+### Os gestos ganharam corpo
+
+O agradecimento eram dois pulinhos de 22 px; agora são três, e o último mais
+alto e com giro — comemoração cresce, não repete. O "não fui eu" era uma
+inclinação de 4 graus; agora a cabeça vai dos dois lados três vezes. E a chegada
+amassa: `scaleY` entra em 0,88 e resolve no mesmo tween da entrada, porque um
+segundo tween de escala disputaria a `figura` com o pulso da fala.
+
+**Tudo isso vale para os quatro artistas**, porque todos saem do mesmo
+`createArtist`: o Davi que anuncia a fase 1.2, a Lia da 1.3, o artista confuso
+quando a criança escreve o nome errado e o desfile de agradecimento do fim do
+nível. O desfile encolheu a pausa de 340 ms para 80 — o gesto agora ocupa o
+tempo, e somar pausa a gesto faz um desfile de três virar fila de banco.
+
+### O defeito que a medição pegou
+
+O pulso da fala ficava PRESO esticado. Sem tranca, dois pulsos se sobrepõem: o
+segundo começa de 1,035 (onde o primeiro estava), vai até 1,035 e volta para
+1,035. Medindo a cena quadro a quadro, `scaleY` dava 1.035 em toda amostra,
+inclusive com ela parada e calada. Agora é um pulso por vez, com o repouso
+reposto na mão no fim — e a medição dá 1 em toda amostra fora da fala.
+
+### O vocabulário
+
+"Obra" saiu de todo texto que a criança lê. E **"verso" saiu junto**: é tão
+difícil quanto, e ainda por cima quer dizer outra coisa (linha de poesia) na
+única aula em que ela provavelmente ouviu a palavra.
+
+| Antes | Agora |
+|---|---|
+| Toque na **obra** para ver o **verso**. | Toque na **figura** para ver o que tem **atrás**. |
+| De quem é isso? Vire a obra. | Quem fez esta figura? Vire e veja atrás. |
+| Estas obras não são suas. Antes de usar, a gente descobre de quem é. | Estas figuras não são suas. Antes de usar, a gente descobre quem fez. |
+| Não é esse o nome que está no verso. | Não é esse o nome que está atrás. |
+| O verso não diz de quem é. | Atrás não diz quem fez. |
+| Toda obra tem dono. | Toda figura tem dono. |
+
+**Por que "figura", e não "foto" ou "desenho".** A folha `obras.png` tem as duas
+coisas — a foto do pôr do sol e o desenho do foguete do nível 3 —, e um jogo que
+chama tudo de foto erra em metade das fases. "Figura" cobre as duas e é palavra
+que a criança já usa.
+
+**"De quem é" virou "quem fez"** onde deu. A pergunta do jogo é sobre autoria, e
+*quem fez* é a forma direta dela; *de quem é* obriga a criança a montar uma
+posse antes de chegar no autor.
+
+O tipo `Obra` continua `Obra` no código: ele é a estrutura de dados, ninguém com
+10 anos vai lê-lo, e renomear trocaria 60 linhas para não mudar nada na tela.
+
+---
+
+## 22. "Ficou escrito LIA" numa fase em que nada se escreve (19/09/2026)
+
+Pego jogando pelo dono do projeto: *"tem hora que o personagem diz 'ficou
+escrito X no mural' sendo que não foi escrito nada. por exemplo, logo na fase 1
+do n1, eu coloco o símbolo do sol e ela diz 'ficou escrito LIA'."*
+
+### O que estava acontecendo
+
+`acertou()` montava a frase assim:
+
+```ts
+`Valeu! Ficou escrito ${ARTIST_NAMES[autor]} lá no mural.`
+```
+
+Duas coisas erradas numa frase só, e as duas na PRIMEIRA fase que a criança
+joga:
+
+1. **Nada foi escrito.** A 1.1 se resolve com uma MARCA — ela toca num sol. A
+   frase descrevia um gesto que ela não fez, e falava de uma palavra que não
+   existia em lugar nenhum da tela.
+2. **A Lia dizia o próprio nome em terceira pessoa.** A autora da 1.1 é ela; o
+   template punha `ARTIST_NAMES[0]` na boca dela, e a menina virou locutora de
+   si mesma.
+
+A causa raiz é a mesma de sempre: os textos foram escritos pensando nas fases
+de letras, que são duas das três, e a fase de marca herdou a palavra errada.
+
+### Não era uma frase, eram cinco
+
+Procurando a palavra, apareceram todas as outras irmãs — e uma delas **ainda
+estava viva no caminho de quem já estava perdido**:
+
+| Onde | Dizia | Quando quebrava |
+|---|---|---|
+| acerto | Ficou escrito LIA lá no mural. | 1.1 (marca) |
+| erro, fala do autor | Dá uma olhada no verso: está escrito lá. | 1.1 (marca) — e ainda dizia "verso" |
+| erro, aviso âmbar | Não é esse o nome que está atrás. | 1.1 (marca) |
+| erro, aviso âmbar | Falta o nome de quem fez. | 1.1 (marca) |
+| botão `?` | Atrás estão o © e **a marca** do dono. | 1.2 e 1.3 (letras) — o inverso |
+
+A última é a mais reveladora: consertar só o que o dono do projeto viu teria
+deixado o espelho dela de pé, na tela que existe justamente para quem não
+lembra como se joga.
+
+### A correção: a palavra sai do dado, nunca da lembrança
+
+Toda frase que fala da assinatura passa agora por `data/levels.ts`, e por lá
+só. A palavra vem do `sign.kind` da fase:
+
+```ts
+palavraDaAssinatura(sign)  // 'a marca' | 'o nome'
+falhaTexto(falha, sign)    // o aviso âmbar
+agradecimento(sign)        // 'Valeu! A minha marca ficou lá no mural.'
+dicaDoAutor(sign)          // 'Olha atrás: a minha marca está lá.'
+```
+
+E o autor passou a falar **em primeira pessoa**: *"a minha marca"*, *"o meu
+nome"*. Além de consertar a terceira pessoa, isso deixa a frase certa de graça
+— quem fala é o dono, e o dono não precisa se apresentar.
+
+`FALHA_TEXT` era um `Record` constante e virou função pela mesma razão: uma
+tabela fixa não tem como saber de que fase está falando, e foi exatamente essa
+impossibilidade que produziu o texto errado.
+
+**Um jogo que descreve um gesto que a criança NÃO fez ensina, em uma frase, que
+o texto dele não vale a leitura.** Num jogo cujo mecanismo inteiro é *ler o que
+está escrito atrás*, isso é o pior estrago possível.
+
+### Conferido jogando
+
+- **1.1, marca errada** (estrela no lugar do sol): a Lia diz *"Olha atrás: a
+  minha marca está lá."*, e o aviso âmbar, *"Não é essa a marca que está
+  atrás."*
+- **1.1, marca certa**: *"Valeu! A minha marca ficou lá no mural."*
+- **1.2, letras** (TOM): o Tom aparece com *"Valeu! O meu nome ficou escrito lá
+  no mural."* — o "escrito" continua onde ele é verdade.
+
+---
+
+## 23. O véu e a travessia (19/09/2026)
+
+*"o certo seria fazer a personagem do n1 f1 do tutorial ficar se movendo pra
+diferentes lados pra um tutorial mais dinâmico, com background escuro como
+tutorial, pq assim o botão fica mais claro e fica mais perceptível onde focar e
+clicar."*
+
+### O véu escurece tudo, e o toque continua passando
+
+O véu do `createTutorial` faz o escuro — mas ele **bloqueia o toque**, porque
+serve para CONTAR. O guia da primeira fase existe justamente para a criança
+FAZER, então o escuro dele precisava ser outro.
+
+`scenes/veu.ts` escurece a tela inteira menos um retângulo, e deixa o dedo
+passar. O truque é banal e é o ponto: **um `Graphics` sem `setInteractive` não
+captura ponteiro nenhum** — ele é pintura, não porta.
+
+- **Quatro faixas, e não uma máscara.** O buraco é sempre retangular, e quatro
+  retângulos em volta dão o mesmo resultado sem gerar textura, sem
+  `BitmapMask` e sem uma segunda câmera. A borda arredondada é um filete
+  dourado desenhado por cima.
+- **A luz ESCORREGA.** Trocar o buraco de lugar num quadro só pisca, e piscar
+  apaga a relação entre o alvo velho e o novo. O retângulo é tweenado, então a
+  criança vê a luz sair da figura e descer até a bandeja — e isso diz "agora é
+  ali" sem uma palavra. (É o único tween do jogo escrito cru e não com `FX.to`:
+  aqui é preciso repintar a cada quadro, e quem dá isso é o `onUpdate`, que o
+  `FX.to` não expõe.)
+- **A profundidade é `DEPTH.fly - 2`**, ou seja 64: escurece o fundo, o mural, a
+  bandeja, a figura e a plaquinha — e deixa em cor cheia a peça que voa (66), a
+  menina (70), as faíscas (80) e o cabeçalho (100). É isso que faz o balão dela
+  virar a coisa mais clara da tela, que era o pedido.
+- **A sala acende junto com o fim do guia.** A escolha da assinatura é entre
+  seis peças, e um véu com buraco em cima de uma delas seria o jogo apontando a
+  resposta.
+
+### A travessia
+
+Andar 86 px era um passo lateral: os dois primeiros postos ficavam do mesmo
+lado da mesa. Agora são três postos nomeados, e o da ESQUERDA é o que faz a
+criança virar a cabeça.
+
+| Passo | Onde ela fica | Por quê |
+|---|---|---|
+| 1 · virar | casa (1090) | de onde ela apresenta |
+| 2–3 · o © e a marca | perto (1004) | colada na figura que está explicando |
+| 4 · carimbar | **esquerda (280)** | o trabalho desceu para a bandeja, e ela atravessa a sala |
+| 5 · assinar | casa (1090) | volta, e sai |
+
+São 724 px de travessia, e ela acontece no momento em que o trabalho deixa de
+ser em cima (a figura) e passa a ser embaixo (a plaquinha). Ir para o posto de
+casa ali seria o caminho curto — e o caminho curto não faz ninguém virar a
+cabeça.
+
+**O passo virou proporcional à distância.** Um tempo fixo fazia a travessia de
+724 px parecer um deslize de patins e o passo de 86 px parecer câmera lenta.
+Agora a velocidade é constante (~1,1 px/ms, entre 260 e 900 ms) e são os PASSOS
+que se multiplicam — um a cada 190 px, mais ou menos a passada de alguém do
+tamanho dela.
+
+`ARTIST.minX` caiu de 1004 para 200 para abrir a sala inteira, e o 280 sai da
+mesma conta do 1004: ela mede 286 de largura, meia largura é 143, e a figura
+começa em 424 com a moldura — sobra um vão de 1 px. Ela passa na frente da
+caixa de fotos, que é o certo: a caixa é cenário pintado no fundo.
+
+### O escuro começava tarde
+
+*"na primeira cena do tutorial da personagem, não tem fundo meio preto como o
+resto."*
+
+O véu era criado dentro do `guiar()`, ou seja **depois da apresentação**: as
+três primeiras falas da Lia aconteciam com a sala acesa e todo o resto do
+tutorial com a sala escura. Dois tutoriais com duas caras, no mesmo minuto — e
+a primeira cena, que é onde a criança decide se aquilo ali merece atenção, era
+justamente a sem contraste.
+
+Agora ele sobe antes da primeira fala, e sobe **sem buraco**: a mesa ainda está
+vazia, e a única coisa que há para olhar é a menina falando. O buraco nasce
+fechado no meio da mesa, então a luz do passo 1 do guia **abre** em cima da
+figura que acabou de pousar, em vez de acender do nada.
+
+A ordem virou: escuro → apresentação (3 falas) → a figura pousa no escuro → a
+luz abre nela → o guia. E o `abrir()` do véu passou a aceitar chamada sem alvo
+exatamente para isso.
+
+### Conferido jogando
+
+Nível 1 fase 1 do começo ao mural, com o véu no ar: a luz na figura inteira → o
+quadradinho do © → o quadradinho da marca → a descida até a peça da bandeja →
+o carimbo que acabou de pousar na plaquinha → a sala acendendo no fim. A
+travessia para a esquerda e a volta, as duas vistas acontecendo. E o toque
+atravessou o escuro em todas as vezes — inclusive tocando na figura ANTES de a
+fala acabar, que continua sem travar nada.
+
+Conferido de novo depois do escuro subir mais cedo: o "Oi! Bem-vindo à Guilda
+dos Criadores" já nasce com a sala apagada e o balão dela sendo a coisa mais
+clara da tela.

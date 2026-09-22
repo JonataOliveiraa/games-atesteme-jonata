@@ -5,6 +5,7 @@ import {
     POSE,
     type LevelDef,
     type Piece,
+    type Sign,
 } from '../types'
 
 const letra = (ch: string): Piece => ({ kind: 'letra', ch })
@@ -32,7 +33,7 @@ export const LEVELS: LevelDef[] = [
         opening: [
             { who: 0, pose: POSE.esperando, text: 'Oi! Bem-vindo à Guilda dos Criadores.' },
             { who: 0, pose: POSE.explicando, text: 'Hoje tem festa, e o nosso mural está vazio.' },
-            { who: 0, pose: POSE.explicando, text: 'Estas obras não são suas. Antes de usar, a gente descobre de quem é.' },
+            { who: 0, pose: POSE.explicando, text: 'Estas figuras não são suas. Antes de usar, a gente descobre quem fez.' },
         ],
         phases: [
             {
@@ -71,7 +72,7 @@ export const LEVELS: LevelDef[] = [
                 },
                 /* Quem fala é o DAVI, que não fez esta obra: o autor é o
                    Tom, e o nome dele é a resposta. */
-                intro: { who: 3, pose: POSE.explicando, text: 'Chegou obra nova na caixa. Confere de quem é antes de pendurar!' },
+                intro: { who: 3, pose: POSE.explicando, text: 'Chegou figura nova na caixa. Veja quem fez antes de pendurar!' },
                 /* As intrusas formam LIA de propósito: nome errado que é de
                    OUTRO artista faz esse artista aparecer confuso, e é a
                    melhor coisa em que o erro pode virar. */
@@ -89,7 +90,7 @@ export const LEVELS: LevelDef[] = [
                 },
                 /* De novo a Lia, e de novo sem ser a autora — aqui ela diz
                    em voz alta a coisa que o jogo existe para ensinar. */
-                intro: { who: 0, pose: POSE.explicando, text: 'Essa aqui não é minha. Só o verso sabe de quem é.' },
+                intro: { who: 0, pose: POSE.explicando, text: 'Esta aqui não é minha. Só o lado de trás sabe quem fez.' },
                 /* Três peças para quatro toques: o N é tocado duas vezes. */
                 tray: [letra('A'), letra('N'), letra('O'), letra('I'), letra('T'), letra('L')],
             },
@@ -105,11 +106,68 @@ export function pointsFor(level: LevelDef, firstTry: boolean): number {
     return firstTry ? full : full / 2
 }
 
-export const FALHA_TEXT: Record<Falha, string> = {
-    incompleta: 'Falta o nome de quem fez.',
-    assinaturaErrada: 'Não é esse o nome que está no verso.',
-    semLicenca: 'Essa está fechada. Pergunte antes.',
-    semDono: 'O verso não diz de quem é. Não dá para dar o crédito.',
+/**
+ * ══════════════════════════════════════════════════════════════════════════
+ *  A PALAVRA DO GESTO — "A MARCA" OU "O NOME", NUNCA OS DOIS
+ * ══════════════════════════════════════════════════════════════════════════
+ *
+ * A fase 1.1 se resolve com uma MARCA: a criança toca num sol, e NADA é
+ * escrito. Mas todos os textos do jogo tinham sido escritos pensando nas
+ * fases de letras, e diziam "nome" e "escrito" em toda fase. O dono do
+ * projeto pegou jogando:
+ *
+ *   *"tem hora que o personagem diz 'ficou escrito X no mural' sendo que não
+ *   foi escrito nada. por exemplo, logo na fase 1 do n1, eu coloco o símbolo
+ *   do sol e ela diz 'ficou escrito LIA'."*
+ *
+ * Duas coisas erradas numa frase só: a criança colava um sol e ouvia falar de
+ * uma palavra que não existia em lugar nenhum da tela — e a palavra era o
+ * nome da própria Lia, dito por ela, em terceira pessoa.
+ *
+ * Um jogo que descreve um gesto que a criança NÃO fez ensina, em uma frase,
+ * que o texto dele não vale a leitura. Por isso toda frase que fala da
+ * assinatura passa por aqui, e por aqui só: a palavra sai do `sign.kind` da
+ * fase, e não do que o autor do texto tinha em mente naquele dia.
+ */
+export function palavraDaAssinatura(sign: Sign | null): 'a marca' | 'o nome' {
+    return sign?.kind === 'marca' ? 'a marca' : 'o nome'
+}
+
+/** O aviso âmbar do erro, na palavra do gesto daquela fase. */
+export function falhaTexto(falha: Falha, sign: Sign | null): string {
+    const marca = sign?.kind === 'marca'
+    switch (falha) {
+        case 'incompleta':
+            return marca ? 'Falta a marca de quem fez.' : 'Falta o nome de quem fez.'
+        case 'assinaturaErrada':
+            return marca
+                ? 'Não é essa a marca que está atrás.'
+                : 'Não é esse o nome que está atrás.'
+        case 'semLicenca':
+            return 'Essa está fechada. Pergunte antes.'
+        case 'semDono':
+            return 'Atrás não diz quem fez. Não dá para dar o crédito.'
+    }
+}
+
+/**
+ * O "valeu" DO AUTOR, em primeira pessoa.
+ *
+ * Quem fala é o dono da figura, então ele diz "a minha marca" — e não o
+ * próprio nome. Antes era `Ficou escrito ${ARTIST_NAMES[autor]}`, o que fazia
+ * a Lia se referir a si mesma em terceira pessoa, como um locutor.
+ */
+export function agradecimento(sign: Sign | null): string {
+    return sign?.kind === 'marca'
+        ? 'Valeu! A minha marca ficou lá no mural.'
+        : 'Valeu! O meu nome ficou escrito lá no mural.'
+}
+
+/** A dica do autor depois de um erro, também na palavra certa. */
+export function dicaDoAutor(sign: Sign | null): string {
+    return sign?.kind === 'marca'
+        ? 'Olha atrás: a minha marca está lá.'
+        : 'Olha atrás: o meu nome está escrito lá.'
 }
 
 /** O nome que as peças tocadas formam, se ele for de algum artista da casa. */

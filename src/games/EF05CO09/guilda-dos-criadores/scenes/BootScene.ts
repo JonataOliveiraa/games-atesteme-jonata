@@ -26,8 +26,8 @@ export class BootScene extends Phaser.Scene {
     preload() {
         createLoadingScreen(this, {
             title: 'A Guilda dos Criadores',
-            subtitle: 'Toda obra tem dono. Vire e veja de quem é.',
-            description: 'Abrindo a caixa de obras...',
+            subtitle: 'Toda figura tem dono. Vire e veja quem fez.',
+            description: 'Abrindo a caixa de figuras...',
             theme: {
                 background: {
                     kind: 'stripes',

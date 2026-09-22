@@ -8,15 +8,23 @@ import { createTutorial, type TutorialStep } from '../../../../shared/tutorial/c
 import { FX, type FxTarget } from '../../../../shared/effects/FX'
 
 import { A, C, CSS } from '../data/theme'
-import { DEPTH, H, HUD, SIGN_Y, W } from '../data/layout'
+import { DEPTH, H, HUD, PLAQUE, POSTO, SIGN_Y, W } from '../data/layout'
 import { IMAGES, has } from '../data/files'
-import { FALHA_TEXT, LEVELS, artistNamed, pointsFor } from '../data/levels'
 import {
-    ARTIST_NAMES,
+    LEVELS,
+    agradecimento,
+    artistNamed,
+    dicaDoAutor,
+    falhaTexto,
+    palavraDaAssinatura,
+    pointsFor,
+} from '../data/levels'
+import {
     POSE,
     avaliar,
     signFrom,
     signLength,
+    type Falha,
     type LevelDef,
     type Mode,
     type PhaseDef,
@@ -31,12 +39,17 @@ import { createArtist, type Artist } from './artist'
 import { createSign, type Sign } from './sign'
 import { createHud, type Hud } from './hud'
 import { createAudio, type Audio } from './audio'
+import { dica } from './dica'
+import { createVeu, type Veu } from './veu'
 
 const GAME_ID = 'guilda-dos-criadores'
 const fx = (o: unknown) => o as unknown as FxTarget
 
 /** O que a bandeja está mostrando agora. Nunca os dois ao mesmo tempo. */
 type Step = 'nada' | 'carimbo' | 'assinatura'
+
+/** Os gestos de verdade que o guia sabe esperar. */
+type Gesto = 'virar' | 'carimbo'
 
 export class GameScene extends Phaser.Scene {
     private lives!: Lives
@@ -63,6 +76,32 @@ export class GameScene extends Phaser.Scene {
     private wrongPieces: number[] = []
     /** Os índices das peças tocadas nesta tentativa, na ordem. */
     private pickedIdx: number[] = []
+
+    /**
+     * O GUIA ESTÁ NO AR? — e o que ele está esperando.
+     *
+     * Enquanto ele está no ar a bandeja não se abre sozinha: quem abre é o
+     * passo do guia, na hora em que a fala pede aquele gesto. Sem isso a
+     * criança toca no carimbo antes de a Lia explicar o ©, e a explicação
+     * chega depois da ação — que é a ordem errada para tudo.
+     */
+    private guiando = false
+    private aguardando: { gesto: Gesto; feito: () => void } | null = null
+    /**
+     * OS GESTOS QUE JÁ ACONTECERAM NESTA FASE.
+     *
+     * A obra continua tocável enquanto a Lia fala — e tem de continuar: mandar
+     * a criança esperar o balão acabar para poder tocar é o oposto do que este
+     * guia é. Só que ela pode virar a obra ANTES de a fala que pede a virada
+     * terminar, e aí o guia ia esperar por um gesto que já passou — e travar
+     * para sempre, com a bandeja fechada.
+     *
+     * Por isso o gesto fica registrado, e não só sinalizado: `esperar` olha
+     * primeiro se aquilo já foi feito e, se foi, segue direto.
+     */
+    private feitos = new Set<Gesto>()
+    /** O escuro do guia. Só existe enquanto ele conduz. */
+    private veu?: Veu
 
     private art!: Artwork
     private plaque!: Plaque
@@ -164,6 +203,11 @@ export class GameScene extends Phaser.Scene {
 
     private shutdownScene() {
         this.gen++
+        this.veu?.destroy()
+        this.veu = undefined
+        this.apagarDicaFinal()
+        this.aguardando?.feito()
+        this.aguardando = null
         this.art?.destroy()
         this.plaque?.destroy()
         this.tray?.destroy()
@@ -192,6 +236,7 @@ export class GameScene extends Phaser.Scene {
         this.seen = false
         this.wrongPieces = []
         this.pickedIdx = []
+        this.feitos.clear()
         this.step = 'nada'
         this.mode = 'entrando'
 
@@ -212,6 +257,30 @@ export class GameScene extends Phaser.Scene {
          * recomeço é o jeito mais rápido de ensinar a criança a tocar em
          * Próximo sem ler.
          */
+        const guiaVaiFalar = index === 0 && this.level.level === 1 && !this.tutorialJaVisto()
+
+        /**
+         * O ESCURO COMEÇA NA PRIMEIRA FALA, E NÃO NO MEIO DO CAMINHO.
+         *
+         * Ele entrava só quando o guia começava, ou seja DEPOIS da
+         * apresentação — e a criança via as três primeiras falas com a sala
+         * acesa e o resto do tutorial com a sala escura. Dois tutoriais com
+         * duas caras, no mesmo minuto:
+         *
+         *   *"na primeira cena do tutorial da personagem, não tem fundo meio
+         *   preto como o resto."*
+         *
+         * Aqui ele sobe SEM BURACO: a mesa ainda está vazia, e a única coisa
+         * que há para olhar é a menina falando. O buraco nasce fechado no meio
+         * da mesa, então a luz do passo 1 do guia ABRE em cima da figura que
+         * acabou de pousar, em vez de acender do nada.
+         */
+        if (guiaVaiFalar) {
+            this.veu = createVeu(this, { depth: DEPTH.fly - 2 })
+            await this.veu.abrir()
+            if (gen !== this.gen) return
+        }
+
         if (index === 0 && this.level.opening && !this.tutorialJaVisto()) {
             const falas = this.level.opening
             for (let i = 0; i < falas.length; i++) {
@@ -241,14 +310,21 @@ export class GameScene extends Phaser.Scene {
         if (gen !== this.gen) return
 
         /* A BANDEJA VAZIA É A RECUSA DO JOGO. Antes da primeira virada só a
-           obra é tocável, e a frase diz o que fazer — sem custar uma vida. */
-        await this.tray.show([], 'De quem é isso?  Vire a obra.')
+           obra é tocável, e a frase diz o que fazer — sem custar uma vida.
+
+           No guia a frase sai: quem pede para virar é a Lia, com o halo em
+           cima da obra, e duas instruções ao mesmo tempo é uma a mais. */
+        await this.tray.show([], guiaVaiFalar ? undefined : 'Quem fez esta figura?  Vire e veja atrás.')
         if (gen !== this.gen) return
 
         this.mode = 'frente'
         this.art.setEnabled(true)
 
-        if (index === 0 && this.level.level === 1) this.runTutorial(false)
+        /* A PRIMEIRA FASE DO NÍVEL 1 É ENSINADA FAZENDO, e só na primeira vez.
+           Depois disso o lembrete é o botão `?`, que é curto de propósito. */
+        if (index === 0 && this.level.level === 1 && !this.tutorialJaVisto()) {
+            await this.guiar(gen)
+        }
     }
 
     /* ─────────────────────────────── virar ────────────────────────────── */
@@ -271,10 +347,15 @@ export class GameScene extends Phaser.Scene {
            estado nenhum. O que a primeira virada faz é ABRIR a bandeja. */
         if (lado === 'verso' && !this.seen) {
             this.seen = true
-            await this.showStep()
+            /* No guia a bandeja continua VAZIA depois da virada: o carimbo
+               aparece na fala que pede o carimbo. Peça visível e desligada é
+               um toque que não responde — e "o jogo travou" é a leitura da
+               criança, não "ainda não é a hora". */
+            if (!this.guiando) await this.showStep()
             if (gen !== this.gen) return
+            this.cumprir('virar')
         } else if (this.seen) {
-            this.tray.setEnabled(true)
+            this.tray.setEnabled(!this.guiando)
             this.plaque.setEnabled(this.picked.length > 0)
         }
     }
@@ -290,7 +371,9 @@ export class GameScene extends Phaser.Scene {
             await this.tray.show(this.phase.tray as TrayItem[])
         }
         if (gen !== this.gen) return
-        this.tray.setEnabled(true)
+        /* Com o guia no ar a bandeja nasce desligada: ela abre na fala que
+           pede aquele gesto, e não no instante em que tem peça dentro. */
+        this.tray.setEnabled(!this.guiando)
         this.plaque.setEnabled(this.picked.length > 0)
     }
 
@@ -300,6 +383,7 @@ export class GameScene extends Phaser.Scene {
         if (this.mode !== 'verso' && this.mode !== 'frente') return
         if (!this.seen) return
         const gen = this.gen
+        this.apagarDicaFinal()
 
         if (this.step === 'carimbo') {
             this.tray.setEnabled(false)
@@ -309,7 +393,11 @@ export class GameScene extends Phaser.Scene {
             await this.plaque.ink()
             if (gen !== this.gen) return
             this.stamped = true
-            await this.showStep()
+            /* Mesma regra da virada: no guia as peças da assinatura entram
+               junto com a fala que manda procurar a marca, e não antes. */
+            if (!this.guiando) await this.showStep()
+            if (gen !== this.gen) return
+            this.cumprir('carimbo')
             return
         }
 
@@ -413,7 +501,7 @@ export class GameScene extends Phaser.Scene {
         if (autor !== null) {
             await this.artist.beat(
                 autor, POSE.agradecendo,
-                `Valeu! Ficou escrito ${ARTIST_NAMES[autor]} lá no mural.`,
+                agradecimento(this.phase.obra.sign),
                 'Continuar',
             )
             if (gen !== this.gen) return
@@ -430,7 +518,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     private async errou(
-        falha: keyof typeof FALHA_TEXT,
+        falha: Falha,
         montada: { kind: string; text?: string },
         gen: number,
     ) {
@@ -459,14 +547,14 @@ export class GameScene extends Phaser.Scene {
             if (autor !== null) {
                 await this.artist.beat(
                     autor, POSE.explicando,
-                    'Dá uma olhada no verso: está escrito lá.', 'Entendi',
+                    dicaDoAutor(this.phase.obra.sign), 'Entendi',
                 )
                 if (gen !== this.gen) return
             }
         }
         if (gen !== this.gen) return
 
-        await this.sign.show(FALHA_TEXT[falha], SIGN_Y)
+        await this.sign.show(falhaTexto(falha, this.phase.obra.sign), SIGN_Y)
         if (gen !== this.gen) return
 
         /* O verso pulsa: o jogo aponta para onde a resposta ESTÁ escrita,
@@ -556,7 +644,10 @@ export class GameScene extends Phaser.Scene {
                para ler, nada onde há só um gesto. Três acenos com "Próximo"
                no fim do nível seriam três toques para não ler nada. */
             await this.artist.show(quem, POSE.agradecendo)
-            await FX.wait(this, 340)
+            /* A espera encolheu de 340 para 80: o agradecimento agora são três
+               pulos de verdade, e são eles que ocupam o tempo. Somar pausa a
+               gesto é o que faz um desfile de três virar fila de banco. */
+            await FX.wait(this, 80)
             await this.artist.exit(200)
             if (gen !== this.gen) return
         }
@@ -570,8 +661,8 @@ export class GameScene extends Phaser.Scene {
         showLevelComplete(this, {
             title: 'Criador de Confiança!',
             subtitle: last
-                ? 'Toda obra do mural tem o nome de quem fez.'
-                : 'Tem obra nova chegando na caixa.',
+                ? 'Toda figura do mural tem o nome de quem fez.'
+                : 'Tem figura nova chegando na caixa.',
             accent: C.gold,
             panelColor: C.cream,
             titleColor: CSS.header,
@@ -650,6 +741,215 @@ export class GameScene extends Phaser.Scene {
         return vistos?.has(`ef05co09-l${this.level.level}`) ?? false
     }
 
+    /**
+     * ══════════════════════════════════════════════════════════════════════
+     *  O GUIA DA PRIMEIRA FASE — ENSINAR FAZENDO, NÃO CONTANDO
+     * ══════════════════════════════════════════════════════════════════════
+     *
+     * Antes, a fase 1.1 abria com três cartelas escuras do `createTutorial`:
+     * a criança lia "toque na obra", "copie aqui", "a obra sobe", tocava em
+     * Próximo três vezes e só ENTÃO começava — com tudo já esquecido, porque
+     * ler sobre um gesto não é o mesmo que fazê-lo. O dono do projeto pediu o
+     * contrário: *"ela deveria já ensinar a criança em interação real como
+     * fazer todo processo."*
+     *
+     * Agora a Lia conduz a fase inteira, e cada instrução dela PARA até o
+     * gesto de verdade acontecer. Ela fala, sai, a criança faz, ela volta e
+     * comenta o que apareceu na tela. É a ordem de uma aula: mostra-se o que
+     * a pessoa acabou de fazer, nunca o que ela ainda vai fazer.
+     *
+     * ── O © É EXPLICADO AQUI, E SÓ AQUI ──────────────────────────────────
+     *
+     * A legenda do verso ("pode usar dando o crédito") é o lembrete que fica.
+     * Mas um símbolo que a criança nunca viu não entra por uma legenda de 19
+     * px: ele precisa de alguém apontando e dizendo o que é, uma vez, na hora
+     * em que ele aparece na tela pela primeira vez. Isso é a fala 2 e 3.
+     *
+     * ── O QUE O GUIA NÃO FAZ ─────────────────────────────────────────────
+     *
+     * Ele nunca aponta para a resposta na bandeja. No passo da assinatura o
+     * halo fica em cima do VERSO — "a resposta está aí, procure" —, porque
+     * apontar a peça certa transformaria a única decisão do jogo num toque
+     * ditado. Ensinar o caminho não é andar por ela.
+     */
+    private async guiar(gen: number) {
+        this.guiando = true
+        /* O `?` abre a cartela escura, que BLOQUEIA o toque — e o guia está
+           justamente esperando um toque. Os dois no ar ao mesmo tempo é uma
+           tela travada, então o botão dorme enquanto a Lia conduz. */
+        this.hud.setHelpEnabled(false)
+        /* O guia substitui o tutorial do nível, então é ele que marca a chave
+           como vista — senão a apresentação e as cartelas voltariam na próxima
+           partida, como se nada tivesse acontecido. */
+        this.marcarTutorialVisto()
+
+        const fim = () => {
+            this.guiando = false
+            this.aguardando = null
+            this.hud.setHelpEnabled(true)
+            /* A SALA ACENDE JUNTO COM O FIM DO GUIA. A escolha da assinatura é
+               entre seis peças, e um véu com buraco em cima de uma delas seria
+               o jogo apontando a resposta. */
+            void this.veu?.fechar().then(() => {
+                this.veu?.destroy()
+                this.veu = undefined
+            })
+        }
+
+        const obra = this.art.box()
+
+        /**
+         * ELA NÃO SAI DE CENA ATÉ O FIM DO GUIA.
+         *
+         * A primeira versão usava `beat` — falar e sumir — a cada instrução, e
+         * a menina piscava para dentro e para fora da tela cinco vezes. Uma
+         * professora não desaparece quando a criança começa a fazer: ela fica
+         * ali, respirando, olhando. E é por ficar que o ANDAR dela pode ser
+         * visto acontecendo.
+         *
+         * `speak` deixa o balão aberto com o botão já tocado; `hideBalloon`
+         * tira o balão e mantém a menina.
+         */
+        const falarEFicar = async (pose: number, texto: string, label?: string) => {
+            await this.artist.speak(0, pose, texto, label)
+            this.artist.hideBalloon()
+        }
+
+        /* 1 · VIRAR — a luz ABRE na figura (o escuro já está de pé desde a
+           apresentação), e a bandeja continua fechada. */
+        await this.veu?.focar(obra)
+        if (gen !== this.gen) return fim()
+        let pararDica = dica(this, obra.x, obra.y, { raio: 150 })
+        await falarEFicar(POSE.explicando, 'Toque na figura para ver o que tem atrás.', 'Vou tocar!')
+        if (gen !== this.gen) return fim()
+        await this.esperar('virar')
+        pararDica()
+        if (gen !== this.gen) return fim()
+
+        /* 2 · O © — ela CHEGA PERTO, e a luz encolhe da figura inteira para o
+           selo. Quem explica se aproxima do que está explicando, e a luz
+           escorregando até lá diz "é ali" antes de a frase começar. */
+        const selo = this.art.seloPos()
+        await FX.all(
+            this.artist.moveTo(POSTO.perto),
+            this.veu!.focar({ x: selo.x, y: selo.y, w: 96, h: 96 }),
+        )
+        if (gen !== this.gen) return fim()
+        pararDica = dica(this, selo.x, selo.y, { raio: 62 })
+        await this.artist.speak(0, POSE.explicando, 'Achou este ©? Ele diz que a figura tem dono.')
+        if (gen !== this.gen) return fim()
+        await this.artist.speak(0, POSE.explicando, 'Pode usar, sim — mas dizendo quem fez. Isso é dar o crédito.')
+        pararDica()
+        if (gen !== this.gen) return fim()
+
+        /* 3 · DE QUEM É — o outro campo, e a luz atravessa o cartão até ele. */
+        const assinatura = this.art.signPos()
+        await this.veu?.focar({ x: assinatura.x, y: assinatura.y, w: 110, h: 110 })
+        if (gen !== this.gen) return fim()
+        pararDica = dica(this, assinatura.x, assinatura.y, { raio: 70 })
+        await this.artist.speak(0, POSE.explicando,
+            `E deste lado fica ${palavraDaAssinatura(this.phase.obra.sign)} de quem fez.`)
+        pararDica()
+        if (gen !== this.gen) return fim()
+
+        /* 4 · CARIMBAR — A TRAVESSIA. O trabalho deixa de ser em cima, na
+           figura, e passa a ser embaixo: ela atravessa a sala INTEIRA e
+           reaparece do outro lado, e a luz desce junto até a bandeja. Ir para
+           o posto de casa aqui seria o caminho curto — e o caminho curto não
+           faz ninguém virar a cabeça. */
+        const plaq = this.plaque.box()
+        await this.artist.moveTo(POSTO.esquerda)
+        if (gen !== this.gen) return fim()
+        await falarEFicar(POSE.explicando, 'Agora copie na plaquinha. Comece pelo carimbo.', 'Ok!')
+        if (gen !== this.gen) return fim()
+        /* O carimbo entra na bandeja AGORA, junto com a fala que o pede. */
+        await this.showStep()
+        if (gen !== this.gen) return fim()
+        const peca = this.tray.posOf(0)
+        await this.veu?.focar({ x: peca.x, y: peca.y, w: 160, h: 96 })
+        if (gen !== this.gen) return fim()
+        this.tray.setEnabled(true)
+        pararDica = dica(this, peca.x, peca.y, { raio: 86 })
+        await this.esperar('carimbo')
+        pararDica()
+        if (gen !== this.gen) return fim()
+
+        /* 5 · ASSINAR — a luz vai para o carimbo que ACABOU de pousar, que é a
+           coisa que a criança fez, e ela volta para casa pelo mesmo caminho. */
+        await FX.all(
+            this.veu!.focar({ x: plaq.x + PLAQUE.stampDX, y: plaq.y, w: 76, h: 76 }),
+            this.artist.moveTo(POSTO.casa),
+        )
+        if (gen !== this.gen) return fim()
+        await this.artist.speak(0, POSE.agradecendo, 'Isso! O carimbo já diz que a figura tem dono.')
+        if (gen !== this.gen) return fim()
+        /* "a marca" ou "o nome", conforme a fase — o guia roda na 1.1, que é
+           de marca, mas a frase sai do dado e não da lembrança de quem a
+           escreveu. Foi exatamente esse descuido que pôs "ficou escrito LIA"
+           numa fase em que nada se escreve. */
+        const palavra = palavraDaAssinatura(this.phase.obra.sign)
+        await this.artist.beat(0, POSE.explicando,
+            `Falta ${palavra}. Olhe atrás e ache na bandeja.`, 'Achei!')
+        if (gen !== this.gen) return fim()
+        /* AQUI ela sai: a escolha da marca é da criança, e alguém em pé ao
+           lado esperando é plateia, não ajuda. */
+        await this.showStep()
+        if (gen !== this.gen) return fim()
+
+        /* O guia ACABA AQUI: a escolha da assinatura é a primeira decisão de
+           verdade do jogo, e ela é da criança. O halo fica no VERSO, onde
+           está a resposta para ler — nunca na peça certa da bandeja. */
+        fim()
+        this.tray.setEnabled(true)
+        this.pararDicaFinal = dica(this, assinatura.x, assinatura.y, { raio: 70, intervalo: 2600 })
+    }
+
+    /**
+     * A ÚLTIMA DICA, QUE O PRIMEIRO TOQUE APAGA.
+     *
+     * Ela sobrevive ao fim do guia porque a criança ainda está procurando a
+     * marca. Assim que ela toca em QUALQUER peça, já está procurando de
+     * verdade — e halo que continua depois disso deixa de ser ajuda e vira
+     * cobrança.
+     */
+    private pararDicaFinal?: () => void
+
+    private apagarDicaFinal() {
+        this.pararDicaFinal?.()
+        this.pararDicaFinal = undefined
+    }
+
+    /** Espera um gesto DE VERDADE — ou segue, se ele já aconteceu. */
+    private esperar(gesto: Gesto): Promise<void> {
+        if (this.feitos.has(gesto)) return Promise.resolve()
+        return new Promise<void>(feito => { this.aguardando = { gesto, feito } })
+    }
+
+    /** O gesto aconteceu. Fica registrado, e solta quem estava esperando. */
+    private cumprir(gesto: Gesto) {
+        this.feitos.add(gesto)
+        if (this.aguardando?.gesto !== gesto) return
+        const { feito } = this.aguardando
+        this.aguardando = null
+        feito()
+    }
+
+    /**
+     * MARCA O TUTORIAL DO NÍVEL COMO VISTO.
+     *
+     * Escreve no MESMO conjunto do `registry` que o `createTutorial` usa — o
+     * que o `tutorialJaVisto()` lê logo acima. Duas memórias para a mesma
+     * pergunta é como a apresentação e o tutorial se desencontram.
+     */
+    private marcarTutorialVisto() {
+        let vistos = this.registry.get('__tutorialsSeen') as Set<string> | undefined
+        if (!vistos) {
+            vistos = new Set<string>()
+            this.registry.set('__tutorialsSeen', vistos)
+        }
+        vistos.add(`ef05co09-l${this.level.level}`)
+    }
+
     /* ───────────────────────────── tutorial ───────────────────────────── */
 
     private steps(): TutorialStep[] {
@@ -660,7 +960,7 @@ export class GameScene extends Phaser.Scene {
             {
                 /* A apresentação já disse que a obra não é dela. Este passo é
                    só o GESTO — repetir a frase faz a criança parar de ler. */
-                text: 'Toque na obra para ver o verso.',
+                text: 'Toque na figura para ver o que tem atrás.',
                 shape: 'rect',
                 x: obra.x, y: obra.y, w: obra.w, h: obra.h,
                 balloonX: W / 2, balloonY: 620,
@@ -671,13 +971,20 @@ export class GameScene extends Phaser.Scene {
                    Recortar a obra junto mostrava a FRENTE dela enquanto a
                    frase falava do verso — a criança via o contrário do que
                    estava escrito. */
-                text: 'O verso diz de quem é. Copie aqui: o carimbo e o nome.',
+                /* O lembrete nomeia o © de novo: quem aperta o `?` é quem não
+                   lembra, e "o carimbo" sozinho não diz qual nem por quê.
+
+                   E a segunda palavra sai da FASE: o `?` é tocável em todas
+                   elas, então esta frase falava de "a marca do dono" em cima
+                   de uma fase de letras — o mesmo erro do "ficou escrito LIA",
+                   só que no caminho de quem já estava perdido. */
+                text: `Atrás estão o © e ${palavraDaAssinatura(this.phase.obra.sign)} do dono. Copie os dois aqui.`,
                 shape: 'rect',
                 x: plaq.x, y: plaq.y, w: plaq.w, h: plaq.h,
                 balloonX: W / 2, balloonY: 300,
             },
             {
-                text: 'Com a plaquinha pronta, a obra sobe para o mural.',
+                text: 'Com a plaquinha pronta, a figura sobe para o mural.',
                 shape: 'rect',
                 x: vao.x, y: vao.y, w: vao.w, h: vao.h,
                 balloonX: W / 2, balloonY: 430,
@@ -685,12 +992,19 @@ export class GameScene extends Phaser.Scene {
         ]
     }
 
-    private runTutorial(force: boolean) {
+    /**
+     * O LEMBRETE DO BOTÃO `?`.
+     *
+     * Três cartelas curtas, e só isso — quem ensina o jogo é o guia da
+     * primeira fase. Este é o caminho de quem já jogou e esqueceu a ordem, e
+     * por isso ele roda SEMPRE que o `?` é tocado, sem `once`.
+     */
+    private runTutorial() {
         this.art.setEnabled(false)
         createTutorial(this, {
             key: 'ef05co09-l1',
             steps: this.steps(),
-            once: !force,
+            once: false,
             accent: C.gold,
             textSize: 34,
             safeTop: HUD.h + HUD.accent + 12,
@@ -705,8 +1019,10 @@ export class GameScene extends Phaser.Scene {
 
     private replayTutorial() {
         if (this.mode === 'fim' || this.mode === 'subindo') return
+        /* O `show-tutorial` chega da plataforma, e ela não sabe do guia. */
+        if (this.guiando) return
         this.tray.setEnabled(false)
-        this.runTutorial(true)
+        this.runTutorial()
     }
 }
 

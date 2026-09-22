@@ -8,8 +8,8 @@ Destino: `src/assets/games/EF05CO09/guilda-dos-criadores/`
 > **O estilo deste jogo é o GRAPHIC NOVEL INFANTOJUVENIL**, escolhido pelo dono
 > do projeto em 18/09/2026, e a referência são **duas imagens** — as duas capas
 > do *Elementary* que ele anexou:
-> [`references/17-graphic-novel-a.jpg`](../../../../references/17-graphic-novel-a.jpg)
-> e [`references/18-graphic-novel-b.jpg`](../../../../references/18-graphic-novel-b.jpg).
+> [`references/17-graphic-novel-a.webp`](../../../../references/17-graphic-novel-a.webp)
+> e [`references/18-graphic-novel-b.png`](../../../../references/18-graphic-novel-b.png).
 > **As duas vão anexadas em TODAS as gerações.** Cada prompt abaixo já vem
 > inteiro — estilo, corpo e negativo —, para ser copiado e colado sem montar
 > nada por cima.

@@ -1,9 +1,9 @@
 import Phaser from 'phaser'
 import { FX, type FxTarget } from '../../../../shared/effects/FX'
-import { ART, DEPTH } from '../data/layout'
+import { ART, DEPTH, VERSO } from '../data/layout'
 import { A, C, CSS, FONT, FONT_NOTE, SIZE, TYPE_MS } from '../data/theme'
 import { SHEETS, has } from '../data/files'
-import { MARK_FRAME, OBJ_FRAME, SEAL_NOTE, type Obra } from '../types'
+import { MARK_FRAME, OBJ_FRAME, SEAL_NOTE, VERSO_LABEL, type Obra } from '../types'
 
 const fx = (o: unknown) => o as unknown as FxTarget
 
@@ -21,7 +21,10 @@ export interface Artwork {
     setEnabled(on: boolean): void
     pos(): { x: number; y: number }
     box(): { x: number; y: number; w: number; h: number }
-    versoBox(): { x: number; y: number; w: number; h: number }
+    /** Onde o © está NA TELA. O guia aponta para cá ao explicar o símbolo. */
+    seloPos(): { x: number; y: number }
+    /** Onde a assinatura do verso está na tela. */
+    signPos(): { x: number; y: number }
     destroy(): void
 }
 
@@ -70,8 +73,23 @@ export function createArtwork(
     const seloAlt = scene.add.graphics()
     const marca = scene.add.image(0, 0, SHEETS.marcas.key, 0).setVisible(false)
     const marcaAlt = scene.add.text(0, 0, '', {
-        fontFamily: FONT, fontSize: '54px', color: CSS.ink,
+        fontFamily: FONT, fontSize: `${VERSO.dono.letraSize}px`, color: CSS.ink,
     }).setOrigin(0.5).setResolution(2).setVisible(false)
+
+    /**
+     * OS DOIS RÓTULOS — O QUE FAZ O CARTÃO TER CAMPOS, E NÃO DESENHOS SOLTOS.
+     *
+     * Eles são a diferença entre "tem um © e um sol no papel" e "este campo é
+     * a licença, aquele é o dono". Sem nome, a criança tem de inferir a função
+     * de cada símbolo — que é justamente o que ela ainda não sabe fazer.
+     */
+    const rotuloLicenca = scene.add.text(VERSO.licenca.cx, VERSO.labelY, VERSO_LABEL.licenca, {
+        fontFamily: FONT, fontSize: `${VERSO.labelSize}px`, color: CSS.grey,
+    }).setOrigin(0.5, 0).setResolution(2)
+    const rotuloDono = scene.add.text(VERSO.dono.cx, VERSO.labelY, VERSO_LABEL.dono, {
+        fontFamily: FONT, fontSize: `${VERSO.labelSize}px`, color: CSS.grey,
+    }).setOrigin(0.5, 0).setResolution(2)
+
     /**
      * A LEGENDA DO SELO — PORQUE UM © NÃO DIZ O PRÓPRIO NOME.
      *
@@ -79,14 +97,17 @@ export function createArtwork(
      * encontrar no rodapé de site e de livro a vida inteira, então tem de
      * aparecer com o que significa escrito do lado — toda vez que ela virar a
      * obra. É a mesma regra do álbum: ícone em miniatura não ensina nada.
+     *
+     * Ela fica CENTRADA COM O SELO, e não encostada na margem do cartão: o
+     * símbolo e o que ele quer dizer têm de ler como uma coisa só.
      */
     const legenda = scene.add.text(0, 0, '', {
         fontFamily: FONT,
         fontSize: `${SIZE.sealNote}px`,
         color: CSS.inkSoft,
-        align: 'left',
-        wordWrap: { width: 300 },
-    }).setOrigin(0, 0).setResolution(2).setVisible(false)
+        align: 'center',
+        wordWrap: { width: VERSO.licenca.notaWrap },
+    }).setOrigin(0.5, 0.5).setResolution(2).setVisible(false)
 
     const filete = scene.add.graphics()
     const bilhete = scene.add.text(0, 0, '', {
@@ -95,21 +116,12 @@ export function createArtwork(
         color: CSS.inkSoft,
         fontStyle: 'italic',
         align: 'left',
-        lineSpacing: 8,
-        wordWrap: { width: ART.w - 56 },
+        lineSpacing: 6,
+        wordWrap: { width: VERSO.noteWrap },
     }).setOrigin(0, 0).setResolution(2)
 
-    verso.add([cartao, seloAlt, selo, legenda, marca, marcaAlt, filete, bilhete])
+    verso.add([cartao, seloAlt, selo, legenda, marca, marcaAlt, rotuloLicenca, rotuloDono, filete, bilhete])
 
-    /* O verso tem de caber em 286 px de altura: o selo e a assinatura em cima,
-       o filete no meio, e ATÉ QUATRO linhas de bilhete embaixo. Com a régua
-       antiga (obra de 308) a quarta linha caía fora do cartão. */
-    const SEAL_X = -ART.w / 2 + 62
-    const SEAL_Y = -ART.h / 2 + 56
-    /** A legenda pousa embaixo do selo, e é ela que empurra o filete. */
-    const LEGEND_Y = SEAL_Y + 36
-    const RULE_Y = -ART.h / 2 + 150
-    const NOTE_Y = RULE_Y + 16
 
     const paintVerso = () => {
         const w = ART.w, h = ART.h, f = ART.frame
@@ -124,15 +136,18 @@ export function createArtwork(
 
         filete.clear()
         filete.lineStyle(2, C.paperEdge, 1)
-        filete.lineBetween(-w / 2 + 34, RULE_Y, w / 2 - 34, RULE_Y)
+        /* O vertical separa os dois campos; o horizontal separa o que se copia
+           do bilhete, que é recado e não dado. */
+        filete.lineBetween(VERSO.divisor.x, VERSO.divisor.y1, VERSO.divisor.x, VERSO.divisor.y2)
+        filete.lineBetween(-w / 2 + 34, VERSO.ruleY, w / 2 - 34, VERSO.ruleY)
     }
 
     /** O selo desenhado, para quando `carimbos-e-marcas.png` não chegou. */
     const paintSeloAlt = (on: boolean) => {
         seloAlt.clear()
         if (!on) return
-        seloAlt.lineStyle(7, C.ink, 1)
-        seloAlt.strokeCircle(SEAL_X, SEAL_Y, 26)
+        seloAlt.lineStyle(6, C.ink, 1)
+        seloAlt.strokeCircle(VERSO.licenca.cx, VERSO.licenca.seloY, VERSO.licenca.seloSize / 2)
     }
 
     /* ── montagem ───────────────────────────────────────────────────────── */
@@ -187,23 +202,29 @@ export function createArtwork(
         paintVerso()
 
         const temFolha = has(scene, SHEETS.marcas.key)
+        const { licenca, dono } = VERSO
+
+        /* ── o campo da licença ─────────────────────────────────────────── */
 
         selo.setVisible(false)
-        legenda.setVisible(false)
         paintSeloAlt(false)
         if (obra.seal !== 'nenhum') {
             const frame = obra.seal === 'credito' ? OBJ_FRAME.selo : OBJ_FRAME.cadeado
             if (temFolha) {
-                selo.setFrame(frame).setPosition(SEAL_X, SEAL_Y)
-                selo.setDisplaySize(62, 62).setVisible(true)
+                selo.setFrame(frame).setPosition(licenca.cx, licenca.seloY)
+                selo.setDisplaySize(licenca.seloSize, licenca.seloSize).setVisible(true)
             } else {
                 paintSeloAlt(true)
             }
-            legenda
-                .setText(SEAL_NOTE[obra.seal])
-                .setPosition(-ART.w / 2 + 34, LEGEND_Y)
-                .setVisible(true)
         }
+        /* A legenda vale para os TRÊS selos — inclusive o `nenhum`, cuja frase
+           ("não diz de quem é") é a única coisa que aquele campo tem a dizer. */
+        legenda
+            .setText(SEAL_NOTE[obra.seal])
+            .setPosition(licenca.cx, licenca.notaY)
+            .setVisible(true)
+
+        /* ── o campo do dono ────────────────────────────────────────────── */
 
         marca.setVisible(false)
         marcaAlt.setVisible(false)
@@ -211,19 +232,22 @@ export function createArtwork(
         if (sign?.kind === 'marca') {
             if (temFolha) {
                 marca.setFrame(MARK_FRAME[sign.id])
-                marca.setPosition(ART.w / 2 - 78, SEAL_Y).setDisplaySize(94, 94).setVisible(true)
+                marca.setPosition(dono.cx, dono.cy)
+                    .setDisplaySize(dono.marcaSize, dono.marcaSize).setVisible(true)
             } else {
-                marcaAlt.setText('✶').setPosition(ART.w / 2 - 78, SEAL_Y).setVisible(true)
+                marcaAlt.setText('✶').setPosition(dono.cx, dono.cy).setVisible(true)
             }
         } else if (sign?.kind === 'letras') {
+            /* O nome fica CENTRADO na coluna: com origem 0.5 não existe mais a
+               correção por número de letras que a régua antiga precisava. */
             marcaAlt
                 .setText(sign.text)
-                .setStyle({ fontFamily: FONT, fontSize: '56px', color: CSS.ink })
-                .setPosition(ART.w / 2 - 78 - (sign.text.length - 3) * 13, SEAL_Y)
+                .setStyle({ fontFamily: FONT, fontSize: `${dono.letraSize}px`, color: CSS.ink })
+                .setPosition(dono.cx, dono.cy)
                 .setVisible(true)
         }
 
-        bilhete.setText('').setPosition(-ART.w / 2 + 34, NOTE_Y)
+        bilhete.setText('').setPosition(-ART.w / 2 + 34, VERSO.noteY)
     }
 
     return {
@@ -270,7 +294,8 @@ export function createArtwork(
             if (indo === 'verso' && current) {
                 /* A ordem da leitura é a ordem da cópia: primeiro o que se
                    copia (selo e assinatura), depois o bilhete. */
-                const peças = [selo, legenda, marca, marcaAlt].filter(o => o.visible)
+                const peças = [rotuloLicenca, selo, legenda, rotuloDono, marca, marcaAlt]
+                    .filter(o => o.visible)
                 peças.forEach(o => o.setAlpha(0))
                 await FX.stagger(scene, peças.map(fx), t =>
                     FX.to(scene, t, { alpha: 1 }, { duration: 220 }), 110)
@@ -323,9 +348,12 @@ export function createArtwork(
             return { x: ART.cx, y: ART.cy, w: ART.w + 30, h: ART.h + 30 }
         },
 
-        /** A faixa do verso que decide a fase: o selo e a assinatura. */
-        versoBox() {
-            return { x: ART.cx, y: ART.cy + SEAL_Y, w: ART.w - 16, h: 150 }
+        seloPos() {
+            return { x: ART.cx + VERSO.licenca.cx, y: ART.cy + VERSO.licenca.seloY }
+        },
+
+        signPos() {
+            return { x: ART.cx + VERSO.dono.cx, y: ART.cy + VERSO.dono.cy }
         },
 
         destroy() {

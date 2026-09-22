@@ -112,6 +112,68 @@ export const ART = {
     frame: 8,
 } as const
 
+/**
+ * O VERSO, EM DOIS CAMPOS COM NOME.
+ *
+ * Primeira versão: o © de 62 px sozinho no canto, a legenda dele encostada na
+ * margem do cartão (e não no símbolo), e a marca de 94 px do outro lado, maior
+ * que o selo e sem nada dizendo o que era. O dono do projeto reprovou — *"a
+ * trás da plaquinha está mt mal organizado, com a logo de copyright (©) está
+ * grande"* —, e ele tem razão: o verso é a ÚNICA superfície de leitura do
+ * jogo, e ali estavam três coisas soltas, sem hierarquia, quase se tocando.
+ *
+ * Agora são dois campos lado a lado, cada um com um rótulo curto, separados
+ * por um filete vertical:
+ *
+ *     A LICENÇA          │        DE QUEM É
+ *         ©              │          [sol]
+ *   pode usar dando      │
+ *      o crédito         │
+ *   ─────────────────────────────────────────
+ *   "Tirei no quintal da vovó. Põe minha marca!"
+ *
+ * ── POR QUE ESTA ORDEM, E NÃO OUTRA ──────────────────────────────────────
+ *
+ * A leitura tem de ser a ordem da CÓPIA: a licença fica à esquerda porque o
+ * carimbo mora à esquerda da plaquinha (`PLAQUE.stampDX`), e o dono à direita
+ * porque a assinatura mora à direita (`PLAQUE.signDX`). O verso vira o mapa
+ * da plaquinha, e copiar deixa de ter ordem para decorar.
+ *
+ * ── O © ENCOLHEU DE 62 PARA 40 ───────────────────────────────────────────
+ *
+ * Tamanho não é ênfase. O © grande roubava a página de tudo o mais sendo o
+ * elemento que a criança MENOS entende — quem ensina é a legenda embaixo dele
+ * e a fala da Lia no guia, não o corpo do glifo. Em 40 px ele fica do tamanho
+ * do que é: um símbolo com uma legenda, dentro de um campo com nome.
+ */
+export const VERSO = {
+    /** O rótulo de cada campo, em cima do conteúdo. */
+    labelY: -126,
+    labelSize: 18,
+    /** O filete que separa os dois campos. */
+    divisor: { x: 34, y1: -102, y2: -6 },
+    licenca: {
+        cx: -81,
+        seloY: -76,
+        seloSize: 40,
+        /** A legenda mora EMBAIXO do selo e centrada com ele — não na margem. */
+        notaY: -26,
+        notaWrap: 200,
+    },
+    dono: {
+        cx: 121,
+        cy: -53,
+        marcaSize: 72,
+        letraSize: 46,
+    },
+    /** O filete que separa o que se copia do bilhete, que é só recado. */
+    ruleY: 14,
+    noteY: 30,
+    noteWrap: 348,
+    /** Três linhas de bilhete cabem; a quarta encosta na borda do cartão. */
+    noteLines: 3,
+} as const
+
 export const PLAQUE = {
     cx: 640,
     cy: 598,
@@ -152,6 +214,44 @@ export const ARTIST = {
     /** Ele fica em pé SOBRE o tampo, que começa em 536. */
     baseY: 556,
     h: 286,
+    /**
+     * ATÉ ONDE ELE PODE ANDAR.
+     *
+     * A obra vai até 856 com a moldura, e ele mede 286 de largura — meia
+     * largura é 143. Em `minX` 1004 sobra um vão de 5 px entre o ombro dele e
+     * o canto da obra: perto o bastante para "ele está apontando AQUILO", e
+     * longe o bastante para não tapar a coisa que ele está apontando.
+     *
+     * Para a direita ele para em 1128, antes de o ombro sair da tela.
+     */
+    minX: 200,
+    maxX: 1128,
+} as const
+
+/**
+ * OS POSTOS — OS LUGARES ONDE ELA PARA, E O QUE CADA UM QUER DIZER.
+ *
+ * *"o certo seria fazer a personagem (…) ficar se movendo pra diferentes
+ * lados pra um tutorial mais dinâmico."* Andar 86 px era um passo lateral, não
+ * uma travessia: os dois primeiros postos ficavam do mesmo lado da mesa.
+ *
+ * Agora são três, e o da ESQUERDA é o que faz a criança virar a cabeça — ela
+ * atravessa a sala por trás da figura e reaparece do outro lado, no momento em
+ * que o trabalho deixa de ser em cima (a figura) e passa a ser embaixo (a
+ * plaquinha e a bandeja).
+ *
+ * `esquerda: 280` sai da mesma conta do `perto`: ela mede 286 de largura, meia
+ * largura é 143, e a figura começa em 424 com a moldura — em 280 sobra um vão
+ * de 1 px. A caixa de fotos do fundo fica em 132 e ela passa na frente, que é
+ * o certo: a caixa é cenário pintado.
+ */
+export const POSTO = {
+    /** Em pé ao lado da mesa, onde ela mora. */
+    casa: ARTIST.cx,
+    /** Colada na figura, para apontar o © e a marca. */
+    perto: 1004,
+    /** Do outro lado da sala, quando o trabalho é na plaquinha. */
+    esquerda: 280,
 } as const
 
 export const BOX = { cx: 132, cy: 440 } as const

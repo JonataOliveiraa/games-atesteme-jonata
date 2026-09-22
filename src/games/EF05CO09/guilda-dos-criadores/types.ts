@@ -38,6 +38,20 @@ export const SEAL_NOTE: Record<Seal, string> = {
     nenhum: 'não diz de quem é',
 }
 
+/**
+ * O NOME DE CADA CAMPO DO VERSO.
+ *
+ * Duas palavras curtas, e nenhuma delas é decoração: sem rótulo, o © e a
+ * marca eram dois desenhos soltos no papel, e a criança tinha de adivinhar
+ * que um era a permissão e o outro o dono. `DE QUEM É` é a frase que o jogo
+ * já usa na bandeja vazia e na fala da Lia — repetir a MESMA palavra em todos
+ * os lugares é o que faz ela virar vocabulário.
+ */
+export const VERSO_LABEL = {
+    licenca: 'A LICENÇA',
+    dono: 'DE QUEM É',
+} as const
+
 export interface Obra {
     id: string
     /** A célula em `obras.png`: `nível × 3 + fase`. */
