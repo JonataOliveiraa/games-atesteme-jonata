@@ -14,6 +14,24 @@
  */
 
 const POR_SLUG: Record<string, string[]> = {
+  "kit-do-solucionador": [
+    "Você leva recado na vila. Casa de porta aberta ainda não sabe.",
+    "Toque numa coisa do kit: o círculo mostra até onde ela avisa.",
+    "O sol acaba a cada trecho andado — quem ficou no escuro, ficou sem saber.",
+  ],
+  "trilha-do-amanha": [
+    "Alguém do outro lado do rio precisa de você, e você não chega lá.",
+    "Ande até a oficina no fim da trilha e toque em ENTRAR.",
+    "Traga uma das três coisas da bancada e use na beira do rio.",
+    "Um recado, uma encomenda, ou um olhar: cada nível pede uma coisa.",
+    "Deu certo? Então conte o que mudou.",
+  ],
+  "maratona-do-algoritmo": [
+    "Um skatista azul passa primeiro e mostra o caminho.",
+    "Toque nas figuras embaixo para fazer o mesmo caminho.",
+    "Trocou de ideia? Toque na figura lá em cima para tirar.",
+    "Tudo cheio, aperte VAI — e veja o seu caminho acontecer.",
+  ],
   "guilda-dos-criadores": [
     "Uma obra da caixa pousa na mesa. Ela não é sua.",
     "Toque na obra para virar: o verso diz de quem ela é.",

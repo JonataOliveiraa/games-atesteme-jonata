@@ -57,7 +57,9 @@ import coverCuradoriaComCreditos from "../assets/games/EF05CO09/curadoria-com-cr
 import coverFuturoEmCena from "../assets/games/EF05CO10/futuro-em-cena/cover-futuro-em-cena.png";
 import coverEscolhaAFerramentaCerta from "../assets/games/EF05CO11/escolha-a-ferramenta-certa/cover-escolha-a-ferramenta-certa.png";
 import coverMuseuDasEstruturas from "../assets/games/EF15CO01/museu-das-estruturas/cover-museu-das-estruturas.png";
+import coverArquivoVivo from "../assets/games/EF15CO01/o-misterio-do-arquivo-vivo/cover-o-misterio-do-arquivo-vivo.png";
 import coverAcademiaDosAlgoritmos from "../assets/games/EF15CO02/academia-dos-algoritmos/cover-academia-dos-algoritmos.png";
+import coverMaratonaDoAlgoritmo from "../assets/games/EF15CO02/maratona-do-algoritmo/cover-maratona-do-algoritmo.png";
 import coverCircuitoDaVerdade from "../assets/games/EF15CO03/circuito-da-verdade/cover-circuito-da-verdade.png";
 import coverArquitetoDasMissoes from "../assets/games/EF15CO04/arquiteto-das-missoes/cover-arquiteto-das-missoes.png";
 import ilhaDosCodigosThumbnail from "../assets/games/EF01CO05/ilha-dos-codigos/cover-ilha-dos-codigos.png";
@@ -1461,6 +1463,22 @@ export const catalog: Game[] = [
     thumbnail: coverFuturoEmCena,
   },
   {
+    id: "083",
+    slug: "trilha-do-amanha",
+    module: "EF05CO10/trilha-do-amanha",
+    skill: "EF05CO10",
+    years: [5],
+    tags: ["mensageiro", "invenção", "transporte", "observação", "trilha"],
+    order: 405,
+    status: "published",
+    title: "Trilha do Amanhã",
+    description:
+      "Do outro lado do rio alguém precisa de você. Ande até a oficina e volte com o que faz o recado chegar, a encomenda atravessar e o olho alcançar.",
+    category: "Cultura Digital",
+    points: 90,
+    icon: "🛤️",
+  },
+  {
     id: "041",
     slug: "escolha-a-ferramenta-certa",
     module: "EF05CO11/escolha-a-ferramenta-certa",
@@ -1476,6 +1494,39 @@ export const catalog: Game[] = [
     points: 65,
     icon: "🔧",
     thumbnail: coverEscolhaAFerramentaCerta,
+  },
+  {
+    id: "084",
+    slug: "kit-do-solucionador",
+    module: "EF05CO11/kit-do-solucionador",
+    skill: "EF05CO11",
+    years: [5],
+    tags: ["alcance", "tecnologia", "vila"],
+    order: 415,
+    status: "published",
+    title: "Kit do Solucionador",
+    description:
+      "Saia pela vila com a coisa certa e acenda quem precisa saber. O telão é o maior de todos — e ele não sai do lugar.",
+    category: "Cultura Digital",
+    points: 80,
+    icon: "🧰",
+  },
+  {
+    id: "092",
+    slug: "o-misterio-do-arquivo-vivo",
+    module: "EF15CO01/o-misterio-do-arquivo-vivo",
+    skill: "EF15CO01",
+    years: [1, 2, 3, 4, 5],
+    tags: ["estrutura de dados", "organização", "lista", "matriz"],
+    order: 421,
+    status: "draft",
+    title: "O Mistério do Arquivo Vivo",
+    description:
+      "Uma bagunça em cima, uma prateleira vazia embaixo. Toque numa coisa, toque num buraco, e ela encaixa — do menor para o maior, ou no cruzamento do bicho com a cor.",
+    category: "Pensamento Computacional",
+    points: 30,
+    icon: "📥",
+    thumbnail: coverArquivoVivo,
   },
   {
     id: "042",
@@ -1509,6 +1560,23 @@ export const catalog: Game[] = [
     points: 65,
     icon: "🏋️",
     thumbnail: coverAcademiaDosAlgoritmos,
+  },
+  {
+    id: "093",
+    slug: "maratona-do-algoritmo",
+    module: "EF15CO02/maratona-do-algoritmo",
+    skill: "EF15CO02",
+    years: [1, 2, 3, 4, 5],
+    tags: ["algoritmo", "repetição", "condicional"],
+    order: 435,
+    status: "published",
+    title: "Maratona do Algoritmo",
+    description:
+      "Monte o caminho do skatista antes de ele sair e veja o seu algoritmo funcionar.",
+    category: "Pensamento Computacional",
+    points: 65,
+    icon: "🛹",
+    thumbnail: coverMaratonaDoAlgoritmo,
   },
   {
     id: "044",
@@ -1547,4 +1615,4 @@ export const catalog: Game[] = [
 ];
 
 /** Próximo id livre. Use ao cadastrar um jogo novo. */
-export const NEXT_FREE_ID = "083";
+export const NEXT_FREE_ID = "084";
