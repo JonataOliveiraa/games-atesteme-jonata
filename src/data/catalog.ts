@@ -87,6 +87,11 @@ import coverMetroMirim from "../assets/games/EF05CO02/metro-mirim/cover-metro-mi
 import coverMaestroDoSistema from "../assets/games/EF05CO07/maestro-do-sistema/cover-maestro-do-sistema.png";
 import coverODiaSemInternet from "../assets/games/EF05CO06/dia-sem-internet/cover-dia-sem-internet.png";
 import coverOlhaOJornal from "../assets/games/EF05CO08/olha-o-jornal/cover-olha-o-jornal.png";
+import coverGuildaDosCriadores from "../assets/games/EF05CO09/guilda-dos-criadores/cover-guilda-dos-criadores.png";
+import coverTrilhaDoAmanha from "../assets/games/EF05CO10/trilha-do-amanha/cover-trilha-do-amanha.png";
+import coverKitDoSolucionador from "../assets/games/EF05CO11/kit-do-solucionador/cover-kit-do-solucionador.png";
+import coverAchadosEPerdidos from "../assets/games/EF15CO03/achados-e-perdidos/cover-achados-e-perdidos.png";
+import coverCanteiroDeObras from "../assets/games/EF15CO04/canteiro-de-obras/cover-canteiro-de-obras.png";
 /**
  * 1. `id` nunca muda e nunca é reaproveitado. Se um jogo for removido,
  *    marque status "draft" — não devolva o id para a fila.
@@ -1427,6 +1432,7 @@ export const catalog: Game[] = [
     category: "Cultura Digital",
     points: 30,
     icon: "🖼️",
+    thumbnail: coverGuildaDosCriadores,
   },
   {
     id: "039",
@@ -1477,6 +1483,7 @@ export const catalog: Game[] = [
     category: "Cultura Digital",
     points: 90,
     icon: "🛤️",
+    thumbnail: coverTrilhaDoAmanha,
   },
   {
     id: "041",
@@ -1510,6 +1517,7 @@ export const catalog: Game[] = [
     category: "Cultura Digital",
     points: 80,
     icon: "🧰",
+    thumbnail: coverKitDoSolucionador,
   },
   {
     id: "092",
@@ -1596,6 +1604,23 @@ export const catalog: Game[] = [
     thumbnail: coverCircuitoDaVerdade,
   },
   {
+    id: "081",
+    slug: "achados-e-perdidos",
+    module: "EF15CO03/achados-e-perdidos",
+    skill: "EF15CO03",
+    years: [1, 2, 3, 4, 5],
+    tags: ["lógica", "não", "verdadeiro e falso"],
+    order: 445,
+    status: "published",
+    title: "Achados e Perdidos",
+    description:
+      "Um bichinho perdido chegou no balcão: pendure no cartaz só as cartas que dizem a verdade sobre ele.",
+    category: "Pensamento Computacional",
+    points: 65,
+    icon: "🧸",
+    thumbnail: coverAchadosEPerdidos,
+  },
+  {
     id: "045",
     slug: "arquiteto-das-missoes",
     module: "EF15CO04/arquiteto-das-missoes",
@@ -1612,7 +1637,52 @@ export const catalog: Game[] = [
     icon: "🏗️",
     thumbnail: coverArquitetoDasMissoes,
   },
+  {
+    id: "086",
+    slug: "canteiro-de-obras",
+    module: "EF15CO04/canteiro-de-obras",
+    skill: "EF15CO04",
+    years: [1, 2, 3, 4, 5],
+    tags: ["decomposição", "partes", "construir", "toque"],
+    order: 455,
+    status: "published",
+    title: "Canteiro de Obras",
+    description:
+      "A praça não cabe de uma vez: corte o terreno e faça uma obra de cada vez.",
+    category: "Pensamento Computacional",
+    points: 90,
+    icon: "🚧",
+    thumbnail: coverCanteiroDeObras,
+  },
 ];
 
 /** Próximo id livre. Use ao cadastrar um jogo novo. */
-export const NEXT_FREE_ID = "084";
+export const NEXT_FREE_ID = "087";
+
+/**
+ * AS RODADAS DE PRODUÇÃO.
+ *
+ * A primeira rodada são os 45 jogos que nasceram com a plataforma — um por
+ * habilidade, ids 001 a 045. A segunda começa em 046: são os jogos que
+ * entraram DEPOIS, acrescentando um segundo (e às vezes terceiro) jogo à
+ * mesma habilidade.
+ *
+ * O corte é pelo `id` e não pelo `order` de propósito: `order` é a posição na
+ * trilha, e a segunda rodada foi intercalada na trilha justamente para ficar
+ * ao lado do jogo irmão (Corrida dos Parecidos é id 046 e order 15, entre os
+ * ids 001 e 002). Quem quer "o que veio na segunda leva" está perguntando
+ * pelo id, que é a identidade eterna e nunca é reaproveitada.
+ *
+ * `lastId` é o TETO da rodada, não o último id cadastrado: "999" quer dizer
+ * "e tudo que vier daqui pra frente". Assim cadastrar o jogo 094 amanhã não
+ * exige lembrar de mexer aqui.
+ *
+ * A comparação é de string, e funciona porque todo id tem três dígitos com
+ * zero à esquerda — "046" <= "090" é verdade pelo mesmo motivo que 46 <= 90.
+ */
+export const ROUNDS = [
+  { key: "1", label: "1ª rodada", firstId: "001", lastId: "045" },
+  { key: "2", label: "2ª rodada", firstId: "046", lastId: "999" },
+] as const;
+
+export type RoundKey = (typeof ROUNDS)[number]["key"];

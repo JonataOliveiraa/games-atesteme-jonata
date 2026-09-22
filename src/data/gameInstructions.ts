@@ -14,6 +14,18 @@
  */
 
 const POR_SLUG: Record<string, string[]> = {
+  "canteiro-de-obras": [
+    "A praça inteira é grande demais para fazer de uma vez.",
+    "Toque na tesoura: o terreno se parte em pedaços.",
+    "Toque num pedaço para chegar perto dele.",
+    "Toque nas peças que são daquele pedaço — uma é de outro!",
+  ],
+  "achados-e-perdidos": [
+    "Um bichinho perdido chegou no balcão.",
+    "O cartaz dele só pode dizer a VERDADE.",
+    "Toque numa carta que seja verdade: ela sobe no cartaz.",
+    "Dizer o que ele NÃO tem também vale!",
+  ],
   "kit-do-solucionador": [
     "Você leva recado na vila. Casa de porta aberta ainda não sabe.",
     "Toque numa coisa do kit: o círculo mostra até onde ela avisa.",
