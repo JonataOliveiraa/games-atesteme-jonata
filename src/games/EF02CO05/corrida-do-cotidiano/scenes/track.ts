@@ -5,10 +5,11 @@ import {
     DEPTH,
     GRASS_Y,
     H,
+    LANE_LINE,
+    MARK,
     P_ROAD_FAR,
     P_ROAD_NEAR,
     ROAD_HALF_WX,
-    STRIPE,
     W,
     pOf,
     xOf,
@@ -53,7 +54,17 @@ const CLOUDS = [
     { x: 1260, y: 150, s: 0.7, drift: 0.07 },
 ]
 
-const P_STRIPE_MIN = 0.13
+const P_MARK_MIN = 0.19
+
+const LINE_WX = ROAD_HALF_WX - LANE_LINE.inset
+
+/** Os quatro tracos de cada fileira: um par colado em cada linha continua. */
+const MARK_WX: ReadonlyArray<readonly [number, number]> = [
+    [-LINE_WX + LANE_LINE.halfWX, -LINE_WX + LANE_LINE.halfWX + MARK.wx],
+    [-LANE_LINE.halfWX - MARK.wx, -LANE_LINE.halfWX],
+    [LANE_LINE.halfWX, LANE_LINE.halfWX + MARK.wx],
+    [LINE_WX - LANE_LINE.halfWX - MARK.wx, LINE_WX - LANE_LINE.halfWX],
+]
 
 export function createTrack(scene: Phaser.Scene, mood: Mood) {
     const extras: Phaser.GameObjects.Graphics[] = []
@@ -146,24 +157,25 @@ export function createTrack(scene: Phaser.Scene, mood: Mood) {
         extras.push(snowGround)
     }
 
-    const asphalt = scene.add.graphics().setDepth(DEPTH.road)
-    asphalt.fillStyle(C.curbDark, 1)
-    quad(asphalt, P_ROAD_FAR, P_ROAD_NEAR, -ROAD_HALF_WX - CURB_WX, ROAD_HALF_WX + CURB_WX)
-    asphalt.fillStyle(C.curb, 1)
-    quad(asphalt, P_ROAD_FAR, P_ROAD_NEAR, -ROAD_HALF_WX - CURB_WX, -ROAD_HALF_WX + 4)
-    quad(asphalt, P_ROAD_FAR, P_ROAD_NEAR, ROAD_HALF_WX - 4, ROAD_HALF_WX + CURB_WX)
-    asphalt.fillStyle(C.asphaltDark, 1)
-    quad(asphalt, P_ROAD_FAR, P_ROAD_NEAR, -ROAD_HALF_WX, ROAD_HALF_WX)
-    asphalt.fillStyle(C.asphalt, 1)
-    quad(asphalt, P_ROAD_FAR, P_ROAD_NEAR, -ROAD_HALF_WX + 6, ROAD_HALF_WX - 6)
+const surface = scene.add.graphics().setDepth(DEPTH.road)
+    surface.fillStyle(C.trackEdge, 1)
+    quad(surface, P_ROAD_FAR, P_ROAD_NEAR, -ROAD_HALF_WX - CURB_WX, ROAD_HALF_WX + CURB_WX)
+    surface.fillStyle(C.trackDark, 1)
+    quad(surface, P_ROAD_FAR, P_ROAD_NEAR, -ROAD_HALF_WX, ROAD_HALF_WX)
+    surface.fillStyle(C.track, 1)
+    quad(surface, P_ROAD_FAR, P_ROAD_NEAR, -ROAD_HALF_WX + 7, ROAD_HALF_WX - 7)
+    surface.fillStyle(C.line, 0.96)
+    for (const wx of [-LINE_WX, 0, LINE_WX]) {
+        quad(surface, P_ROAD_FAR, P_ROAD_NEAR, wx - LANE_LINE.halfWX, wx + LANE_LINE.halfWX)
+    }
 
-    const moving = scene.add.graphics().setDepth(DEPTH.stripe)
+    const moving = scene.add.graphics().setDepth(DEPTH.marks)
 
     const zNear = zOf(P_ROAD_NEAR)
-    const zFar = zOf(P_STRIPE_MIN)
-    const count = Math.ceil((zFar - zNear) / STRIPE.gap)
-    const stripes: number[] = []
-    for (let i = 0; i < count; i++) stripes.push(zNear + i * STRIPE.gap)
+    const zFar = zOf(P_MARK_MIN)
+    const count = Math.ceil((zFar - zNear) / MARK.gap)
+    const marks: number[] = []
+    for (let i = 0; i < count; i++) marks.push(zNear + i * MARK.gap)
 
     const streaks = Array.from({ length: 9 }, (_, i) => ({
         z: zNear + i * 210,
@@ -208,18 +220,21 @@ export function createTrack(scene: Phaser.Scene, mood: Mood) {
         dirty = false
         moving.clear()
 
-        const from = lane === 0 ? -ROAD_HALF_WX + 8 : 8
-        const to = lane === 0 ? -8 : ROAD_HALF_WX - 8
+        const from = lane === 0 ? -LINE_WX + LANE_LINE.halfWX : LANE_LINE.halfWX
+        const to = lane === 0 ? -LANE_LINE.halfWX : LINE_WX - LANE_LINE.halfWX
         moving.fillStyle(C.white, 0.09 + flash * 0.22)
         quad(moving, P_ROAD_FAR, P_ROAD_NEAR, from, to)
 
-        moving.fillStyle(C.stripe, 0.95)
-        for (let i = 0; i < stripes.length; i++) {
-            const pn = pOf(stripes[i])
-            if (pn < P_STRIPE_MIN) continue
-            const pf = pOf(stripes[i] + STRIPE.len)
+        moving.fillStyle(C.line, 0.82)
+        for (let i = 0; i < marks.length; i++) {
+            const pn = pOf(marks[i])
+            if (pn < P_MARK_MIN) continue
+            const pf = pOf(marks[i] + MARK.len)
             if (pf > P_ROAD_NEAR) continue
-            quad(moving, pf, pn > P_ROAD_NEAR ? P_ROAD_NEAR : pn, -STRIPE.halfWX, STRIPE.halfWX)
+            const near = pn > P_ROAD_NEAR ? P_ROAD_NEAR : pn
+            for (let j = 0; j < MARK_WX.length; j++) {
+                quad(moving, pf, near, MARK_WX[j][0], MARK_WX[j][1])
+            }
         }
 
         if (boost <= 0.02) return
@@ -263,10 +278,10 @@ export function createTrack(scene: Phaser.Scene, mood: Mood) {
 
         advance(dz: number) {
             dirty = true
-            const wrap = count * STRIPE.gap
-            for (let i = 0; i < stripes.length; i++) {
-                stripes[i] -= dz
-                if (stripes[i] < zNear - STRIPE.len) stripes[i] += wrap
+            const wrap = count * MARK.gap
+            for (let i = 0; i < marks.length; i++) {
+                marks[i] -= dz
+                if (marks[i] < zNear - MARK.len) marks[i] += wrap
             }
             if (boost > 0.02) {
                 for (let i = 0; i < streaks.length; i++) {
@@ -327,7 +342,7 @@ export function createTrack(scene: Phaser.Scene, mood: Mood) {
             hills.destroy()
             sky.destroy()
             ground.destroy()
-            asphalt.destroy()
+            surface.destroy()
             moving.destroy()
         },
     }

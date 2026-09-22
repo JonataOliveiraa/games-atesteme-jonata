@@ -17,21 +17,28 @@ escala:
 | `corredor.png` | 280 x 1680 | 1 x 6 de 280 | §1.1 |
 | `tecnologias.png` | 1400 x 1050 | 4 x 3 de 350 | ordem confere com o §6 |
 | `grama.png` | 1672 x 941 | — | §1.3, horizonte curvo |
-| `casa.png` | 340 x 240 | — | passa pelas laterais |
+| `cone.png` | 512 x 512 | — | baliza a beira da pista, base em 98,4% |
 | `moita.png` | 340 x 240 | — | idem, base em 94,6% |
 
-O cenário veio **desmontado**: grama de um lado, casa e moita como objetos que
-se movem. É melhor do que o fundo único que este documento pedia — a casa passa,
+O cenário veio **desmontado**: grama de um lado, cone e moita como objetos que
+se movem. É melhor do que o fundo único que este documento pedia — o cone passa,
 a moita passa — e joga a perspectiva toda para o código. Como isso é feito, e
 onde estão os bugs, está em [PISTA.md](./PISTA.md).
+
+**`casa.png` saiu do jogo**, pelo mesmo caminho do portão: o cenário é uma
+pista de atletismo, e casa na beira de pista de corrida não existe. Ela está na
+lista `SKIP` do `BootScene` e `cone.png` ocupou o lugar dela.
 
 **`portao.png` saiu do jogo.** A placa dele era pequena demais para o objeto
 da tecnologia (§15 do PLANEJAMENTO), e o portão virou duas placas de beira de
 pista desenhadas em `Graphics`. O arquivo continua na pasta, mas o `BootScene`
 não carrega — dá para apagar.
 
-**`cover-corrida-do-cotidiano.png` chegou** e o jogo já está no catálogo. Só um
-reparo: a arte escreve **CONTIDIANO** no lugar de COTIDIANO.
+**`cover-corrida-do-cotidiano.png` foi refeita** junto com a pista: a primeira
+versão mostrava a criança correndo no meio de uma rua de asfalto com casas dos
+dois lados — o cenário que saiu do jogo — e ainda escrevia CONTIDIANO no lugar
+de COTIDIANO. A capa de agora é a pista de borracha com os cones, e o título
+está escrito certo.
 
 **O que falta:**
 
@@ -39,10 +46,10 @@ reparo: a arte escreve **CONTIDIANO** no lugar de COTIDIANO.
 |---|---|---|---|---|
 | `situacoes.png` | 3 x 350 x 350 | 3 x 3 | os 9 pictogramas do balão | o balão fica só com a frase |
 | `mapa-bairro.png` | 1672 x 941 | — | o mapa do fim do trecho | mapa em `Graphics` |
-| `casa-escola.png`, `casa-praca.png` | 340 x 240 | — | trechos 2 e 3 | só com os níveis 2 e 3 |
+| `arquibancada.png` | 340 x 240 | — | fundo dos trechos 2 e 3 | moita e tufo de grama |
 
-A rua **não entra na lista**: ela é `Graphics`, desenhada por cima da grama, e o
-motivo está no §9 do PISTA.
+A pista **não entra na lista**: ela é `Graphics`, desenhada por cima da grama, e
+o motivo está no §9 do PISTA.
 
 O jogo roda sem qualquer um deles — cada peça tem desenho de reserva (§14 do
 PLANEJAMENTO) — e roda feio.
@@ -79,11 +86,10 @@ palavras por cima, com a fonte dele.
 |---|---|
 | contorno | `#1F2A37` |
 | céu | `#8FD3F5` claro `#DFF3FF` |
-| asfalto | `#6B7280` claro `#8A93A1` |
-| calçada | `#E7D9C0` escuro `#C4B394` |
+| piso da pista | `#D4674A` escuro `#B95436` |
+| borda da pista | `#93402A`, linhas `#FFF6DF` |
 | grama | `#7FC96A` escura `#4E9A45` |
-| telhado das casas | `#E06C4F` |
-| parede das casas | `#F6E3C5` |
+| cone | `#F07A2E` faixa `#F6E3C5` |
 | portão certo / acerto | `#35D07F` |
 | erro / alerta | `#F59E0B` |
 | madeira do portão | `#C89A5B` escura `#8A6231` |
@@ -404,15 +410,19 @@ open space, no clutter, no text anywhere.
 ## 11. `cover-corrida-do-cotidiano.png` - 1672 x 941
 
 A capa do catálogo. É a única imagem que pode ter mais detalhe, porque nunca
-aparece dentro do jogo.
+aparece dentro do jogo. **Entregue**, na segunda versão: a primeira era de rua
+com casas.
 
 ```
 A colorful cartoon cover illustration for a children's educational game, 1672 by 941
-pixels. A cheerful child seen from behind, running down a sunny residential street
-towards two big friendly wooden gateways standing side by side across the road. Each
+pixels. A cheerful child seen from behind, running down a sunny two-lane athletics
+running track with a terracotta red rubber surface and continuous white lane lines,
+towards two big friendly wooden gateways standing side by side across the track. Each
 gateway has a large blank signboard on its top beam: the left one shows a simple wall
-clock, the right one shows a kitchen blender. Warm daylight, red-roofed houses along the
-horizon, green lawns, dynamic and inviting, plenty of empty sky at the top.
+clock, the right one shows a kitchen blender. Rows of bright orange traffic cones line
+both edges of the track. Warm daylight, green lawn and low bushes beyond the cones,
+soft green hills on the horizon, no houses and no street anywhere, dynamic and
+inviting, plenty of empty sky at the top.
 
 Thick dark outline #1F2A37, flat colors, bright and friendly, no text anywhere.
 
@@ -428,7 +438,7 @@ Deliberadamente, porque é estado ou efeito, e PNG não muda de cor:
 | Elemento | Motivo |
 |---|---|
 | balão da situação e plaquinha da trava | mudam de tamanho com a frase, e entram e saem |
-| listras da pista e brilho da faixa acesa | são o movimento, e mudam a cada quadro |
+| marcas da pista e brilho da raia acesa | são o movimento, e mudam a cada quadro |
 | luz do portão abrindo, poeira, rastro | efeito |
 | moldura verde do acerto e vermelha do erro | kit `FX` compartilhado |
 | cadeado, seta, estrela, confete, véu | idem |
@@ -456,7 +466,7 @@ branco correndo pela pista.
 
 ## 14. Ordem
 
-Entregues: `corredor`, `portao`, `tecnologias`, `grama`, `casa`, `moita`.
+Entregues: `corredor`, `portao`, `tecnologias`, `grama`, `cone`, `moita`.
 
 O que falta, em ordem:
 

@@ -33,7 +33,7 @@ export const DEPTH = {
     sky: -200,
     grass: -190,
     road: -180,
-    stripe: -170,
+    marks: -170,
     runner: 999,
     zones: 2900,
     reward: 3000,
@@ -86,15 +86,21 @@ export const RUNNER = {
     frameMs: 105,
 }
 
-export const STRIPE = { len: 96, gap: 224, halfWX: 10 }
+/** Linhas continuas da pista: borda de fora e divisoria das duas raias. */
+export const LANE_LINE = { halfWX: 9, inset: 22 }
+
+/** Marcas transversais que correm; sao elas que dao a sensacao de velocidade. */
+export const MARK = { len: 30, gap: 300, wx: 132 }
 
 export const PROP = {
-    gapZ: 560,
-    houseWX: [780, 1180] as const,
-    bushWX: [520, 700] as const,
-    houseScale: 1.5,
+    gapZ: 430,
+    coneWX: [506, 540] as const,
+    bushWX: [760, 1060] as const,
+    tuftWX: [640, 720] as const,
+    coneScale: 0.3,
     bushScale: 0.9,
-    houseBase: 0.9875,
+    tuftScale: 0.55,
+    coneBase: 0.9844,
     bushBase: 0.946,
 }
 

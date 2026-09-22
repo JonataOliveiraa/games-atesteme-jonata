@@ -9,7 +9,7 @@ const SHEETS: Record<string, { frameWidth: number; frameHeight: number }> = {
     tecnologias: { frameWidth: 350, frameHeight: 350 },
 }
 
-const SKIP = ['portao']
+const SKIP = ['portao', 'casa']
 
 const FILES = import.meta.glob(
     '../../../../assets/games/EF02CO05/corrida-do-cotidiano/*.png',
@@ -27,7 +27,7 @@ export class BootScene extends Phaser.Scene {
         createLoadingScreen(this, {
             title: 'Corrida do Cotidiano',
             subtitle: 'Corra e escolha o caminho certo!',
-            description: 'Preparando o bairro...',
+            description: 'Preparando a pista...',
             theme: {
                 background: { kind: 'solid', color: 0x7fcdf2 },
                 card: C.cream,

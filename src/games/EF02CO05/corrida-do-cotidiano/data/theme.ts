@@ -10,12 +10,11 @@ export const C = {
     grass: 0x87bc62,
     grassDark: 0x5f9646,
 
-    asphalt: 0x6b7280,
-    asphaltDark: 0x555c66,
-    asphaltLight: 0x8a93a1,
-    stripe: 0xfff6df,
-    curb: 0xe7d9c0,
-    curbDark: 0xbfae8e,
+    track: 0xd4674a,
+    trackDark: 0xb95436,
+    trackEdge: 0x93402a,
+    line: 0xfff6df,
+    dust: 0xe8c9b6,
 
     wood: 0xc89a5b,
     woodDark: 0x8a6231,

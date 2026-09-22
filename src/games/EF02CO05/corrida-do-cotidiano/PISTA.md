@@ -2,10 +2,15 @@
 
 Documentos irmãos: [PLANEJAMENTO.md](./PLANEJAMENTO.md) · [TEXTURAS.md](./TEXTURAS.md)
 
-A arte chegou montada em peças soltas — grama, casa, moita, portão, corredor —
+A arte chegou montada em peças soltas — grama, cone, moita, portão, corredor —
 em vez de um fundo pronto com a pista desenhada dentro. Isso é melhor para o
-jogo (a casa passa, a moita passa, a pista corre) e é onde moram todos os bugs
+jogo (o cone passa, a moita passa, a pista corre) e é onde moram todos os bugs
 possíveis, porque agora **o código é quem faz a perspectiva**.
+
+O cenário é uma **pista de atletismo**: piso de borracha, linhas contínuas
+brancas separando as duas raias e cones balizando as beiras. Não é rua e não
+tem casa — uma criança correndo no meio do asfalto, com casas dos dois lados, é
+a imagem que este jogo não pode passar.
 
 Este documento existe para que a perspectiva seja **uma função só**, usada por
 todo mundo. Toda vez que alguém calcular posição de outro jeito, aparece um
@@ -20,7 +25,7 @@ objeto flutuando, uma placa atrás do chão ou uma decisão que não dispara.
 | `corredor.png` | 280 x 1680 | 1 x 6 de 280 | ver §1.1 |
 | `tecnologias.png` | 1400 x 1050 | 4 x 3 de 350 | objeto centrado |
 | `grama.png` | 1672 x 941 | — | ver §1.3 |
-| `casa.png` | 340 x 240 | — | x3 y1 w336 h236, base em 98,8% |
+| `cone.png` | 512 x 512 | — | x92 y31 w323 h473, base em **98,4%** |
 | `moita.png` | 340 x 240 | — | x3 y12 w331 h215, base em **94,6%** |
 
 `portao.png` **não é carregado** (está na lista `SKIP` do `BootScene`). A placa
@@ -132,9 +137,9 @@ o bug só aparece na terceira decisão.
 |---|---|---|
 | céu (gradiente + nuvens) | -100 | `track.ts`, `Graphics` |
 | grama | -90 | `grama.png`, esticada para 1280 x 720 |
-| asfalto + bordas | -80 | `track.ts`, `Graphics`, repintado todo quadro |
-| listras do meio | -70 | `track.ts`, do mesmo `z` |
-| casas e moitas | `depthOf(p)` | `props.ts` |
+| piso + linhas contínuas | -80 | `track.ts`, `Graphics`, pintado uma vez |
+| marcas transversais | -70 | `track.ts`, do mesmo `z` |
+| cones e moitas | `depthOf(p)` | `props.ts` |
 | placas | `depthOf(p)` | `signs.ts` |
 | corredor | **999** | `runner.ts` |
 | objeto voando do acerto | 3000 | `reward.ts` |
@@ -145,10 +150,11 @@ O corredor em 999 é o que faz a placa passar **por trás** dele enquanto se
 aproxima (`p < 1`) e **por cima** dele depois de atravessada (`p > 1`) — é o
 efeito de passar por baixo dela, e sai de graça da mesma conta.
 
-**O asfalto é pintado uma vez; só o que se mexe é repintado.** São dois
-`Graphics`: o de baixo tem meio-fio e asfalto, que nunca mudam, e é desenhado
-no `create`. O de cima tem as listras, o brilho da faixa escolhida e os riscos
-de velocidade — e mesmo esse só é repintado quando alguma coisa mudou (uma
+**O piso é pintado uma vez; só o que se mexe é repintado.** São dois
+`Graphics`: o de baixo tem a borda de fora, o piso de borracha e as três linhas
+contínuas (as duas beiras e a divisória do meio), que nunca mudam, e é desenhado
+no `create`. O de cima tem as marcas transversais, o brilho da raia escolhida e
+os riscos de velocidade — e mesmo esse só é repintado quando alguma coisa mudou (uma
 flag `dirty`, ligada pelo `advance`, pelo `setLane` e pelo `setBoost`). Com o
 mundo congelado na trava, no tutorial ou no fim do nível, a pista não gasta um
 quadro sequer.
@@ -156,9 +162,14 @@ quadro sequer.
 **Quem desenhar coisa nova em cima da pista precisa ligar o `dirty`.** Sem
 isso, ela aparece uma vez e congela.
 
-Listra é uma lista de `z` que recicla — **nunca** `tileSprite` com
+**As linhas contínuas não dão velocidade — as marcas dão.** Uma linha que corre
+até o infinito fica parada na tela por definição; sem as marcas transversais a
+pista morre. Cada fileira de marcas são quatro tracinhos, um par colado em cada
+linha contínua, que é como uma pista de atletismo é pintada de verdade.
+
+Marca é uma lista de `z` que recicla — **nunca** `tileSprite` com
 `tilePositionY`, que descola do mundo assim que a velocidade muda ou o mundo
-congela. As listras longe demais (abaixo de 0,13 de escala) são puladas: viram
+congela. As fileiras longe demais (abaixo de 0,19 de escala) são puladas: viram
 menos de um pixel.
 
 ---
@@ -237,7 +248,7 @@ Ordem fixa. Trocar a ordem é como a maioria dos bugs de runner aparece:
 4. cruzamento: se prevP < P_DECIDE <= p  → RESOLVE (uma vez)
 5. descarta quem passou de P_CULL ou saiu de lado
 6. nasce prop por DISTÂNCIA acumulada, nunca por tempo
-7. repinta asfalto e listras
+7. repinta o brilho da raia e as marcas
 8. corredor: quadro da animação e interpolação de faixa
 9. som do passo, disparado pela TROCA DE QUADRO do corredor
 ```
@@ -247,8 +258,8 @@ criança troca de aba e volta: sem a trava, `delta` chega com 3 000 ms, a placa
 pula de `p = 0,3` para `p = 3` e a decisão nunca acontece — a corrida segue
 como se nada tivesse sido perguntado.
 
-O passo 6 é o que mantém o espaçamento das casas igual em qualquer velocidade.
-Por tempo, a fase 3 ficaria com o dobro de casas.
+O passo 6 é o que mantém o espaçamento dos cones igual em qualquer velocidade.
+Por tempo, a fase 3 ficaria com o dobro de cones.
 
 O passo 9 é o que amarra o som à imagem: se o passo sair de um `timer`
 paralelo, ele descola do desenho em menos de um minuto, e descola de novo a
@@ -275,7 +286,7 @@ que o código faz.
 | 10 | `moita.png` flutuando | origem medida (94,6%), não `(0.5, 1)` |
 | 11 | segundo horizonte para a curva da grama | ponto de fuga único, no centro |
 | 12 | placa desenhada por cima do corredor cedo demais | `depthOf(p)` contra o 999 do corredor |
-| 13 | `tileSprite` para as listras | listras são `z`, recicladas |
+| 13 | `tileSprite` para as marcas | marcas são `z`, recicladas |
 | 14 | toque repetido na trava cobrando vida a cada vez | cobra só no `RESOLVE` |
 | 15 | contador de tolerância que não zera | zera no começo de cada fase |
 | 16 | `scene.restart` sem o saldo de vidas | passa `lives: this.livesLeft` |
@@ -303,15 +314,19 @@ fazem o mesmo. Nada de arrastar, nada de alvo invisível.
 | Falta | Reserva enquanto não chega |
 |---|---|
 | `situacoes.png` (9 pictogramas) | o balão fica só com a frase, centralizada |
-| `rua.png` | o asfalto é `Graphics`, e é o que permite listra correndo e faixa acesa |
+| `pista.png` | o piso é `Graphics`, e é o que permite marca correndo e raia acesa |
 | `mapa-bairro.png` | o cartão do canto é `Graphics`: casa, nove vagas, e os objetos caindo nelas |
 | ~~`cover-corrida-do-cotidiano.png`~~ | **entregue**, e o jogo já está no catálogo |
 
-Sobre a rua: ela **fica em `Graphics` de propósito**, mesmo agora que a grama é
-textura. O asfalto muda a cada quadro (listras correndo, faixa da escolha
-acesa, brilho do acerto) e um PNG não muda. Como ele é desenhado **por cima** da
-grama, e não ao lado dela, não existe a emenda que o PLANEJAMENTO temia: a
-costura fica dentro do próprio traço do meio-fio.
+Sobre a pista: ela **fica em `Graphics` de propósito**, mesmo agora que a grama
+é textura. O que corre por cima dela muda a cada quadro (marcas passando, raia
+da escolha acesa, brilho do acerto) e um PNG não muda. Como ela é desenhada
+**por cima** da grama, e não ao lado dela, não existe a emenda que o
+PLANEJAMENTO temia: a costura fica dentro da própria borda escura do piso.
 
-Se um `rua.png` aparecer depois, ele entra sem reescrever nada — vira o
-preenchimento do mesmo trapézio, e as listras continuam por cima.
+Se um `pista.png` aparecer depois, ele entra sem reescrever nada — vira o
+preenchimento do mesmo trapézio, e as marcas continuam por cima.
+
+E `casa.png` **não é mais carregada** (está na lista `SKIP` do `BootScene`,
+junto do portão): casa na beira de uma pista de corrida não existe, e o arquivo
+fica só como histórico.

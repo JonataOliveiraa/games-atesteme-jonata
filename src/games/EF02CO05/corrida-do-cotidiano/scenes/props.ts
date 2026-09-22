@@ -10,20 +10,21 @@ interface Prop {
     fade: number
 }
 
-const FALLBACK_HOUSE = 'ccot-prop-casa'
+const FALLBACK_CONE = 'ccot-prop-cone'
 const FALLBACK_BUSH = 'ccot-prop-moita'
 const TUFT = 'ccot-prop-tufo'
 
 function ensureTextures(scene: Phaser.Scene) {
-    if (!scene.textures.exists('casa') && !scene.textures.exists(FALLBACK_HOUSE)) {
+    if (!scene.textures.exists('cone') && !scene.textures.exists(FALLBACK_CONE)) {
         const g = scene.make.graphics({ x: 0, y: 0 }, false)
-        g.fillStyle(C.ink, 1)
-        g.fillRect(10, 90, 320, 146)
+        g.fillStyle(C.trackEdge, 1)
+        g.fillEllipse(256, 452, 300, 74)
+        g.fillStyle(C.track, 1)
+        g.fillEllipse(256, 438, 284, 68)
+        g.fillTriangle(256, 40, 400, 438, 112, 438)
         g.fillStyle(C.cream, 1)
-        g.fillRect(22, 102, 296, 122)
-        g.fillStyle(C.warnDark, 1)
-        g.fillTriangle(0, 96, 170, 8, 340, 96)
-        g.generateTexture(FALLBACK_HOUSE, 340, 240)
+        g.fillTriangle(256, 178, 322, 360, 190, 360)
+        g.generateTexture(FALLBACK_CONE, 512, 512)
         g.destroy()
     }
     if (!scene.textures.exists('moita') && !scene.textures.exists(FALLBACK_BUSH)) {
@@ -53,9 +54,9 @@ function ensureTextures(scene: Phaser.Scene) {
 export function createProps(scene: Phaser.Scene) {
     ensureTextures(scene)
 
-    const houseKey = scene.textures.exists('casa') ? 'casa' : FALLBACK_HOUSE
+    const coneKey = scene.textures.exists('cone') ? 'cone' : FALLBACK_CONE
     const bushKey = scene.textures.exists('moita') ? 'moita' : FALLBACK_BUSH
-    const houseBase = houseKey === 'casa' ? PROP.houseBase : 1
+    const coneBase = coneKey === 'cone' ? PROP.coneBase : 1
     const bushBase = bushKey === 'moita' ? PROP.bushBase : 1
 
     const zSpawn = zOf(P_PROP_SPAWN)
@@ -63,19 +64,9 @@ export function createProps(scene: Phaser.Scene) {
     const idle: Prop[] = []
     let side = 1
     let untilNext = 0
+    let row = 0
 
-    const spawn = (fade: number) => {
-        side *= -1
-        const roll = Math.random()
-        const house = roll < 0.34
-        const bush = !house && roll < 0.72
-
-        const key = house ? houseKey : bush ? bushKey : TUFT
-        const base = house ? houseBase : bush ? bushBase : 1
-        const range = house ? PROP.houseWX : bush ? PROP.bushWX : ([470, 560] as const)
-        const scale = house ? PROP.houseScale : bush ? PROP.bushScale : 0.55
-        const wx = side * Phaser.Math.Between(range[0], range[1])
-
+    const push = (key: string, base: number, wx: number, scale: number, fade: number) => {
         const prop = idle.pop()
         if (prop) {
             prop.image.setTexture(key).setOrigin(0.5, base).setVisible(true)
@@ -83,21 +74,45 @@ export function createProps(scene: Phaser.Scene) {
             prop.wx = wx
             prop.scale = scale
             prop.fade = fade
-            prop.image.setFlipX(house && wx > 0)
+            prop.image.setFlipX(wx > 0)
             prop.image.setAlpha(fade > 0 ? 0 : 1)
             live.push(prop)
-            return
+            return prop
         }
 
         const image = scene.add.image(0, 0, key).setOrigin(0.5, base)
-        image.setFlipX(house && wx > 0)
+        image.setFlipX(wx > 0)
         if (fade > 0) image.setAlpha(0)
-        live.push({ image, z: zSpawn, wx, scale, fade })
+        const fresh = { image, z: zSpawn, wx, scale, fade }
+        live.push(fresh)
+        return fresh
     }
 
-    for (let i = 0; i < 5; i++) {
+    /** Uma fileira: um cone em cada beira, e de vez em quando verde bem mais longe. */
+    const spawn = (fade: number) => {
+        const jitter = Phaser.Math.Between(PROP.coneWX[0], PROP.coneWX[1])
+        push(coneKey, coneBase, -jitter, PROP.coneScale, fade)
+        push(coneKey, coneBase, Phaser.Math.Between(PROP.coneWX[0], PROP.coneWX[1]), PROP.coneScale, fade)
+
+        row++
+        if (row % 2 !== 0) return
+
+        side *= -1
+        const bush = Math.random() < 0.6
+        const range = bush ? PROP.bushWX : PROP.tuftWX
+        push(
+            bush ? bushKey : TUFT,
+            bush ? bushBase : 1,
+            side * Phaser.Math.Between(range[0], range[1]),
+            bush ? PROP.bushScale : PROP.tuftScale,
+            fade,
+        )
+    }
+
+    for (let i = 0; i < 6; i++) {
+        const before = live.length
         spawn(0)
-        live[live.length - 1].z = zSpawn - i * PROP.gapZ
+        for (let j = before; j < live.length; j++) live[j].z = zSpawn - i * PROP.gapZ
     }
 
     return {
@@ -118,7 +133,7 @@ export function createProps(scene: Phaser.Scene) {
                 if (p > P_PROP_CULL || x < -520 || x > W + 520) {
                     prop.image.setVisible(false)
                     live.splice(i, 1)
-                    if (idle.length < 12) idle.push(prop)
+                    if (idle.length < 20) idle.push(prop)
                     else prop.image.destroy()
                     continue
                 }

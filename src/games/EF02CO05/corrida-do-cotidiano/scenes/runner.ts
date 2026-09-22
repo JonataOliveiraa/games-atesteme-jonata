@@ -42,7 +42,7 @@ export function createRunner(scene: Phaser.Scene, onStep: () => void) {
     }
 
     const puffs = Array.from({ length: 6 }, () =>
-        scene.add.ellipse(0, 0, 26, 12, C.curbDark, 0.6).setDepth(DEPTH.runner - 1).setVisible(false),
+        scene.add.ellipse(0, 0, 26, 12, C.dust, 0.6).setDepth(DEPTH.runner - 1).setVisible(false),
     )
     let puffAt = 0
 

@@ -527,7 +527,7 @@ export const catalog: Game[] = [
     status: "published",
     title: "Corrida do Cotidiano",
     description:
-      "Corra pelo bairro e desvie para a placa da tecnologia que resolve a situação do balão.",
+      "Corra na pista e desvie para a placa da tecnologia que resolve a situação do balão.",
     category: "Cultura Digital",
     points: 55,
     icon: "🏃",
