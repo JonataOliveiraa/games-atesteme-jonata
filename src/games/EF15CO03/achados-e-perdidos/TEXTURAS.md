@@ -570,6 +570,161 @@ heavy noise, cropped edges, mess, chaos, sad faces, crying, angry faces.
 
 ---
 
+## 5½. `icones.png` — os três termos, soltos
+
+Os ícones que aparecem **na carta** e **no campo do cartaz**: a gota de tinta
+(a COR), o chapéu e os óculos. Hoje são `Graphics`; este arquivo os substitui.
+
+### A gota é BRANCA, e quem pinta é o código
+
+A ideia é do usuário e está certa: **um desenho só de gota, em branco puro, e o
+`setTint` do Phaser dá as quatro cores**. Quatro gotas desenhadas à mão seriam
+quatro chances de o azul da carta não ser o azul do bichinho — e neste jogo a
+cor é a pergunta, não a decoração.
+
+O `tint` do Phaser **multiplica**: `branco × azul = azul`, `preto × azul =
+preto`. Por isso duas exigências que não são estéticas, são técnicas:
+
+- **o miolo da gota tem de ser branco PURO (`#FFFFFF`)**, sem cinza, sem
+  sombra, sem brilho e sem degradê. Qualquer cinza lá dentro multiplica junto e
+  devolve um azul sujo, apagado;
+- **o contorno tem de ser preto puro**, que é o que sobrevive a qualquer tinta e
+  mantém a silhueta.
+
+O chapéu e os óculos **não são tingidos** — eles já vêm nas cores fixas deles,
+porque o acessório nunca pode ter cor de atributo (§3 das regras).
+
+### Contrato da folha
+
+- **`icones.png`**, **768 × 256**, grade **3 colunas × 1 linha** de **256 ×
+  256**, alfa real.
+- A ordem dos quadros é contrato com `data/icons.ts`:
+
+| # | Ícone | Cor no arquivo | No jogo |
+|---:|---|---|---|
+| 0 | **gota** de tinta | **branco puro**, contorno preto | tingida de azul, verde, vermelho ou amarelo |
+| 1 | **chapéu** | marrom-madeira chapado | como está |
+| 2 | **óculos** | armação preta | como está |
+
+- **O chapéu e os óculos são OS MESMOS de `bichinhos.png`.** Anexe a folha dos
+  bichinhos junto com as referências de estilo: é ela que manda aqui, não a
+  memória do gerador. Se o chapéu do ícone não for o chapéu da cabeça, a criança
+  perde a ligação entre a carta e o bichinho, que é a jogada inteira.
+- Cada ícone ocupa **~80 %** da célula, centrado, sem sombra no chão.
+- O risco vermelho do `NÃO` **não vem no arquivo**: ele é `Graphics`, desenhado
+  por cima, porque muda de tamanho entre a carta e o campo do cartaz.
+
+### Prompt copiável
+
+~~~text
+STYLE — USE THE ATTACHED IMAGES FOR THE LINE WORK ONLY. Match how they are
+DRAWN, never how they are coloured: bold black outlines of EVEN, THICK weight
+all the way around every shape; 100% FLAT colour fill inside, with NO gradients,
+NO cel shading, NO soft shadows, NO airbrushing and NO texture; forms built from
+clean geometry — firm straight runs, crisp corners, confident curves —
+simplified down to the strongest possible silhouette. Graphic and poster-like,
+like clean vector art.
+
+TAKE ONLY THE LINE AND THE SHAPE LANGUAGE FROM THE ATTACHED IMAGES. Do NOT take
+their colours, their palette, their characters, their costumes, their poses,
+their backgrounds or their subject matter.
+
+ONE OF THE ATTACHED IMAGES IS A SHEET OF LITTLE COLOURED CREATURES WEARING A
+BROWN HAT AND BLACK ROUND GLASSES. Copy THAT HAT and THOSE GLASSES exactly —
+same shape, same proportions, same colours — but drawn ALONE, with no creature
+and no head under them.
+
+SHEET — Sprite sheet, 3 columns by 1 row, 256x256 px per cell, transparent
+background, no grid lines drawn, no cell borders, no ground shadow, every cell
+with the SAME outline thickness. Each object is centred in its own cell and
+fills about 80 percent of it.
+
+Three separate objects, seen straight from the front, flat and symmetrical:
+
+Cell 1 — A PAINT DROP: the classic teardrop shape, a round bottom rising into a
+single pointed tip at the top. Its inside is filled with PURE WHITE (#FFFFFF)
+and nothing else — no grey, no off-white, no cream, no highlight, no shine, no
+sparkle, no shadow, no gradient, no second tone anywhere inside it. The ONLY
+other colour in this cell is the black outline around the edge. It must look
+like a blank shape waiting to be filled in, not like a drop of water.
+
+Cell 2 — THE HAT, alone: the same simple round-brimmed hat the creatures in the
+attached sheet are wearing, in the same flat WOOD BROWN, seen straight from the
+front, resting on nothing. Flat fill, black outline, no head, no face, no hair
+under it.
+
+Cell 3 — THE GLASSES, alone: the same simple round spectacles the creatures in
+the attached sheet are wearing, with the same flat BLACK frame — two round
+lenses, a short bridge between them and two short arms. Seen straight from the
+front, floating on their own. The lenses are EMPTY and fully transparent, with
+no glass, no shine and no white fill behind them; no eyes, no face, no head.
+
+All three objects share the same black outline weight, and all three read
+clearly when the cell is shrunk to 72 px wide.
+
+DO NOT INCLUDE: any colour inside the paint drop, grey fill, off-white fill,
+cream fill, shading inside the drop, a highlight on the drop, a shine, a
+specular dot, a water droplet, a realistic liquid, a splash, ripples, a puddle,
+a brush, a paint can, a palette, coloured hats, coloured glasses, hats or
+glasses in yellow, green, blue or red, a head, a face, eyes, ears, hair, a
+creature, a character, lenses filled with white or with glass,
+pink, hot pink, magenta, fuchsia, neon colours, fluorescent colours, acid
+colours, rainbow gradients, glowing outlines, checkerboard patterns, striped
+backgrounds, star bursts, sparkles, twinkles, confetti, halftone dots, the
+characters from the attached images, text, letters, words, labels, digits,
+numbers, captions, watermark, logo, title lettering, signature, user interface,
+buttons, panels, frames, speech bubbles, arrows, icons, HUD, brand marks, check
+marks, crosses, red slashes, prohibition signs,
+gradients, cel shading, soft shadows, airbrushing, painterly lineless
+illustration, heavy rendering, rough sketchy lines, uneven brush outlines, thin
+hairline outlines, muddy colours, 3D render, photorealistic, blur, lens flare,
+heavy noise, grid lines, visible sprite-sheet borders, cell borders, gaps,
+cropped edges, drop shadow on the cell, white backing in transparent assets,
+white sticker keyline.
+~~~
+
+### Depois de gerar, confira o branco
+
+Antes de aceitar, amostre o miolo da gota: tem de dar **`#FFFFFF`**. Um
+`#F4F1EA` ali parece branco na tela e devolve um azul lavado depois do `tint` —
+e o defeito só aparece ao lado do bichinho, quando já é tarde.
+
+O código já está pronto para os dois mundos: com `icones.png` presente ele usa a
+folha e tinge a gota; sem ela, cai no `Graphics` de hoje.
+
+### A folha entregue (22/09/2026)
+
+`768 × 256`, alfa limpa nos quatro cantos, os três quadros na ordem certa.
+Medido:
+
+| # | Ícone | Caixa alfa | Centro na célula |
+|---:|---|---|---|
+| 0 | gota | `148 × 214` | `124, 131` |
+| 1 | chapéu | `236 × 124` | `129, 127` |
+| 2 | óculos | `215 × 91` | `128,5 · 133,5` |
+
+Duas coisas saíram da medição, e as duas estão em `data/icons.ts`:
+
+- **cada ícone é escalado pela PRÓPRIA caixa** (`size / maior lado`), não pela
+  célula. Pela célula, a gota — que é estreita e alta — saía 20 % menor que o
+  chapéu, que é largo e baixo, e os três precisam do mesmo peso a 72 px reais;
+- **o centro é o da caixa alfa.** Os óculos foram desenhados 5,5 px abaixo do
+  meio da célula, e sem corrigir isso ficavam caídos dentro da moldura do campo.
+
+**O miolo da gota saiu `#FCFCFC`, não `#FFFFFF`.** Está aprovado: são 1,2 % de
+desvio, e neutro (`R = G = B`), então o `tint` devolve o tom certo. O que o
+prompt precisa evitar é o off-white QUENTE, tipo `#F4F1EA` — esse puxa a cor
+para o creme e lava o azul.
+
+### O fantasma NÃO é silhueta chapada
+
+A primeira versão usava `setTintFill` no campo vazio, e o `tintFill` come o
+contorno preto junto: o chapéu virava um borrão cinza que não dizia que era um
+chapéu. O campo vazio usa o **desenho de verdade, a 42 % de alfa** — e só a gota
+leva um cinza por cima, para não sugerir uma das quatro cores.
+
+---
+
 ## 6. Depois de gerar
 
 1. **Meça a caixa alfa dos oito quadros** de `bichos.png` com o script do

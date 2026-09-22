@@ -518,4 +518,130 @@ Antes de considerar pronto:
 | Data | O que aconteceu |
 |---|---|
 | 21/09/2026 | Briefing "Trunfo da Lógica": duelo contra robô, melhor de 5, desempate por medalha, compra de 1 entre 2. |
+| 22/09/2026 | **Nível 1 construído e jogado de ponta a ponta**, com as três texturas. Ver §20. |
 | 21/09/2026 | **Esta versão.** Saíram o duelo, o placar, o relógio, as medalhas e o deck-building (§4); entraram o cartaz, a mão como recurso escasso e os quatro consertos pedidos. O nome mudou junto: sem trunfo, não há trunfo no título. |
+
+---
+
+## 20. O que mudou na construção — o nível 1 (22/09/2026)
+
+A primeira build é **só o nível 1**, conforme o `INSTRUCOES.md`. Sete coisas
+saíram diferentes do que este documento dizia, e todas na direção de **menos
+texto e menos painel**, que foi o pedido.
+
+| # | O plano dizia | O jogo faz | Por quê |
+|---:|---|---|---|
+| 1 | a carta é uma FILEIRA de termos, com moldura de `E`/`OU` | no nível 1 a carta tem **um termo só**: ícone grande em cima, duas ou três palavras embaixo | o `E` e o `OU` só existem nos níveis 2 e 3. Uma fileira com um item é uma moldura a mais na tela, e o tipo `Carta` ficou com `term` em vez de `left`/`op`/`right` — quando o nível 2 entrar, o tipo cresce junto |
+| 2 | a carta sobe ao CENTRO da tela e cresce | ela **cresce no próprio lugar** (1,24× e 44 px para cima), e as outras duas escurecem | julgar no centro tapava o bichinho e o cartaz justamente no momento em que a criança precisa comparar os dois. No lugar, zero oclusão |
+| 3 | o NÃO é um risco dentro da moldura do termo | é o risco vermelho no ícone **mais** a palavra `NÃO` em vermelho na frente | com um termo só não existe ambiguidade de escopo para resolver, então os dois canais viram redundância útil em vez de regra |
+| 4 | a régua no balcão | **não existe** no nível 1 | `é pequeno` só aparece no nível 2. Régua sem pergunta de tamanho é mobília |
+| 5 | o carimbo `FALSO` embaixo da fileira | um **✗ laranja** no canto da carta | é o mesmo recado sem uma palavra escrita |
+| 6 | o balão da dica é um painel do jogo | quem fala é a **atendente**, e ela troca de pose: pensativa no erro, comemorando no acerto | a arte trouxe quatro estados dela; um painel anônimo ao lado de uma personagem muda é desperdício |
+| 7 | 4 campos no cartaz em grade 2 × 2 | **2 campos**, em fileira | é o nível 1 |
+
+### As texturas entraram (22/09/2026)
+
+`bichinhos.png` (4 × 2 de 400 × 500), `atendente.png` (4 × 1 de 400 × 600) e
+`bg-praca.png` chegaram e substituíram a reserva em `Graphics` — que **continua
+no código** e é o que roda se um PNG faltar (`textures.exists`).
+
+Medido, não estimado, com a varredura do canal alfa:
+
+- `footPad` por quadro: `[6, 2, 6, 6, 4, 4, 10, 8]`, e `originX` por quadro
+  entre `0,4912` e `0,5138`. Sem os dois o bichinho desliza de lado e afunda no
+  tampo a cada troca de quadro;
+- **uma escala só para a família** (`0,56`), tirada da CÉLULA e não da caixa
+  alfa: os com chapéu medem ~435 px e os sem medem ~405, e normalizar cada um
+  pela própria altura encolheria justamente quem usa chapéu — que é um termo do
+  jogo;
+- as quatro cores foram amostradas pixel a pixel (`#4796F7`, `#69BC47`,
+  `#CA322B`, `#FCC203`), e o chapéu (`#976339`), para o ícone da carta ser a
+  MESMA tinta do bichinho. Cor escolhida à parte nunca casa, e aqui a cor é a
+  pergunta;
+- o `Graphics` ganhou o **mesmo traço preto grosso** da arte (5–6 px) em carta,
+  cartaz, campo, balcão e balão. Sem isso a interface parecia colada de outro
+  jogo.
+
+### Dois bugs pagos
+
+1. **`FX.breathe` recebe MULTIPLICADOR, não escala absoluta.** Passei
+   `grow: scale * 1.025` e o bichinho pulsava entre `0,56` e `0,33` — encolhia
+   40 % a cada respiração. O certo é `grow: 1.025`. Só apareceu porque a escala
+   foi conferida no console: a olho, parecia "o bichinho é menor nesta fase".
+2. **O rabicho do balão apontava para o balcão.** Ele saía por baixo; agora sai
+   pela **esquerda, para cima**, que é onde a atendente está.
+
+### A folha de ícones entrou (22/09/2026)
+
+`icones.png` (3 × 1 de 256) substituiu os ícones em `Graphics` da carta e do
+campo do cartaz. **A gota vem BRANCA e quem pinta é o `setTint`** — uma ideia do
+usuário, e ela resolve um risco real: quatro gotas desenhadas à mão seriam
+quatro chances de o azul da carta não ser o azul do bichinho, num jogo em que a
+cor é a pergunta.
+
+O chapéu e os óculos vão sem tinta, porque o acessório nunca pode ter cor de
+atributo. O risco vermelho do `NÃO` continua em `Graphics`: ele é desenhado por
+cima e muda de tamanho entre a carta (92 px) e o campo (94 px).
+
+Detalhes medidos e a armadilha do `setTintFill` estão no §5½ do
+[TEXTURAS.md](./TEXTURAS.md).
+
+## 21. Os níveis 2 e 3 (22/09/2026)
+
+Construídos. `LEVELS` tem os três, `TOTAL_CASES` é 13 (5 + 4 + 4), e o nível
+sobe sozinho até o 3 (`autoAdvance`), levando pontos e vidas.
+
+### O que mudou do plano, e por quê
+
+| # | O plano dizia | O jogo faz | Por quê |
+|---:|---|---|---|
+| 1 | a fase 2.2 é o Rui, com a mão `é amarelo OU tem chapéu` · `NÃO tem chapéu` · `é pequeno` | é a **Tati**, com `vermelho OU óculos` · `chapéu E pequeno` · `é grande` ✗ | na mão do plano **as três cartas eram verdadeiras** — não havia o que decidir, e a validação reprova. A Tati mantém a lição (o OU com um lado falso) e ainda traz uma decisão |
+| 2 | a moldura do termo tem "ícone grande em cima e palavra embaixo" | tem ícone, palavra **curta** (`CHAPÉU`, `VERMELHO`) e o `NÃO` numa **tarja vermelha** em cima do ícone | `NÃO TEM CHAPÉU E TEM ÓCULOS` numa linha só cai para 18 px de fonte, que é 5 px reais no celular. Na fileira com palavra curta, a menor fonte é 17 px — e quem carrega o sentido é o ícone |
+| 3 | `é pequeno` se julga contra a régua | igual, e a escala do pequeno **caiu de 0,86 para 0,72** | com 0,86 um pequeno **de chapéu** (210 px) media quase o mesmo que um grande **sem chapéu** (228 px): a régua ficava ambígua justamente na fase que ela existe para resolver. Com 0,72 o maior dos pequenos é 175 e o menor dos grandes é 228 |
+| 4 | o cartaz tem 2, 3 ou 4 campos | igual, e com **3 ou 4 o retrato do bichinho sai** | retrato espremido ao lado de quatro campos é o quinto objeto de uma coluna cheia — e o bichinho está ali no balcão, a 300 px |
+| 5 | (nada dito) | o ícone de tamanho é **`Graphics`, não quadro de folha** | tamanho é uma COMPARAÇÃO, e ela tem três estados: o grande, o pequeno, e os dois apagados no campo vazio. Um quadro fixo dá um só. É a mesma razão da régua |
+
+### A regra única que não precisou de caso especial
+
+`lights()` continua sendo uma linha — *acende o campo de cada termo que deu ✓* —
+e dela saem os três comportamentos do nível 2 sem nada escrito à mão:
+
+- o **E** sempre acende dois campos (se um termo falhasse, a carta seria falsa);
+- o **OU** acende **um** quando um lado é falso, e **dois** quando os dois valem;
+- o **NÃO** não muda nada: ele troca o termo, e o campo aceso mostra o ícone
+  riscado — o cartaz diz *não usa chapéu*, que é informação boa para quem procura.
+
+A fase 2.3 existe só para a segunda linha acontecer: a criança joga um OU
+esperando um campo e **acende dois**. A correção do OU exclusivo é feita com
+festa (a atendente diz *"os dois! o OU aceita os dois"*), nunca com bronca.
+
+### A conferência passou a ser termo a termo
+
+No nível 1 a carta tinha um termo e o realce pulsava uma vez. Agora o `pick`
+percorre os termos **na ordem em que eles aparecem na carta**, e cada um pulsa
+o seu atributo no bichinho com o som de ✓ ou de ✗. É o que torna visível *qual*
+dos dois lados derrubou um E — e a dica escrita depois só nomeia esse mesmo termo.
+
+### A validação cresceu
+
+Além dos quatro testes do §10, `levels.ts` agora exige:
+
+- **o cartaz tem `nível + 1` campos** — 2 no nível 1, 3 no 2, 4 no 3;
+- **`ruler` bate com os dados**: a régua é desenhada quando, e só quando, alguma
+  carta daquele nível fala de tamanho. Régua sem pergunta de tamanho é mobília,
+  e pergunta de tamanho sem régua é chute.
+
+### Um bug pago
+
+**`critter.show()` não matava o `breathe` da fase anterior.** O tween antigo
+continuava puxando o container para o alvo dele, e o bichinho **grande entrava
+com a escala do pequeno** — que num nível com régua é uma resposta errada
+desenhada na tela. Medido no console: 0,412 onde deviam ser 0,56. Agora `show()`
+mata e re-arma antes de medir a escala nova.
+
+---
+
+### O que ainda não existe
+
+- `cover-achados-e-perdidos.png` — a entrada no catálogo está sem `thumbnail`;
+- nada da mecânica: os três níveis estão de pé.
