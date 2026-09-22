@@ -744,3 +744,518 @@ sad faces, crying, angry faces, scolding adults, pointing at the viewer.
    de altura e as três invenções a 72 px de largura. Se duas invenções se
    confundirem nesse tamanho, o problema é a silhueta, e é de graça consertar
    agora.
+
+---
+
+# NÍVEL 2 — as folhas novas
+
+O nível 2 é o [NIVEL-2.md](./NIVEL-2.md): o recado virou **encomenda**, e quem
+decide é o **caminho**. Quatro folhas, na ordem de prioridade.
+
+**As cinco regras do §1 valem inteiras aqui**, e a referência
+[`references/19-chibi-figurinhas.jpg`](../../../../references/19-chibi-figurinhas.jpg)
+vai anexada em **TODAS** as gerações. Cada prompt abaixo já vem completo.
+
+| # | Arquivo | Dimensão | Grade | Fundo |
+|---:|---|---:|---|---|
+| 12 | `veiculos.png` | 768 × 512 | 3 × 2 de 256 | alfa real |
+| 13 | `pessoas-n2.png` | 512 × 768 | 2 × 3 de 256 | alfa real |
+| 14 | `destinos.png` | 1536 × 512 | 3 × 1 de 512 | alfa real |
+| 15 | `encomendas.png` | 768 × 256 | 3 × 1 de 256 | alfa real |
+
+> **A folha entregue pode vir maior.** O `sheet.ts` divide o arquivo pela grade
+> do contrato e mede a caixa alfa de cada quadro, então o que não pode mudar é a
+> **grade** e a **ordem dos quadros**. O tamanho, pode.
+
+> **As pessoas do N2 vêm viradas para a DIREITA.** A folha do N1 veio virada para
+> a esquerda e é espelhada em código; esta não deve ser espelhada. Ver §11.5 do
+> `IMPLEMENTACAO.md`.
+
+---
+
+## 12. `veiculos.png` — carroça, barco, avião
+
+### Contrato da folha
+
+- **768 × 512**, grade **3 colunas × 2 linhas** de **256 × 256**, alfa real.
+- **Um veículo por coluna; a linha é o estado.** Contrato com `data/veiculos.ts`:
+
+| | Coluna 1 — **carroça** | Coluna 2 — **barco** | Coluna 3 — **avião** |
+|---|---|---|---|
+| Linha 1 · **parado** | parada, vara de puxar apoiada no chão | encostado, vela enrolada | parado no chão, hélice quieta |
+| Linha 2 · **em uso** | rodando, vara levantada, uma caixa na caçamba | navegando, vela cheia de vento | voando, hélice borrada, nariz um pouco para cima |
+
+- **Três silhuetas que não se confundem** (regra 2 do §1): a **roda** grande é a
+  carroça, a **vela** triangular é o barco, a **asa** em cruz é o avião. A
+  criança escolhe olhando a forma, não lendo o nome.
+- **Sem rosto** (regra 3 do §1) — nenhum dos seis quadros tem olho ou boca.
+- **Sem bicho puxando a carroça.** Ela tem uma vara de puxar e para por aí.
+- Vistos **de lado, virados para a ESQUERDA** — é para onde a entrega vai.
+- **Na escala relativa que eles têm na vida**: a carroça ocupa ~75 % da célula, o
+  barco ~85 %, o avião ~90 %. Tamanho é informação.
+- Cores de acento que não se repetem no cenário: carroça **verde-garrafa**, barco
+  **azul-marinho com vela branca**, avião **vermelho-coral**.
+
+### Prompt copiável
+
+~~~text
+STYLE — USE THE ATTACHED IMAGE AS THE ART STYLE REFERENCE, and match its
+rendering exactly: cute chibi sticker art; clean crisp line art of even weight
+in a dark desaturated colour, never pure black; FLAT cel shading with ONE soft
+shadow tone and no gradients; chunky simplified shapes with rounded corners; a
+short palette — one strong accent colour over near-white and dark neutrals; a
+thin white sticker keyline around the whole silhouette. Take ONLY the art style
+from the attached image: do NOT copy its characters, its clothes, its hair, its
+poses, its scenes or its framing.
+
+Sprite sheet, 3 columns by 2 rows, 256x256 px per cell, transparent background,
+no grid lines drawn, no cell borders, no ground shadow, no baseline.
+
+THREE VEHICLES, one per column, each drawn in SIDE VIEW facing LEFT. The top row
+is the vehicle at rest, the bottom row is the same vehicle in motion. Keep each
+vehicle's colour, shape and proportions identical between its two cells.
+
+Column 1 — a wooden FARM CART in bottle green, with TWO LARGE spoked wheels and
+a long wooden pulling shaft, no animal attached, an open plank bed at the back.
+Top cell: standing still, the shaft resting down on the ground. Bottom cell: the
+same cart rolling, the shaft raised, one plain wooden crate sitting in the bed,
+a few small dust puffs under the wheels.
+
+Column 2 — a small wooden SAILING BOAT with a deep navy blue hull and one white
+triangular sail on a single mast. Top cell: the boat at rest, the sail rolled
+and tied to the mast. Bottom cell: the boat sailing, the sail full and bellied
+with wind, two small white foam curls at the bow.
+
+Column 3 — a small coral red PROPELLER AEROPLANE, a working single engine plane
+with a rounded nose, one straight wing, a tail fin and fixed landing wheels. Top
+cell: parked on its wheels, the propeller still and readable as two blades.
+Bottom cell: flying, nose tilted slightly up, the propeller a soft blurred disc,
+the wheels tucked close.
+
+The three silhouettes must stay unmistakable from each other when the cell is
+shrunk to 72 px wide: the big WHEEL reads as the cart, the triangular SAIL reads
+as the boat, the crossed WING reads as the plane. Fill the cell generously: the
+cart about 75% of the cell, the boat about 85%, the plane about 90%.
+
+DO NOT INCLUDE: any animal, a horse, a donkey, an ox, a driver, a pilot, a
+passenger, a person, eyes, a face, a mouth, eyebrows, a smile on the vehicle,
+ground, road, rails, water, waves under the boat, sky, clouds, scenery, a cast
+shadow, a baseline,
+anime video game characters, character roster sheets, emote sheets,
+text, letters, words, labels, digits, numbers, captions, watermark, website
+address, artist signature, logo, title lettering, user interface, buttons,
+panels, frames, speech bubbles, arrows, icons, stars, HUD,
+painterly lineless illustration, soft airbrushed gradients, heavy rendering,
+western cartoon style, rough sketchy lines, uneven brush outlines, muddy
+colours, 3D render, photorealistic, blur, lens flare, heavy noise,
+grid lines, visible sprite-sheet borders, cell borders, gaps, cropped edges,
+drop shadow on the cell, white backing in transparent assets.
+~~~
+
+---
+
+## 13. `pessoas-n2.png` — quem espera a encomenda
+
+### Contrato da folha
+
+- **512 × 768**, grade **2 colunas × 3 linhas** de **256 × 256**, alfa real.
+- **Uma pessoa por linha; a coluna é o estado.** Contrato com `data/levels.ts`:
+
+| Linha | Quem | Coluna 1 — **esperando** | Coluna 2 — **respondendo** |
+|---:|---|---|---|
+| 1 | **Dona Zuma**, enfermeira do posto | de pé, jaleco branco, olhando o relógio do pulso | segura a caixinha de remédio no alto, aliviada |
+| 2 | **Seu Nilo**, lavrador | de pé, enxada no ombro, olhando a terra seca | abraça o saco de sementes, rindo |
+| 3 | **Dona Rita**, professora | de pé, caderno de chamada fechado na mão | segura um giz colorido no alto, sorrindo grande |
+
+- **Viradas para a DIREITA**, de três quartos — elas estão na margem esquerda do
+  mundo e olham para quem chega. **Esta folha não é espelhada em código.**
+- As três **na mesma escala e na mesma luz**, e os **pés das seis células na
+  mesma linha**.
+- Adultas, mas no mesmo chibi do menino: cabeça grande, corpo pequeno, olho
+  grande com um brilho. Elas têm de parecer da mesma família que a folha do N1.
+- **Nada de posto, galpão ou escola atrás delas** — o cenário é o arquivo 14.
+
+### Prompt copiável
+
+~~~text
+STYLE — USE THE ATTACHED IMAGE AS THE ART STYLE REFERENCE, and match its
+rendering exactly: cute chibi sticker art; clean crisp line art of even weight
+in a dark desaturated colour, never pure black; FLAT cel shading with ONE soft
+shadow tone and no gradients; small chibi proportions, big head and little
+body; big glossy expressive eyes with a bright highlight; a short palette — one
+strong accent colour over near-white and dark neutrals; a thin white sticker
+keyline around the whole silhouette. Take ONLY the art style from the attached
+image: do NOT copy its characters, its clothes, its hair, its poses, its scenes
+or its framing.
+
+Sprite sheet, 2 columns by 3 rows, 256x256 px per cell, transparent background,
+no grid lines drawn, no cell borders, no ground shadow.
+
+THREE ADULT VILLAGERS, one per row, all at the same scale and in the same
+lighting, all drawn in three-quarter view FACING RIGHT, towards whoever is
+arriving. The left column is the person waiting; the right column is the same
+person receiving what they needed. Keep each person's clothes, hair and colours
+exactly the same in both of their cells.
+
+Row 1 — DONA ZUMA, a health worker in her forties, warm brown skin, black hair
+in a low bun, a clean white coat over a teal blouse, plain dark trousers. Left
+cell: standing, looking down at the watch on her wrist, mouth a small worried
+line. Right cell: holding a small white medicine box up in one hand, eyes
+closed in relief, a big warm smile.
+
+Row 2 — SEU NILO, a farmer in his fifties, deep brown skin, short grey hair, a
+faded blue work shirt with the sleeves rolled up, brown trousers, a hoe resting
+on his shoulder. Left cell: standing, the hoe on his shoulder, looking down at
+the dry ground, eyebrows low. Right cell: hugging a fat cloth seed sack against
+his chest, laughing with his head tipped back, the hoe now leaning beside him.
+
+Row 3 — DONA RITA, a schoolteacher in her thirties, light brown skin, curly
+brown hair tied back with a red ribbon, a mustard cardigan over a cream dress.
+Left cell: standing, holding a closed register notebook in both hands, looking
+around, lips pressed. Right cell: holding one bright piece of coloured chalk up
+high, grinning wide, the notebook tucked under her other arm.
+
+In all six cells the LOWEST FOOT must sit on exactly the same horizontal line,
+so the three of them stand on the same ground. Keep each silhouette bold enough
+to read at 46 px tall: the white coat, the hoe and the cardigan are the three
+shapes that tell them apart from far away.
+
+DO NOT INCLUDE: buildings, a clinic, a shed, a school, walls, doors, roofs,
+ground, grass, road, water, sky, scenery, a cast shadow, furniture,
+children, the messenger boy, a cap, a shoulder bag, a megaphone, a telephone, a
+letter, a cart, a boat, an aeroplane,
+weapons, a sword, a staff, wings, horns, animal ears, pointed elf ears, an
+eyepatch, ornate fantasy costume, armour, jewellery, long flowing anime hair,
+hair ornaments, glowing eyes,
+anime video game characters, character roster sheets, emote sheets,
+text, letters, words, labels, digits, numbers, captions, watermark, website
+address, artist signature, logo, title lettering, user interface, buttons,
+panels, frames, speech bubbles, arrows, icons, stars, HUD,
+painterly lineless illustration, soft airbrushed gradients, heavy rendering,
+western cartoon style, rough sketchy lines, uneven brush outlines, muddy
+colours, 3D render, photorealistic, blur, lens flare, heavy noise,
+grid lines, visible sprite-sheet borders, cell borders, gaps, cropped edges,
+drop shadow on the cell, white backing in transparent assets,
+crying, angry faces, scolding adults, pointing at the viewer.
+~~~
+
+---
+
+## 14. `destinos.png` — a outra margem, uma por fase
+
+### Contrato da folha
+
+- **1536 × 512**, grade **3 colunas × 1 linha** de **512 × 512**, alfa real.
+- **Cada quadro é o destino MAIS o caminho que leva até ele.** É o enunciado da
+  fase em desenho: olhando a outra margem, dá para dizer por onde se chega.
+
+| # | Fase | O que é | O caminho que tem de aparecer |
+|---:|---|---|---|
+| 0 | **2.1** | o **posto de saúde** | **água** batendo na frente dele, e nenhuma estrada |
+| 1 | **2.2** | o **galpão** do seu Nilo | uma **estrada de terra** saindo da porta e sumindo à esquerda |
+| 2 | **2.3** | a **escola na serra** | ela lá **em cima** de um morro, com uma estradinha subindo em curva |
+
+- Tudo **apoiado na base da célula**, sem chão próprio além do caminho pedido.
+- Construções pequenas e de silhueta simples, na mesma linguagem da
+  `oficina.png`: telhado inclinado, poucas janelas, cor de acento só no telhado.
+- **Reconhecíveis de longe**, na borda da tela: a **cruz** diz posto, o **portão
+  largo** diz galpão, o **sininho no topo** diz escola.
+- Sem pessoas, sem veículos, sem nuvem.
+
+### Prompt copiável
+
+~~~text
+STYLE — USE THE ATTACHED IMAGE AS THE ART STYLE REFERENCE, and match its
+rendering exactly: cute chibi sticker art; clean crisp line art of even weight
+in a dark desaturated colour, never pure black; FLAT cel shading with ONE soft
+shadow tone and no gradients; chunky simplified shapes with rounded corners; a
+short palette — one strong accent colour over warm neutrals; a thin white
+sticker keyline around the whole silhouette. Take ONLY the art style from the
+attached image: do NOT copy its characters, its clothes, its hair, its poses,
+its scenes or its framing.
+
+Sprite sheet, 3 columns by 1 row, 512x512 px per cell, transparent background,
+no grid lines drawn, no cell borders. In every cell the drawing SITS ON THE
+BOTTOM EDGE of the cell and the top of the cell is empty.
+
+THREE SMALL COUNTRYSIDE DESTINATIONS, one per cell, all at the same scale, all
+in the same lighting, each one drawn together with the path that reaches it.
+
+Cell 1 — a tiny village HEALTH POST: a small white building with a green
+sloped roof and a simple green CROSS on the front wall, one door, two small
+windows. In front of it, filling the bottom left of the cell, calm blue WATER
+with a little wooden jetty touching the shore. No road anywhere.
+
+Cell 2 — a wooden farm SHED: a wide plank building with a tall wide doorway
+standing open and dark, a rust red sloped roof, a couple of stacked crates
+beside the wall. A pale DIRT ROAD leaves the doorway and runs off to the left,
+getting narrower as it goes. No water anywhere.
+
+Cell 3 — a small SCHOOLHOUSE standing HIGH UP on a rounded green hill: a cream
+building with a blue sloped roof and a little BELL on a post at the ridge. A
+thin dirt path switchbacks up the side of the hill to reach it. The hill fills
+the lower part of the cell. No water anywhere.
+
+Keep the three silhouettes unmistakable from each other at 150 px wide: the
+CROSS reads as the health post, the WIDE OPEN DOORWAY reads as the shed, the
+BELL ON THE HILLTOP reads as the school.
+
+DO NOT INCLUDE: people, children, animals, vehicles, a cart, a boat, an
+aeroplane, sky, clouds, sun, moon, birds, fences, power lines, signposts,
+a cast shadow under the cell, a framed base, a grass strip that is not part of
+the hill,
+anime video game characters, character roster sheets,
+text, letters, words, labels, digits, numbers, captions, watermark, website
+address, artist signature, logo, title lettering, user interface, buttons,
+panels, frames, speech bubbles, arrows, icons, stars, HUD,
+painterly lineless illustration, soft airbrushed gradients, heavy rendering,
+western cartoon style, rough sketchy lines, uneven brush outlines, muddy
+colours, 3D render, photorealistic, blur, lens flare, heavy noise,
+grid lines, visible sprite-sheet borders, cell borders, gaps, cropped edges,
+white backing in transparent assets.
+~~~
+
+---
+
+## 15. `encomendas.png` — o que precisa chegar
+
+### Contrato da folha
+
+- **768 × 256**, grade **3 colunas × 1 linha** de **256 × 256**, alfa real.
+
+| # | Fase | O que é | O que a criança tem de ler |
+|---:|---|---|---|
+| 0 | **2.1** | a **caixa de remédio** | pequena e **leve** |
+| 1 | **2.2** | o **saco de sementes** | gordo e **pesado** — é o limite da fase |
+| 2 | **2.3** | a **caixa de giz** | pequena e **leve** |
+
+- **O peso é a informação.** O saco tem de parecer pesado a 72 px: barrigudo,
+  amarrado em cima, apoiado e afundando um pouco na base. As outras duas são
+  leves, pequenas e de canto vivo.
+- Sem rosto, sem chão, sem sombra, na base da célula.
+- Cores de acento: remédio **branco com cruz verde**, saco **bege de aniagem com
+  cordão marrom**, giz **caixa marrom com gizes coloridos aparecendo**.
+
+### Prompt copiável
+
+~~~text
+STYLE — USE THE ATTACHED IMAGE AS THE ART STYLE REFERENCE, and match its
+rendering exactly: cute chibi sticker art; clean crisp line art of even weight
+in a dark desaturated colour, never pure black; FLAT cel shading with ONE soft
+shadow tone and no gradients; chunky simplified shapes with rounded corners; a
+short palette; a thin white sticker keyline around the whole silhouette. Take
+ONLY the art style from the attached image: do NOT copy its characters, its
+clothes, its hair, its poses, its scenes or its framing.
+
+Sprite sheet, 3 columns by 1 row, 256x256 px per cell, transparent background,
+no grid lines drawn, no cell borders, no ground shadow. Each object sits on the
+bottom edge of its cell, seen from a slight three-quarter angle.
+
+Cell 1 — a small white MEDICINE BOX, a neat rectangular carton with a green
+cross on the front and a thin green band along the top. It is SMALL and LIGHT:
+crisp corners, about 45% of the cell.
+
+Cell 2 — a fat burlap SEED SACK in warm beige, tied at the neck with a brown
+cord, a few loose grain seeds spilled at its foot. It is HEAVY and it must look
+heavy: wide round belly, the base flattening and settling under its own weight,
+about 80% of the cell.
+
+Cell 3 — a small open cardboard CHALK BOX in warm brown, with five short sticks
+of coloured chalk standing up inside and one lying in front of it. It is SMALL
+and LIGHT: crisp corners, about 50% of the cell.
+
+The contrast in weight between cell 2 and the other two must be obvious at 72 px
+wide, from the silhouette alone.
+
+DO NOT INCLUDE: eyes, a face, a mouth, hands holding the object, people,
+animals, ground, grass, table, shelf, sky, scenery, a cast shadow, a baseline,
+anime video game characters,
+text, letters, words, labels, digits, numbers, captions, brand names, watermark,
+website address, artist signature, logo, title lettering, user interface,
+buttons, panels, frames, speech bubbles, arrows, icons, stars, HUD,
+painterly lineless illustration, soft airbrushed gradients, heavy rendering,
+western cartoon style, rough sketchy lines, uneven brush outlines, muddy
+colours, 3D render, photorealistic, blur, lens flare, heavy noise,
+grid lines, visible sprite-sheet borders, cell borders, gaps, cropped edges,
+white backing in transparent assets.
+~~~
+
+---
+
+# NÍVEL 3 — as folhas novas
+
+O nível 3 é o [NIVEL-3.md](./NIVEL-3.md): a pergunta que os olhos dele não
+respondem. **Duas folhas**, e as pessoas são as mesmas do N1 (§9 de lá).
+
+**As cinco regras do §1 valem inteiras aqui**, e a referência
+[`references/19-chibi-figurinhas.jpg`](../../../../references/19-chibi-figurinhas.jpg)
+vai anexada em **TODAS** as gerações.
+
+| # | Arquivo | Dimensão | Grade | Fundo |
+|---:|---|---:|---|---|
+| 16 | `instrumentos.png` | 1024 × 512 | **4 × 2** de 256 | alfa real |
+| 17 | `visoes.png` | 1536 × 512 | 3 × 1 de 512 | alfa real |
+
+> **A folha entregue pode vir maior**, como as do N2. O que não pode mudar é a
+> **grade** e a **ordem dos quadros**.
+
+> **Atenção à grade da 16: ela tem QUATRO colunas**, não três como
+> `invencoes.png` e `veiculos.png`. É a única do jogo assim, e o `Item` do
+> `types.ts` passa a carregar `cols`/`rows` por causa dela.
+
+---
+
+## 16. `instrumentos.png` — luneta, lupa, detector, celular
+
+### Contrato da folha
+
+- **1024 × 512**, grade **4 colunas × 2 linhas** de **256 × 256**, alfa real.
+- **Um instrumento por coluna; a linha é o estado.** Contrato com
+  `data/instrumentos.ts`:
+
+| | Col 1 — **luneta** | Col 2 — **lupa** | Col 3 — **detector** | Col 4 — **celular** |
+|---|---|---|---|---|
+| Linha 1 · **parado** | fechada, deitada | parada, deitada | em pé, apoiado na haste | deitado, tela apagada |
+| Linha 2 · **em uso** | esticada, apontando para a esquerda | inclinada, com o brilho na lente | bobina rente ao chão, ondinhas saindo | de pé, tela acesa mostrando um enquadramento |
+
+- **Quatro silhuetas que não se confundem** (regra 2 do §1): o **tubo** é a
+  luneta, o **círculo com cabo** é a lupa, a **haste com o prato redondo** é o
+  detector, o **retângulo de cantos vivos** é o celular.
+- **Sem rosto** (regra 3 do §1).
+- Vistos de **três quartos**, e os que apontam apontam para a **ESQUERDA**.
+- **Na escala relativa que eles têm na vida**: detector ~90 % da célula, luneta
+  ~75 %, lupa ~65 %, celular ~55 %. Tamanho é informação.
+- Cores de acento que não se repetem no cenário nem entre si: luneta **latão
+  dourado com couro marrom**, lupa **cabo vermelho-vinho**, detector **amarelo
+  de ferramenta**, celular **grafite escuro com a tela clara**.
+- **O celular é de hoje, e tem de parecer.** É ele que fecha a habilidade: se
+  sair parecendo um aparelho antigo, o ponto do nível se perde.
+
+### Prompt copiável
+
+~~~text
+STYLE — USE THE ATTACHED IMAGE AS THE ART STYLE REFERENCE, and match its
+rendering exactly: cute chibi sticker art; clean crisp line art of even weight
+in a dark desaturated colour, never pure black; FLAT cel shading with ONE soft
+shadow tone and no gradients; chunky simplified shapes with rounded corners; a
+short palette — one strong accent colour over near-white and dark neutrals; a
+thin white sticker keyline around the whole silhouette. Take ONLY the art style
+from the attached image: do NOT copy its characters, its clothes, its hair, its
+poses, its scenes or its framing.
+
+Sprite sheet, 4 columns by 2 rows, 256x256 px per cell, transparent background,
+no grid lines drawn, no cell borders, no ground shadow, no baseline.
+
+FOUR LOOKING TOOLS, one per column, seen from a slight three-quarter angle. The
+top row is the tool at rest, the bottom row is the same tool in use. Keep each
+tool's colour, shape and proportions identical between its two cells. Anything
+that points, points to the LEFT.
+
+Column 1 — a brass SPYGLASS with a brown leather grip band. Top cell: collapsed
+and lying down. Bottom cell: pulled out to full length, pointing left, a small
+white glint on the front lens.
+
+Column 2 — a MAGNIFYING GLASS with a dark wine red handle and a thick metal rim
+around clear glass. Top cell: lying flat. Bottom cell: tilted up as if held to
+look through, a soft white highlight sweeping across the glass.
+
+Column 3 — a yellow handheld PIPE DETECTOR: a long shaft with a grip at the top
+and a flat round coil plate at the bottom. Top cell: standing upright, resting
+on the shaft. Bottom cell: tilted with the round plate held low and flat, three
+thin curved ripple lines spreading out from under the plate.
+
+Column 4 — a modern dark graphite SMARTPHONE, a plain rounded rectangle with a
+big light screen and a small camera lens circle at the back top corner. Top
+cell: lying flat, screen dark. Bottom cell: standing upright, screen lit pale
+blue with four small corner framing brackets drawn on it.
+
+The four silhouettes must stay unmistakable from each other when the cell is
+shrunk to 72 px wide: the TUBE reads as the spyglass, the CIRCLE WITH A HANDLE
+reads as the magnifier, the SHAFT WITH A ROUND PLATE reads as the detector, the
+SHARP CORNERED RECTANGLE reads as the phone. Fill the cells to different
+degrees: detector about 90% of the cell, spyglass about 75%, magnifier about
+65%, phone about 55%.
+
+DO NOT INCLUDE: hands, arms, a person, a face, eyes, a mouth, eyebrows, ground,
+grass, table, shelf, sky, scenery, a cast shadow, a baseline, a stand,
+a retro phone, a rotary phone, a flip phone, an antenna, a telescope on a
+tripod, a microscope,
+anime video game characters, character roster sheets, emote sheets,
+text, letters, words, labels, digits, numbers, captions, brand names, app icons,
+watermark, website address, artist signature, logo, title lettering, user
+interface, buttons, panels, frames, speech bubbles, arrows, icons, stars, HUD,
+painterly lineless illustration, soft airbrushed gradients, heavy rendering,
+western cartoon style, rough sketchy lines, uneven brush outlines, muddy
+colours, 3D render, photorealistic, blur, lens flare, heavy noise,
+grid lines, visible sprite-sheet borders, cell borders, gaps, cropped edges,
+drop shadow on the cell, white backing in transparent assets.
+~~~
+
+---
+
+## 17. `visoes.png` — o que aparece dentro do visor
+
+### Contrato da folha
+
+- **1536 × 512**, grade **3 colunas × 1 linha** de **512 × 512**, alfa real.
+- **Um quadro por fase**, e é o que entra **dentro do círculo** quando a criança
+  escolheu o instrumento certo. É a recompensa do nível.
+
+| # | Fase | O que se vê | O que tem de ficar claro |
+|---:|---|---|---|
+| 0 | **3.1** | a **semente aberta**, enorme, com um **broto verde** saindo dela | ela **presta** — tem vida dentro |
+| 1 | **3.2** | um **cano** deitado, com a terra em corte por cima e um **X** marcando onde cavar | ele está **debaixo** do chão |
+| 2 | **3.3** | um **ninho** no galho com **dois passarinhos** dentro, de boca aberta | tem passarinho **sim** |
+
+- **Cada quadro é redondo por dentro**: o desenho preenche um círculo centrado na
+  célula, porque é assim que ele vai aparecer. O canto da célula fica vazio.
+- **Grande e simples.** Isso é o que a criança ganha por ter escolhido certo: um
+  detalhe que ela não podia ver antes. Nada de cena, nada de fundo — só a coisa.
+- Sem moldura, sem lente, sem retículo: a moldura de cada instrumento é
+  `Graphics` e muda conforme o que ela pegou.
+
+### Prompt copiável
+
+~~~text
+STYLE — USE THE ATTACHED IMAGE AS THE ART STYLE REFERENCE, and match its
+rendering exactly: cute chibi sticker art; clean crisp line art of even weight
+in a dark desaturated colour, never pure black; FLAT cel shading with ONE soft
+shadow tone and no gradients; chunky simplified shapes with rounded corners; a
+short palette. Take ONLY the art style from the attached image: do NOT copy its
+characters, its clothes, its hair, its poses, its scenes or its framing.
+
+Sprite sheet, 3 columns by 1 row, 512x512 px per cell, transparent background,
+no grid lines drawn, no cell borders. In EVERY cell the drawing fills a CIRCLE
+centred in the cell and the corners of the cell stay empty. No frame, no lens,
+no ring, no crosshair is drawn — only the subject.
+
+THREE CLOSE-UP DISCOVERIES, one per cell, each one big, simple and centred.
+
+Cell 1 — a SEED split open, drawn huge, with a fresh green sprout curling up out
+of it and one tiny pale root below. The seed coat is warm beige, the sprout is
+bright green. It must read as ALIVE and healthy.
+
+Cell 2 — a cross-section of GROUND: a band of brown soil across the top with a
+few small stones and root threads in it, and below the soil one pale grey WATER
+PIPE lying horizontally. A clear dark X marks the soil directly above the pipe.
+It must read as something that is UNDER the ground.
+
+Cell 3 — a woven twig NEST resting on a thick branch, with TWO tiny chicks
+inside, beaks open wide upward. The nest is warm brown, the chicks are soft
+grey with orange beaks. It must read as: yes, there are birds in there.
+
+Each subject must be readable at 240 px across, from the silhouette alone.
+
+DO NOT INCLUDE: a lens, a magnifying glass, a spyglass, a circular frame, a
+vignette, a crosshair, binocular masks, a screen, people, hands, sky, clouds,
+sun, full landscapes, a horizon, buildings, a cast shadow outside the circle,
+anime video game characters,
+text, letters, words, labels, digits, numbers, captions, watermark, website
+address, artist signature, logo, title lettering, user interface, buttons,
+panels, frames, speech bubbles, arrows, icons, stars, HUD,
+painterly lineless illustration, soft airbrushed gradients, heavy rendering,
+western cartoon style, rough sketchy lines, uneven brush outlines, muddy
+colours, 3D render, photorealistic, blur, lens flare, heavy noise,
+grid lines, visible sprite-sheet borders, cell borders, gaps, cropped edges,
+white backing in transparent assets.
+~~~
