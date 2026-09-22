@@ -1,7 +1,8 @@
 import type Phaser from "phaser";
 import type { Game } from "../types/game";
 import type { SkillCode } from "../shared/types/game";
-import { catalog } from "./catalog";
+import { catalog, ROUNDS } from "./catalog";
+import { YEAR_CODES, yearCodeOf } from "./skills";
 
 /* ─────────────────────────────────────────── índices ─────────── */
 
@@ -84,6 +85,37 @@ export function getGameBySlug(slug: string): Game | undefined {
 /** Todos os jogos de uma habilidade. Pode ser mais de um. */
 export function getGamesBySkill(skill: SkillCode): Game[] {
   return bySkill.get(skill) ?? [];
+}
+
+/**
+ * Os jogos de uma rodada de produção — ver `ROUNDS` em catalog.ts.
+ *
+ * Aceita qualquer string para poder receber o parâmetro da URL cru, sem o
+ * chamador ter que validar antes. Rodada desconhecida (ou ausente) devolve a
+ * lista inteira: numa tela de filtro, "não reconheci" e "sem filtro" dão no
+ * mesmo — um link errado mostra jogo demais, nunca uma tela vazia.
+ */
+export function getGamesByRound(round: string): Game[] {
+  const range = ROUNDS.find((r) => r.key === round);
+  if (!range) return games;
+
+  return games.filter((g) => g.id >= range.firstId && g.id <= range.lastId);
+}
+
+/**
+ * Os jogos de um ano curricular, pelo PREFIXO do código — "EF03".
+ *
+ * Não confundir com `getGamesByYear(3)`, que pergunta pelos anos que o jogo
+ * atende: lá os quatro jogos EF15 aparecem em TODOS os cinco anos, porque é
+ * isso que EF15 quer dizer. Aqui eles aparecem só em "EF15", que é o que uma
+ * estante organizada por código precisa.
+ *
+ * Mesmo trato de `getGamesByRound` para entrada desconhecida: devolve tudo.
+ */
+export function getGamesByYearCode(code: string): Game[] {
+  if (!YEAR_CODES.some((y) => y.code === code)) return games;
+
+  return games.filter((g) => yearCodeOf(g.skill) === code);
 }
 
 export function getGamesByYear(year: number): Game[] {

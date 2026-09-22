@@ -4,6 +4,7 @@ import ConfirmModal from "./ConfirmModal";
 import { useBeepSound } from "../hooks/useBeepSound";
 import { useGame } from "../context/useGame";
 import type { Game } from "../types/game";
+import SkillBadge from "./SkillBadge";
 
 type Props = {
   game: Game;
@@ -73,7 +74,9 @@ export default function GameCard(props: Props) {
                 ? { backgroundImage: `url(${game.thumbnail})` }
                 : undefined
             }
-          />
+          >
+            <SkillBadge skill={game.skill} />
+          </div>
 
           <div className="game-card-content">
             <h3>{game.title}</h3>

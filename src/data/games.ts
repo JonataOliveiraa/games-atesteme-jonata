@@ -26,9 +26,13 @@ export {
   getGameBySlug,
   getGamesBySkill,
   getGamesByYear,
+  getGamesByRound,
+  getGamesByYearCode,
   getGamesByTag,
   resolveGameId,
   loadGameConfig,
 } from "./gameIndex";
 
-export { catalog, NEXT_FREE_ID } from "./catalog";
+export { catalog, NEXT_FREE_ID, ROUNDS } from "./catalog";
+export type { RoundKey } from "./catalog";
+export { SKILLS, YEAR_CODES, yearCodeOf, yearLabelOf, skillInfo } from "./skills";

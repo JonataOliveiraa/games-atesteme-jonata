@@ -12,8 +12,11 @@ import type Phaser from "phaser";
 import { EventBus } from "../shared/EventBus";
 import { gameBridge } from "../shared/bridge/gameBridge";
 import { useBeepSound } from "../hooks/useBeepSound";
+import SkillInfoButton from "../components/SkillInfoButton";
 
 const GAMES_WITH_IN_GAME_COMPLETION_SCREEN = new Set([
+  "canteiro-de-obras",
+  "achados-e-perdidos",
   "maratona-do-algoritmo",
   "trilha-do-amanha",
   "guilda-dos-criadores",
@@ -588,7 +591,10 @@ export default function GameDetailsPage() {
             {"<"} Voltar
           </button>
 
-          <h1 className="page-title">{game.title}</h1>
+          <h1 className="page-title game-title-row">
+          {game.title}
+          <SkillInfoButton skill={game.skill} />
+        </h1>
           <p className="page-subtitle">
             Este jogo está bloqueado porque houve game over.
             {blockedUntil && (
@@ -696,7 +702,10 @@ export default function GameDetailsPage() {
           {"<"} Voltar
         </button>
 
-        <h1 className="page-title">{game.title}</h1>
+        <h1 className="page-title game-title-row">
+          {game.title}
+          <SkillInfoButton skill={game.skill} />
+        </h1>
 
         <div className="game-topbar">
           <div className="player-box">

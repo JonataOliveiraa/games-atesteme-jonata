@@ -213,6 +213,153 @@ button {
   box-shadow: 0 8px 18px rgba(0, 0, 0, 0.1);
 }
 
+/* ─────────────────────────────────── selo do código curricular ─────── */
+
+.skill-badge {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 1;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 1px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: rgba(20, 24, 56, 0.72);
+  color: white;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  backdrop-filter: blur(2px);
+}
+
+/* O ano é a metade que o filtro usa, então é a metade que fica opaca. */
+.skill-badge-year {
+  color: white;
+}
+
+.skill-badge-rest {
+  opacity: 0.66;
+  font-weight: 700;
+}
+
+.skill-badge-label {
+  margin-left: 6px;
+  padding-left: 6px;
+  border-left: 1px solid rgba(255, 255, 255, 0.32);
+  font-weight: 600;
+  opacity: 0.85;
+}
+
+/* ──────────────────────────────── botão "i" e o balão da habilidade ─── */
+
+.game-title-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.skill-info {
+  position: relative;
+  display: inline-flex;
+}
+
+.skill-info-button {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 2px solid var(--primary);
+  background: var(--white);
+  color: var(--primary-dark);
+  font-size: 1rem;
+  font-weight: 800;
+  font-family: Georgia, "Times New Roman", serif;
+  line-height: 1;
+  cursor: help;
+  transition: 0.2s;
+}
+
+.skill-info-button:hover,
+.skill-info-button.open {
+  background: linear-gradient(135deg, var(--primary-dark), var(--primary));
+  color: white;
+}
+
+.skill-info-button:focus-visible {
+  outline: 3px solid var(--primary-soft);
+  outline-offset: 2px;
+}
+
+/*
+  O balão sai do fluxo (`position: absolute`) para não empurrar o topo da
+  página quando abre — um título que pula 200px ao passar o mouse é pior que
+  não ter o balão.
+*/
+.skill-info-balloon {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: min(360px, calc(100vw - 32px));
+  padding: 16px 18px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: var(--white);
+  box-shadow: 0 10px 28px rgba(20, 24, 56, 0.18);
+  color: var(--text);
+  font-size: 0.9rem;
+  font-weight: 400;
+  line-height: 1.45;
+  text-align: left;
+  cursor: default;
+}
+
+.skill-info-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 1rem;
+  color: var(--primary-dark);
+}
+
+.skill-info-year {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--primary-soft);
+  color: var(--primary-dark);
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.skill-info-eixo {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.skill-info-objeto {
+  font-weight: 700;
+}
+
+.skill-info-habilidade {
+  padding-left: 10px;
+  border-left: 3px solid var(--primary-soft);
+  color: var(--muted);
+}
+
+.skill-info-resumo {
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+
 .blocked-banner {
   margin-top: 24px;
   background: #fff4f4;
@@ -369,6 +516,90 @@ button {
   box-shadow: none;
 }
 
+/* ───────────────────────────── os dois botões-lista de filtro ───────── */
+
+.games-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 1.5rem;
+}
+
+.filter-select {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.filter-select-legend {
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/*
+  A seta é do invólucro, não do `<select>`: com `appearance: none` o
+  navegador leva embora a dele, e desenhá-la aqui evita ter que reservar
+  espaço em duas regras diferentes.
+*/
+.filter-select-control {
+  position: relative;
+  display: inline-flex;
+}
+
+.filter-select-control::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: 16px;
+  width: 8px;
+  height: 8px;
+  margin-top: -6px;
+  border-right: 2px solid var(--primary-dark);
+  border-bottom: 2px solid var(--primary-dark);
+  transform: rotate(45deg);
+  pointer-events: none;
+}
+
+.filter-select select {
+  appearance: none;
+  -webkit-appearance: none;
+  min-width: 210px;
+  padding: 12px 42px 12px 18px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--white);
+  box-shadow: var(--shadow);
+  color: var(--text);
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.filter-select select:hover {
+  color: var(--primary-dark);
+  transform: translateY(-1px);
+}
+
+.filter-select select:focus-visible {
+  outline: 3px solid var(--primary-soft);
+  outline-offset: 2px;
+}
+
+
+.games-empty {
+  margin-top: 2rem;
+  padding: 28px;
+  border: 1px dashed var(--border);
+  border-radius: 16px;
+  background: var(--white);
+  color: var(--muted);
+  text-align: center;
+  font-weight: 600;
+}
 .pagination {
   display: flex;
   justify-content: center;
@@ -845,6 +1076,32 @@ button {
 
   .rewards-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 600px) {
+  /*
+    No estreito o balão deixa de pendurar no botãozinho e passa a se alinhar
+    pela LINHA DO TÍTULO (`.game-title-row`, que é `position: relative`).
+    Centrado num botão de 30px perto da borda ele encostava no canto da tela;
+    preso à linha, a largura dele é a da coluna de conteúdo, em qualquer
+    tamanho de aparelho.
+  */
+  .skill-info {
+    position: static;
+  }
+
+  .skill-info-balloon {
+    left: 0;
+    width: auto;
+    max-width: 100%;
+    transform: none;
+  }
+
+  /* Um botão por linha: dois selects lado a lado não cabem num celular. */
+  .filter-select,
+  .filter-select select {
+    width: 100%;
   }
 }
 
@@ -3025,6 +3282,15 @@ body.embed-active .game-fullscreen-btn {
 
 /* ── Painel de integração (header) ────────────────────────────────────────
    Só aparece fora do modo embed: é ferramenta de quem cadastra, não do aluno. */
+/* ══════════════════════════════ painel de integração ═══════════════════
+
+   Este painel nasceu com px fixos e uma paleta própria (#7c3aed, #d1d5db),
+   e por isso saía miúdo e estranho ao lado do resto do site: fonte 11–13px
+   onde a plataforma usa 0.9–1rem, e roxo de outro tom que o --primary.
+
+   Agora ele usa as mesmas variáveis e as mesmas medidas das outras telas.
+   ═══════════════════════════════════════════════════════════════════ */
+
 .integracao-overlay {
   position: fixed;
   inset: 0;
@@ -3036,100 +3302,312 @@ body.embed-active .game-fullscreen-btn {
   z-index: 60;
 }
 
+/*
+  Coluna com cabeçalho preso e corpo rolante, e não uma caixa só com
+  `overflow: auto`. É o que mantém o ✕ sempre à mão numa lista de 71 jogos.
+
+  O `padding` saiu daqui e foi para as duas partes: com ele no painel, o
+  cabeçalho ficaria 28px mais estreito que a caixa e o conteúdo passaria por
+  baixo dele aparecendo nas laterais.
+*/
 .integracao-painel {
-  background: #fff;
-  border-radius: 16px;
-  padding: 20px;
-  width: min(560px, 100%);
-  max-height: 85vh;
-  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  background: var(--white);
+  border-radius: 18px;
+  width: min(760px, 100%);
+  max-height: 88vh;
+  overflow: hidden;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+  color: var(--text);
+  font-size: 0.95rem;
 }
 
 .integracao-topo {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 14px;
+  gap: 16px;
+  padding: 22px 28px;
+  border-bottom: 1px solid var(--border);
+}
+
+.integracao-corpo {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 24px 28px 28px;
+}
+
+.integracao-topo strong {
+  font-size: 1.25rem;
 }
 
 .integracao-topo button {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
   border: 0;
-  background: transparent;
-  font-size: 18px;
+  border-radius: 10px;
+  background: var(--bg);
+  color: var(--muted);
+  font-size: 1rem;
   cursor: pointer;
+  transition: 0.2s;
+}
+
+.integracao-topo button:hover {
+  background: var(--primary-soft);
+  color: var(--primary-dark);
+}
+
+/* ─────────────────────────────────── a escolha do jogo ──────────────── */
+
+.integracao-busca {
+  margin-bottom: 24px;
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--bg);
+}
+
+.integracao-busca-linha {
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
 }
 
 .integracao-campo {
   display: block;
-  margin-bottom: 16px;
+  margin-bottom: 0;
+}
+
+/* A busca fica com a sobra: é nela que se digita, o ano é só um recorte. */
+.integracao-campo-larga {
+  flex: 1;
+  min-width: 0;
 }
 
 .integracao-campo span {
   display: block;
-  font-size: 12px;
-  font-weight: 600;
-  margin-bottom: 4px;
+  margin-bottom: 6px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--muted);
 }
 
+.integracao-campo input,
 .integracao-campo select,
 .integracao-valor input {
   width: 100%;
-  padding: 8px 10px;
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
-  font-size: 13px;
+  padding: 11px 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--white);
+  color: var(--text);
+  font-size: 0.95rem;
 }
 
-.integracao-linha { margin-bottom: 12px; }
+.integracao-campo input:focus-visible,
+.integracao-campo select:focus-visible,
+.integracao-valor input:focus-visible {
+  outline: 3px solid var(--primary-soft);
+  outline-offset: 1px;
+}
+
+.integracao-contagem {
+  margin: 12px 2px 8px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+/*
+  `max-height` e não altura fixa: com o filtro apertado a caixa encolhe em
+  vez de deixar um vão vazio embaixo de dois resultados.
+*/
+.integracao-lista {
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  max-height: 240px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--white);
+}
+
+.integracao-opcao {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--text);
+  font-size: 0.92rem;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.integracao-opcao:hover {
+  background: var(--primary-soft);
+}
+
+.integracao-opcao.ativa {
+  background: linear-gradient(135deg, var(--primary-dark), var(--primary));
+  color: white;
+}
+
+/* Largura fixa no código para os títulos começarem todos na mesma coluna. */
+.integracao-opcao-skill {
+  flex: 0 0 76px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: var(--primary-dark);
+}
+
+.integracao-opcao.ativa .integracao-opcao-skill,
+.integracao-opcao.ativa .integracao-opcao-id {
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.integracao-opcao-titulo {
+  flex: 1;
+  min-width: 0;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.integracao-opcao-id {
+  flex-shrink: 0;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.integracao-vazio {
+  margin: 0;
+  padding: 20px;
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+  background: var(--white);
+  color: var(--muted);
+  text-align: center;
+  font-weight: 600;
+}
+
+/* ────────────────────────────────── os campos para copiar ───────────── */
+
+.integracao-linha {
+  margin-bottom: 16px;
+}
 
 .integracao-rotulo {
-  font-size: 12px;
-  font-weight: 600;
-  margin-bottom: 4px;
+  margin-bottom: 6px;
+  font-size: 0.85rem;
+  font-weight: 700;
 }
 
 .integracao-valor {
   display: flex;
-  gap: 8px;
+  gap: 10px;
 }
 
 .integracao-valor button {
   flex-shrink: 0;
-  padding: 8px 12px;
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
-  background: #f9fafb;
+  padding: 11px 18px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 0.88rem;
+  font-weight: 700;
   cursor: pointer;
-  font-size: 12px;
+  transition: 0.2s;
+}
+
+.integracao-valor button:hover {
+  background: var(--primary-soft);
+  color: var(--primary-dark);
 }
 
 .integracao-dica {
-  font-size: 11px;
-  color: #6b7280;
-  margin-top: 3px;
+  margin-top: 5px;
+  font-size: 0.82rem;
+  color: var(--muted);
 }
 
 .integracao-rodape {
   display: flex;
-  gap: 10px;
+  gap: 16px;
   align-items: center;
-  margin-top: 18px;
+  margin-top: 24px;
 }
 
 .integracao-principal {
   flex: 1;
-  padding: 10px;
+  padding: 14px;
   border: 0;
-  border-radius: 10px;
-  background: #7c3aed;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--primary-dark), var(--primary));
   color: #fff;
-  font-weight: 600;
+  font-size: 0.98rem;
+  font-weight: 700;
   cursor: pointer;
+  transition: 0.2s;
+}
+
+.integracao-principal:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.integracao-principal:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
 }
 
 .integracao-secundario {
-  font-size: 12px;
-  color: #7c3aed;
-  text-decoration: none;
+  flex-shrink: 0;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--primary-dark);
+  text-decoration: underline;
+}
+
+@media (max-width: 600px) {
+  .integracao-topo {
+    padding: 16px 20px;
+  }
+
+  .integracao-corpo {
+    padding: 18px 20px 20px;
+  }
+
+  /* Busca e ano empilham: lado a lado sobra meia palavra para cada um. */
+  .integracao-busca-linha {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 14px;
+  }
+
+  .integracao-rodape {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .integracao-secundario {
+    text-align: center;
+  }
 }
