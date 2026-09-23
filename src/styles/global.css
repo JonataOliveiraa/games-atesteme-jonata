@@ -3419,10 +3419,18 @@ body.embed-active .game-fullscreen-btn {
 }
 
 .integracao-contagem {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px 12px;
   margin: 12px 2px 8px;
   font-size: 0.82rem;
   font-weight: 700;
   color: var(--muted);
+}
+
+.integracao-contagem span + span {
+  font-weight: 600;
 }
 
 /*
@@ -3454,6 +3462,8 @@ body.embed-active .game-fullscreen-btn {
   text-align: left;
   cursor: pointer;
   transition: background 0.15s;
+  /* O clique duplo copia; sem isto ele também pintaria uma palavra. */
+  user-select: none;
 }
 
 .integracao-opcao:hover {
@@ -3475,8 +3485,18 @@ body.embed-active .game-fullscreen-btn {
 }
 
 .integracao-opcao.ativa .integracao-opcao-skill,
+.integracao-opcao.ativa .integracao-opcao-eixo,
 .integracao-opcao.ativa .integracao-opcao-id {
   color: rgba(255, 255, 255, 0.82);
+}
+
+/* Título e eixo: lado a lado no computador, empilhados no celular. */
+.integracao-opcao-nome {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
 }
 
 .integracao-opcao-titulo {
@@ -3485,6 +3505,32 @@ body.embed-active .game-fullscreen-btn {
   font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.integracao-opcao-rascunho {
+  flex-shrink: 0;
+  padding: 2px 8px;
+  border: 1px dashed var(--muted);
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.integracao-opcao.ativa .integracao-opcao-rascunho {
+  border-color: rgba(255, 255, 255, 0.82);
+  color: white;
+}
+
+/* Largura do eixo mais longo, para os três começarem na mesma coluna. */
+.integracao-opcao-eixo {
+  flex: 0 0 11.5rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--muted);
   white-space: nowrap;
 }
 
@@ -3609,5 +3655,47 @@ body.embed-active .game-fullscreen-btn {
 
   .integracao-secundario {
     text-align: center;
+  }
+
+  /*
+    Numa coluna só, código, nome, eixo e id não cabem lado a lado: o nome
+    virava "Base dos Cl…" e o eixo empurrava a lista para o lado. Em duas
+    linhas — nome e id em cima, código e eixo embaixo — cada um tem a
+    largura toda da sua linha.
+  */
+  .integracao-opcao {
+    display: grid;
+    grid-template-columns: auto 1fr auto auto;
+    grid-template-areas:
+      "titulo titulo rascunho id"
+      "skill eixo eixo eixo";
+    gap: 2px 8px;
+  }
+
+  .integracao-opcao-rascunho {
+    grid-area: rascunho;
+    align-self: start;
+  }
+
+  .integracao-opcao-nome {
+    display: contents;
+  }
+
+  .integracao-opcao-titulo {
+    grid-area: titulo;
+    white-space: normal;
+  }
+
+  .integracao-opcao-skill {
+    grid-area: skill;
+  }
+
+  .integracao-opcao-eixo {
+    grid-area: eixo;
+    white-space: normal;
+  }
+
+  .integracao-opcao-id {
+    grid-area: id;
   }
 }

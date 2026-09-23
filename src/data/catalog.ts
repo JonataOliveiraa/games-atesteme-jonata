@@ -292,7 +292,7 @@ export const catalog: Game[] = [
     status: "published",
     title: "Pixel Secreto",
     description: "Descubra imagens escondidas preenchendo grades com códigos de cor.",
-    category: "Pensamento Computacional",
+    category: "Mundo Digital",
     points: 50,
     icon: "🎨",
     thumbnail: pixelSecretThumbnail,
@@ -343,7 +343,7 @@ export const catalog: Game[] = [
     title: "Guardiões dos Dados",
     description:
       "Escolha atitudes seguras em situações com celular, tablet, computador, jogos e aplicativos.",
-    category: "Pensamento Computacional",
+    category: "Cultura Digital",
     points: 50,
     icon: "🛡️",
     thumbnail: guardiansThumbnail,
@@ -1293,7 +1293,7 @@ export const catalog: Game[] = [
     title: "Monte seu Computador",
     description:
       "Aprenda sobre as peças de um computador, suas funções e como montá-lo corretamente.",
-    category: "Pensamento Computacional",
+    category: "Mundo Digital",
     points: 65,
     icon: "💻",
     thumbnail: coverMonteSeuComputador,
@@ -1310,7 +1310,7 @@ export const catalog: Game[] = [
     title: "Raio-X da Máquina",
     description:
       "A máquina chega para revisão e o raio-X abre ela. Diga quem recebe, quem pensa, quem segura, quem guarda e quem mostra — e teste cada peça trabalhando.",
-    category: "Pensamento Computacional",
+    category: "Mundo Digital",
     points: 90,
     icon: "🩻",
     thumbnail: coverRaioXDaMaquina,
@@ -1327,7 +1327,7 @@ export const catalog: Game[] = [
     title: "Missão Arquivo Seguro",
     description:
       "Proteja seus arquivos digitais contra ameaças e mantenha sua privacidade online.",
-    category: "Cultura Digital",
+    category: "Mundo Digital",
     points: 65,
     icon: "🔒",
     thumbnail: coverMissaoArquivoSeguro,
@@ -1361,7 +1361,7 @@ export const catalog: Game[] = [
     title: "Sistema Operacional",
     description:
       "Aprenda sobre o funcionamento de um sistema operacional e suas principais funções.",
-    category: "Pensamento Computacional",
+    category: "Mundo Digital",
     points: 65,
     icon: "🖥️",
     thumbnail: sistemaOperacionalThumbnail,

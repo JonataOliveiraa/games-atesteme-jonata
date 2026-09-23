@@ -33,11 +33,10 @@ import type { Eixo, SkillCode } from "../shared/types/game";
  *    declara EF15CO01 a EF15CO04. Cadastrar um jogo numa delas exige mexer
  *    nos dois lugares.
  *
- * 3. O `eixo` daqui é o da BNCC, e em cinco casos ele DIVERGE do `category`
- *    que o mesmo jogo tem no catálogo (EF01CO07, EF05CO05, EF05CO06,
- *    EF05CO07, e um dos jogos de EF01CO05). Quem está certo é este arquivo;
- *    o catálogo não foi tocado porque `category` é o que os cards já
- *    mostram, e corrigir dado curricular é decisão de quem escreve a ficha.
+ * 3. O `eixo` daqui é o da BNCC, e o `category` do catálogo é uma cópia
+ *    dele, jogo a jogo. Seis cópias divergiam e foram corrigidas em
+ *    23/09/2026 pela lista de eixos que o usuário mandou (005, 007, 035,
+ *    036, 037, 080). Se voltarem a divergir, quem está certo é este arquivo.
  */
 export type SkillInfo = {
   eixo: Eixo;

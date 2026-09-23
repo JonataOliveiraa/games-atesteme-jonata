@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { catalog } from "../../data/catalog";
-import { YEAR_CODES, yearCodeOf, yearLabelOf } from "../../data/skills";
+import { SKILLS, YEAR_CODES, yearCodeOf, yearLabelOf } from "../../data/skills";
 import type { Game } from "../../types/game";
 
 /**
@@ -34,6 +34,12 @@ import type { Game } from "../../types/game";
  * Aqui a ordem é por HABILIDADE, que é como quem cadastra pensa, e a lista
  * ganhou busca: o mesmo campo encontra por nome, por id, por slug e por
  * código curricular, ignorando acento e maiúscula.
+ *
+ * ── POR QUE O EIXO VEM DE `SKILLS` E NÃO DE `category` ───────────────────
+ *
+ * Eixo é da habilidade, não do jogo: os dois jogos de EF05CO05 são do mesmo
+ * eixo por definição. `category` é uma cópia disso gravada jogo a jogo, e
+ * cópia diverge — seis já divergiam. Lendo da tabela, não tem como.
  */
 
 const ORIGEM = typeof window !== "undefined" ? window.location.origin : "";
@@ -82,24 +88,29 @@ function normalizar(texto: string): string {
 
 export default function IntegracaoPanel({ onClose }: { onClose: () => void }) {
   /*
-    Só os publicados: um jogo em rascunho cadastrado na Atesteme vira uma
-    tela quebrada na mão de uma criança.
+    O catálogo inteiro, rascunhos junto. Até 23/09/2026 eram só os
+    publicados, e o "73" do contador passava por tamanho do catálogo: quem
+    sabia que eram 90 procurava os outros 17 e não achava. Agora o rascunho
+    entra marcado — decidir se ele já pode ir para a Atesteme é de quem
+    cadastra, não da lista.
 
     A ordem é por habilidade e, dentro dela, pela trilha — assim os dois ou
     três jogos da mesma habilidade aparecem colados, que é justamente a
     escolha que quem cadastra precisa fazer.
   */
-  const publicados = useMemo(
+  const jogos = useMemo(
     () =>
-      catalog
-        .filter((g) => g.status === "published")
-        .sort((a, b) => a.skill.localeCompare(b.skill) || a.order - b.order),
+      [...catalog].sort(
+        (a, b) => a.skill.localeCompare(b.skill) || a.order - b.order
+      ),
     []
   );
 
+  const rascunhos = jogos.filter((g) => g.status !== "published").length;
+
   const [busca, setBusca] = useState("");
   const [ano, setAno] = useState("");
-  const [escolhido, setEscolhido] = useState(publicados[0]?.slug ?? "");
+  const [escolhido, setEscolhido] = useState(jogos[0]?.slug ?? "");
   const [copiado, setCopiado] = useState<string | null>(null);
 
   const listaRef = useRef<HTMLUListElement>(null);
@@ -107,7 +118,7 @@ export default function IntegracaoPanel({ onClose }: { onClose: () => void }) {
   const resultados = useMemo(() => {
     const alvo = normalizar(busca.trim());
 
-    return publicados.filter((g) => {
+    return jogos.filter((g) => {
       if (ano && yearCodeOf(g.skill) !== ano) return false;
       if (!alvo) return true;
 
@@ -116,11 +127,13 @@ export default function IntegracaoPanel({ onClose }: { onClose: () => void }) {
          pelo nome, e nenhum dos dois precisa saber em qual caixa digitar. */
       const agulha = `${g.id} ${g.skill} ${g.title} ${g.slug} ${yearLabelOf(
         g.skill
-      )}`;
+      )} ${SKILLS[g.skill].eixo} ${
+        g.status === "published" ? "publicado" : "rascunho"
+      }`;
 
       return normalizar(agulha).includes(alvo);
     });
-  }, [publicados, busca, ano]);
+  }, [jogos, busca, ano]);
 
   /*
     A escolha que VALE, calculada no render.
@@ -136,8 +149,8 @@ export default function IntegracaoPanel({ onClose }: { onClose: () => void }) {
     : resultados[0]?.slug ?? "";
 
   const jogo = useMemo(
-    () => publicados.find((g) => g.slug === slug),
-    [publicados, slug]
+    () => jogos.find((g) => g.slug === slug),
+    [jogos, slug]
   );
 
   const campos = useMemo(() => camposDoJogo(jogo), [jogo]);
@@ -164,11 +177,17 @@ export default function IntegracaoPanel({ onClose }: { onClose: () => void }) {
     if (proximo) setEscolhido(proximo.slug);
   };
 
+  /* Um relógio só: com uma cópia por linha, duas cópias seguidas em linhas
+     diferentes são comuns, e o relógio da primeira apagaria o "copiado" da
+     segunda antes da hora. */
+  const relogioCopiado = useRef<number | undefined>(undefined);
+
   const copiar = async (rotulo: string, valor: string) => {
     try {
       await navigator.clipboard.writeText(valor);
       setCopiado(rotulo);
-      window.setTimeout(() => setCopiado(null), 1500);
+      window.clearTimeout(relogioCopiado.current);
+      relogioCopiado.current = window.setTimeout(() => setCopiado(null), 1500);
     } catch {
       /* clipboard bloqueado: o valor continua visível para seleção manual */
     }
@@ -199,7 +218,7 @@ export default function IntegracaoPanel({ onClose }: { onClose: () => void }) {
                   value={busca}
                   onChange={(e) => setBusca(e.target.value)}
                   onKeyDown={navegar}
-                  placeholder="Buscar por nome, id, slug ou código (EF03CO04)"
+                  placeholder="Buscar por nome, id, eixo ou código (EF03CO04)"
                   autoFocus
                 />
               </label>
@@ -218,38 +237,67 @@ export default function IntegracaoPanel({ onClose }: { onClose: () => void }) {
             </div>
 
             <div className="integracao-contagem">
-              {resultados.length === publicados.length
-                ? `${publicados.length} jogos publicados`
-                : `${resultados.length} de ${publicados.length} jogos`}
+              <span>
+                {resultados.length === jogos.length
+                  ? `${jogos.length} jogos · ${
+                      jogos.length - rascunhos
+                    } publicados · ${rascunhos} em rascunho`
+                  : `${resultados.length} de ${jogos.length} jogos`}
+              </span>
+              <span>Clique duas vezes para copiar código e nome</span>
             </div>
 
             {resultados.length === 0 ? (
               <p className="integracao-vazio">
-                Nenhum jogo publicado
+                Nenhum jogo
                 {busca.trim() && " com esse termo"}
                 {ano && ` em ${ano}`}.
               </p>
             ) : (
               <ul className="integracao-lista" role="listbox" ref={listaRef}>
-                {resultados.map((g) => (
-                  <li key={g.id}>
-                    <button
-                      type="button"
-                      role="option"
-                      aria-selected={g.slug === slug}
-                      className={
-                        g.slug === slug
-                          ? "integracao-opcao ativa"
-                          : "integracao-opcao"
-                      }
-                      onClick={() => setEscolhido(g.slug)}
-                    >
-                      <span className="integracao-opcao-skill">{g.skill}</span>
-                      <span className="integracao-opcao-titulo">{g.title}</span>
-                      <span className="integracao-opcao-id">{g.id}</span>
-                    </button>
-                  </li>
-                ))}
+                {resultados.map((g) => {
+                  const chave = `linha-${g.id}`;
+
+                  return (
+                    <li key={g.id}>
+                      <button
+                        type="button"
+                        role="option"
+                        aria-selected={g.slug === slug}
+                        className={
+                          g.slug === slug
+                            ? "integracao-opcao ativa"
+                            : "integracao-opcao"
+                        }
+                        title="Clique duas vezes para copiar código e nome"
+                        onClick={() => setEscolhido(g.slug)}
+                        onDoubleClick={() =>
+                          copiar(chave, `${g.skill} ${g.title}`)
+                        }
+                      >
+                        <span className="integracao-opcao-skill">
+                          {g.skill}
+                        </span>
+                        <span className="integracao-opcao-nome">
+                          <span className="integracao-opcao-titulo">
+                            {g.title}
+                          </span>
+                          {g.status !== "published" && (
+                            <span className="integracao-opcao-rascunho">
+                              rascunho
+                            </span>
+                          )}
+                          <span className="integracao-opcao-eixo">
+                            {SKILLS[g.skill].eixo}
+                          </span>
+                        </span>
+                        <span className="integracao-opcao-id">
+                          {copiado === chave ? "copiado" : g.id}
+                        </span>
+                      </button>
+                    </li>
+                  );
+                })}
               </ul>
             )}
           </div>
