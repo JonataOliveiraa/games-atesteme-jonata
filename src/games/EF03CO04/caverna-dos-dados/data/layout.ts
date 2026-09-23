@@ -105,20 +105,47 @@ export const DOOR = {
     niche: { x: 1092, y: 246, h: 318 },
 }
 
-/** A faixa da informação e a placa, no alto do altar. */
-export const BAND = { x: 640, y: 162, w: 860, h: 96 }
-export const PLACA = { x: 640, y: 246, w: 820 }
+/**
+ * O ALTAR, de cima para baixo, cada coisa na sua faixa:
+ *
+ *   faixa quebrada  84–164
+ *   placa           ~168–224
+ *   bancada         232–480  (encaixes, e o JUNTAR embaixo deles)
+ *   fichas          552–656, ou 496–712 em duas fileiras
+ *
+ * Antes a placa caía em cima dos encaixes, os encaixes começavam na borda de
+ * cima da bancada e o JUNTAR encostava na de baixo — as fichas pareciam sair
+ * do painel. E a bancada tinha largura fixa: com quatro encaixes a fileira
+ * ocupava a pedra de ponta a ponta.
+ */
+export const BAND = { x: 640, y: 124, w: 860, h: 80 }
+export const PLACA = { x: 640, y: 196, w: 820 }
 
 export const ALTAR = {
-    slab: { x: 640, y: 380, w: 840, h: 232 },
-    slotY: 326,
-    slotW: 202,
+    x: 640,
+    top: 232,
+    /** Margem da pedra em volta do que ela leva. */
+    padX: 26,
+    padTop: 24,
+    padBottom: 18,
+    /** O encaixe tem 7 px de folga para cada lado da ficha. */
+    slotW: 204,
     slotH: 118,
-    slotGap: 212,
-    join: { x: 640, y: 448, w: 232, h: 92 },
+    slotGap: 214,
+    /** Entre a fileira de encaixes e o JUNTAR. */
+    joinGap: 12,
+    join: { w: 232, h: 76 },
     joinHitW: 264,
-    joinHitH: 132,
+    joinHitH: 100,
 }
+
+export const ALTAR_SLOT_Y = ALTAR.top + ALTAR.padTop + ALTAR.slotH / 2
+export const ALTAR_JOIN_Y = ALTAR.top + ALTAR.padTop + ALTAR.slotH + ALTAR.joinGap + ALTAR.join.h / 2
+export const ALTAR_BOTTOM = ALTAR_JOIN_Y + ALTAR.join.h / 2 + ALTAR.padBottom
+
+/** A bancada é do tamanho da fileira de encaixes. */
+export const altarWidth = (slots: number) =>
+    (slots - 1) * ALTAR.slotGap + ALTAR.slotW + ALTAR.padX * 2
 
 export const FICHA = {
     w: 190,
@@ -126,9 +153,9 @@ export const FICHA = {
     icon: 56,
     font: '22px',
     hitW: 202,
-    // 122 quando as fichas vêm em duas linhas; 136 quando vêm em uma.
-    // No celular (fator 0,30) isso é a diferença entre 37 e 41 px reais.
-    hitH: 122,
+    // 110 quando as fichas vêm em duas linhas (o passo entre elas é 112);
+    // 136 quando vêm em uma.
+    hitH: 110,
     hitTall: 136,
 }
 
@@ -136,12 +163,24 @@ export const FICHA = {
 export const WORD = { w: 176, h: 98, icon: 52, font: '21px' }
 
 /** Só existe no nível 3, quando um dado ficou para trás na caverna. */
-export const BACK = { x: 132, y: 496, w: 176, h: 68, hitW: 204, hitH: 92 }
+// Embaixo do explorador e fora da bancada de quatro encaixes, que começa em
+// x 191 — em 132 × 496 o botão comia o canto dela.
+export const BACK = { x: 108, y: 470, w: 176, h: 68, hitW: 204, hitH: 92 }
 
-/** As fichas disponíveis, embaixo, à direita da bolsa aberta. */
-export const BAGROW = { cx: 706, y: 600, gap: 224, rowGap: 118, perRow: 4 }
+/**
+ * As fichas disponíveis, embaixo, à direita da bolsa aberta. Em duas fileiras
+ * elas ficam em 548 e 660: a de cima começa logo abaixo da bancada.
+ */
+export const BAGROW = { cx: 706, y: 604, gap: 224, rowGap: 112, perRow: 4 }
 
 export const BAG = {
     explore: { x: 1194, y: 640, size: 130 },
     altar: { x: 118, y: 612, size: 150 },
+    /**
+     * As miniaturas do que já foi minerado, em fila à esquerda da bolsa. A
+     * primeira nasce a 100 px do centro: a 62 ela caía embaixo do couro (a
+     * bolsa tem 130 de largura) e só aparecia a partir da segunda.
+     */
+    miniDX: 100,
+    miniGap: 56,
 }

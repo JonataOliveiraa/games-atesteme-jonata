@@ -1,6 +1,6 @@
 import Phaser from 'phaser'
 import { FX } from '../../../../shared/effects/FX'
-import { BAND, DEPTH, DOOR, PLACA } from '../data/layout'
+import { BAND, DEPTH, DOOR, PLACA, altarWidth } from '../data/layout'
 import { C, CSS, FONT } from '../data/theme'
 
 type Tone = 'calm' | 'warn' | 'info'
@@ -70,14 +70,16 @@ export function createDoor(scene: Phaser.Scene) {
 
     let pieces = 3
     let filledNow = 0
+    /** A faixa tem a largura da bancada embaixo dela: as duas se leem como uma coluna. */
+    let bandW = altarWidth(pieces)
 
     /** Faixa quebrada: um pedaço por encaixe, aceso conforme a seleção cresce. */
     const paintBroken = (filled: number, cracked = -1) => {
         filledNow = filled
         bandG.clear()
         const gap = 16
-        const w = (BAND.w - gap * (pieces - 1)) / pieces
-        const hw = BAND.w / 2
+        const w = (bandW - gap * (pieces - 1)) / pieces
+        const hw = bandW / 2
         for (let i = 0; i < pieces; i++) {
             const x = -hw + i * (w + gap)
             const lit = i < filled
@@ -94,13 +96,13 @@ export function createDoor(scene: Phaser.Scene) {
 
     const paintWhole = () => {
         bandG.clear()
-        const hw = BAND.w / 2
+        const hw = bandW / 2
         bandG.fillStyle(C.infoDark, 1)
-        bandG.fillRoundedRect(-hw, -BAND.h / 2, BAND.w, BAND.h, 20)
+        bandG.fillRoundedRect(-hw, -BAND.h / 2, bandW, BAND.h, 20)
         bandG.fillStyle(C.panel, 1)
-        bandG.fillRoundedRect(-hw + 7, -BAND.h / 2 + 7, BAND.w - 14, BAND.h - 14, 14)
+        bandG.fillRoundedRect(-hw + 7, -BAND.h / 2 + 7, bandW - 14, BAND.h - 14, 14)
         bandG.fillStyle(C.info, 0.22)
-        bandG.fillRoundedRect(-hw + 7, -BAND.h / 2 + 7, BAND.w - 14, 20, 10)
+        bandG.fillRoundedRect(-hw + 7, -BAND.h / 2 + 7, bandW - 14, 20, 10)
     }
 
     const paintPlaca = (tone: Tone) => {
@@ -135,6 +137,9 @@ export function createDoor(scene: Phaser.Scene) {
 
         reset(slots: number) {
             pieces = slots
+            bandW = altarWidth(slots)
+            // A frase mais longa de 3 encaixes mede 633 px; em 692 - 40 ela cabe numa linha.
+            sentence.setWordWrapWidth(bandW - 40)
             slab?.setFrame(5)
             scene.tweens.killTweensOf(door)
             scene.tweens.killTweensOf(band)

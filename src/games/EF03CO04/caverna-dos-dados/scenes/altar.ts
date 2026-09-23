@@ -1,6 +1,8 @@
 import Phaser from 'phaser'
 import { FX } from '../../../../shared/effects/FX'
-import { ALTAR, BACK, BAG, BAGROW, DEPTH, FICHA } from '../data/layout'
+import {
+    ALTAR, ALTAR_BOTTOM, ALTAR_JOIN_Y, ALTAR_SLOT_Y, BACK, BAG, BAGROW, DEPTH, FICHA, altarWidth,
+} from '../data/layout'
 import { C, CSS, FONT } from '../data/theme'
 import { createWordArt } from './word'
 import type { Datum, DatumId } from '../types'
@@ -36,8 +38,12 @@ export function createAltar(scene: Phaser.Scene, options: AltarOptions) {
     const wires = scene.add.graphics()
     root.add([slab, slotsG, wires])
 
-    const paintSlab = () => {
-        const { x, y, w, h } = ALTAR.slab
+    /** A pedra cresce com o número de encaixes: a fileira nunca encosta na borda. */
+    const paintSlab = (count: number) => {
+        const w = altarWidth(count)
+        const h = ALTAR_BOTTOM - ALTAR.top
+        const x = ALTAR.x
+        const y = ALTAR.top + h / 2
         slab.clear()
         slab.fillStyle(C.ink, 0.35)
         slab.fillRoundedRect(x - w / 2 + 6, y - h / 2 + 12, w, h, 30)
@@ -45,13 +51,14 @@ export function createAltar(scene: Phaser.Scene, options: AltarOptions) {
         slab.fillRoundedRect(x - w / 2, y - h / 2, w, h, 30)
         slab.fillStyle(C.stone, 1)
         slab.fillRoundedRect(x - w / 2 + 8, y - h / 2 + 8, w - 16, h - 20, 24)
+        // O brilho da borda fica ACIMA dos encaixes, não atrás deles.
         slab.fillStyle(C.white, 0.16)
-        slab.fillRoundedRect(x - w / 2 + 22, y - h / 2 + 18, w - 44, 18, 9)
+        slab.fillRoundedRect(x - w / 2 + 22, y - h / 2 + 11, w - 44, 8, 4)
     }
-    paintSlab()
+    paintSlab(3)
 
     // ── botão JUNTAR ───────────────────────────────────────────────────────
-    const join = scene.add.container(ALTAR.join.x, ALTAR.join.y).setDepth(DEPTH.altar + 2)
+    const join = scene.add.container(ALTAR.x, ALTAR_JOIN_Y).setDepth(DEPTH.altar + 2)
     const joinG = scene.add.graphics()
     const joinLabel = scene.add
         .text(26, 0, 'JUNTAR', {
@@ -90,7 +97,7 @@ export function createAltar(scene: Phaser.Scene, options: AltarOptions) {
     paintJoin()
 
     const joinZone = scene.add
-        .zone(ALTAR.join.x, ALTAR.join.y, ALTAR.joinHitW, ALTAR.joinHitH)
+        .zone(ALTAR.x, ALTAR_JOIN_Y, ALTAR.joinHitW, ALTAR.joinHitH)
         .setOrigin(0.5)
         .setDepth(DEPTH.altar + 3)
         .setInteractive({ useHandCursor: true })
@@ -141,13 +148,13 @@ export function createAltar(scene: Phaser.Scene, options: AltarOptions) {
     let occupied: (DatumId | null)[] = []
     let pulse = 0
 
-    const slotX = (index: number) => ALTAR.slab.x + (index - (slots - 1) / 2) * ALTAR.slotGap
+    const slotX = (index: number) => ALTAR.x + (index - (slots - 1) / 2) * ALTAR.slotGap
 
     const paintSlots = () => {
         slotsG.clear()
         for (let i = 0; i < slots; i++) {
             const x = slotX(i)
-            const y = ALTAR.slotY
+            const y = ALTAR_SLOT_Y
             const w = ALTAR.slotW
             const h = ALTAR.slotH
             const free = !occupied[i]
@@ -171,9 +178,9 @@ export function createAltar(scene: Phaser.Scene, options: AltarOptions) {
         for (let i = 0; i < taken.length - 1; i++) {
             const from = slotX(taken[i]) + FICHA.w / 2 - 20
             const to = slotX(taken[i + 1]) - FICHA.w / 2 + 20
-            wires.lineBetween(from, ALTAR.slotY, to, ALTAR.slotY)
+            wires.lineBetween(from, ALTAR_SLOT_Y, to, ALTAR_SLOT_Y)
             wires.fillStyle(C.crystalLit, 1)
-            wires.fillCircle((from + to) / 2, ALTAR.slotY, 10)
+            wires.fillCircle((from + to) / 2, ALTAR_SLOT_Y, 10)
         }
     }
 
@@ -259,6 +266,7 @@ export function createAltar(scene: Phaser.Scene, options: AltarOptions) {
             clear()
             slots = count
             occupied = new Array(count).fill(null)
+            paintSlab(count)
             paintSlots()
             paintWires()
 
@@ -291,12 +299,12 @@ export function createAltar(scene: Phaser.Scene, options: AltarOptions) {
         },
 
         slotPos(index: number) {
-            return { x: slotX(index), y: ALTAR.slotY }
+            return { x: slotX(index), y: ALTAR_SLOT_Y }
         },
 
         fichaPos(id: DatumId) {
             const ficha = find(id)
-            return ficha ? { x: ficha.root.x, y: ficha.root.y } : { x: ALTAR.slab.x, y: ALTAR.slab.y }
+            return ficha ? { x: ficha.root.x, y: ficha.root.y } : { x: ALTAR.x, y: ALTAR_SLOT_Y }
         },
 
         homePos(id: DatumId) {
@@ -305,7 +313,7 @@ export function createAltar(scene: Phaser.Scene, options: AltarOptions) {
         },
 
         joinPos() {
-            return { x: ALTAR.join.x, y: ALTAR.join.y }
+            return { x: ALTAR.x, y: ALTAR_JOIN_Y }
         },
 
         rowBounds() {
@@ -331,7 +339,7 @@ export function createAltar(scene: Phaser.Scene, options: AltarOptions) {
             await FX.to(
                 scene,
                 ficha.root,
-                { x: slotX(index), y: ALTAR.slotY },
+                { x: slotX(index), y: ALTAR_SLOT_Y },
                 { duration: 300, ease: 'Back.easeOut' },
             )
             paintSlots()

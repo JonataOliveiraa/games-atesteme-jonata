@@ -32,7 +32,7 @@ export function createBag(scene: Phaser.Scene) {
 
     /** Desenhadas nas coordenadas da EXPLORAÇÃO: só existem naquele modo. */
     const drawMini = (item: { datum: Datum; sheet: string }, index: number) => {
-        const mini = scene.add.container(BAG.explore.x - 62 - index * 54, BAG.explore.y + 2)
+        const mini = scene.add.container(BAG.explore.x - BAG.miniDX - index * BAG.miniGap, BAG.explore.y + 2)
         const disc = scene.add.graphics()
         disc.fillStyle(C.ink, 1)
         disc.fillCircle(0, 0, 25)
