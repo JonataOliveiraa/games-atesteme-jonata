@@ -19,8 +19,6 @@ export function createHud(scene: Phaser.Scene, options: HudOptions) {
     bar.fillRect(0, 0, W, HUD.h)
     bar.fillStyle(C.cream, 1)
     bar.fillRect(0, 0, W, HUD.h - 5)
-    bar.fillStyle(C.white, 0.7)
-    bar.fillRect(0, 0, W, 14)
     bar.fillStyle(C.wood, 1)
     bar.fillRect(0, HUD.h - 5, W, 5)
 
