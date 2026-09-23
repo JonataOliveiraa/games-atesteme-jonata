@@ -5,6 +5,8 @@ export const DEPTH = {
     scene: 0,
     tablet: 10,
     queue: 20,
+    /** O recado do cuidado: ABAIXO dos perigos, que continuam passando e não podem sumir atrás dele. */
+    care: 35,
     item: 40,
     bubble: 60,
     seal: 80,

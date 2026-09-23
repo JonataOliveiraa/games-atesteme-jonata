@@ -1,6 +1,6 @@
 import Phaser from 'phaser'
 import { Ease, FX } from '../../../../shared/effects/FX'
-import { DEPTH, H, W } from '../data/layout'
+import { DEPTH, H, TABLET, W } from '../data/layout'
 import { C, CSS, FONT } from '../data/theme'
 
 export function createCareRibbon(scene: Phaser.Scene, text: string) {
@@ -29,6 +29,44 @@ export function createCareRibbon(scene: Phaser.Scene, text: string) {
 
     root.add([g, label])
     return root
+}
+
+/**
+ * O RECADO DO CUIDADO FICA PARADO.
+ *
+ * Antes ele nascia colado embaixo do perigo e subia junto com a bolha: a
+ * criança tentava ler uma frase que andava e sumia em um segundo. Agora ele
+ * aparece no lugar de onde o perigo saiu — é ali que o olho já está —, fica
+ * parado o bastante para ser lido e só então se apaga. A bolha sobe sozinha.
+ *
+ * Mora ABAIXO dos perigos (`DEPTH.care`): o jogo não para, e um perigo da
+ * mesma faixa que passar por ali tem de continuar à vista e tocável.
+ */
+export async function showCareRibbon(
+    scene: Phaser.Scene,
+    x: number,
+    y: number,
+    text: string,
+    { hold = 2000, delay = 0 } = {},
+) {
+    // o perigo e a bolha saem do mesmo ponto: esperar um instante deixa os
+    // dois começarem a subir antes, em vez de passarem por cima da frase
+    if (delay) await FX.wait(scene, delay)
+    const ribbon = createCareRibbon(scene, text).setDepth(DEPTH.care)
+    // dentro do VIDRO do tablet: perigo preso na beirada fica em x 1150, e a
+    // faixa centrada ali invadia a moldura
+    const half = ribbon.getBounds().width / 2
+    const glass = TABLET.w / 2 - TABLET.bezel - 12
+    ribbon.setPosition(
+        Phaser.Math.Clamp(x, TABLET.cx - glass + half, TABLET.cx + glass - half),
+        y,
+    )
+    ribbon.setScale(0.6).setAlpha(0)
+
+    await FX.to(scene, ribbon, { scale: 1, alpha: 1 }, { duration: 240, ease: Ease.back(2.4) })
+    await FX.wait(scene, hold)
+    await FX.to(scene, ribbon, { alpha: 0, y: y + 12 }, { duration: 320 })
+    ribbon.destroy(true)
 }
 
 export async function showSafeSeal(

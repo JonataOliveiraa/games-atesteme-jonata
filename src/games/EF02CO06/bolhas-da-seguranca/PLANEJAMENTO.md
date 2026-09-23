@@ -382,3 +382,21 @@ scenes/audio.ts     WebAudio, sem arquivo
 
 A `GameScene` não desenha: se ela precisar de um `fillRoundedRect`, falta um
 módulo em `scenes/`.
+
+## O recado do cuidado fica parado (23/09/2026)
+
+Ao tocar num perigo, a faixa dourada com o cuidado ("Bebida longe do
+aparelho.") nascia colada embaixo dele e **subia junto com a bolha** por um
+segundo: a criança tentava ler uma frase que andava e sumia. O usuário apontou
+que, nesse meio tempo, ficava difícil ler.
+
+Agora (`showCareRibbon`, em `seal.ts`):
+
+- a faixa aparece **parada no lugar de onde o perigo saiu** — é ali que o olho
+  já está —, 200 ms depois de a bolha começar a subir, para o perigo e a bolha
+  não passarem por cima da frase;
+- fica **2 s** parada e só então esmaece; a bolha sobe sozinha;
+- mora **abaixo dos perigos** (`DEPTH.care`): o jogo não para, e um perigo da
+  mesma faixa que passar por ali continua à vista e tocável;
+- fica **dentro do vidro do tablet**: o perigo preso na beirada está em x 1150,
+  e a faixa centrada ali invadia a moldura.

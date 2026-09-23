@@ -2,7 +2,7 @@ import Phaser from 'phaser'
 import { Ease, FX } from '../../../../shared/effects/FX'
 import { DEPTH, FIELD } from '../data/layout'
 import { C } from '../data/theme'
-import { createCareRibbon } from './seal'
+import { showCareRibbon } from './seal'
 
 const darker = (color: number, amount = 26) =>
     Phaser.Display.Color.IntegerToColor(color).darken(amount).color
@@ -54,14 +54,11 @@ export async function captureAndRise(
     const bubble = drawBubble(scene, target.x, target.y, radius, color)
     bubble.setScale(0.25).setAlpha(0)
 
-    const ribbon = createCareRibbon(scene, careText)
-    const ribbonGap = radius + 34
-    ribbon.setPosition(target.x, target.y + ribbonGap).setScale(0.5).setAlpha(0)
+    await FX.to(scene, bubble, { scale: 1, alpha: 1 }, { duration: 240, ease: Ease.back(2.2) })
 
-    await FX.all(
-        FX.to(scene, bubble, { scale: 1, alpha: 1 }, { duration: 240, ease: Ease.back(2.2) }),
-        FX.to(scene, ribbon, { scale: 1, alpha: 1 }, { duration: 260, ease: Ease.back(2.4) }),
-    )
+    // O recado fica PARADO onde o perigo estava; só a bolha sobe. Ele não é
+    // esperado aqui: some sozinho, depois de dar tempo de ler.
+    void showCareRibbon(scene, target.x, target.y + FIELD.item * 0.2, careText, { delay: 200 })
 
     trail(scene, bubble, color)
 
@@ -71,11 +68,9 @@ export async function captureAndRise(
     await FX.all(
         FX.to(scene, bubble, { y: top, x: bubble.x + drift }, { duration: 1000, ease: Ease.smooth }),
         FX.to(scene, target, { y: top, x: target.x + drift }, { duration: 1000, ease: Ease.smooth }),
-        FX.to(scene, ribbon, { y: top + ribbonGap, x: ribbon.x + drift }, { duration: 1000, ease: Ease.smooth }),
     )
 
     bubble.destroy()
-    ribbon.destroy(true)
 }
 
 export async function popAt(scene: Phaser.Scene, x: number, y: number, color: number) {
