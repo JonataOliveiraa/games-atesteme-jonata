@@ -4,9 +4,14 @@ import { DEPTH, TRASH } from '../data/layout'
 import { C } from '../data/theme'
 import type { Spot } from '../types'
 
-interface Hazard {
+/** Na ordem dos quadros de `lixo.png`. */
+export type HazardKind = 'sock' | 'roach' | 'fish'
+const KINDS: HazardKind[] = ['sock', 'roach', 'fish']
+
+export interface Hazard {
     x: number
     y: number
+    kind: HazardKind
     art: Phaser.GameObjects.Container
 }
 
@@ -16,8 +21,11 @@ interface Hazard {
  * Ele entrou no lugar dos itens da outra metade, que antes ocupavam essas vagas
  * e travavam o jogo quando apanhados. Trocar um pelo outro tira o erro de
  * cabeça do meio da corrida: a divisão é decidida no corte e conferida na fase
- * final, e a viagem passou a ser execução pura. O lixo não custa vida — ele
- * custa um objeto derrubado, que é o preço certo para um erro de dedo.
+ * final, e a viagem passou a ser execução pura.
+ *
+ * Cada um sabe o que é (`kind`), porque o preço mudou: a MEIA não tira vida,
+ * ela deixa o herói fedendo e lento por um tempo; a barata e o peixe continuam
+ * custando uma vida (`onHazard`, na cena).
  */
 export function createHazards(scene: Phaser.Scene) {
     let list: Hazard[] = []
@@ -71,16 +79,19 @@ export function createHazards(scene: Phaser.Scene) {
             const art = scene.textures.exists('lixo')
             list = spots.map((spot, index) => {
                 const container = scene.add.container(spot.x, spot.y).setDepth(DEPTH.hazard)
+                const frame = index % TRASH.frames
                 if (art) {
                     container.add(
                         scene.add
-                            .image(0, 0, 'lixo', index % TRASH.frames)
+                            .image(0, 0, 'lixo', frame)
                             .setDisplaySize(TRASH.size, TRASH.size),
                     )
                 } else {
                     drawReserve(container)
                 }
-                return { x: spot.x, y: spot.y, art: container }
+                // o desenho de reserva é sempre uma meia, e ela se comporta como tal
+                const kind = art ? KINDS[frame] : 'sock'
+                return { x: spot.x, y: spot.y, kind, art: container }
             })
         },
 

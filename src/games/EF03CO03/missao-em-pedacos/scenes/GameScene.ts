@@ -19,7 +19,7 @@ import {
     stepReady,
     tripFull,
 } from '../data/rules'
-import { DEPTH, HUD, PAD, W, WORLD } from '../data/layout'
+import { DEPTH, HUD, PAD, STINK, W, WORLD } from '../data/layout'
 import { C } from '../data/theme'
 import type { Item, LevelDef, LevelNumber, Mode, Station, Task, Trip } from '../types'
 import { createRoom, type Room } from './room'
@@ -52,6 +52,7 @@ const LINE = {
     carryStations: 'Agora leve cada dupla até o lugar dela!',
     finale: 'Agora faça a tarefa: toque no que vem agora.',
     done: 'Tudo pronto!',
+    sock: 'Eca, meia fedida! Você ficou lento.',
 }
 
 export class GameScene extends Phaser.Scene {
@@ -74,6 +75,8 @@ export class GameScene extends Phaser.Scene {
     private carried: Item[] = []
     private checkpoint = WORLD.startX
     private hazardCooldown = 0
+    /** O topo está mostrando o aviso da meia, e tem de voltar quando o fedor passar. */
+    private sockLine = false
     private steps = new Set<string>()
     private stationsDone = new Set<string>()
     private stationHint: string | null = null
@@ -299,7 +302,7 @@ export class GameScene extends Phaser.Scene {
         }
 
         const trip = this.trips[tripIndex]
-        if (tripFull(trip)) {
+        if (tripFull(this.task, tripIndex, trip)) {
             this.audio.tripOut()
             void this.plan.refuse(tripIndex)
             return
@@ -413,6 +416,7 @@ export class GameScene extends Phaser.Scene {
         this.runTrip = tripIndex
         this.carried = []
         this.hazardCooldown = 0
+        this.sockLine = false
         this.mode = 'run'
 
         const task = this.task
@@ -494,7 +498,9 @@ export class GameScene extends Phaser.Scene {
         if (touched) this.onPickup(touched.item)
 
         const trash = this.hazards.touching(this.hero.x, this.hero.y)
-        if (trash && this.hazardCooldown <= 0) void this.onHazard(trash)
+        if (trash?.kind === 'sock') this.onSock(trash)
+        else if (trash && this.hazardCooldown <= 0) void this.onHazard(trash)
+        this.settleSockLine()
 
         const stations = this.task.jobs[this.runTrip].stations ?? []
         if (stations.length) {
@@ -529,9 +535,47 @@ export class GameScene extends Phaser.Scene {
     }
 
     /**
-     * O LIXO É FATAL. Encostar numa meia fedida, numa barata ou num peixe morto
-     * custa UMA VIDA e devolve a criança ao último ponto, com as mãos vazias:
-     * tudo o que ela já tinha juntado volta para as vagas.
+     * A MEIA NÃO MATA: ELA FEDE.
+     *
+     * Encostar nela não tira vida, não derruba nada e não manda de volta. O
+     * herói fica lento por três segundos, piscando com o quadro "eca" e
+     * soltando ondinhas verdes — o castigo é o tempo, e dá para ver na hora
+     * por quê. Pisar de novo enquanto fede só renova o fedor; o som e o aviso
+     * saem uma vez.
+     */
+    private onSock(at: { x: number; y: number }) {
+        const fresh = !this.hero.stinky
+        this.hero.stink(STINK.ms)
+        if (!fresh) return
+
+        this.audio.eca()
+        this.hazards.puff(at.x, at.y)
+        this.hud.setTitle(LINE.sock)
+        this.sockLine = true
+    }
+
+    /**
+     * O aviso da meia sai quando o FEDOR acaba — conferido a cada quadro, no
+     * relógio do próprio herói. Um `delayedCall` com a mesma duração chegava um
+     * quadro antes, via o herói ainda fedendo e deixava o aviso preso no topo.
+     */
+    private settleSockLine() {
+        if (!this.sockLine || this.hero.stinky) return
+        this.sockLine = false
+        this.hud.setTitle(this.runLine())
+    }
+
+    /** O que o topo diz durante a viagem, conforme a mão já está cheia ou não. */
+    private runLine() {
+        const full = this.carried.length === this.trips[this.runTrip].length
+        if (!full) return LINE.run
+        return this.viaStations ? LINE.carryStations : LINE.carry
+    }
+
+    /**
+     * A BARATA E O PEIXE SÃO FATAIS. Encostar num deles custa UMA VIDA e devolve
+     * a criança ao último ponto, com as mãos vazias: tudo o que ela já tinha
+     * juntado volta para as vagas. (A meia saiu daqui: ver `onSock`.)
      *
      * Por isso o mapa tem só dois deles, os dois em pista aberta, com pelo menos
      * 400 px de aproximação e nada por cima — hazard que mata precisa ser visto
@@ -914,7 +958,9 @@ export class GameScene extends Phaser.Scene {
     private runTutorial(kind: 'plan' | 'run' | 'finale', force: boolean) {
         const back = this.mode
         this.mode = 'intro'
-        this.pad.setEnabled(false)
+        // Na corrida os botões ficam à vista, só travados: o tutorial aponta
+        // para eles.
+        this.pad.setEnabled(false, back === 'run')
         this.hero.setFrozen(true)
 
         const steps = this.tutorialSteps(kind)
@@ -964,15 +1010,33 @@ export class GameScene extends Phaser.Scene {
         }
 
         if (kind === 'run') {
+            const walk = this.pad.walkBounds()
             return [
                 {
-                    text: 'Use os botões para andar e pular.',
+                    text: 'Use as setas para andar.',
+                    shape: 'rect' as const,
+                    x: walk.x,
+                    y: walk.y,
+                    w: walk.w,
+                    h: walk.h,
+                    balloonX: 640,
+                    balloonY: 250,
+                    pointer: {
+                        fromX: PAD.right.x,
+                        fromY: PAD.right.y,
+                        toX: PAD.right.x,
+                        toY: PAD.right.y,
+                        tap: true,
+                    },
+                },
+                {
+                    text: 'E este botão faz pular.',
                     shape: 'circle' as const,
                     x: PAD.jump.x,
                     y: PAD.jump.y,
                     w: PAD.jump.r * 2 + 40,
                     h: PAD.jump.r * 2 + 40,
-                    balloonX: 560,
+                    balloonX: 640,
                     balloonY: 250,
                     pointer: {
                         fromX: PAD.jump.x,

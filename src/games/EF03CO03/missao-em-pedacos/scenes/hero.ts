@@ -1,6 +1,6 @@
 import Phaser from 'phaser'
 import { FX } from '../../../../shared/effects/FX'
-import { DEPTH, HERO_ART, PHYS, WORLD } from '../data/layout'
+import { DEPTH, HERO_ART, PHYS, STINK, WORLD } from '../data/layout'
 import { C } from '../data/theme'
 import type { Solid } from '../types'
 
@@ -46,6 +46,25 @@ export function createHero(scene: Phaser.Scene, callbacks: HeroCallbacks) {
     let stepFlip = 0
     let facing = 1
     let pose: number | null = null
+    /** Quanto falta do fedor da meia, e os relógios do piscar e das ondinhas. */
+    let stinkLeft = 0
+    let flicker = 0
+    let puffIn = 0
+
+    /** Uma ondinha verde subindo da cabeça: o "cheiro" desenhado. */
+    const stinkWave = () => {
+        const wave = scene.add.graphics().setDepth(DEPTH.hero + 1)
+        wave.lineStyle(5, C.stink, 0.9)
+        wave.beginPath()
+        wave.moveTo(0, 0)
+        wave.lineTo(6, -12)
+        wave.lineTo(-2, -24)
+        wave.lineTo(4, -36)
+        wave.strokePath()
+        wave.setPosition(x + Phaser.Math.Between(-26, 26), y - PHYS.heroH - 4)
+        void FX.to(scene, wave, { y: wave.y - 46, alpha: 0 }, { duration: 760 })
+            .then(() => wave.destroy())
+    }
 
     const paintReserve = (frame: number) => {
         if (!reserve) return
@@ -102,6 +121,9 @@ export function createHero(scene: Phaser.Scene, callbacks: HeroCallbacks) {
         get facing() {
             return facing
         },
+        get stinky() {
+            return stinkLeft > 0
+        },
 
         spawn(atX: number) {
             x = atX
@@ -110,7 +132,17 @@ export function createHero(scene: Phaser.Scene, callbacks: HeroCallbacks) {
             onGround = true
             coyote = 0
             pose = null
+            stinkLeft = 0
             place()
+        },
+
+        /** Pisou na meia: fica fedendo por `ms`. Pisar de novo renova, não soma. */
+        stink(ms: number) {
+            if (stinkLeft <= 0) {
+                flicker = 0
+                puffIn = 0
+            }
+            stinkLeft = Math.max(stinkLeft, ms)
         },
 
         setFrozen(value: boolean) {
@@ -132,7 +164,9 @@ export function createHero(scene: Phaser.Scene, callbacks: HeroCallbacks) {
 
             const dir = (input.right ? 1 : 0) - (input.left ? 1 : 0)
             if (dir !== 0) facing = dir
-            const vx = dir * PHYS.speed
+            // fedendo, anda devagar; no ar não, senão o pulo não vence o buraco
+            const pace = stinkLeft > 0 && onGround ? STINK.slow : 1
+            const vx = dir * PHYS.speed * pace
 
             if (input.jump && (onGround || coyote > 0)) {
                 vy = -PHYS.jump
@@ -190,7 +224,7 @@ export function createHero(scene: Phaser.Scene, callbacks: HeroCallbacks) {
                     setFrame(vy < 0 ? 5 : 6)
                     runTime = 0
                 } else if (dir !== 0) {
-                    runTime += dt * (PHYS.speed / 100)
+                    runTime += dt * ((PHYS.speed * pace) / 100)
                     const index = Math.floor(runTime) % RUN_FRAMES.length
                     setFrame(RUN_FRAMES[index])
                     const flip = index % 2
@@ -201,6 +235,23 @@ export function createHero(scene: Phaser.Scene, callbacks: HeroCallbacks) {
                 } else {
                     setFrame(0)
                     runTime = 0
+                }
+            }
+
+            // O FEDOR: o desenho alterna com o quadro "eca" o tempo todo, e
+            // ondinhas verdes sobem da cabeça. É o que diz "pisei na meia" sem
+            // tirar vida nem derrubar nada.
+            if (stinkLeft > 0) {
+                const ms = dt * 1000
+                stinkLeft = Math.max(0, stinkLeft - ms)
+                flicker += ms
+                if (pose === null && Math.floor(flicker / STINK.flickerMs) % 2 === 0) {
+                    setFrame(STINK.frame)
+                }
+                puffIn -= ms
+                if (puffIn <= 0) {
+                    puffIn = STINK.puffMs
+                    stinkWave()
                 }
             }
 

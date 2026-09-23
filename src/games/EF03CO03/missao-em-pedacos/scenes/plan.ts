@@ -1,7 +1,7 @@
 import Phaser from 'phaser'
 import { FX } from '../../../../shared/effects/FX'
 import { DEPTH, FOCUS, H, PLAN, W } from '../data/layout'
-import { TRIP_SLOTS } from '../data/rules'
+import { tripSlots } from '../data/rules'
 import { C, CSS, FONT } from '../data/theme'
 import type { Item, Task, Trip } from '../types'
 
@@ -129,19 +129,26 @@ export function createPlan(scene: Phaser.Scene, callbacks: PlanCallbacks) {
     ) => {
         const w = PLAN.panels.w
         const h = PLAN.panels.h
+        const { rise, h: tabH, face } = PLAN.tab
+        const top = -h / 2 - rise
         g.clear()
         g.fillStyle(C.ink, 1)
-        g.fillRoundedRect(-w / 2 + 30, -h / 2 - 40, w - 60, 52, 16)
+        g.fillRoundedRect(-w / 2 + 30, top, w - 60, tabH, 16)
         g.fillStyle(done ? C.okDark : C.warnDark, 1)
-        g.fillRoundedRect(-w / 2 + 34, -h / 2 - 36, w - 68, 44, 13)
+        g.fillRoundedRect(-w / 2 + 34, top + 4, w - 68, tabH - 8, 13)
         g.fillStyle(done ? C.ok : C.warn, 1)
-        g.fillRoundedRect(-w / 2 + 34, -h / 2 - 36, w - 68, 32, 13)
-        text.setText(name.toUpperCase()).setPosition(0, -h / 2 - 15)
+        g.fillRoundedRect(-w / 2 + 34, top + 4, w - 68, face, 13)
+        // no meio da face clara, que é a parte que aparece
+        text.setText(name.toUpperCase()).setPosition(0, top + 4 + face / 2)
     }
 
-    /** Os quatro lugares, em fila dentro do painel. */
-    const slotLocal = (slotIndex: number) => {
-        const span = TRIP_SLOTS * PLAN.panels.slot + (TRIP_SLOTS - 1) * PLAN.panels.slotGap
+    /** Quantos lugares o painel tem: um por objeto da metade (o bolo tem dois). */
+    const slotsOf = (tripIndex: number) => (task ? tripSlots(task, tripIndex) : 4)
+
+    /** Os lugares, em fila e centrados dentro do painel. */
+    const slotLocal = (tripIndex: number, slotIndex: number) => {
+        const count = slotsOf(tripIndex)
+        const span = count * PLAN.panels.slot + (count - 1) * PLAN.panels.slotGap
         return {
             x:
                 -span / 2 +
@@ -153,7 +160,7 @@ export function createPlan(scene: Phaser.Scene, callbacks: PlanCallbacks) {
 
     const slotCenter = (tripIndex: number, slotIndex: number) => {
         const trip = tripCenter(tripIndex)
-        const local = slotLocal(slotIndex)
+        const local = slotLocal(tripIndex, slotIndex)
         const scale = focused() ? FOCUS.scale : 1
         return { x: trip.x + local.x * scale, y: trip.y + local.y * scale }
     }
@@ -178,7 +185,7 @@ export function createPlan(scene: Phaser.Scene, callbacks: PlanCallbacks) {
         flying = []
     }
 
-    const paintPanel = (g: Phaser.GameObjects.Graphics, done: boolean) => {
+    const paintPanel = (g: Phaser.GameObjects.Graphics, done: boolean, tripIndex: number) => {
         const w = PLAN.panels.w
         const h = PLAN.panels.h
         const edge = done ? C.okDark : C.ink
@@ -192,8 +199,8 @@ export function createPlan(scene: Phaser.Scene, callbacks: PlanCallbacks) {
         g.fillRoundedRect(-w / 2 + 10, -h / 2 + 8, w - 20, 10, 5)
 
         const s = PLAN.panels.slot
-        for (let i = 0; i < TRIP_SLOTS; i++) {
-            const local = slotLocal(i)
+        for (let i = 0; i < slotsOf(tripIndex); i++) {
+            const local = slotLocal(tripIndex, i)
             g.fillStyle(C.ink, 0.1)
             g.fillRoundedRect(local.x - s / 2, local.y - s / 2, s, s, 14)
             g.lineStyle(3, C.ink, 0.22)
@@ -247,9 +254,10 @@ export function createPlan(scene: Phaser.Scene, callbacks: PlanCallbacks) {
         marks.clear()
         if (state.mode !== 'cutting' || !state.picked) return
         state.trips.forEach((trip, index) => {
-            if (trip.length >= TRIP_SLOTS) return
+            if (trip.length >= slotsOf(index)) return
             const center = tripCenter(index)
-            const y = center.y - PLAN.panels.h / 2 - 62
+            // acima da tarja, com a mesma folga de antes
+            const y = center.y - PLAN.panels.h / 2 - PLAN.tab.rise - 22
             marks.fillStyle(C.ink, 1)
             marks.fillTriangle(center.x - 26, y - 30, center.x + 26, y - 30, center.x, y + 6)
             marks.fillStyle(C.gold, 1)
@@ -277,7 +285,7 @@ export function createPlan(scene: Phaser.Scene, callbacks: PlanCallbacks) {
             }
             container.setAlpha(focused() && state.done[index] ? 0.55 : 1)
 
-            paintPanel(container.getData('body') as Phaser.GameObjects.Graphics, state.done[index])
+            paintPanel(container.getData('body') as Phaser.GameObjects.Graphics, state.done[index], index)
             paintTitle(
                 container.getData('titleBar') as Phaser.GameObjects.Graphics,
                 container.getData('title') as Phaser.GameObjects.Text,
@@ -289,7 +297,7 @@ export function createPlan(scene: Phaser.Scene, callbacks: PlanCallbacks) {
             items.removeAll(true)
             if (!scene.textures.exists(sheet)) return
             trip.forEach((item, slotIndex) => {
-                const local = slotLocal(slotIndex)
+                const local = slotLocal(index, slotIndex)
                 items.add(
                     scene.add
                         .image(local.x, local.y, sheet, item.frame)

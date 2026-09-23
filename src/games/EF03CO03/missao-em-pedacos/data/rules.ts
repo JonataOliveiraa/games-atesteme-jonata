@@ -1,6 +1,15 @@
 import type { Item, Job, Station, Step, Task, Trip } from '../types'
 
-export const TRIP_SLOTS = 4
+/**
+ * Quantos lugares o painel tem: um por objeto daquela metade.
+ *
+ * Quase toda tarefa tem quatro de cada lado, mas o bolo ficou com dois quando a
+ * colher, a espátula, a velinha e a tigela saíram — elas não SÃO massa nem
+ * cobertura, e a criança podia achar que a vela ia misturada na calda. Painel
+ * com lugar sobrando diria "falta coisa aqui", então o número vem da tarefa.
+ */
+export const tripSlots = (task: Task, tripIndex: number) =>
+    task.items.filter(item => item.jobId === task.jobs[tripIndex]?.id).length
 
 export const jobOf = (task: Task, item: Item): Job =>
     task.jobs.find(job => job.id === item.jobId)!
@@ -18,7 +27,8 @@ export const tripJob = (trip: Trip) => (trip.length ? trip[0].jobId : null)
 export const fits = (task: Task, tripIndex: number, item: Item) =>
     task.jobs[tripIndex]?.id === item.jobId
 
-export const tripFull = (trip: Trip) => trip.length >= TRIP_SLOTS
+export const tripFull = (task: Task, tripIndex: number, trip: Trip) =>
+    trip.length >= tripSlots(task, tripIndex)
 
 /** Guarda: o item apanhado tem que ser um dos quatro desta viagem. */
 export const belongsToRun = (trip: Trip, item: Item) =>

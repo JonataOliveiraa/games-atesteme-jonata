@@ -45,12 +45,12 @@ export const HUD = {
  * sai correndo dali. Não é uma página de interface — é um lugar, com mesa,
  * os dois painéis no gramado e o herói de pé esperando.
  *
- * São OITO objetos numa fileira só: duas fileiras exigiriam uma estante, e a
+ * São até OITO objetos numa fileira só (o bolo tem quatro): duas fileiras exigiriam uma estante, e a
  * fileira única deixa cada objeto com a mesma importância — que é o ponto, já
  * que a criança precisa comparar todos entre si.
  *
- * Cada objeto tem uma PLAQUINHA com o nome dele. Sem ela, uma colher de pau e
- * uma espátula são duas manchas de madeira e metal: a criança não erra a
+ * Cada objeto tem uma PLAQUINHA com o nome dele. Sem ela, a vareta e a estaca
+ * da barraca são dois palitos: a criança não erra a
  * decomposição, erra a leitura do desenho, e as duas coisas não são a mesma.
  */
 export const PLAN = {
@@ -61,12 +61,27 @@ export const PLAN = {
      * A plaquinha fica na beirada da mesa, como etiqueta de prateleira.
      *
      * A fonte é 17, não 14: em 14 os nomes ficavam apertados na tela pequena, e
-     * eles existem justamente para serem LIDOS — é a etiqueta que separa uma
-     * colher de pau de uma espátula.
+     * eles existem justamente para serem LIDOS — é a etiqueta que separa a
+     * vareta da estaca.
      */
     caption: { cy: 320, w: 114, h: 48, wrap: 106, font: 17 },
-    /** Os dois painéis do corte: borda interna pontilhada e 4 lugares em fila. */
+    /**
+     * Os dois painéis do corte: borda interna pontilhada e um lugar por objeto
+     * da metade (`tripSlots`), em fila.
+     */
     panels: { cx: 520, cy: 566, w: 440, h: 168, gap: 56, slot: 96, slotGap: 12 },
+    /**
+     * A tarja com o nome do grupo, em cima do painel.
+     *
+     * O pé dela fica ATRÁS do painel, que é desenhado por cima — então o que
+     * a criança vê é só a face clara, e é nela que o nome se centra. Antes o
+     * texto se centrava na tarja inteira, metade escondida, e a base das
+     * letras encostava na borda do card.
+     *
+     * `rise` é quanto o topo sobe acima do painel; `face` é a altura da face
+     * clara, onde o texto mora.
+     */
+    tab: { rise: 50, h: 52, face: 34 },
     hero: { x: 1096, feet: 700 },
     go: { cx: 1096, cy: 424, w: 276, h: 100 },
 }
@@ -161,6 +176,25 @@ export const PHYS = {
     bufferMs: 140,
     heroW: 70,
     heroH: 150,
+}
+
+/**
+ * O FEDOR DA MEIA: o herói fica lento e o desenho pisca com o quadro "eca".
+ *
+ * A lentidão vale só NO CHÃO. O pulo cobre 300 px na velocidade cheia e os
+ * buracos têm 180; lento no ar ele cobriria 160 e cairia — e em dois mapas
+ * (sanduíche e fogueira) a meia fica a 360–540 px de um buraco. Fedendo, ele
+ * anda devagar, mas pula igual.
+ */
+export const STINK = {
+    ms: 3000,
+    /** Fração da velocidade enquanto fede, andando no chão. */
+    slow: 0.45,
+    /** O quadro do herói tapando o nariz, e o ritmo em que ele pisca. */
+    frame: 8,
+    flickerMs: 200,
+    /** De quanto em quanto tempo sobe uma ondinha verde da cabeça. */
+    puffMs: 260,
 }
 
 /** O herói na folha: quadro de 300 x 450, pés em 91,2% da altura do quadro. */

@@ -11,11 +11,17 @@ export function createPad(scene: Phaser.Scene) {
     const held: Record<Which, boolean> = { left: false, right: false, jump: false }
     const touch: Record<Which, boolean> = { left: false, right: false, jump: false }
     let enabled = false
+    /*
+     * Aparecer e aceitar toque são coisas separadas: o tutorial da corrida
+     * aponta para os botões com eles travados, e antes eles sumiam junto — o
+     * recorte do véu circulava um chão vazio.
+     */
+    let shown = false
     let lastJumpAt = -1e9
 
     const paint = () => {
         g.clear()
-        if (!enabled) return
+        if (!shown) return
 
         const button = (x: number, y: number, r: number, down: boolean, tone: number, dark: number) => {
             g.fillStyle(C.ink, 0.24)
@@ -151,8 +157,10 @@ export function createPad(scene: Phaser.Scene) {
             return true
         },
 
-        setEnabled(value: boolean) {
+        /** Travado some da tela, a menos que `show` peça para ficar à vista. */
+        setEnabled(value: boolean, show = value) {
             enabled = value
+            shown = value || show
             zones.forEach(zone => {
                 if (zone.input) zone.input.enabled = value
             })
@@ -162,6 +170,17 @@ export function createPad(scene: Phaser.Scene) {
 
         jumpBounds() {
             return { x: PAD.jump.x, y: PAD.jump.y, w: PAD.jump.r * 2 + 40, h: PAD.jump.r * 2 + 40 }
+        },
+
+        /** As duas setas juntas, num retângulo só. */
+        walkBounds() {
+            const r = PAD.left.r
+            return {
+                x: (PAD.left.x + PAD.right.x) / 2,
+                y: PAD.left.y,
+                w: PAD.right.x - PAD.left.x + r * 2 + 40,
+                h: r * 2 + 40,
+            }
         },
 
         press(which: Which) {

@@ -234,7 +234,7 @@ const TASK_SANDUICHE: Task = {
     name: 'Fazer o sanduíche',
     sheetKey: 'itens-n2-a',
     finalKey: 'final-n2',
-    brief: 'Corte a tarefa no meio: um painel leva o pão, o outro o recheio.',
+    brief: 'Corte a tarefa no meio: um painel prepara o pão, o outro leva o recheio.',
     map: MAP_SANDUICHE,
     items: [
         { id: 'pao', name: 'Pão', label: 'O pão', frame: 0, jobId: 'pao' },
@@ -247,7 +247,8 @@ const TASK_SANDUICHE: Task = {
         { id: 'alface', name: 'Alface', label: 'A alface', frame: 7, jobId: 'recheio' },
     ],
     jobs: [
-        { id: 'pao', name: 'O pão', partOf: 'do pão' },
+        // "O pão" com faca e tábua dentro dizia que as duas eram parte do pão.
+        { id: 'pao', name: 'Preparar o pão', partOf: 'de preparar o pão' },
         { id: 'recheio', name: 'O recheio', partOf: 'do recheio' },
     ],
     steps: [
@@ -392,8 +393,9 @@ const TASK_FOGUEIRA: Task = {
     jobs: [
         {
             id: 'fogo',
-            name: 'A fogueira',
-            partOf: 'da fogueira',
+            // os fósforos não SÃO a fogueira; acender, sim, pede fósforos
+            name: 'Acender a fogueira',
+            partOf: 'de acender a fogueira',
             stations: [
                 {
                     id: 'roda',
@@ -416,8 +418,9 @@ const TASK_FOGUEIRA: Task = {
         },
         {
             id: 'lanche',
-            name: 'O lanche',
-            partOf: 'do lanche',
+            // "O lanche" com o espeto dentro dizia que o espeto se comia
+            name: 'Fazer o lanche',
+            partOf: 'de fazer o lanche',
             requires: 'fogo',
             stations: [
                 {
@@ -450,7 +453,7 @@ const TASK_BARRACA: Task = {
     name: 'Montar a barraca',
     sheetKey: 'itens-n3-b',
     finalKey: 'final-n3',
-    brief: 'Corte a tarefa no meio: um painel arma a barraca, o outro faz a cama.',
+    brief: 'Corte a tarefa no meio: um painel arma a barraca, o outro prepara a hora de dormir.',
     map: MAP_BARRACA,
     items: [
         { id: 'lona', name: 'Lona da barraca', label: 'A lona', frame: 0, jobId: 'armar' },
@@ -489,8 +492,9 @@ const TASK_BARRACA: Task = {
         },
         {
             id: 'cama',
-            name: 'Fazer a cama',
-            partOf: 'de fazer a cama',
+            // a lanterna não faz parte da cama; da hora de dormir, sim
+            name: 'Hora de dormir',
+            partOf: 'da hora de dormir',
             requires: 'armar',
             stations: [
                 {
@@ -531,78 +535,59 @@ export const LEVELS: LevelDef[] = [
                 brief: 'Corte a tarefa no meio: um painel leva a massa, o outro a cobertura.',
                 map: MAP_BOLO,
                 /*
-                 * As plaquinhas do bolo carregam o VERBO onde o desenho não
-                 * basta. Uma colher de pau e uma espátula são, no traço, dois
-                 * cabos com uma ponta chata: "de misturar" e "de espalhar"
-                 * resolvem em duas palavras o que a arte não resolve.
+                 * SÓ O QUE É MASSA E O QUE É COBERTURA.
                  *
-                 * O que a plaquinha NUNCA diz é de que metade o objeto é. A
-                 * criança ainda precisa saber que misturar vem antes de assar e
-                 * espalhar vem depois — e essa inferência é a habilidade.
+                 * Antes cada metade tinha quatro objetos, e para chegar a quatro
+                 * entravam a tigela, a colher de pau, a espátula e a velinha. Com
+                 * o painel dizendo "Cobertura", a criança lia que a vela ia
+                 * MISTURADA na calda, e que a colher era ingrediente da massa.
+                 * Saíram as quatro, sem nada no lugar: cada painel agora tem dois
+                 * lugares (`tripSlots`). A velinha continua no bolo pronto — no
+                 * desenho do fim, não como coisa que se leva.
+                 *
+                 * Os quadros 0, 3, 6 e 7 de `itens-n1-a` ficaram sem uso.
                  */
                 items: [
-                    { id: 'tigela', name: 'Tigela com massa', label: 'A tigela', frame: 0, jobId: 'massa' },
-                    { id: 'ovo', name: 'Ovo', label: 'O ovo', frame: 1, jobId: 'massa' },
                     { id: 'farinha', name: 'Farinha', label: 'A farinha', frame: 2, jobId: 'massa' },
-                    { id: 'colher', name: 'Colher de misturar', label: 'A colher', frame: 3, jobId: 'massa' },
+                    { id: 'ovo', name: 'Ovo', label: 'O ovo', frame: 1, jobId: 'massa' },
                     { id: 'calda', name: 'Calda de chocolate', label: 'A calda', frame: 4, jobId: 'cobertura' },
                     { id: 'confeitos', name: 'Confeitos', label: 'Os confeitos', frame: 5, jobId: 'cobertura' },
-                    { id: 'espatula', name: 'Espátula de espalhar', label: 'A espátula', frame: 6, jobId: 'cobertura' },
-                    { id: 'velinha', name: 'Velinha', label: 'A velinha', frame: 7, jobId: 'cobertura' },
                 ],
                 jobs: [
                     { id: 'massa', name: 'Massa do bolo', partOf: 'da massa' },
                     { id: 'cobertura', name: 'Cobertura', partOf: 'da cobertura' },
                 ],
+                /*
+                 * A massa vai ao forno SOZINHA, no segundo ingrediente: sem a
+                 * tigela e a colher não há quem misture nem quem leve, e o
+                 * quadro do bolo assado precisa estar na tela antes da calda.
+                 */
                 steps: [
                     {
                         itemId: 'farinha',
-                        line: 'A farinha foi para a tigela.',
+                        line: 'A farinha foi para a forma.',
                         hint: 'Comece pela massa.',
                     },
                     {
                         itemId: 'ovo',
-                        line: 'O ovo, quebrado na tigela.',
-                        hint: 'Comece pela massa.',
-                    },
-                    {
-                        itemId: 'colher',
-                        after: ['farinha', 'ovo'],
-                        line: 'Mexe, mexe: a massa ficou pronta.',
-                        hint: 'Ponha a farinha e o ovo na tigela primeiro.',
-                    },
-                    {
-                        itemId: 'tigela',
-                        after: ['colher'],
-                        line: 'A massa foi para o forno... e assou!',
-                        hint: 'A massa ainda não foi misturada.',
+                        after: ['farinha'],
+                        line: 'O ovo, e a massa foi para o forno... assou!',
+                        hint: 'Comece pela farinha.',
                     },
                     {
                         itemId: 'calda',
-                        after: ['tigela'],
+                        after: ['ovo'],
                         line: 'Chocolate por cima do bolo!',
                         hint: 'O bolo ainda não assou.',
                     },
                     {
-                        itemId: 'espatula',
-                        after: ['calda'],
-                        line: 'A cobertura ficou lisinha.',
-                        hint: 'Ponha a calda antes de espalhar.',
-                    },
-                    {
                         itemId: 'confeitos',
-                        after: ['espatula'],
+                        after: ['calda'],
                         line: 'Confeitos coloridos por cima.',
-                        hint: 'Espalhe a cobertura primeiro.',
-                    },
-                    {
-                        itemId: 'velinha',
-                        after: ['confeitos'],
-                        line: 'E a velinha, no capricho.',
-                        hint: 'A velinha é a última coisa.',
+                        hint: 'Ponha a calda antes dos confeitos.',
                     },
                 ],
-                states: [0, 0, 0, 1, 2, 2, 2, 2, 3],
+                states: [0, 1, 2, 2, 3],
                 finalLine: 'O bolo de aniversário ficou pronto!',
             },
             {

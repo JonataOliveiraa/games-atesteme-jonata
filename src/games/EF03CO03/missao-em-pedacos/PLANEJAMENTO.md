@@ -1106,3 +1106,41 @@ corria deixava duas contas brigando pela posição das folhas, e matar um tween 
 meio deixava o `await curtain.close()` pendurado para sempre, esperando um
 `onComplete` que não vinha mais. O movimento agora é um só de cada vez, e quem
 mata o anterior RESOLVE a promessa dele antes de começar o seu.
+
+## A meia não mata, e cada grupo só leva o que é dele (23/09/2026)
+
+### A meia fede
+
+Encostar na meia custava uma vida, derrubava tudo o que a criança carregava e a
+mandava de volta ao último ponto. Agora (`onSock`):
+
+- **não tira vida, não derruba nada, não volta**;
+- o herói fica **lento por 3 s** (`STINK`), com o desenho **alternando o tempo
+  todo com o quadro "eca"** (quadro 8 da `heroi.png`, tapando o nariz) e
+  ondinhas verdes subindo da cabeça; o topo diz "Eca, meia fedida! Você ficou
+  lento." e volta à instrução quando o fedor passa;
+- pisar de novo enquanto fede só renova o fedor.
+
+**A lentidão vale só no chão.** O pulo cobre 300 px e os buracos têm 180; lento
+no ar ele cobriria 160 e cairia. No sanduíche e na fogueira a meia fica a
+360–540 px de um buraco.
+
+A **barata** e o **peixe** continuam custando uma vida (o peixe nem aparece:
+cada mapa tem dois lixos, e eles são sempre a meia e a barata).
+
+### Só o que pertence ao grupo
+
+O painel diz o nome do grupo, e o que está dentro dele passa a ser lido como
+PARTE daquilo. Com "Cobertura" e uma vela dentro, a criança podia achar que a
+vela ia misturada na calda; com "Massa do bolo", que a colher era ingrediente.
+
+- **Bolo:** saíram a tigela, a colher de pau, a espátula e a velinha, **sem
+  nada no lugar** (decisão do usuário). Massa: farinha e ovo. Cobertura: calda e
+  confeitos. Cada painel tem agora **dois lugares** — o número vem da tarefa
+  (`tripSlots`), não mais de uma constante de 4. Na fase final a massa vai ao
+  forno sozinha no segundo ingrediente. Os quadros 0, 3, 6 e 7 de
+  `itens-n1-a.png` ficaram sem uso; a velinha segue no desenho do bolo pronto.
+- **Nas outras tarefas o grupo passou a dizer a AÇÃO**, e a ferramenta passa a
+  pertencer a ela: "O pão" → **Preparar o pão** (faca e tábua), "A fogueira" →
+  **Acender a fogueira** (fósforos), "O lanche" → **Fazer o lanche** (espeto),
+  "Fazer a cama" → **Hora de dormir** (lanterna).
