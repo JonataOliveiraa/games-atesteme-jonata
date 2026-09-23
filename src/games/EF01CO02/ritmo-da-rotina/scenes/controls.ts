@@ -118,10 +118,25 @@ export function createControls(scene: Phaser.Scene, onPress: (kind: HitKind) => 
             .setDepth(DEPTH.button + 5)
         zone.on('pointerdown', () => onPress(kind))
         zones.push(zone)
+        return zone
     }
 
     addZone(DRUM.x, DRUM.y + 30, DRUM.size * 1.2, H - DRUM.y + 150, 'yes')
-    addZone(REFUSE.x, REFUSE.y + 10, r * 2.7, r * 2.9, 'no')
+    const refuseZone = addZone(REFUSE.x, REFUSE.y + 10, r * 2.7, r * 2.9, 'no')
+
+    /*
+     * No nível do tambor a mãozinha NÃO EXISTE — nem apagada, nem cinza. Um
+     * botão à vista que não se usa é uma pergunta que a criança vai fazer com
+     * o dedo.
+     */
+    let handShown = true
+    function setHand(shown: boolean) {
+        handShown = shown
+        FX.kill(scene, fx(refuse))
+        refuse.setVisible(shown).setScale(1).setAlpha(1)
+        if (shown) refuseZone.setInteractive({ useHandCursor: true })
+        else refuseZone.disableInteractive()
+    }
 
     function bounce(target: Phaser.GameObjects.Container, squash: number) {
         FX.kill(scene, fx(target))
@@ -134,6 +149,22 @@ export function createControls(scene: Phaser.Scene, onPress: (kind: HitKind) => 
     }
 
     return {
+        setHand,
+        get handShown() {
+            return handShown
+        },
+
+        /** A estreia da mãozinha: ela cai no lugar, quica e acende. */
+        async revealHand() {
+            setHand(true)
+            refuse.setScale(0).setAlpha(1)
+            await FX.to(scene, fx(refuse), { scale: 1 }, { duration: 520, ease: Ease.back(2.6) })
+            void FX.ping(scene, REFUSE.x, REFUSE.y, C.bad, { radius: 150, duration: 520 })
+            FX.kill(scene, fx(refuseGlow))
+            refuseGlow.setAlpha(1)
+            FX.breathe(scene, fx(refuseGlow), { grow: 1.16, duration: 360 })
+        },
+
         /** Acende junto com o alvo. Os dois piscando dizem "pode bater". */
         arm() {
             FX.kill(scene, fx(drumGlow))

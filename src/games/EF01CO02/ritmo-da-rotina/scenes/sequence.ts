@@ -1,7 +1,7 @@
 import Phaser from 'phaser'
 import { Ease, FX, type FxTarget } from '../../../../shared/effects/FX'
 import { C, CSS, FONT, SIZE } from '../data/theme'
-import { DEPTH, HELP, MINI, PANEL, PIPS, TITLE, W } from '../data/layout'
+import { DEPTH, HELP, LEVEL_TAG, MINI, PANEL, PIPS, TITLE, W } from '../data/layout'
 import { createFigure } from './figures'
 import type { RoutineDef } from '../types'
 
@@ -20,6 +20,7 @@ export function createSequence(
     routine: RoutineDef,
     phaseIndex: number,
     phaseCount: number,
+    level: number,
 ) {
     const parts: Phaser.GameObjects.GameObject[] = []
 
@@ -64,15 +65,35 @@ export function createSequence(
     }
     parts.push(name)
 
-    // as três fases do nível, em bolinhas: a criança vê quanto falta sem ler
+    // o nível numa plaquinha, com a mesma palavra que a plataforma usa
+    const tag = scene.add.graphics().setDepth(DEPTH.hud)
+    const tagTop = LEVEL_TAG.y - LEVEL_TAG.h / 2
+    tag.fillStyle(C.ink, 1)
+    tag.fillRoundedRect(LEVEL_TAG.x, tagTop, LEVEL_TAG.w, LEVEL_TAG.h, LEVEL_TAG.h / 2)
+    tag.fillStyle(C.tealDark, 1)
+    tag.fillRoundedRect(LEVEL_TAG.x + 3, tagTop + 3, LEVEL_TAG.w - 6, LEVEL_TAG.h - 6, (LEVEL_TAG.h - 6) / 2)
+    tag.fillStyle(C.teal, 1)
+    tag.fillRoundedRect(LEVEL_TAG.x + 3, tagTop + 3, LEVEL_TAG.w - 6, LEVEL_TAG.h - 10, (LEVEL_TAG.h - 10) / 2)
+    parts.push(tag)
+
+    const tagText = scene.add.text(LEVEL_TAG.x + LEVEL_TAG.w / 2, LEVEL_TAG.y - 2, `Nível ${level}`, {
+        fontFamily: FONT.black,
+        fontSize: '22px',
+        color: CSS.white,
+    }).setOrigin(0.5).setDepth(DEPTH.hud + 1).setResolution(2)
+    tagText.setStroke(CSS.ink, 4)
+    parts.push(tagText)
+
+    // as fases do nível, em bolinhas: a criança vê quanto falta sem ler
     const pips = scene.add.graphics().setDepth(DEPTH.hud + 1)
     const spread = (phaseCount - 1) * PIPS.gap
     for (let i = 0; i < phaseCount; i++) {
         const x = PIPS.cx - spread / 2 + i * PIPS.gap
-        pips.fillStyle(C.ink, 0.55)
-        pips.fillCircle(x, PIPS.y + 2, PIPS.r + 2)
-        pips.fillStyle(i < phaseIndex ? C.ok : i === phaseIndex ? C.warn : C.cream, 1)
-        pips.fillCircle(x, PIPS.y, i === phaseIndex ? PIPS.r + 2 : PIPS.r)
+        const r = i === phaseIndex ? PIPS.r + 2 : PIPS.r
+        pips.fillStyle(C.ink, 1)
+        pips.fillCircle(x, PIPS.y + 1, r + 3)
+        pips.fillStyle(i < phaseIndex ? C.ok : i === phaseIndex ? C.warn : C.white, 1)
+        pips.fillCircle(x, PIPS.y, r)
     }
     parts.push(pips)
 
@@ -161,6 +182,23 @@ export function createSequence(
                 FX.to(scene, fx(slot.check), { scale: 1 }, { duration: 300, ease: Ease.back(3.4) }),
                 FX.impact(scene, fx(slot.holder), 0.26),
             )
+        },
+
+        /**
+         * Cada passo pula, um depois do outro, da esquerda para a direita. É
+         * assim que a partitura diz "esta é a ordem" sem uma palavra.
+         */
+        async parade(current: number) {
+            if (pulsing) {
+                FX.kill(scene, fx(pulsing))
+                pulsing.setScale(1)
+            }
+            for (const slot of slots) {
+                slot.icon.setAlpha(1)
+                await FX.impact(scene, fx(slot.holder), 0.24)
+                await FX.wait(scene, 110)
+            }
+            setCurrent(current)
         },
 
         /** Chama o olho para o passo certo depois de dois erros. */

@@ -25,10 +25,17 @@ export const DEPTH = {
 export const PANEL = { x: 16, y: 10, w: 1248, h: 140, r: 30 }
 
 /** O nome da rotina mora numa fita dentro do painel — nunca solto na tela. */
-export const TITLE = { x: 36, y: 80, w: 248, h: 90, r: 24 }
+export const TITLE = { x: 36, y: 58, w: 248, h: 68, r: 22 }
+
+/**
+ * Embaixo da fita, uma linha só dela, INTEIRA dentro do painel: a plaquinha do
+ * nível na esquerda e as bolinhas das fases na direita. Antes as bolinhas
+ * ficavam em cima da borda de baixo da fita e pareciam um defeito do desenho.
+ */
+export const LEVEL_TAG = { x: 36, y: 117, w: 130, h: 34 }
 
 /** As três fases do nível, em bolinhas embaixo do nome. */
-export const PIPS = { cx: 160, y: 128, gap: 26, r: 7 }
+export const PIPS = { cx: 226, y: 117, gap: 26, r: 8 }
 
 export const MINI = { size: 104, gap: 16, cy: 80, max: 5 }
 
@@ -58,5 +65,12 @@ export const BALLOON = { x: 820, y: 286, w: 440 }
 export const DRUM = { x: 352, y: 566, size: 292 }
 
 export const REFUSE = { x: 1024, y: 560, r: 98 }
+
+/**
+ * O menino do tutorial fala EMBAIXO, entre o tambor e a mãozinha: o caminho e
+ * o anel ficam livres para a demonstração acontecer à vista. O balão cresce
+ * para cima a partir de `bottom`.
+ */
+export const GUIDE = { x: 712, bottom: 704, w: 404, avatar: 104, text: '28px' }
 
 export const RECAP = { cy: 300, rowY: 470, gap: 130, size: 116, titleY: 168 }

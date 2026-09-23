@@ -17,7 +17,7 @@ export type LevelNumber = 1 | 2 | 3
 /** Os dois botões: o tambor diz "é esse", o redondo diz "agora não". */
 export type HitKind = 'yes' | 'no'
 
-export type PlayState = 'intro' | 'tutorial' | 'running' | 'locked' | 'recap' | 'ending'
+export type PlayState = 'intro' | 'lesson' | 'tutorial' | 'running' | 'locked' | 'recap' | 'ending'
 
 export type Scenery = 'quarto' | 'cozinha'
 
@@ -63,10 +63,21 @@ export interface PhaseDef {
     beatsBetween: number
     /** Meia-janela de acerto em PIXELS: ela é exatamente o anel que se vê. */
     windowPx: number
+    /** Andamento. A travessia dura sempre 4 tempos, então é ele a velocidade. */
+    bpm: number
 }
+
+/**
+ * O ASSUNTO do nível, que traz junto o botão novo dele:
+ * - `drum`: seguir a ordem. Só o tambor existe.
+ * - `hand`: o que não é da rotina. A mãozinha estreia.
+ * - `early`: passo da rotina chegando antes da hora. Dia maior e mais rápido.
+ */
+export type Lesson = 'drum' | 'hand' | 'early'
 
 export interface LevelDef {
     level: LevelNumber
     name: string
+    lesson: Lesson
     phases: PhaseDef[]
 }

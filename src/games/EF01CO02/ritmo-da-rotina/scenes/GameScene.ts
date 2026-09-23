@@ -6,19 +6,20 @@ import { createTutorial, type TutorialStep } from '../../../../shared/tutorial/c
 import { showLevelComplete } from '../../../../shared/level/showLevelComplete'
 import { Ease, FX, type FxTarget } from '../../../../shared/effects/FX'
 import {
-    BEAT_MS, LEVELS, OK_NO, OK_YES, PHASE_CHEER, TOTAL_CUES, TRAVEL_BEATS,
-    buildCues, cuesBefore, cuesInLevel, expectedHit, mistakeSentence, stepAt,
+    LESSON_FIGURES, LEVELS, OK_NO, OK_YES, PHASE_CHEER, TOTAL_CUES, TRAVEL_BEATS, beatMs,
+    buildCues, cuesBefore, cuesInLevel, expectedHit, hasHand, mistakeSentence, stepAt,
 } from '../data/routines'
 import { C, CSS, SIZE } from '../data/theme'
 import {
     DEPTH, DRUM, FIGURE, MINI, PATH, REFUSE, TARGET, TRAVEL, W,
 } from '../data/layout'
 import type {
-    Cue, FallingFigure, HitKind, LevelDef, LevelNumber, PhaseDef, PlayState,
+    Cue, FallingFigure, HitKind, LevelDef, LevelNumber, PhaseDef, PlayState, StepDef,
 } from '../types'
 import { createAudio } from './audio'
 import { createControls } from './controls'
 import { attachLabel, createFigure } from './figures'
+import { createFinger, createGuide, createSpotlight } from './lesson'
 import { createRecap } from './recap'
 import { createStage } from './stage'
 import { createHelpButton, createSequence } from './sequence'
@@ -70,6 +71,11 @@ export class GameScene extends Phaser.Scene {
     private controls!: ReturnType<typeof createControls>
     private recap!: ReturnType<typeof createRecap>
     private audio!: ReturnType<typeof createAudio>
+    private guide!: ReturnType<typeof createGuide>
+    private finger!: ReturnType<typeof createFinger>
+    private spot!: ReturnType<typeof createSpotlight>
+    /** No treino do tutorial, o toque vai para cá em vez do julgamento. */
+    private lessonPress: ((kind: HitKind) => void) | null = null
 
     private unsubPlatform?: () => void
 
@@ -100,6 +106,7 @@ export class GameScene extends Phaser.Scene {
         this.live = []
         this.judging = null
         this.armed = false
+        this.lessonPress = null
     }
 
     create() {
@@ -110,6 +117,9 @@ export class GameScene extends Phaser.Scene {
         this.controls = createControls(this, kind => this.onPress(kind))
         this.recap = createRecap(this)
         this.audio = createAudio(this)
+        this.guide = createGuide(this)
+        this.finger = createFinger(this)
+        this.spot = createSpotlight(this)
         this.strip = this.buildStrip()
 
         this.bindKeyboard()
@@ -145,7 +155,7 @@ export class GameScene extends Phaser.Scene {
         if (this.state !== 'running') return
 
         this.clockMs += step
-        const beat = Math.floor(this.clockMs / BEAT_MS)
+        const beat = Math.floor(this.clockMs / beatMs(this.phase))
         if (beat !== this.lastBeat) {
             this.lastBeat = beat
             this.audio.tick(beat)
@@ -163,6 +173,10 @@ export class GameScene extends Phaser.Scene {
         this.help?.destroy()
         this.controls?.destroy()
         this.recap?.destroy()
+        this.guide?.destroy()
+        this.finger?.destroy()
+        this.spot?.destroy()
+        this.lessonPress = null
         EventBus.off('mute-audio', this.onMute, this)
         EventBus.off('show-tutorial', this.replayTutorial, this)
         this.unsubPlatform?.()
@@ -176,15 +190,20 @@ export class GameScene extends Phaser.Scene {
             this.phase.routine,
             this.phaseIndex,
             this.levelDef.phases.length,
+            this.levelDef.level,
         )
     }
 
     private startLevel() {
-        this.state = 'tutorial'
         this.armPhase()
         this.emitCheckpoint()
+        this.controls.setHand(hasHand(this.levelDef))
 
-        this.runTutorial(true, () => this.runPhase())
+        if (this.wasSeen(this.levelDef.level)) {
+            this.runPhase()
+            return
+        }
+        void this.runLesson()
     }
 
     /** Prepara a fase sem começar a contar o tempo. */
@@ -241,17 +260,293 @@ export class GameScene extends Phaser.Scene {
 
     // ─────────────────────────────────────────────────────── tutorial
 
+    private lessonKey(level: number) {
+        return `ef01co02-ritmo-l${level}`
+    }
+
+    /** A mesma memória do `createTutorial`: as duas não podem se desencontrar. */
+    private seenSet() {
+        let seen = this.registry.get('__tutorialsSeen') as Set<string> | undefined
+        if (!seen) {
+            seen = new Set<string>()
+            this.registry.set('__tutorialsSeen', seen)
+        }
+        return seen
+    }
+
+    private wasSeen(level: number) {
+        return this.seenSet().has(this.lessonKey(level))
+    }
+
+    /**
+     * ══════════════════════════════════════════════════════════════════
+     *  O TUTORIAL É O COMEÇO DO DIA
+     * ══════════════════════════════════════════════════════════════════
+     *
+     * Nada de painel de texto antes de jogar. O menino da rotina fala, e o
+     * jogo de verdade acontece na frente da criança: primeiro ele MOSTRA (a
+     * figura chega, o dedo bate, a peça sobe para a partitura), depois ELA
+     * FAZ, com a figura parada no anel esperando o toque. Só então o dia anda
+     * sozinho.
+     *
+     * Um nível, um assunto: o N1 ensina só o tambor, o N2 só a mãozinha, o N3
+     * só o passo que chega antes da hora. Quem entra direto num nível alto
+     * (a plataforma pode mandar `stage=3`) recebe antes, curto, o que ficou
+     * para trás.
+     *
+     * O passo que o menino faz e o que a criança faz contam de verdade: a
+     * fase continua de onde o tutorial parou.
+     */
+    private async runLesson() {
+        const gen = this.gen
+        const alive = () => gen === this.gen
+        const level = this.levelDef.lesson
+        this.state = 'lesson'
+        this.help.setEnabled(false)
+
+        const needsDrum = level === 'drum' || !this.wasSeen(1)
+        const needsHand = level === 'hand' || (level === 'early' && !this.wasSeen(2))
+        if (needsHand) this.controls.setHand(false)
+
+        if (needsDrum) {
+            void this.spot.show('strip')
+            await this.guide.say('Oi! Me ajuda a fazer o meu dia na ordem?', {
+                button: 'Vou ajudar!',
+                ready: this.strip.parade(this.done),
+            })
+            if (!alive()) return
+            void this.spot.show('strip', 'path', 'drum')
+            await this.demo('yes', 'Olha: chegou no círculo, eu bato no tambor!')
+            if (!alive()) return
+            if (level === 'drum') {
+                void this.spot.show('path', 'drum')
+                await this.practice('yes', 'Agora você! Bata no tambor.')
+                if (!alive()) return
+            }
+        }
+
+        if (needsHand) {
+            void this.spot.show('strip')
+            await this.guide.say('Agora vai passar coisa que NÃO está lá em cima!', {
+                button: 'E agora?',
+            })
+            if (!alive()) return
+            void this.spot.show('hand')
+            await this.guide.say('Para essas, tem a mãozinha!', {
+                button: 'Próximo',
+                ready: this.controls.revealHand(),
+            })
+            if (!alive()) return
+            void this.spot.show('strip', 'path', 'hand')
+            await this.demo('no', LESSON_FIGURES.demoLine, LESSON_FIGURES.demo)
+            if (!alive()) return
+            if (level === 'hand') {
+                void this.spot.show('path', 'hand')
+                await this.practice('no', 'Agora você! Aperte a mãozinha.', LESSON_FIGURES.practice)
+                if (!alive()) return
+            }
+        }
+
+        if (level === 'early') {
+            void this.spot.show('strip')
+            await this.guide.say('Agora o dia é maior, com mais passos!', { button: 'Oba!' })
+            if (!alive()) return
+            void this.spot.show('strip', 'path', 'hand')
+            const turn = stepAt(this.phase, this.done)!
+            await this.demo('no', `Ainda não! Primeiro: ${turn.label}. Mãozinha!`, this.earlyStep(0))
+            if (!alive()) return
+            await this.practice('no', 'Chegou antes da vez? Aperte a mãozinha!', this.earlyStep(1))
+            if (!alive()) return
+        }
+
+        void this.spot.show('strip', 'drum', ...(this.controls.handShown ? ['hand' as const] : []))
+        const last = {
+            drum: 'Isso! Agora o dia vai andar sozinho.',
+            hand: 'Está lá em cima? Tambor. Não está? Mãozinha!',
+            early: 'Só o passo que BRILHA lá em cima vai no tambor!',
+        }[level]
+        await this.guide.say(last, { button: 'Vamos lá!' })
+        if (!alive()) return
+
+        this.seenSet().add(this.lessonKey(this.levelDef.level))
+        void this.guide.hide()
+        void this.spot.hide()
+        this.finger.hide()
+        this.help.setEnabled(true)
+
+        this.cues = buildCues(this.phase, Math.random, this.done)
+        this.nextCue = 0
+        this.strip.setCurrent(this.done)
+        this.emitCheckpoint()
+        this.runPhase()
+    }
+
+    /** Um passo da rotina que ainda NÃO é a vez: ele mostra o que é "antes da hora". */
+    private earlyStep(offset: number): StepDef {
+        const steps = this.phase.routine.steps
+        return steps[Math.min(steps.length - 1, this.done + 2 + offset)]
+    }
+
+    /**
+     * A figura entra pela direita e para DENTRO do anel. Ela desacelera ao
+     * chegar, para o olho ter tempo de ver que ela está no círculo.
+     */
+    private walkIn(step: StepDef): Promise<Phaser.GameObjects.Container> {
+        const icon = createFigure(this, step, FIGURE.size)
+        attachLabel(this, icon, step)
+        icon.setPosition(FIGURE.spawnX, PATH.cy).setDepth(DEPTH.figure)
+
+        return new Promise(resolve => {
+            this.tweens.add({
+                targets: icon,
+                x: TARGET.x,
+                duration: (TRAVEL / this.speed()) * 0.8,
+                ease: 'Sine.easeOut',
+                onUpdate: () => {
+                    icon.setY(PATH.cy + Math.sin(icon.x * 0.03) * 7)
+                    icon.setAngle(Math.sin(icon.x * 0.03) * 3)
+                },
+                onComplete: () => {
+                    icon.setY(PATH.cy).setAngle(0)
+                    this.stage.arm()
+                    resolve(icon)
+                },
+            })
+        })
+    }
+
+    /** O menino faz sozinho: o dedo vai até o botão e bate de verdade. */
+    private async demo(kind: HitKind, caption: string, step?: StepDef) {
+        const gen = this.gen
+        const figure = step ?? stepAt(this.phase, this.done)!
+
+        const show = (async () => {
+            const icon = await this.walkIn(figure)
+            if (gen !== this.gen) return
+            // passo adiantado: o que pisca lá em cima é de quem é a vez
+            if (kind === 'no' && this.phase.routine.steps.includes(figure)) this.strip.blink(this.done)
+            await FX.wait(this, 450)
+            if (gen !== this.gen) return
+
+            if (kind === 'yes') this.controls.arm()
+            else this.controls.hint('no')
+            const at = this.controls.at(kind)
+            await this.finger.tap(at.x, at.y, () => {
+                this.controls.press(kind)
+                kind === 'yes' ? this.audio.drum() : this.audio.refuse()
+            })
+            if (gen !== this.gen) return
+            this.finger.hide()
+            this.cheer(icon, kind, false)
+            if (kind === 'yes') this.resolved += 1
+            await this.land(icon, kind)
+        })()
+
+        await this.guide.say(caption, { button: 'Entendi!', ready: show })
+    }
+
+    /**
+     * Ela faz: a figura para no anel e ESPERA. O botão certo acende e o dedo
+     * fica batendo nele. O outro botão não pune — só lembra qual é.
+     */
+    private async practice(kind: HitKind, caption: string, step?: StepDef) {
+        const gen = this.gen
+        const figure = step ?? stepAt(this.phase, this.done)!
+
+        void this.guide.say(caption)
+        const icon = await this.walkIn(figure)
+        if (gen !== this.gen) return
+
+        this.controls.hint(kind)
+        const at = this.controls.at(kind)
+        this.finger.loop(at.x, at.y)
+
+        await new Promise<void>(resolve => {
+            this.lessonPress = pressed => {
+                if (pressed !== kind) {
+                    void FX.shake(this, fx(icon), { amount: 8, times: 2 })
+                    this.controls.hint(kind)
+                    return
+                }
+                this.lessonPress = null
+                resolve()
+            }
+        })
+        if (gen !== this.gen) return
+
+        this.finger.hide()
+        this.cheer(icon, kind, true)
+        if (kind === 'yes') this.resolved += 1
+        await this.land(icon, kind)
+    }
+
+    /**
+     * Para onde a figura vai depois do toque certo: o passo sobe para a
+     * partitura e ganha o visto; o que ficou de fora é engolido pela mão.
+     */
+    private async land(icon: Phaser.GameObjects.Container, kind: HitKind) {
+        const gen = this.gen
+
+        if (kind === 'yes') {
+            // `done` anda JÁ, antes da animação: a próxima figura pode chegar
+            // ao anel enquanto esta ainda voa, e é julgada pelo passo seguinte
+            const index = this.done
+            const slot = this.strip.at(index)
+            this.done += 1
+            await FX.to(this, fx(icon), { y: icon.y - 50, angle: 0 },
+                { duration: 140, ease: Ease.back(3) })
+            if (gen !== this.gen) return
+            await FX.to(this, fx(icon),
+                { x: slot.x, y: slot.y, scale: this.strip.miniScale / FIGURE.size },
+                { duration: 360, ease: 'Quad.easeInOut' })
+            if (gen !== this.gen) return
+            icon.destroy()
+            await this.strip.stamp(index)
+            if (gen !== this.gen) return
+            this.strip.setCurrent(this.done)
+        } else {
+            const at = this.controls.at('no')
+            await FX.to(this, fx(icon),
+                { x: at.x, y: at.y, scale: 0.2, alpha: 0, angle: 24 },
+                { duration: 400, ease: 'Back.easeIn' })
+            if (gen !== this.gen) return
+            icon.destroy()
+        }
+        // outra figura pode ter acendido o anel enquanto esta voava
+        if (!this.armed) this.stage.disarm()
+    }
+
+    /** O que todo acerto faz na hora do toque, no jogo e no tutorial. */
+    private cheer(icon: Phaser.GameObjects.Container, kind: HitKind, withText: boolean) {
+        this.stage.hush()
+        this.stage.flashOk()
+        this.controls.disarm()
+        this.audio.reward()
+        if (withText) {
+            void FX.popText(this, icon.x, icon.y - 120,
+                Phaser.Utils.Array.GetRandom(kind === 'yes' ? OK_YES : OK_NO), {
+                color: CSS.okBright, size: SIZE.float, rise: 76,
+            })
+        }
+        void FX.sparks(this, icon.x, icon.y, { color: C.ok, count: 20, spread: 180 })
+    }
+
+    /**
+     * O "?" no meio do jogo. Aqui não dá para refazer a demonstração — o dia
+     * está andando —, então ele volta a ser o painel de sempre, com as
+     * mesmas palavras do menino.
+     */
     private tutorialSteps(): TutorialStep[] {
         const steps: TutorialStep[] = [
             {
-                text: 'Esta é a sua rotina. Siga a ordem!',
+                text: 'Faça o dia nesta ordem, um passo de cada vez.',
                 shape: 'rect', x: W / 2, y: MINI.cy, w: 900, h: 156,
                 balloonX: W / 2, balloonY: PATH.cy,
             },
             {
-                text: 'Bata no tambor quando o próximo passo chegar aqui.',
+                text: 'Chegou no círculo o passo que brilha? Bata no tambor!',
                 shape: 'circle', x: TARGET.x, y: TARGET.y, w: TARGET.r * 2.5, h: TARGET.r * 2.5,
-                balloonX: W / 2 + 220, balloonY: PATH.cy,
+                balloonX: W / 2 + 200, balloonY: PATH.cy,
                 pointer: {
                     fromX: TARGET.x, fromY: TARGET.y,
                     toX: DRUM.x, toY: DRUM.y - 50, tap: true,
@@ -259,43 +554,36 @@ export class GameScene extends Phaser.Scene {
             },
         ]
 
-        const hasDistractor = this.levelDef.phases.some(
-            p => p.distractors.length > 0 || p.outOfOrder > 0,
-        )
-
-        if (hasDistractor) {
+        if (this.controls.handShown) {
             steps.push({
-                text: 'Se não for a hora dele, aperte a mãozinha vermelha.',
+                text: this.levelDef.lesson === 'early'
+                    ? 'Não está lá em cima, ou não é a vez dele? Mãozinha!'
+                    : 'Não está lá em cima? Aperte a mãozinha!',
                 shape: 'circle', x: REFUSE.x, y: REFUSE.y, w: REFUSE.r * 2.8, h: REFUSE.r * 2.8,
-                balloonX: W / 2 - 120, balloonY: PATH.cy,
-                buttonLabel: 'Vamos lá!',
+                balloonX: W / 2 - 150, balloonY: PATH.cy,
             })
-        } else {
-            steps[steps.length - 1].buttonLabel = 'Vamos lá!'
         }
 
+        steps[steps.length - 1].buttonLabel = 'Entendi!'
         return steps
     }
 
-    private runTutorial(once: boolean, onFinish: () => void) {
-        createTutorial(this, {
-            key: `ef01co02-ritmo-l${this.levelDef.level}`,
-            once,
-            accent: C.coral,
-            safeTop: 12,
-            steps: this.tutorialSteps(),
-            onFinish,
-        })
-    }
-
     private replayTutorial() {
-        if (this.state === 'ending' || this.state === 'tutorial' || this.state === 'recap') return
+        if (this.state !== 'running' && this.state !== 'locked') return
         const previous = this.state
         this.state = 'tutorial'
         this.help.setEnabled(false)
-        this.runTutorial(false, () => {
-            this.state = previous
-            this.help.setEnabled(true)
+        createTutorial(this, {
+            key: this.lessonKey(this.levelDef.level),
+            once: false,
+            accent: C.coral,
+            safeTop: 12,
+            textSize: 32,
+            steps: this.tutorialSteps(),
+            onFinish: () => {
+                this.state = previous
+                this.help.setEnabled(true)
+            },
         })
     }
 
@@ -321,7 +609,7 @@ export class GameScene extends Phaser.Scene {
         this.refillIfDry()
         while (this.nextCue < this.cues.length) {
             const cue = this.cues[this.nextCue]
-            if (cue.beat * BEAT_MS > this.clockMs) break
+            if (cue.beat * beatMs(this.phase) > this.clockMs) break
             this.nextCue += 1
 
             const icon = createFigure(this, cue.step, FIGURE.size)
@@ -337,7 +625,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     private moveFigures(dtMs: number) {
-        const speed = TRAVEL / (TRAVEL_BEATS * BEAT_MS)
+        const speed = this.speed()
         const step = speed * dtMs
 
         for (const item of this.live) {
@@ -379,9 +667,50 @@ export class GameScene extends Phaser.Scene {
              * Já quem devia ser pego e escapou é erro de dedo, não de cabeça:
              * volta sem penalidade.
              */
-            if (expectedHit(item.cue, this.done) === 'no') this.missedRefusal(item.cue)
-            this.requeue(item.cue)
+            const wanted = expectedHit(item.cue, this.done)
+            if (wanted === 'no' && this.controls.handShown) this.missedRefusal(item.cue)
+            if (wanted === 'yes' && this.levelDef.lesson !== 'early') this.rewind()
+            else this.requeue(item.cue)
         }
+    }
+
+    /**
+     * ══════════════════════════════════════════════════════════════════
+     *  NO N1 E NO N2, NINGUÉM FURA A FILA
+     * ══════════════════════════════════════════════════════════════════
+     *
+     * O passo da vez escapou — erro de dedo. Se ele simplesmente voltasse
+     * para o fim da fila, os passos que vinham atrás dele chegariam ao anel
+     * ANTES da hora, e a criança teria de recusar um passo adiantado: o
+     * assunto do N3, cobrado no N1 sem a mãozinha nem existir, e cobrado
+     * com vida.
+     *
+     * Então os passos que vinham depois saem do caminho, e a fila é refeita
+     * na ordem, com o que escapou na frente. Distrator fica onde está.
+     */
+    private rewind() {
+        const later = this.live.filter(item => item.cue.routineIndex > this.done)
+        for (const item of later) {
+            this.live.splice(this.live.indexOf(item), 1)
+            if (this.judging === item) this.disarm()
+            void FX.to(this, fx(item.icon), { alpha: 0, scale: 0.6, y: item.icon.y - 40 },
+                { duration: 260 }).then(() => item.icon.destroy())
+        }
+
+        const steps = this.phase.routine.steps
+        const distractors = this.cues.slice(this.nextCue).filter(cue => cue.routineIndex < 0)
+        const ordered: Cue[] = []
+        for (let i = this.done; i < steps.length; i++) {
+            ordered.push({ step: steps[i], routineIndex: i, beat: 0 })
+        }
+        distractors.forEach((cue, k) => ordered.splice(Math.min(ordered.length, 1 + k * 2), 0, cue))
+
+        this.cues = [...this.cues.slice(0, this.nextCue), ...ordered]
+        this.reschedule()
+    }
+
+    private speed() {
+        return TRAVEL / (TRAVEL_BEATS * beatMs(this.phase))
     }
 
     /**
@@ -466,8 +795,10 @@ export class GameScene extends Phaser.Scene {
             upcoming.splice(1, 0, cue)
         }
 
+        // um tempo de folga basta quando o caminho está vazio; o espaço entre
+        // figuras só conta a partir da última que nasceu
         const lastSpawned = this.nextCue > 0 ? this.cues[this.nextCue - 1].beat : -Infinity
-        let beat = Math.max(this.clockMs / BEAT_MS, lastSpawned) + this.phase.beatsBetween
+        let beat = Math.max(this.clockMs / beatMs(this.phase) + 1, lastSpawned + this.phase.beatsBetween)
         for (const cue of upcoming) {
             cue.beat = beat
             beat += this.phase.beatsBetween
@@ -480,12 +811,20 @@ export class GameScene extends Phaser.Scene {
 
     private onPress(kind: HitKind) {
         if (this.paused) return
-        if (this.state !== 'running' && this.state !== 'locked') return
+        // o teclado também não chega a um botão que não está na tela
+        if (kind === 'no' && !this.controls.handShown) return
+        const practicing = this.state === 'lesson' && this.lessonPress
+        if (!practicing && this.state !== 'running' && this.state !== 'locked') return
         if (this.time.now - this.lastPressMs < 130) return
         this.lastPressMs = this.time.now
 
         this.controls.press(kind)
         kind === 'yes' ? this.audio.drum() : this.audio.refuse()
+
+        if (practicing) {
+            this.lessonPress?.(kind)
+            return
+        }
 
         const target = this.judging
         if (!target) return
@@ -510,25 +849,12 @@ export class GameScene extends Phaser.Scene {
         if (first) this.firstTry += 1
 
         this.state = 'running'
-        this.stage.hush()
-        this.stage.flashOk()
-        this.controls.disarm()
-        this.audio.reward()
-
-        void FX.popText(this, item.icon.x, item.icon.y - 120,
-            Phaser.Utils.Array.GetRandom(kind === 'yes' ? OK_YES : OK_NO), {
-            color: CSS.okBright, size: SIZE.float, rise: 76,
-        })
+        this.cheer(item.icon, kind, true)
 
         // a explosão cresce com a sequência de acertos: acertar seguido tem que
         // PARECER melhor, senão nada convida a continuar
-        const big = this.streak >= 3
-        void FX.sparks(this, item.icon.x, item.icon.y, {
-            color: big ? C.warn : C.ok,
-            count: big ? 34 : 20,
-            spread: big ? 260 : 180,
-        })
-        if (big) {
+        if (this.streak >= 3) {
+            void FX.sparks(this, item.icon.x, item.icon.y, { color: C.warn, count: 34, spread: 260 })
             this.audio.streak()
             void FX.ping(this, item.icon.x, item.icon.y, C.warn, { radius: 240 })
         }
@@ -541,46 +867,23 @@ export class GameScene extends Phaser.Scene {
         })
         this.emitCheckpoint()
 
-        if (kind === 'yes') {
-            const index = this.done
-            const slot = this.strip.at(index)
-            this.done += 1
-            await FX.to(this, fx(item.icon), { y: item.icon.y - 50, angle: 0 },
-                { duration: 140, ease: Ease.back(3) })
-            if (gen !== this.gen) return
-            await FX.to(this, fx(item.icon),
-                { x: slot.x, y: slot.y, scale: this.strip.miniScale / FIGURE.size },
-                { duration: 360, ease: 'Quad.easeInOut' })
-            if (gen !== this.gen) return
-            item.icon.destroy()
-            await this.strip.stamp(index)
-            if (gen !== this.gen) return
-            this.strip.setCurrent(this.done)
-            this.reschedule()
-        } else {
-            /*
-             * "AGORA NÃO" QUER DIZER DEPOIS, NÃO NUNCA.
-             *
-             * Um passo da rotina que chega antes da hora é recusado com razão
-             * — mas se ele fosse descartado aqui, a rotina ficaria sem ele e a
-             * fase não teria mais como terminar. Foi o que travou o nível 3:
-             * a criança perdia um passo no tempo, os seguintes chegavam fora
-             * de ordem, eram corretamente recusados, e o dia nunca fechava.
-             *
-             * Só distrator (sem índice na rotina) e passo já feito somem de
-             * vez; o resto volta para o fim da fila.
-             */
-            if (item.cue.routineIndex >= this.done) this.requeue(item.cue)
+        /*
+         * "AGORA NÃO" QUER DIZER DEPOIS, NÃO NUNCA.
+         *
+         * Um passo da rotina que chega antes da hora é recusado com razão
+         * — mas se ele fosse descartado aqui, a rotina ficaria sem ele e a
+         * fase não teria mais como terminar. Foi o que travou o nível 3:
+         * a criança perdia um passo no tempo, os seguintes chegavam fora
+         * de ordem, eram corretamente recusados, e o dia nunca fechava.
+         *
+         * Só distrator (sem índice na rotina) e passo já feito somem de
+         * vez; o resto volta para o fim da fila.
+         */
+        if (kind === 'no' && item.cue.routineIndex >= this.done) this.requeue(item.cue)
 
-            const at = this.controls.at('no')
-            await FX.to(this, fx(item.icon),
-                { x: at.x, y: at.y, scale: 0.2, alpha: 0, angle: 24 },
-                { duration: 400, ease: 'Back.easeIn' })
-            if (gen !== this.gen) return
-            item.icon.destroy()
-        }
-
-        this.stage.disarm()
+        await this.land(item.icon, kind)
+        if (gen !== this.gen) return
+        if (kind === 'yes') this.reschedule()
 
         if (this.done >= this.phase.routine.steps.length) void this.finishPhase()
     }
@@ -604,7 +907,7 @@ export class GameScene extends Phaser.Scene {
         this.cameras.main.shake(200, 0.005)
 
         const next = stepAt(this.phase, this.done)
-        void this.stage.say(mistakeSentence(item.cue, next, kind), C.bad)
+        void this.stage.say(mistakeSentence(item.cue, next, kind, this.done), C.bad)
 
         runtimeGameBridge.emit({
             type: 'WRONG_ANSWER',

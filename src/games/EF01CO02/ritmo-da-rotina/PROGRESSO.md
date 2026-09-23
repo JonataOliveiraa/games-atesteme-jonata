@@ -20,7 +20,7 @@ vira `feito` quando o revisor aprova.
 | 3 | Partitura: painel com moldura, fita do nome, miniaturas | `scenes/sequence.ts` | feito |
 | 4 | Acerto e erro: explosão, voo até a partitura, moldura piscando | `scenes/GameScene.ts` | feito |
 | 5 | Áudio: tique-taque, tambor, mão, sequência de acertos | `scenes/audio.ts` | feito |
-| 6 | Abertura e tutorial: o propósito do jogo em 5 segundos | `scenes/GameScene.ts` | pendente |
+| 6 | Abertura e tutorial: o propósito do jogo em 5 segundos | `scenes/lesson.ts` | feito |
 | 7 | Reprise da rotina no fim de cada fase | `scenes/recap.ts` | feito |
 | 8 | Três fases por nível, distratores e passos fora de hora | `data/routines.ts` | feito |
 | 9 | Passe final: celular, mudo, pausa, desempenho | — | pendente |
@@ -83,6 +83,48 @@ distrator e passo já feito somem de vez. Tem ainda uma rede de segurança
   por meio segundo; batendo rápido eles se empilhavam e pareciam um anel só
   inflando sem parar. Os anéis também ficaram menores e mais curtos;
 - a mão do botão de recusa passou a ser `mao-silhueta.png`.
+
+**Passe de 23/09 — um nível, um assunto, e o tutorial que mostra**
+
+Pedido do usuário: só o tambor no N1; a mãozinha estreia no N2 com exemplo
+visual de verdade; o N3 com rotinas maiores e mais rápidas; tutorial mais
+compreensível para criança.
+
+| Nível | Assunto | Botões | Rotinas | Andamento |
+|---|---|---|---|---|
+| 1 | seguir a ordem | só tambor | 3, 4, 5 passos | 72 bpm |
+| 2 | o que não está lá em cima | tambor + mãozinha | 3, 4, 5 | 72 bpm |
+| 3 | passo que chega antes da vez | tambor + mãozinha | 5, 6, 6 | 72, 74, 76 bpm |
+
+- a regra de cada nível está em `LevelDef.lesson` e é VALIDADA no
+  `routines.ts`: distrator no N1 ou passo adiantado antes do N3 não carrega;
+- no N1 a mãozinha não existe (nem cinza), e o teclado também não a alcança;
+- **no N1 e no N2 ninguém fura a fila** (`rewind`): se o passo da vez escapa,
+  os que vinham atrás saem do caminho e a fila é refeita na ordem. Antes, um
+  erro de dedo fazia um passo adiantado chegar ao anel no N1, sem mãozinha
+  para recusá-lo, e custava vida;
+- o tutorial deixou de ser o painel de texto: o menino da rotina (`p-feliz`)
+  fala letra a letra e espera o botão, e o jogo de verdade acontece à vista.
+  Em cada assunto ele MOSTRA (a figura chega, um dedo bate no botão, a peça
+  sobe ou some na mão) e depois a criança FAZ, com a figura parada no anel
+  esperando. O botão errado no treino não pune, só lembra qual é;
+- o que o menino e a criança fazem no tutorial conta: a fase segue dali;
+- quem entra direto no N2 ou N3 recebe antes, curto, o que ficou para trás;
+- o "?" no meio do jogo continua sendo o painel, com as mesmas palavras;
+- frase de erro por causa: distrator, passo adiantado, passo já feito e
+  passo certo recusado têm cada um a sua;
+- figura que volta depois de escapar nasce um tempo depois, e não três;
+- durante o tutorial a tela escurece (`createSpotlight`) e só fica aceso o
+  que a fala cita: a partitura, o caminho, o tambor ou a mãozinha. No treino,
+  o botão errado fica no escuro;
+- as bolinhas das fases estavam em cima da borda da fita do nome. A fita
+  encolheu e ganhou embaixo uma linha própria, dentro do painel: a plaquinha
+  "Nível N" e, ao lado, as bolinhas.
+- o N3 saiu a 78–86 bpm com figuras a 1,75 tempo uma da outra, e o usuário
+  achou acelerado demais. Voltou para 72–76 bpm e 2,5–2,25 tempos, perto do
+  N2: a dificuldade do N3 é o dia maior, os distratores e o passo adiantado,
+  não a velocidade. Na última fase a janela de acerto passou de ~0,5 s para
+  ~0,6 s, e o espaço entre figuras de 1,2 s para 1,8 s.
 
 **Ainda em aberto**
 
