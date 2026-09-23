@@ -180,52 +180,78 @@ export function createEntrega(scene: Phaser.Scene) {
         await entregue(null, to)
     }
 
-    // ── telefone: o fio de luz, e os pulsos da voz correndo nele ───────
+    // ── telefone: ondas pelo ar, sem fio ───────────────────────────────
+
+    /** Anéis que se abrem num ponto: o sinal saindo, ou o sinal chegando. */
+    const signalRings = (at: Ponto, count: number) => {
+        for (let i = 0; i < count; i++) {
+            const ring = keep(scene.add.graphics().setDepth(DEPTH.wave - 1))
+            ring.lineStyle(8, C.telefone, 0.9)
+            ring.strokeCircle(0, 0, 30)
+            ring.setPosition(at.x, at.y).setScale(0.5).setAlpha(0)
+            scene.tweens.add({
+                targets: ring,
+                scale: 2.2,
+                alpha: { from: 0.95, to: 0 },
+                delay: FX.ms(scene, i * 150),
+                duration: FX.ms(scene, 560),
+                ease: 'Sine.easeOut',
+                onComplete: () => ring.destroy(),
+            })
+        }
+    }
+
+    /**
+     * Um trecho de onda senoidal que viaja de quem liga até quem atende. A
+     * onda é o desenho do "sem fio": o megafone manda arcos de som que
+     * perdem força; o telefone manda ondas que chegam inteiras e na hora.
+     */
+    const radioWave = (from: Ponto, to: Ponto, delay: number, travel: number) => {
+        const wave = keep(scene.add.graphics().setDepth(DEPTH.wave))
+        const length = 150
+        const amp = 15
+        const drawSine = (width: number, color: number, alpha: number) => {
+            wave.lineStyle(width, color, alpha)
+            wave.beginPath()
+            for (let x = -length / 2; x <= length / 2; x += 4) {
+                const y = Math.sin((x / length) * Math.PI * 6) * amp
+                if (x === -length / 2) wave.moveTo(x, y)
+                else wave.lineTo(x, y)
+            }
+            wave.strokePath()
+        }
+        drawSine(15, C.ink, 0.2)
+        drawSine(9, C.telefone, 1)
+        drawSine(3, C.white, 0.75)
+
+        wave.setPosition(from.x, from.y)
+        wave.setRotation(Math.atan2(to.y - from.y, to.x - from.x))
+        wave.setAlpha(0)
+
+        scene.tweens.add({
+            targets: wave,
+            x: to.x,
+            y: to.y,
+            delay: FX.ms(scene, delay),
+            duration: FX.ms(scene, travel),
+            ease: 'Linear',
+            onUpdate: tween => wave.setAlpha(Math.min(1, Math.sin(tween.progress * Math.PI) * 2.4)),
+            onComplete: () => wave.destroy(),
+        })
+    }
 
     const telefone = async (from: Ponto, to: Ponto, motivo: MotivoFalha | null, onTravel?: OnTravel) => {
-        const travel = 1150
-        onTravel?.(to.x, travel)
+        const travel = 900
+        const packets = 3
+        const gap = 170
+        onTravel?.(to.x, travel + gap * (packets - 1))
 
-        const line = keep(scene.add.graphics().setDepth(DEPTH.wave - 1))
-        const grow = { v: 0 }
-        const dx = to.x - from.x
-        const dy = to.y - from.y
+        signalRings(from, 3)
+        for (let i = 0; i < packets; i++) radioWave(from, to, 120 + i * gap, travel)
+        await FX.wait(scene, 120 + travel + gap * (packets - 1))
 
-        const drawLine = () => {
-            line.clear()
-            line.lineStyle(9, C.ink, 0.25)
-            line.lineBetween(from.x, from.y + 3, from.x + dx * grow.v, from.y + dy * grow.v + 3)
-            line.lineStyle(6, C.telefone, 0.95)
-            line.lineBetween(from.x, from.y, from.x + dx * grow.v, from.y + dy * grow.v)
-        }
-
-        await new Promise<void>(resolve => {
-            scene.tweens.add({
-                targets: grow,
-                v: 1,
-                duration: FX.ms(scene, travel),
-                ease: 'Linear',
-                onUpdate: drawLine,
-                onComplete: () => resolve(),
-            })
-        })
-
-        for (let i = 0; i < 3; i++) {
-            const pulse = keep(scene.add.circle(from.x, from.y, 13, C.white, 1).setDepth(DEPTH.wave))
-            pulse.setStrokeStyle(5, C.telefone, 1)
-            scene.tweens.add({
-                targets: pulse,
-                x: to.x,
-                y: to.y,
-                duration: FX.ms(scene, 620),
-                delay: FX.ms(scene, i * 170),
-                ease: 'Linear',
-                onComplete: () => pulse.destroy(),
-            })
-        }
-        await FX.wait(scene, 1050)
-
-        await FX.to(scene, line, { alpha: 0 }, { duration: 360 })
+        if (motivo !== 'semTelefone') signalRings(to, 2)
+        await FX.wait(scene, 260)
 
         if (motivo === 'semTelefone') return badge(to, '✕', C.coral)
         if (motivo === 'naoEscuta') return badge(to, '…', C.warn)
