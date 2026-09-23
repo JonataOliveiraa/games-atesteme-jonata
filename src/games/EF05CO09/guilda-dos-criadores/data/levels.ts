@@ -96,7 +96,187 @@ export const LEVELS: LevelDef[] = [
             },
         ],
     },
+
+    /*
+     * ══════════════════════════════════════════════════════════════════════
+     *  NÍVEL 2 — PEDIR
+     * ══════════════════════════════════════════════════════════════════════
+     *
+     * O verso agora mostra um CADEADO. A sequência que a criança já sabe
+     * ganha um passo na frente dela: toca a campainha, o autor atende e
+     * entrega o carimbo — e só então ela credita como no nível 1.
+     *
+     * O erro deste nível já existia no motor antes de o nível existir:
+     * carimbar sem pedir é `semLicenca`, e a frase é "Essa está fechada.
+     * Pergunte antes." — o que o `avaliar` cobra com o `licensed`.
+     *
+     * A ficha prevê que o autor possa dizer NÃO. Aqui ele sempre atende, e
+     * é decisão de projeto: o assunto do nível é PEDIR, e "devolver a obra"
+     * é um segundo gesto e um segundo assunto. Se ele entrar, entra num
+     * nível próprio.
+     */
+    {
+        level: 2,
+        prompt: 'Peça licença antes de usar.',
+        opening: [
+            { who: 1, pose: POSE.esperando, text: 'Opa! Tem figura nova chegando pro mural.' },
+            { who: 1, pose: POSE.explicando, text: 'Repara no cadeado atrás: essa aí ninguém pega sem perguntar.' },
+            { who: 1, pose: POSE.explicando, text: 'Toque a campainha. Quem fez vem atender.' },
+        ],
+        phases: [
+            {
+                obra: {
+                    id: 'l2f1',
+                    frame: 3,
+                    title: 'a ponte de manhã',
+                    seal: 'fechada',
+                    sign: { kind: 'marca', id: 'raio' },
+                    note: 'Essa é minha.\nPergunta antes, tá?',
+                    author: 3,
+                },
+                /* Marca de novo na fase de estreia, como no nível 1: o passo
+                   novo é a campainha, e um toque só fecha a assinatura. */
+                tray: [
+                    { kind: 'marca', id: 'folha' },
+                    { kind: 'marca', id: 'raio' },
+                    { kind: 'marca', id: 'sol' },
+                    { kind: 'marca', id: 'peixe' },
+                    { kind: 'marca', id: 'lua' },
+                    { kind: 'marca', id: 'coracao' },
+                ],
+            },
+            {
+                obra: {
+                    id: 'l2f2',
+                    frame: 4,
+                    title: 'a chuva na janela',
+                    seal: 'fechada',
+                    sign: { kind: 'letras', text: 'NINA' },
+                    note: 'Demorei uma tarde inteira.\nFala comigo antes.',
+                    author: 2,
+                },
+                /* Quem fala é o Tom, que não é a autora: numa fase de letras
+                   o nome de quem fala seria a resposta de graça. */
+                intro: { who: 1, pose: POSE.explicando, text: 'Essa está fechada. Chame quem fez antes de carimbar.' },
+                tray: [letra('I'), letra('N'), letra('A'), letra('T'), letra('O'), letra('L')],
+            },
+            {
+                obra: {
+                    id: 'l2f3',
+                    frame: 5,
+                    title: 'o bolo de aniversário',
+                    seal: 'fechada',
+                    sign: { kind: 'letras', text: 'DAVI' },
+                    note: 'Foi o bolo da minha irmã.\nPede antes de usar.',
+                    author: 3,
+                },
+                intro: { who: 0, pose: POSE.explicando, text: 'Fechada também. Você já sabe o que fazer primeiro.' },
+                tray: [letra('D'), letra('A'), letra('V'), letra('I'), letra('N'), letra('O')],
+            },
+        ],
+    },
+
+    /*
+     * ══════════════════════════════════════════════════════════════════════
+     *  NÍVEL 3 — CRIAR
+     * ══════════════════════════════════════════════════════════════════════
+     *
+     * O verso não mostra nada, e não é esquecimento: a figura é DELA. Não há
+     * de quem é escrito em lugar nenhum porque quem faz é quem assina, e o
+     * carimbo da mesa deixa de ser o do crédito e passa a ser o dela.
+     *
+     * A PRIMEIRA obra do nível é a que ESTABELECE a marca — qualquer uma das
+     * oito serve, e é a única vez no jogo inteiro em que não existe resposta
+     * certa. As duas seguintes cobram a mesma marca: uma assinatura que muda
+     * a cada obra não assina nada, e é isso que o nível ensina.
+     */
+    {
+        level: 3,
+        prompt: 'Assine o que é seu.',
+        opening: [
+            { who: 2, pose: POSE.esperando, text: 'Sua vez! Estas três figuras são suas.' },
+            { who: 2, pose: POSE.explicando, text: 'Vira que você vai ver: atrás não tem nada escrito.' },
+            { who: 2, pose: POSE.explicando, text: 'Escolha a SUA marca. Ela vai ser a mesma nas três.' },
+        ],
+        phases: [
+            {
+                obra: {
+                    id: 'l3f1',
+                    frame: 6,
+                    title: 'o seu desenho do mar',
+                    seal: 'nenhum',
+                    sign: null,
+                    note: null,
+                    author: null,
+                },
+                /* As oito marcas, e nenhuma delas é a certa: a que ela tocar
+                   vira a dela, e as duas fases seguintes cobram essa. */
+                tray: [
+                    { kind: 'marca', id: 'sol' },
+                    { kind: 'marca', id: 'raio' },
+                    { kind: 'marca', id: 'estrela' },
+                    { kind: 'marca', id: 'coracao' },
+                    { kind: 'marca', id: 'gato' },
+                    { kind: 'marca', id: 'peixe' },
+                ],
+            },
+            {
+                obra: {
+                    id: 'l3f2',
+                    frame: 7,
+                    title: 'a sua foto do quintal',
+                    seal: 'nenhum',
+                    sign: null,
+                    note: null,
+                    author: null,
+                },
+                intro: { who: 2, pose: POSE.explicando, text: 'Mais uma sua. A marca é a mesma de antes.' },
+                tray: [
+                    { kind: 'marca', id: 'sol' },
+                    { kind: 'marca', id: 'raio' },
+                    { kind: 'marca', id: 'estrela' },
+                    { kind: 'marca', id: 'coracao' },
+                    { kind: 'marca', id: 'gato' },
+                    { kind: 'marca', id: 'peixe' },
+                ],
+            },
+            {
+                obra: {
+                    id: 'l3f3',
+                    frame: 8,
+                    title: 'o seu cartaz da festa',
+                    seal: 'nenhum',
+                    sign: null,
+                    note: null,
+                    author: null,
+                },
+                intro: { who: 0, pose: POSE.explicando, text: 'A última é sua também. Fecha o mural com a sua marca!' },
+                tray: [
+                    { kind: 'marca', id: 'sol' },
+                    { kind: 'marca', id: 'raio' },
+                    { kind: 'marca', id: 'estrela' },
+                    { kind: 'marca', id: 'coracao' },
+                    { kind: 'marca', id: 'gato' },
+                    { kind: 'marca', id: 'peixe' },
+                ],
+            },
+        ],
+    },
 ]
+
+/**
+ * O VERBO DO NÍVEL, tirado das obras dele.
+ *
+ * Não existe um campo dizendo "este é o nível de pedir": o selo das obras já
+ * diz isso, e um campo a mais seria uma segunda fonte de verdade que pode
+ * discordar da primeira. A validação afirma que as três fases concordam.
+ */
+export function verboDoNivel(level: LevelDef): 'creditar' | 'pedir' | 'criar' {
+    const seal = level.phases[0]?.obra.seal
+    if (seal === 'fechada') return 'pedir'
+    if (seal === 'nenhum') return 'criar'
+    return 'creditar'
+}
 
 export const TOTAL_FASES = LEVELS.reduce((n, l) => n + l.phases.length, 0)
 
@@ -133,13 +313,21 @@ export function palavraDaAssinatura(sign: Sign | null): 'a marca' | 'o nome' {
     return sign?.kind === 'marca' ? 'a marca' : 'o nome'
 }
 
-/** O aviso âmbar do erro, na palavra do gesto daquela fase. */
-export function falhaTexto(falha: Falha, sign: Sign | null): string {
+/**
+ * O aviso âmbar do erro, na palavra do gesto daquela fase.
+ *
+ * `propria` troca a referência: numa obra da criança não há verso para
+ * conferir, e mandar ela "olhar atrás" seria mandar olhar para um papel em
+ * branco. O que existe é a marca que ELA escolheu na primeira obra.
+ */
+export function falhaTexto(falha: Falha, sign: Sign | null, propria = false): string {
     const marca = sign?.kind === 'marca'
     switch (falha) {
         case 'incompleta':
+            if (propria) return 'Falta a sua marca.'
             return marca ? 'Falta a marca de quem fez.' : 'Falta o nome de quem fez.'
         case 'assinaturaErrada':
+            if (propria) return 'A sua marca é outra. Use sempre a mesma.'
             return marca
                 ? 'Não é essa a marca que está atrás.'
                 : 'Não é esse o nome que está atrás.'
@@ -190,8 +378,40 @@ if (import.meta.env.DEV) {
     LEVELS.forEach(level => {
         if (level.phases.length !== 3) erro(`nível ${level.level}: são 3 fases por nível`)
 
+        /* UM NÍVEL, UM VERBO. Misturar selos no mesmo nível põe duas
+           aprendizagens na mesma tela, e `verboDoNivel` passaria a mentir. */
+        const seals = new Set(level.phases.map(f => f.obra.seal))
+        if (seals.size > 1)
+            erro(`nível ${level.level}: selos misturados (${[...seals].join(', ')}) — um nível, um verbo`)
+
+        const verbo = verboDoNivel(level)
+        if (level.level === 2 && verbo !== 'pedir')
+            erro(`nível 2: é o nível de PEDIR, e as obras não estão fechadas`)
+        if (level.level === 3 && verbo !== 'criar')
+            erro(`nível 3: é o nível de CRIAR, e as obras não são da criança`)
+
+        /* A marca que ela escolheu na primeira obra tem de existir nas outras
+           duas — senão o nível cobra uma assinatura que a bandeja não oferece. */
+        if (verboDoNivel(level) === 'criar') {
+            const chaves = level.phases.map(f =>
+                f.tray.map(p => (p as { id: string }).id).sort().join(','))
+            if (new Set(chaves).size > 1)
+                erro(`nível ${level.level}: as bandejas da marca própria têm de ser iguais`)
+        }
+
         level.phases.forEach(({ obra, tray, intro }, i) => {
             const onde = `${level.level}.${i + 1}`
+
+            /* No nível da criança a bandeja é de MARCAS, e precisa de mais de
+               uma: escolher entre uma coisa só não é escolher. */
+            if (verbo === 'criar') {
+                if (tray.some(p => p.kind !== 'marca'))
+                    erro(`${onde}: a obra da criança se assina com marca, não com letras`)
+                if (tray.length < 2)
+                    erro(`${onde}: a bandeja da marca própria precisa de opção`)
+                const ids = new Set(tray.map(p => (p as { id: string }).id))
+                if (ids.size !== tray.length) erro(`${onde}: marca repetida na bandeja`)
+            }
 
             // obra sem selo não tem o que copiar; obra com selo não pode estar sem
             if ((obra.seal === 'nenhum') !== (obra.sign === null))

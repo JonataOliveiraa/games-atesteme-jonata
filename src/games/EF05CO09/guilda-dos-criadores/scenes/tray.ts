@@ -3,14 +3,35 @@ import { FX, type FxTarget } from '../../../../shared/effects/FX'
 import { DEPTH, TRAY, W, trayCx } from '../data/layout'
 import { C, CSS, FONT, SIZE } from '../data/theme'
 import { SHEETS, has } from '../data/files'
-import { MARK_FRAME, OBJ_FRAME, type Piece } from '../types'
+import { MARK_FRAME, OBJ_FRAME, type MarkId, type Piece } from '../types'
 
 const fx = (o: unknown) => o as unknown as FxTarget
 
-/** Uma peça da bandeja: ou um carimbo, ou uma letra, ou uma marca. */
+/**
+ * Uma peça da bandeja.
+ *
+ * Os três objetos da mesa — o carimbo do crédito, a campainha de pedir
+ * licença e o selo de quem assina a própria obra — cabem na mesma moldura
+ * que as letras e as marcas, porque o gesto é sempre o mesmo: um toque, e a
+ * peça voa para a plaquinha.
+ */
 export type TrayItem =
-    | { kind: 'carimbo' }
+    | { kind: 'carimbo' | 'campainha' | 'minha' }
     | Piece
+
+/** O quadro de `carimbos-e-marcas.png` de cada objeto da mesa. */
+const OBJ_TRAY: Partial<Record<string, number>> = {
+    carimbo: OBJ_FRAME.carimbo,
+    campainha: OBJ_FRAME.campainha,
+    minha: OBJ_FRAME.selo,
+}
+
+/** O reserva, quando a folha não carregou. */
+const OBJ_GLYPH: Partial<Record<string, string>> = {
+    carimbo: '◉',
+    campainha: '♪',
+    minha: '★',
+}
 
 export interface Tray {
     container: Phaser.GameObjects.Container
@@ -154,7 +175,7 @@ export function createTray(
                     .setResolution(2),
             )
         } else {
-            const frame = item.kind === 'carimbo' ? OBJ_FRAME.carimbo : MARK_FRAME[item.id]
+            const frame = OBJ_TRAY[item.kind] ?? MARK_FRAME[(item as { id: MarkId }).id]
             if (temFolha) {
                 const img = scene.add.image(0, 0, SHEETS.marcas.key, frame)
                 img.setDisplaySize(TRAY.pieceH - 16, TRAY.pieceH - 16)
@@ -162,7 +183,7 @@ export function createTray(
             } else {
                 node.add(
                     scene.add
-                        .text(0, 2, item.kind === 'carimbo' ? '◉' : '✶', {
+                        .text(0, 2, OBJ_GLYPH[item.kind] ?? '✶', {
                             fontFamily: FONT, fontSize: '46px', color: CSS.ink,
                         })
                         .setOrigin(0.5)

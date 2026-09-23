@@ -186,6 +186,23 @@ export function avaliar(p: Plaquinha, o: Obra, licensed: boolean): Falha | null 
     return sameSign(p.sign, o.sign!) ? null : 'assinaturaErrada'
 }
 
+/**
+ * O VEREDITO DA OBRA QUE A PRÓPRIA CRIANÇA FEZ.
+ *
+ * No nível 3 o verso não diz nada, porque não há nada para dizer: a figura é
+ * dela. Então não existe resposta guardada em lugar nenhum — a PRIMEIRA obra
+ * do nível é a que estabelece a marca dela, e qualquer marca serve. As duas
+ * seguintes comparam com essa.
+ *
+ * É o mesmo princípio do resto do jogo, virado do avesso: lá a plaquinha era
+ * uma cópia do verso; aqui ela é uma cópia de si mesma.
+ */
+export function avaliarPropria(p: Plaquinha, mine: Sign | null): Falha | null {
+    if (!p.stamp || !p.sign) return 'incompleta'
+    if (!mine) return null
+    return sameSign(p.sign, mine) ? null : 'assinaturaErrada'
+}
+
 /** Quantas peças fecham a assinatura desta obra. */
 export function signLength(sign: Sign): number {
     return sign.kind === 'letras' ? sign.text.length : 1

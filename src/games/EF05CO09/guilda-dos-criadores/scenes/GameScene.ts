@@ -18,10 +18,12 @@ import {
     falhaTexto,
     palavraDaAssinatura,
     pointsFor,
+    verboDoNivel,
 } from '../data/levels'
 import {
     POSE,
     avaliar,
+    avaliarPropria,
     signFrom,
     signLength,
     type Falha,
@@ -29,6 +31,10 @@ import {
     type Mode,
     type PhaseDef,
     type Piece,
+    // `Sign` dos tipos é a ASSINATURA; o `Sign` de './sign' é o aviso âmbar
+    // da tela. Os dois nomes colidiriam aqui, então a assinatura entra com
+    // o nome que ela tem na cabeça de quem joga.
+    type Sign as Assinatura,
 } from '../types'
 
 import { createArtwork, type Artwork } from './artwork'
@@ -46,10 +52,10 @@ const GAME_ID = 'guilda-dos-criadores'
 const fx = (o: unknown) => o as unknown as FxTarget
 
 /** O que a bandeja está mostrando agora. Nunca os dois ao mesmo tempo. */
-type Step = 'nada' | 'carimbo' | 'assinatura'
+type Step = 'nada' | 'campainha' | 'carimbo' | 'assinatura'
 
 /** Os gestos de verdade que o guia sabe esperar. */
-type Gesto = 'virar' | 'carimbo'
+type Gesto = 'virar' | 'campainha' | 'carimbo'
 
 export class GameScene extends Phaser.Scene {
     private lives!: Lives
@@ -69,6 +75,21 @@ export class GameScene extends Phaser.Scene {
 
     /** O que a plaquinha tem agora. Zerado a cada fase E a cada erro. */
     private stamped = false
+    /**
+     * O autor JÁ ATENDEU a campainha nesta fase.
+     *
+     * É o estado que faz a mesma obra mudar de resposta: fechada, ela recusa
+     * o carimbo; depois do sim do autor, ela aceita. Zera a cada fase — a
+     * licença é daquela obra, não do nível.
+     */
+    private licensed = false
+    /**
+     * A MARCA DELA, escolhida na primeira obra do nível de CRIAR.
+     *
+     * Vive no NÍVEL, e não na fase: é justamente por durar as três obras que
+     * ela vira uma assinatura. Fica `undefined` até a primeira fechar.
+     */
+    private mine?: Assinatura
     private picked: Piece[] = []
     /** A criança já viu o verso? Sem isso a bandeja não abre. */
     private seen = false
@@ -232,6 +253,7 @@ export class GameScene extends Phaser.Scene {
         this.attemptsHere = 0
         this.chargedHere = false
         this.stamped = false
+        this.licensed = false
         this.picked = []
         this.seen = false
         this.wrongPieces = []
@@ -360,12 +382,25 @@ export class GameScene extends Phaser.Scene {
         }
     }
 
-    /** A bandeja mostra SÓ o que a plaquinha precisa agora. */
+    /** O verbo deste nível, tirado do selo das obras. */
+    private get verbo() { return verboDoNivel(this.level) }
+
+    /**
+     * A bandeja mostra SÓ o que a plaquinha precisa agora.
+     *
+     * A ordem dos passos é a ordem do assunto de cada nível: creditar é
+     * carimbo → assinatura; pedir põe a CAMPAINHA na frente dos dois; criar
+     * troca o carimbo do crédito pelo selo dela. Três níveis, uma bandeja.
+     */
     private async showStep(): Promise<void> {
         const gen = this.gen
-        if (!this.stamped) {
+        if (this.verbo === 'pedir' && !this.licensed) {
+            this.step = 'campainha'
+            await this.tray.show([{ kind: 'campainha' }] as TrayItem[])
+        } else if (!this.stamped) {
             this.step = 'carimbo'
-            await this.tray.show([{ kind: 'carimbo' }] as TrayItem[])
+            const carimbo: TrayItem = { kind: this.verbo === 'criar' ? 'minha' : 'carimbo' }
+            await this.tray.show([carimbo])
         } else {
             this.step = 'assinatura'
             await this.tray.show(this.phase.tray as TrayItem[])
@@ -384,6 +419,36 @@ export class GameScene extends Phaser.Scene {
         if (!this.seen) return
         const gen = this.gen
         this.apagarDicaFinal()
+
+        /*
+         * A CAMPAINHA.
+         *
+         * Ela não põe nada na plaquinha: o que ela faz é CHAMAR alguém. O
+         * autor aparece, diz que sim, e é a fala dele que solta o carimbo —
+         * a licença é uma resposta de gente, não um objeto que se cola.
+         */
+        if (this.step === 'campainha') {
+            this.tray.setEnabled(false)
+            this.audio.stamp()
+            await this.tray.launch(index, this.art.pos())
+            if (gen !== this.gen) return
+
+            const autor = this.phase.obra.author
+            if (autor !== null) {
+                await this.artist.beat(
+                    autor, POSE.agradecendo,
+                    'Pode usar sim! Só não esquece de pôr de quem é.',
+                    'Combinado',
+                )
+                if (gen !== this.gen) return
+            }
+
+            this.licensed = true
+            await this.showStep()
+            if (gen !== this.gen) return
+            this.cumprir('campainha')
+            return
+        }
 
         if (this.step === 'carimbo') {
             this.tray.setEnabled(false)
@@ -404,7 +469,7 @@ export class GameScene extends Phaser.Scene {
         if (this.step !== 'assinatura') return
 
         const peça = this.phase.tray[index]
-        const alvo = this.phase.obra.sign!
+        const alvo = this.alvoDaAssinatura(peça)
         const falta = signLength(alvo) - this.picked.length
         if (falta <= 0) return
 
@@ -426,6 +491,22 @@ export class GameScene extends Phaser.Scene {
         await this.julgar(montada, gen)
     }
 
+    /**
+     * QUAL ASSINATURA ESTA FASE ESPERA.
+     *
+     * Nas obras dos outros é a do verso. Na obra da criança é a marca dela —
+     * e na PRIMEIRA do nível, quando ela ainda não tem uma, é a peça que ela
+     * acabou de tocar: aquele toque não está acertando nada, está decidindo.
+     */
+    private alvoDaAssinatura(peça: Piece): Assinatura {
+        const doVerso = this.phase.obra.sign
+        if (doVerso) return doVerso
+        if (this.mine) return this.mine
+        return peça.kind === 'marca'
+            ? { kind: 'marca', id: peça.id }
+            : { kind: 'letras', text: peça.ch }
+    }
+
     /** Tirar a última peça. Sem botão de apagar, sem confirmação, sem custo. */
     private onErase() {
         if (this.step !== 'assinatura' || !this.picked.length) return
@@ -440,13 +521,20 @@ export class GameScene extends Phaser.Scene {
 
     private async julgar(montada: NonNullable<ReturnType<typeof signFrom>>, gen: number) {
         const obra = this.phase.obra
-        const falha = avaliar(
-            { stamp: this.stamped ? 'credito' : null, sign: montada },
-            obra,
-            false,
-        )
+        const propria = this.verbo === 'criar'
+
+        const falha = propria
+            ? avaliarPropria({ stamp: this.stamped ? 'minha' : null, sign: montada }, this.mine ?? null)
+            : avaliar(
+                { stamp: this.stamped ? 'credito' : null, sign: montada },
+                obra,
+                this.licensed,
+            )
 
         if (!falha) {
+            // A primeira obra dela É a escolha da marca: daqui em diante o
+            // nível cobra esta, e não outra.
+            if (propria && !this.mine) this.mine = montada
             await this.acertou(gen)
             return
         }
@@ -554,7 +642,10 @@ export class GameScene extends Phaser.Scene {
         }
         if (gen !== this.gen) return
 
-        await this.sign.show(falhaTexto(falha, this.phase.obra.sign), SIGN_Y)
+        await this.sign.show(
+            falhaTexto(falha, this.phase.obra.sign ?? this.mine ?? null, this.verbo === 'criar'),
+            SIGN_Y,
+        )
         if (gen !== this.gen) return
 
         /* O verso pulsa: o jogo aponta para onde a resposta ESTÁ escrita,
