@@ -25,7 +25,11 @@ const fx = (o: unknown) => o as unknown as FxTarget
  * levaria os painéis junto e cortaria a paleta; aqui a interface fica
  * exatamente onde estava, e só o mundo se aproxima.
  */
-export function createFocus(scene: Phaser.Scene, root: Phaser.GameObjects.Container) {
+export function createFocus(
+    scene: Phaser.Scene,
+    root: Phaser.GameObjects.Container,
+    worldW: number,
+) {
     /** Onde o skatista fica na tela enquanto o foco está ligado. */
     const screenX = W / 2
 
@@ -33,6 +37,14 @@ export function createFocus(scene: Phaser.Scene, root: Phaser.GameObjects.Contai
     let zoom = 1
     let targetX = 0
     let targetY = 0
+
+    /**
+     * A ROLAGEM DE MONTAR. O parque é mais largo que a tela, então fora da
+     * descida ele fica deslocado de `planX` — e é para esse ponto que o foco
+     * volta quando a descida acaba, não para o começo do mapa.
+     */
+    let planX = 0
+    const clampX = (x: number, z: number) => Phaser.Math.Clamp(x, Math.min(0, W - z * worldW), 0)
 
     /*
      * O foco SÓ ANDA NA HORIZONTAL.
@@ -49,13 +61,38 @@ export function createFocus(scene: Phaser.Scene, root: Phaser.GameObjects.Contai
     const groundAnchor = () => GROUND.y * (1 - zoom)
 
     function aim(worldX: number) {
-        targetX = Phaser.Math.Clamp(screenX - zoom * worldX, W - zoom * W, 0)
+        targetX = clampX(screenX - zoom * worldX, zoom)
         targetY = groundAnchor()
     }
 
     return {
         get active() {
             return on
+        },
+
+        get planX() {
+            return planX
+        },
+
+        /** O arrasto: o parque vai junto com o dedo, sem tween. */
+        drag(x: number) {
+            planX = clampX(x, 1)
+            if (on) return
+            FX.kill(scene, fx(root))
+            root.setPosition(planX, 0).setScale(1)
+        },
+
+        /** Põe `worldX` no meio da tela (até onde o mapa deixa). */
+        async view(worldX: number, ms = 420) {
+            planX = clampX(W / 2 - worldX, 1)
+            if (on) return
+            FX.kill(scene, fx(root))
+            if (ms <= 0) {
+                root.setPosition(planX, 0).setScale(1)
+                return
+            }
+            await FX.to(scene, fx(root), { x: planX, y: 0, scaleX: 1, scaleY: 1 },
+                { duration: ms, ease: 'Sine.easeInOut' })
         },
 
         async enter(worldX: number) {
@@ -86,9 +123,9 @@ export function createFocus(scene: Phaser.Scene, root: Phaser.GameObjects.Contai
             if (!on) return
             on = false
             zoom = 1
-            await FX.to(scene, fx(root), { scaleX: 1, scaleY: 1, x: 0, y: 0 },
+            await FX.to(scene, fx(root), { scaleX: 1, scaleY: 1, x: planX, y: 0 },
                 { duration: FOCUS.ms, ease: 'Sine.easeInOut' })
-            root.setPosition(0, 0).setScale(1)
+            root.setPosition(planX, 0).setScale(1)
         },
 
         destroy() {

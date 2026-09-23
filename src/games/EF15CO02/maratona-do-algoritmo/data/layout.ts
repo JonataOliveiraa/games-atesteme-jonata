@@ -84,8 +84,35 @@ export const GROUND = { y: 478 }
  */
 export const BG_OFFSET_Y = -144
 
-/** O percurso ocupa a faixa entre a fita e a paleta, e NÃO rola. */
-export const COURSE = { firstX: 260, lastX: 960 }
+/**
+ * ═══════════════════════════════════════════════════════════════════════
+ *  O PERCURSO É MAIS LARGO QUE A TELA
+ * ═══════════════════════════════════════════════════════════════════════
+ *
+ * Antes os marcos se espremiam entre x 260 e 960, e com cinco deles sobravam
+ * 175 px por manobra — metade do que um ollie gasta. A rampa e o caixote
+ * encostavam, e o skatista pousava de uma já dentro da outra.
+ *
+ * Agora o espaço entre dois marcos sai do TAMANHO das manobras
+ * (`courseXs` em `data/moves.ts`): o fim da manobra de um, a corrida da
+ * seguinte e uma folga `gap`. O parque cresce para a direita quanto precisar,
+ * com o fundo repetido, e a tela rola:
+ *
+ *  - montando, ela anda sozinha até o próximo espaço vazio, e arrastar o
+ *    parque para os lados mostra o resto do trajeto;
+ *  - descendo, o foco segue o skatista até o fim do mapa.
+ *
+ * `tail` é a pista livre depois da última manobra, para ele sair rolando.
+ */
+export const COURSE = { firstX: 260, gap: 80, tail: 300 }
+
+/**
+ * A ROLAGEM DE MONTAR, por arrasto. `slop` é quanto o dedo anda antes de
+ * virar arrasto — abaixo disso é toque, e o toque num espaço cheio ainda
+ * devolve a carta. `keep` é a margem da tela onde um espaço já conta como
+ * fora de vista, e a tela anda até ele.
+ */
+export const SCROLL = { slop: 12, keep: 150 }
 
 /**
  * As rodas do skatista ficam a 99,8 % da altura do quadro — medido no PNG,
@@ -102,7 +129,6 @@ export const SKATER = {
      * a silhueta sumia. Daqui até 1160 o deck está limpo.
      */
     startX: 186,
-    exitX: 1230,
     footRatio: 0.498,
     fallFootRatio: 0.411,
     /**

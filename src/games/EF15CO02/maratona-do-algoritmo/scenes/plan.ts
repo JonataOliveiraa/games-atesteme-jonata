@@ -35,6 +35,7 @@ export function createPlan(
     scene: Phaser.Scene,
     root: Phaser.GameObjects.Container,
     marksX: number[],
+    exitX: number,
     onTapMedal: (index: number) => void,
 ) {
     const count = marksX.length
@@ -100,7 +101,7 @@ export function createPlan(
             }
         })
 
-        trecho({ x: SKATER.exitX, y: GROUND.y }, 'Linear', tudoPronto)
+        trecho({ x: exitX, y: GROUND.y }, 'Linear', tudoPronto)
         return out
     }
 
@@ -168,9 +169,9 @@ export function createPlan(
     /*
      * As zonas de toque ficam no NÍVEL DA CENA, e não dentro do parque.
      * Elas só são tocáveis enquanto a criança monta, e nesse momento o foco
-     * está desligado e o parque em escala 1 — então as duas coordenadas são
-     * a mesma. Durante a descida a paleta está desabilitada e ninguém toca
-     * em nada, que é quando o parque cresce e as duas divergiriam.
+     * está desligado e o parque em escala 1 — mas ROLADO, porque o mapa é
+     * mais largo que a tela. `follow` põe cada zona de volta em cima do seu
+     * medalhão a cada quadro. Durante a descida ninguém toca em nada.
      */
     const zones = marksX.map((x, i) => {
         const zone = scene.add
@@ -178,13 +179,19 @@ export function createPlan(
             .setOrigin(0.5)
             .setInteractive({ useHandCursor: true })
             .setDepth(DEPTH.card + 6)
-        zone.on('pointerdown', () => onTapMedal(i))
+        // no SUBIR do dedo: quem desceu aqui e arrastou estava olhando o parque
+        zone.on('pointerup', () => onTapMedal(i))
         return zone
     })
 
     return {
         program,
         slotAt: (i: number) => ({ x: marksX[i], y: MEDAL.y }),
+
+        /** As zonas de toque acompanham o parque rolado. */
+        follow() {
+            zones.forEach((zone, i) => zone.setX(root.x + marksX[i]))
+        },
 
         /** O desfile das bolinhas. Só redesenha a trilha, nunca os anéis. */
         update(delta: number) {
@@ -202,7 +209,8 @@ export function createPlan(
         async place(index: number, kind: TrickKind, from: { x: number; y: number }) {
             icons[index]?.destroy()
             const icon = createPoseIcon(scene, kind, MEDAL.size)
-            icon.setPosition(from.x, from.y).setDepth(DEPTH.medal + 1).setScale(0.6)
+            // a carta está na tela e o ícone mora no parque rolado
+            icon.setPosition(from.x - root.x, from.y).setDepth(DEPTH.medal + 1).setScale(0.6)
             root.add(icon)
             icons[index] = icon
             program[index] = kind
@@ -251,7 +259,7 @@ export function createPlan(
                 await FX.to(scene, fx(icon), { angle: -8 }, { duration: 70, yoyo: true, repeat: 2 })
                 await FX.to(scene, fx(icon), { alpha: 0.3 }, { duration: 160 })
             }
-            void FX.ping(scene, marksX[index], MEDAL.y, C.bad, {
+            void FX.ping(scene, root.x + marksX[index], MEDAL.y, C.bad, {
                 radius: MEDAL.size, duration: 420,
             })
         },

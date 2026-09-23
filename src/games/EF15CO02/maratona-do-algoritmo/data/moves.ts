@@ -1,4 +1,4 @@
-import { GROUND, RAMP, SKATER } from './layout'
+import { COURSE, GROUND, LEDGE, RAMP, SKATER, W } from './layout'
 import type { TrickKind } from '../types'
 
 /**
@@ -74,4 +74,41 @@ export function trickPath(kind: TrickKind, markX: number): Step[] {
 export function endX(kind: TrickKind, markX: number): number {
     const path = trickPath(kind, markX)
     return path[path.length - 1].x
+}
+
+/** Metade da largura do desenho que mora no marco: nada, rampa ou caixote. */
+const halfArt = (kind: TrickKind) =>
+    kind === 'subir' ? RAMP.w / 2 : kind === 'pular' ? LEDGE.w / 2 : 40
+
+/**
+ * ONDE CADA MARCO FICA, a partir das manobras que resolvem cada um.
+ *
+ * O marco seguinte começa depois de três coisas somadas: o fim da manobra
+ * deste (onde o skatista pousa), a corrida que a próxima pede antes do marco
+ * e a folga `COURSE.gap`. E nunca mais perto do que as duas peças desenhadas
+ * permitem, para uma rampa não encostar no caixote.
+ */
+export function courseXs(line: TrickKind[]): number[] {
+    const xs: number[] = []
+    line.forEach((kind, i) => {
+        if (i === 0) {
+            xs.push(COURSE.firstX)
+            return
+        }
+        const prev = line[i - 1]
+        const px = xs[i - 1]
+        const landing = endX(prev, px) - px
+        const runUp = 0 - approachX(kind, 0)
+        const byMoves = landing + runUp + COURSE.gap
+        const byArt = halfArt(prev) + halfArt(kind) + COURSE.gap
+        xs.push(px + Math.max(byMoves, byArt))
+    })
+    return xs
+}
+
+/** A largura do mundo: da largada até a pista livre depois da última manobra. */
+export function worldWidth(line: TrickKind[], xs: number[]): number {
+    const last = xs.length - 1
+    const end = last >= 0 ? endX(line[last], xs[last]) : SKATER.startX
+    return Math.max(W, Math.ceil(end + COURSE.tail))
 }

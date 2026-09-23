@@ -2,10 +2,11 @@ import Phaser from 'phaser'
 import { Ease, FX, type FxTarget } from '../../../../shared/effects/FX'
 import { C } from '../data/theme'
 import {
-    BG_OFFSET_Y, COURSE, DEPTH, FRAME_NUDGE, GROUND, H,
+    BG_OFFSET_Y, DEPTH, FRAME_NUDGE, GROUND, H,
     OBSTACLE_ART, PARK, SKATER, W, type ObstacleArt,
 } from '../data/layout'
-import { approachX, trickPath, type MoveFrame } from '../data/moves'
+import { approachX, courseXs, trickPath, worldWidth, type MoveFrame } from '../data/moves'
+import { ghostLine } from '../data/levels'
 import type { FeatureKind, TrickKind } from '../types'
 
 const fx = (o: unknown) => o as unknown as FxTarget
@@ -40,26 +41,37 @@ export function createPark(scene: Phaser.Scene, marks: FeatureKind[]) {
     maskShape.fillRect(0, PARK.top, W, PARK.bottom - PARK.top)
     root.setMask(maskShape.createGeometryMask())
 
-    // ────────────────────────────────────────────────────────── cenário
+    // ─────────────────────────────────────────────── percurso e largura
 
+    const line = ghostLine(marks)
+    const xs = courseXs(line)
+    const worldW = worldWidth(line, xs)
+    /** Ele sai rolando pela borda direita do MUNDO, não da tela. */
+    const exitX = worldW - 50
+
+    /*
+     * O FUNDO SE REPETE, espelhado um sim, um não. Espelhar faz a borda
+     * direita de uma cópia encostar na mesma borda da seguinte: o muro, as
+     * árvores e o piso continuam sem emenda, e não aparece um corte seco no
+     * meio do percurso.
+     */
     if (scene.textures.exists('bg-parque')) {
-        const bg = scene.add.image(W / 2, H / 2 + BG_OFFSET_Y, 'bg-parque')
-        bg.setDisplaySize(W, H)
-        root.add(bg)
+        const tiles = Math.ceil(worldW / W)
+        for (let i = 0; i < tiles; i++) {
+            const bg = scene.add.image(W / 2 + i * W, H / 2 + BG_OFFSET_Y, 'bg-parque')
+            bg.setDisplaySize(W, H).setFlipX(i % 2 === 1)
+            root.add(bg)
+        }
 
         /* Um véu claro empurra o cenário para trás: o skatista é a coisa
          * mais saturada da tela, e é nele que o olho tem de cair. */
         const veil = scene.add.graphics()
         veil.fillStyle(C.cream, 0.1)
-        veil.fillRect(0, PARK.top, W, PARK.bottom - PARK.top)
+        veil.fillRect(0, PARK.top, tiles * W, PARK.bottom - PARK.top)
         root.add(veil)
     }
 
     // ─────────────────────────────────────────────────────────── marcos
-
-    const count = marks.length
-    const span = COURSE.lastX - COURSE.firstX
-    const xs = marks.map((_, i) => (count === 1 ? W / 2 : COURSE.firstX + (span * i) / (count - 1)))
 
     const marksG = scene.add.graphics().setDepth(DEPTH.mark - 1)
     const glow = scene.add.graphics().setDepth(DEPTH.mark - 2)
@@ -135,7 +147,7 @@ export function createPark(scene: Phaser.Scene, marks: FeatureKind[]) {
     // ───────────────────────────────────────────────────────── adereços
 
     if (scene.textures.exists('decor')) {
-        const props: Array<[number, number, number]> = [[0, 58, 0.44], [3, 1204, 0.38]]
+        const props: Array<[number, number, number]> = [[0, 58, 0.44], [3, worldW - 76, 0.38]]
         props.forEach(([frame, x, ratio]) => {
             const prop = scene.add.sprite(x, GROUND.y - ratio * 96, 'decor', frame)
             prop.setDisplaySize(96, 96).setAlpha(0.9)
@@ -254,8 +266,18 @@ export function createPark(scene: Phaser.Scene, marks: FeatureKind[]) {
     return {
         root,
         marksX: xs,
+        worldW,
+        exitX,
         markX: (i: number) => xs[i],
         skaterPos: () => ({ x: skater.x, y: skater.y }),
+
+        /**
+         * Quem a câmera segue: o fantasma enquanto ele demonstra, e o
+         * skatista no resto do tempo. Na demonstração o skatista fica parado
+         * e invisível na largada — seguir ele deixava o fantasma sair da tela
+         * assim que o mapa passou a ser mais largo que ela.
+         */
+        actorX: () => (ghost.alpha > 0.05 ? ghost.x : skater.x),
 
         reset() {
             stopRollCycle()
@@ -329,7 +351,7 @@ export function createPark(scene: Phaser.Scene, marks: FeatureKind[]) {
                 await perform(ghost, line[i], i)
             }
             this.highlight(-1)
-            await rollTo(ghost, SKATER.exitX, 0.6)
+            await rollTo(ghost, exitX, 0.6)
             await FX.to(scene, fx(ghost), { alpha: 0 }, { duration: 200 })
             ghost.setPosition(SKATER.startX, footY())
             skater.setAlpha(1)
@@ -344,7 +366,9 @@ export function createPark(scene: Phaser.Scene, marks: FeatureKind[]) {
             await FX.to(scene, fx(skater), { x: skater.x + 46 }, {
                 duration: 260, ease: 'Sine.easeOut',
             })
-            void FX.ping(scene, xs[index], GROUND.y - 30, C.bad, { radius: 150, duration: 420 })
+            // o ping mora na tela, e o marco no parque rolado e ampliado
+            void FX.ping(scene, root.x + xs[index] * root.scaleX, root.y + (GROUND.y - 30) * root.scaleY,
+                C.bad, { radius: 150, duration: 420 })
             await FX.wait(scene, 320)
         },
 

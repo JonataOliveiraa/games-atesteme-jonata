@@ -13,7 +13,7 @@ import {
     fallSentence, ghostLine, marksBefore, marksInLevel, solves,
 } from '../data/levels'
 import { C } from '../data/theme'
-import { CARD, GO, MEDAL, SKATER, W } from '../data/layout'
+import { CARD, GO, MEDAL, PARK, SCROLL, SKATER, W } from '../data/layout'
 import type { LevelDef, LevelNumber, PhaseDef, PlayState, TrickKind } from '../types'
 import { createAudio } from './audio'
 import { createFocus } from './focus'
@@ -94,6 +94,7 @@ export class GameScene extends Phaser.Scene {
         this.replay = createReplay(this)
         this.audio = createAudio(this)
         this.help = createHelpButton(this, () => this.replayTutorial())
+        this.bindDrag()
         this.hud = createHud(this, this.levelDef.phases.length)
         this.hud.setPhase(0)
 
@@ -129,7 +130,8 @@ export class GameScene extends Phaser.Scene {
         this.talk.update(step)
         this.plan?.update(step)
         this.focus?.update(step)
-        if (this.focus?.active) this.focus.follow(this.park.skaterPos().x)
+        this.plan?.follow()
+        if (this.focus?.active) this.focus.follow(this.park.actorX())
         if (this.clockOn) this.elapsed += step
     }
 
@@ -161,7 +163,7 @@ export class GameScene extends Phaser.Scene {
         this.focus?.destroy()
 
         this.park = createPark(this, this.phase.marks)
-        this.focus = createFocus(this, this.park.root)
+        this.focus = createFocus(this, this.park.root, this.park.worldW)
         /* O plano é desenhado DENTRO do parque: a linha pontilhada e os
          * medalhões entram no mesmo container, então o foco os aproxima
          * junto com o mundo em vez de deixá-los descolados dele. */
@@ -169,6 +171,7 @@ export class GameScene extends Phaser.Scene {
             this,
             this.park.root,
             this.park.marksX,
+            this.park.exitX,
             index => this.onTapSlot(index),
         )
         this.hud.setPhase(this.phaseIndex)
@@ -193,10 +196,10 @@ export class GameScene extends Phaser.Scene {
      * acontecendo para olhar. A criança lia uma instrução sobre o vazio.
      *
      * Agora a ordem é a de quem recebe alguém: primeiro o skatista CHEGA
-     * rolando e diz o nome dele; depois ele apresenta o amigo, e o fantasma
-     * aparece ao lado enquanto a frase é dita — a palavra e a pessoa entram
-     * juntas; depois o amigo FAZ o percurso; e só então o tutorial pede
-     * alguma coisa. Ninguém é instruído antes de ter visto.
+     * rolando e diz o nome dele; depois diz "Vamos fazer assim!", e o
+     * fantasma aparece e FAZ o percurso — ele é o "assim", não um segundo
+     * personagem a apresentar; e só então o tutorial pede alguma coisa.
+     * Ninguém é instruído antes de ter visto.
      */
     private async openLevel() {
         const gen = ++this.gen
@@ -213,13 +216,11 @@ export class GameScene extends Phaser.Scene {
         await FX.wait(this, 1700)
         if (gen !== this.gen) return
 
-        await this.talk.say('Esse é o meu amigo!', C.ok, 2600, SKATER.startX + 150)
+        // o fantasma não é apresentado como outra pessoa: ele é o "assim" da
+        // frase, o jeito certo de fazer, e entra enquanto ela é dita
+        void this.talk.say('Vamos fazer assim!', C.ok, 2200, SKATER.startX + 150)
         await this.park.summonGhost()
-        await FX.wait(this, 1500)
-        if (gen !== this.gen) return
-
-        void this.talk.say('Olha o caminho dele!', C.ok, 2200, SKATER.startX + 150)
-        await FX.wait(this, 900)
+        await FX.wait(this, 1100)
         if (gen !== this.gen) return
 
         await this.runGhost()
@@ -242,7 +243,61 @@ export class GameScene extends Phaser.Scene {
         this.park.reset()
     }
 
+    /**
+     * O parque é mais largo que a tela: o espaço que vai receber a próxima
+     * carta tem de estar à vista antes de a carta voar. Ele fica a um terço
+     * da tela, para dar para ver também o que vem logo depois.
+     */
+    private showSlot(index: number) {
+        if (index < 0) return
+        const x = this.park.marksX[index]
+        const onScreen = x + this.focus.planX
+        if (onScreen >= SCROLL.keep && onScreen <= W - SCROLL.keep) return
+        void this.focus.view(x + W * 0.15)
+    }
+
+    /** Onde o dedo desceu e onde o parque estava; `null` sem dedo no parque. */
+    private dragFrom: { x: number; planX: number } | null = null
+    /** O dedo andou mais que `SCROLL.slop`: o que ele fizer ao subir não é toque. */
+    private dragMoved = false
+
+    /**
+     * ═══════════════════════════════════════════════════════════════════
+     *  ARRASTAR PARA VER O TRAJETO
+     * ═══════════════════════════════════════════════════════════════════
+     *
+     * Enquanto monta, arrastar o parque para os lados mostra o percurso
+     * inteiro. É olhar, não jogar: nenhuma carta é posta ou tirada pelo
+     * arrasto, e errar o arrasto não custa nada.
+     *
+     * Os eventos são os da CENA, e não de uma zona: o dedo pode descer em
+     * cima de um espaço e ainda assim arrastar. Por isso o espaço responde
+     * no `pointerup`, e só se o dedo não tiver andado — assim um toque tira a
+     * carta e um arrasto que começou em cima dela não tira.
+     */
+    private bindDrag() {
+        const inPark = (y: number) => y >= PARK.top && y <= PARK.bottom
+        this.input.on('pointerdown', (p: Phaser.Input.Pointer) => {
+            this.dragMoved = false
+            if (this.state !== 'building' || this.focus.active || !inPark(p.y)) return
+            this.dragFrom = { x: p.x, planX: this.focus.planX }
+        })
+        this.input.on('pointermove', (p: Phaser.Input.Pointer) => {
+            if (!this.dragFrom || !p.isDown) return
+            const dx = p.x - this.dragFrom.x
+            if (!this.dragMoved && Math.abs(dx) < SCROLL.slop) return
+            this.dragMoved = true
+            this.focus.drag(this.dragFrom.planX + dx)
+        })
+        const release = () => {
+            this.dragFrom = null
+        }
+        this.input.on('pointerup', release)
+        this.input.on('pointerupoutside', release)
+    }
+
     private toBuilding() {
+        this.showSlot(this.plan.firstEmpty())
         this.state = 'building'
         this.clockOn = true
         this.palette.setEnabled(true)
@@ -251,8 +306,8 @@ export class GameScene extends Phaser.Scene {
     }
 
     /**
-     * As fases seguintes não repetem a apresentação: o Téo e o amigo já foram
-     * apresentados, e refazer isso a cada fase viraria pedágio.
+     * As fases seguintes não repetem a apresentação: o Téo já se apresentou,
+     * e refazer isso a cada fase viraria pedágio.
      */
     private async startPhase() {
         const gen = ++this.gen
@@ -304,7 +359,9 @@ export class GameScene extends Phaser.Scene {
         if (slot < 0) return
 
         this.audio.snap()
+        this.showSlot(slot)
         void this.plan.place(slot, kind, this.palette.at(kind))
+        this.showSlot(this.plan.firstEmpty())
 
         /*
          * O VAI acende AGORA, e não quando o voo da carta terminar. O botão
@@ -320,7 +377,7 @@ export class GameScene extends Phaser.Scene {
      * a qualquer momento em que se esteja montando — não só depois de cair.
      */
     private onTapSlot(index: number) {
-        if (this.paused || this.state !== 'building') return
+        if (this.paused || this.state !== 'building' || this.dragMoved) return
         if (!this.plan.program[index]) return
         this.audio.unsnap()
         this.plan.clear(index)
@@ -374,7 +431,7 @@ export class GameScene extends Phaser.Scene {
 
         this.plan.idle()
         this.park.highlight(-1)
-        await this.park.rollTo(SKATER.exitX)
+        await this.park.rollTo(this.park.exitX)
         if (gen !== this.gen) return
 
         const points = this.phaseClean ? 10 * marks.length : 5 * marks.length
@@ -424,6 +481,8 @@ export class GameScene extends Phaser.Scene {
         await this.park.fall(index)
         if (gen !== this.gen) return
 
+        // a saída do foco já para em cima do espaço culpado, e não no começo
+        void this.focus.view(this.park.marksX[index] + W * 0.15)
         await this.focus.exit()
         if (gen !== this.gen) return
 
@@ -498,6 +557,8 @@ export class GameScene extends Phaser.Scene {
     }
 
     private runTutorial(once: boolean, onFinish: () => void) {
+        // o tutorial aponta para o primeiro espaço: o parque volta ao começo
+        void this.focus.view(0, 0)
         createTutorial(this, {
             key: `ef15co02-maratona-l${this.levelDef.level}`,
             once,
