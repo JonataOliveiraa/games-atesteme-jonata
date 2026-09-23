@@ -20,14 +20,13 @@ src/games/EF15CO02/academia-dos-algoritmos/index.ts
 
 - `src/data/catalog.ts` passou a ser a fonte canonica dos jogos.
 - `src/data/gameIndex.ts` concentra buscas por `id`, `slug`, `alias`, habilidade BNCC e carregamento dinamico do modulo Phaser.
-- `src/data/games.ts` virou uma camada de compatibilidade que reexporta o novo indice.
+- Os consumidores passaram a importar diretamente de `src/data/gameIndex.ts` e `src/data/catalog.ts`.
 - `src/types/game.ts` e `src/shared/types/game.ts` foram alinhados ao formato novo.
 - `src/context/migrateState.ts` foi adicionado para migrar estado salvo do navegador.
 - `src/context/GameContext.tsx` agora normaliza qualquer slug/codigo legado para o `id` estavel antes de gravar progresso, vidas, bloqueios e historico.
 - `src/pages/GameDetailsPage.tsx` deixou de manter mapas manuais `SLUG_TO_CODE` e `GAME_CONFIG_LOADERS`.
 - `src/components/GameCard.tsx`, `src/pages/ResourcesPage.tsx`, `src/pages/RankingPage.tsx` e ranking local passaram a usar `game.id` para estado interno.
 - `src/platform/components/GameLauncher.tsx` e `src/platform/components/IframeGameFrame.tsx` agora aceitam eventos emitidos com slug/codigo legado e repassam ao site ja normalizados para o `id` novo.
-- `src/shared/utils/progressStore.ts` deixou de depender de `GameCode` e aceita qualquer `gameId` string.
 
 ## Por que foi feito
 
