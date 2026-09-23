@@ -23,6 +23,8 @@ function paintDot(g: Phaser.GameObjects.Graphics, x: number, done: boolean) {
 }
 
 export interface HudOptions {
+    /** O nível em jogo (1 a 3), escrito na pílula ao lado das bolinhas. */
+    level: number
     waves: number
     onHelp: () => void
 }
@@ -75,6 +77,33 @@ export function createHud(scene: Phaser.Scene, options: HudOptions) {
     }
     paintDots(0)
     root.add(dots)
+
+    // O NÍVEL, logo depois das bolinhas: é o lado em que os outros jogos do
+    // catálogo mostram "NÍVEL N". A pílula tem o mesmo acabamento do `?` —
+    // anel escuro, miolo claro e sombra — para ler como parte do cabeçalho.
+    const levelText = scene.add
+        .text(0, HUD.cy, `NÍVEL ${options.level}`, {
+            fontFamily: FONT.black,
+            fontSize: '20px',
+            color: CSS.ink,
+        })
+        .setOrigin(0.5)
+        .setResolution(2)
+    const levelW = Math.ceil(levelText.width) + HUD.levelPadX * 2
+    const levelH = HUD.levelH
+    const levelX = dotX(options.waves - 1) + HUD.dotR + HUD.levelGap + levelW / 2
+    levelText.setX(levelX)
+
+    const levelG = scene.add.graphics()
+    const left = levelX - levelW / 2
+    const top = HUD.cy - levelH / 2
+    levelG.fillStyle(C.ink, 0.26)
+    levelG.fillRoundedRect(left + 2, top + 5, levelW, levelH, levelH / 2)
+    levelG.fillStyle(C.ink, 1)
+    levelG.fillRoundedRect(left - 3, top - 3, levelW + 6, levelH + 6, (levelH + 6) / 2)
+    levelG.fillStyle(C.paper, 1)
+    levelG.fillRoundedRect(left, top, levelW, levelH, levelH / 2)
+    root.add([levelG, levelText])
 
     const order = scene.add
         .text(HUD.orderX, HUD.cy, ORDER, {
@@ -148,8 +177,13 @@ export function createHud(scene: Phaser.Scene, options: HudOptions) {
             helpText.setAlpha(value ? 1 : 0.5)
         },
 
+        /**
+         * O recorte do tutorial em volta da ordem. Mede o TEXTO, e não a
+         * largura máxima reservada para ele: com os 620 px da reserva o
+         * recorte começava no meio da pílula do nível e a cortava ao meio.
+         */
         orderBounds() {
-            return { x: HUD.orderX, y: HUD.cy, w: HUD.orderW + 40, h: 62 }
+            return { x: HUD.orderX, y: HUD.cy, w: Math.ceil(order.width) + 40, h: 62 }
         },
 
         destroy() {

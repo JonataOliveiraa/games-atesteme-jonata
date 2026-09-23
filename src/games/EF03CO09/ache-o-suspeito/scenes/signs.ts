@@ -289,6 +289,16 @@ export function createSigns(scene: Phaser.Scene, onPick: (index: number) => void
 
         const stripH = narrow ? 58 : 72
         const stripTop = h / 2 - stripH - (narrow ? 16 : 20)
+
+        // A faixa de destino é desenhada POR CIMA da frase: a linha que passar
+        // do topo dela some atrás do painel. Contar letras não prevê isso (40
+        // letras já deram três linhas, 42 deram duas), então a conta é feita
+        // aqui, com a fonte de verdade. Na placa estreita de colega cabem DUAS.
+        const textBottom = narrow ? textY + message.height : textY + message.height / 2
+        if (import.meta.env.DEV && textBottom > stripTop) {
+            console.warn(`[ache-o-suspeito] frase maior que a placa, some atrás do destino: "${card.message}"`)
+        }
+
         const strip = scene.add.graphics()
         paintStrip(strip, w, stripTop, stripH)
         hang.add(strip)

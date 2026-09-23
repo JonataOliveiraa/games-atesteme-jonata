@@ -1063,3 +1063,32 @@ pictograma acima e a tira embaixo, cada um com o seu espaço.
    import já aponta para ela; o que segura a publicação são as folhas do item 1.
 3. Teste com criança, principalmente no nível 3: é o único que pede duas
    decisões seguidas (abrir e acusar).
+
+## 33. A frase sumia atrás do destino (23/09/2026)
+
+No nível 3 as placas são estreitas (três por onda, 232 px) e as de colega
+levam a etiqueta roxa "DE UM COLEGA", que empurra a frase para baixo. Sobram
+54 px até a faixa de destino — **duas linhas** de 17 px. As seis frases de
+colega tinham três, e a terceira ficava atrás da faixa, que é desenhada por
+cima. O usuário viu em "Escrever o apelido que a Bia não gosta no grupo.". No
+nível 1, "Postar o experimento sem rostos no site da escola." dava quatro
+linhas na placa larga e encostava na faixa.
+
+As frases foram encurtadas, tirando o que a faixa já diz (o destino) e
+mantendo o que decide a placa (a permissão):
+
+| Antes | Depois |
+|---|---|
+| Postar a foto do Téo sem pedir permissão a ele. | Postar a foto do Téo sem a permissão dele. |
+| Mostrar o desenho da Bia, que ela deixou expor. | Mostrar o desenho que a Bia deixou. |
+| Escrever o apelido que a Bia não gosta no grupo. | Usar o apelido que a Bia não gosta. |
+| Postar a foto do grupo que todos deixaram postar. | Postar a foto que todos deixaram. |
+| Mandar o endereço do Téo para alguém que não conheço. | Mandar o endereço do Téo a um estranho. |
+| Enviar o trabalho da dupla, com o nome dos dois. | Enviar o trabalho da dupla, que concordou. |
+| Postar o experimento sem rostos no site da escola. | Postar o experimento sem mostrar rostos. |
+
+**Contar letras não prevê a quebra**: com a DynaPuff, "Postar a foto que
+todos deixaram postar." (40 letras) dá três linhas e "Postar a foto do Téo
+sem a permissão dele." (42) dá duas. Por isso o limite não virou número no
+`validateLevels`: `signs.ts` mede a frase montada e, em desenvolvimento, avisa
+no console quando ela passa do topo da faixa.

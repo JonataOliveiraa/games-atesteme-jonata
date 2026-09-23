@@ -25,6 +25,10 @@ export const HUD = {
     dotX: 122,
     dotGap: 40,
     dotR: 13,
+    /** A pílula do nível: distância das bolinhas, altura e folga do texto. */
+    levelGap: 24,
+    levelH: 40,
+    levelPadX: 18,
     orderX: 640,
     orderW: 620,
     livesX: 1058,

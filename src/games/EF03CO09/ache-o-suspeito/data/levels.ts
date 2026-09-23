@@ -67,7 +67,7 @@ export const LEVELS: LevelDef[] = [
                     },
                     {
                         id: 'experimento-site',
-                        message: 'Postar o experimento sem rostos no site da escola.',
+                        message: 'Postar o experimento sem mostrar rostos.',
                         destination: 'SITE DA ESCOLA',
                         owner: 'self',
                         audience: 'school-site',
@@ -223,7 +223,7 @@ export const LEVELS: LevelDef[] = [
                 cards: [
                     {
                         id: 'foto-teo-sem-permissao',
-                        message: 'Postar a foto do Téo sem pedir permissão a ele.',
+                        message: 'Postar a foto do Téo sem a permissão dele.',
                         destination: 'PERFIL PÚBLICO',
                         owner: 'peer',
                         consent: false,
@@ -233,7 +233,7 @@ export const LEVELS: LevelDef[] = [
                     },
                     {
                         id: 'desenho-bia-autorizado',
-                        message: 'Mostrar o desenho da Bia, que ela deixou expor.',
+                        message: 'Mostrar o desenho que a Bia deixou.',
                         destination: 'SITE DA ESCOLA',
                         owner: 'peer',
                         consent: true,
@@ -258,7 +258,7 @@ export const LEVELS: LevelDef[] = [
                 cards: [
                     {
                         id: 'apelido-bia',
-                        message: 'Escrever o apelido que a Bia não gosta no grupo.',
+                        message: 'Usar o apelido que a Bia não gosta.',
                         destination: 'GRUPO DA ESCOLA',
                         owner: 'peer',
                         consent: false,
@@ -268,7 +268,7 @@ export const LEVELS: LevelDef[] = [
                     },
                     {
                         id: 'foto-grupo-autorizada',
-                        message: 'Postar a foto do grupo que todos deixaram postar.',
+                        message: 'Postar a foto que todos deixaram.',
                         destination: 'GRUPO DAS FAMÍLIAS',
                         owner: 'peer',
                         consent: true,
@@ -293,7 +293,7 @@ export const LEVELS: LevelDef[] = [
                 cards: [
                     {
                         id: 'endereco-teo',
-                        message: 'Mandar o endereço do Téo para alguém que não conheço.',
+                        message: 'Mandar o endereço do Téo a um estranho.',
                         destination: 'PESSOA DESCONHECIDA',
                         owner: 'peer',
                         consent: false,
@@ -303,7 +303,7 @@ export const LEVELS: LevelDef[] = [
                     },
                     {
                         id: 'trabalho-da-dupla',
-                        message: 'Enviar o trabalho da dupla, com o nome dos dois.',
+                        message: 'Enviar o trabalho da dupla, que concordou.',
                         destination: 'PROFESSORA',
                         owner: 'peer',
                         consent: true,

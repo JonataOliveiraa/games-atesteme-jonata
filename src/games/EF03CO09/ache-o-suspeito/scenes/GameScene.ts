@@ -109,6 +109,7 @@ export class GameScene extends Phaser.Scene {
         })
         this.band = createBand(this)
         this.hud = createHud(this, {
+            level: this.level.level,
             waves: this.level.waves.length,
             onHelp: () => this.replayTutorial(),
         })
