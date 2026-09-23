@@ -17,18 +17,19 @@ export const DEPTH = {
     overlay: 400,
 }
 
+/** O header é uma barra reta de ponta a ponta: nível, bolinhas das fases e a ajuda. */
 export const HUD = {
-    plate: { x: 12, y: 8, w: 1256, h: 68, r: 24 },
-    pipCy: 42,
-    dotR: 11,
-    dotGap: 32,
-    groupGap: 26,
-    help: { x: 1214, y: 42, r: 30 },
+    bar: { h: 64 },
+    pipCy: 32,
+    dotR: 10,
+    dotGap: 28,
+    groupGap: 20,
+    help: { x: 1236, y: 32, r: 24 },
 }
 
 export const ZONES = {
-    top: 92,
-    cy: 248,
+    top: 80,
+    cy: 236,
     h: 250,
     gap: 24,
     wide: 336,
@@ -46,7 +47,19 @@ export const MAT = {
     touch: { w: 268, h: 168 },
 }
 
-export const DETECTIVE = { x: 146, y: 486, size: 196 }
+/** O prato de exposição: centro da imagem e largura em tela. */
+export const PEDESTAL = { y: 533, w: 310 }
+
+export const DETECTIVE = { x: 150, y: 500, size: 240 }
+
+/**
+ * O balão da detetive mora no vão entre ela e o pedestal, e nunca sai dele:
+ * à esquerda o rosto dela, à direita o veículo (o pedestal começa em x 485),
+ * em cima os cartões (acabam em y 383), embaixo o álbum. Por isso ele é
+ * estreito e cresce para baixo, com o pictograma EM CIMA da frase, e não ao
+ * lado. A ponta aponta sempre para a boca.
+ */
+export const BUBBLE = { left: 276, w: 206, cy: 484, minTop: 392, tailX: 232, tailY: 500 }
 
 export const ALBUM = {
     top: 600,

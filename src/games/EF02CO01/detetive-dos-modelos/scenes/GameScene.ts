@@ -8,7 +8,7 @@ import { FX } from '../../../../shared/effects/FX'
 import { createLives, type Lives } from '../../../../shared/hud/createLives'
 import { vidasIniciais } from '../../../../shared/level/vidasIniciais'
 import { GAME_DONE, LEVELS, LEVEL_DONE, TOTAL_TESTS, testsBefore, testsInLevel } from '../data/levels'
-import { MISS_LINE, matchesZone, fittingZone, vehicleOf, zoneAttribute, zoneKey } from '../data/vehicles'
+import { matchesZone, fittingZone, vehicleOf, zoneKey } from '../data/vehicles'
 import { playTest } from './theatre'
 import { C } from '../data/theme'
 import { MAT } from '../data/layout'
@@ -22,7 +22,9 @@ import { pause } from './timing'
 import type { LevelDef, LevelNumber, PhaseDef, VehicleModel } from '../types'
 
 const GAME_ID = 'detetive-dos-modelos'
-const CHEER = ['Funcionou!', 'Combinou!', 'Isso mesmo!']
+// a detetive só reage: quem explica o acerto e o erro é a animação do teste
+const CHEER = ['Oba!', 'Uhuu!', 'Que chique!', 'Hehe!']
+const OOPS = ['Eita!', 'Ops!', 'Hmm...', 'Ih!']
 
 export class GameScene extends Phaser.Scene {
     private lives!: Lives
@@ -117,6 +119,8 @@ export class GameScene extends Phaser.Scene {
     private shutdownScene() {
         this.gen++
         this.zones?.destroy()
+        this.zones = undefined
+        this.matZone = undefined
         this.piece?.destroy()
         this.detective?.destroy()
         this.album?.destroy()
@@ -133,11 +137,14 @@ export class GameScene extends Phaser.Scene {
 
     private setEnabled(on: boolean) {
         this.zones?.setEnabled(on)
-        if (on) this.matZone.setInteractive({ useHandCursor: true })
-        else this.matZone.disableInteractive()
+        if (on) this.matZone?.setInteractive({ useHandCursor: true })
+        else this.matZone?.disableInteractive()
     }
 
-    private matZone!: Phaser.GameObjects.Zone
+    // a cena é a mesma instância depois de um `restart`: o que ela guarda de uma
+    // partida para a outra tem de ser zerado no `shutdown`, senão a partida nova
+    // acha a zona antiga, já destruída, e o nível seguinte não abre
+    private matZone?: Phaser.GameObjects.Zone
 
     private startPhase() {
         this.zones?.destroy()
@@ -256,15 +263,15 @@ export class GameScene extends Phaser.Scene {
         })
         if (gen !== this.gen) return
 
-        if (ok) await this.succeed(index, key)
+        if (ok) await this.succeed(key)
         else await this.miss(index)
     }
 
-    private async succeed(index: number, key: string) {
+    private async succeed(key: string) {
         const gen = this.gen
         this.reward()
         this.detective.mood('smile')
-        this.detective.say(CHEER[this.resolved % CHEER.length], C.ok)
+        this.detective.say(Phaser.Utils.Array.GetRandom(CHEER))
 
         const slot = this.album.slotAt(this.vehicleIndex)
         await this.piece.toAlbum(slot, this.album.slotSize())
@@ -286,12 +293,10 @@ export class GameScene extends Phaser.Scene {
     private async miss(index: number) {
         const gen = this.gen
         const zones = this.zones!
-        const zone = this.phase.zones[index]
 
         this.penalize()
-        const attr = zoneAttribute(zone)
         this.detective.mood('think')
-        this.detective.say(MISS_LINE[attr], C.bad, attr)
+        this.detective.say(Phaser.Utils.Array.GetRandom(OOPS))
 
         void zones.deny(index)
         await pause(this, 900)

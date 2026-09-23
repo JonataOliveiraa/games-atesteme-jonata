@@ -2,7 +2,7 @@ import Phaser from 'phaser'
 import { Ease, FX, type FxTarget } from '../../../../shared/effects/FX'
 import { C, CSS, FONT, ZONE_COLOR } from '../data/theme'
 import { DEPTH, ZONES, zoneWidth, zoneX } from '../data/layout'
-import { zoneKey, zoneName } from '../data/vehicles'
+import { CARD_VIEW, SCENERY, zoneKey, zoneName } from '../data/vehicles'
 import { drawAttribute, drawLock } from './icons'
 import { pause } from './timing'
 import type { Point, TestZone } from '../types'
@@ -132,6 +132,47 @@ function paintScene(g: Phaser.GameObjects.Graphics, key: string, w: number, h: n
     g.lineBetween(-38, -52, 38, 24)
 }
 
+/**
+ * O cartão mostra um RECORTE do mesmo cenário que a animação do teste mostra
+ * inteiro: a criança toca no céu e vê o veículo ir para aquele céu. O recorte
+ * é feito com `setCrop` e os cantos arredondados com uma máscara.
+ */
+function addSceneArt(
+    scene: Phaser.Scene,
+    parts: Phaser.GameObjects.GameObject[],
+    key: string,
+    cx: number,
+    cy: number,
+    w: number,
+    h: number,
+    r: number,
+): boolean {
+    const view = CARD_VIEW[key]
+    const texture = SCENERY[key]
+    if (!view || !texture || !scene.textures.exists(texture)) return false
+
+    const source = scene.textures.get(texture).getSourceImage() as { width: number; height: number }
+    const rh = Math.min(source.height, source.height * view.h)
+    const rw = Math.min(source.width, rh * (w / h))
+    const rx = Phaser.Math.Clamp(source.width * view.cx - rw / 2, 0, source.width - rw)
+    const ry = Phaser.Math.Clamp(source.height * view.cy - rh / 2, 0, source.height - rh)
+    const s = h / rh
+
+    const image = scene.add.image(cx - w / 2 - rx * s, cy - h / 2 - ry * s, texture)
+        .setOrigin(0)
+        .setScale(s)
+        .setCrop(rx, ry, rw, rh)
+        .setDepth(DEPTH.zoneArt)
+
+    const shape = scene.make.graphics({ x: 0, y: 0 }, false)
+    shape.fillStyle(0xffffff, 1)
+    shape.fillRoundedRect(cx - w / 2, cy - h / 2, w, h, r)
+    image.setMask(shape.createGeometryMask())
+
+    parts.push(image, shape)
+    return true
+}
+
 export function createZones(
     scene: Phaser.Scene,
     zones: TestZone[],
@@ -157,9 +198,11 @@ export function createZones(
         frame.fillRoundedRect(cx - w / 2 - 8, cy - h / 2 - 8, w + 16, h + 16, r + 8)
         parts.push(frame)
 
-        const art = scene.add.graphics().setDepth(DEPTH.zoneArt).setPosition(cx, cy)
-        paintScene(art, key, w, h)
-        parts.push(art)
+        if (!addSceneArt(scene, parts, key, cx, cy, w, h, r)) {
+            const art = scene.add.graphics().setDepth(DEPTH.zoneArt).setPosition(cx, cy)
+            paintScene(art, key, w, h)
+            parts.push(art)
+        }
 
         const ribbon = scene.add.graphics().setDepth(DEPTH.zoneFace)
         ribbon.fillStyle(C.ink, 1)

@@ -1,16 +1,45 @@
 import Phaser from 'phaser'
 import { Ease, FX, type FxTarget } from '../../../../shared/effects/FX'
 import { C, CSS, FONT } from '../data/theme'
-import { DEPTH, H, MAT, VEHICLE_FRAME, W } from '../data/layout'
+import { DEPTH, H, MAT, PEDESTAL, VEHICLE_FRAME, W } from '../data/layout'
 import { settled } from './timing'
 import type { Point, VehicleModel } from '../types'
 
 const fx = (o: unknown) => o as unknown as FxTarget
 
+/**
+ * O tabuleiro é a SALA da detetive, e não o céu: com céu de fundo, o cartão
+ * CÉU sumia dentro dele. A imagem traz a parede e o piso de tábuas, e com ela
+ * o piso listrado em Graphics deixa de existir.
+ */
+function drawRoom(scene: Phaser.Scene, made: Phaser.GameObjects.GameObject[]) {
+    const source = scene.textures.get('bg-sala').getSourceImage()
+    const scale = Math.max(W / (source.width || 1), H / (source.height || 1))
+    made.push(scene.add.image(W / 2, H / 2, 'bg-sala')
+        .setDisplaySize(source.width * scale, source.height * scale)
+        .setDepth(DEPTH.sky))
+}
+
+/** O prato de exposição onde o veículo fica esperando o teste. */
+function drawPedestal(scene: Phaser.Scene, made: Phaser.GameObjects.GameObject[]) {
+    const shadow = scene.add.graphics().setDepth(DEPTH.plate)
+    shadow.fillStyle(C.ink, 0.22)
+    shadow.fillEllipse(MAT.x, PEDESTAL.y + PEDESTAL.w * 0.11, PEDESTAL.w * 1.02, PEDESTAL.w * 0.2)
+    made.push(shadow)
+
+    const source = scene.textures.get('pedestal').getSourceImage()
+    const scale = PEDESTAL.w / (source.width || 1)
+    made.push(scene.add.image(MAT.x, PEDESTAL.y, 'pedestal')
+        .setScale(scale)
+        .setDepth(DEPTH.plate))
+}
+
 export function drawBackdrop(scene: Phaser.Scene) {
     const made: Phaser.GameObjects.GameObject[] = []
 
-    if (scene.textures.exists('bg-ceu')) {
+    if (scene.textures.exists('bg-sala')) {
+        drawRoom(scene, made)
+    } else if (scene.textures.exists('bg-ceu')) {
         const source = scene.textures.get('bg-ceu').getSourceImage()
         const sw = source.width || 1
         const sh = source.height || 1
@@ -25,6 +54,15 @@ export function drawBackdrop(scene: Phaser.Scene) {
         made.push(sky)
     }
 
+    if (!scene.textures.exists('bg-sala')) drawFloor(scene, made)
+
+    if (scene.textures.exists('pedestal')) drawPedestal(scene, made)
+    else drawDisc(scene, made)
+
+    return made
+}
+
+function drawFloor(scene: Phaser.Scene, made: Phaser.GameObjects.GameObject[]) {
     const ground = scene.add.graphics().setDepth(DEPTH.ground)
     ground.fillStyle(C.ink, 1)
     ground.fillRect(0, MAT.top - 16, W, 12)
@@ -37,7 +75,9 @@ export function drawBackdrop(scene: Phaser.Scene) {
     ground.fillStyle(C.white, 0.16)
     ground.fillRect(0, MAT.top - 6, W, 8)
     made.push(ground)
+}
 
+function drawDisc(scene: Phaser.Scene, made: Phaser.GameObjects.GameObject[]) {
     const disc = scene.add.graphics().setDepth(DEPTH.plate)
     disc.fillStyle(C.ink, 0.28)
     disc.fillEllipse(MAT.x, MAT.y + 66, 300, 66)
@@ -50,8 +90,6 @@ export function drawBackdrop(scene: Phaser.Scene) {
     disc.fillStyle(C.warn, 0.22)
     disc.fillEllipse(MAT.x, MAT.y + 55, 206, 34)
     made.push(disc)
-
-    return made
 }
 
 export function createVehiclePiece(scene: Phaser.Scene) {

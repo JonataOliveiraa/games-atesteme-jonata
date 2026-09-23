@@ -58,8 +58,23 @@ export function zoneKey(zone: TestZone): string {
 
 export const SCENERY: Record<string, string> = {
     air: 'bg-ceu',
-    land: 'bg-asfalto',
+    land: 'bg-estrada',
     water: 'bg-mar',
+}
+
+/**
+ * O pedaço do cenário que o CARTÃO mostra, em frações da imagem: centro e
+ * altura. A largura sai da proporção do cartão.
+ *
+ * O quarto de baixo do cartão fica sob a fita com o nome, então o que precisa
+ * ser lido mora no meio: o sol e as nuvens no céu, a faixa tracejada na
+ * estrada, o horizonte e as ondas no mar. Na animação do teste o mesmo
+ * arquivo aparece inteiro.
+ */
+export const CARD_VIEW: Record<string, { cx: number; cy: number; h: number }> = {
+    air: { cx: 0.76, cy: 0.38, h: 0.64 },
+    land: { cx: 0.44, cy: 0.65, h: 0.68 },
+    water: { cx: 0.5, cy: 0.58, h: 0.64 },
 }
 
 export const MISS_LINE: Record<string, string> = {
