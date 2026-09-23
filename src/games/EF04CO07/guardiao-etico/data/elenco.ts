@@ -23,7 +23,9 @@ export const DESTINATIONS: Record<DestinationId, { title: string; who: string }>
 export const LEAK_NOTE: Record<ItemKind, string> = {
     telefone: 'Tem um telefone nesse papel.',
     endereco: 'Tem o endereço da casa de alguém aí.',
-    rosto: 'Tem alguém de outra turma nessa foto.',
+    /* Serve para o rosto de quem não é da turma E para o de quem é: a partir
+     * do jornal da escola, o colega também precisa de tarja. */
+    rosto: 'Tem o rosto de alguém nesse papel.',
     nome: 'Tem nome demais nesse papel pra ir tão longe.',
     assinatura: 'Tem uma assinatura nesse papel.',
     senha: 'Senha não fica escrita na parede.',
