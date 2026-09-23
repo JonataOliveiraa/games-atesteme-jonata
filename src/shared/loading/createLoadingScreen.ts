@@ -233,50 +233,84 @@ export function createLoadingScreen(
     layer.add(conteudo)
 
     const midY = H / 2
-    const card = scene.add.graphics()
-
-    card.fillStyle(theme.cardShadow, 0.45)
-    card.fillRoundedRect(W / 2 - 340, midY - 130, 680, 280, 30)
-    card.fillStyle(theme.card, 1)
-    card.fillRoundedRect(W / 2 - 340, midY - 142, 680, 280, 30)
-    card.fillStyle(theme.cardHighlight, 0.06)
-    card.fillRoundedRect(W / 2 - 328, midY - 132, 656, 86, 22)
-    card.lineStyle(5, theme.cardBorder, 1)
-    card.strokeRoundedRect(W / 2 - 340, midY - 142, 680, 280, 30)
-
-    conteudo.add(card)
+    const CARD_W = 680
+    const BAR_W = 540
+    const BAR_H = 32
+    /** Largura util dos textos dentro do cartao. */
+    const TEXT_W = CARD_W - 80
 
     const stroke = color(theme.titleStroke)
 
-    const title = scene.add.text(W / 2, midY - 86, options.title ?? 'Carregando', {
+    const title = scene.add.text(W / 2, 0, options.title ?? 'Carregando', {
         fontFamily: '"DynaPuff Black", "Arial Black", sans-serif',
         fontSize: '34px',
         color: color(theme.title),
         stroke,
         strokeThickness: 8,
+        align: 'center',
     }).setOrigin(0.5).setResolution(2)
 
-    const subtitle = scene.add.text(W / 2, midY - 30, options.subtitle ?? '', {
+    const subtitle = scene.add.text(W / 2, 0, 'Ag', {
         fontFamily: '"DynaPuff Black", "Arial Black", sans-serif',
         fontSize: '48px',
         color: color(theme.subtitle),
         stroke,
         strokeThickness: 9,
+        align: 'center',
+        wordWrap: { width: TEXT_W, useAdvancedWrap: true },
     }).setOrigin(0.5).setResolution(2)
 
-    const description = scene.add.text(W / 2, midY + 28, options.description ?? 'Preparando...', {
+    const description = scene.add.text(W / 2, 0, options.description ?? 'Preparando...', {
         fontFamily: 'DynaPuff, Arial, sans-serif',
         fontStyle: 'bold',
         fontSize: '20px',
         color: color(theme.description),
+        align: 'center',
+        wordWrap: { width: TEXT_W, useAdvancedWrap: true },
     }).setOrigin(0.5).setResolution(2)
 
-    conteudo.add([title, subtitle, description])
+    /*
+     * O SUBTITULO CABE NO CARTAO.
+     *
+     * Em 48px, sem quebra, "Leia as placas e ache o compartilhamento
+     * suspeito!" passava de 1200px num cartao de 680. Agora ele quebra na
+     * largura do cartao e a fonte desce ate caber em DUAS linhas; o que ele
+     * crescer em altura, o cartao cresce junto (e continua centrado).
+     */
+    const oneLine = subtitle.height
+    subtitle.setText(options.subtitle ?? '')
+    for (let size = 48; size >= 26; size -= 2) {
+        subtitle.setFontSize(size)
+        if (subtitle.getWrappedText().length <= 2 && subtitle.width <= TEXT_W) break
+    }
+    // O titulo e uma linha so: se nao couber, encolhe inteiro.
+    if (title.width > TEXT_W) title.setScale(TEXT_W / title.width)
 
-    const BAR_W = 540
-    const BAR_H = 32
+    const extra = Math.max(0, subtitle.height - oneLine) + Math.max(0, description.height - 28)
+    const cardH = 280 + extra
+    const top = midY - 142 - extra / 2
+
+    const card = scene.add.graphics()
+
+    card.fillStyle(theme.cardShadow, 0.45)
+    card.fillRoundedRect(W / 2 - CARD_W / 2, top + 12, CARD_W, cardH, 30)
+    card.fillStyle(theme.card, 1)
+    card.fillRoundedRect(W / 2 - CARD_W / 2, top, CARD_W, cardH, 30)
+    card.fillStyle(theme.cardHighlight, 0.06)
+    card.fillRoundedRect(W / 2 - CARD_W / 2 + 12, top + 10, CARD_W - 24, 86, 22)
+    card.lineStyle(5, theme.cardBorder, 1)
+    card.strokeRoundedRect(W / 2 - CARD_W / 2, top, CARD_W, cardH, 30)
+
+    // Mesmas distancias de antes com uma linha; o excesso empurra para baixo.
+    const subExtra = Math.max(0, subtitle.height - oneLine)
+    title.setY(top + 56)
+    subtitle.setY(top + 112 + subExtra / 2)
+    description.setY(top + 170 + subExtra + Math.max(0, description.height - 28) / 2)
+
+    conteudo.add([card, title, subtitle, description])
+
     const barX = W / 2 - BAR_W / 2
-    const barY = midY + 68
+    const barY = top + 210 + extra
 
     const track = scene.add.graphics()
     track.fillStyle(theme.progressTrack, 1)

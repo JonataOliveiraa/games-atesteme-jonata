@@ -31,7 +31,7 @@ export class BootScene extends Phaser.Scene {
     preload() {
         createLoadingScreen(this, {
             title: 'Torres dos Formatos',
-            subtitle: 'Escolha o leitor que entende cada estrutura!',
+            subtitle: 'Aceite só o certo!',
             description: 'Ligando os leitores...',
             theme: {
                 background: { kind: 'solid', color: C.grassDark },
