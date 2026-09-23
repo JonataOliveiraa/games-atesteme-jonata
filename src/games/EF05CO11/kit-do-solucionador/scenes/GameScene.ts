@@ -43,6 +43,14 @@ export class GameScene extends Phaser.Scene {
     private usadas: string[] = []
     private escolhida: string | null = null
     private errosNoProblema = 0
+    /**
+     * As casas que já acenderam NESTE problema.
+     *
+     * Fora do problema que pede duas ela nunca guarda nada entre corridas —
+     * é o `comecarProblema` que a zera. É ela que faz a segunda ferramenta
+     * ter só o que sobrou para resolver.
+     */
+    private jaAcesas = new Set<string>()
     private perdeuVidaNoProblema = false
     private solRestante = 0
 
@@ -404,6 +412,7 @@ export class GameScene extends Phaser.Scene {
         this.errosNoProblema = 0
         this.perdeuVidaNoProblema = false
         this.escolhida = null
+        this.jaAcesas.clear()
 
         const camera = this.cameras.main
 
@@ -582,9 +591,67 @@ export class GameScene extends Phaser.Scene {
         this.audio.motor(false)
         this.audio.drone(false)
 
-        const escuras = this.problema.marcadas.filter(x => !acesas.has(x))
-        if (!escuras.length) await this.acertou(f)
-        else await this.falhou(f, escuras)
+        // O que já estava aceso continua aceso: no problema que pede duas, a
+        // primeira corrida deixa uma parte da vila resolvida.
+        acesas.forEach(casa => this.jaAcesas.add(casa))
+        const escuras = this.problema.marcadas.filter(x => !this.jaAcesas.has(x))
+
+        if (!escuras.length) {
+            await this.acertou(f)
+            return
+        }
+
+        /*
+         * A PRIMEIRA DE DUAS.
+         *
+         * Não é erro: é metade do recado dado. A ferramenta sai da mesa se
+         * for das que gastam, as casas que ela acendeu ficam acesas, e a
+         * pergunta que sobra é menor — só o que ficou escuro.
+         */
+        const ajudou = this.problema.marcadas.some(x => acesas.has(x))
+        if (this.problema.duas && ajudou && escuras.length < this.problema.marcadas.length) {
+            await this.meioCaminho(f, escuras)
+            return
+        }
+
+        await this.falhou(f, escuras)
+    }
+
+    /** Uma das duas já foi. O que sobrou escuro vira o problema de agora. */
+    private async meioCaminho(f: Ferramenta, escuras: string[]) {
+        const gen = this.gen
+        this.modo = 'fechando'
+        this.escolhida = null
+        this.audio.resolveu()
+        this.vila.congelarRastro()
+        this.vila.esconderCirculo()
+        this.vila.falar('', 'Metade avisada! Falta quem ficou no escuro.', 'bom', this.problema.vizinho)
+
+        await FX.wait(this, 900)
+        if (gen !== this.gen) return
+
+        this.corrida.limpar()
+        this.hud.mostrarSol(false)
+        this.vila.calar()
+        this.kit.subir()
+
+        if (f.gasta) {
+            await this.kit.gastar(f.id)
+            this.kitAtual = this.kitAtual.filter(x => x !== f.id)
+            this.usadas.push(f.id)
+        } else {
+            this.kit.piscar(f.id)
+            if (!this.usadas.includes(f.id)) this.usadas.push(f.id)
+        }
+        if (gen !== this.gen) return
+
+        // a vila volta a marcar SÓ o que falta: a pergunta encolheu
+        this.vila.marcar(escuras)
+        const xs = escuras.map(id => CASA_POR_ID[id].x)
+        this.olharPara((Math.min(...xs) + Math.max(...xs)) / 2, 420)
+
+        this.modo = 'lendo'
+        this.kit.setEnabled(true)
     }
 
     private async acertou(f: Ferramenta) {
@@ -654,7 +721,15 @@ export class GameScene extends Phaser.Scene {
         if (gen !== this.gen) return
         this.vila.pulsarEscuras(escuras)
 
-        const daria = existeRota(f, this.problema.marcadas)
+        /*
+         * "ESSA DARIA?" — e a pergunta muda no problema que pede duas.
+         *
+         * Lá nenhuma ferramenta dá conta do recado inteiro, e perguntar pelo
+         * recado inteiro condenaria todas elas. O que se cobra é o que ainda
+         * está escuro: era ESSA parte que a ferramenta tinha de alcançar.
+         */
+        const cobrado = this.problema.duas ? escuras : this.problema.marcadas
+        const daria = existeRota(f, cobrado)
 
         /*
          * A regra mais importante do jogo: caminho ruim não é julgamento ruim.
@@ -681,14 +756,12 @@ export class GameScene extends Phaser.Scene {
 
         this.corrida.limpar()
         this.hud.mostrarSol(false)
-        this.vila.marcar(this.problema.marcadas)
+        this.vila.marcar(cobrado)
         this.kit.subir()
         if (!daria) this.kit.esmaecer(f.id)
 
         if (this.errosNoProblema >= 2) {
-            const certa = this.kitAtual.find(id =>
-                existeRota(ferramenta(id), this.problema.marcadas),
-            )
+            const certa = this.kitAtual.find(id => existeRota(ferramenta(id), cobrado))
             if (certa) this.kit.pulsar(certa)
         }
 

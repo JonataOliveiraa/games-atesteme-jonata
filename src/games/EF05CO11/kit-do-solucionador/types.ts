@@ -45,6 +45,16 @@ export interface Problema {
     enunciado: string
     vizinho: number
     marcadas: string[]
+    /**
+     * O PROBLEMA QUE PEDE DUAS.
+     *
+     * As casas marcadas estão longe demais umas das outras para um círculo
+     * só: a criança manda uma ferramenta, ela acende o que alcança, e o que
+     * ficou escuro continua escuro até a segunda sair da mesa. A validação
+     * afirma que NENHUMA ferramenta do kit resolve sozinha e que ALGUM par
+     * resolve — senão o problema é um problema comum com uma etiqueta.
+     */
+    duas?: true
 }
 
 export interface Dia {

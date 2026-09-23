@@ -156,6 +156,43 @@ export function existeRota(f: Ferramenta, marcadas: string[]): boolean {
 export const resolve = existeRota
 
 /**
+ * O QUE UMA FERRAMENTA CONSEGUE ACENDER, no melhor caso.
+ *
+ * Não é "ela resolve?", é "até onde ela chega?" — e é essa a pergunta do
+ * problema que pede duas: a primeira acende o que alcança, e o que sobrou
+ * escuro é o problema da segunda.
+ */
+export function alcanceMaximo(f: Ferramenta): Set<string> {
+    if (!f.avisa) return new Set()
+    if (f.andar === 'planta') return coberturaPlantada(f)
+
+    const todas = new Set<string>()
+    if (f.andar === 'voo') {
+        for (const p of POUSOS) for (const casa of coberturaDosPousos(f, [p])) todas.add(casa)
+        return todas
+    }
+    for (const r of rotas(f.sol)) for (const casa of coberturaDaRota(f, r)) todas.add(casa)
+    return todas
+}
+
+/**
+ * Duas ferramentas juntas dão conta?
+ *
+ * Cada uma faz a rota DELA — não existe rota combinada. Por isso a conta é a
+ * união do que cada uma consegue sozinha, e não uma busca sobre as duas ao
+ * mesmo tempo: são duas corridas, uma depois da outra.
+ */
+export function resolvePar(a: Ferramenta, b: Ferramenta, marcadas: string[]): boolean {
+    if (!a.avisa || !b.avisa || !marcadas.length) return false
+    const minhas = marcadas.filter(id => alcanceMaximo(a).has(id))
+    const dela = marcadas.filter(id => alcanceMaximo(b).has(id))
+    if (!minhas.length || !dela.length) return false
+    if (!marcadas.every(id => minhas.includes(id) || dela.includes(id))) return false
+    // cada uma tem de dar conta da SUA parte numa corrida só
+    return resolve(a, minhas) && resolve(b, dela)
+}
+
+/**
  * O que o jogo pega ANTES de a ferramenta sair da mesa. Só duas coisas: uma
  * ferramenta que não alcança ninguém, e gastar a que vai fazer falta.
  * Tudo o mais se descobre correndo.
@@ -265,8 +302,208 @@ const DIA_3: Dia = {
     ],
 }
 
+/*
+ * ══════════════════════════════════════════════════════════════════════════
+ *  NÍVEL 2 — O SOL
+ * ══════════════════════════════════════════════════════════════════════════
+ *
+ * O círculo já foi aprendido. O assunto agora é o COMPRIMENTO: o sol acaba, e
+ * na bifurcação a ferramenta para e espera. Os problemas daqui separam as
+ * casas ALTAS das casas da RUAZINHA — e com círculo pequeno não dá para servir
+ * os dois lados na mesma corrida. Escolher o ramo errado não custa nada além
+ * do dia: a ferramenta volta para a mesa e a criança escolhe de novo.
+ */
+const DIA_4: Dia = {
+    id: 'd4',
+    titulo: 'De que lado?',
+    falaExagero: 'O telão de novo! Ele não anda, mas ele é GRANDE!',
+    kit: ['bicicleta', 'bilhete', 'telao', 'palpite'],
+    problemas: [
+        {
+            id: 'd4p1',
+            fala: 'Estas três da praça: a feira mudou de dia.',
+            enunciado: 'As três casas em volta da praça precisam saber.',
+            vizinho: 2,
+            marcadas: ['h1', 'h2', 'h3'],
+        },
+        {
+            id: 'd4p2',
+            fala: 'As duas lá de cima: o poço vai ser limpo amanhã.',
+            enunciado: 'Só quem mora no caminho de cima usa aquele poço.',
+            vizinho: 4,
+            marcadas: ['h5', 'h7'],
+        },
+        {
+            id: 'd4p3',
+            fala: 'Só a casa da ruazinha: chegou encomenda pra ela.',
+            enunciado: 'Uma casa só, e ela fica do outro lado da bifurcação.',
+            vizinho: 3,
+            marcadas: ['h6'],
+        },
+    ],
+}
+
+const DIA_5: Dia = {
+    id: 'd5',
+    titulo: 'O sol no morro',
+    falaExagero: 'Hoje eu subo o morro com o MAIOR carro de som da vila!',
+    kit: ['carro', 'drone', 'sino', 'palpite'],
+    problemas: [
+        {
+            id: 'd5p1',
+            fala: 'Estas quatro do meio: vai ter mutirão na horta.',
+            enunciado: 'O miolo da vila inteiro, e nada além dele.',
+            vizinho: 2,
+            marcadas: ['h4', 'h5', 'h6', 'h7'],
+        },
+        {
+            id: 'd5p2',
+            fala: 'As quatro lá do alto: o ônibus escolar muda de horário.',
+            enunciado: 'Só o morro — e o sol mal dá pra chegar lá em cima.',
+            vizinho: 4,
+            marcadas: ['h9', 'h10', 'h11', 'h12'],
+        },
+        {
+            id: 'd5p3',
+            fala: 'E estas três da praça: a feira volta pro sábado.',
+            enunciado: 'De volta ao começo da estrada, com o que sobrou na mesa.',
+            vizinho: 5,
+            marcadas: ['h1', 'h2', 'h3'],
+        },
+    ],
+}
+
+const DIA_6: Dia = {
+    id: 'd6',
+    titulo: 'A ruazinha e o alto',
+    falaExagero: 'Um dia desses eu levo o telão pro morro. Você vai ver!',
+    kit: ['bicicleta', 'carro', 'quadro', 'palpite'],
+    problemas: [
+        {
+            id: 'd6p1',
+            fala: 'Estas duas da praça: o correio passa mais cedo.',
+            enunciado: 'Duas casas coladas na praça — a ferramenta nem precisa sair.',
+            vizinho: 3,
+            marcadas: ['h1', 'h2'],
+        },
+        {
+            id: 'd6p2',
+            fala: 'A da ruazinha e a do fim da reta: vai passar caminhão.',
+            enunciado: 'As duas estão no caminho de BAIXO, e só nele.',
+            vizinho: 2,
+            marcadas: ['h6', 'h8'],
+        },
+        {
+            id: 'd6p3',
+            fala: 'As duas lá no alto do morro: a água volta hoje.',
+            enunciado: 'O fim da subida, que é onde o sol quase não chega.',
+            vizinho: 4,
+            marcadas: ['h10', 'h11'],
+        },
+    ],
+}
+
+/*
+ * ══════════════════════════════════════════════════════════════════════════
+ *  NÍVEL 3 — O QUE NÃO GASTA, E O QUE PEDE DUAS
+ * ══════════════════════════════════════════════════════════════════════════
+ *
+ * Duas descobertas, e as duas são sobre a MESA. A primeira: algumas
+ * ferramentas voltam — o sino toca de novo, a porta continua lá, o quadro
+ * fica no poste —, e elas são a resposta do dia inteiro em vez de a resposta
+ * de um problema. A segunda: existe recado que nenhum círculo cobre sozinho,
+ * e aí vão duas, uma depois da outra.
+ */
+const DIA_7: Dia = {
+    id: 'd7',
+    titulo: 'A mesa não esvazia',
+    falaExagero: 'Eu trouxe o telão! Um telão resolve tudo! ...resolve?',
+    kit: ['porta', 'telao', 'bilhete', 'palpite'],
+    problemas: [
+        {
+            id: 'd7p1',
+            fala: 'Estas três da praça: a reunião é hoje à noite.',
+            enunciado: 'A praça inteira, e é o único problema que o telão pega.',
+            vizinho: 2,
+            marcadas: ['h1', 'h2', 'h3'],
+        },
+        {
+            id: 'd7p2',
+            fala: 'Estas duas do caminho de cima: falta luz na parte alta.',
+            enunciado: 'Duas casas do ramo de cima, perto uma da outra.',
+            vizinho: 4,
+            marcadas: ['h4', 'h5'],
+        },
+        {
+            id: 'd7p3',
+            fala: 'Só a da ruazinha: o gás dela chegou.',
+            enunciado: 'Uma casa só, do outro lado da bifurcação.',
+            vizinho: 3,
+            marcadas: ['h6'],
+        },
+    ],
+}
+
+const DIA_8: Dia = {
+    id: 'd8',
+    titulo: 'O sino toca de novo',
+    falaExagero: 'Carro de som! Esse sim! Esse dá pra usar o dia inteiro!',
+    kit: ['sino', 'carro', 'bilhete', 'palpite'],
+    problemas: [
+        {
+            id: 'd8p1',
+            fala: 'Estas quatro do meio: o médico chega ao meio-dia.',
+            enunciado: 'O miolo da vila, exatamente o que o sino alcança.',
+            vizinho: 2,
+            marcadas: ['h4', 'h5', 'h6', 'h7'],
+        },
+        {
+            id: 'd8p2',
+            fala: 'Estas duas, de novo no meio: a consulta atrasou.',
+            enunciado: 'A mesma região, outra notícia — e o sino continua lá.',
+            vizinho: 3,
+            marcadas: ['h5', 'h6'],
+        },
+        {
+            id: 'd8p3',
+            fala: 'As duas do meio do morro: o médico sobe depois.',
+            enunciado: 'Longe, e só uma ferramenta do kit chega até lá.',
+            vizinho: 4,
+            marcadas: ['h9', 'h10'],
+        },
+    ],
+}
+
+const DIA_9: Dia = {
+    id: 'd9',
+    titulo: 'Duas de uma vez',
+    falaExagero: 'Uma ferramenta só? Pra isso? Nem a MINHA dá conta!',
+    kit: ['quadro', 'drone', 'bilhete', 'palpite'],
+    problemas: [
+        {
+            id: 'd9p1',
+            fala: 'Estas duas da praça: a escola abre mais tarde.',
+            enunciado: 'A praça, com o quadro que fica no poste.',
+            vizinho: 2,
+            marcadas: ['h1', 'h2'],
+        },
+        {
+            id: 'd9p2',
+            fala: 'A da praça E a lá do alto: as duas ganharam horta.',
+            enunciado:
+                'Uma na praça e a outra no alto do morro. Nenhum círculo da vila'
+                + ' cobre as duas: vão duas ferramentas, uma de cada vez.',
+            vizinho: 5,
+            marcadas: ['h2', 'h11'],
+            duas: true,
+        },
+    ],
+}
+
 export const LEVELS: LevelDef[] = [
     { level: 1, nome: 'O dia da vila', dias: [DIA_1, DIA_2, DIA_3] },
+    { level: 2, nome: 'O sol', dias: [DIA_4, DIA_5, DIA_6] },
+    { level: 3, nome: 'O que fica na mesa', dias: [DIA_7, DIA_8, DIA_9] },
 ]
 
 // ─────────────────────────────────────────────────────────── a validação
@@ -277,6 +514,27 @@ function varrerDia(dia: Dia, nivel: number) {
         const p = dia.problemas[i]
         const aindaVem = dia.problemas.slice(i + 1)
         let saida = false
+
+        /*
+         * O PROBLEMA QUE PEDE DUAS anda de par em par.
+         *
+         * A ordem importa para o que sobra na mesa: mandar primeiro a que
+         * gasta e depois a que fica não é o mesmo kit do contrário. Por isso
+         * os dois sentidos entram na busca.
+         */
+        if (p.duas) {
+            for (const a of kit) {
+                for (const b of kit) {
+                    if (a === b) continue
+                    const fa = ferramenta(a)
+                    const fb = ferramenta(b)
+                    if (!resolvePar(fa, fb, p.marcadas)) continue
+                    const resto = kit.filter(x => !(x === a && fa.gasta) && !(x === b && fb.gasta))
+                    if (visita(i + 1, resto)) saida = true
+                }
+            }
+            return saida
+        }
 
         for (const id of kit) {
             const f = ferramenta(id)
@@ -326,11 +584,46 @@ function validar() {
                     if (!CASA_POR_ID[id]) throw new Error(`[kit] ${p.id} marca casa inexistente: ${id}`)
                 }
                 const ferramentas = dia.kit.map(ferramenta)
+
+                if (p.duas) {
+                    if (nivel.level !== 3) {
+                        throw new Error(`[kit] ${p.id}: o problema de duas é o assunto do nível 3`)
+                    }
+                    if (ferramentas.some(f => resolve(f, p.marcadas))) {
+                        throw new Error(`[kit] ${p.id} pede duas e alguém do kit resolve sozinho`)
+                    }
+                    const par = ferramentas.some(a =>
+                        ferramentas.some(b => a !== b && resolvePar(a, b, p.marcadas)))
+                    if (!par) throw new Error(`[kit] ${p.id} pede duas e nenhum par do kit dá conta`)
+                    continue
+                }
+
                 if (!ferramentas.some(f => resolve(f, p.marcadas))) {
                     throw new Error(`[kit] ${p.id} não tem ferramenta que resolva no kit do dia`)
                 }
                 if (!ferramentas.some(f => !resolve(f, p.marcadas))) {
                     throw new Error(`[kit] ${p.id} não tem decisão: tudo no kit resolve`)
+                }
+            }
+
+            /*
+             * A ROTA É DECISÃO — a regra do nível 2.
+             *
+             * Não basta existir solução: tem de existir um problema em que a
+             * ferramenta certa ainda pode errar o RAMO. Sem isto o nível 2
+             * vira o nível 1 com outras casas, e a bifurcação nunca é uma
+             * pergunta de verdade.
+             */
+            if (nivel.level === 2) {
+                const temEscolha = dia.problemas.some(p =>
+                    dia.kit.map(ferramenta).some(f => {
+                        if (f.andar !== 'estrada' || !resolve(f, p.marcadas)) return false
+                        const possiveis = rotas(f.sol)
+                        return possiveis.some(r => !cobre(coberturaDaRota(f, r), p.marcadas))
+                            && possiveis.some(r => cobre(coberturaDaRota(f, r), p.marcadas))
+                    }))
+                if (!temEscolha) {
+                    throw new Error(`[kit] o dia ${dia.id} não tem escolha de rota — é nível 1`)
                 }
             }
 
