@@ -260,7 +260,7 @@ export class GameScene extends Phaser.Scene {
     private async showHint() {
         if (this.phase !== 'editing' && this.phase !== 'carrying') return
         const gen = this.gen
-        const hint = this.request.hint(this.list, this.startList)
+        const hint = this.request.hint(this.list, this.startList, this.carried?.who)
 
         if (hint.kind === 'pin' && !this.carried) return
         const point = hint.kind === 'chip'

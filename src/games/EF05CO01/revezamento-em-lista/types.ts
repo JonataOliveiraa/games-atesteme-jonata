@@ -23,7 +23,14 @@ export interface Request {
     line: string
     why: string
     solves(list: Swimmer[], start: Swimmer[]): boolean
-    hint(list: Swimmer[], start: Swimmer[]): Hint
+    /**
+     * `carried` é quem está NA MÃO da criança agora, e não está em `list`.
+     *
+     * Sem ele o pedido não distingue "a Bia ainda está no banco" de "a Bia já
+     * está na mão" — as duas coisas são a mesma ausência da água —, e a dica
+     * mandaria pegar de novo quem já foi pega.
+     */
+    hint(list: Swimmer[], start: Swimmer[], carried?: Swimmer): Hint
 }
 
 export interface Heat {
