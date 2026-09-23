@@ -1,5 +1,5 @@
 import type { Edge, LevelDef, Link, PhaseDef, Rider, Station } from '../types'
-import { hasEdge, hops, key } from './graph'
+import { hasEdge, hops, key, pathOf } from './graph'
 import { STATION, TRAY } from './layout'
 
 /* ─────────────────────────── o veredito, em função ────────────────────── */
@@ -17,6 +17,104 @@ export const served = (rider: Rider, edges: Edge[]) => {
 
 export const stuck = (phase: PhaseDef, edges: Edge[]) =>
     phase.riders.filter(rider => !served(rider, edges))
+
+/**
+ * O TRILHO MAIS USADO da rede que a criança montou.
+ *
+ * A obra cai onde o movimento é maior — não num trilho escolhido a dedo no
+ * arquivo de dados. É por isso que ela dói: some justamente o que estava
+ * segurando a cidade, e sempre num lugar diferente conforme a rede que ela
+ * projetou.
+ *
+ * Empate vai para o primeiro construído, que é o mais antigo — e ficar velho
+ * é um bom motivo para uma obra.
+ */
+export function busiestEdge(phase: PhaseDef, edges: Edge[]): Edge | null {
+    const traffic = new Map<string, number>()
+    phase.riders.forEach(rider => {
+        const path = pathOf(edges, rider.from, rider.to)
+        if (!path) return
+        for (let i = 0; i + 1 < path.length; i++) {
+            const k = key(path[i], path[i + 1])
+            traffic.set(k, (traffic.get(k) ?? 0) + 1)
+        }
+    })
+
+    /*
+     * A CIDADE NÃO FECHA A ÚNICA ENTRADA DE UM LUGAR.
+     *
+     * Se o trilho mais movimentado for o único que a cidade permite até uma
+     * estação, fechá-lo não é uma obra: é apagar aquela estação do mapa, e
+     * nenhuma peça reconecta o que não tem por onde. A obra procura o mais
+     * movimentado ENTRE os que deixam conserto possível.
+     */
+    const closable = (edge: Edge) =>
+        phase.stations.every(station => {
+            if (station.id !== edge.a && station.id !== edge.b) return true
+            return phase.links.some(
+                l =>
+                    (l.a === station.id || l.b === station.id)
+                    && key(l.a, l.b) !== key(edge.a, edge.b),
+            )
+        })
+
+    const open = edges.filter(closable)
+    if (!open.length) return null
+
+    let best: Edge | null = null
+    let most = 0
+    open.forEach(edge => {
+        const n = traffic.get(key(edge.a, edge.b)) ?? 0
+        if (n > most) {
+            most = n
+            best = edge
+        }
+    })
+    return most > 0 ? best : open[0]
+}
+
+/**
+ * A FASE DEPOIS DO SEGUNDO ATO.
+ *
+ * A mesma função serve a cena e a validação: a cena precisa da fase viva para
+ * continuar jogando, e a validação precisa dela para afirmar que o conserto é
+ * possível. Duas contas diferentes para a mesma coisa é como um nível passa a
+ * ser jogável na conferência e impossível na tela.
+ */
+export function afterTwist(phase: PhaseDef, edges: Edge[]): { phase: PhaseDef; edges: Edge[] } {
+    const twist = phase.twist
+    if (!twist) return { phase, edges }
+
+    if (twist.kind === 'chegada') {
+        return {
+            phase: {
+                ...phase,
+                stations: [...phase.stations, twist.station],
+                links: [...phase.links, ...twist.links],
+                riders: [...phase.riders, ...twist.riders],
+                tray: twist.tray,
+                twist: undefined,
+            },
+            edges,
+        }
+    }
+
+    // A obra TIRA o trilho: ele sai da rede montada e some da lista de
+    // ligações possíveis — não dá para simplesmente reconstruir o que fechou.
+    const gone = busiestEdge(phase, edges)
+    const closed = gone ? [{ a: gone.a, b: gone.b }] : []
+    const isClosed = (a: string, b: string) => closed.some(c => key(c.a, c.b) === key(a, b))
+    return {
+        phase: {
+            ...phase,
+            links: phase.links.filter(l => !isClosed(l.a, l.b)),
+            closed,
+            tray: twist.tray,
+            twist: undefined,
+        },
+        edges: edges.filter(e => !isClosed(e.a, e.b)),
+    }
+}
 
 export const solved = (phase: PhaseDef, edges: Edge[]) => stuck(phase, edges).length === 0
 
@@ -179,6 +277,248 @@ export const LEVELS: LevelDef[] = [
             },
         ],
     },
+
+    /*
+     * ══════════════════════════════════════════════════════════════════════
+     *  NÍVEL 2 — QUEM TEM PRESSA
+     * ══════════════════════════════════════════════════════════════════════
+     *
+     * No nível 1 bastava EXISTIR caminho. Aqui alguns passageiros têm
+     * pontinhos no balão: eles aguentam um número de trilhos, e não mais que
+     * isso. Ligar tudo em corrente continua conectando todo mundo — e passa a
+     * não bastar, porque a corrente é longa. É aí que a FORMA da rede começa
+     * a importar, e não só se ela é inteira.
+     *
+     * A fase 2.2 estreia o segundo ato: depois que o primeiro trem chega, a
+     * biblioteca abre com duas pessoas querendo ir até lá, e vem UMA peça
+     * para ligá-la. A cidade não espera a rede ficar pronta.
+     */
+    {
+        level: 2,
+        title: 'Quem tem pressa',
+        goal: 'Ligue tudo — e curto para quem tem pressa',
+        closing: 'Numa rede não basta chegar: às vezes importa por quantas linhas.',
+        phases: [
+            {
+                /*
+                 * A estreia dos pontinhos. Ligar tudo em corrente ainda
+                 * conecta a cidade inteira, e deixa a Bia com quatro trilhos
+                 * pela frente — que é um a mais do que ela aguenta.
+                 */
+                id: '2.1',
+                world: { w: 2280, h: 1040 },
+                stations: [
+                    at(PLACE.casa, 'casa', 330, 320),
+                    at(PLACE.mercado, 'mercado', 330, 800),
+                    at(PLACE.praca, 'praca', 1000, 560),
+                    at(PLACE.escola, 'escola', 1620, 320),
+                    at(PLACE.estadio, 'estadio', 1900, 800),
+                ],
+                links: [
+                    link('casa', 'mercado'),
+                    link('casa', 'praca'),
+                    link('mercado', 'praca'),
+                    link('praca', 'escola'),
+                    link('praca', 'estadio'),
+                    link('escola', 'estadio'),
+                ],
+                tray: 4,
+                riders: [
+                    rider('teo', 'casa', 'escola', 'Vou pra escola, sem pressa nenhuma.'),
+                    rider('bia', 'mercado', 'estadio', 'O jogo já vai começar! Me leva rápido!', 3),
+                    rider('duda', 'praca', 'casa', 'Tá na hora do meu lanche.'),
+                ],
+            },
+            {
+                /*
+                 * O segundo ato estreia aqui. A rede que resolve o primeiro
+                 * ato não é necessariamente a que aguenta o segundo: quem
+                 * gastar as quatro peças longe do mercado vai ter de ligar a
+                 * biblioteca com a única peça que sobra.
+                 */
+                id: '2.2',
+                world: { w: 2280, h: 1040 },
+                stations: [
+                    at(PLACE.casa, 'casa', 330, 320),
+                    at(PLACE.escola, 'escola', 330, 800),
+                    at(PLACE.praca, 'praca', 1000, 560),
+                    at(PLACE.mercado, 'mercado', 1660, 320),
+                    at(PLACE.estadio, 'estadio', 1660, 820),
+                ],
+                links: [
+                    link('casa', 'escola'),
+                    link('casa', 'praca'),
+                    link('escola', 'praca'),
+                    link('praca', 'mercado'),
+                    link('praca', 'estadio'),
+                    link('mercado', 'estadio'),
+                ],
+                tray: 4,
+                riders: [
+                    rider('teo', 'casa', 'estadio', 'Tenho treino no estádio hoje.'),
+                    rider('bia', 'escola', 'mercado', 'Preciso comprar o lanche antes da aula!', 3),
+                ],
+                twist: {
+                    kind: 'chegada',
+                    station: at(PLACE.biblioteca, 'biblioteca', 2020, 560),
+                    links: [link('biblioteca', 'mercado'), link('biblioteca', 'estadio')],
+                    tray: 1,
+                    riders: [
+                        rider('duda', 'casa', 'biblioteca', 'Abriu biblioteca! Quero pegar um livro.'),
+                        rider('rafa', 'escola', 'biblioteca', 'Eu também vou! Tenho que devolver o meu.'),
+                    ],
+                },
+            },
+            {
+                /*
+                 * Seis estações e dois apressados que puxam para lados
+                 * diferentes: a praça vira o centro, e é quase sempre por ela
+                 * que os dois caminhos curtos passam.
+                 */
+                id: '2.3',
+                world: { w: 2500, h: 1100 },
+                stations: [
+                    at(PLACE.casa, 'casa', 330, 330),
+                    at(PLACE.mercado, 'mercado', 330, 830),
+                    at(PLACE.praca, 'praca', 1000, 580),
+                    at(PLACE.escola, 'escola', 1620, 330),
+                    at(PLACE.estadio, 'estadio', 1620, 830),
+                    at(PLACE.hospital, 'hospital', 2200, 580),
+                ],
+                links: [
+                    link('casa', 'mercado'),
+                    link('casa', 'praca'),
+                    link('mercado', 'praca'),
+                    link('praca', 'escola'),
+                    link('praca', 'estadio'),
+                    link('escola', 'estadio'),
+                    link('escola', 'hospital'),
+                    link('estadio', 'hospital'),
+                ],
+                tray: 5,
+                riders: [
+                    rider('duda', 'casa', 'hospital', 'Vou visitar minha avó no hospital.'),
+                    rider('bia', 'mercado', 'escola', 'Vou levar o lanche pra sala, rapidinho!', 3),
+                    rider('teo', 'praca', 'estadio', 'O treino começa em dois minutos!', 2),
+                ],
+            },
+        ],
+    },
+
+    /*
+     * ══════════════════════════════════════════════════════════════════════
+     *  NÍVEL 3 — A REDE SE CONSERTA
+     * ══════════════════════════════════════════════════════════════════════
+     *
+     * A pergunta do nível é "e se cortar?". Depois que o primeiro trem chega,
+     * a obra fecha o TRILHO MAIS USADO da rede que a criança montou — não um
+     * trilho escolhido aqui no arquivo. Quem ligou tudo numa corrente perde o
+     * meio dela e fica com a cidade partida em duas; quem deixou um desvio
+     * perde pouco.
+     *
+     * A peça do conserto é UMA. É o que transforma "reconectar" numa escolha
+     * em vez de uma reconstrução: existe mais de um jeito de fechar o buraco,
+     * e nem todos servem para quem tem pressa.
+     */
+    {
+        level: 3,
+        title: 'A rede se conserta',
+        goal: 'Monte a rede — e conserte quando a obra fechar',
+        closing: 'Rede boa não é só a que liga tudo: é a que aguenta perder uma linha.',
+        phases: [
+            {
+                id: '3.1',
+                world: { w: 2500, h: 1100 },
+                stations: [
+                    at(PLACE.casa, 'casa', 330, 330),
+                    at(PLACE.mercado, 'mercado', 330, 830),
+                    at(PLACE.praca, 'praca', 1000, 580),
+                    at(PLACE.escola, 'escola', 1620, 330),
+                    at(PLACE.estadio, 'estadio', 1620, 830),
+                    at(PLACE.hospital, 'hospital', 2200, 580),
+                ],
+                links: [
+                    link('casa', 'mercado'),
+                    link('casa', 'praca'),
+                    link('mercado', 'praca'),
+                    link('praca', 'escola'),
+                    link('praca', 'estadio'),
+                    link('escola', 'estadio'),
+                    link('escola', 'hospital'),
+                    link('estadio', 'hospital'),
+                ],
+                tray: 5,
+                riders: [
+                    rider('teo', 'casa', 'hospital', 'Vou levar um desenho pro meu primo.'),
+                    rider('bia', 'mercado', 'escola', 'Tô atrasada pra aula!', 4),
+                    rider('duda', 'praca', 'estadio', 'Vou ver o jogo com o meu pai.'),
+                ],
+                twist: { kind: 'obra', tray: 2 },
+            },
+            {
+                id: '3.2',
+                world: { w: 2760, h: 1160 },
+                stations: [
+                    at(PLACE.casa, 'casa', 330, 350),
+                    at(PLACE.mercado, 'mercado', 330, 870),
+                    at(PLACE.praca, 'praca', 980, 610),
+                    at(PLACE.central, 'central', 1640, 350),
+                    at(PLACE.escola, 'escola', 1640, 870),
+                    at(PLACE.estadio, 'estadio', 2300, 350),
+                    at(PLACE.hospital, 'hospital', 2300, 870),
+                ],
+                links: [
+                    link('casa', 'mercado'),
+                    link('casa', 'praca'),
+                    link('mercado', 'praca'),
+                    link('praca', 'central'),
+                    link('praca', 'escola'),
+                    link('central', 'escola'),
+                    link('central', 'estadio'),
+                    link('escola', 'hospital'),
+                    link('estadio', 'hospital'),
+                ],
+                tray: 6,
+                riders: [
+                    rider('duda', 'casa', 'estadio', 'Vou pro jogo com a minha turma.'),
+                    rider('bia', 'mercado', 'escola', 'Preciso entregar o trabalho!', 4),
+                    rider('teo', 'praca', 'hospital', 'Vou buscar um remédio pra vovó.', 4),
+                ],
+                twist: { kind: 'obra', tray: 2 },
+            },
+            {
+                id: '3.3',
+                world: { w: 2760, h: 1160 },
+                stations: [
+                    at(PLACE.casa, 'casa', 330, 350),
+                    at(PLACE.escola, 'escola', 330, 870),
+                    at(PLACE.praca, 'praca', 980, 610),
+                    at(PLACE.mercado, 'mercado', 1640, 350),
+                    at(PLACE.central, 'central', 1640, 870),
+                    at(PLACE.biblioteca, 'biblioteca', 2300, 350),
+                    at(PLACE.hospital, 'hospital', 2300, 870),
+                ],
+                links: [
+                    link('casa', 'escola'),
+                    link('casa', 'praca'),
+                    link('escola', 'praca'),
+                    link('praca', 'mercado'),
+                    link('praca', 'central'),
+                    link('mercado', 'central'),
+                    link('mercado', 'biblioteca'),
+                    link('central', 'hospital'),
+                    link('biblioteca', 'hospital'),
+                ],
+                tray: 6,
+                riders: [
+                    rider('teo', 'casa', 'biblioteca', 'Quero pegar um livro de dinossauro.'),
+                    rider('bia', 'escola', 'hospital', 'Vou visitar a minha tia depois da aula.', 5),
+                    rider('duda', 'praca', 'mercado', 'Vou comprar pão antes de voltar.', 3),
+                ],
+                twist: { kind: 'obra', tray: 2 },
+            },
+        ],
+    },
 ]
 
 /* ──────────────────────────── validação de carga ──────────────────────── */
@@ -206,6 +546,44 @@ const distToSegment = (p: Station, a: Station, b: Station) => {
  * decisão, estação em cima de outra ou trilho passando por dentro de uma
  * terceira. Roda uma vez, no `create`.
  */
+/** As redes de `tray` peças que atendem todo mundo desta fase. */
+const winningSets = (phase: PhaseDef, from: Edge[] = []): Edge[][] => {
+    const open = phase.links.filter(l => !hasEdge(from, l.a, l.b))
+    return combos(open, phase.tray)
+        .map(set => [...from, ...set.map(l => ({ a: l.a, b: l.b }))])
+        .filter(edges => solved(phase, edges))
+}
+
+/**
+ * A CHECAGEM DO SEGUNDO ATO.
+ *
+ * O ato 2 não pode ser impossível a partir de NENHUMA rede que o ato 1
+ * aceitou — e isso não é óbvio: a obra cai no trilho mais usado da rede que a
+ * criança montou, então cada rede vencedora do ato 1 abre uma fase diferente
+ * no ato 2. Aqui todas elas são jogadas.
+ */
+function checkTwist(phase: PhaseDef, where: string, problems: string[]) {
+    if (!phase.twist) return
+
+    const firstActWins = winningSets(phase)
+    if (!firstActWins.length) return
+
+    let dead = 0
+    let broke = 0
+    firstActWins.forEach(edges => {
+        const act2 = afterTwist(phase, edges)
+        if (!solved(act2.phase, act2.edges)) broke += 1
+        if (!winningSets(act2.phase, act2.edges).length) dead += 1
+    })
+
+    if (dead) {
+        problems.push(`${where}: ${dead} de ${firstActWins.length} redes do ato 1 não têm conserto`)
+    }
+    if (phase.twist.kind === 'obra' && !broke) {
+        problems.push(`${where}: a obra nunca quebra nada — o ato 2 não pede conserto`)
+    }
+}
+
 export function validateLevels(levels: LevelDef[]): string[] {
     const problems: string[] = []
 
@@ -213,6 +591,18 @@ export function validateLevels(levels: LevelDef[]): string[] {
         level.phases.forEach(phase => {
             const where = `nível ${level.level}, fase ${phase.id}`
             const byId = new Map(phase.stations.map(s => [s.id, s]))
+
+            if (phase.twist?.kind === 'chegada') {
+                const t = phase.twist
+                if (byId.has(t.station.id)) problems.push(`${where}: a estação que chega já está no mapa`)
+                if (phase.riders.length + t.riders.length > 4)
+                    problems.push(`${where}: mais de 4 passageiros depois da chegada`)
+                const ids = new Set([...phase.riders, ...t.riders].map(r => r.id))
+                if (ids.size !== phase.riders.length + t.riders.length)
+                    problems.push(`${where}: dois passageiros com o mesmo id`)
+                if (t.links.every(l => l.a !== t.station.id && l.b !== t.station.id))
+                    problems.push(`${where}: a estação que chega não se liga a nada`)
+            }
 
             if (phase.tray !== phase.stations.length - 1)
                 problems.push(`${where}: a bandeja tem ${phase.tray} peças para ${phase.stations.length} estações`)
@@ -260,6 +650,37 @@ export function validateLevels(levels: LevelDef[]): string[] {
             if (!wins.length) problems.push(`${where}: nenhuma rede possível atende todo mundo`)
             if (sets.length > 1 && wins.length === sets.length)
                 problems.push(`${where}: qualquer rede vence — a fase não tem decisão`)
+
+            checkTwist(phase, where, problems)
+
+            // A estação que chega precisa caber no mapa e longe das outras,
+            // igual às que já estavam: ela é desenhada na mesma cidade.
+            if (phase.twist?.kind === 'chegada') {
+                const s = phase.twist.station
+                const margin = STATION.r + RIDER_ROOM
+                if (s.x - margin < 0 || s.x + STATION.r + 40 > phase.world.w)
+                    problems.push(`${where}: ${s.label} (que chega) sai do mapa na horizontal`)
+                if (s.y - STATION.r - 120 < 0 || s.y + STATION.labelDy + 30 > phase.world.h)
+                    problems.push(`${where}: ${s.label} (que chega) sai do mapa na vertical`)
+                phase.stations.forEach(other => {
+                    if (Math.hypot(s.x - other.x, s.y - other.y) < 380)
+                        problems.push(`${where}: ${s.label} (que chega) fica perto demais de ${other.label}`)
+                })
+                phase.twist.links.forEach(l => {
+                    const all = [...phase.stations, s]
+                    const a = all.find(x => x.id === l.a)
+                    const b = all.find(x => x.id === l.b)
+                    if (!a || !b) {
+                        problems.push(`${where}: ligação da chegada com estação que não existe`)
+                        return
+                    }
+                    all.forEach(x => {
+                        if (x.id === l.a || x.id === l.b) return
+                        if (distToSegment(x, a, b) < 150)
+                            problems.push(`${where}: o trilho ${a.label}–${b.label} passa por dentro de ${x.label}`)
+                    })
+                })
+            }
 
             const seen = new Set<string>()
             phase.links.forEach(l => {

@@ -29,6 +29,8 @@ export function createNetwork(scene: Phaser.Scene, options: NetworkOptions) {
 
     let stations = new Map<string, Station>()
     let links: Link[] = []
+    /** O que a obra fechou: continua desenhado, e não é mais ligável. */
+    let closed: Link[] = []
     let edges: Edge[] = []
     let selected: string | null = null
     let enabled = true
@@ -57,6 +59,25 @@ export function createNetwork(scene: Phaser.Scene, options: NetworkOptions) {
      */
     const paintGhosts = () => {
         ghosts.clear()
+
+        /*
+         * O TRILHO EM OBRA.
+         *
+         * Ele não some da tela: se sumisse, a criança acharia que nunca
+         * existiu. Fica no lugar, em listras de obra e cinza, dizendo "aqui
+         * tinha trilho e agora não passa" — que é a informação de que ela
+         * precisa para decidir por onde desviar.
+         */
+        closed.forEach(link => {
+            const a = at(link.a)
+            const b = at(link.b)
+            if (!a || !b) return
+            ghosts.lineStyle(26, C.ink, 0.45)
+            dashed(ghosts, a, b, 18, 26)
+            ghosts.lineStyle(16, C.amber, 0.8)
+            dashed(ghosts, a, b, 18, 26)
+        })
+
         links.forEach(link => {
             if (hasEdge(edges, link.a, link.b)) return
             const k = key(link.a, link.b)
@@ -162,9 +183,10 @@ export function createNetwork(scene: Phaser.Scene, options: NetworkOptions) {
     }
 
     return {
-        setPhase(list: Station[], possible: Link[]) {
+        setPhase(list: Station[], possible: Link[], blocked: Link[] = []) {
             stations = new Map(list.map(s => [s.id, s]))
             links = possible
+            closed = blocked
             edges = []
             selected = null
             hover = null

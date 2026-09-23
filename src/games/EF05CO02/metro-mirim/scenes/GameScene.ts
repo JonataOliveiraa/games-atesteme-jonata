@@ -7,7 +7,7 @@ import { createLives, type Lives } from '../../../../shared/hud/createLives'
 import { vidasIniciais } from '../../../../shared/level/vidasIniciais'
 import { createTutorial, type TutorialStep } from '../../../../shared/tutorial/createTutorial'
 import { FX } from '../../../../shared/effects/FX'
-import { LEVELS, canDepart, hintLink, pointsFor, served, solved, stuck, validateLevels } from '../data/levels'
+import { LEVELS, afterTwist, canDepart, hintLink, pointsFor, served, solved, stuck, validateLevels } from '../data/levels'
 import { hasEdge, hops, key, pathOf, strandedPath } from '../data/graph'
 import { BENCH, DEPTH, GO, H, HUD, MAP, STATION, TRAY, W } from '../data/layout'
 import { C } from '../data/theme'
@@ -91,8 +91,23 @@ export class GameScene extends Phaser.Scene {
     private grab: { x: number; y: number; sx: number; sy: number; moved: boolean } | null = null
     private unsubPlatform?: () => void
 
-    private get phase(): PhaseDef {
+    /**
+     * A FASE VIVA — a que está na tela agora.
+     *
+     * A partir do nível 2 a fase muda no meio: uma estação abre, ou uma obra
+     * fecha um trilho. O objeto dos dados continua sendo o ponto de partida
+     * (`this.start`), e tudo o que a cena pergunta — quem chegou, qual a
+     * dica, o que dá para ligar — pergunta para a fase viva.
+     */
+    private live!: PhaseDef
+
+    /** A fase como ela nasce, direto do arquivo de dados. */
+    private get start(): PhaseDef {
         return this.level.phases[this.phaseIndex]
+    }
+
+    private get phase(): PhaseDef {
+        return this.live ?? this.start
     }
 
     constructor() {
@@ -290,6 +305,7 @@ export class GameScene extends Phaser.Scene {
         this.mode = 'entrando'
         this.edges = []
         this.selected = null
+        this.live = this.start
         this.trayLeft = this.phase.tray
         this.locked = false
         this.errorsInPhase = 0
@@ -627,6 +643,16 @@ export class GameScene extends Phaser.Scene {
         this.emitCheckpoint()
 
         void this.flashFrame(C.green)
+
+        // O segundo ato vem ANTES da comemoração da fase: a fase não acabou,
+        // a cidade só mudou de assunto.
+        if (this.phase.twist) {
+            await FX.wait(this, 520)
+            if (gen !== this.gen) return
+            await this.playTwist()
+            return
+        }
+
         await this.hud.celebrate(this.phaseIndex)
         if (gen !== this.gen) return
 
@@ -639,6 +665,76 @@ export class GameScene extends Phaser.Scene {
             return
         }
         void this.finishLevel()
+    }
+
+    /* ──────────────────────── o segundo ato da fase ─────────────────────── */
+
+    /**
+     * A CIDADE MUDA, E A REDE CONTINUA A MESMA.
+     *
+     * Os trilhos que a criança montou ficam onde estão — esse é o ponto. Ela
+     * não recomeça: ela mexe numa rede que já existe e que ela já entendeu.
+     *
+     * `afterTwist` faz a conta (qual estação chega, qual trilho fecha) e esta
+     * função só mostra o que aconteceu e devolve a construção para ela.
+     */
+    private async playTwist() {
+        const gen = this.gen
+        const twist = this.phase.twist
+        if (!twist) return
+
+        const next = afterTwist(this.phase, this.edges)
+        this.live = next.phase
+        this.edges = next.edges
+        this.trayLeft = next.phase.tray
+
+        this.mode = 'entrando'
+        this.applyInput()
+        this.teach('off')
+
+        if (twist.kind === 'chegada') {
+            // a estação nova nasce grande e pousa: ela é a novidade da tela
+            const view = createStation(this, twist.station, { onTap: id => this.tapStation(id) })
+            this.stations.set(twist.station.id, view)
+            this.audio.arrive()
+            this.lookAt(twist.station.x, twist.station.y)
+            void view.ping(C.green)
+            await FX.wait(this, 700)
+            if (gen !== this.gen) return
+
+            twist.riders.forEach(r => {
+                this.riders.push(createRider(this, r, this.stationOf(r.from), this.stationOf(r.to)))
+            })
+        } else {
+            const gone = next.phase.closed?.[0]
+            if (gone) {
+                this.audio.hmm()
+                const a = this.stationOf(gone.a)
+                const b = this.stationOf(gone.b)
+                this.lookAt((a.x + b.x) / 2, (a.y + b.y) / 2)
+                void this.flashFrame(C.amber)
+                FX.shakeCam(this, 'leve')
+            }
+            await FX.wait(this, 620)
+            if (gen !== this.gen) return
+        }
+
+        this.network.setPhase(next.phase.stations, next.phase.links, next.phase.closed)
+        this.network.setEdges(this.edges)
+        this.tray.setPieces(this.trayLeft)
+        this.tray.setGoReady(canDepart(this.trayLeft))
+        this.tray.setLocked(false)
+
+        // ATO 1 DE NOVO — quem chegou fala; na obra, quem ficou sem caminho
+        this.mode = 'conversa'
+        const speaking = twist.kind === 'chegada' ? twist.riders : stuck(next.phase, this.edges)
+        if (speaking.length) {
+            await this.talk.play(speaking, id => this.stationOf(id))
+            if (gen !== this.gen) return
+        }
+
+        this.mode = 'montando'
+        this.applyInput()
     }
 
     private async fail() {
