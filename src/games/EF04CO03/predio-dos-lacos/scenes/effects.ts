@@ -1087,24 +1087,37 @@ export function createTopBadge(
 ): { container: Phaser.GameObjects.Container; destroy(): void } {
     const container = scene.add.container(x, y)
 
+    const text = scene.add.text(0, 0, 'até o topo', {
+        fontFamily: FONT.black, fontSize: SIZE.countWord, color: hex(C.outerDark),
+    }).setOrigin(0, 0.5).setResolution(2)
+
+    // Seta, vão e palavra centrados JUNTOS. Antes a seta ficava presa a 26 px
+    // da borda e o texto centrado sozinho, e "até" nascia em cima dela. A
+    // placa ocupa o lugar do contador E dos botões − e +, então pode crescer
+    // além da caixa do número quando a palavra pede.
+    const MARK_W = 18
+    const GAP = 10
+    const PAD = 18
+    const content = MARK_W + GAP + text.width
+    const w = Math.max(EDITOR.boxW, Math.ceil(content) + PAD * 2)
+    const left = -content / 2
+
     const g = scene.add.graphics()
     g.fillStyle(C.shadow, 0.22)
-    g.fillRoundedRect(-EDITOR.boxW / 2 + 3, -EDITOR.boxH / 2 + 5, EDITOR.boxW, EDITOR.boxH, EDITOR.boxR)
+    g.fillRoundedRect(-w / 2 + 3, -EDITOR.boxH / 2 + 5, w, EDITOR.boxH, EDITOR.boxR)
     g.fillStyle(C.cream, 1)
-    g.fillRoundedRect(-EDITOR.boxW / 2, -EDITOR.boxH / 2, EDITOR.boxW, EDITOR.boxH, EDITOR.boxR)
+    g.fillRoundedRect(-w / 2, -EDITOR.boxH / 2, w, EDITOR.boxH, EDITOR.boxR)
     g.lineStyle(4, C.outerDark, 1)
-    g.strokeRoundedRect(-EDITOR.boxW / 2, -EDITOR.boxH / 2, EDITOR.boxW, EDITOR.boxH, EDITOR.boxR)
+    g.strokeRoundedRect(-w / 2, -EDITOR.boxH / 2, w, EDITOR.boxH, EDITOR.boxR)
 
     // seta batendo num teto: o desenho do "até o topo"
-    const mark = scene.add.graphics().setPosition(-EDITOR.boxW / 2 + 26, 0)
+    const mark = scene.add.graphics().setPosition(left + MARK_W / 2, 0)
     mark.fillStyle(C.outerDark, 1)
     mark.fillRect(-9, -13, 18, 4)
     mark.fillTriangle(0, -8, -9, 3, 9, 3)
     mark.fillRoundedRect(-3.5, 1, 7, 11, 2)
 
-    const text = scene.add.text(10, 0, 'até o topo', {
-        fontFamily: FONT.black, fontSize: SIZE.countWord, color: hex(C.outerDark),
-    }).setOrigin(0.5).setResolution(2)
+    text.setX(left + MARK_W + GAP)
 
     container.add([g, mark, text])
 
