@@ -17,7 +17,9 @@ import {
     canPlayNow,
     faseDone,
     fasesIn,
+    joinGuest,
     judgeServe,
+    kill,
     mustHold,
     newWorld,
     notesIn,
@@ -29,7 +31,7 @@ import {
     validateLevels,
 } from '../data/fases'
 import { PROGRAMS } from '../data/cast'
-import { DEPTH, DESK, H, HUD, SEAT, SPOT_X, W, seatX } from '../data/layout'
+import { DEPTH, DESK, FERIAS, H, HUD, SEAT, SPOT_X, W, seatX } from '../data/layout'
 import { C, CSS, FONT } from '../data/theme'
 import type { FaseDef, Layer, LevelDef, Phase, Piece, World } from '../types'
 
@@ -78,6 +80,16 @@ export class GameScene extends Phaser.Scene {
     private tape: string[][] = []
 
     private erredThisFase = false
+    /** As férias são uma por fase, e o botão sai de cena depois de usadas. */
+    private feriasUsed = false
+    private feriasBtn?: Phaser.GameObjects.Container
+    private feriasBg?: Phaser.GameObjects.Graphics
+    /** O X acima de quem travou, e a zona que o encerra. */
+    private killX?: {
+        id: string
+        box: Phaser.GameObjects.Container
+        zone: Phaser.GameObjects.Zone
+    }
     private score = 0
     private hits = 0
     private errors = 0
@@ -152,6 +164,7 @@ export class GameScene extends Phaser.Scene {
         this.frame = this.add.graphics().setDepth(DEPTH.frame).setAlpha(0)
         this.buildCaption()
         this.buildNext()
+        this.buildFerias()
 
         this.bindPlatform()
         EventBus.on('mute-audio', this.onMute, this)
@@ -595,6 +608,7 @@ export class GameScene extends Phaser.Scene {
     /* ─────────────────────────────── a fase ────────────────────────────── */
 
     private clearFase() {
+        this.dropKill()
         this.progs.forEach(p => p.destroy())
         this.progs.clear()
         this.desk?.destroy()
@@ -609,6 +623,7 @@ export class GameScene extends Phaser.Scene {
         this.nudged = undefined
         this.batonHint = false
         this.erredThisFase = false
+        this.feriasUsed = false
         this.tape = []
 
         this.clearFase()
@@ -618,7 +633,9 @@ export class GameScene extends Phaser.Scene {
         this.world = newWorld(def)
         this.desk = createDesk(this, def.pieces)
 
-        const xs = seatX(def.programs.length)
+        // A cadeira do convidado é reservada AGORA, vazia. Abrir espaço no
+        // meio da música faria os quatro balões trocarem de lugar de uma vez.
+        const xs = seatX(def.programs.length + (def.guest ? 1 : 0))
         def.programs.forEach((p, i) => {
             const view = createProgram(this, {
                 id: p.id,
@@ -725,6 +742,7 @@ export class GameScene extends Phaser.Scene {
         if (this.tape.length > TAPE_MAX) this.tape.shift()
 
         report.freed.forEach(f => void this.release(f.id, f.piece))
+        report.froze.forEach(id => this.freeze(id))
         report.finished.forEach(id => {
             this.audio.finish()
             const view = this.progs.get(id)
@@ -732,6 +750,9 @@ export class GameScene extends Phaser.Scene {
             void view?.goldNotes()
         })
         report.asked.forEach(id => this.raise(id))
+
+        const guest = this.fase.guest
+        if (guest && this.world.beat === guest.at) void this.welcomeGuest()
 
         this.refreshLit()
         this.paintStage()
@@ -742,6 +763,36 @@ export class GameScene extends Phaser.Scene {
             return
         }
         this.syncHold()
+    }
+
+    /**
+     * O CONVIDADO CHEGA ANDANDO.
+     *
+     * A cadeira dele já estava reservada desde o começo da fase — `seatX` foi
+     * calculado com ele —, então ninguém se mexe. O palco que se reorganiza no
+     * meio da música é ilegível para quem está acompanhando quatro balões.
+     */
+    private async welcomeGuest() {
+        const guest = this.fase.guest
+        if (!guest || this.progs.has(guest.program.id)) return
+
+        const gen = this.gen
+        const seats = seatX(this.fase.programs.length + 1)
+        const x = seats[seats.length - 1]
+
+        const view = createProgram(this, {
+            id: guest.program.id,
+            x,
+            onTap: () => this.onTap(guest.program.id),
+        })
+        view.setNotes(notesIn(this.fase, guest.program.id))
+        this.progs.set(guest.program.id, view)
+
+        joinGuest(this.world, guest.program)
+        this.audio.pick()
+        await view.walkIn(W + 140, 900)
+        if (gen !== this.gen) return
+        this.refreshLit()
     }
 
     private playingLayers(): Layer[] {
@@ -818,6 +869,190 @@ export class GameScene extends Phaser.Scene {
         this.refreshLit()
     }
 
+    /* ──────────────────────── o travamento e o X ───────────────────────── */
+
+    /**
+     * ELE TRAVOU.
+     *
+     * A peça não volta, e nenhum compasso resolve isso: o atril fica com um
+     * buraco até o maestro encerrar. O tremor é contínuo de propósito — é a
+     * única coisa no palco que não acompanha a música.
+     */
+    private freeze(id: string) {
+        const view = this.progs.get(id)
+        const slot = slotOf(this.world, id)
+        if (!view || !slot) return
+        view.clearAsk()
+        view.setState('frozen')
+        view.slump(true)
+        // o encaixe dele no atril pisca vazio: a peça está presa lá em cima
+        if (slot.holds) this.desk.flashBusy(slot.holds)
+        FX.shakeCam(this, 'leve')
+        void this.flashFrame(C.red)
+    }
+
+    /** O X grande, acima da cabeça de quem travou. Um toque nele encerra. */
+    private raiseKill(id: string) {
+        if (this.killX?.id === id) return
+        this.dropKill()
+
+        const view = this.progs.get(id)
+        if (!view) return
+
+        const box = this.add.container(view.x, view.headY - 96).setDepth(DEPTH.fly)
+        const disc = this.add.graphics()
+        disc.fillStyle(C.ink, 0.22)
+        disc.fillCircle(4, 6, 46)
+        disc.fillStyle(C.red, 1)
+        disc.fillCircle(0, 0, 44)
+        disc.lineStyle(7, C.cream, 1)
+        disc.strokeCircle(0, 0, 44)
+        disc.lineStyle(11, C.cream, 1)
+        disc.lineBetween(-17, -17, 17, 17)
+        disc.lineBetween(17, -17, -17, 17)
+        box.add(disc)
+
+        const zone = this.add
+            .zone(view.x, view.headY - 96, 132, 132)
+            .setDepth(DEPTH.fly + 1)
+            .setInteractive({ useHandCursor: true })
+        zone.on('pointerdown', () => void this.endProgram(id))
+
+        this.killX = { id, box, zone }
+        FX.popIn(this, box, { from: 0.4, duration: 280 })
+        FX.float(this, box, { amount: 7, duration: 1500 })
+    }
+
+    private dropKill() {
+        if (!this.killX) return
+        this.killX.zone.destroy()
+        this.killX.box.destroy()
+        this.killX = undefined
+    }
+
+    /**
+     * O X DESCE: o programa é encerrado e a peça volta ao atril.
+     *
+     * Encerrar não custa vida nem ponto. Não é um erro da criança — é a coisa
+     * certa a fazer, e a única que o sistema operacional pode fazer.
+     */
+    private async endProgram(id: string) {
+        if (this.phase !== 'running' && this.phase !== 'hold') return
+        const gen = this.gen
+        const view = this.progs.get(id)
+        const piece = kill(this.world, id)
+        this.dropKill()
+        if (!view || !piece) return
+
+        this.audio.ret()
+        view.slump(false)
+        view.setState('done')
+        void this.baton.swingTo(view.x, SEAT.footY - 170)
+        void this.desk.back(piece, { x: view.x, y: SEAT.footY - 150 })
+
+        this.refreshLit()
+        this.paintStage()
+        this.syncHold()
+
+        await FX.wait(this, 260)
+        if (gen !== this.gen) return
+        if (faseDone(this.world)) void this.finishFase()
+    }
+
+    /* ─────────────────────── as férias do maestro ──────────────────────── */
+
+    /**
+     * O BOTÃO, ao lado do atril e longe dos programas.
+     *
+     * Ele não existe no nível 1: sem fila não há o que demonstrar, e um botão
+     * a mais na estreia é uma pergunta a mais. A partir do nível 2 ele fica
+     * sempre à vista, e apaga depois de usado — uma por fase.
+     */
+    private buildFerias() {
+        const box = this.add.container(FERIAS.x, FERIAS.y).setDepth(DEPTH.hud - 2)
+        const bg = this.add.graphics()
+        const label = this.add.text(0, 0, 'FÉRIAS', {
+            fontFamily: FONT.black, fontSize: '26px', color: CSS.ink,
+        }).setOrigin(0.5).setResolution(2)
+        box.add([bg, label])
+
+        const zone = this.add
+            .zone(FERIAS.x, FERIAS.y, FERIAS.w + 20, FERIAS.h + 20)
+            .setDepth(DEPTH.hud - 1)
+            .setInteractive({ useHandCursor: true })
+        zone.on('pointerdown', () => void this.takeVacation())
+
+        this.feriasBtn = box
+        this.feriasBg = bg
+        this.paintFerias()
+    }
+
+    /** Aceso enquanto sobra; apagado e sem toque depois de usado. */
+    private paintFerias() {
+        const bg = this.feriasBg
+        const box = this.feriasBtn
+        if (!bg || !box) return
+
+        const on = this.level.ferias && !this.feriasUsed
+        box.setVisible(this.level.ferias).setAlpha(on ? 1 : 0.35)
+
+        const w = FERIAS.w
+        const h = FERIAS.h
+        bg.clear()
+        bg.fillStyle(C.ink, 0.22)
+        bg.fillRoundedRect(-w / 2 + 4, -h / 2 + 6, w, h, h / 2)
+        bg.fillStyle(on ? C.gold : C.cream, 1)
+        bg.fillRoundedRect(-w / 2, -h / 2, w, h, h / 2)
+        bg.lineStyle(6, on ? C.goldDeep : C.ink, 0.6)
+        bg.strokeRoundedRect(-w / 2, -h / 2, w, h, h / 2)
+    }
+
+    /**
+     * TRÊS SEGUNDOS SEM MAESTRO.
+     *
+     * Todo mundo pede ao mesmo tempo e nada toca — é a resposta desenhada
+     * para "por que o computador precisa disso?". Uma vez por fase, sem custo
+     * e sem mexer no mundo: quando acaba, o palco está exatamente como estava.
+     */
+    private async takeVacation() {
+        if (!this.level.ferias || this.feriasUsed) return
+        if (this.phase !== 'running' && this.phase !== 'hold') return
+
+        const gen = this.gen
+        const back = this.phase
+        this.feriasUsed = true
+        this.phase = 'locked'
+        this.paintFerias()
+        this.dropKill()
+
+        this.baton.hide()
+        this.stage.lightOn([])
+        this.stage.setFullness(0)
+
+        // todo mundo levanta a mão, e nenhuma mão é atendida
+        this.progs.forEach(view => {
+            view.setState('asking')
+            view.nudge(true)
+        })
+
+        await FX.wait(this, 3000)
+        if (gen !== this.gen) return
+
+        this.progs.forEach((view, id) => {
+            view.nudge(false)
+            const slot = slotOf(this.world, id)
+            if (slot) view.setState(slot.state)
+        })
+        this.world.slots.forEach(slot => {
+            if (slot.state !== 'asking') return
+            const ask = askOf(slot)
+            if (ask) this.progs.get(slot.id)?.ask(ask.piece, canPlayNow(this.world, slot))
+        })
+        this.refreshLit()
+        this.paintStage()
+        this.phase = back
+    }
+
     /**
      * O MUNDO PRENDE A RESPIRAÇÃO.
      *
@@ -847,6 +1082,12 @@ export class GameScene extends Phaser.Scene {
         const view = this.progs.get(id)
         const slot = slotOf(this.world, id)
         if (!view || !slot) return
+
+        // Quem travou não tem balão nem veredito: ele tem um X.
+        if (slot.state === 'frozen') {
+            this.raiseKill(id)
+            return
+        }
 
         const verdict = judgeServe(this.world, id)
         if (verdict === 'served') {
@@ -952,8 +1193,18 @@ export class GameScene extends Phaser.Scene {
 
     private checkNudge() {
         const wait = this.fase.guided ? 3200 : 6000
+
+        /*
+         * QUANDO NÃO HÁ NINGUÉM PARA ATENDER, O CUTUCÃO APONTA O TRAVADO.
+         *
+         * É o único momento em que o palco inteiro fica parado sem ser culpa
+         * da criança: todos os balões cinzas, esperando uma peça que está na
+         * mão de quem não toca mais. Sem este cutucão o jogo espera para
+         * sempre, e a criança não tem como adivinhar que o X é a saída.
+         */
         const ready = this.world.slots.find(slot =>
             canPlayNow(this.world, slot) && queueHead(this.world, askOf(slot).piece) === slot.id)
+            ?? this.world.slots.find(slot => slot.state === 'frozen')
 
         if (!ready) {
             this.clearNudge()

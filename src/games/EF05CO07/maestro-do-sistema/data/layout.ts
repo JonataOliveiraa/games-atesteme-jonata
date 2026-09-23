@@ -67,6 +67,14 @@ export const DESK = {
     ringR: 66,
 } as const
 
+/**
+ * O botão FÉRIAS, à direita do atril.
+ *
+ * Com quatro peças o atril vai de x 237 a 1043 — este canto é o único espaço
+ * na altura da bancada que nunca disputa toque com um encaixe.
+ */
+export const FERIAS = { x: 1152, y: 640, w: 166, h: 76 } as const
+
 export function seatX(count: number): number[] {
     if (count <= 1) return [SPOT_X[2]]
     if (count === 2) return [SPOT_X[1], SPOT_X[3]]

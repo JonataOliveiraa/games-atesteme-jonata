@@ -17,6 +17,15 @@ export interface Ask {
     notes: number
     /** Compassos de descanso antes de levantar este balão. */
     rest: number
+    /**
+     * ELE TRAVA NO FIM DESTE PEDIDO, e não devolve a peça.
+     *
+     * É o único jeito de a peça sumir do atril sem ninguém estar tocando —
+     * e é o que só o sistema operacional resolve: encerrar quem travou. Só
+     * vale no ÚLTIMO pedido do programa (a validação cobra), porque encerrar
+     * é definitivo e o que vinha depois não vai acontecer.
+     */
+    freezes?: boolean
 }
 
 export interface ProgramDef {
@@ -31,10 +40,22 @@ export interface FaseDef {
     programs: ProgramDef[]
     /** A fase de aula: o cutucão vem mais cedo e o erro não custa vida. */
     guided?: boolean
+    /**
+     * O CONVIDADO SURPRESA: um programa que não estava no palco e entra
+     * andando no compasso `at`, com a cadeira dele já reservada desde o
+     * começo — ninguém se mexe para abrir espaço.
+     */
+    guest?: { at: number; program: ProgramDef }
 }
 
 export interface LevelDef {
     level: number
+    /**
+     * O botão FÉRIAS DO MAESTRO, uma vez por fase e sem custo: três segundos
+     * em que todos pedem ao mesmo tempo e nada toca. Só faz sentido quando já
+     * existe fila para ficar sem dono — por isso ele nasce com ela, no nível 2.
+     */
+    ferias: boolean
     fases: FaseDef[]
 }
 
