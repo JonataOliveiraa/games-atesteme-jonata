@@ -88,11 +88,10 @@ function normalizar(texto: string): string {
 
 export default function IntegracaoPanel({ onClose }: { onClose: () => void }) {
   /*
-    O catálogo inteiro, rascunhos junto. Até 23/09/2026 eram só os
-    publicados, e o "73" do contador passava por tamanho do catálogo: quem
-    sabia que eram 90 procurava os outros 17 e não achava. Agora o rascunho
-    entra marcado — decidir se ele já pode ir para a Atesteme é de quem
-    cadastra, não da lista.
+    Só os publicados: jogo em "draft" é jogo removido (a regra do
+    catálogo), e não pode virar cadastro na Atesteme. Em 23/09/2026 os 17
+    rascunhos que sobravam foram todos publicados — estavam prontos — e a
+    lista voltou a ser o catálogo inteiro.
 
     A ordem é por habilidade e, dentro dela, pela trilha — assim os dois ou
     três jogos da mesma habilidade aparecem colados, que é justamente a
@@ -100,13 +99,11 @@ export default function IntegracaoPanel({ onClose }: { onClose: () => void }) {
   */
   const jogos = useMemo(
     () =>
-      [...catalog].sort(
-        (a, b) => a.skill.localeCompare(b.skill) || a.order - b.order
-      ),
+      catalog
+        .filter((g) => g.status === "published")
+        .sort((a, b) => a.skill.localeCompare(b.skill) || a.order - b.order),
     []
   );
-
-  const rascunhos = jogos.filter((g) => g.status !== "published").length;
 
   const [busca, setBusca] = useState("");
   const [ano, setAno] = useState("");
@@ -127,9 +124,7 @@ export default function IntegracaoPanel({ onClose }: { onClose: () => void }) {
          pelo nome, e nenhum dos dois precisa saber em qual caixa digitar. */
       const agulha = `${g.id} ${g.skill} ${g.title} ${g.slug} ${yearLabelOf(
         g.skill
-      )} ${SKILLS[g.skill].eixo} ${
-        g.status === "published" ? "publicado" : "rascunho"
-      }`;
+      )} ${SKILLS[g.skill].eixo}`;
 
       return normalizar(agulha).includes(alvo);
     });
@@ -239,9 +234,7 @@ export default function IntegracaoPanel({ onClose }: { onClose: () => void }) {
             <div className="integracao-contagem">
               <span>
                 {resultados.length === jogos.length
-                  ? `${jogos.length} jogos · ${
-                      jogos.length - rascunhos
-                    } publicados · ${rascunhos} em rascunho`
+                  ? `${jogos.length} jogos`
                   : `${resultados.length} de ${jogos.length} jogos`}
               </span>
               <span>Clique duas vezes para copiar código e nome</span>
@@ -282,11 +275,6 @@ export default function IntegracaoPanel({ onClose }: { onClose: () => void }) {
                           <span className="integracao-opcao-titulo">
                             {g.title}
                           </span>
-                          {g.status !== "published" && (
-                            <span className="integracao-opcao-rascunho">
-                              rascunho
-                            </span>
-                          )}
                           <span className="integracao-opcao-eixo">
                             {SKILLS[g.skill].eixo}
                           </span>

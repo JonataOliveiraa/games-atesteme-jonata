@@ -830,7 +830,7 @@ export const catalog: Game[] = [
     years: [3],
     tags: ["imagem", "texto", "som", "criação", "toque"],
     order: 215,
-    status: "draft",
+    status: "published",
     title: "Show de Formatos",
     description:
       "Escolha uma imagem, uma frase e um som para cada cena do palco e assista ao microclipe que você dirigiu.",
@@ -864,7 +864,7 @@ export const catalog: Game[] = [
     years: [3],
     tags: ["dados pessoais", "compartilhar", "destino", "impacto", "toque"],
     order: 225,
-    status: "draft",
+    status: "published",
     title: "Ache o Suspeito",
     description:
       "Leia as placas da sala e toque no compartilhamento suspeito: uma bolinha de papel voa até ele e mostra o impacto que você evitou.",
@@ -898,7 +898,7 @@ export const catalog: Game[] = [
     years: [4],
     tags: ["coordenadas", "matriz", "linha e coluna", "mira"],
     order: 235,
-    status: "draft",
+    status: "published",
     title: "Canhão das Coordenadas",
     description:
       "Leia a linha e a coluna, toque na janela certa e veja o canhão de tinta pintar a fachada.",
@@ -932,7 +932,7 @@ export const catalog: Game[] = [
     years: [4],
     tags: ["registro", "campo", "preencher"],
     order: 245,
-    status: "draft",
+    status: "published",
     title: "O Cofre dos Registros",
     description:
       "Leia a pista do avistamento e coloque cada valor no campo com o nome certo para abrir a cápsula do arquivo.",
@@ -966,7 +966,7 @@ export const catalog: Game[] = [
     years: [4],
     tags: ["laço", "repetição", "coreografia", "simulação"],
     order: 255,
-    status: "draft",
+    status: "published",
     title: "Dança Aninhada",
     description:
       "Monte a coreografia com blocos REPITA e toque em DANÇAR para ver o dançarino executar o seu algoritmo.",
@@ -1000,7 +1000,7 @@ export const catalog: Game[] = [
     years: [4],
     tags: ["binário", "pixel", "codificação", "transmissão"],
     order: 265,
-    status: "draft",
+    status: "published",
     title: "Pista Binária",
     description:
       "Atire 1 no quadradinho cheio e 0 no vazio: a fila de caixas vira código, e o código vira desenho na máquina.",
@@ -1034,7 +1034,7 @@ export const catalog: Game[] = [
     years: [4],
     tags: ["rgb", "cor", "binário", "pixel"],
     order: 275,
-    status: "draft",
+    status: "published",
     title: "Expedição Pixel",
     description:
       "Na festa da praça, a cor do fogo é feita de três luzes: abra as torneiras vermelha, verde e azul e solte o fogo que a festa pediu.",
@@ -1068,7 +1068,7 @@ export const catalog: Game[] = [
     years: [4],
     tags: ["edição", "ferramentas", "slides", "vídeo"],
     order: 285,
-    status: "draft",
+    status: "published",
     title: "Mesa de Edição",
     description:
       "Cartaz, slides e vídeo: o cliente diz o que incomoda, você aperta as ferramentas do editor até ficar bom e entrega.",
@@ -1102,7 +1102,7 @@ export const catalog: Game[] = [
     years: [4],
     tags: ["dados", "ética", "privacidade", "autoria"],
     order: 295,
-    status: "draft",
+    status: "published",
     title: "Guardião Ético",
     description:
       "Chegou um papel para publicar. Passe a lupa, ache o que é de outra pessoa, tape — e aprove.",
@@ -1136,7 +1136,7 @@ export const catalog: Game[] = [
     years: [4],
     tags: ["fonte", "confiabilidade", "boato", "checagem"],
     order: 305,
-    status: "draft",
+    status: "published",
     title: "Duelo das Fontes",
     description:
       "O robô solta um boato e quer que você espalhe. Pergunte aos vizinhos, descubra quem podia saber — e veja o robô murchar.",
@@ -1169,7 +1169,7 @@ export const catalog: Game[] = [
     years: [5],
     tags: ["lista", "posição", "inserir", "remover"],
     order: 315,
-    status: "draft",
+    status: "published",
     title: "Revezamento em Lista",
     description:
       "A escalação é uma lista. Tire o cansado, ponha o reserva, mude de lugar — e veja a prova nadar na ordem que você montou.",
@@ -1202,7 +1202,7 @@ export const catalog: Game[] = [
     years: [5],
     tags: ["grafo", "rede", "caminho", "mapa"],
     order: 325,
-    status: "draft",
+    status: "published",
     title: "Metrô Mirim",
     description:
       "Os passageiros dizem aonde precisam ir. Arraste trilhos pelo mapa da cidade, aperte PARTIR — e veja a rede que você montou.",
@@ -1306,7 +1306,7 @@ export const catalog: Game[] = [
     years: [5],
     tags: ["hardware", "entrada e saída", "memória", "armazenamento"],
     order: 355,
-    status: "draft",
+    status: "published",
     title: "Raio-X da Máquina",
     description:
       "A máquina chega para revisão e o raio-X abre ela. Diga quem recebe, quem pensa, quem segura, quem guarda e quem mostra — e teste cada peça trabalhando.",
@@ -1340,7 +1340,7 @@ export const catalog: Game[] = [
     years: [5],
     tags: ["armazenamento", "local ou remoto", "internet"],
     order: 365,
-    status: "draft",
+    status: "published",
     title: "O Dia Sem Internet",
     description:
       "Uns arquivos moram aqui, na sua mesa. Outros moram longe, lá em cima na nuvem. Suba até o céu para descobrir onde cada um está — e o que sobra quando o fio arrebenta.",
@@ -1408,7 +1408,7 @@ export const catalog: Game[] = [
     years: [5],
     tags: ["fonte", "confiabilidade", "checagem", "notícia"],
     order: 385,
-    status: "draft",
+    status: "published",
     title: "Olha o Jornal!",
     description:
       "O carteiro traz dois jornais sobre a mesma coisa. Leia os dois, escolha um e saia espalhando pela praça.",
@@ -1425,7 +1425,7 @@ export const catalog: Game[] = [
     years: [5],
     tags: ["direitos autorais", "crédito", "autoria", "licença"],
     order: 391,
-    status: "draft",
+    status: "published",
     title: "A Guilda dos Criadores",
     description:
       "Toda obra tem um verso, e é lá que está de quem ela é. Vire, copie o carimbo e o nome na plaquinha, e a obra sobe para o mural da festa.",
@@ -1527,7 +1527,7 @@ export const catalog: Game[] = [
     years: [1, 2, 3, 4, 5],
     tags: ["estrutura de dados", "organização", "lista", "matriz"],
     order: 421,
-    status: "draft",
+    status: "published",
     title: "O Mistério do Arquivo Vivo",
     description:
       "Uma bagunça em cima, uma prateleira vazia embaixo. Toque numa coisa, toque num buraco, e ela encaixa — do menor para o maior, ou no cruzamento do bicho com a cor.",

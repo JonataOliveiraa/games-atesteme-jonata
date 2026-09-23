@@ -3508,23 +3508,6 @@ body.embed-active .game-fullscreen-btn {
   white-space: nowrap;
 }
 
-.integracao-opcao-rascunho {
-  flex-shrink: 0;
-  padding: 2px 8px;
-  border: 1px dashed var(--muted);
-  border-radius: 999px;
-  font-size: 0.7rem;
-  font-weight: 800;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--muted);
-}
-
-.integracao-opcao.ativa .integracao-opcao-rascunho {
-  border-color: rgba(255, 255, 255, 0.82);
-  color: white;
-}
-
 /* Largura do eixo mais longo, para os três começarem na mesma coluna. */
 .integracao-opcao-eixo {
   flex: 0 0 11.5rem;
@@ -3665,16 +3648,11 @@ body.embed-active .game-fullscreen-btn {
   */
   .integracao-opcao {
     display: grid;
-    grid-template-columns: auto 1fr auto auto;
+    grid-template-columns: auto 1fr auto;
     grid-template-areas:
-      "titulo titulo rascunho id"
-      "skill eixo eixo eixo";
+      "titulo titulo id"
+      "skill eixo eixo";
     gap: 2px 8px;
-  }
-
-  .integracao-opcao-rascunho {
-    grid-area: rascunho;
-    align-self: start;
   }
 
   .integracao-opcao-nome {
