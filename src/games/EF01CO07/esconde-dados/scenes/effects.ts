@@ -285,15 +285,39 @@ export function paintHideoutGlow(g: Phaser.GameObjects.Graphics, w: number, on: 
     g.fillEllipse(0, 0, w * 1.6, 78)
 }
 
-/** Seta verde apontando a moita: o "toque aqui" que não depende de ler. */
+const ARROW_SHAPE: Array<[number, number]> = [
+    [-11, -34], [11, -34], [11, 0], [30, 0], [0, 40], [-30, 0], [-11, 0],
+]
+
+/**
+ * Seta verde apontando a moita: o "toque aqui" que não depende de ler.
+ *
+ * Ela continua em Graphics porque acende e apaga a cada janela de luz, mas
+ * ganhou o contorno escuro da arte: sem ele, ao lado das moitas e dos ícones
+ * ilustrados, ela era a única forma chapada sem traço da tela.
+ */
 export function paintHideoutArrow(g: Phaser.GameObjects.Graphics, on: boolean) {
     g.clear()
     if (!on) return
+    const pts = ARROW_SHAPE.map(([x, y]) => new Phaser.Geom.Point(x, y))
     g.fillStyle(C.safeGreen, 1)
-    g.fillTriangle(-30, 0, 30, 0, 0, 40)
-    g.fillRoundedRect(-11, -34, 22, 36, 8)
-    g.fillStyle(C.white, 0.45)
-    g.fillRoundedRect(-7, -30, 8, 26, 4)
+    g.fillPoints(pts, true)
+    g.fillStyle(C.white, 0.5)
+    g.fillRoundedRect(-6, -29, 7, 24, 3.5)
+    g.lineStyle(4, C.outline, 1)
+    g.strokePoints(pts, true, true)
+}
+
+/** O "pode ir" da pílula: o mesmo verde e o mesmo traço da seta da moita. */
+export function drawGoIcon(g: Phaser.GameObjects.Graphics) {
+    g.fillStyle(C.white, 1)
+    g.fillCircle(0, 0, 21)
+    g.lineStyle(3, C.outline, 1)
+    g.strokeCircle(0, 0, 21)
+    g.fillStyle(C.safeGreen, 1)
+    g.fillTriangle(-7, -11, -7, 11, 12, 0)
+    g.lineStyle(3, C.outline, 1)
+    g.strokeTriangle(-7, -11, -7, 11, 12, 0)
 }
 
 /** O curioso: geométrico e simpático. O obstáculo é a lanterna, não ele. */
@@ -496,33 +520,184 @@ export function drawSafeBeam(g: Phaser.GameObjects.Graphics, w: number, h: numbe
     g.fillEllipse(0, 0, w * 0.7, h * 0.5)
 }
 
+/* ─────────────────────────────────────────────── ícones em textura */
+
+/*
+ * As duas folhas de ícones, `dados.png` e `simbolos.png`: 768 × 512, grade
+ * 3 × 2 de 256.
+ *
+ * Cada quadro traz a caixa alfa MEDIDA na arte (centro e tamanho, em pixels
+ * do quadro). O ícone é centrado por ela, e não pelo meio do quadro: a casa
+ * tem o pino saindo para a direita e o crachá é baixinho, e centrados pelo
+ * quadro eles ficariam tortos dentro do mesmo cartão. O `size` pedido vira o
+ * MAIOR lado da caixa.
+ */
+const ICON_CELL = 256
+
+interface IconBox { frame: number; cx: number; cy: number; w: number; h: number }
+
+const DATA_BOX: Record<DataKind, IconBox> = {
+    name: { frame: 0, cx: 130.5, cy: 134, w: 214, h: 143 },
+    photo: { frame: 1, cx: 129.5, cy: 137.5, w: 188, h: 206 },
+    address: { frame: 2, cx: 137, cy: 128, w: 183, h: 221 },
+    school: { frame: 3, cx: 124.5, cy: 129.5, w: 238, h: 232 },
+    phone: { frame: 4, cx: 133.5, cy: 132.5, w: 132, h: 222 },
+}
+
+/** O cartão em branco. A caixa é a do CORPO, sem a estrelinha do canto. */
+const CARD_BOX: IconBox = { frame: 5, cx: 124, cy: 134.5, w: 161, h: 206 }
+
+export type SymbolName = 'shield' | 'shieldEmpty' | 'lockOpen' | 'lockClosed' | 'eye' | 'no'
+
+/*
+ * Os cadeados são medidos pelo CORPO, e o `size` deles é a largura do corpo.
+ * A alça aberta sobe e deixa a caixa inteira mais alta: centrar pela caixa
+ * faria o corpo dar um pulo no instante em que a alça desce.
+ */
+const SYMBOL_BOX: Record<SymbolName, IconBox> = {
+    shield: { frame: 0, cx: 122, cy: 132.5, w: 199, h: 220 },
+    shieldEmpty: { frame: 1, cx: 119, cy: 133, w: 197, h: 219 },
+    lockOpen: { frame: 2, cx: 134, cy: 171, w: 185, h: 133 },
+    lockClosed: { frame: 3, cx: 126.5, cy: 164, w: 182, h: 129 },
+    eye: { frame: 4, cx: 132.5, cy: 131.5, w: 216, h: 168 },
+    no: { frame: 5, cx: 127, cy: 133.5, w: 209, h: 212 },
+}
+
+/**
+ * Onde o pictograma assenta dentro do escudo, como fração da altura dele.
+ * A placa clara estreita para a ponta de baixo; no centro exato o crachá, que
+ * é largo, encostaria na borda.
+ */
+export const SHIELD_ICON_DY = -0.05
+
+export type Icon = Phaser.GameObjects.Image | Phaser.GameObjects.Graphics
+
+function placeIcon(img: Phaser.GameObjects.Image, box: IconBox, size: number) {
+    img.setFrame(box.frame)
+    img.setOrigin(box.cx / ICON_CELL, box.cy / ICON_CELL)
+    img.setScale(size / Math.max(box.w, box.h))
+    return img
+}
+
+/** O pictograma de um dado pessoal. Sem `dados.png`, o desenho antigo. */
+export function dataIcon(scene: Phaser.Scene, kind: DataKind, size: number): Icon {
+    if (scene.textures.exists('dados')) {
+        return placeIcon(scene.add.image(0, 0, 'dados'), DATA_BOX[kind], size)
+    }
+    const g = scene.add.graphics()
+    drawDataIcon(g, kind, size)
+    return g
+}
+
+/** O cartão em branco, cabendo em `w × h`. Sem `dados.png`, o retângulo antigo. */
+export function cardFace(scene: Phaser.Scene, w: number, h: number): Icon {
+    if (scene.textures.exists('dados')) {
+        const img = placeIcon(scene.add.image(0, 0, 'dados'), CARD_BOX, 1)
+        return img.setScale(Math.min(w / CARD_BOX.w, h / CARD_BOX.h))
+    }
+    const g = scene.add.graphics()
+    paintCard(g, w, h)
+    return g
+}
+
+/**
+ * O cartão com o dado dentro: a abertura da fase e o cartão nas mãos da
+ * criança são o MESMO objeto em dois tamanhos.
+ */
+export function dataCard(scene: Phaser.Scene, kind: DataKind, w: number, h: number) {
+    return scene.add.container(0, 0, [cardFace(scene, w, h), dataIcon(scene, kind, w * 0.66)])
+}
+
+export function symbolIcon(scene: Phaser.Scene, name: SymbolName, size: number): Icon {
+    if (scene.textures.exists('simbolos')) {
+        return placeIcon(scene.add.image(0, 0, 'simbolos'), SYMBOL_BOX[name], size)
+    }
+    const g = scene.add.graphics()
+    drawSymbol(g, name, size)
+    return g
+}
+
+/** Troca o desenho sem trocar o objeto: é assim que o cadeado fecha. */
+export function setSymbol(icon: Icon, name: SymbolName, size: number) {
+    if (icon instanceof Phaser.GameObjects.Image) placeIcon(icon, SYMBOL_BOX[name], size)
+    else drawSymbol(icon, name, size)
+}
+
+/** Os desenhos de antes das folhas, com o mesmo `size` das texturas. */
+function drawSymbol(g: Phaser.GameObjects.Graphics, name: SymbolName, size: number) {
+    g.clear()
+    if (name === 'shield' || name === 'shieldEmpty') {
+        const full = name === 'shield'
+        drawShield(g, size, full ? C.safeLight : C.cream, full ? C.safeGreen : C.amberDark, Math.max(3, size * 0.07))
+        return
+    }
+    if (name === 'lockOpen' || name === 'lockClosed') {
+        // o corpo do `drawPadlock` tem 0,72 do tamanho; aqui `size` é o corpo
+        drawPadlock(g, size / 0.72, name === 'lockClosed')
+        return
+    }
+    if (name === 'eye') {
+        g.fillStyle(C.white, 1)
+        g.fillEllipse(0, 0, size, size * 0.64)
+        g.lineStyle(4, C.inkSoft, 1)
+        g.strokeEllipse(0, 0, size, size * 0.64)
+        g.fillStyle(C.inkSoft, 1)
+        g.fillCircle(0, 0, size * 0.2)
+        return
+    }
+    g.fillStyle(C.red, 1)
+    g.fillCircle(0, 0, size * 0.5)
+    g.fillStyle(C.white, 1)
+    g.fillRoundedRect(-size * 0.31, -size * 0.06, size * 0.62, size * 0.12, size * 0.06)
+}
+
+/**
+ * Selo de fase, no header, com textura: escudo apagado com o cartão dentro
+ * (os que vêm), o mesmo com o cartão aceso (o da vez) e o escudo verde com um
+ * cadeadinho no canto (o que já foi guardado). O pictograma do dado não entra
+ * aqui: ele chega voando do cofre e é um objeto à parte.
+ *
+ * O `slot` é o móvel fixo; só o que está dentro dele troca.
+ */
+export function fillShieldSlot(
+    scene: Phaser.Scene,
+    slot: Phaser.GameObjects.Container,
+    size: number,
+    state: ShieldState,
+) {
+    slot.removeAll(true)
+    if (!scene.textures.exists('simbolos')) {
+        const g = scene.add.graphics()
+        paintShieldSlot(g, size, state)
+        slot.add(g)
+        return
+    }
+
+    const done = state === 'done'
+    slot.add(symbolIcon(scene, done ? 'shield' : 'shieldEmpty', size))
+
+    if (done) {
+        const lock = symbolIcon(scene, 'lockClosed', size * 0.3)
+        lock.setPosition(size * 0.32, -size * 0.3)
+        slot.add(lock)
+        return
+    }
+
+    const card = cardFace(scene, size * 0.36, size * 0.44)
+    card.setPosition(0, size * SHIELD_ICON_DY).setAlpha(state === 'current' ? 1 : 0.4)
+    slot.add(card)
+}
+
 /* ────────────────────────────────────────────────────────── fala */
 
 export type BubbleIcon = 'shield' | 'eye' | 'lock' | 'no'
 
-function drawBubbleIcon(g: Phaser.GameObjects.Graphics, icon: BubbleIcon, s: number) {
-    if (icon === 'shield') {
-        drawShield(g, s, C.safeLight, C.safeGreen, 4)
-        return
-    }
-    if (icon === 'eye') {
-        g.fillStyle(C.white, 1)
-        g.fillEllipse(0, 0, s * 1.1, s * 0.7)
-        g.lineStyle(4, C.inkSoft, 1)
-        g.strokeEllipse(0, 0, s * 1.1, s * 0.7)
-        g.fillStyle(C.inkSoft, 1)
-        g.fillCircle(0, 0, s * 0.22)
-        return
-    }
-    if (icon === 'lock') {
-        drawPadlock(g, s * 0.9, true)
-        return
-    }
-    // mão aberta de "não"
-    g.fillStyle(C.red, 1)
-    g.fillCircle(0, 0, s * 0.48)
-    g.fillStyle(C.white, 1)
-    g.fillRoundedRect(-s * 0.3, -s * 0.06, s * 0.6, s * 0.12, s * 0.06)
+/** O ícone de cada fala, no tamanho da coluna de 38 px do balão. */
+function bubbleIcon(scene: Phaser.Scene, icon: BubbleIcon): Icon {
+    if (icon === 'shield') return symbolIcon(scene, 'shield', 44)
+    if (icon === 'eye') return symbolIcon(scene, 'eye', 46)
+    if (icon === 'lock') return symbolIcon(scene, 'lockClosed', 34)
+    return symbolIcon(scene, 'no', 44)
 }
 
 /**
@@ -572,8 +747,7 @@ export function speechBubble(
     bg.lineBetween(-16, h / 2 - 2, -2, h / 2 + 26)
     bg.lineBetween(20, h / 2 - 2, -2, h / 2 + 26)
 
-    const iconG = scene.add.graphics().setPosition(-w / 2 + 34, 0)
-    drawBubbleIcon(iconG, icon, iconSize)
+    const iconG = bubbleIcon(scene, icon).setPosition(-w / 2 + 34, 0)
 
     box.add([bg, iconG, label])
     return box

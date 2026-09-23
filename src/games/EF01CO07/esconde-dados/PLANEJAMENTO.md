@@ -560,3 +560,86 @@ O álbum do rodapé virou os **escudos do header**: um por fase, que enche com o
 pictograma do dado quando ele entra no cofre. É a mesma informação da pílula
 "Fase 2 de 3" ao lado, em desenho, para quem ainda não lê. O rodapé ficou de
 grama, e o percurso inteiro cabe na faixa do meio.
+
+## 15. Sétima rodada: o portão virou conversa (23/09/2026)
+
+> *"se formos na base do escudo, a criança sempre saberá qual é o certo"* — o
+> dono do projeto, pedindo diálogo com as duas pessoas e uma fuga "em tensão"
+> quando a escolha é errada.
+
+A habilidade, na ficha: **nome, endereço, idade e onde estuda são dados a
+resguardar — não se compartilham com qualquer pessoa.** O escudo verde sobre a
+cabeça transformava isso em "toque no verde": a criança acertava sem saber QUEM
+estava pedindo.
+
+### O que saiu
+
+| Pista | Por que entregava |
+|---|---|
+| escudo verde sobre a cabeça de quem cuida | era a resposta, visível antes de qualquer fala |
+| tapete verde para quem cuida, cinza para o outro | a mesma resposta, embaixo |
+| ícone de escudo no balão de quem cuida, olho no do outro | a mesma resposta, no balão |
+
+Os dois tapetes agora têm a mesma cor. O escolhido só fica verde **depois** do
+acerto: vira confirmação, não pista. `badgeOnArrival` saiu dos níveis.
+
+### A conversa (`talkAtGate`, `scenes/talk.ts`)
+
+As duas pessoas pedem o cartão, uma de cada vez, da esquerda para a direita
+(os lados já são sorteados). A fala sai letra a letra e espera o botão dentro
+do balão (`Próximo`, depois `Entendi`), como manda a regra do catálogo; quem
+não está falando fica esmaecido. Só depois das duas falas o toque vale. Os
+balões ficam na tela, sem botão, para serem relidos na hora de escolher.
+
+**A pista é a relação**: quem cuida chama a criança pelo que ela é para ele —
+"Oi, filho!", "Oi, meu aluno!". O estranho só quer o cartão. As falas moram na
+fase (`PhaseDef.talk`), porque a mesma pessoa pede de jeitos diferentes em
+cada nível, e o `validateLevels` cobra as duas metades da regra: quem cuida
+TEM de usar `filho`/`aluno` (`KIN_WORDS`), estranho NUNCA usa, e nenhuma fala
+passa de 34 letras.
+
+| Nível | Assunto no portão | Exemplo de estranho |
+|---|---|---|
+| 1 | quem é da família fala diferente | "Ei, você! Me dá isso aí!" |
+| 2 | simpatia não é confiança | "Que cartão lindo! Me dá?", "Te dou um doce por ele!" |
+| 3 | (o assunto é o avatar no caminho; o portão repete o 2) | "Me dá? Eu devolvo depois!" |
+
+### O erro: ele leva o cartão e foge (`giveToStranger`)
+
+Antes, um escudo fechava por cima do cartão e nada acontecia. Agora:
+
+1. o cartão vai para a mão de quem pediu (menor, do lado da corrida — inteiro
+   tapava o rosto), ele diz **"Valeu! Tchau!"** e a criança leva um "!";
+2. ele **foge** para fora da tela, inclinado e quicando, soltando poeira, com
+   vinheta vermelha, brilho vermelho nas bordas e coração batendo;
+3. a frase do estrago diz QUAL dado foi: **"Ele levou o seu NOME!"**,
+   **"Agora ele sabe ONDE VOCÊ MORA!"** (`CardDef.lost`);
+4. **a fita volta**: véu azulado, ⏪ e "Vamos voltar!"; ele volta de costas e o
+   cartão volta para as mãos da criança;
+5. a mesma decisão reabre, com as duas falas à vista.
+
+Custa uma vida e emite `WRONG_ANSWER`, como antes. Não empurra a fase nem manda
+refazer o percurso. Depois de dois erros, quem cuida respira e a fala dele dá
+um tranco (a trava do catálogo).
+
+A cena é tensa e não assustadora: o estranho é o mesmo boneco sorridente, e
+ninguém persegue a criança — ele vai embora.
+
+### O cofre só aparece para guardar
+
+Na hora da escolha o cofre não está na tela. Ele é montado transparente e,
+quando quem cuida diz **"Vou trancar!"**, cai do alto e assenta no chão com
+poeira e baque (`revealSafe`) — só então abre, engole o cartão e tranca. Atrás
+do menino durante a conversa ele era mais uma coisa para olhar, e o cartão
+erguido ficava na frente dele (`GATE.cardY` subiu de 398 para 346 para não
+tapar a cabeça).
+
+### Pendências
+
+- **`pessoas.png` ainda tem escudinhos**: um broche na jaqueta da mãe e o
+  crachá da professora. São pequenos e o jogo não ensina mais a procurá-los,
+  mas continuam sendo uma pista fora da fala. Resolver pede uma nova geração
+  da folha sem os dois.
+- **Idade não é um cartão.** A ficha lista nome, endereço, **idade** e onde
+  estuda; o jogo tem nome, foto, endereço, escola e telefone. Um cartão de
+  idade precisa de um ícone novo em `dados.png` (bolo com velinhas, sem número).

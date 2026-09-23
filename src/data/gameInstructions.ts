@@ -121,7 +121,7 @@ const POR_SLUG: Record<string, string[]> = {
   "esconde-dados": [
     "Espere a luz da lanterna apagar: verde é pode ir.",
     "Toque na moita para correr até o próximo esconderijo.",
-    "No portão, entregue o cartão só para quem tem o escudo verde.",
+    "No portão, ouça os dois e entregue o cartão só para quem cuida de você.",
   ],
   "guardioes-dos-dados": [
     "Leia cada situação com atenção.",

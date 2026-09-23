@@ -9,6 +9,224 @@ Este jogo deve usar pouca textura. A pracinha, os esconderijos, a lanterna, o
 cartão, o cofre, os escudos e os pictogramas saem em `Graphics`. As texturas
 existem só para dar identidade humana aos personagens e para a capa do catálogo.
 
+> **Superado em 23/09/2026 — ver §0.** Com personagens, moita, árvore e cofre
+> ilustrados, os ícones em `Graphics` passaram a ser as peças mais pobres da
+> tela, e o usuário os reprovou como amadores.
+
+---
+
+## 0. Estado dos arquivos
+
+**O que já existe**, medido nos arquivos entregues:
+
+| Arquivo | Tamanho | Grade |
+|---|---|---|
+| `crianca.png` | 450 x 1800 | 1 x 4 de 450, vertical |
+| `pessoas.png` | 450 x 2250 | 1 x 5 de 450, vertical |
+| `cofre.png` | 1024 x 256 | 4 x 1 de 256 |
+| `seguranca.png` | 304 x 396 | — |
+| `arvore.png` | 400 x 400 | — |
+| `moita.png` | 280 x 165 | — |
+| `cover-esconde-dados.png` | — | — |
+| `dados.png` | 768 x 512 | 3 x 2 de 256 |
+| `simbolos.png` | 768 x 512 | 3 x 2 de 256 |
+
+**Os ícones chegaram em 23/09/2026**, na METADE do tamanho pedido (1536 x 1024
+com células de 512). O cartão da abertura sai com 210 px de altura a partir de
+um corpo de 206 px — dá, sem ampliar. Se um dia vierem de novo em 512, o
+`BootScene` (quadro 256) e as caixas de `effects.ts` (medidas em pixels do
+quadro) mudam juntos.
+
+| Arquivo | Quadros | Substitui |
+|---|---|---|
+| `dados.png` | 0 nome · 1 foto · 2 endereço · 3 escola · 4 telefone · 5 cartão em branco | `drawDataIcon`, `paintCard` (cartão da abertura e das mãos) |
+| `simbolos.png` | 0 escudo verde · 1 escudo apagado · 2 cadeado aberto · 3 cadeado fechado · 4 olho · 5 mão de "não" | `drawShield`, `paintShieldSlot`, `drawPadlock`, ícones dos balões e do botão NÃO |
+
+Cada quadro é centrado pela **caixa alfa medida** (`DATA_BOX`, `CARD_BOX`,
+`SYMBOL_BOX` em `effects.ts`), e o `size` pedido é o maior lado dela. Duas
+exceções: o cartão é medido pelo corpo, sem a estrelinha; e os cadeados pelo
+corpo, sem a alça — aberto e fechado trocam de quadro no meio da animação, e
+centrados pela caixa inteira o corpo pularia quando a alça desce. Os desenhos
+antigos continuam como reserva, por `textures.exists()`.
+
+**Continuam em `Graphics`:** a seta verde sobre a moita e o "play" da pílula
+(sinal de estado, que acende e apaga), o chip do cartão no header (é pílula com
+texto), balões, pílulas, cone, brilhos e raios do cofre.
+
+### 0.1 A linha de arte deste jogo
+
+É a **linha própria do Esconde-Dados**, anterior às seis de `references/`. A
+referência que vai anexada em toda geração são **os PNGs do próprio jogo** —
+não as imagens de `references/`.
+
+| | Esconde-Dados | Chibi de figurinha (NÃO é esta) |
+|---|---|---|
+| traço | grosso, uniforme, azul-marinho quase preto `#000819`, ponta redonda de caneta | fino, uniforme, escuro dessaturado |
+| cor | chapada e saturada, um tom de sombra embaixo/à direita e um risco de brilho branco | chapada, um tom de sombra |
+| olho | pontinho ou arco, bochecha rosada redonda | enorme, com brilho |
+| silhueta | o próprio contorno escuro, **sem keyline branca** | keyline branca de adesivo |
+| proporção | cabeça grande sobre corpo de criança, formas roliças | cabeça enorme, corpo mínimo |
+
+Cores medidas na arte: pele `#FAD2AC`, cabelo `#ED6715`, camiseta `#218CFB`,
+short `#FCB625`, cofre `#4A5D7C`.
+
+**O rosto que aparece no "nome" e na "foto" é o do menino de cabelo laranja**:
+o cartão diz "Este cartão tem a SUA FOTO", e a criança que joga é ele. Por isso
+`dados.png` leva `crianca.png` anexada e NÃO põe o menino no negativo — e
+`simbolos.png`, que não tem gente, põe.
+
+### 0.2 `dados.png` — 1536 x 1024, grade 3 x 2
+
+Anexar: **`crianca.png` e `cofre.png`**.
+
+Os ícones aparecem de 35 px (dentro do escudo do header) a 124 px (cartão da
+abertura). O que decide é o tamanho pequeno: silhueta grossa, pouco detalhe, e
+a casa e a escola com formas diferentes, não só cores.
+
+#### Prompt copiável
+
+~~~text
+STYLE — USE THE ATTACHED IMAGES AS THE ART STYLE REFERENCE, and match their
+rendering exactly: cheerful children's cartoon clipart for a first-grade game;
+THICK clean outline of even weight in a very dark navy, almost black (#000819),
+with rounded line ends, like a thick felt-tip marker; bright saturated FLAT
+colours, each shape with ONE darker shade tone on its lower-right side and a
+small white shine mark on its upper-left side, no gradients; chunky rounded
+shapes, no sharp corners, very few details; small inner detail strokes in the
+same dark outline colour. NO white sticker keyline — the dark outline is the
+edge of every object. Take ONLY the art style from the attached images, with
+ONE exception: the boy's face, described below. Do NOT copy the safe, the
+poses or the bush.
+
+ICON SPRITE SHEET — 6 game icons in a strict grid of 3 columns by 2 rows,
+1536 x 1024 pixels, every cell exactly 512 x 512, fully transparent background.
+Each object is centred in its cell and fills about 75% of it, front view, flat
+and straight (no tilt, no perspective), with wide empty transparent space
+around it. No grid lines. All six share the same outline weight, the same scale
+and the same lighting, as one icon family. They will be shown as small as 40
+pixels, so every silhouette must be chunky, simple and instantly readable.
+
+These are the PERSONAL DATA of the orange-haired boy in the attached reference
+(messy orange hair #ED6715, skin #FAD2AC, rosy round cheeks, big happy smile,
+blue t-shirt #218CFB). Wherever a face appears, it is HIS face, head and
+shoulders only, simplified.
+
+Cells, left to right, top row first:
+1. NAME — a horizontal ID name tag: rounded rectangle, cream body #FFF8EC, a
+   blue header band #218CFB and a small clip slot at the top; on the left a
+   round portrait of the boy's face; on the right two thick grey wavy scribble
+   lines that suggest handwriting — scribbles only, NOT letters.
+2. PHOTO — a square instant photo with a thick white frame, wider at the
+   bottom; inside, a light sky-blue background #BFE7FF with the boy's head and
+   shoulders, smiling.
+3. HOME ADDRESS — a small cosy house, tall and narrow: warm yellow walls
+   #FFC857, pointed terracotta roof #E8743B, a white door and one round window;
+   a big red map location pin #E14B4B stands above the roof, slightly to the
+   right.
+4. SCHOOL — a WIDE low schoolhouse: red-brick walls #D9573B with white trim and
+   two white windows, a small white bell tower with a golden bell in the middle
+   of the roof, a little green flag on top, and a small blue kid's backpack
+   #218CFB leaning at the front-left corner. Clearly wider and different in
+   shape from the house.
+5. PHONE NUMBER — a smartphone standing upright, dark slate body #3B4A5E, light
+   blue screen with a round green call-handset symbol #2FBF71 in the middle and
+   a row of five white dots below it that hide the number — dots only, NO
+   digits.
+6. BLANK DATA CARD — a precious collectible card in portrait format (width to
+   height 5:6), rounded corners, cream face #FFF8EC, thick golden rim #F5C542
+   with a darker gold edge #D99A1F, and one small four-point sparkle on the
+   top-right corner of the rim. The whole centre of the card is EMPTY flat
+   cream with nothing drawn on it — the game places a picture there.
+
+DO NOT INCLUDE: text, letters, words, readable writing, names, digits, numbers,
+street names, school names, logos, brand marks, watermark, signature, grid
+lines, cell borders, frames around the cells, UI panels, buttons, speech
+bubbles, background scene, ground, floor, drop shadows under the objects,
+full-body characters, other people, the teacher, the robot guard, the purple
+app avatar, bushes, trees, safes, white sticker keyline, thin lines, sketchy
+lines, tiny details, soft airbrushed gradients, painterly rendering, glossy 3D,
+3D render, photorealistic, isometric or perspective view, tilted objects,
+objects cropped or touching the cell edge.
+~~~
+
+### 0.3 `simbolos.png` — 1536 x 1024, grade 3 x 2
+
+Anexar: **`cofre.png` e `moita.png`** (objetos, sem gente).
+
+Os pares 1-2 e 3-4 trocam de quadro no meio de uma animação — o escudo que
+enche no header, o cadeado que fecha na frente do cofre. Se o desenho mudar de
+lugar dentro da célula, ele pula na troca; por isso o prompt exige a mesma
+posição e só muda o que precisa mudar.
+
+#### Prompt copiável
+
+~~~text
+STYLE — USE THE ATTACHED IMAGES AS THE ART STYLE REFERENCE, and match their
+rendering exactly: cheerful children's cartoon clipart for a first-grade game;
+THICK clean outline of even weight in a very dark navy, almost black (#000819),
+with rounded line ends, like a thick felt-tip marker; bright saturated FLAT
+colours, each shape with ONE darker shade tone on its lower-right side and a
+small white shine mark on its upper-left side, no gradients; chunky rounded
+shapes, no sharp corners, very few details; small inner detail strokes in the
+same dark outline colour. NO white sticker keyline — the dark outline is the
+edge of every object. Take ONLY the art style from the attached images: do NOT
+copy the safe or the bush.
+
+ICON SPRITE SHEET — 6 game symbols in a strict grid of 3 columns by 2 rows,
+1536 x 1024 pixels, every cell exactly 512 x 512, fully transparent background.
+Each object is centred in its cell and fills about 75% of it, front view, flat
+and straight (no tilt, no perspective), with wide empty transparent space
+around it. No grid lines. All six share the same outline weight, the same scale
+and the same lighting, as one icon family. They will be shown as small as 40
+pixels, so every silhouette must be chunky, simple and instantly readable.
+
+Cells, left to right, top row first:
+1. TRUST SHIELD — a friendly chunky shield: flat top with rounded corners,
+   straight sides that curve into a soft point at the bottom. A thick
+   safe-green rim #2FBF71 with a darker green edge #1F9A57 around a large
+   lighter mint-green inner plate #A8EBC4, and a white shine on the upper
+   left. The inner plate is EMPTY and takes about 70% of the shield — the game
+   places a picture there.
+2. EMPTY SHIELD — EXACTLY the same shield as cell 1, same outline, same size
+   and same position inside the cell, but not earned yet: pale cream plate
+   #FFF8EC and light beige rim #E8DCC6. Only the colours change.
+3. OPEN PADLOCK — a chunky golden padlock body #F5C542 with a darker gold edge
+   #D99A1F and a round dark keyhole; the steel-grey shackle #9FB0C4 is lifted
+   up and swung open to the left.
+4. CLOSED PADLOCK — EXACTLY the same padlock body as cell 3, same size and same
+   position inside the cell, with the shackle down and locked into the body.
+   Only the shackle changes.
+5. LOOKING EYE — one single big cartoon eye, almond shaped, white, with a
+   dark-brown iris #3B2A22, a large white highlight and three short eyelash
+   strokes on top; curious and friendly, never scary. Just the eye, no face.
+6. "NO" HAND — a friendly open hand, palm facing the viewer, fingers together
+   pointing up, thumb out to the side, warm child skin #FAD2AC, two short palm
+   crease strokes, ending at the wrist, in front of a round coral-red disc
+   #E14B4B with a darker red rim #B83232 — the calm, universal "stop, don't"
+   gesture.
+
+DO NOT INCLUDE: text, letters, words, digits, numbers, check marks, crosses,
+stars or pictures inside the shields, logos, watermark, signature, grid lines,
+cell borders, frames around the cells, UI panels, buttons, speech bubbles,
+background scene, ground, drop shadows, people, children, faces, full
+characters, the orange-haired boy, the teacher, the robot guard, the purple app
+avatar, arm or sleeve on the hand, keys, chains, bushes, trees, safes, white
+sticker keyline, thin lines, sketchy lines, tiny details, soft airbrushed
+gradients, painterly rendering, chrome reflections, glossy 3D, 3D render,
+photorealistic, isometric or perspective view, tilted objects, objects cropped
+or touching the cell edge.
+~~~
+
+### 0.4 Depois que chegar
+
+- Se vier com fundo branco, refazer pedindo fundo magenta `#FF00FF` chapado e
+  remover a cor. Branco não serve: é a cor da moldura da foto e do olho.
+- Medir a caixa alfa de cada célula e centrar pela caixa, não pela célula. Nos
+  pares escudo e cadeado, ancorar os dois quadros pela MESMA caixa (a do
+  primeiro), senão a troca pula.
+- Cada peça continua com o desenho de `Graphics` como reserva, por
+  `textures.exists()`: o jogo roda sem as folhas.
+
 ---
 
 ## 1. Arquivos
@@ -20,7 +238,8 @@ existem só para dar identidade humana aos personagens e para a capa do catálog
 | `cover-esconde-dados.png` | - | 1024 x 576 | capa do catálogo |
 
 Não pedir textura para cenário, cartão, cofre, esconderijo, lanterna, cone de
-luz, escudo, cadeado, botões, estrelas, balões ou UI.
+luz, escudo, cadeado, botões, estrelas, balões ou UI. *(Valeu até a arte
+chegar: cofre, cartão, escudo, cadeado e pictogramas viraram textura — §0.)*
 
 ---
 

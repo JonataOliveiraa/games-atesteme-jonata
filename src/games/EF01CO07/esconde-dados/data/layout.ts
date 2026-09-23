@@ -17,8 +17,13 @@ export const HUD = {
     shieldSize: 62,
     shieldGap: 16,
     cardX: 688,
+    /** Largura MÍNIMA do chip: ele cresce até caber o rótulo mais comprido. */
     cardW: 214,
     cardH: 66,
+    /** Onde o rótulo começa, a partir da borda esquerda (depois do ícone). */
+    cardLabelDX: 74,
+    /** Folga entre o fim do rótulo e a borda direita. */
+    cardPadR: 20,
     livesX: 1096,
     helpX: 1222,
     helpR: 30,
@@ -61,8 +66,54 @@ export const WATCHER = {
     handDY: -22,
 }
 
+export interface WatcherSpot {
+    x: number
+    y: number
+    handDX: number
+    handDY: number
+    /** De onde para onde a lanterna varre. O segundo curioso varre ao contrário. */
+    aim: [number, number]
+    /** O desenho olha para a esquerda; o da direita entra espelhado. */
+    flip: boolean
+}
+
+/**
+ * Onde os curiosos ficam.
+ *
+ * Com um só, ele fica no meio e varre a pracinha inteira. Com dois, eles se
+ * afastam para os cantos e cada janela de luz nasce de um lado — é a diferença
+ * que a criança precisa ver para entender que agora são dois.
+ */
+const WATCHER_SPOTS: Record<number, WatcherSpot[]> = {
+    1: [{ x: 656, y: 322, handDX: -52, handDY: -22, aim: [140, 1140], flip: false }],
+    2: [
+        { x: 392, y: 330, handDX: -52, handDY: -22, aim: [140, 1140], flip: false },
+        { x: 918, y: 316, handDX: 52, handDY: -22, aim: [1140, 140], flip: true },
+    ],
+}
+
+export function watcherSpots(count: number): WatcherSpot[] {
+    return WATCHER_SPOTS[count] ?? WATCHER_SPOTS[1]
+}
+
 /** Paradas do percurso. A de índice 0 é a entrada; as demais são esconderijos. */
 export const STOPS = [186, 486, 786, 1086]
+
+/**
+ * O passo do percurso muda com o tanto de paradas.
+ *
+ * Com quatro esconderijos são CINCO moitas na mesma largura de pracinha, e o
+ * passo de 300px não cabe. Elas se aproximam e encolhem juntas — o vão entre
+ * duas moitas nunca pode sumir, senão o caminho vira uma cerca viva.
+ */
+const STOPS_BY_COUNT: Record<number, number[]> = {
+    3: [186, 486, 786, 1086],
+    4: [148, 384, 620, 856, 1092],
+}
+
+export function stopsFor(hideouts: number): number[] {
+    return STOPS_BY_COUNT[hideouts] ?? STOPS
+}
 
 export const HIDEOUT = {
     w: 216,
@@ -71,6 +122,42 @@ export const HIDEOUT = {
     y: 502,
     hitW: 232,
     hitH: 186,
+}
+
+export interface BushSize {
+    w: number
+    h: number
+    hitW: number
+    hitH: number
+}
+
+const BUSH_BY_COUNT: Record<number, BushSize> = {
+    3: { w: 216, h: 128, hitW: 232, hitH: 186 },
+    4: { w: 190, h: 116, hitW: 208, hitH: 174 },
+}
+
+export function bushFor(hideouts: number): BushSize {
+    return BUSH_BY_COUNT[hideouts] ?? BUSH_BY_COUNT[3]
+}
+
+/**
+ * O avatar que para a criança no meio do caminho.
+ *
+ * Ele nasce na altura das moitas, À ESQUERDA de onde a criança parou: ela
+ * chega à última moita (x 1092 com quatro esconderijos), e em x 1010 o avatar
+ * nascia em cima dela. O botão de recusar fica embaixo, no meio — longe do
+ * avatar, para ninguém tocar num querendo o outro.
+ */
+export const INTERCEPT = {
+    x: 846,
+    y: 424,
+    size: 196,
+    bubbleDY: -168,
+    hitW: 220,
+    hitH: 250,
+    noW: 268,
+    noH: 84,
+    noY: 646,
 }
 
 export const RUNNER = {
@@ -100,7 +187,7 @@ export const RUNNER = {
  * servia para nada.
  *
  * A leitura, de baixo para cima: o menino com o cartão → as duas pessoas
- * falando → o cofre esperando.
+ * falando. O cofre só cai no chão quando quem cuida vai guardar.
  */
 export const GATE = {
     /** Cofre: na grama, atrás de todo mundo. */
@@ -134,14 +221,34 @@ export const GATE = {
 
     hitW: 264,
     hitH: 300,
-    badgeDY: -148,
-    badgeSize: 72,
-    /** O balão de fala, acima do escudo. */
-    bubbleDY: -238,
+    /**
+     * A ponta do rabicho da fala do pedido, logo acima da cabeça. O balão
+     * cresce para cima dela e, com o botão, vai até ~y 110 — fica abaixo do
+     * header e fora da faixa da pílula (x 454–826).
+     */
+    talkDY: -126,
+    /** O balão curto de reação ("Deixa comigo!"), no mesmo lugar da fala. */
+    bubbleDY: -200,
+    /**
+     * Onde fica o cartão na mão de quem pega, a partir do centro da pessoa:
+     * na altura da cintura, do lado para onde ela vai (o cofre, ou a fuga), e
+     * encolhido — inteiro, no meio do peito, ele tapava o rosto.
+     */
+    handDX: 52,
+    handDY: 30,
+    stolenScale: 0.55,
+    /** Para onde o estranho corre: além da borda, do lado dele. */
+    fleeX: 200,
 
     runnerY: 486,
     runnerSize: 152,
-    cardY: 398,
+    /**
+     * O cartão erguido ACIMA da cabeça, não na frente dela. O cabelo do menino
+     * começa em y 412 no portão (medido no quadro); com o centro em 398 o
+     * cartão ia até 451 e tapava o rosto. Em 346 a face dele termina em 399 —
+     * e o flutuar só sobe, então nunca encosta.
+     */
+    cardY: 346,
     cardW: 88,
     cardH: 106,
 }

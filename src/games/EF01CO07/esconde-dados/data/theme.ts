@@ -1,5 +1,8 @@
 export const C = {
     ink: 0x1f2a37,
+    /** O contorno medido na arte (`crianca.png`, `dados.png`): o que for
+     *  desenhado em Graphics ao lado dos ícones usa o mesmo traço. */
+    outline: 0x000819,
     inkSoft: 0x4b5a6b,
     cream: 0xfff8ec,
     creamEdge: 0xe8dcc6,

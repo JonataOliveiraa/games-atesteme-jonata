@@ -8,12 +8,15 @@ import { LEVELS } from '../data/levels'
 /**
  * Tiras de quadros. As de gente são VERTICAIS, 450 × 450, e o índice do quadro
  * é a linha; a do cofre é HORIZONTAL, 256 × 256, e vai de fechado (0) a
- * escancarado (3).
+ * escancarado (3). As de ícones são grades 3 × 2 de 256; as caixas medidas de
+ * cada quadro estão em `effects.ts`.
  */
 const SHEETS: Record<string, { frameWidth: number; frameHeight: number }> = {
     crianca: { frameWidth: 450, frameHeight: 450 },
     pessoas: { frameWidth: 450, frameHeight: 450 },
     cofre: { frameWidth: 256, frameHeight: 256 },
+    dados: { frameWidth: 256, frameHeight: 256 },
+    simbolos: { frameWidth: 256, frameHeight: 256 },
 }
 
 const FILES = import.meta.glob(
