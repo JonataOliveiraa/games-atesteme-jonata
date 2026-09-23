@@ -2,7 +2,7 @@ import Phaser from 'phaser'
 import { FX } from '../../../../shared/effects/FX'
 import { CHOICE, DEPTH } from '../data/layout'
 import { C, CSS, FONT } from '../data/theme'
-import type { ChoiceDef } from '../types'
+import { choiceLabel, type ChoiceDef } from '../types'
 
 interface Button {
     def: ChoiceDef
@@ -19,17 +19,35 @@ export function createChoices(scene: Phaser.Scene, onPick: (index: number) => vo
 
     const slotX = (index: number) => CHOICE.cx + (index - 1) * CHOICE.gap
 
+    /**
+     * CADA GESTO TEM A SUA COR E O SEU FORMATO.
+     *
+     * Quatro coisas diferentes acontecem quando a criança toca: soma palavra,
+     * tira palavra, filtra tipo, troca de ferramenta. Dois botões com a mesma
+     * cara fariam duas delas parecerem a mesma — e o botão que tem cara de
+     * "mais uma palavra" e na verdade troca o buscador ensina errado.
+     *
+     * O filtro é o único com canto reto: filtro corta, e corte tem canto.
+     */
+    const SKIN: Record<ChoiceDef['kind'], { deep: number; face: number; radius: number }> = {
+        add: { deep: C.magicDeep, face: C.magic, radius: 26 },
+        remove: { deep: C.warnDark, face: C.warn, radius: 26 },
+        filter: { deep: C.okDark, face: C.ok, radius: 10 },
+        engine: { deep: C.woodDark, face: C.gold, radius: 40 },
+    }
+
     const paint = (button: Button, pressed: boolean) => {
         const { w, h } = CHOICE
-        const add = button.def.kind === 'add'
+        const skin = SKIN[button.def.kind]
+        const r = skin.radius
         const dy = pressed ? 8 : 0
         button.face.clear()
         button.face.fillStyle(C.ink, 0.28)
-        button.face.fillRoundedRect(-w / 2 + 5, -h / 2 + 9, w, h, 26)
-        button.face.fillStyle(add ? C.magicDeep : C.warnDark, 1)
-        button.face.fillRoundedRect(-w / 2, -h / 2 + dy, w, h, 26)
-        button.face.fillStyle(add ? C.magic : C.warn, 1)
-        button.face.fillRoundedRect(-w / 2 + 7, -h / 2 + 7 + dy, w - 14, h - 20, 20)
+        button.face.fillRoundedRect(-w / 2 + 5, -h / 2 + 9, w, h, r)
+        button.face.fillStyle(skin.deep, 1)
+        button.face.fillRoundedRect(-w / 2, -h / 2 + dy, w, h, r)
+        button.face.fillStyle(skin.face, 1)
+        button.face.fillRoundedRect(-w / 2 + 7, -h / 2 + 7 + dy, w - 14, h - 20, Math.max(r - 6, 6))
         button.face.fillStyle(C.white, 0.3)
         button.face.fillRoundedRect(-w / 2 + 22, -h / 2 + 16 + dy, w - 44, 14, 7)
     }
@@ -56,7 +74,7 @@ export function createChoices(scene: Phaser.Scene, onPick: (index: number) => vo
                 container.add([ring, face])
                 container.add(
                     scene.add
-                        .text(0, -6, `${def.kind === 'add' ? '+' : '−'} ${def.term}`, {
+                        .text(0, -6, choiceLabel(def), {
                             fontFamily: FONT.black,
                             fontSize: '34px',
                             color: CSS.white,

@@ -7,11 +7,11 @@ import { createLives, type Lives } from '../../../../shared/hud/createLives'
 import { vidasIniciais } from '../../../../shared/level/vidasIniciais'
 import { createTutorial } from '../../../../shared/tutorial/createTutorial'
 import { FX } from '../../../../shared/effects/FX'
-import { LEVELS, applyChoice, improves, solved } from '../data/levels'
+import { LEVELS, applyChoice, improves, queryText, solved, startQuery, validateLevels } from '../data/levels'
 import { rankResults } from '../data/results'
 import { DEPTH, H, HUD, W } from '../data/layout'
 import { C } from '../data/theme'
-import type { ChoiceDef, LevelDef, LevelNumber, MissionDef, Mode } from '../types'
+import type { ChoiceDef, LevelDef, LevelNumber, MissionDef, Mode, QueryState } from '../types'
 import { createCast, KEEPER, type Cast } from './cast'
 import { createQuery, type Query } from './query'
 import { createBoard, type Board } from './board'
@@ -32,7 +32,14 @@ export class GameScene extends Phaser.Scene {
     private mode: Mode = 'reading'
     private gen = 0
 
-    private terms: string[] = []
+    /**
+     * A CONSULTA INTEIRA — palavras, filtro e buscador.
+     *
+     * Era uma lista de palavras, e virou um objeto quando o filtro e o
+     * buscador entraram: os três eixos precisam viajar juntos até o
+     * `rankResults`, que é o único lugar que decide a ordem da estante.
+     */
+    private busca: QueryState = { terms: [], engine: 'grimorio' }
     private stepIndex = 0
     private misses = 0
     private stumbled = false
@@ -72,7 +79,7 @@ export class GameScene extends Phaser.Scene {
 
         this.missionIndex = 0
         this.mode = 'reading'
-        this.terms = []
+        this.busca = { terms: [], engine: 'grimorio' }
         this.stepIndex = 0
         this.misses = 0
         this.stumbled = false
@@ -86,6 +93,9 @@ export class GameScene extends Phaser.Scene {
 
     create() {
         this.input.topOnly = true
+
+        const problems = validateLevels(LEVELS)
+        if (problems.length) console.error(`[${GAME_ID}]`, problems)
 
         if (this.textures.exists('bg-biblioteca')) {
             this.add.image(W / 2, H / 2, 'bg-biblioteca').setDisplaySize(W, H + 2).setDepth(DEPTH.bg)
@@ -150,8 +160,8 @@ export class GameScene extends Phaser.Scene {
         this.unsubPlatform?.()
     }
 
-    private top3(terms: string[]) {
-        return rankResults(this.mission.pool, terms)
+    private top3(q: QueryState) {
+        return rankResults(this.mission.pool, q)
             .slice(0, 3)
             .map(item => item.id)
     }
@@ -165,11 +175,11 @@ export class GameScene extends Phaser.Scene {
         this.stumbled = false
 
         const mission = this.mission
-        this.terms = [...mission.initialTerms]
+        this.busca = startQuery(mission)
         this.hint.hush()
         this.board.clear()
         this.choices.clear()
-        this.query.set(this.terms)
+        this.query.set(this.busca)
         this.hud.setMissions(this.done)
         this.cast.keeper(KEEPER.show)
         this.applyInput()
@@ -181,7 +191,7 @@ export class GameScene extends Phaser.Scene {
         await this.query.run()
         if (gen !== this.gen) return
 
-        await this.board.show(this.top3(this.terms), mission.targetId)
+        await this.board.show(this.top3(this.busca), mission.targetId)
         if (gen !== this.gen) return
 
         this.cast.doubt()
@@ -203,7 +213,7 @@ export class GameScene extends Phaser.Scene {
         const gen = this.gen
         const mission = this.mission
         const choice = mission.steps[this.stepIndex].choices[index]
-        const before = [...this.terms]
+        const before = this.busca
         const after = applyChoice(before, choice)
         const good = improves(mission, before, choice)
 
@@ -213,12 +223,26 @@ export class GameScene extends Phaser.Scene {
         this.audio.tap()
         this.hint.hush()
 
+        /*
+         * CADA GESTO TEM O SEU MOVIMENTO NA BARRA.
+         *
+         * A palavra voa do botão e vira ficha; o filtro pousa uma ficha de
+         * tipo no fim da consulta; o buscador troca a cara da barra inteira
+         * e não mexe em ficha nenhuma — a criança vê que a consulta não
+         * mudou, e é por isso que a estante não muda depois.
+         */
         if (choice.kind === 'add') {
             this.audio.term()
             await this.query.add(choice.term, this.choices.posOf(index))
-        } else {
+        } else if (choice.kind === 'remove') {
             this.audio.unterm()
             await this.query.remove(choice.term)
+        } else if (choice.kind === 'filter') {
+            this.audio.term()
+            await this.query.setFilter(after.filter, this.choices.posOf(index))
+        } else {
+            this.audio.term()
+            await this.query.setEngine(after.engine)
         }
         if (gen !== this.gen) return
 
@@ -235,10 +259,10 @@ export class GameScene extends Phaser.Scene {
             return
         }
 
-        this.terms = after
+        this.busca = after
         this.audio.rise()
 
-        if (solved(mission, this.terms)) {
+        if (solved(mission, this.busca)) {
             void this.hint.say('Achou!', 'good')
             void this.cast.happy()
             await this.deliver()
@@ -246,7 +270,20 @@ export class GameScene extends Phaser.Scene {
         }
 
         this.board.glow(mission.targetId)
-        void this.hint.say('Subiu! Falta mais uma palavra.', 'good')
+        /*
+         * A FRASE DIZ O QUE ACABOU DE ACONTECER.
+         *
+         * Depois de trocar de buscador a estante NÃO se mexeu, e dizer
+         * "subiu!" ali seria o jogo descrevendo um movimento que não houve —
+         * que é o jeito mais rápido de ensinar que o texto dele não vale a
+         * leitura. A troca tem a frase dela, e é a lição do nível.
+         */
+        void this.hint.say(
+            choice.kind === 'engine'
+                ? 'Outro buscador, os MESMOS resultados. Quem acha são as palavras.'
+                : 'Subiu! Falta mais um pouco.',
+            'good',
+        )
         this.stepIndex += 1
         this.misses = 0
         this.cast.keeper(KEEPER.think)
@@ -260,7 +297,7 @@ export class GameScene extends Phaser.Scene {
         this.applyInput()
     }
 
-    private async stall(index: number, choice: ChoiceDef, before: string[]) {
+    private async stall(index: number, choice: ChoiceDef, before: QueryState) {
         const gen = this.gen
 
         this.audio.stall()
@@ -272,6 +309,8 @@ export class GameScene extends Phaser.Scene {
         await FX.wait(this, 1200)
         if (gen !== this.gen) return
 
+        // A palavra que não serviu VOLTA para o botão de onde veio; o resto
+        // se desfaz repintando a consulta como ela estava.
         if (choice.kind === 'add') {
             this.audio.unterm()
             await this.query.remove(choice.term, this.choices.posOf(index))
@@ -299,7 +338,7 @@ export class GameScene extends Phaser.Scene {
             this.livesLeft = this.lives.remaining
 
             const useful = this.mission.steps[this.stepIndex].choices.findIndex(item =>
-                improves(this.mission, this.terms, item),
+                improves(this.mission, this.busca, item),
             )
             if (useful >= 0) this.choices.hint(useful)
         }
@@ -419,13 +458,14 @@ export class GameScene extends Phaser.Scene {
         })
     }
 
+    /** A consulta que resolve a missão, escrita para o painel de fim de fase. */
     private finalQuery(mission: MissionDef) {
-        let terms = [...mission.initialTerms]
+        let q = startQuery(mission)
         mission.steps.forEach(step => {
-            const useful = step.choices.find(choice => improves(mission, terms, choice))
-            if (useful) terms = applyChoice(terms, useful)
+            const useful = step.choices.find(choice => improves(mission, q, choice))
+            if (useful) q = applyChoice(q, useful)
         })
-        return terms.join(' + ')
+        return queryText(q)
     }
 
     private applyInput() {

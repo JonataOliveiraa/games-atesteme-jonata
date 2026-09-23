@@ -3,6 +3,7 @@ import { FX } from '../../../../shared/effects/FX'
 import { DEPTH, RESULT } from '../data/layout'
 import { C, CSS, FONT } from '../data/theme'
 import { resultOf } from '../data/results'
+import type { ResultType } from '../types'
 import { paintHeart } from './heart'
 
 interface Card {
@@ -65,11 +66,35 @@ function buildMedal(scene: Phaser.Scene) {
     return medal
 }
 
-function paintPlay(g: Phaser.GameObjects.Graphics, x: number, y: number) {
+/**
+ * O SELO DO TIPO, no canto da carta.
+ *
+ * O desenho da carta não diz se aquilo é um vídeo, uma foto ou um texto — e o
+ * filtro do nível 2 julga exatamente isso. Sem o selo a criança veria três
+ * cartas parecidas despencando por um motivo invisível.
+ *
+ * Os três desenhos são diferentes de longe: triângulo, montanha e linhas.
+ */
+function paintType(g: Phaser.GameObjects.Graphics, type: ResultType, x: number, y: number) {
     g.fillStyle(C.ink, 0.72)
     g.fillCircle(x, y, 27)
     g.fillStyle(C.white, 1)
-    g.fillTriangle(x - 8, y - 13, x - 8, y + 13, x + 14, y)
+
+    if (type === 'video') {
+        g.fillTriangle(x - 8, y - 13, x - 8, y + 13, x + 14, y)
+        return
+    }
+    if (type === 'image') {
+        // a montanhinha com sol: o pictograma universal de foto
+        g.fillCircle(x + 7, y - 7, 4)
+        g.fillTriangle(x - 13, y + 10, x - 2, y - 6, x + 9, y + 10)
+        g.fillTriangle(x - 1, y + 10, x + 6, y, x + 13, y + 10)
+        return
+    }
+    // três linhas de texto, a última mais curta
+    g.fillRect(x - 12, y - 10, 24, 5)
+    g.fillRect(x - 12, y - 2, 24, 5)
+    g.fillRect(x - 12, y + 6, 14, 5)
 }
 
 function paintTag(g: Phaser.GameObjects.Graphics, x: number, y: number) {
@@ -121,7 +146,7 @@ export function createBoard(scene: Phaser.Scene) {
         }
 
         const marks = scene.add.graphics()
-        if (def.type === 'video') paintPlay(marks, art / 2 - 16, art / 2 - 18)
+        paintType(marks, def.type, art / 2 - 16, art / 2 - 18)
         if (id === targetId) paintTag(marks, w / 2 - 8, -h / 2 + 8)
         container.add(marks)
 
