@@ -104,6 +104,8 @@ export class BootScene extends Phaser.Scene {
     }
 
     create() {
+        this.buildGlowTexture()
+
         /*
          * `level` é 1-based, `phase` é 0-based.
          *
@@ -113,5 +115,23 @@ export class BootScene extends Phaser.Scene {
          * não quebra nada.
          */
         this.scene.start('GameScene', { level: faseInicial(this, 1), phase: 0, points: 0 })
+    }
+
+    /** A luz de teto e os LEDs da sala: um degradê redondo, tingido na hora. */
+    private buildGlowTexture() {
+        if (this.textures.exists('fx-brilho')) return
+
+        const s = 256
+        const tex = this.textures.createCanvas('fx-brilho', s, s)
+        if (!tex) return
+
+        const ctx = tex.getContext()
+        const grad = ctx.createRadialGradient(s / 2, s / 2, 0, s / 2, s / 2, s / 2)
+        grad.addColorStop(0, 'rgba(255,255,255,0.95)')
+        grad.addColorStop(0.45, 'rgba(255,255,255,0.36)')
+        grad.addColorStop(1, 'rgba(255,255,255,0)')
+        ctx.fillStyle = grad
+        ctx.fillRect(0, 0, s, s)
+        tex.refresh()
     }
 }

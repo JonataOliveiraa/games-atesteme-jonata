@@ -1,7 +1,7 @@
 import Phaser from 'phaser'
 import { FX, Ease } from '../../../../shared/effects/FX'
 import { C, A, FONT, SIZE, TYPE_MS, LONGA, hex, inkOn } from '../data/theme'
-import { W, H, HUD, SELOS, SITUACAO, FICHA, ACOES, IMPACTO, TOAST } from '../data/layout'
+import { W, H, SALA, LEDS, HUD, SELOS, SITUACAO, FICHA, ACOES, IMPACTO, TOAST } from '../data/layout'
 import { PRINCIPIOS } from '../data/principios'
 import type { Acao, Arquivo, Efeito, Marca, Principio, TipoArquivo } from '../types'
 
@@ -16,7 +16,11 @@ import type { Acao, Arquivo, Efeito, Marca, Principio, TipoArquivo } from '../ty
 
 /* ═══════════════════════════════════════════════════════════ texturas */
 
-export const TEX = { fundo: 'bg-missao-etica' } as const
+export const TEX = {
+    fundo: 'bg-missao-etica',
+    /** Degradê redondo branco, feito no `BootScene`: a luz de teto e os LEDs. */
+    brilho: 'fx-brilho',
+} as const
 
 export const hasTex = (scene: Phaser.Scene, key: string) => scene.textures.exists(key)
 
@@ -78,6 +82,33 @@ export function createSala(scene: Phaser.Scene): void {
     const veil = scene.add.graphics().setDepth(-19)
     veil.fillStyle(C.ink, A.veil)
     veil.fillRect(0, 0, W, H)
+
+    if (!hasTex(scene, TEX.brilho)) return
+
+    scene.add.image(SALA.luzX, SALA.luzY, TEX.brilho)
+        .setDisplaySize(SALA.luzW, SALA.luzH)
+        .setTint(C.permissao)
+        .setAlpha(A.luz)
+        .setBlendMode(Phaser.BlendModes.ADD)
+        .setDepth(-18)
+
+    // o brilho acende por cima de um LED que já está na arte, e apaga
+    scene.time.addEvent({
+        delay: SALA.piscaMs,
+        loop: true,
+        callback: () => {
+            const [x, y, verde] = LEDS[Phaser.Math.Between(0, LEDS.length - 1)]
+            const led = scene.add.image(x, y, TEX.brilho)
+                .setDisplaySize(SALA.ledD, SALA.ledD)
+                .setTint(verde ? C.guarda : C.permissao)
+                .setBlendMode(Phaser.BlendModes.ADD)
+                .setDepth(-18)
+                .setAlpha(0)
+            void FX.to(scene, led, { alpha: 1 },
+                { duration: SALA.acesoMs / 2, yoyo: true, ease: 'Sine.easeInOut' })
+                .then(() => led.destroy())
+        },
+    })
 }
 
 /* ══════════════════════════════════════════════════════════ botões */
@@ -1254,11 +1285,17 @@ export function paintAcao(
     g.clear()
     g.fillStyle(C.shadow, 0.32)
     g.fillRoundedRect(-hw + 4, -hh + 7, ACOES.w, ACOES.h, ACOES.r)
-    g.fillStyle(C.painel, 1)
-    g.fillRoundedRect(-hw, -hh, ACOES.w, ACOES.h, ACOES.r)
-    // a lombada colorida, e o disco onde o ícone mora
+    /*
+     * A lombada é o cartão inteiro na cor do princípio, com o corpo escuro por
+     * cima deixando só a faixa da esquerda. Solta, com canto de 6 num cartão de
+     * 20, ela passava reta pelas curvas e saía do contorno em cima e embaixo.
+     */
     g.fillStyle(tone, 1)
-    g.fillRoundedRect(-hw, -hh, 12, ACOES.h, 6)
+    g.fillRoundedRect(-hw, -hh, ACOES.w, ACOES.h, ACOES.r)
+    g.fillStyle(C.painel, 1)
+    g.fillRoundedRect(-hw + ACOES.lombada, -hh, ACOES.w - ACOES.lombada, ACOES.h,
+        { tl: 0, bl: 0, tr: ACOES.r, br: ACOES.r })
+    // o disco onde o ícone mora
     g.fillStyle(tone, 0.14)
     g.fillCircle(ACOES.iconeDX, 0, ACOES.iconeR + 12)
     g.fillStyle(C.white, A.gloss)

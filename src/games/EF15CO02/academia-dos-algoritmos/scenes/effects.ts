@@ -803,7 +803,9 @@ export function createTrack(
       const piece = content[i]
       if (!piece) continue
 
-      const img = putImage(scene, pieceTexture(piece), cx, TRACK.cy - 16, 46, 46)
+      const img = putImage(
+        scene, pieceTexture(piece), cx, TRACK.cy + TRACK.icon.dy, TRACK.icon.size, TRACK.icon.size
+      )
       if (img) {
         children.push(img)
         container.add(img)
@@ -819,7 +821,7 @@ export function createTrack(
         20
       )
 
-      const rot = makeText(scene, cx, TRACK.cy + 28, pieceLabel(piece), SIZE.block, {
+      const rot = makeText(scene, cx, TRACK.cy + TRACK.label.dy, pieceLabel(piece), SIZE.block, {
         wordWrap: { width: TRACK.slotWidth - 20 },
       })
       children.push(rot)

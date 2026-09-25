@@ -252,11 +252,6 @@ export function createConsole(scene: Phaser.Scene, options: ConsoleOptions) {
             paintRocket(color, lit)
         },
 
-        setSteps(steps: TapSteps) {
-            options.steps = steps
-            taps.forEach(tap => tap.paint(mix[tap.channel]))
-        },
-
         setEnabled(value: boolean) {
             enabled = value
             zones.forEach(zone => {
@@ -313,10 +308,6 @@ export function createConsole(scene: Phaser.Scene, options: ConsoleOptions) {
 
         allTapsBounds() {
             return { x: (TAPS.cx[0] + TAPS.cx[2]) / 2, y: TAPS.cy - 6, w: 580, h: 250 }
-        },
-
-        rocketBounds() {
-            return { x: ROCKET.cx, y: ROCKET.cy, w: ROCKET.size, h: ROCKET.size }
         },
 
         launchBounds() {

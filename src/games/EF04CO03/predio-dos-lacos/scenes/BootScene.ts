@@ -5,7 +5,7 @@ import { faseInicial } from '../../../../shared/level/faseInicial'
 import { preloadLives } from '../../../../shared/hud/createLives'
 
 /**
- * As chaves que o jogo consome — os três céus e as duas poses do limpador.
+ * As chaves que o jogo consome — o céu e as duas poses do limpador.
  *
  * Prédio, janelas, blocos e botões continuam todos em `Graphics`: eles mudam de
  * estado o tempo todo (janela suja/lavando/limpa, bloco pulsando na cor do laço)
@@ -16,12 +16,15 @@ import { preloadLives } from '../../../../shared/hud/createLives'
  * na pasta, `createBuilding` volta sozinho para o boneco de `Graphics`.
  */
 const WANTED = [
-    'bg-building-day',
-    'bg-building-sunset',
-    'bg-building-night',
+    'bg-sky',
     'personagem-parado',
     'personagem-limpando',
 ] as const
+
+/** Folhas de quadros: `janela.png` tem a suja (0) e a limpa (1), 300 x 300 cada. */
+const SHEETS: Record<string, { frameWidth: number; frameHeight: number }> = {
+    janela: { frameWidth: 300, frameHeight: 300 },
+}
 
 /**
  * As texturas são varridas da pasta, não importadas uma a uma.
@@ -47,7 +50,7 @@ function found(): Array<[string, string]> {
         const key = keyOf(path)
         if (key) byKey.set(key, url)
     })
-    return WANTED
+    return [...WANTED, ...Object.keys(SHEETS)]
         .map(key => [key, byKey.get(key)] as [string, string | undefined])
         .filter((pair): pair is [string, string] => !!pair[1])
 }
@@ -90,7 +93,10 @@ export class BootScene extends Phaser.Scene {
             },
         })
 
-        found().forEach(([key, url]) => this.load.image(key, url))
+        found().forEach(([key, url]) => {
+            if (SHEETS[key]) this.load.spritesheet(key, url, SHEETS[key])
+            else this.load.image(key, url)
+        })
         preloadLives(this)
     }
 

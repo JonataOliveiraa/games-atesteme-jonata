@@ -2,7 +2,7 @@ import Phaser from 'phaser'
 import { FX } from '../../../../shared/effects/FX'
 import { PROPS, SHEET } from '../data/art'
 import { DEPTH, SKY } from '../data/layout'
-import { C, CSS, FONT } from '../data/theme'
+import { C } from '../data/theme'
 
 /**
  * ══════════════════════════════════════════════════════════════════════════
@@ -14,9 +14,8 @@ import { C, CSS, FONT } from '../data/theme'
  * foguete e a placa. Um PNG de explosão colorida seria uma segunda fonte de cor
  * — e no dia em que as duas discordassem, o jogo estaria mentindo.
  *
- * Ao lado do estouro aparece a cor pedida, do mesmo tamanho de um fogo pequeno.
- * É ela que transforma o erro em aula: os dois círculos ficam lado a lado no céu
- * e a criança vê sozinha o que faltou.
+ * O céu mostra só o estouro, sem a cor pedida ao lado: a comparação é da placa,
+ * que volta logo depois com PEDIDO e SUA LUZ lado a lado.
  *
  * ── O LANÇAMENTO É UMA CENA, NÃO UM EFEITO ──────────────────────────────
  *
@@ -67,29 +66,6 @@ export function createSky(scene: Phaser.Scene) {
         rack.lineStyle(3, C.brass, 0.5)
         rack.strokeCircle(x, SKY.rack.y, SKY.rack.r)
     })
-
-    const askRing = scene.add.graphics().setDepth(DEPTH.burst).setVisible(false)
-    const askLabel = scene.add
-        .text(SKY.askX, SKY.askY + SKY.askR + 26, 'PEDIDO', {
-            fontFamily: FONT.black,
-            fontSize: '22px',
-            color: CSS.paper,
-        })
-        .setOrigin(0.5)
-        .setResolution(2)
-        .setDepth(DEPTH.burst)
-        .setVisible(false)
-    askLabel.setStroke(CSS.ink, 5)
-
-    const paintAsk = (color: number) => {
-        askRing.clear()
-        askRing.fillStyle(C.ink, 0.45)
-        askRing.fillCircle(SKY.askX, SKY.askY, SKY.askR + 9)
-        askRing.fillStyle(C.white, 0.9)
-        askRing.fillCircle(SKY.askX, SKY.askY, SKY.askR + 5)
-        askRing.fillStyle(color, 1)
-        askRing.fillCircle(SKY.askX, SKY.askY, SKY.askR)
-    }
 
     /** Fumaça: bolinhas cinza que incham e somem. Vai ficando para trás. */
     const puff = (x: number, y: number) => {
@@ -210,20 +186,6 @@ export function createSky(scene: Phaser.Scene) {
     }
 
     return {
-        /** A cor pedida, ao lado de onde o fogo vai estourar. */
-        showAsk(color: number) {
-            paintAsk(color)
-            askRing.setVisible(true).setAlpha(0)
-            askLabel.setVisible(true).setAlpha(0)
-            void FX.to(scene, askRing, { alpha: 1 }, { duration: 260 })
-            void FX.to(scene, askLabel, { alpha: 1 }, { duration: 260 })
-        },
-
-        hideAsk() {
-            askRing.setVisible(false)
-            askLabel.setVisible(false)
-        },
-
         /**
          * O voo e o estouro.
          *
@@ -348,10 +310,6 @@ export function createSky(scene: Phaser.Scene) {
             )
         },
 
-        burstPoint() {
-            return { x: SKY.burstX, y: SKY.burstY }
-        },
-
         destroy() {
             // no shutdown o gerenciador de câmeras já foi embora: sem o `?.` o
             // destroy explode e leva junto a limpeza de todo o resto
@@ -367,8 +325,6 @@ export function createSky(scene: Phaser.Scene) {
             })
             stars.length = 0
             rack.destroy()
-            askRing.destroy()
-            askLabel.destroy()
         },
     }
 }

@@ -29,8 +29,6 @@ export interface Level {
     title: string
     objective: string
     tip: string
-    /** Qual céu. Um por nível: dia, pôr do sol, noite. */
-    sky: 'day' | 'sunset' | 'night'
     cases: Caso[]
 }
 

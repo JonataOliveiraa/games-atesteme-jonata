@@ -7,7 +7,7 @@ import { FX } from '../../../../shared/effects/FX'
 import { FONT_JOGO } from '../../../../shared/fonts/gameFont'
 
 import { C, CSS } from '../data/theme'
-import { BAGUNCA, BANDEJA, DEPTH, DUPLA, H, HUD, W, tamanhoNaFila } from '../data/layout'
+import { BAGUNCA, BANDEJA, DEPTH, DUPLA, H, HUD, W, afastarDoTuca, tamanhoNaFila } from '../data/layout'
 import { IMAGES, TUCA_F, has } from '../data/files'
 import { ABERTURA, ABERTURA_DUPLA, LEVELS, NOME } from '../data/levels'
 import { criarPrateleira, type Posto, type Prateleira } from './prateleira'
@@ -106,11 +106,17 @@ export class GameScene extends Phaser.Scene {
 
     /* ────────────────────────────── cabeçalho ─────────────────────────── */
 
-    /** Cinco bolinhas e o `?`. Nada escrito: criança de 1º ano não lê placar. */
+    /** O nível numa pílula, as cinco bolinhas das fases e o `?`. */
     private hud() {
         const g = this.add.graphics().setDepth(DEPTH.hud - 1)
         g.fillStyle(C.tinta, 0.8)
         g.fillRoundedRect(-24, -34, W + 48, 96, 24)
+
+        g.fillStyle(C.ambar, 1)
+        g.fillRoundedRect(HUD.nivelX, HUD.y - HUD.nivelH / 2, HUD.nivelW, HUD.nivelH, HUD.nivelH / 2)
+        this.add.text(HUD.nivelX + HUD.nivelW / 2, HUD.y + 1, `NÍVEL ${this.level.level}`, {
+            fontFamily: FONT_JOGO.black, fontSize: '22px', color: CSS.tinta,
+        }).setOrigin(0.5).setDepth(DEPTH.hud + 1).setResolution(2)
 
         this.dots = this.level.fases.map((_, i) =>
             this.add.circle(HUD.dotsX + i * HUD.dotStep, HUD.y, 10, C.creme, 0.3)
@@ -181,12 +187,12 @@ export class GameScene extends Phaser.Scene {
      * mudar no jogo, porque as quatro estruturas falam a mesma interface.
      */
     private postoDe(i: number): Posto {
-        if (this.fase.estruturas.length === 1) return { cx: W / 2, escala: 1 }
-        return {
-            cx: i === 0 ? DUPLA.esqX : DUPLA.dirX,
-            cy: DUPLA.y,
-            escala: DUPLA.escala,
-        }
+        const est = this.fase.estruturas[i]
+        const posto: Posto = this.fase.estruturas.length === 1
+            ? { cx: W / 2, escala: 1 }
+            : { cx: i === 0 ? DUPLA.esqX : DUPLA.dirX, cy: DUPLA.y, escala: DUPLA.escala }
+        if (est.forma !== 'fila') return posto
+        return { ...posto, ...afastarDoTuca(est.fila ?? 4, posto.cx, posto.escala) }
     }
 
     /**

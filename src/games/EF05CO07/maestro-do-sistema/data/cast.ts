@@ -40,18 +40,6 @@ export interface PieceInfo {
     frame: number
 }
 
-/**
- * O centro da caixa alfa de cada quadro de `pecas.png`, em fração da célula.
- * A memória está encostada à esquerda na folha entregue: ancorar pelo meio da
- * célula deixaria ela torta dentro do encaixe do atril.
- */
-export const PIECE_PIVOT: Record<Piece, { x: number; y: number }> = {
-    cpu: { x: 0.504, y: 0.471 },
-    speaker: { x: 0.523, y: 0.467 },
-    screen: { x: 0.527, y: 0.520 },
-    memory: { x: 0.350, y: 0.457 },
-}
-
 export const PIECES: Record<Piece, PieceInfo> = {
     cpu: { name: 'processador', shape: 'square', color: C.teal, frame: 0 },
     speaker: { name: 'alto-falante', shape: 'circle', color: C.coral, frame: 1 },

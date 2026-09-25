@@ -30,8 +30,6 @@ export interface Round {
     nome: string
     /** A resposta como três quantidades. Nunca uma cor hexadecimal. */
     target: Mix
-    /** A frase do mestre quando o fogo acerta. */
-    successLine: string
 }
 
 export interface LevelDef {

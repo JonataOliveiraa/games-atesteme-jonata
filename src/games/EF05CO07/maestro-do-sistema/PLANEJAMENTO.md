@@ -934,9 +934,18 @@ carregava a folha, mas o atril e o balão continuavam chamando `drawPiece` — o
 placeholder de `Graphics`. Só a batuta (`icones.png`) tinha sido ligada. Entrou
 `makePiece()`, que devolve o recorte de papel quando a folha existe e o desenho
 em `Graphics` quando não existe, e agora os dois lugares usam a mesma peça.
-A **memória está encostada à esquerda** na folha entregue, então a âncora não
-pode ser o meio da célula: `PIECE_PIVOT` guarda o centro real da caixa alfa de
-cada quadro, medido no PNG.
+A âncora passou a ser o centro da caixa alfa de cada quadro, e isso escondeu o
+defeito de verdade da folha (ver **0b**).
+
+**0b. A tela saía cortada e torta no atril.** O monitor da folha entregue tinha
+260 px de largura numa célula de 256 e ia de x 526 a 785: o quadro 2 cortava a
+moldura direita, e o pé ficava fora do meio do que sobrava. Os 15 px que
+vazavam caíam na borda esquerda do quadro 3 — era isso, e não a memória
+"encostada à esquerda", que puxava a caixa alfa dela para o lado. A folha foi
+reempacotada: cada peça inteira, centrada na própria célula, e só o monitor
+reduzido (0,93) para caber. Com todo centro no meio da célula, a tabela de
+âncoras saiu e o sprite usa a origem padrão. O contrato em `TEXTURAS.md` agora
+exige a peça inteira dentro da célula, com margem.
 
 **1a. A abertura longa nasceu com a câmera parada, e isso parecia bug.** Medindo
 o zoom e o `scrollX` quadro a quadro, os **nove primeiros segundos** não tinham

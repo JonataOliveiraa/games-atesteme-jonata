@@ -95,7 +95,7 @@ export function criarValorCampo(
         g.lineStyle(5, C.tinta, 1)
         desenharForma(g, col.forma, 0, 0, r * 0.6, true)
     } else {
-        desenharTamanho(g, valor, r)
+        desenharTamanho(g, valor, 0, 0, r)
     }
 
     c.setSize(tamanho, tamanho)
@@ -127,25 +127,36 @@ export function desenharRotuloCampo(
         })
         return
     }
-    desenharTamanho(g, -1, r)
+    desenharTamanho(g, -1, x, y, r)
 }
 
-/** Três círculos crescendo. Com `valor` de 0 a 2, o escolhido fica cheio. */
+/**
+ * Três círculos crescendo, lado a lado. Com `valor` de 0 a 2, o escolhido fica
+ * cheio.
+ *
+ * Diâmetros e vãos somam 1,7 `r` e cabem no cartão (2 `r`). Antes somavam
+ * 2,32 `r` e o maior saía pela borda direita.
+ */
 function desenharTamanho(
     g: Phaser.GameObjects.Graphics,
     valor: number,
+    x: number,
+    y: number,
     r: number,
 ) {
-    const raios = [r * 0.22, r * 0.38, r * 0.56]
+    const raios = [r * 0.15, r * 0.25, r * 0.37]
+    const vao = r * 0.08
+    let cx = x - (raios.reduce((soma, rr) => soma + rr * 2, 0) + vao * 2) / 2
     raios.forEach((rr, i) => {
-        const x = (i - 1) * r * 0.62
+        cx += rr
         if (valor < 0 || valor === i) {
             g.fillStyle(valor < 0 ? C.tinta : C.madeiraEscura, valor < 0 ? 0.34 : 1)
-            g.fillCircle(x, 0, rr)
+            g.fillCircle(cx, y, rr)
         } else {
             g.lineStyle(4, C.tinta, 0.3)
-            g.strokeCircle(x, 0, rr)
+            g.strokeCircle(cx, y, rr)
         }
+        cx += rr + vao
     })
 }
 

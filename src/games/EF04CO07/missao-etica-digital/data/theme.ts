@@ -52,7 +52,10 @@ export const C = {
 } as const
 
 export const A = {
-    veil: 0.44,
+    /** Só o bastante para o fundo não disputar com a ficha e as ações. */
+    veil: 0.1,
+    /** A luz de teto na parede. */
+    luz: 0.2,
     gloss: 0.16,
     dim: 0.45,
 } as const

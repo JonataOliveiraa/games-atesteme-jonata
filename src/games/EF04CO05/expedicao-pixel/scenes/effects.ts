@@ -70,8 +70,7 @@ export type Fair = ReturnType<typeof createFair>
  * comemoração tem alguém comemorando.
  *
  * O balão continua existindo sozinho: a dica de erro é uma frase da festa, não
- * precisa de ninguém em cena para ser lida. Por isso o rabicho é uma peça
- * separada, que só aparece quando há uma boca de onde a fala sai.
+ * precisa de ninguém em cena para ser lida.
  */
 export function createMaster(scene: Phaser.Scene) {
     const hasArt = scene.textures.exists(SHEET.master)
@@ -93,12 +92,6 @@ export function createMaster(scene: Phaser.Scene) {
     bubble.fillStyle(0xfff6e2, 1)
     bubble.fillRoundedRect(-HINT.w / 2 + 7, -HINT.h / 2 + 7, HINT.w - 14, HINT.h - 14, 16)
 
-    // o rabicho aponta para o mestre; sem ele em cena, a fala é da festa e o
-    // balão fica sem bico, como uma faixa
-    const tail = scene.add.graphics().setVisible(false)
-    tail.fillStyle(0xfff6e2, 1)
-    tail.fillTriangle(-HINT.w / 2 + 12, 10, -HINT.w / 2 - 30, 34, -HINT.w / 2 + 12, -20)
-
     const text = scene.add
         .text(0, 0, '', {
             fontFamily: FONT.body,
@@ -111,7 +104,7 @@ export function createMaster(scene: Phaser.Scene) {
         .setOrigin(0.5)
         .setResolution(2)
 
-    balloon.add([bubble, tail, text])
+    balloon.add([bubble, text])
     let visible = false
     let onStage = false
 
@@ -138,13 +131,8 @@ export function createMaster(scene: Phaser.Scene) {
             void FX.to(scene, guy, { y: MASTER_AT.cy - 16 }, { duration: 180, yoyo: true, repeat: 3 })
         },
 
-        /**
-         * A fala. `comMestre` pede o rabicho — e só a virada de rodada pede,
-         * porque só nela ele está em cena.
-         */
-        async say(message: string, comMestre = false) {
+        async say(message: string) {
             text.setText(message)
-            tail.setVisible(comMestre && !!guy && onStage)
             if (visible) {
                 await FX.shake(scene, balloon, { amount: 6, times: 2 })
                 return
@@ -167,10 +155,6 @@ export function createMaster(scene: Phaser.Scene) {
             void FX.to(scene, guy, { alpha: 0 }, { duration: 200 }).then(() => {
                 if (!onStage) guy.setVisible(false).setY(MASTER_AT.cy).setDepth(DEPTH.console)
             })
-        },
-
-        bounds() {
-            return { x: MASTER_AT.cx, y: MASTER_AT.cy, w: MASTER_AT.w + 20, h: MASTER_AT.h + 20 }
         },
 
         destroy() {

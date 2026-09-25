@@ -42,26 +42,37 @@ export const NOTICE = {
   radius: 16,
 }
 
+/*
+ * Every card is an icon band on top and a TWO-LINE text band below it.
+ * "fechar mochila" and "pegar regador" wrap at 25px, and two lines with the
+ * stroke are 72px tall: on 108px cards, centred under the icon, the second
+ * line crossed the bottom border. The label is anchored 4px above the bottom
+ * edge, and a one-line label sits in the middle of the same band.
+ */
 export const TRACK = {
-  cy: 452,
+  /** The top stays at 398, under the head; the card grows downward. */
+  cy: 462,
   slotWidth: 178,
-  slotHeight: 108,
+  slotHeight: 128,
   gap: 46,
   radius: 18,
-  badge: { dx: -74, dy: -38, r: 20 },
+  icon: { dy: -35, size: 46 },
+  label: { dy: 24 },
+  badge: { dx: -74, dy: -48, r: 20 },
   arrow: { width: 26, height: 20 },
-  head: { r: 14, dy: -74 },
+  head: { r: 14, dy: -84 },
 }
 
 export const SHELF = {
-  cy: 594,
-  board: { y: 640, h: 14 },
+  /** 26px below the track; the shadow ends at 691, inside the bench. */
+  cy: 618,
+  board: { y: 674, h: 14 },
   width: 192,
-  height: 112,
+  height: 132,
   gap: 26,
   radius: 18,
-  icon: { dy: -24, size: 52 },
-  label: { dy: 34 },
+  icon: { dy: -34, size: 52 },
+  label: { dy: 26 },
 }
 
 export const COLUMN = {

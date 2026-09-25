@@ -9,7 +9,6 @@ export const DEPTH = {
     board: 20,
     console: 30,
     hint: 40,
-    fx: 200,
     hud: 500,
 }
 
@@ -56,17 +55,6 @@ export const SKY = {
     burstX: 700,
     burstY: 236,
     burstR: 132,
-    /*
-     * A COR PEDIDA FICA À ESQUERDA DO ESTOURO, NA MESMA ALTURA.
-     *
-     * Ela morava à direita, e ali atrapalhava duas vezes: o foguete passava por
-     * cima dela na subida, e o rótulo caía em cima da igrejinha do fundo. À
-     * esquerda o caminho do foguete nunca chega, o céu é limpo, e os dois
-     * círculos ficam lado a lado na ordem de leitura — pediram isto, saiu aquilo.
-     */
-    askX: 404,
-    askY: 236,
-    askR: 52,
 
     /**
      * O VARAL DOS FOGOS GUARDADOS.

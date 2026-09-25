@@ -23,7 +23,6 @@ export const LEVELS: Level[] = [
         title: 'Um laço, um andar',
         objective: 'Repetir é dizer quantas vezes, não repetir a ordem.',
         tip: 'Ajuste o número até ele bater com as janelas do andar.',
-        sky: 'day',
         cases: [
             {
                 id: 'p1-1',
@@ -55,7 +54,6 @@ export const LEVELS: Level[] = [
         title: 'Um laço dentro do outro',
         objective: 'O laço de fora conta andares; o de dentro conta janelas.',
         tip: 'Dois números resolvem o prédio inteiro.',
-        sky: 'sunset',
         cases: [
             {
                 id: 'p2-1',
@@ -87,7 +85,6 @@ export const LEVELS: Level[] = [
         title: 'Até o topo, sem contar',
         objective: 'Um laço pode repetir até acabar, sem saber quantas vezes são.',
         tip: 'O bloco roxo não tem número: ele vai até o topo. Diga só as janelas.',
-        sky: 'night',
         cases: [
             {
                 id: 'p3-1',

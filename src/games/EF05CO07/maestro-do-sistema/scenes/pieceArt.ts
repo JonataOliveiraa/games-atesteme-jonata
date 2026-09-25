@@ -1,14 +1,15 @@
 import Phaser from 'phaser'
 import { C } from '../data/theme'
-import { PIECES, PIECE_PIVOT } from '../data/cast'
+import { PIECES } from '../data/cast'
 import type { Piece } from '../types'
 import { TEX } from './BootScene'
 
 /**
  * A PEÇA, EM SPRITE OU EM `Graphics`.
  *
- * Quando `pecas.png` existe, a peça é o recorte de papel da folha, ancorado
- * pelo centro real do desenho (`PIECE_PIVOT`). Sem a folha, o mesmo objeto
+ * Quando `pecas.png` existe, a peça é o recorte de papel da folha — cada uma
+ * inteira e centrada na própria célula, então o meio da célula é o meio do
+ * desenho. Sem a folha, o mesmo objeto
  * nasce em `Graphics` — é o que mantém a promessa de o jogo abrir com zero PNG.
  * `cell` é a altura da célula de 256 na tela, e não o tamanho do desenho: é
  * isso que preserva a proporção entre as quatro peças.
@@ -21,7 +22,6 @@ export function makePiece(
     if (scene.textures.exists(TEX.pieces)) {
         const sprite = scene.add.sprite(0, 0, TEX.pieces, PIECES[piece].frame)
         sprite.setDisplaySize(cell, cell)
-        sprite.setOrigin(PIECE_PIVOT[piece].x, PIECE_PIVOT[piece].y)
         return sprite
     }
     const g = scene.add.graphics()

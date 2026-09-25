@@ -78,7 +78,7 @@ function prateleiraFila(scene: Phaser.Scene, est: Estrutura, posto: Posto): Prat
 
     const yBase = y + lado / 2 + 26 * e
     tabua.fillStyle(C.madeiraEscura, 1)
-    tabua.fillRoundedRect(x0 - passo / 2 - 22 * e, yBase, largura + 44 * e, 34 * e, 14)
+    tabua.fillRoundedRect(x0 - passo / 2 - FILA.aba * e, yBase, largura + FILA.aba * 2 * e, 34 * e, 14)
     tabua.fillStyle(C.madeira, 1)
     tabua.fillRoundedRect(x0 - passo / 2 - 16 * e, yBase + 5 * e, largura + 32 * e, 22 * e, 10)
 

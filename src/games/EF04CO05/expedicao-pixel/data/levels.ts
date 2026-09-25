@@ -38,20 +38,17 @@ export const LEVELS: LevelDef[] = [
             {
                 id: 'f1-1',
                 nome: 'VERMELHO',
-                target: { r: 3, g: 0, b: 0 },
-                successLine: 'Essa é a torneira vermelha! Só ela acende o fogo vermelho.',
+                target: { r: 3, g: 0, b: 0 },
             },
             {
                 id: 'f1-2',
                 nome: 'AZUL',
-                target: { r: 0, g: 0, b: 3 },
-                successLine: 'Azul no céu! Cada torneira acende uma cor diferente.',
+                target: { r: 0, g: 0, b: 3 },
             },
             {
                 id: 'f1-3',
                 nome: 'VERDE',
-                target: { r: 0, g: 3, b: 0 },
-                successLine: 'Verde! Agora você já conhece as três luzes do foguete.',
+                target: { r: 0, g: 3, b: 0 },
             },
         ],
     },
@@ -65,22 +62,17 @@ export const LEVELS: LevelDef[] = [
             {
                 id: 'f2-1',
                 nome: 'AMARELO',
-                target: { r: 3, g: 3, b: 0 },
-                successLine:
-                    'Vermelho mais verde deu AMARELO! Com tinta isso não acontece — com luz, sim.',
+                target: { r: 3, g: 3, b: 0 },
             },
             {
                 id: 'f2-2',
                 nome: 'ROSA',
-                target: { r: 3, g: 0, b: 3 },
-                successLine: 'Vermelho mais azul deu ROSA. Cada par de luzes faz uma cor nova.',
+                target: { r: 3, g: 0, b: 3 },
             },
             {
                 id: 'f2-3',
                 nome: 'BRANCO',
-                target: { r: 3, g: 3, b: 3 },
-                successLine:
-                    'As três juntas dão BRANCO. É por isso que a luz do dia parece não ter cor: ela tem todas.',
+                target: { r: 3, g: 3, b: 3 },
             },
         ],
     },
@@ -94,21 +86,17 @@ export const LEVELS: LevelDef[] = [
             {
                 id: 'f3-1',
                 nome: 'LARANJA',
-                target: { r: 3, g: 2, b: 0 },
-                successLine: 'Vermelho cheio e verde pela metade: isso é LARANJA.',
+                target: { r: 3, g: 2, b: 0 },
             },
             {
                 id: 'f3-2',
                 nome: 'VERDE-ÁGUA',
-                target: { r: 0, g: 3, b: 2 },
-                successLine: 'Verde cheio com um tanto de azul. Mudar o quanto muda a cor.',
+                target: { r: 0, g: 3, b: 2 },
             },
             {
                 id: 'f3-3',
                 nome: 'ROXO',
-                target: { r: 2, g: 0, b: 3 },
-                successLine:
-                    'ROXO: 2 de vermelho e 3 de azul. É assim que o computador guarda cor — três números.',
+                target: { r: 2, g: 0, b: 3 },
             },
         ],
     },

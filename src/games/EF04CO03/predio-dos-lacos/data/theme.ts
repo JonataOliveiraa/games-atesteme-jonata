@@ -16,9 +16,24 @@ export const C = {
     roof: 0x3d4964,
     base: 0x2b3550,
 
+    /*
+     * A fachada, no traço de prédio de ilustração plana: parede clara,
+     * cornija rosada em cima, pilastras com cantaria nas bordas e embasamento
+     * — a parede azul-acinzentada de antes, com as janelas em ladrilho, lia
+     * como uma parede de azulejo, não como um prédio.
+     */
+    facade: 0xf2d3ad,
+    facadeLight: 0xf9e4c8,
+    facadeShade: 0xe2bb90,
+    trim: 0xd9a48b,
+    trimDark: 0xb97c68,
+    /** Caixilho da janela: escuro, é ele que desenha a janela. */
+    frame: 0x2f3440,
+    sill: 0xfff1dd,
+
     // ── janelas ────────────────────────────────────────────────────────
-    dirty: 0x8d8f7e,
-    dirtyEdge: 0x6f7263,
+    dirty: 0x9da38d,
+    dirtyEdge: 0x767c63,
     clean: 0x8fd8ff,
     cleanEdge: 0x3fa8dd,
 

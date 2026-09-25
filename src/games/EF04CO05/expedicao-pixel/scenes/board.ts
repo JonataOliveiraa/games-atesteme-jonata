@@ -137,10 +137,6 @@ export function createBoard(scene: Phaser.Scene) {
             return { x: cx, y: cy, w: BOARD.w + 26, h: BOARD.h + 26 }
         },
 
-        askBounds() {
-            return { x: askX, y: discY, w: discR * 2 + 30, h: discR * 2 + 30 }
-        },
-
         destroy() {
             scene.tweens.killTweensOf(discs)
             plank?.destroy()

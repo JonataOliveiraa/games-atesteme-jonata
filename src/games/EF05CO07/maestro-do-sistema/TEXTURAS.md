@@ -260,6 +260,7 @@ photorealistic, blur, digital noise, muddy colours.
 | fundo | alfa real |
 | índice do quadro | `0 cpu · 1 speaker · 2 screen · 3 memory` — é contrato com o código |
 | escala | cabem na mesma célula, mas **não têm o mesmo formato** |
+| posição | cada peça **inteira e centrada** na própria célula, ≥ 8 px de margem; nada atravessa para a vizinha |
 
 | Quadro | Peça | Silhueta obrigatória |
 |---:|---|---|
@@ -303,6 +304,9 @@ into the middle.
 CRITICAL: the four outline shapes must be square, circle, wide rectangle and
 tall rectangle — unmistakable from each other at thumbnail size.
 CRITICAL: no hands, no characters, no table, no floor, nothing holding them.
+CRITICAL: each object sits COMPLETELY inside its own cell, centred, with at
+least 8 px of empty margin on every side — the wide screen must be drawn small
+enough to fit; nothing may touch or cross into the neighbouring cell.
 
 DO NOT INCLUDE: hands, arms, characters, robots, faces, tables, shelves, floor,
 stage, background, cables, plugs, sparks, text, letters, numbers, logos,
@@ -315,6 +319,8 @@ digital noise, muddy colours.
 ### Conferência
 
 - [ ] 1024 × 256, células de 256 batendo;
+- [ ] cada peça inteira e centrada na sua célula — a tela, que é a mais larga,
+      não pode vazar para a memória (foi o defeito da primeira entrega);
 - [ ] as quatro silhuetas são quadrado, círculo, retângulo largo e retângulo alto;
 - [ ] reduzidas a 54 px de largura, ainda se distinguem sem o pictograma;
 - [ ] nenhuma mão, nenhum personagem, nenhuma mesa;

@@ -49,6 +49,16 @@ export const SITE = {
     w: 660,
     pad: 22,
     roof: 22,
+    /**
+     * O telhado nunca fica mais BAIXO que isto. Os prédios pequenos sobem até
+     * aqui e seguem para baixo até sair da tela; os altos (o de dez andares
+     * tem o telhado em 168) já ficam acima e não mudam.
+     *
+     * Não sobe mais que 300 porque o limpador estaciona ACIMA do telhado: com
+     * o telhado em 168 ele estacionava em cima das janelas do andar que a
+     * criança precisa contar.
+     */
+    roofMax: 300,
     gap: 8,
     /** Janela nunca maior que isso, ou um prédio de 1x4 vira um outdoor. */
     maxCell: 88,

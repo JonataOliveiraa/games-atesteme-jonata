@@ -8,18 +8,22 @@ import { TOP, type WindowState } from '../types'
  * Painters puros e construtores. A GameScene não desenha nada: se ela precisar
  * de um `fillRoundedRect`, falta um painter aqui.
  *
- * Neste jogo SÓ o céu é textura. Prédio, janelas, limpador, blocos, botões e
- * relatório saem todos de `Graphics` — é o que permite a janela ter três
- * estados e o bloco pulsar na cor do laço sem virar dezenas de PNGs.
+ * Texturas: o céu, as duas poses do limpador e a janela (suja e limpa). A
+ * fachada, os blocos, os botões e o relatório saem de `Graphics` — é o que
+ * permite o bloco pulsar na cor do laço sem virar dezenas de PNGs.
  */
 
 /* ═══════════════════════════════════════════════════════════ cenário */
 
-export const SKY: Record<'day' | 'sunset' | 'night', string> = {
-    day: 'bg-building-day',
-    sunset: 'bg-building-sunset',
-    night: 'bg-building-night',
-}
+/**
+ * Um céu só, o mesmo nos três níveis.
+ *
+ * Os fundos antigos traziam um prédio PRÓPRIO desenhado na arte — dia, pôr do
+ * sol e noite — e ele disputava com o prédio do jogo: eram dois prédios na
+ * tela, e o de fundo era mais bonito. Com o céu limpo, o único prédio é o que
+ * a criança lava.
+ */
+export const SKY = 'bg-sky'
 
 /**
  * O limpador em duas poses.
@@ -49,10 +53,8 @@ export function fitImage(img: Phaser.GameObjects.Image, maxW: number, maxH: numb
 }
 
 /** Céu em degradê, quando a textura não estiver na pasta. */
-export function paintSky(g: Phaser.GameObjects.Graphics, sky: 'day' | 'sunset' | 'night') {
-    const pair = sky === 'day' ? [0x8fd0f5, 0xd8eefb]
-        : sky === 'sunset' ? [0x3d4a80, 0xf2a05a]
-            : [0x0d1430, 0x2b3a6b]
+export function paintSky(g: Phaser.GameObjects.Graphics) {
+    const pair = [0x3aa6f5, 0x9fe3fb]
 
     g.clear()
     for (let i = 0; i < 18; i += 1) {
@@ -65,28 +67,16 @@ export function paintSky(g: Phaser.GameObjects.Graphics, sky: 'day' | 'sunset' |
         g.fillStyle(Phaser.Display.Color.GetColor(color.r, color.g, color.b), 1)
         g.fillRect(0, Math.floor(t * H), W, Math.ceil(H / 18) + 1)
     }
-    if (sky === 'night') {
-        g.fillStyle(C.white, 0.7)
-        for (let i = 0; i < 60; i += 1) {
-            const x = (i * 137) % W
-            const y = (i * 71) % 360
-            g.fillCircle(x, y, 1.5)
-        }
-    }
-    g.fillStyle(C.base, 1)
-    g.fillRect(0, SITE.bottom, W, H - SITE.bottom)
 }
 
-export function createScene(scene: Phaser.Scene, sky: 'day' | 'sunset' | 'night'): void {
-    const key = SKY[sky]
-
-    if (!hasTex(scene, key)) {
+export function createScene(scene: Phaser.Scene): void {
+    if (!hasTex(scene, SKY)) {
         const g = scene.add.graphics().setDepth(-20)
-        paintSky(g, sky)
+        paintSky(g)
         return
     }
 
-    const bg = scene.add.image(W / 2, H / 2, key).setDepth(-20)
+    const bg = scene.add.image(W / 2, H / 2, SKY).setDepth(-20)
     const src = bg.texture.getSourceImage() as { width: number; height: number }
     bg.setScale(Math.max(W / src.width, H / src.height))
 
@@ -377,71 +367,211 @@ export function paintWindow(
     size: number,
     { state }: { state: WindowState },
 ) {
-    const half = size / 2
-    const r = Math.max(4, size * 0.14)
+    /*
+     * Em pé e mais estreita que a célula: sobra parede entre uma janela e a
+     * outra, como numa fachada. Quadrada e do tamanho da célula, a fileira
+     * virava um tabuleiro. A célula continua sendo a mesma para o resto do
+     * jogo — só o desenho encolhe.
+     */
+    const ww = Math.round(size * 0.74)
+    const wh = Math.round(size * 0.9)
+    const hx = ww / 2
+    const hy = wh / 2
+
+    /*
+     * Uma JANELA, não um ladrilho: caixilho escuro, vidro, a cruz que divide
+     * o vidro em quatro e o peitoril claro embaixo. É o caixilho que faz a
+     * fileira ler como andar de prédio — sem ele eram quadrados cinza
+     * enfileirados, e a fachada parecia uma parede de azulejo.
+     *
+     * Os três estados só trocam o VIDRO (e o caixilho, na lavagem, que ganha
+     * a cor do laço de dentro): o desenho da janela é o mesmo, então a
+     * criança vê a mesma janela ficar limpa.
+     */
+    const t = Math.max(3, Math.round(size * 0.09))
+    const r = Math.max(2, size * 0.06)
+    const m = Math.max(2, Math.round(size * 0.05))
+    const sillH = Math.max(3, Math.round(size * 0.08))
+
+    const gx = -hx + t
+    const gy = -hy + t
+    const gw = ww - t * 2
+    const gh = wh - t * 2
+    const crossY = gy + gh * 0.42
 
     g.clear()
 
+    // peitoril: sai um pouco para os lados, logo embaixo do caixilho
+    g.fillStyle(C.trimDark, 1)
+    g.fillRect(-hx - 4, hy - 1, ww + 8, sillH + 1)
+    g.fillStyle(C.sill, 1)
+    g.fillRect(-hx - 4, hy - 1, ww + 8, sillH - 1)
+
+    g.fillStyle(state === 'washing' ? C.inner : C.frame, 1)
+    g.fillRoundedRect(-hx, -hy, ww, wh, r)
+
     if (state === 'clean') {
         g.fillStyle(C.clean, 1)
-        g.fillRoundedRect(-half, -half, size, size, r)
+        g.fillRect(gx, gy, gw, gh)
+        // o brilho na diagonal é o que diz "vidro limpo"
         g.fillStyle(C.white, 0.55)
-        g.fillTriangle(-half, half, -half, -half * 0.1, half * 0.1, -half)
+        g.fillTriangle(gx, gy + gh * 0.62, gx, gy, gx + gw * 0.62, gy)
         g.fillStyle(C.white, 0.3)
-        g.fillTriangle(half * 0.35, -half, half, -half, half, -half * 0.35)
-        g.lineStyle(3, C.cleanEdge, 1)
-        g.strokeRoundedRect(-half, -half, size, size, r)
-        return
-    }
-
-    if (state === 'washing') {
+        g.fillTriangle(gx + gw, gy + gh * 0.45, gx + gw, gy + gh, gx + gw * 0.55, gy + gh)
+    } else if (state === 'washing') {
         g.fillStyle(C.innerSoft, 1)
-        g.fillRoundedRect(-half, -half, size, size, r)
-        g.fillStyle(C.white, 0.6)
+        g.fillRect(gx, gy, gw, gh)
+        g.fillStyle(C.white, 0.75)
         for (let i = 0; i < 3; i += 1) {
-            g.fillRoundedRect(-half + 4, -half + 6 + i * (size / 3.4), size - 8, size * 0.1, size * 0.05)
+            g.fillRoundedRect(gx + 2, gy + gh * (0.12 + i * 0.3), gw - 4, gh * 0.12, gh * 0.06)
         }
-        g.lineStyle(4, C.inner, 1)
-        g.strokeRoundedRect(-half, -half, size, size, r)
-        return
+    } else {
+        g.fillStyle(C.dirty, 1)
+        g.fillRect(gx, gy, gw, gh)
+        // manchas: posição determinística, senão o prédio muda de cara a cada
+        // repintura e a criança acha que alguma coisa aconteceu
+        g.fillStyle(C.dirtyEdge, 0.6)
+        g.fillCircle(gx + gw * 0.26, gy + gh * 0.24, gw * 0.14)
+        g.fillCircle(gx + gw * 0.7, gy + gh * 0.66, gw * 0.18)
+        g.fillCircle(gx + gw * 0.62, gy + gh * 0.16, gw * 0.08)
+        g.fillCircle(gx + gw * 0.22, gy + gh * 0.78, gw * 0.1)
     }
 
-    g.fillStyle(C.dirty, 1)
-    g.fillRoundedRect(-half, -half, size, size, r)
-    // manchas: posição determinística, senão o prédio muda de cara a cada
-    // repintura e a criança acha que alguma coisa aconteceu
-    g.fillStyle(C.dirtyEdge, 0.55)
-    g.fillCircle(-half * 0.35, -half * 0.3, size * 0.16)
-    g.fillCircle(half * 0.28, half * 0.12, size * 0.2)
-    g.fillCircle(half * 0.05, -half * 0.55, size * 0.1)
-    g.lineStyle(3, C.dirtyEdge, 1)
-    g.strokeRoundedRect(-half, -half, size, size, r)
+    // a cruz do caixilho, por cima do vidro
+    g.fillStyle(state === 'washing' ? C.inner : C.frame, 1)
+    g.fillRect(-m / 2, gy, m, gh)
+    g.fillRect(gx, crossY - m / 2, gw, m)
 }
 
+/**
+ * `janela.png`: a suja no quadro 0, a limpa no 1, 300 x 300 cada.
+ *
+ * O desenho não fica no centro do quadro do mesmo jeito nos dois: medido pela
+ * caixa alfa, a limpa está 3,5 px mais à direita. Cada quadro tem a SUA
+ * origem, senão a janela pula para o lado no instante em que fica limpa.
+ */
+export const WINDOW_ART = {
+    key: 'janela',
+    origin: [
+        { x: 150 / 300, y: 150.5 / 300 },
+        { x: 153.5 / 300, y: 150.5 / 300 },
+    ],
+    /** Altura e largura do desenho dentro do quadro. */
+    bodyH: 286,
+    bodyW: 268,
+    /** Quanto da altura da célula o desenho ocupa: sobra parede em volta. */
+    fill: 0.96,
+}
+
+export interface WindowView {
+    root: Phaser.GameObjects.Container
+    set(state: WindowState): void
+}
+
+/**
+ * Uma janela da fachada, no estado pedido.
+ *
+ * Com `janela.png` é a arte (suja ou limpa). A LAVAGEM não tem quadro próprio
+ * e não precisa: é a janela suja com a moldura acesa na cor do laço de dentro,
+ * um tom quente e espuma no vidro — a mesma cor que o bloco de dentro e o
+ * contador usam, que é como a criança sabe qual laço está rodando. Sem a
+ * folha, cai no desenho de `paintWindow`.
+ */
+export function createWindow(
+    scene: Phaser.Scene, x: number, y: number, cell: number, state: WindowState,
+): WindowView {
+    const root = scene.add.container(x, y)
+
+    if (!hasTex(scene, WINDOW_ART.key)) {
+        const g = scene.add.graphics()
+        root.add(g)
+        paintWindow(g, cell, { state })
+        return { root, set: s => paintWindow(g, cell, { state: s }) }
+    }
+
+    const h = cell * WINDOW_ART.fill
+    const w = h * WINDOW_ART.bodyW / WINDOW_ART.bodyH
+
+    const glow = scene.add.graphics()
+    const img = scene.add.image(0, 0, WINDOW_ART.key, 0).setScale(h / WINDOW_ART.bodyH)
+    const foam = scene.add.graphics()
+    root.add([glow, img, foam])
+
+    const set = (s: WindowState) => {
+        const frame = s === 'clean' ? 1 : 0
+        const o = WINDOW_ART.origin[frame]
+        img.setFrame(frame).setOrigin(o.x, o.y).clearTint()
+        glow.clear()
+        foam.clear()
+        if (s !== 'washing') return
+
+        glow.fillStyle(C.inner, 1)
+        glow.fillRoundedRect(-w / 2 - 5, -h / 2 - 5, w + 10, h + 10, Math.max(8, w * 0.16))
+        img.setTint(0xffe2b8)
+        foam.fillStyle(C.white, 0.8)
+        for (let i = 0; i < 3; i += 1) {
+            foam.fillRoundedRect(-w * 0.3, -h * 0.26 + i * h * 0.22, w * 0.6, h * 0.08, h * 0.04)
+        }
+    }
+
+    set(state)
+    return { root, set }
+}
+
+/**
+ * A fachada.
+ *
+ * `w` e `h` são o corpo do prédio, com o pé em y 0 e o topo em -h. O pé fica
+ * ABAIXO da borda da tela (ver `createBuilding`): não há chão nem embasamento
+ * à vista, só a cornija em cima, que avança sobre as bordas.
+ */
 export function paintBuildingShell(
     g: Phaser.GameObjects.Graphics,
     w: number, h: number,
 ) {
     const left = -w / 2
+    const right = w / 2
+    /** Pilastra de cada lado: menor que o `SITE.pad`, para não encostar na janela. */
+    const pil = 12
 
     g.clear()
+
     g.fillStyle(C.shadow, 0.3)
-    g.fillRoundedRect(left + 8, -h + 12, w, h, 14)
+    g.fillRect(left + 10, -h + 10, w, h)
 
-    g.fillStyle(C.wall, 1)
-    g.fillRoundedRect(left, -h, w, h, 14)
-    g.fillStyle(C.wallLight, 0.5)
-    g.fillRoundedRect(left + 6, -h + 6, w * 0.3, h - 12, 10)
-    g.fillStyle(C.wallDark, 0.4)
-    g.fillRoundedRect(left + w * 0.72, -h + 6, w * 0.24, h - 12, 10)
+    // corpo, com a lateral direita um tom abaixo
+    g.fillStyle(C.facade, 1)
+    g.fillRect(left, -h, w, h)
+    g.fillStyle(C.facadeShade, 1)
+    g.fillRect(right - pil, -h, pil, h)
+    g.fillStyle(C.facadeLight, 1)
+    g.fillRect(left, -h, pil, h)
 
-    // telhado e base: é o que faz a caixa virar prédio
-    g.fillStyle(C.roof, 1)
-    g.fillRoundedRect(left - 12, -h - 18, w + 24, 26, 8)
-    g.fillStyle(C.base, 1)
-    g.fillRoundedRect(left - 8, -18, w + 16, 22, 6)
-    g.lineStyle(3, C.roof, 0.9)
-    g.strokeRoundedRect(left, -h, w, h, 14)
+    // cantaria: blocos alternados nas duas bordas
+    const block = 16
+    for (let y = 0, i = 0; y - block > -h + 10; y -= block + 3, i += 1) {
+        const bw = i % 2 ? pil - 4 : pil + 2
+        g.fillStyle(C.trim, 0.55)
+        g.fillRect(left, y - block, bw, block)
+        g.fillStyle(C.trimDark, 0.45)
+        g.fillRect(right - bw, y - block, bw, block)
+    }
+
+    // contorno do corpo, para ele não sumir no céu claro do dia
+    g.lineStyle(3, C.frame, 0.35)
+    g.strokeRect(left, -h, w, h)
+
+    // cornija: a laje que avança, a moldura embaixo dela e os dentículos
+    g.fillStyle(C.shadow, 0.16)
+    g.fillRect(left, -h + 6, w, 7)
+    g.fillStyle(C.trim, 1)
+    g.fillRect(left - 8, -h - 6, w + 16, 12)
+    g.fillStyle(C.trimDark, 1)
+    for (let x = left + 4; x < right - 6; x += 14) g.fillRect(x, -h + 6, 7, 5)
+    g.fillStyle(C.trimDark, 1)
+    g.fillRect(left - 14, -h - 18, w + 28, 13)
+    g.fillStyle(C.facadeLight, 0.55)
+    g.fillRect(left - 14, -h - 18, w + 28, 3)
 }
 
 /** O limpador desenhado à mão, quando as PNGs não estiverem na pasta. */
@@ -512,20 +642,41 @@ export function createBuilding(
     const gridW = windows * cell + (windows - 1) * SITE.gap
     const gridH = floors * cell + (floors - 1) * SITE.gap
     const shellW = gridW + SITE.pad * 2
-    const shellH = gridH + SITE.pad * 2 + SITE.roof
 
-    const ground = SITE.bottom
-    const shell = scene.add.graphics().setPosition(SITE.cx, ground)
-    paintBuildingShell(shell, shellW, shellH)
+    /*
+     * O TELHADO FICA NO ALTO, E O PRÉDIO SAI DA TELA POR BAIXO.
+     *
+     * Antes o prédio pisava no chão e, com um andar só, era um caixote no pé
+     * da tela. Agora ele é sempre alto: o telhado sobe até `SITE.roofMax` (ou
+     * fica onde já estava, nos prédios altos), os andares da tarefa (sujos)
+     * vêm logo embaixo dele, e dali para baixo seguem andares que já foram
+     * lavados, até passar da borda. O limpador está no meio de um prédio de
+     * verdade.
+     *
+     * O telhado continua à vista de propósito: "até o topo" é até ele, e é
+     * nele que o limpador bate quando manda subir andares demais.
+     */
+    const top = Math.min(SITE.bottom - (gridH + SITE.pad * 2 + SITE.roof), SITE.roofMax)
+    const foot = H + 60
+    const shell = scene.add.graphics().setPosition(SITE.cx, foot)
+    paintBuildingShell(shell, shellW, foot - top)
     container.add(shell)
 
     const originX = SITE.cx - gridW / 2 + cell / 2
-    const originY = ground - SITE.pad - cell / 2
+    const originY = top + SITE.pad + SITE.roof + gridH - cell / 2
 
     const at = (floor: number, win: number) => ({
         x: originX + win * (cell + SITE.gap),
         y: originY - floor * (cell + SITE.gap),
     })
+
+    // Os andares de baixo, já lavados: só cenário, sem faixa e sem toque.
+    for (let f = -1; at(f, 0).y - cell / 2 < H; f -= 1) {
+        for (let w = 0; w < windows; w += 1) {
+            const p = at(f, w)
+            container.add(createWindow(scene, p.x, p.y, cell, 'clean').root)
+        }
+    }
 
     // ── faixas de andar: acendem na cor do laço de fora ────────────────
     const bands: Phaser.GameObjects.Graphics[] = []
@@ -543,16 +694,15 @@ export function createBuilding(
     }
 
     // ── janelas ────────────────────────────────────────────────────────
-    const wins = new Map<string, Phaser.GameObjects.Graphics>()
+    const wins = new Map<string, WindowView>()
     const key = (f: number, w: number) => `${f}:${w}`
 
     for (let f = 0; f < floors; f += 1) {
         for (let w = 0; w < windows; w += 1) {
             const p = at(f, w)
-            const g = scene.add.graphics().setPosition(p.x, p.y)
-            paintWindow(g, cell, { state: 'dirty' })
-            container.add(g)
-            wins.set(key(f, w), g)
+            const view = createWindow(scene, p.x, p.y, cell, 'dirty')
+            container.add(view.root)
+            wins.set(key(f, w), view)
         }
     }
 
@@ -614,7 +764,7 @@ export function createBuilding(
 
     const parkSpot = () => ({
         x: SITE.cx,
-        y: Math.max(SITE.top + 46, ground - shellH - 44),
+        y: Math.max(SITE.top + 46, top - 44),
     })
 
     const drawRope = () => {
@@ -661,17 +811,17 @@ export function createBuilding(
         posOf: (floor, win) => at(floor, win),
 
         setWindow: (floor, win, state) => {
-            const g = wins.get(key(floor, win))
-            if (!g) return
-            paintWindow(g, cell, { state })
+            const view = wins.get(key(floor, win))
+            if (!view) return
+            view.set(state)
             if (state === 'clean') {
-                FX.to(scene, g, { scale: 1.16 },
+                FX.to(scene, view.root, { scale: 1.16 },
                     { duration: 140, yoyo: true, ease: Ease.back(2) })
             }
         },
 
         resetWindows: () => {
-            wins.forEach(g => paintWindow(g, cell, { state: 'dirty' }))
+            wins.forEach(view => view.set('dirty'))
         },
 
         highlightFloor: (floor, on) => {
@@ -701,7 +851,7 @@ export function createBuilding(
         bumpTop: async () => {
             setPose(false)
             const x = SITE.cx
-            const y = ground - shellH + 20
+            const y = top + 20
             await moveTo(x, y, 220)
             void FX.sparks(scene, x + bladeDX, y + bladeDY,
                 { color: C.bump, count: 14, spread: 120 })
@@ -1212,7 +1362,7 @@ export function createEditor(
         container.add(outerBody)
 
         outerPips = addRows(EDITOR.cx, EDITOR.outerCY, {
-            action: 'SUBIR UM ANDAR',
+            action: 'SUBIR ANDAR',
             actionY: EDITOR.outerActionY,
             pipsY: EDITOR.outerPipsY,
             icon: g => paintFloorIcon(g, EDITOR.iconR),
@@ -1250,7 +1400,7 @@ export function createEditor(
     container.add(innerBody)
 
     const innerPips = addRows(innerX, innerCY, {
-        action: 'LAVAR UMA JANELA',
+        action: 'LAVAR JANELA',
         actionY: EDITOR.actionY,
         pipsY: EDITOR.pipsY,
         icon: g => paintWindowIcon(g, EDITOR.iconR, C.inner),

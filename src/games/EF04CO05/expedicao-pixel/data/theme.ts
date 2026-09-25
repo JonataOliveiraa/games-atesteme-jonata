@@ -36,11 +36,9 @@ export const CSS = {
     paper: '#f6e7c8',
     wood: '#5c3d24',
     dim: '#8f9bb0',
-    warm: '#f6c66b',
     r: '#e5584f',
     g: '#4eaa78',
     b: '#4b8fe0',
-    trava: '#7a4410',
 } as const
 
 export const FONT = {

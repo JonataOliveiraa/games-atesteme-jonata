@@ -93,7 +93,7 @@ export class GameScene extends Phaser.Scene {
         this.events.once(Phaser.Scenes.Events.SHUTDOWN, this.shutdownScene, this)
 
         // o céu muda por nível: dia, pôr do sol, noite
-        createScene(this, this.level.sky)
+        createScene(this)
 
         this.hud = createHud(this, { onHelp: () => this.replayTutorial() })
         this.hud.setLevel(this.level.level)

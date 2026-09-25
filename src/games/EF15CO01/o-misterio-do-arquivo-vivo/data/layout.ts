@@ -14,12 +14,17 @@ export const DEPTH = {
     intro: 140,
 } as const
 
+/** Da esquerda para a direita: a pílula do nível, as bolinhas das fases, as vidas. */
 export const HUD = {
     y: 34,
-    dotsX: 44,
+    nivelX: 24,
+    nivelW: 132,
+    nivelH: 40,
+    dotsX: 184,
     dotStep: 32,
     helpX: W - 46,
-    livesX: 160,
+    /** Depois da quinta bolinha: em 160 ele caía em cima dela. */
+    livesX: 348,
     livesY: 34,
 } as const
 
@@ -41,6 +46,13 @@ export const BAGUNCA = { y: 196, xIni: 330, xFim: 1170 } as const
 export const TUCA = { x: 142, y: 560, escala: 0.78 } as const
 
 /**
+ * Onde o chão livre começa, à direita dele. As poses de asa aberta (`feliz`,
+ * `acenando`) chegam na borda do quadro de 256, então o desenho vai até meio
+ * quadro depois do centro.
+ */
+export const TUCA_LIVRE = TUCA.x + 128 * TUCA.escala + 16
+
+/**
  * A FILA: uma tábua com buracos, e as peças mantêm o tamanho delas.
  *
  * ── POR QUE OS TAMANHOS SÃO GEOMÉTRICOS, E NÃO LINEARES ──────────────────
@@ -59,6 +71,10 @@ export const FILA = {
     passo: 202,
     maior: 158,
     razao: 1.29,
+    /** Quanto a tábua passa do primeiro e do último buraco, de cada lado. */
+    aba: 22,
+    /** Folga entre a ponta da tábua e a borda da tela. */
+    margem: 16,
     /** A seta de "cresce para cá", desenhada acima da tábua. */
     guiaY: 396,
 } as const
@@ -66,6 +82,18 @@ export const FILA = {
 /** O tamanho da peça `i` numa fila de `n`: a maior sempre chega em `FILA.maior`. */
 export function tamanhoNaFila(i: number, n: number): number {
     return Math.round(FILA.maior / Math.pow(FILA.razao, n - 1 - i))
+}
+
+/**
+ * A fila é a única estrutura larga o bastante para chegar no Tuca: centrada, a
+ * de cinco punha o primeiro buraco atrás dele. Ela anda para a direita até a
+ * tábua sair de trás dele e, se ainda não couber até a borda, encolhe — a peça
+ * encolhe junto, porque o tamanho dela no buraco vem do posto.
+ */
+export function afastarDoTuca(n: number, cx: number, escala: number): { cx: number; escala: number } {
+    const largura = n * FILA.passo + FILA.aba * 2
+    const e = Math.min(escala, (W - FILA.margem - TUCA_LIVRE) / largura)
+    return { cx: Math.max(cx, TUCA_LIVRE + (largura * e) / 2), escala: e }
 }
 
 /** A grade: 3 × 3, com o bichinho na borda esquerda e a forma no alto. */

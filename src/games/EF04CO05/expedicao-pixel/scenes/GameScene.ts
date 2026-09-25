@@ -19,7 +19,7 @@ import {
     validateLevels,
     worstChannel,
 } from '../data/levels'
-import { DEPTH, HUD } from '../data/layout'
+import { HUD } from '../data/layout'
 import { C } from '../data/theme'
 import type { Channel, LevelDef, Mix, Phase, Round } from '../types'
 import { createFair, createMaster, type Fair, type Master } from './effects'
@@ -195,7 +195,6 @@ export class GameScene extends Phaser.Scene {
         this.master.hush()
         this.master.leave()
         this.deck.hideLock()
-        this.sky.hideAsk()
         this.deck.setMix(this.mix, toColor(this.mix))
         this.board.setAsk(toColor(this.round.target), this.round.nome)
         this.board.setMix(toColor(this.mix))
@@ -222,7 +221,6 @@ export class GameScene extends Phaser.Scene {
             this.phase = 'misturando'
             this.master.hush()
             this.deck.hideLock()
-            this.sky.hideAsk()
         }
         if (this.phase !== 'misturando') return
 
@@ -257,16 +255,11 @@ export class GameScene extends Phaser.Scene {
          * Mesa, placa e cabeçalho saem; fica o céu, a praça e o foguete. É o
          * único trecho do jogo em que não há nada para decidir — e é o momento
          * que paga o esforço da mistura, então merece a tela inteira.
-         *
-         * A COR PEDIDA SOBE JUNTO. Ela fica ao lado do estouro enquanto ele
-         * acontece, e é o que transforma o erro em aula: os dois círculos no
-         * mesmo céu, do mesmo tamanho, e a criança vê sozinha o que faltou.
          */
         const nose = this.deck.rocketNose()
         await FX.all(this.deck.hide(), this.board.hide(), this.hud.fade(0))
         if (gen !== this.gen) return
 
-        this.sky.showAsk(toColor(this.round.target))
         this.audio.whistle()
         await FX.wait(this, 200)
         if (gen !== this.gen) return
@@ -300,10 +293,6 @@ export class GameScene extends Phaser.Scene {
         this.audio.crowd()
         void this.board.celebrate()
         await this.sky.store(this.done - 1, color)
-        if (gen !== this.gen) return
-
-        this.sky.hideAsk()
-        await this.master.say(this.round.successLine)
         if (gen !== this.gen) return
 
         await this.hud.celebrate(this.done - 1)
@@ -578,6 +567,3 @@ export class GameScene extends Phaser.Scene {
         this.audio.setMuted(muted)
     }
 }
-
-/** O céu é o placar: cada rodada certa vira uma estrela lá em cima. */
-export const SCOREBOARD_IS_THE_SKY = DEPTH.star
