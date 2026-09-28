@@ -28,3 +28,5 @@ dist-games/
 
 # Claude Code local files
 .claude/
+
+.maestri/

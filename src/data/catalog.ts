@@ -1656,16 +1656,22 @@ export const catalog: Game[] = [
   },
 ];
 
-/** Próximo id livre. Use ao cadastrar um jogo novo. */
-export const NEXT_FREE_ID = "087";
+/**
+ * Próximo id livre. Use ao cadastrar um jogo novo.
+ *
+ * 087, 088 e 089 nunca foram usados — a segunda rodada saltou de 086 para
+ * 090 — e continuam vazios de propósito: um jogo novo com 087 cairia dentro
+ * da segunda rodada. Jogo novo sempre entra DEPOIS do maior id cadastrado.
+ */
+export const NEXT_FREE_ID = "094";
 
 /**
  * AS RODADAS DE PRODUÇÃO.
  *
  * A primeira rodada são os 45 jogos que nasceram com a plataforma — um por
- * habilidade, ids 001 a 045. A segunda começa em 046: são os jogos que
- * entraram DEPOIS, acrescentando um segundo (e às vezes terceiro) jogo à
- * mesma habilidade.
+ * habilidade, ids 001 a 045. A segunda são os 45 que entraram DEPOIS,
+ * acrescentando um segundo (e às vezes terceiro) jogo à mesma habilidade:
+ * ids 046 a 093, com o buraco de 087 a 089. A terceira começa em 094.
  *
  * O corte é pelo `id` e não pelo `order` de propósito: `order` é a posição na
  * trilha, e a segunda rodada foi intercalada na trilha justamente para ficar
@@ -1673,16 +1679,18 @@ export const NEXT_FREE_ID = "087";
  * ids 001 e 002). Quem quer "o que veio na segunda leva" está perguntando
  * pelo id, que é a identidade eterna e nunca é reaproveitada.
  *
- * `lastId` é o TETO da rodada, não o último id cadastrado: "999" quer dizer
- * "e tudo que vier daqui pra frente". Assim cadastrar o jogo 094 amanhã não
- * exige lembrar de mexer aqui.
+ * O `lastId` da rodada ABERTA é o teto, não o último id cadastrado: "999"
+ * quer dizer "e tudo que vier daqui pra frente", e cadastrar o jogo 095
+ * amanhã não exige mexer aqui. Ao abrir uma rodada nova, feche a anterior no
+ * último id que ela de fato usou.
  *
  * A comparação é de string, e funciona porque todo id tem três dígitos com
  * zero à esquerda — "046" <= "090" é verdade pelo mesmo motivo que 46 <= 90.
  */
 export const ROUNDS = [
   { key: "1", label: "1ª rodada", firstId: "001", lastId: "045" },
-  { key: "2", label: "2ª rodada", firstId: "046", lastId: "999" },
+  { key: "2", label: "2ª rodada", firstId: "046", lastId: "093" },
+  { key: "3", label: "3ª rodada", firstId: "094", lastId: "999" },
 ] as const;
 
 export type RoundKey = (typeof ROUNDS)[number]["key"];

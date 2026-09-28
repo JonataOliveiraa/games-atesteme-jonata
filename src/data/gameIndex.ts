@@ -1,7 +1,7 @@
 import type Phaser from "phaser";
 import type { Game } from "../types/game";
 import type { SkillCode } from "../shared/types/game";
-import { catalog, ROUNDS } from "./catalog";
+import { catalog, NEXT_FREE_ID, ROUNDS } from "./catalog";
 import { YEAR_CODES, yearCodeOf } from "./skills";
 
 /* ─────────────────────────────────────────── índices ─────────── */
@@ -57,6 +57,19 @@ if (import.meta.env.DEV) {
       throw new Error(`[catalog] module duplicado: ${game.module}`);
     }
     seenModules.add(game.module);
+
+    // O NEXT_FREE_ID ficou em 087 enquanto o catálogo já ia no 093. Um id
+    // igual ou acima dele quer dizer que alguém cadastrou e não andou a fila.
+    if (game.id >= NEXT_FREE_ID) {
+      throw new Error(
+        `[catalog] id ${game.id} >= NEXT_FREE_ID (${NEXT_FREE_ID}). ` +
+          `Avance NEXT_FREE_ID em catalog.ts.`
+      );
+    }
+
+    if (!ROUNDS.some((r) => game.id >= r.firstId && game.id <= r.lastId)) {
+      throw new Error(`[catalog] id ${game.id} fora de todas as ROUNDS.`);
+    }
 
     // A convenção é "<skill>/<slug>". Não é obrigatória tecnicamente,
     // mas quebrá-la sem querer deixa a pasta órfã do agrupamento.
