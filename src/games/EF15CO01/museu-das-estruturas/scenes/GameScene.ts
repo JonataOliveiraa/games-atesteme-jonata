@@ -1273,6 +1273,9 @@ export class GameScene extends Phaser.Scene {
         if (this.ended || this.locked) return
         this.locked = true
         this.taskLocked = true
+        runtimeGameBridge.emit({ type: 'WRONG_ANSWER', gameId: GAME_ID, pointsEarned: 0, stage: this.level.level })
+        this.lives.lose()
+        this.livesLeft = this.lives.remaining
         this.showFeedback(false, 'O tempo do museu acabou. Vamos ver a próxima sala.', 0, () => this.completePhase())
     }
 

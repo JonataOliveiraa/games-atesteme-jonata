@@ -207,6 +207,12 @@ export function createTray(scene: Phaser.Scene, onPick: (index: number) => void,
             })
         },
 
+        async shake(index: number) {
+            const card = cards[index]
+            if (!card) return
+            await FX.shake(scene, card.root)
+        },
+
         press(index: number) {
             const card = cards[index]
             if (!card) return

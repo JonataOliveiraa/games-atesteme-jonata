@@ -47,4 +47,4 @@ export interface Picked {
     sound: SoundId
 }
 
-export type Mode = 'intro' | 'choosing' | 'busy' | 'ready' | 'showing' | 'clip' | 'done'
+export type Mode = 'intro' | 'choosing' | 'busy' | 'ready' | 'showing' | 'clip' | 'asking' | 'done'

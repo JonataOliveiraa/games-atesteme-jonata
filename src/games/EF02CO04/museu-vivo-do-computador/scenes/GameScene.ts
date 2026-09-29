@@ -54,7 +54,6 @@ export class GameScene extends Phaser.Scene {
   private hits = 0
   private errors = 0
   private currentPoints = 0
-  private currentLives = 1
   private isMuted = false
   private phase: MissionPhase = 'intro'
   private gameEnded = false
@@ -98,7 +97,6 @@ export class GameScene extends Phaser.Scene {
     this.hits = 0
     this.errors = 0
     this.currentPoints = data?.points ?? 0
-    this.currentLives = data?.lives ?? 1
     this.isMuted = false
     this.phase = 'intro'
     this.gameEnded = false
@@ -1108,7 +1106,7 @@ export class GameScene extends Phaser.Scene {
     const btn = this.createModalButton(0, 116,
       nextLevel ? 'Próximo nível' : 'Ver resultado', C.blue, () => {
         if (nextLevel) {
-          this.scene.restart({ level: nextLevel, points: this.currentPoints, lives: this.currentLives })
+          this.scene.restart({ level: nextLevel, points: this.currentPoints, lives: this.livesLeft })
         } else {
           overlay.destroy(); modal.destroy()
           this.showGameCompleteScreen()
@@ -1158,7 +1156,7 @@ export class GameScene extends Phaser.Scene {
     })
 
     const again = this.createModalButton(-150, 136, 'Jogar novamente', C.green, () => {
-      this.scene.restart({ level: 1, points: 0, lives: 1 })
+      this.scene.restart({ level: 1, points: 0, lives: this.livesTotal })
     })
     const exit = this.createModalButton(150, 136, 'Outros jogos', C.blue, () => {
       EventBus.emit('exit-game')
@@ -1193,14 +1191,18 @@ export class GameScene extends Phaser.Scene {
       fontFamily: 'DynaPuff, Arial, sans-serif', fontStyle: 'bold', fontSize: '20px', color: '#1E293B',
     }).setOrigin(0.5).setResolution(2)
 
-    const retry = this.createModalButton(-140, 110, 'Tentar novamente', C.green, () => {
-      this.scene.restart({ level: this.levelConfig.level, points: this.currentPoints, lives: this.currentLives })
-    })
-    const exit = this.createModalButton(140, 110, 'Sair', C.blue, () => {
+    const canRetry = this.lives.remaining > 0
+    const exit = this.createModalButton(canRetry ? 140 : 0, 110, 'Sair', C.blue, () => {
       EventBus.emit('exit-game')
     })
+    panel.add([bg, title, stats, exit])
 
-    panel.add([bg, title, stats, retry, exit])
+    if (canRetry) {
+      const retry = this.createModalButton(-140, 110, 'Tentar novamente', C.green, () => {
+        this.scene.restart({ level: this.levelConfig.level, points: this.currentPoints, lives: this.livesLeft })
+      })
+      panel.add(retry)
+    }
     panel.setScale(0.9).setAlpha(0)
     this.tweens.add({ targets: panel, alpha: 1, scale: 1, duration: 260, ease: 'Back.easeOut' })
 
@@ -1343,7 +1345,6 @@ export class GameScene extends Phaser.Scene {
     this.unsubPlatform = runtimeGameBridge.onCommand((cmd: PlatformCommand) => {
       if (cmd.type === 'START_GAME') {
         this.currentPoints = cmd.points ?? 0
-        this.currentLives = cmd.lives ?? 1
       }
     })
   }

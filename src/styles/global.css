@@ -589,6 +589,71 @@ button {
   outline-offset: 2px;
 }
 
+/* ───────────────────────────── a busca, na mesma pílula dos filtros ─── */
+
+.games-search {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* A lupa é desenhada no invólucro, como a seta dos selects. */
+.games-search-control {
+  position: relative;
+  display: inline-flex;
+}
+
+.games-search-control::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 18px;
+  width: 11px;
+  height: 11px;
+  margin-top: -8px;
+  border: 2px solid var(--primary-dark);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.games-search-control::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 30px;
+  width: 2px;
+  height: 7px;
+  margin-top: 2px;
+  background: var(--primary-dark);
+  border-radius: 1px;
+  transform: rotate(-45deg);
+  pointer-events: none;
+}
+
+.games-search input {
+  min-width: 260px;
+  padding: 12px 18px 12px 44px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--white);
+  box-shadow: var(--shadow);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 700;
+  transition: 0.2s;
+}
+
+.games-search input::placeholder {
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.games-search input:focus-visible {
+  outline: 3px solid var(--primary-soft);
+  outline-offset: 2px;
+}
+
 
 .games-empty {
   margin-top: 2rem;
@@ -1100,7 +1165,10 @@ button {
 
   /* Um botão por linha: dois selects lado a lado não cabem num celular. */
   .filter-select,
-  .filter-select select {
+  .filter-select select,
+  .games-search,
+  .games-search-control,
+  .games-search input {
     width: 100%;
   }
 }

@@ -391,7 +391,7 @@ src/games/EF05CO06/dia-sem-internet/
 |---|---|
 | Pasta | `src/games/EF05CO06/dia-sem-internet` |
 | Assets | `src/assets/games/EF05CO06/dia-sem-internet` |
-| Slug | `dia-sem-internet` · Id `090` · `order: 365` |
+| Slug | `dia-sem-internet` · Id `087` · `order: 365` |
 | Título | `O Dia Sem Internet` · Ícone `🔌` |
 | Habilidade | `EF05CO06` · `years: [5]` · `points: 90` |
 

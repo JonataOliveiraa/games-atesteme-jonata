@@ -62,6 +62,7 @@ export class GameScene extends Phaser.Scene {
     private optionZones: Phaser.GameObjects.Zone[] = []
     private optionSeals: Phaser.GameObjects.Container[] = []
     private found = new Set<string>()
+    private missed = new Set<string>()
 
     private unsubPlatform?: () => void
 
@@ -91,6 +92,7 @@ export class GameScene extends Phaser.Scene {
         this.ended = false
         this.gen = 0
         this.found = new Set()
+        this.missed = new Set()
         this.options = []
         this.optionZones = []
         this.optionSeals = []
@@ -161,6 +163,7 @@ export class GameScene extends Phaser.Scene {
         this.impact.hide()
         this.watchers.clear()
         this.found.clear()
+        this.missed.clear()
     }
 
     private async playCase(withTutorial: boolean) {
@@ -272,6 +275,9 @@ export class GameScene extends Phaser.Scene {
 
         // ── pedaço que pode ser postado ────────────────────────────────
         if (!chunk.risky) {
+            void this.post?.nudge(chunk.id)
+            if (this.missed.has(chunk.id)) return
+            this.missed.add(chunk.id)
             this.errors += 1
             this.points += POINTS.miss
             this.playSoft()
@@ -282,7 +288,6 @@ export class GameScene extends Phaser.Scene {
                 this.lives.lose(); this.livesLeft = this.lives.remaining
             this.emitCheckpoint()
 
-            void this.post?.nudge(chunk.id)
             showToast(this, chunk.safe ?? 'Esse pedaço pode ser postado.', C.safe, 2400)
             return
         }

@@ -27,7 +27,7 @@ partícula, painel, botão, barra de tempo, medalha de fim de nível.
 
 ### `pedras.png` vem quase branca
 
-As cinco cores são pintadas com `setTint`. Cor na arte vira cor errada depois
+As três cores (vermelho, azul e amarelo) são pintadas com `setTint`. Cor na arte vira cor errada depois
 de tingida.
 
 | | |
@@ -44,7 +44,7 @@ honesto.
 
 ### `cestos.png` não tem cor de regra nem símbolo
 
-Palha acinzentada e folha verde, sem vermelho, azul, amarelo ou roxo, e sem
+Palha acinzentada e folha verde, sem vermelho, azul ou amarelo, e sem
 círculo, quadrado ou triângulo desenhado nele. É exatamente isso que confunde
 no jogo de hoje: base vermelha embaixo de uma regra de triângulo faz a criança
 achar que precisa de um triângulo vermelho. Quem diz a regra é a plaquinha de
@@ -65,15 +65,18 @@ céu       #bfe7ff                 sol      #ffd88a
 tinta     #1f2a37
 ```
 
-Cores das pedras, aplicadas por código e nunca na arte:
+Cores das pedras, aplicadas por código e nunca na arte (só estas três, desde
+29/09/2026):
 
 ```
-#e14b4b   #4da3ff   #2fbf71   #ffc857   #8b5cf6
+vermelho #e14b4b   azul #4da3ff   amarelo #ffc857
 ```
 
-A pedra verde e a grama são parentes de cor, então as pedras nunca ficam soltas
-no gramado: elas descansam num tronco caído desenhado em Graphics, de madeira
-clara.
+As pedras nunca ficam soltas no gramado: elas descansam num tronco caído
+desenhado em Graphics, de madeira clara.
+
+A capa (`cover-base-dos-classificadores.png`, com título) mostra só as três
+cores. A capa antiga `cover-01.png` continua na pasta, mas o catálogo não a usa mais.
 
 ## Ordem
 

@@ -620,6 +620,7 @@ export class GameScene extends Phaser.Scene {
     if (!card) return
 
     if (id !== round.answerId) {
+      this.locked = true
       this.errors += 1
       runtimeGameBridge.emit({ type: 'WRONG_ANSWER', gameId: GAME_ID, pointsEarned: -2, stage: this.level.level })
       this.lives.lose(); this.livesLeft = this.lives.remaining
@@ -632,6 +633,7 @@ export class GameScene extends Phaser.Scene {
       this.time.delayedCall(900, () => {
         if (gen !== this.stageGen) return
         paintCard(card.bg, card.w, card.h, BANK.r, 'normal')
+        this.locked = false
       })
       return
     }

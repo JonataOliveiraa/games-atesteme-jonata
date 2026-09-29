@@ -30,6 +30,7 @@ export interface LevelCompleteOptions {
    * valor menor encolhe as bolinhas, o vao e o espaco que elas ocupam juntos.
    */
   progress?: { total: number; current: number; size?: number }
+  stars?: number
   buttons?: LevelCompleteButton[]
   autoAdvance?: { delay: number; label?: string; onComplete: () => void }
   depth?: number
@@ -37,6 +38,34 @@ export interface LevelCompleteOptions {
 
 export interface LevelCompleteHandle {
   destroy: () => void
+}
+
+const STAR_R = 30
+const STAR_GAP = 78
+
+const starPoints = (outer: number, inner: number, dy = 0) =>
+  Array.from({ length: 10 }, (_, i) => {
+    const r = i % 2 ? inner : outer
+    const a = -Math.PI / 2 + (i * Math.PI) / 5
+    return new Phaser.Math.Vector2(Math.cos(a) * r, Math.sin(a) * r + dy)
+  })
+
+function paintStar(g: Phaser.GameObjects.Graphics, earned: boolean) {
+  const outer = STAR_R, inner = STAR_R * 0.46
+  if (earned) {
+    g.fillStyle(0xd98a00, 1)
+    g.fillPoints(starPoints(outer, inner, 4), true)
+    g.fillStyle(0xffc933, 1)
+    g.fillPoints(starPoints(outer, inner), true)
+    g.lineStyle(3, 0xffffff, 0.95)
+    g.strokePoints(starPoints(outer, inner), true)
+    g.fillStyle(0xffffff, 0.45)
+    g.fillEllipse(-outer * 0.18, -outer * 0.3, outer * 0.32, outer * 0.2)
+  } else {
+    g.fillStyle(0xd8dde8, 1)
+    g.fillPoints(starPoints(outer * 0.86, inner * 0.86), true)
+  }
+  return g
 }
 
 const darken = (color: number, amount: number) =>
@@ -118,7 +147,17 @@ export function showLevelComplete(
 
   place(title, 18)
   place(subtitle, 16)
-  place(message, options.progress || hasFooter ? 30 : 0)
+  const starCount = options.stars === undefined
+    ? 0
+    : Phaser.Math.Clamp(Math.round(options.stars), 1, 3)
+
+  place(message, starCount || options.progress || hasFooter ? 30 : 0)
+
+  let starsY = 0
+  if (starCount) {
+    starsY = cursor + STAR_R
+    cursor += STAR_R * 2 + (options.progress || hasFooter ? 26 : 0)
+  }
 
   const dotScale = (options.progress?.size ?? 11) / 11
 
@@ -179,6 +218,19 @@ export function showLevelComplete(
 
   modal.add([shadow, bg, cap, ...content])
 
+  let starsGroup: Phaser.GameObjects.Container | null = null
+  const starPops: Phaser.GameObjects.Container[] = []
+  if (starCount) {
+    starsGroup = scene.add.container(0, starsY + shift)
+    for (let i = 0; i < 3; i++) {
+      const star = scene.add.container((i - 1) * STAR_GAP, i === 1 ? -8 : 0)
+      star.add(paintStar(scene.add.graphics(), i < starCount))
+      starsGroup.add(star)
+      if (i < starCount) starPops.push(star.setScale(0))
+    }
+    modal.add(starsGroup)
+  }
+
   // ── progresso ─────────────────────────────────────────────────────────
   let dotsGroup: Phaser.GameObjects.Container | null = null
   if (options.progress) {
@@ -211,7 +263,7 @@ export function showLevelComplete(
     targets: modal, alpha: 1, scale: 1, duration: 280, ease: 'Back.easeOut',
   })
 
-  const staggered = [title, subtitle, message, dotsGroup, ...buttons, waitText]
+  const staggered = [title, subtitle, message, starsGroup, dotsGroup, ...buttons, waitText]
     .filter(Boolean) as Phaser.GameObjects.Container[]
 
   staggered.forEach((obj, i) => {
@@ -220,6 +272,12 @@ export function showLevelComplete(
     scene.tweens.add({
       targets: obj, alpha: 1, y: restY,
       duration: 300, delay: 140 + i * 70, ease: 'Cubic.easeOut',
+    })
+  })
+
+  starPops.forEach((star, i) => {
+    scene.tweens.add({
+      targets: star, scale: 1, duration: 360, delay: 380 + i * 220, ease: 'Back.easeOut',
     })
   })
 

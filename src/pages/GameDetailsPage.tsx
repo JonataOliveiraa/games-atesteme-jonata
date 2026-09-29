@@ -15,6 +15,11 @@ import { useBeepSound } from "../hooks/useBeepSound";
 import SkillInfoButton from "../components/SkillInfoButton";
 
 const GAMES_WITH_IN_GAME_COMPLETION_SCREEN = new Set([
+  "garra-dos-grupos",
+  "pescaria-dos-codigos",
+  "subida-do-dia",
+  "balao-do-recado",
+  "decolagem-passo-a-passo",
   "canteiro-de-obras",
   "achados-e-perdidos",
   "maratona-do-algoritmo",

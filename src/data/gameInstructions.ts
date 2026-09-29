@@ -295,6 +295,7 @@ const POR_SLUG: Record<string, string[]> = {
     "Para trocar, toque na aba IMAGEM, FRASE ou SOM e escolha de novo.",
     "Com os três prontos, toque em APRESENTAR e veja a cena no telão.",
     "No fim, as três cenas tocam juntas como um clipe, e o palco apaga para você assistir.",
+    "No clipe, depois de cada cena, responda o que estava nela. Preste atenção: errar faz perder!",
     "No nível 3 você escolhe o tema do show antes de começar.",
   ],
   "detetives-da-busca": [
@@ -450,6 +451,31 @@ const POR_SLUG: Record<string, string[]> = {
     "No Nível 2, use a tabela de referência para descobrir qual letra corresponde a cada código.",
     "No Nível 3, ajuste os sliders de Vermelho, Verde e Azul para misturar a cor pedida.",
     "Toda informação digital pode ser representada em binário, letras ou valores de cor RGB!",
+  ],
+  "garra-dos-grupos": [
+    "Olhe a cor no visor: ela diz o que a garra deve pegar.",
+    "Toque na tela quando a garra estiver em cima de um item dessa cor.",
+    "Encha a caixinha com cinco itens iguais na cor.",
+  ],
+  "balao-do-recado": [
+    "Segure a tela para o balão subir; solte para ele descer.",
+    "Passe por dentro dos anéis até chegar em quem espera o recado.",
+    "Na janela, escolha o jeito certo: voz, carta ou telinha.",
+  ],
+  "pescaria-dos-codigos": [
+    "Ouça as batidas do tambor no quadro; toque nele para ouvir de novo.",
+    "Olhe a vela: ela mostra que cor cada número de batidas quer dizer.",
+    "Toque na tela quando o peixe dessa cor estiver na luz embaixo do anzol.",
+  ],
+  "subida-do-dia": [
+    "O quadro mostra o problema; a nuvem no alto da escada mostra ele resolvido.",
+    "Toque na figura do próximo passo para montar o degrau que brilha.",
+    "Passo fora da ordem dá errado, e a criança escorrega da escada!",
+  ],
+  "decolagem-passo-a-passo": [
+    "Olhe a missão: o foguete, o balão ou a pipa precisa subir.",
+    "Toque nos cartões na ordem em que os passos acontecem.",
+    "Com todos os passos certos, vem a decolagem e o seu algoritmo!",
   ],
 };
 

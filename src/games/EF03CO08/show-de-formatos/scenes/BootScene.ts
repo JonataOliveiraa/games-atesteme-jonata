@@ -1,6 +1,7 @@
 import Phaser from 'phaser'
 import { createLoadingScreen } from '../../../../shared/loading/createLoadingScreen'
 import { faseInicial } from '../../../../shared/level/faseInicial'
+import { preloadLives } from '../../../../shared/hud/createLives'
 import { cutAt, HOST_SHEET, SCENE_GRID, SHEET, SOUND_SHEET } from '../data/art'
 import { C } from '../data/theme'
 
@@ -44,6 +45,8 @@ export class BootScene extends Phaser.Scene {
                 progressHighlight: C.yellow,
             },
         })
+
+        preloadLives(this)
 
         Object.entries(FILES).forEach(([path, url]) => {
             const name = nameOf(path)

@@ -16,9 +16,7 @@ export const SIZE_SCALE: Record<Size, number> = {
 export const COLOR_LABEL: Record<Color, string> = {
     vermelho: 'VERMELHA',
     azul: 'AZUL',
-    verde: 'VERDE',
     amarelo: 'AMARELA',
-    roxo: 'ROXA',
 }
 
 export const SHAPE_LABEL: Record<Shape, string> = {
@@ -77,6 +75,9 @@ export function ruleExamples(rule: Attribute, value: string): Stone[] {
 
 const s = (color: Color, shape: Shape, size: Size = 'media'): Stone => ({ color, shape, size })
 
+export const MAX_STONES = 6
+export const MAX_COLOR_BASKETS = 3
+
 export const LEVELS: LevelConfig[] = [
     {
         level: 1,
@@ -110,15 +111,15 @@ export const LEVELS: LevelConfig[] = [
                 ],
             },
             {
-                id: 'n1-cores-novas',
+                id: 'n1-cestos-trocados',
                 rule: 'cor',
-                baskets: ['azul', 'amarelo', 'roxo'],
+                baskets: ['amarelo', 'vermelho', 'azul'],
                 stones: [
-                    s('roxo', 'retangulo'),
-                    s('amarelo', 'triangulo'),
                     s('azul', 'circulo'),
-                    s('roxo', 'quadrado'),
                     s('amarelo', 'retangulo'),
+                    s('vermelho', 'quadrado'),
+                    s('amarelo', 'triangulo'),
+                    s('vermelho', 'retangulo'),
                     s('azul', 'quadrado'),
                 ],
             },
@@ -136,51 +137,77 @@ export const LEVELS: LevelConfig[] = [
                 stones: [
                     s('azul', 'circulo'),
                     s('amarelo', 'quadrado'),
-                    s('roxo', 'triangulo'),
+                    s('vermelho', 'triangulo'),
                     s('vermelho', 'circulo'),
-                    s('verde', 'quadrado'),
-                    s('azul', 'triangulo'),
+                    s('azul', 'quadrado'),
+                    s('amarelo', 'triangulo'),
                 ],
             },
             {
                 id: 'n2-cor',
                 rule: 'cor',
-                baskets: ['vermelho', 'verde', 'roxo'],
+                baskets: ['azul', 'amarelo', 'vermelho'],
                 stones: [
                     s('vermelho', 'retangulo'),
-                    s('verde', 'circulo'),
-                    s('roxo', 'quadrado'),
-                    s('vermelho', 'triangulo'),
-                    s('roxo', 'circulo'),
-                    s('verde', 'retangulo'),
+                    s('azul', 'circulo'),
+                    s('amarelo', 'triangulo'),
+                    s('vermelho', 'quadrado'),
+                    s('amarelo', 'retangulo'),
+                    s('azul', 'triangulo'),
                 ],
             },
             {
                 id: 'n2-forma-parecidas',
                 rule: 'forma',
-                baskets: ['circulo', 'quadrado', 'triangulo', 'retangulo'],
+                baskets: ['quadrado', 'retangulo', 'triangulo'],
                 stones: [
                     s('vermelho', 'quadrado'),
                     s('azul', 'retangulo'),
-                    s('amarelo', 'circulo'),
-                    s('verde', 'triangulo'),
-                    s('roxo', 'retangulo'),
-                    s('azul', 'quadrado'),
-                ],
-            },
-            {
-                id: 'n2-cor-parecidas',
-                rule: 'cor',
-                baskets: ['azul', 'roxo', 'amarelo', 'verde'],
-                stones: [
-                    s('azul', 'circulo'),
-                    s('roxo', 'circulo'),
+                    s('amarelo', 'quadrado'),
+                    s('vermelho', 'retangulo'),
+                    s('azul', 'triangulo'),
                     s('amarelo', 'retangulo'),
-                    s('verde', 'quadrado'),
-                    s('roxo', 'triangulo'),
-                    s('azul', 'quadrado'),
                 ],
             },
         ],
     },
 ]
+
+export function validateLevels(levels: LevelConfig[]): string[] {
+    const problems: string[] = []
+    const colors = Object.keys(COLOR_LABEL)
+
+    levels.forEach((level, index) => {
+        const tag = `N${level.level}`
+        if (level.level !== index + 1) problems.push(`${tag}: fora de ordem`)
+        if (level.phases.length !== 3) problems.push(`${tag}: ${level.phases.length} fases`)
+
+        level.phases.forEach((phase, i) => {
+            const where = `${tag}/${phase.id}`
+            if (phase.stones.length > MAX_STONES) problems.push(`${where}: ${phase.stones.length} pedras`)
+            if (phase.stones.some(stone => !colors.includes(stone.color))) problems.push(`${where}: cor fora das 3`)
+            if (phase.rule === 'cor' && phase.baskets.length > MAX_COLOR_BASKETS) {
+                problems.push(`${where}: cestos de cor demais`)
+            }
+            phase.stones.forEach(stone => {
+                const homes = phase.baskets.filter(value => matches(stone, phase.rule, value)).length
+                if (homes !== 1) problems.push(`${where}: pedra ${stone.color}/${stone.shape} com ${homes} cestos`)
+            })
+            phase.baskets.forEach(value => {
+                if (!phase.stones.some(stone => matches(stone, phase.rule, value))) {
+                    problems.push(`${where}: cesto ${value} sem pedra`)
+                }
+            })
+            if (level.level === 1 && phase.rule !== 'cor') problems.push(`${where}: o N1 é só cor`)
+            const previous = level.phases[i - 1]
+            if (level.level === 2 && previous && previous.rule === phase.rule) {
+                problems.push(`${where}: a regra não alternou`)
+            }
+        })
+    })
+
+    return problems
+}
+
+const PROBLEMS = validateLevels(LEVELS)
+if (PROBLEMS.length && import.meta.env?.DEV) console.error('[base-dos-classificadores]', PROBLEMS)

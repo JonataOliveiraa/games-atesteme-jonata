@@ -51,6 +51,7 @@ export class GameScene extends Phaser.Scene {
     private explainTimer?: Phaser.Time.TimerEvent
     private armed = false
     private travas = 0
+    private stubbornUntil = 0
     private pendingTutorial = true
 
     private score = 0
@@ -93,6 +94,7 @@ export class GameScene extends Phaser.Scene {
         this.travaOpen = null
         this.armed = false
         this.travas = 0
+        this.stubbornUntil = 0
         this.score = data?.points ?? 0
         this.hits = 0
         this.errors = 0
@@ -382,6 +384,8 @@ export class GameScene extends Phaser.Scene {
      * peso certo para o unico gesto que o jogo pede para nao fazer.
      */
     private stubborn() {
+        if (this.time.now < this.stubbornUntil) return
+        this.stubbornUntil = this.time.now + 900
         this.errors += 1
         this.travas += 1
 

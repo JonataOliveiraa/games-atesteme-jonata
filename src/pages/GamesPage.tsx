@@ -7,11 +7,30 @@ import { ROUNDS } from "../data/catalog";
 import { YEAR_CODES } from "../data/skills";
 import { useGame } from "../context/useGame";
 import { useSearchParams } from "react-router-dom";
+import type { Game } from "../types/game";
 
 const ITEMS_PER_PAGE = 6;
 
 /** O filtro "sem filtro". String vazia porque é o que some da URL. */
 const TODOS = "";
+
+/** Sem acento e sem maiúscula: "memoria" acha "Memória". */
+const normalizar = (texto: string) =>
+  texto.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+
+/**
+ * Cada palavra digitada precisa aparecer em algum lugar do jogo: título, slug,
+ * código da habilidade, id ou tags. "pixel ef01" acha o Pixel Secreto.
+ */
+function combinaComBusca(game: Game, busca: string): boolean {
+  const palavras = normalizar(busca).split(/\s+/).filter(Boolean);
+  if (palavras.length === 0) return true;
+
+  const alvo = normalizar(
+    [game.title, game.slug, game.skill, game.id, ...game.tags].join(" ")
+  );
+  return palavras.every((p) => alvo.includes(p));
+}
 
 export default function GamesPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -31,18 +50,24 @@ export default function GamesPage() {
   */
   const requestedRound = searchParams.get("rodada") ?? TODOS;
   const requestedYear = searchParams.get("ano") ?? TODOS;
+  const requestedSearch = searchParams.get("busca") ?? TODOS;
 
   /*
-    Os dois filtros se somam por interseção — "2ª rodada E 3º ano". Cada
+    Os filtros se somam por interseção — "2ª rodada E 3º ano E 'pixel'". Cada
     resolver já devolve a lista inteira quando não reconhece o valor, então
     "sem filtro" cai no caso geral sem precisar de um ramo só para ele.
+
+    A busca entra aqui também, e não só na grade: assim o número de cada opção
+    dos selects conta o que a busca já deixou de fora.
   */
   const filtrar = useMemo(
     () => (round: string, year: string) => {
       const doAno = new Set(getGamesByYearCode(year).map((g) => g.id));
-      return getGamesByRound(round).filter((g) => doAno.has(g.id));
+      return getGamesByRound(round).filter(
+        (g) => doAno.has(g.id) && combinaComBusca(g, requestedSearch)
+      );
     },
-    []
+    [requestedSearch]
   );
 
   const visibleGames = useMemo(
@@ -71,16 +96,27 @@ export default function GamesPage() {
     startIndex + ITEMS_PER_PAGE
   );
 
-  /** Escreve a URL inteira de uma vez: os três parâmetros andam juntos. */
-  const apply = (round: string, year: string, page: number) => {
-    playBeep();
-
+  /** Escreve a URL inteira de uma vez: os quatro parâmetros andam juntos. */
+  const apply = (
+    round: string,
+    year: string,
+    page: number,
+    search = requestedSearch
+  ) => {
     const params: Record<string, string> = {};
     if (round !== TODOS) params.rodada = round;
     if (year !== TODOS) params.ano = year;
+    if (search !== TODOS) params.busca = search;
     if (page > 1) params.page = String(page);
 
-    setSearchParams(params);
+    /*
+      Digitar troca a URL a cada letra. Sem `replace`, o "voltar" do
+      navegador desfaria a busca uma letra por vez — e sem bipe, que a cada
+      tecla viraria metralhadora.
+    */
+    const digitando = search !== requestedSearch;
+    if (!digitando) playBeep();
+    setSearchParams(params, { replace: digitando });
   };
 
   const setPage = (page: number) => apply(requestedRound, requestedYear, page);
@@ -88,6 +124,8 @@ export default function GamesPage() {
   /* Filtro novo, contagem nova: a página antiga pode nem existir mais. */
   const setRound = (round: string) => apply(round, requestedYear, 1);
   const setYear = (year: string) => apply(requestedRound, year, 1);
+  const setSearch = (search: string) =>
+    apply(requestedRound, requestedYear, 1, search);
 
   const goToNextPage = () => {
     if (currentPage < totalPages) setPage(currentPage + 1);
@@ -148,6 +186,19 @@ export default function GamesPage() {
       </p>
 
       <div className="games-filters">
+        <label className="games-search">
+          <span className="filter-select-legend">Buscar</span>
+          <span className="games-search-control">
+            <input
+              type="search"
+              value={requestedSearch}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Nome, habilidade ou tema"
+              autoComplete="off"
+            />
+          </span>
+        </label>
+
         <FilterSelect
           legend="Ano"
           value={activeYear}
@@ -173,7 +224,9 @@ export default function GamesPage() {
 
       {visibleGames.length === 0 ? (
         <p className="games-empty">
-          Nenhum jogo nesta combinação de ano e rodada.
+          {requestedSearch.trim()
+            ? `Nenhum jogo encontrado para "${requestedSearch.trim()}".`
+            : "Nenhum jogo nesta combinação de ano e rodada."}
         </p>
       ) : (
         <div className="games-grid">

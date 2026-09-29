@@ -1032,6 +1032,7 @@ export class GameScene extends Phaser.Scene {
             return
         }
 
+        this.phase = 'rodando'
         this.registerError()
         this.flashChip(!!step.conditionValue)
         this.showBadge(step.conditionValue ? 'badge-verdadeiro' : 'badge-falso')

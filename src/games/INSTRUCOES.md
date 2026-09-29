@@ -46,11 +46,11 @@ não pode ser embutido:
 
 O `id` é o `NEXT_FREE_ID` do próprio `catalog.ts`, e o `NEXT_FREE_ID` anda um
 logo em seguida. O id decide a rodada (`ROUNDS`, no fim do arquivo): a 3ª
-rodada começa em 094.
+rodada começa em 091.
 
 ```ts
 {
-  id: "094",
+  id: "091",
   slug: "caca-fonte-confiavel",
   module: "EF04CO08/caca-fonte-confiavel",   // a pasta, a partir de src/games
   skill: "EF04CO08",

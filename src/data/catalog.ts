@@ -1,6 +1,6 @@
 import type { Game } from "../types/game";
 
-import classificadoresThumbnail from "../assets/games/EF01CO01/base-dos-classificadores/cover-01.png";
+import classificadoresThumbnail from "../assets/games/EF01CO01/base-dos-classificadores/cover-base-dos-classificadores.png";
 import corridaDosParecidosThumbnail from "../assets/games/EF01CO01/corrida-dos-parecidos/cover-corrida-dos-parecidos.png";
 import ritmoDaRotinaThumbnail from "../assets/games/EF01CO02/ritmo-da-rotina/cover-ritmo-da-rotina.png";
 import trilhaThumbnail from "../assets/games/EF01CO02/trilha-do-passo-a-passo/splash_art.png";
@@ -92,6 +92,11 @@ import coverTrilhaDoAmanha from "../assets/games/EF05CO10/trilha-do-amanha/cover
 import coverKitDoSolucionador from "../assets/games/EF05CO11/kit-do-solucionador/cover-kit-do-solucionador.png";
 import coverAchadosEPerdidos from "../assets/games/EF15CO03/achados-e-perdidos/cover-achados-e-perdidos.png";
 import coverCanteiroDeObras from "../assets/games/EF15CO04/canteiro-de-obras/cover-canteiro-de-obras.png";
+import coverGarraDosGrupos from "../assets/games/EF01CO01/garra-dos-grupos/cover-garra-dos-grupos.png";
+import coverSubidaDoDia from "../assets/games/EF01CO02/subida-do-dia/cover-subida-do-dia.png";
+import coverDecolagemPassoAPasso from "../assets/games/EF01CO03/decolagem-passo-a-passo/cover-decolagem-passo-a-passo.png";
+import coverBalaoDoRecado from "../assets/games/EF01CO04/balao-do-recado/cover-balao-do-recado.png";
+import coverPescariaDosCodigos from "../assets/games/EF01CO05/pescaria-dos-codigos/cover-pescaria-dos-codigos.png";
 /**
  * 1. `id` nunca muda e nunca é reaproveitado. Se um jogo for removido,
  *    marque status "draft" — não devolva o id para a fila.
@@ -186,7 +191,7 @@ export const catalog: Game[] = [
     skill: "EF01CO02",
     years: [1],
     tags: ["sequência", "rotina", "ritmo", "toque"],
-    order: 16,
+    order: 18,
     status: "published",
     title: "Ritmo da Rotina",
     description:
@@ -1333,7 +1338,7 @@ export const catalog: Game[] = [
     thumbnail: coverMissaoArquivoSeguro,
   },
   {
-    id: "090",
+    id: "087",
     slug: "dia-sem-internet",
     module: "EF05CO06/dia-sem-internet",
     skill: "EF05CO06",
@@ -1418,7 +1423,7 @@ export const catalog: Game[] = [
     thumbnail: coverOlhaOJornal,
   },
   {
-    id: "091",
+    id: "088",
     slug: "guilda-dos-criadores",
     module: "EF05CO09/guilda-dos-criadores",
     skill: "EF05CO09",
@@ -1520,7 +1525,7 @@ export const catalog: Game[] = [
     thumbnail: coverKitDoSolucionador,
   },
   {
-    id: "092",
+    id: "089",
     slug: "o-misterio-do-arquivo-vivo",
     module: "EF15CO01/o-misterio-do-arquivo-vivo",
     skill: "EF15CO01",
@@ -1570,7 +1575,7 @@ export const catalog: Game[] = [
     thumbnail: coverAcademiaDosAlgoritmos,
   },
   {
-    id: "093",
+    id: "090",
     slug: "maratona-do-algoritmo",
     module: "EF15CO02/maratona-do-algoritmo",
     skill: "EF15CO02",
@@ -1638,6 +1643,23 @@ export const catalog: Game[] = [
     thumbnail: coverArquitetoDasMissoes,
   },
   {
+    id: "091",
+    slug: "garra-dos-grupos",
+    module: "EF01CO01/garra-dos-grupos",
+    skill: "EF01CO01",
+    years: [1],
+    tags: ["classificação", "cores", "semelhanças", "diferenças", "toque"],
+    order: 17,
+    status: "published",
+    title: "Garra dos Grupos",
+    description:
+      "Toque na hora certa para a garra pegar só os itens da cor do visor e encher a caixinha.",
+    category: "Pensamento Computacional",
+    points: 60,
+    icon: "🧸",
+    thumbnail: coverGarraDosGrupos,
+  },
+  {
     id: "086",
     slug: "canteiro-de-obras",
     module: "EF15CO04/canteiro-de-obras",
@@ -1654,16 +1676,84 @@ export const catalog: Game[] = [
     icon: "🚧",
     thumbnail: coverCanteiroDeObras,
   },
+  {
+    id: "092",
+    slug: "subida-do-dia",
+    module: "EF01CO02/subida-do-dia",
+    skill: "EF01CO02",
+    years: [1],
+    tags: ["sequência", "passo a passo", "rotina", "toque"],
+    order: 21,
+    status: "published",
+    title: "Subida do Dia",
+    description:
+      "Monte a escada passo a passo: toque na figura certa e veja o problema do dia se resolver.",
+    category: "Pensamento Computacional",
+    points: 40,
+    icon: "🪜",
+    thumbnail: coverSubidaDoDia,
+  },
+  {
+    id: "093",
+    slug: "decolagem-passo-a-passo",
+    module: "EF01CO03/decolagem-passo-a-passo",
+    skill: "EF01CO03",
+    years: [1],
+    tags: ["algoritmo", "sequência", "passo a passo", "toque"],
+    order: 32,
+    status: "published",
+    title: "Decolagem Passo a Passo",
+    description:
+      "Toque nos cartões na ordem certa para o foguete, o balão e a pipa subirem: a sequência é o seu algoritmo.",
+    category: "Pensamento Computacional",
+    points: 40,
+    icon: "🚀",
+    thumbnail: coverDecolagemPassoAPasso,
+  },
+  {
+    id: "094",
+    slug: "balao-do-recado",
+    module: "EF01CO04/balao-do-recado",
+    skill: "EF01CO04",
+    years: [1],
+    tags: ["informação", "mensagem", "meios", "segurar"],
+    order: 41,
+    status: "published",
+    title: "Balão do Recado",
+    description:
+      "Segure para o balão subir, passe pelos anéis e escolha o jeito certo de entregar o recado: voz, carta ou telinha.",
+    category: "Mundo Digital",
+    points: 40,
+    icon: "🎈",
+    thumbnail: coverBalaoDoRecado,
+  },
+  {
+    id: "095",
+    slug: "pescaria-dos-codigos",
+    module: "EF01CO05/pescaria-dos-codigos",
+    skill: "EF01CO05",
+    years: [1],
+    tags: ["codificação", "representação", "tradução", "toque"],
+    order: 49,
+    status: "published",
+    title: "Pescaria dos Códigos",
+    description:
+      "Ouça as batidas do tambor, veja na vela que cor elas querem dizer e pesque o peixe dessa cor.",
+    category: "Mundo Digital",
+    points: 40,
+    icon: "🎣",
+    thumbnail: coverPescariaDosCodigos,
+  },
 ];
 
 /**
  * Próximo id livre. Use ao cadastrar um jogo novo.
  *
- * 087, 088 e 089 nunca foram usados — a segunda rodada saltou de 086 para
- * 090 — e continuam vazios de propósito: um jogo novo com 087 cairia dentro
- * da segunda rodada. Jogo novo sempre entra DEPOIS do maior id cadastrado.
+ * Os ids são contínuos, sem buraco. Em 29/09/2026 a segunda rodada tinha
+ * saltado de 086 para 090; os oito jogos de 090 a 097 desceram três casas
+ * (090→087 … 097→094) para fechar o 087–089.
  */
-export const NEXT_FREE_ID = "094";
+export const NEXT_FREE_ID = "096";
 
 /**
  * AS RODADAS DE PRODUÇÃO.
@@ -1671,7 +1761,7 @@ export const NEXT_FREE_ID = "094";
  * A primeira rodada são os 45 jogos que nasceram com a plataforma — um por
  * habilidade, ids 001 a 045. A segunda são os 45 que entraram DEPOIS,
  * acrescentando um segundo (e às vezes terceiro) jogo à mesma habilidade:
- * ids 046 a 093, com o buraco de 087 a 089. A terceira começa em 094.
+ * ids 046 a 090. A terceira começa em 091.
  *
  * O corte é pelo `id` e não pelo `order` de propósito: `order` é a posição na
  * trilha, e a segunda rodada foi intercalada na trilha justamente para ficar
@@ -1680,7 +1770,7 @@ export const NEXT_FREE_ID = "094";
  * pelo id, que é a identidade eterna e nunca é reaproveitada.
  *
  * O `lastId` da rodada ABERTA é o teto, não o último id cadastrado: "999"
- * quer dizer "e tudo que vier daqui pra frente", e cadastrar o jogo 095
+ * quer dizer "e tudo que vier daqui pra frente", e cadastrar o jogo 096
  * amanhã não exige mexer aqui. Ao abrir uma rodada nova, feche a anterior no
  * último id que ela de fato usou.
  *
@@ -1689,8 +1779,8 @@ export const NEXT_FREE_ID = "094";
  */
 export const ROUNDS = [
   { key: "1", label: "1ª rodada", firstId: "001", lastId: "045" },
-  { key: "2", label: "2ª rodada", firstId: "046", lastId: "093" },
-  { key: "3", label: "3ª rodada", firstId: "094", lastId: "999" },
+  { key: "2", label: "2ª rodada", firstId: "046", lastId: "090" },
+  { key: "3", label: "3ª rodada", firstId: "091", lastId: "999" },
 ] as const;
 
 export type RoundKey = (typeof ROUNDS)[number]["key"];

@@ -1,7 +1,7 @@
 import type Phaser from 'phaser'
 
 export type Attribute = 'cor' | 'forma' | 'tamanho'
-export type Color = 'vermelho' | 'azul' | 'verde' | 'amarelo' | 'roxo'
+export type Color = 'vermelho' | 'azul' | 'amarelo'
 export type Shape = 'circulo' | 'quadrado' | 'triangulo' | 'retangulo'
 export type Size = 'pequena' | 'media' | 'grande'
 

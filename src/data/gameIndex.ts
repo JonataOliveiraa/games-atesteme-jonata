@@ -58,7 +58,7 @@ if (import.meta.env.DEV) {
     }
     seenModules.add(game.module);
 
-    // O NEXT_FREE_ID ficou em 087 enquanto o catálogo já ia no 093. Um id
+    // O NEXT_FREE_ID já ficou parado atrás do catálogo uma vez. Um id
     // igual ou acima dele quer dizer que alguém cadastrou e não andou a fila.
     if (game.id >= NEXT_FREE_ID) {
       throw new Error(

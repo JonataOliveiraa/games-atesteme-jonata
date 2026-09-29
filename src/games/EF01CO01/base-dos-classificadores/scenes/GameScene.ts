@@ -584,6 +584,12 @@ export class GameScene extends Phaser.Scene {
         if (this.locked || this.ended) return
         this.locked = true
         this.timeBar.setRunning(false)
+        this.errors += 1
+        runtimeGameBridge.emit({
+            type: 'WRONG_ANSWER', gameId: GAME_ID, pointsEarned: 0, stage: this.level.level,
+        })
+        this.lives.lose()
+        this.livesLeft = this.lives.remaining
         this.playRefuse()
         this.sayWarning('O tempo acabou! Vamos de novo.')
         this.time.delayedCall(1500, () => {

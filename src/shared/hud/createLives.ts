@@ -96,6 +96,7 @@ export interface Lives {
     readonly remaining: number
     /** Uma vida a menos. No zero, emite `GAME_OVER` — uma vez só. */
     lose(): void
+    loseAll(): void
     /** Repõe o saldo sem animação (para reconstruir o HUD após um restart). */
     set(n: number): void
     /** O container, se o jogo precisar reposicionar ou esconder. */
@@ -306,6 +307,26 @@ export function createLives(scene: Phaser.Scene, options: LivesOptions): Lives {
 
             if (remaining > 0) return
 
+            acabou = true
+            runtimeGameBridge.emit({
+                type: 'GAME_OVER',
+                gameId,
+                stage: stage(),
+            })
+        },
+
+        loseAll() {
+            if (acabou) return
+            remaining = 0
+            pintar()
+            scene.tweens.add({
+                targets: [icone, numero],
+                scaleX: '*=1.35',
+                scaleY: '*=1.35',
+                duration: 130,
+                yoyo: true,
+                ease: 'Quad.easeOut',
+            })
             acabou = true
             runtimeGameBridge.emit({
                 type: 'GAME_OVER',

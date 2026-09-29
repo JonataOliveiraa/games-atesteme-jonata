@@ -386,19 +386,17 @@ export class GameScene extends Phaser.Scene {
     const correctIds = new Set(this.level.vehicleIds.filter(id => this.matches(vehicleById(id), this.mission)).map(String))
     const selectedIds = [...this.selected]
     const perfect = selectedIds.length === correctIds.size && selectedIds.every(id => correctIds.has(id))
-    let selectedCorrect = 0
 
     this.cards.forEach(card => {
       const should = correctIds.has(card.vehicle.id)
       const was = this.selected.has(card.vehicle.id)
-      if (should && was) selectedCorrect++
       this.paintCard(card, should && was ? 'correct' : !should && was ? 'wrong' : should ? 'missed' : 'idle')
       if (!should && was) this.tweens.add({ targets: card.container, x: card.container.x + 8, duration: 70, yoyo: true, repeat: 2 })
       if (should && was) this.tweens.add({ targets: card.container, y: card.container.y - 12, duration: 170, yoyo: true, ease: 'Sine.easeOut' })
     })
 
-    const earned = perfect ? 30 : Math.max(5, selectedCorrect * 8)
-    this.points += earned
+    const earned = perfect ? 30 : -5
+    this.points = Math.max(0, this.points + earned)
     runtimeGameBridge.emit({
       type: perfect ? 'CORRECT_ANSWER' : 'WRONG_ANSWER',
       gameId: GAME_ID,
@@ -413,7 +411,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.renderHeader()
-    this.renderFooter(perfect ? `Perfeito! +${earned} pontos.` : `Veja os cartões marcados. +${earned} pontos.`, perfect ? C.green : C.amber)
+    this.renderFooter(perfect ? `Perfeito! +${earned} pontos.` : 'Veja os cartões marcados.', perfect ? C.green : C.amber)
     this.time.delayedCall(perfect ? 1100 : 1800, () => this.nextMission())
   }
 

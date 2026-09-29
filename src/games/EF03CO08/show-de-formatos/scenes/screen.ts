@@ -62,10 +62,17 @@ export function createScreen(scene: Phaser.Scene) {
         .setAlpha(0)
     line.setStroke(CSS.ink, 6)
 
+    const mark = scene.add
+        .text(0, -INNER.h * 0.12, '?', { fontFamily: FONT.black, fontSize: '150px', color: CSS.cream })
+        .setOrigin(0.5)
+        .setResolution(2)
+        .setAlpha(0)
+    mark.setStroke(CSS.ink, 10)
+
     const rim = scene.add.graphics().setAlpha(0)
     const eq = scene.add.graphics().setAlpha(0)
 
-    root.add([shell, art, gloss, band, line, rim, eq])
+    root.add([shell, art, mark, gloss, band, line, rim, eq])
 
     let picture: Phaser.GameObjects.Image | Phaser.GameObjects.Graphics | null = null
     let shown = { w: INNER.w, h: INNER.h }
@@ -98,6 +105,8 @@ export function createScreen(scene: Phaser.Scene) {
     scene.events.on('update', tick)
 
     const dropPicture = () => {
+        scene.tweens.killTweensOf(mark)
+        mark.setAlpha(0)
         if (!picture) return
         scene.tweens.killTweensOf(picture)
         picture.destroy()
@@ -145,6 +154,13 @@ export function createScreen(scene: Phaser.Scene) {
                 FX.to(scene, picture, { alpha: 1 }, { duration: 260 }),
                 FX.to(scene, picture, { scale: target }, { duration: 300, ease: 'Back.easeOut' }),
             )
+        },
+
+        async mystery() {
+            dropPicture()
+            shown = { w: INNER.w, h: INNER.h }
+            mark.setScale(0.8)
+            await FX.to(scene, mark, { alpha: 1, scale: 1 }, { duration: 300, ease: 'Back.easeOut' })
         },
 
         clear() {
@@ -233,7 +249,7 @@ export function createScreen(scene: Phaser.Scene) {
         destroy() {
             scene.events.off('update', tick)
             dropPicture()
-            scene.tweens.killTweensOf([root, rim, eq, band, line])
+            scene.tweens.killTweensOf([root, rim, eq, band, line, mark])
             root.destroy(true)
         },
     }

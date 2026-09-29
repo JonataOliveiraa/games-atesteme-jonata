@@ -963,7 +963,13 @@ export class GameScene extends Phaser.Scene {
         stage: this.levelConfig.level,
         pointsEarned: -5,
       });
-        this.lives.lose(); this.livesLeft = this.lives.remaining
+      this.lives.lose();
+      this.livesLeft = this.lives.remaining;
+
+      if (this.lives.remaining <= 0) {
+        this.levelStarted = false;
+        this.timerEvent?.destroy();
+      }
 
       this.emitProgress();
       return;
@@ -1894,6 +1900,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private onTimeUp() {
+    this.levelStarted = false;
     this.input.enabled = false;
     this.timerEvent?.destroy();
     this.playWrong();
@@ -1904,9 +1911,17 @@ export class GameScene extends Phaser.Scene {
       stage: this.levelConfig.level,
       pointsEarned: -5,
     });
-      this.lives.lose(); this.livesLeft = this.lives.remaining
+    this.lives.lose();
+    this.livesLeft = this.lives.remaining;
 
     this.emitProgress();
+
+    if (this.lives.remaining <= 0) return;
+
+    this.showFloatingMessage("Tempo esgotado!", 0xef4444);
+    this.time.delayedCall(1600, () => {
+      this.scene.restart({ lives: this.livesLeft, level: this.levelConfig.level });
+    });
   }
 
   private getGridCellSize(rows: number, cols: number) {

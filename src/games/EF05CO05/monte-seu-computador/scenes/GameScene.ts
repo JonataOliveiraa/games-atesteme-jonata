@@ -682,6 +682,8 @@ export class GameScene extends Phaser.Scene {
                 const ok = grp.accepts.includes(PARTS[id].category)
 
                 if (!ok) {
+                    selected = null
+                    parts.forEach((p, k) => paintCard(p, k))
                     this.playError()
                     this.registerError()
                     this.stamp('selo-x', L.cx(rect), rect.y + 70)

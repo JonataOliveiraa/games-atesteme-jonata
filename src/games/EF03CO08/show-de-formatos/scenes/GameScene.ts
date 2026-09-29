@@ -5,7 +5,9 @@ import type { PlatformCommand } from '../../../../shared/contracts/platformComma
 import { showLevelComplete, type LevelCompleteHandle } from '../../../../shared/level/showLevelComplete'
 import { createTutorial } from '../../../../shared/tutorial/createTutorial'
 import { FX } from '../../../../shared/effects/FX'
-import { LEVELS, POINTS_PER_LAYER, THEME_LABEL, THEME_SCENES } from '../data/levels'
+import { createLives, type Lives } from '../../../../shared/hud/createLives'
+import { vidasIniciais } from '../../../../shared/level/vidasIniciais'
+import { LEVELS, POINTS_PER_LAYER, THEME_SCENES } from '../data/levels'
 import {
     chosen,
     emptyClip,
@@ -31,10 +33,18 @@ import { createThemePicker, type ThemePicker } from './themes'
 const GAME_ID = 'show-de-formatos'
 const SHOW_MS = 3600
 const CLIP_MS = 3200
+const QUIZ_POINTS = 5
+
+const QUESTION: Record<LayerId, string> = {
+    image: 'que imagem aparecia?',
+    text: 'que frase aparecia?',
+    sound: 'que som tocava?',
+}
 
 /**
- * Sem vidas e sem WRONG_ANSWER, de propósito: aqui toda escolha é autoral e
- * nenhuma é errada. Ver PLANEJAMENTO.md §11.
+ * Montar a cena continua sem erro: toda escolha é autoral. O erro mora nas
+ * perguntas do fim do nível, sobre o que acontecia em cada cena do clipe.
+ * Ver PLANEJAMENTO.md §11.
  */
 export class GameScene extends Phaser.Scene {
     private level!: LevelDef
@@ -47,7 +57,13 @@ export class GameScene extends Phaser.Scene {
     private score = 0
     private earned = 0
     private hits = 0
+    private errors = 0
     private done = 0
+
+    private livesTotal = 3
+    private livesLeft = 3
+    private lives!: Lives
+    private answering: ((index: number) => void) | null = null
 
     private tutorialOpen = false
     private pendingTutorial = true
@@ -83,7 +99,9 @@ export class GameScene extends Phaser.Scene {
         super({ key: 'GameScene' })
     }
 
-    init(data: { level?: number; points?: number }) {
+    init(data: { level?: number; points?: number; lives?: number }) {
+        this.livesTotal = vidasIniciais(this, 3)
+        this.livesLeft = data?.lives ?? this.livesTotal
         const number = Phaser.Math.Clamp(data?.level ?? 1, 1, LEVELS.length) as LevelNumber
         this.level = LEVELS[number - 1]
         this.theme = this.level.theme ?? null
@@ -94,7 +112,9 @@ export class GameScene extends Phaser.Scene {
         this.score = data?.points ?? 0
         this.earned = 0
         this.hits = 0
+        this.errors = 0
         this.done = 0
+        this.answering = null
         this.tutorialOpen = false
         this.pendingTutorial = true
     }
@@ -116,7 +136,24 @@ export class GameScene extends Phaser.Scene {
             index => void this.pick(index),
             () => void this.present(),
         )
-        this.hud = createHud(this, { label: this.level.label, onHelp: () => this.replayTutorial() })
+        this.hud = createHud(this, {
+            level: this.level.level,
+            phases: this.scenes.length,
+            onHelp: () => this.replayTutorial(),
+        })
+
+        /* AJUSTE A POSIÇÃO COM A TECLA M (dev). Ver shared/hud/createLives.ts */
+        this.lives = createLives(this, {
+            total: this.livesTotal,
+            remaining: this.livesLeft,
+            gameId: GAME_ID,
+            x: 1112,
+            y: HUD.cy,
+            size: 30,
+            depth: DEPTH.hud + 2,
+            stage: () => this.level.level,
+        })
+        this.events.once('shutdown', () => this.lives.destroy())
 
         this.veil = this.add
             .rectangle(W / 2, H / 2, W, H, C.ink)
@@ -150,7 +187,6 @@ export class GameScene extends Phaser.Scene {
         this.picker = null
         this.theme = theme
         this.clips = this.scenes.map(emptyClip)
-        this.hud.setLabel(THEME_LABEL[theme])
         this.audio.pick()
         await picker?.close(theme)
         void this.startScene(0)
@@ -173,8 +209,7 @@ export class GameScene extends Phaser.Scene {
         this.unsubPlatform?.()
     }
 
-    private optionsOf(layer: LayerId): TrayOption[] {
-        const plan = this.plan
+    private optionsOf(layer: LayerId, plan = this.plan): TrayOption[] {
         if (layer === 'image') return plan.images.map(choice => ({ kind: 'image', id: choice.id, frame: choice.frame }))
         if (layer === 'text') return plan.texts.map(choice => ({ kind: 'text', id: choice.id, line: choice.line }))
         return plan.sounds.map(choice => ({ kind: 'sound', id: choice.id, sound: choice.sound }))
@@ -193,6 +228,7 @@ export class GameScene extends Phaser.Scene {
         this.screen.clear()
         this.screen.focus(false)
         this.hud.setTitle(this.plan.title)
+        this.hud.setPhase(index)
         this.host.pose('presenting')
 
         await FX.wait(this, 460)
@@ -224,6 +260,12 @@ export class GameScene extends Phaser.Scene {
     }
 
     private async pick(index: number) {
+        if (this.mode === 'asking' && !this.tutorialOpen) {
+            const answer = this.answering
+            this.answering = null
+            answer?.(index)
+            return
+        }
         if (this.mode !== 'choosing' || this.tutorialOpen) return
         const gen = this.gen
         const layer = this.current
@@ -365,14 +407,14 @@ export class GameScene extends Phaser.Scene {
         await this.screen.cinema(true)
     }
 
-    private async exitShow() {
+    private async exitShow(showFilm = true) {
         this.film.highlight(null)
         await this.screen.cinema(false)
         this.film.lift(false)
         await FX.all(
             this.hud.fade(true),
             this.tabs.fade(true),
-            this.film.fade(true),
+            showFilm ? this.film.fade(true) : Promise.resolve(),
             FX.to(this, this.veil, { alpha: 0 }, { duration: 380 }),
         )
     }
@@ -431,15 +473,6 @@ export class GameScene extends Phaser.Scene {
         this.tabs.setEnabled(false)
         this.film.setEnabled(false)
         this.hud.setEnabled(false)
-
-        runtimeGameBridge.emit({
-            type: 'GAME_COMPLETED',
-            gameId: GAME_ID,
-            stage: this.level.level,
-            totalStages: LEVELS.length,
-            score: Math.max(0, Math.round(this.score)),
-            errors: 0,
-        })
         this.emitCheckpoint(true)
 
         await this.stage.close()
@@ -448,30 +481,180 @@ export class GameScene extends Phaser.Scene {
         await this.stage.open()
         if (gen !== this.gen) return
 
-        await this.playClip(gen)
+        const passed = await this.playClip(gen)
+        if (!passed || gen !== this.gen) return
+
+        runtimeGameBridge.emit({
+            type: 'GAME_COMPLETED',
+            gameId: GAME_ID,
+            stage: this.level.level,
+            totalStages: LEVELS.length,
+            score: Math.max(0, Math.round(this.score)),
+            errors: this.errors,
+        })
+
+        this.screen.clear()
+        this.tabs.highlight(null)
+        LAYER_ORDER.forEach(each => this.tabs.set(each, 'filled'))
+        this.hud.setTitle('')
+        this.hud.setPhase(this.scenes.length)
+        await this.film.fade(true)
         if (gen !== this.gen) return
         this.showPanel()
     }
 
-    private async playClip(gen: number) {
-        await this.enterShow(true)
+    private async ask(i: number, gen: number) {
+        const plan = this.scenes[i]
+        const clip = this.clips[i]
+        const picked = pickedOf(plan, clip)
+        if (!picked) return true
+
+        const layer = LAYER_ORDER[(i + this.level.level - 1) % LAYER_ORDER.length]
+        const options = this.optionsOf(layer, plan)
+        const right = options.findIndex(option => option.id === chosen(clip, layer))
+
+        this.mode = 'busy'
+        this.applyInput()
+        this.host.pose('presenting')
+        this.hud.setPhase(i)
+        this.hud.setTitle(`${plan.title}: ${QUESTION[layer]}`)
+        LAYER_ORDER.forEach(each => this.tabs.set(each, each === layer ? 'filled' : 'empty'))
+        this.tabs.highlight(layer)
+        this.screen.clear()
+        if (layer === 'image') {
+            await this.screen.mystery()
+            await this.screen.say(picked.line)
+        } else {
+            await this.screen.show(picked.frame)
+            await this.screen.say(layer === 'text' ? '?' : picked.line)
+        }
         if (gen !== this.gen) return false
 
+        await this.tray.show(layer, options)
+        if (gen !== this.gen) return false
+        await this.quizTutorial()
+        if (gen !== this.gen) return false
+
+        this.mode = 'asking'
+        this.applyInput()
+        const index = await new Promise<number>(resolve => {
+            this.answering = resolve
+        })
+        if (gen !== this.gen) return false
+
+        this.mode = 'busy'
+        this.applyInput()
+        this.tray.press(index)
+
+        if (index === right) {
+            this.audio.pick()
+            this.tray.mark(index)
+            if (layer === 'image') {
+                this.audio.whoosh()
+                await this.screen.show(picked.frame)
+                await this.screen.say(picked.line)
+            }
+            if (layer === 'text') {
+                this.audio.paper()
+                await this.screen.say(picked.line)
+            }
+            if (layer === 'sound') {
+                this.audio.preview(picked.sound)
+                this.screen.setPlaying(picked.sound)
+                await this.tray.ripple(index)
+                this.screen.setPlaying(null)
+            }
+            if (gen !== this.gen) return false
+
+            this.hits += 1
+            this.score += QUIZ_POINTS
+            runtimeGameBridge.emit({
+                type: 'CORRECT_ANSWER',
+                gameId: GAME_ID,
+                pointsEarned: QUIZ_POINTS,
+                stage: this.level.level,
+            })
+            this.emitCheckpoint(true)
+            await FX.wait(this, 500)
+            if (gen !== this.gen) return false
+            await this.tray.hide()
+            return gen === this.gen
+        }
+
+        this.audio.wrong()
+        this.errors += 1
+        runtimeGameBridge.emit({
+            type: 'WRONG_ANSWER',
+            gameId: GAME_ID,
+            pointsEarned: -QUIZ_POINTS,
+            stage: this.level.level,
+        })
+        this.lives.lose()
+        this.livesLeft = this.lives.remaining
+        this.emitCheckpoint(true)
+        await this.tray.shake(index)
+        if (gen !== this.gen) return false
+        if (this.lives.remaining <= 0) return false
+
+        this.tray.mark(right)
+        await FX.wait(this, 1100)
+        if (gen !== this.gen) return false
+        await this.tray.hide()
+        return gen === this.gen
+    }
+
+    private quizTutorial() {
+        return new Promise<void>(resolve => {
+            this.tutorialOpen = true
+            this.applyInput()
+            createTutorial(this, {
+                key: 'ef03co08-show-de-formatos-perguntas',
+                once: true,
+                accent: C.purple,
+                safeTop: HUD.h + 14,
+                steps: [
+                    {
+                        text: 'O que estava na sua cena? Toque nele.',
+                        shape: 'rect' as const,
+                        ...this.tray.bounds(),
+                        balloonX: 640,
+                        balloonY: 300,
+                        buttonLabel: 'Vamos!',
+                    },
+                ],
+                onFinish: () => {
+                    this.tutorialOpen = false
+                    this.applyInput()
+                    resolve()
+                },
+            })
+        })
+    }
+
+    private async playClip(gen: number) {
         for (let i = 0; i < this.scenes.length; i++) {
             const picked = pickedOf(this.scenes[i], this.clips[i])
             if (!picked) continue
-            this.film.highlight(i)
+
+            this.hud.setPhase(i)
+            await this.enterShow(false)
+            if (gen !== this.gen) return false
             this.screen.clear()
             await this.screen.show(picked.frame)
             if (gen !== this.gen) return false
             void this.screen.say(picked.line)
             const alive = await this.playPicked(picked, CLIP_MS, gen)
             if (!alive) return false
+
+            await this.exitShow(false)
+            if (gen !== this.gen) return false
+
+            const passed = await this.ask(i, gen)
+            if (!passed || gen !== this.gen) return false
         }
 
         this.host.pose('celebrating')
         this.audio.applause()
-        await this.exitShow()
         return gen === this.gen
     }
 
@@ -491,45 +674,33 @@ export class GameScene extends Phaser.Scene {
             title: last ? 'Seu clipe ficou pronto!' : 'Clipe pronto!',
             message: last ? 'Você usou imagem, texto e som para se expressar.' : undefined,
             progress: { total: LEVELS.length, current: this.level.level, size: 9 },
-            buttons: [
-                {
-                    label: 'Assistir de novo',
-                    color: C.ok,
-                    onClick: () => void this.watchAgain(),
-                },
-                last
-                    ? {
-                          label: 'Escolher jogo',
-                          color: C.purple,
-                          onClick: () => EventBus.emit('exit-game'),
-                      }
-                    : {
-                          label: 'Continuar',
-                          color: C.purple,
-                          onClick: () =>
+            ...(last
+                ? {
+                      buttons: [
+                          {
+                              label: 'Escolher jogo',
+                              color: C.purple,
+                              onClick: () => EventBus.emit('exit-game'),
+                          },
+                      ],
+                  }
+                : {
+                      autoAdvance: {
+                          delay: 2600,
+                          onComplete: () =>
                               this.scene.restart({
                                   level: (this.level.level + 1) as LevelNumber,
                                   points: this.score,
+                                  lives: this.livesLeft,
                               }),
                       },
-            ],
+                  }),
         })
     }
 
-    private async watchAgain() {
-        const gen = this.gen
-        this.panel?.destroy()
-        this.panel = null
-        this.mode = 'clip'
-        this.applyInput()
-        const alive = await this.playClip(gen)
-        if (!alive) return
-        this.showPanel()
-    }
-
     private applyInput() {
-        const free = !this.tutorialOpen && this.mode === 'choosing'
-        this.tray.setEnabled(free, !this.tutorialOpen && this.mode !== 'choosing')
+        const free = !this.tutorialOpen && (this.mode === 'choosing' || this.mode === 'asking')
+        this.tray.setEnabled(free, !this.tutorialOpen && !free)
         this.film.setEnabled(!this.tutorialOpen && (this.mode === 'ready' || this.mode === 'done'))
     }
 
@@ -595,7 +766,7 @@ export class GameScene extends Phaser.Scene {
             score: Math.max(0, Math.round(this.score)),
             stage: this.level.level,
             hits: this.hits,
-            errors: 0,
+            errors: this.errors,
         })
     }
 
@@ -604,7 +775,7 @@ export class GameScene extends Phaser.Scene {
             if (command.type === 'START_GAME') {
                 this.score = command.points ?? this.score
                 if (command.stage && command.stage !== this.level.level) {
-                    this.scene.restart({ level: command.stage, points: this.score })
+                    this.scene.restart({ level: command.stage, points: this.score, lives: this.livesLeft })
                     return
                 }
             }

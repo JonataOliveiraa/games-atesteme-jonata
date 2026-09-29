@@ -10,6 +10,7 @@ import {
   origensDeDestino,
 } from "../../shared/bridge/allowedOrigins";
 import { subscribeToGameUi } from "../../shared/bridge/uiTunnel";
+import { gameBridge } from "../../shared/bridge/gameBridge";
 import { resolveGameId } from "../../data/gameIndex";
 
 /**
@@ -125,6 +126,25 @@ export default function IframeGameFrame({
     window.addEventListener("message", aoReceber);
     return () => window.removeEventListener("message", aoReceber);
   }, [gameId]);
+
+  /* ── pausar e retomar, que a página manda pelo `gameBridge` ───────────── */
+
+  /*
+   * A `GameDetailsPage` manda `PAUSE_GAME`/`RESUME_GAME` pelo `gameBridge`,
+   * que é um evento na janela DELA. O jogo mora em outra janela, a do iframe,
+   * e nunca ouvia nada: o modal abria e o jogo seguia rodando por baixo.
+   * Aqui os dois comandos atravessam o iframe pelo mesmo caminho do
+   * `START_GAME`.
+   */
+  useEffect(
+    () =>
+      gameBridge.onPlatformCommand((comando) => {
+        if (comando.type === "PAUSE_GAME" || comando.type === "RESUME_GAME") {
+          enviarComando(comando);
+        }
+      }),
+    [enviarComando]
+  );
 
   /* ── os sinais de interface (exit-game e companhia) ───────────────────── */
 

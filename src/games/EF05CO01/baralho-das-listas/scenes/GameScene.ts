@@ -417,6 +417,8 @@ export class GameScene extends Phaser.Scene {
              */
             const v = vizinhosDoGap(lista, gap)
             this.vizinhos.set({ ...v, alvo: carta })
+            const gen = this.gen
+            this.locked = true
             this.errors += 1
             this.points += POINTS.erro
             this.playErro()
@@ -433,6 +435,7 @@ export class GameScene extends Phaser.Scene {
                 TINTA.alerta,
             )
             await t.recusarEspaco(gap)
+            if (gen === this.gen) this.locked = false
             return
         }
 
@@ -486,6 +489,8 @@ export class GameScene extends Phaser.Scene {
             this.vizinhos.set(vizinhosDaCarta(lista, i))
 
             if (carta.valor !== passo.valor) {
+                const gen = this.gen
+                this.locked = true
                 this.errors += 1
                 this.points += POINTS.erro
                 this.playErro()
@@ -500,6 +505,7 @@ export class GameScene extends Phaser.Scene {
                     TINTA.alerta,
                 )
                 await t.recusar(i)
+                if (gen === this.gen) this.locked = false
                 return
             }
 
@@ -593,16 +599,7 @@ export class GameScene extends Phaser.Scene {
          */
         if (this.buscaIdx < t.lista().length) {
             this.gastarAcao()
-            this.errors += 1
-            this.points += POINTS.erro
-            this.playErro()
-            runtimeGameBridge.emit({
-                type: 'WRONG_ANSWER', gameId: GAME_ID,
-                pointsEarned: POINTS.erro, stage: this.level.level,
-            })
-                this.lives.lose(); this.livesLeft = this.lives.remaining
-            this.emitCheckpoint()
-            this.balao.dizer('Ainda tem carta virada. Vire todas.', TINTA.alerta)
+            this.recusarNaoTem('Ainda tem carta virada. Vire todas.')
             return
         }
 
@@ -614,10 +611,27 @@ export class GameScene extends Phaser.Scene {
         }
 
         this.gastarAcao()
+        this.recusarNaoTem(`O ${this.nomeAlvo} estava lá!`)
+    }
+
+    /** "Não tem" errado: um erro, e o botão fica surdo enquanto o balão fala. */
+    private recusarNaoTem(fala: string) {
+        const gen = this.gen
+        this.locked = true
         this.errors += 1
         this.points += POINTS.erro
         this.playErro()
-        this.balao.dizer(`O ${this.nomeAlvo} estava lá!`, TINTA.alerta)
+        runtimeGameBridge.emit({
+            type: 'WRONG_ANSWER', gameId: GAME_ID,
+            pointsEarned: POINTS.erro, stage: this.level.level,
+        })
+        this.lives.lose()
+        this.livesLeft = this.lives.remaining
+        this.emitCheckpoint()
+        this.balao.dizer(fala, TINTA.alerta)
+        this.time.delayedCall(900, () => {
+            if (gen === this.gen) this.locked = false
+        })
     }
 
     /* ═══════════════════════════════════════════════ passo concluído */

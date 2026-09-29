@@ -13,14 +13,14 @@ saber qual das duas mandava — ela ficava procurando um triângulo vermelho.
 
 O conserto não é de arte, é de desenho:
 
-- **o cesto é neutro** — palha e folha, nenhuma das cinco cores das pedras,
+- **o cesto é neutro** — palha e folha, nenhuma das três cores das pedras,
   nenhuma forma desenhada nele;
 - **quem diz a regra é a placa** acima do cesto, e ela mostra **três exemplos
   que variam em tudo, menos no critério**.
 
 Regra VERMELHO: círculo vermelho, quadrado vermelho, triângulo vermelho —
 *qualquer forma, desde que vermelha*. Regra TRIÂNGULO: triângulo azul,
-triângulo amarelo, triângulo verde — *qualquer cor, desde que triângulo*.
+triângulo amarelo, triângulo vermelho — *qualquer cor, desde que triângulo*.
 
 Isso é exatamente o verbo da habilidade: o padrão fica visível porque tudo o
 que não é o padrão está variando na frente da criança.
@@ -31,9 +31,8 @@ critério e do valor — a placa nunca é escrita à mão.
 ## Cenário
 
 Uma clareira de floresta. As pedras descansam num tronco caído, os cestos
-ficam na grama, e duas vinhas balançam nas laterais. A pedra verde e a grama
-são parentes de cor, e é por isso que as pedras nunca ficam soltas no gramado:
-o tronco é a superfície de leitura delas.
+ficam na grama, e duas vinhas balançam nas laterais. As pedras nunca ficam
+soltas no gramado: o tronco é a superfície de leitura delas.
 
 ## Tela (1280 × 720)
 
@@ -102,20 +101,31 @@ Os níveis **1 e 2** estão implementados. O 3 não.
 pedra, para a criança aprender a ignorá-la; o tamanho fica constante, porque
 ele ainda não é critério.
 
+O jogo inteiro usa **só três cores: vermelho, azul e amarelo** (pedido do
+usuário, 29/09/2026). São 3 fases por nível, até 6 pedras por fase, e no máximo
+3 cestos de cor.
+
 1. dois cestos (vermelho, azul), seis pedras
 2. três cestos (vermelho, azul, amarelo), seis pedras
-3. três cestos (azul, amarelo, roxo) — o conjunto de cores muda, para a fase
-   não ser vencida de memória
+3. os mesmos três cestos em **outra ordem** (amarelo, vermelho, azul), para a
+   fase não ser vencida de memória
 
-**N2 — dois critérios, um por fase: COR e FORMA.** Quatro fases, alternando.
+**N2 — dois critérios, um por fase: COR e FORMA.** Três fases, alternando.
 É aqui que a placa deixa de ser enfeite: a criança tem que olhar para ela em
 toda fase, porque o que valia na anterior não vale mais.
 
-1. forma, três cestos
-2. cor, três cestos
-3. forma, quatro cestos — quadrado e retângulo na mesma fase, que é o par
-   difícil de separar
-4. cor, quatro cestos — azul e roxo juntos, o par difícil do outro critério
+1. forma: círculo, quadrado, triângulo
+2. cor: azul, amarelo, vermelho
+3. forma: quadrado, retângulo, triângulo. Quadrado e retângulo na mesma fase
+   são o par difícil. Com 3 cores, o par difícil de cor deixou de existir.
+
+`validateLevels` (no import, `console.error` em dev) cobra:
+- só as 3 cores;
+- até 6 pedras;
+- até 3 cestos de cor;
+- cada pedra com exatamente 1 cesto, e cada cesto com pelo menos 1 pedra;
+- o N1 só com cor;
+- no N2, a regra alternando de uma fase para a outra.
 
 Quando o critério muda de uma fase para a outra, as placas piscam uma a uma e
 a faixa diz *"A regra mudou: olhe a FORMA!"*. Sem esse aviso a criança começa
@@ -134,5 +144,18 @@ Quatro arquivos, descritos em `TEXTURAS.md`. As doze do jogo antigo continuam
 na pasta e **não são carregadas** — a `BootScene` tem uma lista `WANTED`, senão
 o `import.meta.glob` puxaria 18 MB de arte morta.
 
-`formas.png` vem quase branca e é tingida por código: é o que permite cinco
+`formas.png` vem quase branca e é tingida por código: é o que permite três
 cores com quatro quadros.
+
+## Histórico
+
+- **29/09/2026, só 3 cores e o N2 revisto (pedido do usuário).** *"faça ter
+  cores apenas AZUL, VERMELHO e AMARELO. adicione nível 2"*.
+  - Verde e roxo saíram de tudo: tipo `Color`, `COLOR_LABEL`, tema e fases.
+  - O N1 ficou com 3 fases de cor; a 3ª repete as 3 cores com os cestos em
+    outra ordem.
+  - O N2 ficou com 3 fases (forma → cor → forma). O par difícil agora é só o de
+    forma (quadrado × retângulo), e a fase de 4 cestos saiu.
+  - Entrou o `validateLevels`.
+  - A passagem N1 → N2 já existia (`autoAdvance`), e o N2 é o último nível,
+    então aprova. As linhas de tempo esgotado da GameScene não foram tocadas.

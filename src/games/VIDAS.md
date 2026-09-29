@@ -214,14 +214,18 @@ dentro do jogo, isso deixa de existir — o jogo conta sempre, em qualquer modo.
 
 ---
 
-## Um bug que não é deste trabalho
+## O "travamento" do hangar não era bug (29/09/2026)
 
-O `hangar-dos-modelos` trava depois de responder: mostra o resultado e não
-avança para a missão seguinte. Reproduzi com as vidas e **sem** elas, no
-código original — não é daqui.
+Esta seção dizia que o `hangar-dos-modelos` travava depois de responder: o
+`delayedCall(1800)` do `confirmSelection()` nunca disparava. Era o Browser
+pane oculto, que congela o loop do Phaser — relógio da cena parado, toques
+funcionando. Com o loop bombeado no ritmo real, o jogo avança para a missão
+seguinte normalmente.
 
-O `nextMission()` nunca roda: a seleção da criança não é limpa, e só ele
-limpa. O `this.time.delayedCall(1800, ...)` no fim do `confirmSelection()` não
-dispara. Descartei exceção (o console fica limpo e as linhas seguintes rodam),
-cena pausada (o jogo responde a toques) e o tutorial (não mexe em `time`).
-Sobra o relógio da cena ou os canais `timer-*` do `EventBus`.
+## Atualização de 29/09/2026 — quem para o jogo agora é a plataforma
+
+Desde `shared/bridge/partida.ts`, todo `GAME_OVER` corta o toque na hora e
+congela o Phaser logo depois, e `PAUSE_GAME`/`RESUME_GAME` pausam o jogo
+inteiro (e atravessam o iframe). O que este arquivo diz sobre jogos que
+"continuam jogáveis depois do zero" ou que "ignoram o `PAUSE_GAME`" não vale
+mais.

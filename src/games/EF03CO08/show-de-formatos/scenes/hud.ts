@@ -4,9 +4,12 @@ import { DEPTH, HUD, W } from '../data/layout'
 import { C, CSS, FONT } from '../data/theme'
 
 export interface HudOptions {
-    label: string
+    level: number
+    phases: number
     onHelp: () => void
 }
+
+const DOT = { x: HUD.pillX + HUD.pillW + 30, gap: 32, r: 9 }
 
 export function createHud(scene: Phaser.Scene, options: HudOptions) {
     const root = scene.add.container(0, 0).setDepth(DEPTH.hud)
@@ -40,7 +43,7 @@ export function createHud(scene: Phaser.Scene, options: HudOptions) {
     pill.fillRoundedRect(HUD.pillX + 13, HUD.pillY + 8, HUD.pillW - 26, 9, 5)
 
     const label = scene.add
-        .text(HUD.pillX + HUD.pillW / 2, HUD.cy - 1, options.label, {
+        .text(HUD.pillX + HUD.pillW / 2, HUD.cy - 1, `NÍVEL ${options.level}`, {
             fontFamily: FONT.black,
             fontSize: '20px',
             color: CSS.white,
@@ -48,7 +51,21 @@ export function createHud(scene: Phaser.Scene, options: HudOptions) {
         .setOrigin(0.5)
         .setResolution(2)
     label.setStroke(CSS.ink, 5)
-    if (label.width > HUD.pillW - 26) label.setScale((HUD.pillW - 26) / label.width)
+
+    const dots = scene.add.graphics()
+    const paintDots = (current: number) => {
+        dots.clear()
+        for (let i = 0; i < options.phases; i++) {
+            const x = DOT.x + i * DOT.gap
+            const now = i === current
+            const r = now ? DOT.r + 3 : DOT.r
+            dots.fillStyle(C.ink, 1)
+            dots.fillCircle(x, HUD.cy - 1, r + 3)
+            dots.fillStyle(i < current ? C.yellow : now ? C.white : C.purpleDeep, 1)
+            dots.fillCircle(x, HUD.cy - 1, r)
+        }
+    }
+    paintDots(-1)
 
     const title = scene.add
         .text(HUD.titleX, HUD.cy - 3, '', {
@@ -77,7 +94,7 @@ export function createHud(scene: Phaser.Scene, options: HudOptions) {
         .setOrigin(0.5)
         .setResolution(2)
 
-    root.add([bar, pill, label, title, helpG, helpText])
+    root.add([bar, pill, label, dots, title, helpG, helpText])
 
     const zone = scene.add
         .zone(HUD.helpX, HUD.cy, HUD.helpHit, HUD.helpHit)
@@ -97,10 +114,8 @@ export function createHud(scene: Phaser.Scene, options: HudOptions) {
             title.setText(text)
         },
 
-        setLabel(text: string) {
-            label.setScale(1)
-            label.setText(text)
-            if (label.width > HUD.pillW - 26) label.setScale((HUD.pillW - 26) / label.width)
+        setPhase(current: number) {
+            paintDots(current)
         },
 
         async fade(visible: boolean) {

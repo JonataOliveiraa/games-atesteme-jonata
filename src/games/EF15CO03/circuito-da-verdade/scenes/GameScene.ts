@@ -1228,6 +1228,9 @@ export class GameScene extends Phaser.Scene {
     private onTimeUp = () => {
         if (this.ended || this.locked) return
         this.locked = true
+        runtimeGameBridge.emit({ type: 'WRONG_ANSWER', gameId: GAME_ID, pointsEarned: 0, stage: this.level.level })
+        this.lives.lose()
+        this.livesLeft = this.lives.remaining
         this.showFeedback(false, false, `O tempo acabou. ${this.phase.explain}`, 0, () => this.completePhase())
     }
 

@@ -10,6 +10,14 @@ import {
 } from "./iframeBridge";
 import { completarEvento } from "./outgoingEvent";
 import { primeiroProntoDaTentativa } from "./embedSession";
+import { encerrarPartida, partidaEncerrada } from "./partida";
+
+const EVENTOS_DE_RESULTADO = new Set<PlatformEvent["type"]>([
+  "GAME_OVER",
+  "GAME_COMPLETED",
+  "CORRECT_ANSWER",
+  "WRONG_ANSWER",
+]);
 
 export interface RuntimeGameBridge {
   emit: (event: PlatformEvent) => void;
@@ -69,10 +77,23 @@ export const runtimeGameBridge: RuntimeGameBridge = {
      */
     if (event.type === "GAME_READY" && !primeiroProntoDaTentativa()) return;
 
+    /*
+     * DEPOIS DO `GAME_OVER`, A PARTIDA NÃO PONTUA MAIS.
+     *
+     * Alguns jogos emitem um segundo `GAME_OVER` (o das vidas e o do tempo
+     * esgotado), e um relógio que ficou armado ainda pode soltar acerto ou
+     * erro no instante antes de o jogo congelar. Cada um desses chegaria à
+     * plataforma como mais um resultado da mesma partida — e o `GAME_OVER`
+     * repetido regravava o bloqueio, empurrando o prazo para frente.
+     */
+    if (partidaEncerrada() && EVENTOS_DE_RESULTADO.has(event.type)) return;
+
     const completo = completarEvento(event);
 
     emitGameEvent(completo);
     if (embutido) emitIframeGameEvent(completo);
+
+    if (event.type === "GAME_OVER") encerrarPartida();
   },
 
   onCommand: (handler) => {

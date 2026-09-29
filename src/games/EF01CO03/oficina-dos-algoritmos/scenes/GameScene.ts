@@ -307,8 +307,8 @@ export class GameScene extends Phaser.Scene {
       onComplete: () => {
         this.drawTimeBar(0);
         this.errors += 1;
-        this.perderVida();
         this.emitWrongAnswer();
+        this.perderVida();
         this.emitCheckpoint();
         this.showFeedback('Tempo esgotado!', false);
       },
@@ -782,8 +782,8 @@ export class GameScene extends Phaser.Scene {
 
     this.errors += 1;
     this.currentPoints = Math.max(0, this.currentPoints - 5);
-    this.perderVida();
     this.emitWrongAnswer();
+    this.perderVida();
     this.emitCheckpoint();
     this.showFeedback('Tente novamente!', false);
   }
@@ -1323,7 +1323,6 @@ export class GameScene extends Phaser.Scene {
       pointsEarned: -5,
       stage: this.currentLevel.level,
     });
-      this.lives.lose(); this.livesLeft = this.lives.remaining
   }
 
   private emitCheckpoint() {

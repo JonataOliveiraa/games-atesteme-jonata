@@ -138,6 +138,10 @@ export function createAudio(scene: Phaser.Scene) {
             note({ freq: 700, to: 1100, dur: 0.16, type: 'triangle', gain: 0.05 })
         },
 
+        wrong() {
+            note({ freq: 320, to: 170, dur: 0.3, type: 'square', gain: 0.045 })
+        },
+
         applause(seconds = 1.6) {
             for (let i = 0; i < 26; i++) {
                 noise({ dur: 0.11, freq: 1200 + Math.random() * 1400, q: 0.6, gain: 0.03, at: Math.random() * seconds })

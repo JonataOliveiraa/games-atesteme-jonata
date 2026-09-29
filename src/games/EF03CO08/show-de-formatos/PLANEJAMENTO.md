@@ -368,6 +368,23 @@ Validar os dados ao iniciar:
 
 ## 11. Erro, trava e vidas
 
+> **Revisão de 29/09/2026 — o jogo passou a poder ser perdido.** A regra da
+> plataforma é "errou, perdeu" em todos os jogos, e este era o único sem
+> nenhum caminho de derrota. A montagem continua livre, como está descrito
+> abaixo. O erro entrou NO CLIPE: cada cena toca e, logo depois, vem a pergunta
+> sobre o que acontecia nela. A tela mostra a cena com um pedaço trocado por "?", e a
+> criança escolhe esse pedaço entre as duas opções que ela mesma viu na
+> montagem. O pedaço perguntado gira entre imagem, frase e som (cena `i`,
+> nível `n` → `LAYER_ORDER[(i + n - 1) % 3]`), então cada nível pergunta os
+> três formatos. Errar emite `WRONG_ANSWER` + `lives.lose()` e mostra a certa;
+> no zero, o jogo para e a plataforma assume. O `GAME_COMPLETED` só sai depois
+> da última pergunta. O HUD passou a mostrar `NÍVEL n` na pílula e a fase
+> (cena) em bolinhas. O painel "Clipe pronto" dos níveis 1 e 2 não tem botão:
+> passa sozinho para o nível seguinte. O "Assistir de novo" saiu (repetiria as
+> perguntas); no nível 3 fica só "Escolher jogo".
+>
+> O resto desta seção vale para a MONTAGEM.
+
 Este é um jogo de expressão. Duas imagens diferentes ou duas frases diferentes
 podem comunicar ideias válidas. Portanto:
 

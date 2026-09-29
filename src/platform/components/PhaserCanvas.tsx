@@ -3,6 +3,12 @@ import Phaser from "phaser";
 import { EventBus } from "../../shared/EventBus";
 import { carregarFonteDoJogo } from "../../shared/fonts/gameFont";
 import { useFullscreen } from "../../hooks/useFullscreen";
+import { runtimeGameBridge } from "../../shared/bridge/runtimeGameBridge";
+import {
+  pausarJogo,
+  registrarJogoAtivo,
+  retomarJogo,
+} from "../../shared/bridge/partida";
 
 interface PhaserCanvasProps {
   config: Phaser.Types.Core.GameConfig;
@@ -35,6 +41,8 @@ export default function PhaserCanvas({ config, gameId, stage, lives }: PhaserCan
     GAME_CHANNELS.forEach((c) => EventBus.removeAllListeners(c));
 
     let cancelado = false;
+    let desregistrar = () => {};
+    let desinscreverComandos = () => {};
 
     /*
      * A FONTE ANTES DO PHASER.
@@ -113,10 +121,25 @@ export default function PhaserCanvas({ config, gameId, stage, lives }: PhaserCan
         anunciarProporcao(tamanho?.width, tamanho?.height);
         gameRef.current?.scale?.refresh();
       });
+
+      /*
+       * PAUSAR É DA PLATAFORMA, NÃO DE CADA JOGO.
+       *
+       * Metade dos jogos ignorava `PAUSE_GAME` e seguia com relógio correndo
+       * atrás do modal. Aqui o comando para o jogo inteiro, trate ele o
+       * comando ou não. Ver `shared/bridge/partida.ts`.
+       */
+      desregistrar = registrarJogoAtivo(gameRef.current);
+      desinscreverComandos = runtimeGameBridge.onCommand((comando) => {
+        if (comando.type === "PAUSE_GAME") pausarJogo();
+        if (comando.type === "RESUME_GAME") retomarJogo();
+      });
     });
 
     return () => {
       cancelado = true;
+      desinscreverComandos();
+      desregistrar();
       if (gameRef.current) {
         gameRef.current.destroy(true);
         gameRef.current = null;

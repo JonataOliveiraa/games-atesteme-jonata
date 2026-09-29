@@ -595,7 +595,14 @@ export class GameScene extends Phaser.Scene {
         this.hero.setFrozen(true)
         this.hero.setPose(8)
         this.dropAll()
+        this.errors += 1
 
+        runtimeGameBridge.emit({
+            type: 'WRONG_ANSWER',
+            gameId: GAME_ID,
+            pointsEarned: 0,
+            stage: this.level.level,
+        })
         this.lives.lose()
         this.livesLeft = this.lives.remaining
         this.emitCheckpoint()

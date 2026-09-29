@@ -47,6 +47,7 @@ export class GameScene extends Phaser.Scene {
     private errors = 0
     private consecutiveErrors = 0
     private locked = true
+    private refusing = false
     private ended = false
 
     private ctxBtn?: Phaser.GameObjects.Container
@@ -88,6 +89,7 @@ export class GameScene extends Phaser.Scene {
         this.errors = 0
         this.consecutiveErrors = 0
         this.locked = true
+        this.refusing = false
         this.ended = false
         this.taskIndex = 0
         this.used = { disco: 0, pendrive: 0, nuvem: 0 }
@@ -562,7 +564,7 @@ export class GameScene extends Phaser.Scene {
 
     private registerDrag() {
         this.input.on('dragstart', (_p: Phaser.Input.Pointer, obj: Phaser.GameObjects.Container) => {
-            if (this.locked || obj !== this.card) return
+            if (this.locked || this.refusing || obj !== this.card) return
             this.tweens.killTweensOf(obj)
             obj.setDepth(40).setScale(1.06)
             this.playTone(620, 0.04, 'sine', 0.08)
@@ -573,13 +575,13 @@ export class GameScene extends Phaser.Scene {
             obj: Phaser.GameObjects.Container,
             x: number, y: number,
         ) => {
-            if (this.locked || obj !== this.card) return
+            if (this.locked || this.refusing || obj !== this.card) return
             obj.setPosition(x, y)
             this.highlightHover(x, y)
         })
 
         this.input.on('dragend', (_p: Phaser.Input.Pointer, obj: Phaser.GameObjects.Container) => {
-            if (this.locked || obj !== this.card) return
+            if (this.locked || this.refusing || obj !== this.card) return
             obj.setScale(1).setDepth(30)
             const target = this.destAt(obj.x, obj.y)
             this.clearHover()
@@ -655,6 +657,7 @@ export class GameScene extends Phaser.Scene {
         }
 
         if (!this.task.accepts.includes(id)) {
+            this.refusing = true
             this.registerError()
             this.stamp('selo-x', L.cx(rect), rect.y + 128)
             this.playError()
@@ -663,6 +666,8 @@ export class GameScene extends Phaser.Scene {
             this.returnCard()
             if (this.lives.remaining <= 0) {
                 this.time.delayedCall(2000, () => this.showGameOver())
+            } else {
+                this.time.delayedCall(700, () => { this.refusing = false })
             }
             return
         }

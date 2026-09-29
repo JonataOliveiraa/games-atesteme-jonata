@@ -1081,8 +1081,15 @@ export class GameScene extends Phaser.Scene {
         // no mural o tempo PUBLICA a galeria como ela está; na ficha ele só
         // devolve a mesma mídia com a barra cheia, que é perder o caso e não
         // o nível — errar aqui trava até entender, nunca empurra para a frente
-        if (p.kind === 'mural') this.showReport(p)
-        else this.showTimeUp(p.item)
+        if (p.kind === 'mural') {
+            this.showReport(p)
+            return
+        }
+
+        runtimeGameBridge.emit({ type: 'WRONG_ANSWER', gameId: GAME_ID, pointsEarned: 0, stage: this.level.level })
+        this.lives.lose()
+        this.livesLeft = this.lives.remaining
+        this.showTimeUp(p.item)
     }
 
     private showTimeUp(item: MediaItem) {

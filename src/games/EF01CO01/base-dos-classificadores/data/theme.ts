@@ -25,9 +25,7 @@ export const C = {
 
     red: 0xe14b4b,
     blue: 0x4da3ff,
-    green: 0x2fbf71,
     yellow: 0xffc857,
-    purple: 0x8b5cf6,
 
     amber: 0xffc857,
     amberDark: 0xd99a1f,
@@ -38,9 +36,7 @@ export const C = {
 export const STONE_TINT: Record<Color, number> = {
     vermelho: C.red,
     azul: C.blue,
-    verde: C.green,
     amarelo: C.yellow,
-    roxo: C.purple,
 }
 
 export const FONT = {
