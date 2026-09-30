@@ -9,7 +9,6 @@ import { createTutorial } from '../../../../shared/tutorial/createTutorial'
 import { FX } from '../../../../shared/effects/FX'
 import { LEVELS, POINTS_AFTER_STALL, POINTS_CLEAN } from '../data/levels'
 import {
-    answerOf,
     applyTask,
     correct,
     destinationOf,
@@ -405,16 +404,6 @@ export class GameScene extends Phaser.Scene {
 
         await FX.wait(this, 700)
         if (gen !== this.gen) return
-
-        // depois de duas tentativas a resposta pulsa: a ajuda cresce, mas só
-        // depois de a criança ter tido duas chances de raciocinar
-        if (this.tries >= 2) {
-            if (task.kind === 'read') this.cards.pulse(task.highlighted)
-            else this.facade.pulse(answerOf(task))
-        }
-
-        this.mode = 'asking'
-        this.applyInput()
     }
 
     private async finishMural() {

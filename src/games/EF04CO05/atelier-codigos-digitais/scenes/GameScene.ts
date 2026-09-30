@@ -7,7 +7,7 @@ import { showLevelComplete } from '../../../../shared/level/showLevelComplete'
 import { FX } from '../../../../shared/effects/FX'
 
 import { LEVELS, TOTAL_CASES } from '../data/levels'
-import { TINTAS, PORQUE, FORMATOS } from '../data/tintas'
+import { TINTAS,  FORMATOS } from '../data/tintas'
 import { C } from '../data/theme'
 import { HUD, GRID, LEGENDA, CARDS } from '../data/layout'
 import type { Caso, CaseState, Face, Formato, Level } from '../types'
@@ -249,14 +249,6 @@ export class GameScene extends Phaser.Scene {
 
             await this.cards?.reject(escolhido)
             if (gen !== this.gen) return
-
-            showToast(this, PORQUE[escolhido], C.warn, 3400)
-
-            await FX.wait(this, 400)
-            if (gen !== this.gen) return
-
-            this.locked = false
-            this.cards?.setEnabled(true)
             return
         }
 
@@ -346,6 +338,21 @@ export class GameScene extends Phaser.Scene {
         if (this.quadro.get(r, c) === index) return
 
         this.quadro.set(r, c, index)
+
+        if (index !== this.caso.art[r][c]) {
+            this.locked = true
+            this.errors += 1
+            this.points += POINTS.miss
+            this.playError()
+            runtimeGameBridge.emit({
+                type: 'WRONG_ANSWER', gameId: GAME_ID,
+                pointsEarned: POINTS.miss, stage: this.level.level,
+            })
+            this.lives.lose(); this.livesLeft = this.lives.remaining
+            this.emitCheckpoint()
+            return
+        }
+
         this.playPaint()
         this.checkRows()
     }
@@ -354,8 +361,9 @@ export class GameScene extends Phaser.Scene {
      * Confere linha por linha, e é a comparação com o original que o briefing
      * pede — só que contínua, em vez de um botão no fim.
      *
-     * Sem botão a criança nunca "entrega errado": ela vê a linha acender no
-     * instante em que acerta, e o caso fecha sozinho quando todas acendem.
+     * Não há botão de entrega: a linha acende no instante em que fica certa,
+     * e o caso fecha sozinho quando todas acendem. Pintar uma célula com a
+     * tinta errada já é o erro, cobrado em `onPaint`.
      */
     private checkRows() {
         if (!this.quadro) return

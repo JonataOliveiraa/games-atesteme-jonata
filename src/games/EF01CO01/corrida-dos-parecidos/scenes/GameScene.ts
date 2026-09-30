@@ -509,26 +509,6 @@ export class GameScene extends Phaser.Scene {
 
         await this.lock.showAt(icon.x, icon.y - 66)
         if (gen !== this.gen) return
-
-        if (item.mistakes >= 2) {
-            const wanted = shouldCollect(item.def, this.rule)
-            const all = Array.from({ length: this.levelDef.lanes }, (_, i) => i)
-            this.laneHint.show(wanted ? [item.lane] : all.filter(l => l !== item.lane))
-        }
-
-        await FX.wait(this, 700)
-        if (gen !== this.gen) return
-
-        this.lock.hide()
-        await FX.to(this, fx(icon),
-            { x: laneX(item.lane, this.levelDef.lanes), y: ITEM.spawnY },
-            { duration: 640, ease: Ease.back(1.2) })
-        if (gen !== this.gen) return
-
-        item.y = ITEM.spawnY
-        item.returning = false
-        this.state = 'running'
-        this.rampTo(this.cruise, 520)
     }
 
     // ─────────────────────────────────────────────────────── os trechos

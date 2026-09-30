@@ -8,14 +8,11 @@ import { createTutorial, type TutorialStep } from '../../../../shared/tutorial/c
 import { FX, type FxTarget } from '../../../../shared/effects/FX'
 
 import { A, C, CSS } from '../data/theme'
-import { DEPTH, H, HUD, PLAQUE, POSTO, SIGN_Y, W } from '../data/layout'
+import { DEPTH, H, HUD, PLAQUE, POSTO,  W } from '../data/layout'
 import { IMAGES, has } from '../data/files'
 import {
     LEVELS,
     agradecimento,
-    artistNamed,
-    dicaDoAutor,
-    falhaTexto,
     palavraDaAssinatura,
     pointsFor,
     verboDoNivel,
@@ -26,7 +23,6 @@ import {
     avaliarPropria,
     signFrom,
     signLength,
-    type Falha,
     type LevelDef,
     type Mode,
     type PhaseDef,
@@ -132,7 +128,6 @@ export class GameScene extends Phaser.Scene {
     private sign!: Sign
     private hud!: Hud
     private audio!: Audio
-    private frame!: Phaser.GameObjects.Graphics
 
     constructor() {
         super({ key: 'GameScene' })
@@ -171,7 +166,6 @@ export class GameScene extends Phaser.Scene {
             phases: this.level.phases.length,
             onHelp: () => this.replayTutorial(),
         })
-        this.frame = this.add.graphics().setDepth(DEPTH.frame).setAlpha(0)
 
         EventBus.on('mute-audio', this.onMute, this)
         EventBus.on('show-tutorial', this.replayTutorial, this)
@@ -538,7 +532,7 @@ export class GameScene extends Phaser.Scene {
             await this.acertou(gen)
             return
         }
-        await this.errou(falha, montada, gen)
+        await this.errou()
     }
 
     private async acertou(gen: number) {
@@ -605,11 +599,7 @@ export class GameScene extends Phaser.Scene {
         void this.startPhase(this.phaseIndex + 1)
     }
 
-    private async errou(
-        falha: Falha,
-        montada: { kind: string; text?: string },
-        gen: number,
-    ) {
+    private async errou() {
         this.mode = 'travado'
         this.tray.setEnabled(false)
         this.plaque.setEnabled(false)
@@ -621,63 +611,6 @@ export class GameScene extends Phaser.Scene {
 
         this.audio.slip()
         await this.plaque.drop()
-        if (gen !== this.gen) return
-
-        /* A PIADA DO NOME ERRADO. Se o que ela montou é o nome de OUTRO
-           artista da casa, é ele quem aparece — a criança vê o crédito indo
-           para a pessoa errada, que é o estrago que o crédito errado causa. */
-        const outro = montada.text ? artistNamed(montada.text) : null
-        if (outro !== null && outro !== this.phase.obra.author) {
-            await this.artist.beat(outro, POSE.confuso, 'Eu? Eu não fiz isso!', 'Ops!')
-            if (gen !== this.gen) return
-        } else {
-            const autor = this.phase.obra.author
-            if (autor !== null) {
-                await this.artist.beat(
-                    autor, POSE.explicando,
-                    dicaDoAutor(this.phase.obra.sign), 'Entendi',
-                )
-                if (gen !== this.gen) return
-            }
-        }
-        if (gen !== this.gen) return
-
-        await this.sign.show(
-            falhaTexto(falha, this.phase.obra.sign ?? this.mine ?? null, this.verbo === 'criar'),
-            SIGN_Y,
-        )
-        if (gen !== this.gen) return
-
-        /* O verso pulsa: o jogo aponta para onde a resposta ESTÁ escrita,
-           nunca para a peça que a resolveria. */
-        if (this.art.facing === 'verso') await this.art.pulseVerso()
-        void this.flashFrame(C.amber)
-
-        this.picked = []
-        this.pickedIdx = []
-        this.plaque.setDraft([])
-        /* A plaquinha caiu inteira, mas o carimbo NÃO foi o erro: ele volta
-           calado, senão a criança tem de recarimbar a cada tentativa e o
-           jogo cobra duas vezes pela mesma coisa. */
-        if (this.stamped) await this.plaque.ink(true)
-        this.mode = this.art.facing === 'verso' ? 'verso' : 'frente'
-        this.art.setEnabled(true)
-        await this.showStep()
-        if (gen !== this.gen) return
-
-        /* A peça errada reaparece ESMAECIDA — a bandeja é reconstruída a cada
-           trava, então o esmaecido tem de ser reaplicado depois dela. */
-        this.wrongPieces.forEach(i => this.tray.dim(i))
-
-        /* Só depois do SEGUNDO erro a peça certa brilha. */
-        if (this.attemptsHere >= 2) {
-            const alvo = this.phase.obra.sign!
-            const i = this.phase.tray.findIndex(p =>
-                alvo.kind === 'marca'
-                    ? p.kind === 'marca' && p.id === alvo.id
-                    : p.kind === 'letra' && p.ch === alvo.text[0])
-            if (i >= 0) void this.tray.shine(i)
-        }
     }
 
     /**
@@ -808,15 +741,6 @@ export class GameScene extends Phaser.Scene {
             score: Math.max(0, Math.round(this.score)),
             errors: this.errors,
         })
-    }
-
-    private async flashFrame(colour: number) {
-        this.frame.clear()
-        this.frame.lineStyle(14, colour, 1)
-        this.frame.strokeRect(7, 7, W - 14, H - 14)
-        this.frame.setAlpha(0)
-        await FX.to(this, fx(this.frame), { alpha: 1 }, { duration: 90 })
-        await FX.to(this, fx(this.frame), { alpha: 0 }, { duration: 340 })
     }
 
     /**

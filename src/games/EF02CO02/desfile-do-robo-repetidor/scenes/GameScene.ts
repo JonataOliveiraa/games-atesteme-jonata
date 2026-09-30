@@ -177,8 +177,15 @@ export class GameScene extends Phaser.Scene {
     this.paintTimer()
     if (this.timeLeft <= 0) {
       this.timerOn = false
-      floatingNote(this, W / 2, 320, "O bônus de tempo acabou — siga com calma!",
-        { tone: C.sun, deep: C.sunDeep })
+      this.ended = true
+      this.errors += 1
+      this.playWrong()
+      floatingNote(this, W / 2, 320, "O tempo acabou!",
+        { tone: C.coral, deep: C.coralDeep })
+      runtimeGameBridge.emit({
+        type: "WRONG_ANSWER", gameId: GAME_ID, stage: this.level.level, pointsEarned: 0,
+      })
+      this.lives.lose(); this.livesLeft = this.lives.remaining
     }
   }
 
@@ -266,7 +273,7 @@ export class GameScene extends Phaser.Scene {
 
     const secs = Math.ceil(this.timeLeft)
     this.timerText.setText(
-      secs > 0 ? `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, "0")}` : "sem bônus",
+      secs > 0 ? `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, "0")}` : "0:00",
     )
     this.timerText.setColor(hex(p > 0.4 ? C.white : C.sun))
   }
@@ -695,12 +702,12 @@ export class GameScene extends Phaser.Scene {
 
       if (!this.isInside(next.x, next.y)) {
         await this.bump(cmd.direction)
-        await this.fail(i, "O robô saiu da pista aqui.")
+        this.fail(i)
         return
       }
       if (this.isObstacle(next.x, next.y)) {
         await this.bump(cmd.direction)
-        await this.fail(i, "Tem um cone bloqueando este passo.")
+        this.fail(i)
         return
       }
 
@@ -734,17 +741,6 @@ export class GameScene extends Phaser.Scene {
       this.lives.lose(); this.livesLeft = this.lives.remaining
     this.playWrong()
     this.cameras.main.shake(160, 0.004)
-
-    this.hideTape()
-    this.hideFocus()
-    await this.zoomOut()
-
-    floatingNote(this, W / 2, 320,
-      onTarget
-        ? "Chegou ao palco, mas pulou a pegada. Ajuste o caminho."
-        : "O robô parou fora do palco. Confira o programa.",
-      { tone: C.sun, deep: C.sunDeep })
-    this.time.delayedCall(700, () => this.resetRobot())
   }
 
   private showFocus() {
@@ -775,17 +771,7 @@ export class GameScene extends Phaser.Scene {
     this.tweens.add({ targets: g, alpha: 1, duration: 320, ease: "Sine.easeOut" })
   }
 
-  private hideFocus() {
-    const g = this.focusVeil
-    if (!g) return
-    this.focusVeil = undefined
-    this.tweens.add({
-      targets: g, alpha: 0, duration: 280, ease: "Sine.easeIn",
-      onComplete: () => g.destroy(),
-    })
-  }
-
-  private async fail(index: number, message: string) {
+  private fail(index: number) {
     this.errors += 1
     this.running = false
     this.runningIndex = -1
@@ -801,13 +787,6 @@ export class GameScene extends Phaser.Scene {
       this.lives.lose(); this.livesLeft = this.lives.remaining
     this.playWrong()
     this.cameras.main.shake(180, 0.005)
-
-    await this.wait(900)
-    this.hideTape()
-    await this.zoomOut()
-
-    floatingNote(this, W / 2, 320, message, { tone: C.coral, deep: C.coralDeep })
-    this.time.delayedCall(700, () => this.resetRobot())
   }
 
   private async succeed() {
@@ -1150,7 +1129,7 @@ export class GameScene extends Phaser.Scene {
         balloonX: 400, balloonY: 250,
       },
       {
-        text: "Toque em Executar: a tela aproxima e cada seta acende antes do passo. Se errar, o passo fica vermelho — é só corrigir.",
+        text: "Toque em Executar: a tela aproxima e cada seta acende antes do passo. Um passo errado encerra o jogo.",
         shape: "rect", x: ACTION.run.x, y: ACTION_Y, w: 210, h: 90,
         balloonX: 420, balloonY: 300,
         buttonLabel: "Vamos lá!",

@@ -13,11 +13,9 @@ import {
     POINTS_CLEAN,
     TOTAL_ROUNDS,
     matches,
-    missText,
     nextStep,
     toColor,
     validateLevels,
-    worstChannel,
 } from '../data/levels'
 import { HUD } from '../data/layout'
 import { C } from '../data/theme'
@@ -307,7 +305,6 @@ export class GameScene extends Phaser.Scene {
     }
 
     private async miss() {
-        const gen = this.gen
         this.tries += 1
         this.phase = 'travado'
 
@@ -324,22 +321,6 @@ export class GameScene extends Phaser.Scene {
             })
             this.lives.lose()
             this.livesLeft = this.lives.remaining
-        }
-
-        this.audio.sigh()
-        this.deck.reload()
-        await this.deck.showLock()
-        if (gen !== this.gen) return
-
-        await this.master.say(missText(this.mix, this.round.target))
-        if (gen !== this.gen) return
-
-        this.applyInput()
-
-        // depois do segundo fogo errado na MESMA rodada, a torneira do canal
-        // mais distante pulsa. O valor certo continua não aparecendo.
-        if (this.tries >= 2) {
-            void this.deck.hint(worstChannel(this.mix, this.round.target))
         }
     }
 

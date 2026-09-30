@@ -8,7 +8,7 @@ import { vidasIniciais } from '../../../../shared/level/vidasIniciais'
 import { createTutorial } from '../../../../shared/tutorial/createTutorial'
 import { FX } from '../../../../shared/effects/FX'
 import { LEVELS } from '../data/levels'
-import { emptySide, explain, problemSide, runChain, sideOf, solves, SOURCE_CONTENT } from '../data/rules'
+import { emptySide, explain, problemSide, runChain, sideOf,  SOURCE_CONTENT } from '../data/rules'
 import { DEPTH, HUD, REQUEST, STATION, TABLE } from '../data/layout'
 import { C } from '../data/theme'
 import type { ChallengeDef, LevelDef, LevelNumber, Mode, Outcome, Side } from '../types'
@@ -275,7 +275,7 @@ export class GameScene extends Phaser.Scene {
         if (!finished || gen !== this.gen) return
 
         if (outcome.solved) await this.succeed()
-        else await this.stall(index, outcome, side)
+        else await this.stall(outcome, side)
     }
 
     private async playChain(outcome: Outcome, gen: number) {
@@ -400,7 +400,7 @@ export class GameScene extends Phaser.Scene {
         else void this.endLevel()
     }
 
-    private async stall(index: number, outcome: Outcome, side: Side) {
+    private async stall(outcome: Outcome, side: Side) {
         const gen = this.gen
         const challenge = this.challenge
         this.tries += 1
@@ -424,29 +424,6 @@ export class GameScene extends Phaser.Scene {
 
         await FX.wait(this, 1100)
         if (gen !== this.gen) return
-
-        this.resetChain()
-        this.lia.present(challenge.source)
-        await this.stations.undock(side, this.cards.artOf(index))
-        if (gen !== this.gen) return
-        this.cards.take(index, false)
-        const original = side === 'input' ? challenge.input : challenge.output
-        if (original) await this.stations.showFixed(side, original)
-        else this.stations.showEmpty(side)
-        if (gen !== this.gen) return
-
-        if (this.repair) {
-            this.stations.mark(this.focus, true)
-            this.cables.fault(this.focus, true)
-        }
-
-        if (this.tries >= 2) {
-            const right = challenge.options.findIndex(device => solves(challenge, device))
-            if (right >= 0) this.cards.hint(right)
-        }
-
-        this.mode = 'choosing'
-        this.applyInput()
     }
 
     private async endLevel() {

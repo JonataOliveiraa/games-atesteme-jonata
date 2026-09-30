@@ -265,10 +265,6 @@ export class GameScene extends Phaser.Scene {
         this.options.reject(index)
         void this.clue.shakeChest()
         this.clue.flashWrong()
-        this.legend.peek(3200)
-
-        if (this.attempts >= 2) this.options.hint(this.chest.correctAt)
-        this.emitCheckpoint()
     }
 
     private async openChest() {

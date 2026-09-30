@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import ConfirmModal from "../components/ConfirmModal";
 import Toast from "../components/Toast";
 import { useGame } from "../context/useGame";
+import { formatLives } from "../context/formatLives";
 import { getGameBySlug, loadGameConfig } from "../data/gameIndex";
 import { getGameInstructions } from "../data/gameInstructions";
 import GameFrame from "../platform/components/GameFrame";
@@ -11,12 +12,15 @@ import type { GameEventPayload } from "../types/platform";
 import type Phaser from "phaser";
 import { EventBus } from "../shared/EventBus";
 import { gameBridge } from "../shared/bridge/gameBridge";
+import { ESPERA_PARA_VER_O_ERRO_MS } from "../shared/bridge/partida";
 import { useBeepSound } from "../hooks/useBeepSound";
 import SkillInfoButton from "../components/SkillInfoButton";
 
 const GAMES_WITH_IN_GAME_COMPLETION_SCREEN = new Set([
   "garra-dos-grupos",
   "pescaria-dos-codigos",
+  "maquina-dos-ajudantes",
+  "labirinto-do-cofrinho",
   "subida-do-dia",
   "balao-do-recado",
   "decolagem-passo-a-passo",
@@ -130,15 +134,13 @@ const MODO_DO_JOGO: "iframe" | "local" = "iframe";
 function urlDoJogoEmbutido(
   slug: string,
   stage: 1 | 2 | 3,
-  points: number,
-  lives: number
+  points: number
 ): string {
   const query = new URLSearchParams({
     embed: "1",
     inline: "1",
     stage: String(stage),
     points: String(points),
-    lives: String(lives),
   });
 
   return `/jogos/${encodeURIComponent(slug)}?${query}`;
@@ -156,12 +158,12 @@ export default function GameDetailsPage() {
 
   const {
     points,
+    lives,
     extraLifeCost,
-    unlockCost,
+    unlockLifeCost,
     handleGameEvent,
     isGameBlocked,
     getGameBlockedUntil,
-    getGameLives,
     buyExtraLife,
     unlockGameAccess,
   } = useGame();
@@ -174,8 +176,6 @@ export default function GameDetailsPage() {
   const [currentLevel, setCurrentLevel] = useState<1 | 2 | 3>(1);
 
   const [showGameOverModal, setShowGameOverModal] = useState(false);
-  const [showNoLivesModal, setShowNoLivesModal] = useState(false);
-  const [showPostUnlockLifeModal, setShowPostUnlockLifeModal] = useState(false);
   const [showCongratsModal, setShowCongratsModal] = useState(false);
 
   const [toast, setToast] = useState<{
@@ -193,11 +193,15 @@ export default function GameDetailsPage() {
 
   const streakRef = useRef(0);
   const errorCountRef = useRef(0);
-  const lifePurchasePendingRef = useRef(false);
-  const alreadyOfferedExtraLifeRef = useRef(false);
+  const gameOverTimerRef = useRef<number | undefined>(undefined);
+
+  // saiu do jogo (ou da página) antes de o modal abrir: ele não abre mais
+  useEffect(
+    () => () => window.clearTimeout(gameOverTimerRef.current),
+    [hasStartedGame]
+  );
 
   const game = slug ? getGameBySlug(slug) : undefined;
-  const isPixelSecreto = game?.slug === "pixel-secreto";
 
   useEffect(() => {
     let cancelled = false;
@@ -235,17 +239,13 @@ export default function GameDetailsPage() {
   const srcDoJogo = useMemo(
     () =>
       game
-        ? urlDoJogoEmbutido(game.slug, currentLevel, points, getGameLives(game.id))
+        ? urlDoJogoEmbutido(game.slug, currentLevel, points)
         : "",
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [game, hasStartedGame]
   );
 
   useEffect(() => {
-    const openExtraLifeModal = () => {
-      setShowNoLivesModal(true);
-    };
-
     const exitGame = () => {
       setHasStartedGame(false);
       navigate(-1);
@@ -256,18 +256,15 @@ export default function GameDetailsPage() {
     };
 
     const closeGameModals = () => {
-      setShowNoLivesModal(false);
       setShowGameOverModal(false);
     };
 
-    window.addEventListener("pixel-secret-show-extra-life-modal", openExtraLifeModal);
     window.addEventListener("pixel-secret-exit-game", exitGame);
     EventBus.on("exit-game", exitGame);
     EventBus.on("game-back-to-start", backToStart);
     EventBus.on("close-game-modals", closeGameModals);
 
     return () => {
-      window.removeEventListener("pixel-secret-show-extra-life-modal", openExtraLifeModal);
       window.removeEventListener("pixel-secret-exit-game", exitGame);
       EventBus.off("exit-game", exitGame);
       EventBus.off("game-back-to-start", backToStart);
@@ -294,36 +291,10 @@ export default function GameDetailsPage() {
     );
   }
 
-  const gameLives = getGameLives(game.id);
   const blocked = isGameBlocked(game.id);
   const blockedUntil = getGameBlockedUntil(game.id);
-
-  const resumePixelSecreto = () => {
-    if (!isPixelSecreto) return;
-    window.dispatchEvent(new CustomEvent("pixel-secret-resume-game"));
-  };
-
-  const dispatchPixelFinalGameOver = (event: PlatformEvent) => {
-    const blockedDate = new Date(
-      Date.now() + 2 * 24 * 60 * 60 * 1000
-    ).toISOString();
-
-    handleGameEvent({
-      type: "GAME_OVER",
-      gameId: event.gameId,
-      stage: "stage" in event ? event.stage : currentLevel,
-      pointsEarned: 0,
-    });
-
-    window.dispatchEvent(
-      new CustomEvent("pixel-secret-show-final-game-over", {
-        detail: {
-          blockedUntil: blockedDate,
-          unlockCost,
-        },
-      })
-    );
-  };
+  const canUnlock = lives >= unlockLifeCost;
+  const livesLabel = formatLives(lives);
 
   const dispatchPlatformGameEvent = (event: {
     type: "GAME_OVER" | "GAME_COMPLETED" | "CORRECT_ANSWER" | "WRONG_ANSWER";
@@ -390,26 +361,11 @@ export default function GameDetailsPage() {
         return;
       }
 
+      /*
+       * O erro aqui é só aviso e pontos. Quem decide a derrota é o jogo: se
+       * este erro encerrou a partida, o `GAME_OVER` vem logo atrás.
+       */
       case "WRONG_ANSWER": {
-        const livesBeforeError = gameLives;
-        const livesAfterError = Math.max(livesBeforeError - 1, 0);
-
-        if (livesBeforeError <= 0) {
-          // Jogador já está sem vidas — não deduzir pontos, ir direto ao game over
-          dispatchPlatformGameEvent({
-            type: "GAME_OVER",
-            gameId: event.gameId,
-            stage: event.stage,
-            pointsEarned: 0,
-          });
-
-          gameBridge.send({ type: 'PAUSE_GAME' });
-          setShowNoLivesModal(false);
-          setShowGameOverModal(true);
-
-          return;
-        }
-
         dispatchPlatformGameEvent({
           type: "WRONG_ANSWER",
           gameId: event.gameId,
@@ -420,16 +376,7 @@ export default function GameDetailsPage() {
         streakRef.current = 0;
         errorCountRef.current += 1;
 
-        showToast(
-          `-5 pontos • -1 vida (${livesAfterError} restante${livesAfterError === 1 ? "" : "s"
-          })`,
-          "error"
-        );
-
-        if (livesAfterError === 0) {
-          gameBridge.send({ type: 'PAUSE_GAME' });
-          setShowNoLivesModal(true);
-        }
+        showToast("-5 pontos", "error");
 
         return;
       }
@@ -475,9 +422,17 @@ export default function GameDetailsPage() {
         });
 
         streakRef.current = 0;
-        gameBridge.send({ type: 'PAUSE_GAME' });
-        setShowNoLivesModal(false);
-        setShowGameOverModal(true);
+
+        /*
+         * O bloqueio já foi gravado acima, na hora. O modal espera: o jogo
+         * segue mostrando o erro por `ESPERA_PARA_VER_O_ERRO_MS` antes de
+         * alguma coisa cobri-lo.
+         */
+        window.clearTimeout(gameOverTimerRef.current);
+        gameOverTimerRef.current = window.setTimeout(() => {
+          gameBridge.send({ type: 'PAUSE_GAME' });
+          setShowGameOverModal(true);
+        }, ESPERA_PARA_VER_O_ERRO_MS);
 
         return;
       }
@@ -485,25 +440,12 @@ export default function GameDetailsPage() {
   };
 
   const handleBuyLife = () => {
-    if (lifePurchasePendingRef.current) return;
-
-    if (points < extraLifeCost) {
+    if (!buyExtraLife()) {
       showToast("Pontos insuficientes para comprar uma vida.", "error");
-      resumePixelSecreto();
       return;
     }
 
-    buyExtraLife(game.id);
-
-    lifePurchasePendingRef.current = true;
-    window.setTimeout(() => {
-      lifePurchasePendingRef.current = false;
-    }, 2000);
-
     showToast("+1 vida adquirida ❤️", "success");
-    setShowNoLivesModal(false);
-    setShowPostUnlockLifeModal(false);
-    resumePixelSecreto();
   };
 
   const handleUnlock = () => {
@@ -515,8 +457,8 @@ export default function GameDetailsPage() {
       return;
     }
 
-    if (points < unlockCost) {
-      showToast("Pontos insuficientes para desbloquear este jogo.", "error");
+    if (!canUnlock) {
+      showToast("Você está sem vidas para desbloquear este jogo.", "error");
       return;
     }
 
@@ -530,8 +472,7 @@ export default function GameDetailsPage() {
     setShowGameOverModal(false);
     setCurrentLevel(1);
     setHasStartedGame(false);
-    setShowPostUnlockLifeModal(true);
-    showToast("Jogo desbloqueado com sucesso.", "success");
+    showToast("Jogo desbloqueado com 1 vida.", "success");
   };
 
   const handleCongratsPlayAgain = () => {
@@ -552,7 +493,6 @@ export default function GameDetailsPage() {
 
   const startGame = () => {
     playBeep();
-    alreadyOfferedExtraLifeRef.current = false;
     setShowInstructions(false);
     setHasStartedGame(true);
   };
@@ -561,9 +501,7 @@ export default function GameDetailsPage() {
   const gameInstructions = getGameInstructions(game.slug);
 
   useEffect(() => {
-    const hasBlockingOverlay =
-      showNoLivesModal ||
-      showGameOverModal;
+    const hasBlockingOverlay = showGameOverModal;
 
     const elements = document.querySelectorAll(
       ".phaser-container, .phaser-container canvas, .game-iframe, iframe"
@@ -582,7 +520,7 @@ export default function GameDetailsPage() {
         element.classList.remove("game-input-blocked");
       });
     };
-  }, [showNoLivesModal, showGameOverModal]);
+  }, [showGameOverModal]);
 
   if (blocked && !hasStartedGame && !showGameOverModal) {
     return (
@@ -601,7 +539,7 @@ export default function GameDetailsPage() {
           <SkillInfoButton skill={game.skill} />
         </h1>
           <p className="page-subtitle">
-            Este jogo está bloqueado porque houve game over.
+            Este jogo está bloqueado por 24 horas porque houve game over.
             {blockedUntil && (
               <>
                 {" "}
@@ -622,7 +560,7 @@ export default function GameDetailsPage() {
                   <h3>Desbloquear este jogo</h3>
                   <p>
                     Você pode aguardar o prazo ou desbloquear agora usando{" "}
-                    {unlockCost} pontos.
+                    {unlockLifeCost} vida.
                   </p>
                 </div>
               </div>
@@ -630,15 +568,15 @@ export default function GameDetailsPage() {
               <div className="reward-bottom">
                 <div>
                   <span className="reward-label">Custo</span>
-                  <div className="reward-cost">{unlockCost} pontos</div>
+                  <div className="reward-cost">{unlockLifeCost} vida</div>
                 </div>
 
                 <div className="reward-action">
-                  <span>Seus pontos: {points}</span>
+                  <span>Suas vidas: {livesLabel}</span>
                   <button
                     type="button"
                     onClick={handleUnlock}
-                    disabled={points < unlockCost}
+                    disabled={!canUnlock}
                   >
                     Desbloquear jogo
                   </button>
@@ -650,18 +588,15 @@ export default function GameDetailsPage() {
               <div className="reward-top">
                 <div className="reward-icon">❤️</div>
                 <div>
-                  <h3>Vidas atuais</h3>
-                  <p>
-                    Depois do desbloqueio, você pode escolher comprar vidas
-                    extras para voltar mais segura ao jogo.
-                  </p>
+                  <h3>Vidas</h3>
+                  <p>Cada vida desbloqueia um jogo bloqueado.</p>
                 </div>
               </div>
 
               <div className="reward-bottom">
                 <div>
                   <span className="reward-label">Vidas</span>
-                  <div className="reward-cost">{gameLives}</div>
+                  <div className="reward-cost">{livesLabel}</div>
                 </div>
 
                 <div className="reward-action">
@@ -678,16 +613,6 @@ export default function GameDetailsPage() {
             </div>
           </div>
         </section>
-
-        <ConfirmModal
-          isOpen={showPostUnlockLifeModal}
-          title="Jogo desbloqueado"
-          message={`O jogo "${game.title}" foi desbloqueado e está com 0 vidas. Deseja comprar +1 vida por ${extraLifeCost} pontos agora?`}
-          confirmText="Comprar vida"
-          cancelText="Depois"
-          onConfirm={handleBuyLife}
-          onCancel={() => setShowPostUnlockLifeModal(false)}
-        />
 
         {toast && (
           <Toast
@@ -734,7 +659,7 @@ export default function GameDetailsPage() {
               <span className="resource-icon">❤️</span>
               <div className="resource-text">
                 <span>Vidas</span>
-                <strong>{gameLives}</strong>
+                <strong>{livesLabel}</strong>
               </div>
             </div>
 
@@ -776,7 +701,6 @@ export default function GameDetailsPage() {
                 gameId={game.id}
                 level={currentLevel}
                 points={points}
-                lives={gameLives}
                 config={gameConfig}
                 onPlatformEvent={handlePlatformEvent}
                 mode={MODO_DO_JOGO}
@@ -858,69 +782,6 @@ export default function GameDetailsPage() {
       </section>
 
 
-      {/* TELA FULLSCREEN - PERDEU VIDA */}
-      {showNoLivesModal && (
-        <div
-          className="game-over-overlay"
-          onPointerDown={(e) => {
-            e.stopPropagation();
-          }}
-          onMouseDown={(e) => {
-            e.stopPropagation();
-          }}
-          onClick={(e) => {
-            e.stopPropagation();
-          }}
-          onTouchStart={(e) => {
-            e.stopPropagation();
-          }}
-        >
-          <div className="game-over-modal">
-            <h1 className="game-over-title error">Você cometeu um erro!</h1>
-
-            <p className="game-over-text">
-              Você perdeu ponto de vida.
-              <br />
-              Deseja comprar um ponto de vida ou continuar com 0 pontos de vida?
-            </p>
-
-            <p className="game-over-warning">
-              Se você continuar com 0 vidas e errar novamente, será Game Over.
-            </p>
-
-            <div className="game-over-actions">
-              <button
-                type="button"
-                className="game-over-primary-btn"
-                onClick={() => {
-                  handleBuyLife();
-                  if (!isPixelSecreto) {
-                    gameBridge.send({ type: 'RESUME_GAME' });
-                  }
-                }}
-              >
-                Comprar vida
-              </button>
-
-              <button
-                type="button"
-                className="game-over-secondary-btn"
-                onClick={() => {
-                  setShowNoLivesModal(false);
-                  resumePixelSecreto();
-                  if (!isPixelSecreto) {
-                    gameBridge.send({ type: 'RESUME_GAME' });
-                  }
-                }}
-              >
-                Continuar assim
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* TELA FULLSCREEN - GAME OVER */}
       {/* TELA FULLSCREEN - GAME OVER */}
       {showGameOverModal && (
         <div
@@ -942,7 +803,7 @@ export default function GameDetailsPage() {
             <h1 className="game-over-title">GAME OVER</h1>
 
             <p className="game-over-text">
-              O jogo foi bloqueado.
+              O jogo foi bloqueado por 24 horas.
               {blockedUntil && (
                 <>
                   <br />
@@ -954,22 +815,34 @@ export default function GameDetailsPage() {
             </p>
 
             <p className="game-over-warning">
-              {blocked ? (
-                <>Você pode desbloquear agora usando {unlockCost} pontos. Você tem {points} ponto{points !== 1 ? 's' : ''}.</>
-              ) : (
+              {!blocked ? (
                 <>Este jogo já está liberado. Você pode voltar aos jogos ou iniciar novamente.</>
+              ) : canUnlock ? (
+                <>Você pode desbloquear agora usando {unlockLifeCost} vida. Você tem {livesLabel} vida{lives === 1 ? '' : 's'}.</>
+              ) : (
+                <>Você está sem vidas. Compre uma vida por {extraLifeCost} pontos para desbloquear.</>
               )}
             </p>
 
             <div className="game-over-actions">
-              {blocked && (
+              {blocked && canUnlock && (
                 <button
                   type="button"
                   className="game-over-primary-btn"
                   onClick={handleUnlock}
-                  disabled={points < unlockCost}
                 >
                   Desbloquear jogo
+                </button>
+              )}
+
+              {blocked && !canUnlock && (
+                <button
+                  type="button"
+                  className="game-over-primary-btn"
+                  onClick={handleBuyLife}
+                  disabled={points < extraLifeCost}
+                >
+                  Comprar vida
                 </button>
               )}
 
@@ -997,16 +870,6 @@ export default function GameDetailsPage() {
         cancelText="Voltar aos jogos"
         onConfirm={handleCongratsPlayAgain}
         onCancel={handleCongratsExit}
-      />
-
-      <ConfirmModal
-        isOpen={showPostUnlockLifeModal}
-        title="Jogo desbloqueado"
-        message={`O jogo "${game.title}" foi desbloqueado e está com 0 vidas. Deseja comprar +1 vida por ${extraLifeCost} pontos agora?`}
-        confirmText="Comprar vida"
-        cancelText="Depois"
-        onConfirm={handleBuyLife}
-        onCancel={() => setShowPostUnlockLifeModal(false)}
       />
 
       {toast && (

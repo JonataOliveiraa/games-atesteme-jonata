@@ -19,7 +19,7 @@ import type { Game } from "../../types/game";
  *
  * ── POR QUE O ENDEREÇO SAI SEM PARÂMETRO ─────────────────────────────────
  *
- * `attempt`, `returnBase`, `stage` e `lives` pertencem a UMA partida e são
+ * `attempt`, `returnBase` e `stage` pertencem a UMA partida e são
  * montados pela plataforma na hora de abrir o iframe. Gravar qualquer um
  * deles no cadastro é gravar o bilhete de uma partida que já acabou — e foi
  * exatamente o que aconteceu na primeira tentativa de integração.
@@ -335,7 +335,7 @@ export default function IntegracaoPanel({ onClose }: { onClose: () => void }) {
             {slug && (
               <a
                 className="integracao-secundario"
-                href={`/jogos/${slug}?embed=1&attempt=teste-cadastro&stage=1&points=0&lives=3&returnBase=${encodeURIComponent(
+                href={`/jogos/${slug}?embed=1&attempt=teste-cadastro&stage=1&points=0&returnBase=${encodeURIComponent(
                   ORIGEM
                 )}`}
                 target="_blank"

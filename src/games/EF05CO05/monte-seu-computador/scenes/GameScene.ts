@@ -244,10 +244,6 @@ export class GameScene extends Phaser.Scene {
             this.timerEvent = undefined
             this.registerError()
             this.showToast('O tempo acabou.', false)
-            this.time.delayedCall(2200, () => {
-                if (this.lives.remaining <= 0) this.showGameOver()
-                else this.startChallenge()
-            })
         }
     }
 
@@ -537,14 +533,7 @@ export class GameScene extends Phaser.Scene {
                     this.playError()
                     this.registerError()
                     this.cameras.main.shake(140, 0.004)
-
-                    if (this.lives.remaining <= 0) {
-                        locked = true
-                        this.time.delayedCall(1200, () => {
-                            this.clearOverlay()
-                            this.showGameOver()
-                        })
-                    }
+                    locked = true
                     return
                 }
 
@@ -687,12 +676,6 @@ export class GameScene extends Phaser.Scene {
                     this.playError()
                     this.registerError()
                     this.stamp('selo-x', L.cx(rect), rect.y + 70)
-                    if (this.lives.remaining <= 0) {
-                        this.time.delayedCall(1200, () => {
-                            this.clearOverlay()
-                            this.showGameOver()
-                        })
-                    }
                     return
                 }
 
@@ -1253,10 +1236,6 @@ export class GameScene extends Phaser.Scene {
                 false,
             )
             this.returnHand()
-
-            if (this.lives.remaining <= 0) {
-                this.time.delayedCall(2200, () => this.showGameOver())
-            }
             return
         }
 
@@ -1575,7 +1554,7 @@ export class GameScene extends Phaser.Scene {
         const runStep = (i: number) => {
             if (i >= result.steps.length) {
                 if (result.ok) this.bootSuccess(cleanup)
-                else this.bootFailure(result, paintBar, caption, cleanup, total)
+                else this.bootFailure(result, paintBar, caption, total)
                 return
             }
 
@@ -1674,7 +1653,6 @@ export class GameScene extends Phaser.Scene {
         result: BootResult,
         paintBar: (done: number, color: number) => void,
         caption: Phaser.GameObjects.Text,
-        cleanup: () => void,
         total: number,
     ) {
         paintBar(total, C.vermelho)
@@ -1689,16 +1667,6 @@ export class GameScene extends Phaser.Scene {
         }
 
         this.registerError()
-
-        this.time.delayedCall(2800, () => {
-            cleanup()
-            if (this.lives.remaining <= 0) {
-                this.showGameOver()
-                return
-            }
-            this.phase = 'montando'
-            this.refreshAll()
-        })
     }
 
     private finishChallenge() {
@@ -2114,33 +2082,6 @@ export class GameScene extends Phaser.Scene {
 
         panel.setAlpha(0).setScale(0.92)
         this.tweens.add({ targets: panel, alpha: 1, scale: 1, duration: 260, ease: 'Back.easeOut' })
-    }
-
-    private showGameOver() {
-        this.clearOverlay()
-        this.timerEvent?.remove()
-        this.timerEvent = undefined
-
-        showLevelCompleteModal(this, {
-            title: 'Quase lá!',
-            subtitle: 'Três tentativas seguidas sem acertar.',
-            message: this.challenge.explanation,
-            accent: C.vermelho,
-            buttons: [
-                {
-                    label: 'Tentar de novo', color: C.verde,
-                    onClick: () => this.scene.restart({ lives: this.livesLeft, 
-                        level: this.levelConfig.level, points: this.points,
-                    }),
-                },
-                {
-                    label: 'Sair', color: C.medio,
-                    onClick: () => EventBus.emit('exit-game'),
-                },
-            ],
-        })
-
-        // o GAME_OVER sai do componente de vidas, no zero. Aqui é só a tela.
     }
 
     private makeButton(rect: L.Rect, label: string, color: number, onClick: () => void) {

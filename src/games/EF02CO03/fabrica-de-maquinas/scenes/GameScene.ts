@@ -1417,13 +1417,16 @@ export class GameScene extends Phaser.Scene {
         this.errors += 1;
         this.playWrong();
 
+        this.showToast("Tempo esgotado.", COLORS.red);
+
         runtimeGameBridge.emit({
-          type: "GAME_OVER",
+          type: "WRONG_ANSWER",
           gameId: GAME_ID,
           stage: this.levelConfig.level,
+          pointsEarned: 0,
         });
-
-        this.showToast("Tempo esgotado. Tente organizar a esteira de novo.", COLORS.red);
+        this.lives.lose();
+        this.livesLeft = this.lives.remaining;
       },
     });
   }

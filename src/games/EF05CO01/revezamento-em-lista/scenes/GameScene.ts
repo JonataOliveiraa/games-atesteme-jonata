@@ -462,34 +462,16 @@ export class GameScene extends Phaser.Scene {
         this.render()
         await FX.wait(this, 900)
         if (gen !== this.gen) return
-
-        void this.roster.renumber(i => this.audio.step(i))
-        await this.coach.say(this.request.line, this.request.verb)
-        if (gen !== this.gen) return
-
-        this.phase = 'editing'
-        this.applyInput()
-
-        // Errou uma vez na prova guiada? A mão vem logo, sem esperar os
-        // segundos de sempre — é a hora em que a criança mais precisa dela.
-        if (this.heat.guided || this.errorsInLap >= 2) {
-            this.armHint(this.heat.guided ? 900 : 2500)
-        }
-        if (this.errorsInLap >= 2) {
-            this.roster.blink(this.request.hint(this.list, this.startList))
-        }
     }
 
     /**
-     * Uma vida por VOLTA, no primeiro erro dela — e **nenhuma** na prova
-     * guiada: ali o erro é aula, não castigo. Sem vida perdida não sai
-     * `WRONG_ANSWER`, porque na plataforma um implica o outro.
+     * O primeiro erro da volta encerra a partida, inclusive na prova guiada:
+     * quem ensina é o tutorial, e prova que pontua acerto também cobra erro.
      */
     private chargeOnce() {
         if (this.chargedThisLap) return
         this.chargedThisLap = true
         this.errors += 1
-        if (this.heat.guided) return
         runtimeGameBridge.emit({
             type: 'WRONG_ANSWER',
             gameId: GAME_ID,

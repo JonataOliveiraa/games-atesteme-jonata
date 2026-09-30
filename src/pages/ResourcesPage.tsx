@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import ConfirmModal from "../components/ConfirmModal";
 import { useGame } from "../context/useGame";
+import { formatLives } from "../context/formatLives";
 import { games, getGameById } from "../data/gameIndex";
 import { useBeepSound } from "../hooks/useBeepSound";
 
@@ -9,20 +10,15 @@ type UnlockTarget = {
   title: string;
 } | null;
 
-type LifeTarget = {
-  id: string;
-  title: string;
-} | null;
-
 export default function ResourcesPage() {
   const {
     points,
+    lives,
     extraLifeCost,
-    unlockCost,
+    unlockLifeCost,
     history,
     isGameBlocked,
     getGameBlockedUntil,
-    getGameLives,
     buyExtraLife,
     unlockGameAccess,
     resetProgress,
@@ -36,7 +32,7 @@ export default function ResourcesPage() {
   });
 
   const [unlockTarget, setUnlockTarget] = useState<UnlockTarget>(null);
-  const [lifeTarget, setLifeTarget] = useState<LifeTarget>(null);
+  const [showLifeModal, setShowLifeModal] = useState(false);
   const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
   const [showResetModal, setShowResetModal] = useState(false);
 
@@ -46,10 +42,12 @@ export default function ResourcesPage() {
 
   const blockedGamesCount = blockedGamesList.length;
   const recentHistory = history.slice(0, 8);
+  const canUnlock = lives >= unlockLifeCost;
+  const livesLabel = formatLives(lives);
 
   const getGameTitle = (gameId: string) => {
     const game = getGameById(gameId);
-    return game ? game.title : gameId;
+    return game ? game.title : gameId || "Plataforma";
   };
 
   const getHistoryLabel = (eventType: string) => {
@@ -72,6 +70,8 @@ export default function ResourcesPage() {
         return "Jogo bloqueado";
       case "UNLOCKED_BY_POINTS":
         return "Desbloqueio por pontos";
+      case "UNLOCKED_BY_LIFE":
+        return "Desbloqueio por vida";
       case "UNLOCKED_BY_TIME":
         return "Desbloqueio por tempo";
       case "BOUGHT_EXTRA_LIFE":
@@ -94,17 +94,6 @@ export default function ResourcesPage() {
     setUnlockTarget(null);
   };
 
-  const openLifeModal = (gameId: string, gameTitle: string) => {
-    setLifeTarget({
-      id: gameId,
-      title: gameTitle,
-    });
-  };
-
-  const closeLifeModal = () => {
-    setLifeTarget(null);
-  };
-
   const handleConfirmUnlock = () => {
     if (!unlockTarget) return;
 
@@ -114,7 +103,7 @@ export default function ResourcesPage() {
 
     if (!success) {
       setFeedbackMessage(
-        "Você não possui pontos suficientes para desbloquear este jogo."
+        "Você está sem vidas para desbloquear este jogo."
       );
       setUnlockTarget(null);
       return;
@@ -127,24 +116,17 @@ export default function ResourcesPage() {
   };
 
   const handleConfirmBuyLife = () => {
-    if (!lifeTarget) return;
-
     playBeep();
+    setShowLifeModal(false);
 
-    const success = buyExtraLife(lifeTarget.id);
-
-    if (!success) {
+    if (!buyExtraLife()) {
       setFeedbackMessage(
-        "Você não possui pontos suficientes para comprar um ponto de vida extra."
+        "Você não possui pontos suficientes para comprar uma vida."
       );
-      setLifeTarget(null);
       return;
     }
 
-    setFeedbackMessage(
-      `Você comprou +1 ponto de vida para o jogo "${lifeTarget.title}".`
-    );
-    setLifeTarget(null);
+    setFeedbackMessage("Você comprou +1 vida.");
   };
 
   const handleConfirmReset = () => {
@@ -208,12 +190,10 @@ export default function ResourcesPage() {
         <div className="stat-card">
           <div className="stat-icon">❤️</div>
           <div>
-            <h3>Custos</h3>
+            <h3>Vidas</h3>
+            <strong>{livesLabel}</strong>
             <p>
-              <strong>Vida: {extraLifeCost} pontos</strong>
-            </p>
-            <p>
-              <strong>Desbloqueio: {unlockCost} pontos</strong>
+              Vida: {extraLifeCost} pontos · Desbloqueio: {unlockLifeCost} vida
             </p>
           </div>
         </div>
@@ -232,6 +212,34 @@ export default function ResourcesPage() {
       </div>
 
       <div className="rewards-grid">
+        <div className="reward-card">
+          <div className="reward-top">
+            <div className="reward-icon">❤️</div>
+            <div>
+              <h3>Vida</h3>
+              <p>Cada vida desbloqueia um jogo bloqueado.</p>
+            </div>
+          </div>
+
+          <div className="reward-bottom">
+            <div>
+              <span className="reward-label">Custo</span>
+              <div className="reward-cost">{extraLifeCost} pontos</div>
+            </div>
+
+            <div className="reward-action">
+              <span>Suas vidas: {livesLabel}</span>
+              <button
+                type="button"
+                onClick={() => setShowLifeModal(true)}
+                disabled={points < extraLifeCost}
+              >
+                Comprar vida
+              </button>
+            </div>
+          </div>
+        </div>
+
         {blockedGamesList.length === 0 ? (
           <div className="reward-card">
             <div className="reward-top">
@@ -273,15 +281,15 @@ export default function ResourcesPage() {
                 <div className="reward-bottom">
                   <div>
                     <span className="reward-label">Custo</span>
-                    <div className="reward-cost">{unlockCost} pontos</div>
+                    <div className="reward-cost">{unlockLifeCost} vida</div>
                   </div>
 
                   <div className="reward-action">
-                    <span>Seus pontos: {points}</span>
+                    <span>Suas vidas: {livesLabel}</span>
                     <button
                       type="button"
                       onClick={() => openUnlockModal(game.id, game.title)}
-                      disabled={points < unlockCost}
+                      disabled={!canUnlock}
                     >
                       Desbloquear
                     </button>
@@ -301,7 +309,6 @@ export default function ResourcesPage() {
         {games.map((game) => {
           const blocked = isGameBlocked(game.id);
           const blockedUntil = getGameBlockedUntil(game.id);
-          const lives = getGameLives(game.id);
 
           return (
             <div key={game.id} className="history-card">
@@ -314,7 +321,6 @@ export default function ResourcesPage() {
 
               <div className="history-meta">
                 <span>Categoria: {game.category}</span>
-                <span>Vidas: {lives}</span>
                 {blocked ? (
                   <span>
                     Bloqueado até{" "}
@@ -325,16 +331,6 @@ export default function ResourcesPage() {
                 ) : (
                   <span>Disponível para jogar normalmente</span>
                 )}
-              </div>
-
-              <div className="history-meta" style={{ marginTop: 8 }}>
-                <button
-                  type="button"
-                  onClick={() => openLifeModal(game.id, game.title)}
-                  disabled={points < extraLifeCost}
-                >
-                  Comprar ponto de vida
-                </button>
               </div>
             </div>
           );
@@ -370,17 +366,13 @@ export default function ResourcesPage() {
       </div>
 
       <ConfirmModal
-        isOpen={!!lifeTarget}
-        title="Comprar ponto de vida"
-        message={
-          lifeTarget
-            ? `Deseja comprar +1 ponto de vida para o jogo "${lifeTarget.title}" por ${extraLifeCost} pontos?`
-            : ""
-        }
+        isOpen={showLifeModal}
+        title="Comprar vida"
+        message={`Deseja comprar +1 vida por ${extraLifeCost} pontos?`}
         confirmText="Confirmar"
         cancelText="Cancelar"
         onConfirm={handleConfirmBuyLife}
-        onCancel={closeLifeModal}
+        onCancel={() => setShowLifeModal(false)}
       />
 
       <ConfirmModal
@@ -388,7 +380,7 @@ export default function ResourcesPage() {
         title="Desbloquear jogo"
         message={
           unlockTarget
-            ? `Deseja desbloquear o jogo "${unlockTarget.title}" por ${unlockCost} pontos?`
+            ? `Deseja desbloquear o jogo "${unlockTarget.title}" usando ${unlockLifeCost} vida?`
             : ""
         }
         confirmText="Confirmar"

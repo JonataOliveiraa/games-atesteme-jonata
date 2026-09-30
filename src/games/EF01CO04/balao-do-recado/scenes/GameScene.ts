@@ -524,6 +524,7 @@ export class GameScene extends Phaser.Scene {
 
     private onChoice(slot: number) {
         if (this.mode !== 'choose') return
+        if (this.guiding && failOf(this.leg, this.forms[slot])) return
         const resolve = this.choiceWaiter
         this.choiceWaiter = undefined
         resolve?.()

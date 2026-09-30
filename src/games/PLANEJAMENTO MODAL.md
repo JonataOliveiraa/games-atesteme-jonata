@@ -109,24 +109,50 @@ põe, um toque tira** — dá edição sem exigir precisão de dedo.
 
 ---
 
-## 5. O erro, e o que ele não pode ser
+## 5. O erro: errou, perdeu
 
-A TRAVA é padrão do catálogo: o mundo para, o item errado ganha destaque, e só
-a ação certa destrava; depois de dois erros no mesmo item, a opção certa
-pisca. A frase diz **qual** e **por quê**, nunca "tente de novo" e nunca a
-resposta.
+**Todo jogo tolera um erro.** O primeiro erro de decisão, ou o tempo esgotado,
+encerra a partida: `WRONG_ANSWER` + `lose()`, e o `GAME_OVER` sai sozinho. A
+regra inteira, com o código, está em "A derrota" do
+[INSTRUCOES.md](./INSTRUCOES.md).
 
-Três aprendizados que valem para qualquer jogo novo:
+A TRAVA — o mundo para, só a ação certa destrava, a opção certa pisca depois de
+dois erros — **saiu do catálogo**. Não planeje segunda tentativa, dica por
+insistência nem "tente de novo": nada disso chega a acontecer.
 
-1. **Separe erro de dedo de erro de cabeça.** Em Ritmo da Rotina, perder o
-   tempo não trava (a figura volta para a fila); errar o julgamento trava.
-   Travar por dedo lento pune a coisa errada.
+O jogo não sabe que vidas existem. Vida, bloqueio e desbloqueio são da
+plataforma; o planejamento não fala deles.
+
+O que o planejamento precisa trazer, em tabela:
+
+| Conta como erro (encerra) | Não conta (o jogo ignora ou corrige sozinho) |
+|---|---|
+| … cada decisão errada possível | … cada escorregão de dedo possível |
+
+Se uma linha não cabe claramente numa das colunas, o gesto está mal desenhado:
+resolva no controle (seção 4), não na punição.
+
+Quatro aprendizados que valem para qualquer jogo novo:
+
+1. **Separe erro de dedo de erro de cabeça.** Com um erro só, é a decisão mais
+   cara do planejamento. Errar a mira, soltar fora do alvo ou tocar no vazio
+   não pode encerrar a partida; escolher errado encerra. Em Ritmo da Rotina,
+   perder o tempo devolvia a figura para a fila, e só errar o julgamento
+   cobrava.
 2. **Ignorar não é responder.** Deixar passar o que devia ser recusado conta
    como erro — senão a criança aprende que não fazer nada é seguro.
-3. **Nenhum estado sem saída.** Toda combinação de erro precisa ter volta. Em
-   Ritmo da Rotina um passo recusado por chegar cedo era descartado para
-   sempre e a fase ficava impossível de terminar; a correção foi "agora não"
-   querer dizer DEPOIS, mais uma rede de segurança que repõe o que falta.
+3. **A cena do erro cabe em 1,35 segundo.** A plataforma cobre a tela 1,35 s depois
+   do `lose()`; o que o jogo mostrar além disso a criança não vê. Então o erro
+   mostra **o estrago acontecendo** e a pista do certo aparece em seguida
+   (depois do erro, nunca antes da decisão), tudo curto e visual. Cena mais
+   longa que isso toca antes do `lose()`, que só então fecha.
+4. **Nenhum estado sem saída.** O que não é erro precisa ter volta: uma peça
+   recusada por chegar cedo não pode sumir para sempre e deixar a fase
+   impossível de terminar.
+
+**A dificuldade precisa caber em uma partida sem erro.** Um nível que só se
+passa errando uma vez para entender a regra está mal ensinado: o que a criança
+precisa saber vem do tutorial e da primeira fase, que é a mais fácil.
 
 ---
 
@@ -137,7 +163,9 @@ Pontuação do INSTRUCOES manda nisso. Os pontos existem e saem pelo
 `runtimeGameBridge`; o que a criança vê é estrela, selo, bolinha de fase e o
 que ela montou.
 
-Se o jogo tiver relógio, decida com a cabeça no que ele cobra:
+Se o jogo tiver relógio, decida com a cabeça no que ele cobra. **Relógio que
+chega a zero encerra a partida**, igual a um erro — então só ponha contagem
+regressiva onde a pressa é a habilidade:
 
 - **barra que esvazia** cria pressa — serve para jogo de reflexo;
 - **cronômetro que conta para cima** mede sem empurrar — serve para jogo de
@@ -281,7 +309,9 @@ Antes de considerar pronto:
 - [ ] `npx tsc --noEmit` limpo para os arquivos do jogo
 - [ ] `npx eslint <pasta do jogo>` limpo
 - [ ] abre e joga uma fase inteira no navegador
-- [ ] o erro e a trava foram vistos acontecendo, não só lidos no código
+- [ ] cada tipo de erro e o tempo esgotado foram vistos encerrando a partida
+      (`WRONG_ANSWER` + `GAME_OVER` no console), não só lidos no código
+- [ ] erro de dedo (mira, arrasto fora, toque no vazio) não encerra nada
 - [ ] mudo funciona; `?` pausa e reabre o tutorial; retomada sem salto
 - [ ] nenhum número de ponto na tela
 - [ ] nenhum gancho de depuração sobrou (`window.__algo`)
@@ -303,7 +333,8 @@ para as promessas resolverem. **Remova o gancho antes de terminar.**
 4. **A grade** — a tabela de faixas com a coluna do celular.
 5. **Níveis e fases** — a tabela, e o que cresce em cada um.
 6. **As regras, em código** — a função do veredito, escrita como pseudocódigo.
-7. **O erro** — a trava, passo a passo, e o que ela não pode ser.
+7. **O erro** — a tabela do que encerra e do que não encerra, e a cena do
+   erro, passo a passo, terminando no `lose()`.
 8. **Feedback** — a tabela momento → o que acontece.
 9. **Antes da arte existir** — o placeholder e a ordem de produção.
 10. **Registro** — pasta, slug, ícone, onde registrar.

@@ -471,8 +471,9 @@ export class GameScene extends Phaser.Scene {
         await this.ground.settle(id)
         if (gen !== this.gen) return
 
-        this.chargeOnce()
+        if (!this.guiding) this.chargeOnce()
         this.wrongHere += 1
+        if (this.lives.remaining <= 0) return
 
         if (this.wrongHere >= 2) {
             const help = piecesOf(chunk).find(p => !this.placed.has(p.id))

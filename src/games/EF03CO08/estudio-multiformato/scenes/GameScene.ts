@@ -269,7 +269,6 @@ export class GameScene extends Phaser.Scene {
     this.playWrong();
     runtimeGameBridge.emit({ type: "WRONG_ANSWER", gameId: GAME_ID, stage: this.levelConfig.level, pointsEarned: -5 });
     this.lives.lose(); this.livesLeft = this.lives.remaining
-    this.time.delayedCall(300, () => this.showGameOverScreen());
   }
 
   // ─── Start Screen ─────────────────────────────────────────────────────────
@@ -838,9 +837,6 @@ export class GameScene extends Phaser.Scene {
       this.showToast(`Ainda não. ${hint}`, COLORS.red, 2200);
       runtimeGameBridge.emit({ type: "WRONG_ANSWER", gameId: GAME_ID, stage: this.levelConfig.level, pointsEarned: -5 });
       this.lives.lose(); this.livesLeft = this.lives.remaining
-      this.time.delayedCall(350, () => {
-        if (!this.gameEnded) this.n1AnswerLocked = false;
-      });
     }
   }
 
@@ -1318,9 +1314,6 @@ export class GameScene extends Phaser.Scene {
       this.showToast(`Dica: use ${hint.label} para esta missão.`, COLORS.red, 2200);
       runtimeGameBridge.emit({ type: "WRONG_ANSWER", gameId: GAME_ID, stage: this.levelConfig.level, pointsEarned: -5 });
       this.lives.lose(); this.livesLeft = this.lives.remaining
-      this.time.delayedCall(350, () => {
-        if (!this.gameEnded) this.n3AnswerLocked = false;
-      });
       return;
     }
     this.hits += 1;
@@ -1691,74 +1684,9 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
-  private showGameOverScreen() {
-    this.input.enabled = true;
-    this.clearOverlay();
-    const bg = this.addOverlay(this.add.rectangle(640, 360, 1280, 720, 0x1e1b4b, 0.7).setDepth(60));
-    bg.setInteractive();
-    const panel = this.addOverlay(this.add.container(640, 360).setDepth(62));
-    const shadow = this.add.graphics();
-    shadow.fillStyle(0x000000, 0.2);
-    shadow.fillRoundedRect(-298, -196, 596, 392, 30);
-    const panelBg = this.add.graphics();
-    panelBg.fillStyle(0xffffff, 0.97);
-    panelBg.fillRoundedRect(-310, -208, 620, 396, 30);
-    panelBg.lineStyle(5, COLORS.red, 0.8);
-    panelBg.strokeRoundedRect(-310, -208, 620, 396, 30);
-    const topBar = this.add.graphics();
-    topBar.fillStyle(COLORS.red, 1);
-    topBar.fillRoundedRect(-210, -224, 420, 28, 14);
-    const icon = this.createClockIcon(0, -138, 58);
-    const title = this.addSharpText(0, -62, "Tempo esgotado!", {
-      fontSize: "40px", fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif", color: "#dc2626", stroke: "#ffffff", strokeThickness: 6,
-      align: "center", wordWrap: { width: 540 },
-    }).setOrigin(0.5);
-    const reason = this.addSharpText(0, 2, `${this.getScore()} pontos`, {
-      fontSize: "26px", fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif", color: "#334155", align: "center",
-    }).setOrigin(0.5);
-    const stats = this.addSharpText(0, 40, `${this.hits} acertos · ${this.errors} erros`, {
-      fontSize: "19px", fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif", color: "#64748b",
-    }).setOrigin(0.5);
-    const retryBg = this.add.graphics();
-    retryBg.fillStyle(COLORS.green, 1);
-    retryBg.fillRoundedRect(-262, 68, 240, 52, 26);
-    retryBg.lineStyle(4, 0xffffff, 1);
-    retryBg.strokeRoundedRect(-262, 68, 240, 52, 26);
-    const retryTxt = this.addSharpText(-142, 94, "Jogar de novo", {
-      fontSize: "21px", fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif", color: "#ffffff", stroke: "#14532d", strokeThickness: 3,
-    }).setOrigin(0.5);
-    const exitBg = this.add.graphics();
-    exitBg.fillStyle(COLORS.orange, 1);
-    exitBg.fillRoundedRect(22, 68, 240, 52, 26);
-    exitBg.lineStyle(4, 0xffffff, 1);
-    exitBg.strokeRoundedRect(22, 68, 240, 52, 26);
-    const exitTxt = this.addSharpText(142, 94, "Sair", {
-      fontSize: "20px", fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif", color: "#ffffff", stroke: "#78350f", strokeThickness: 3,
-    }).setOrigin(0.5);
-    panel.add([shadow, panelBg, topBar, icon, title, reason, stats, retryBg, retryTxt, exitBg, exitTxt]);
-    this.animateModal(panel);
-
-    const rz = this.addOverlay(this.add.zone(640 - 142 * MODAL_SCALE, 360 + 94 * MODAL_SCALE, 258 * MODAL_SCALE, 64 * MODAL_SCALE).setDepth(70));
-    rz.setInteractive({ useHandCursor: true });
-    rz.on("pointerover", () => this.input.setDefaultCursor("pointer"));
-    rz.on("pointerout", () => this.input.setDefaultCursor("default"));
-    rz.on("pointerdown", () => { this.playClick(); this.scene.restart({ lives: this.livesLeft, level: this.levelConfig.level, hits: 0, errors: 0 }); });
-
-    const ez = this.addOverlay(this.add.zone(640 + 142 * MODAL_SCALE, 360 + 94 * MODAL_SCALE, 258 * MODAL_SCALE, 64 * MODAL_SCALE).setDepth(70));
-    ez.setInteractive({ useHandCursor: true });
-    ez.on("pointerover", () => this.input.setDefaultCursor("pointer"));
-    ez.on("pointerout", () => this.input.setDefaultCursor("default"));
-    ez.on("pointerdown", () => { this.playClick(); EventBus.emit("exit-game"); });
-  }
-
   // ─── Overlay Helpers ──────────────────────────────────────────────────────
 
-  private addOverlay<T extends Phaser.GameObjects.GameObject>(o: T) { this.overlayObjects.push(o); return o; }
   private clearOverlay() { this.overlayObjects.forEach((o) => o.destroy()); this.overlayObjects = []; this.input.setDefaultCursor("default"); }
-  private animateModal(m: Phaser.GameObjects.Container) {
-    m.setAlpha(0); m.setScale(0.88);
-    this.tweens.add({ targets: m, alpha: 1, scale: MODAL_SCALE, duration: 260, ease: "Back.easeOut" });
-  }
 
   // ─── Graphics Icons ───────────────────────────────────────────────────────
 
@@ -1826,19 +1754,6 @@ export class GameScene extends Phaser.Scene {
       c.add(g);
     }
     return c;
-  }
-
-  private createClockIcon(x: number, y: number, size: number) {
-    const g = this.add.graphics();
-    g.setPosition(x, y);
-    g.lineStyle(5, COLORS.red, 1);
-    g.fillStyle(0xffffff, 0.95);
-    g.fillCircle(0, 0, size * 0.42);
-    g.strokeCircle(0, 0, size * 0.42);
-    g.lineStyle(4, COLORS.red, 1);
-    g.lineBetween(0, 0, 0, -size * 0.22);
-    g.lineBetween(0, 0, size * 0.18, size * 0.08);
-    return g;
   }
 
   // ─── Utilities ────────────────────────────────────────────────────────────

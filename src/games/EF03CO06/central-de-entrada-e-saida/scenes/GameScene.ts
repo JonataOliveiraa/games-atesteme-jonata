@@ -530,10 +530,6 @@ export class GameScene extends Phaser.Scene {
       this.reactThenIdle('op-05', round.wrongLine)
       await cable.fault()
       if (gen !== this.stageGen) { cable.destroy(); return }
-      await cable.unplug(280)
-      if (gen !== this.stageGen) return
-      paintPort(port.bg, PORTS.w, PORTS.h, PORTS.r, tone, 'normal')
-      this.locked = false
       return
     }
 
@@ -630,11 +626,6 @@ export class GameScene extends Phaser.Scene {
       cardReject(this, card.box)
       const line = `O ${device.label.toLowerCase()} ${device.action}.`
       this.reactThenIdle('op-05', line)
-      this.time.delayedCall(900, () => {
-        if (gen !== this.stageGen) return
-        paintCard(card.bg, card.w, card.h, BANK.r, 'normal')
-        this.locked = false
-      })
       return
     }
 
@@ -838,13 +829,6 @@ export class GameScene extends Phaser.Scene {
       paintSlot(bad.bg, RAIL.slotW, RAIL.slotH, RAIL.r, C.red, true)
       FX.shake(this, bad.box, { amount: 10, times: 3 })
       this.reactThenIdle('op-05', line)
-
-      this.time.delayedCall(1100, () => {
-        if (gen !== this.stageGen) return
-        this.clearSlot(bad.kind)
-        this.locked = false
-        this.syncPrimary()
-      })
       return
     }
 

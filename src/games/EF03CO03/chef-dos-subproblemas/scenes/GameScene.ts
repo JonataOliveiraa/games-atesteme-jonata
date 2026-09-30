@@ -1006,7 +1006,6 @@ export class GameScene extends Phaser.Scene {
     }
 
     private fail(ids: string[], message: string) {
-        const gen = this.stageGen
         this.errors += 1
         runtimeGameBridge.emit({ type: 'WRONG_ANSWER', gameId: GAME_ID, pointsEarned: -2, stage: this.level.level })
         this.lives.lose(); this.livesLeft = this.lives.remaining
@@ -1024,13 +1023,6 @@ export class GameScene extends Phaser.Scene {
                 paintPlate(drop.bg, drop.w, drop.h, DROPS.r, 'warning')
                 FX.shake(this, drop.box, { amount: 9, times: 3 })
             }
-        })
-
-        this.time.delayedCall(950, () => {
-            if (gen !== this.stageGen) return
-            ids.forEach(id => this.removePlaced(id, true))
-            this.locked = false
-            this.syncPrimary()
         })
     }
 

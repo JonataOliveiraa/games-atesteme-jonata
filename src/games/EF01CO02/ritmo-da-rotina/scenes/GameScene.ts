@@ -895,7 +895,6 @@ export class GameScene extends Phaser.Scene {
      */
     private async trip(item: Live, kind: HitKind) {
         if (this.state === 'locked') return
-        const gen = this.gen
 
         this.state = 'locked'
         item.cue.mistakes += 1
@@ -919,16 +918,6 @@ export class GameScene extends Phaser.Scene {
         this.emitCheckpoint()
 
         void FX.shake(this, fx(item.icon), { amount: 10, times: 3 })
-
-        if (item.cue.mistakes >= 2) {
-            this.strip.blink(this.done)
-            this.controls.hint(expectedHit(item.cue, this.done))
-        }
-
-        await FX.wait(this, 260)
-        if (gen !== this.gen) return
-        this.stage.arm()
-        this.controls.arm()
     }
 
     // ─────────────────────────────────────────────────────── fim do nível

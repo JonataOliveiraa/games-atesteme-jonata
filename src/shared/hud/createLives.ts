@@ -4,11 +4,15 @@ import hpIconUrl from '../../assets/global/hp-icon.png'
 
 /**
  * ══════════════════════════════════════════════════════════════════════════
- *  AS VIDAS DA PARTIDA
+ *  A TOLERÂNCIA A ERRO DA PARTIDA
  * ══════════════════════════════════════════════════════════════════════════
  *
  * Um ícone e o número ao lado. Guarda a REGRA junto com o desenho: quando o
  * número chega a zero, sai o `GAME_OVER`.
+ *
+ * O número começa em 1 (`shared/level/vidasIniciais.ts`): o primeiro `lose()`
+ * já encerra a partida. Estas "vidas" não são as da plataforma — aquelas são
+ * a moeda que desbloqueia um jogo bloqueado, e o jogo nem sabe que existem.
  *
  * A regra mora aqui, e não em cada jogo, de propósito. São 49 jogos; 49
  * contadores escritos à mão seriam 49 chances de errar o mesmo detalhe — e um
@@ -16,9 +20,8 @@ import hpIconUrl from '../../assets/global/hp-icon.png'
  *
  * ── ÍCONE E NÚMERO, NÃO UM ÍCONE POR VIDA ────────────────────────────────
  *
- * A fileira de corações cresce com o total, e a plataforma pode mandar
- * `lives=5` num jogo cujo header foi desenhado para três. Ícone + número ocupa
- * a mesma largura com qualquer quantidade.
+ * A fileira de corações cresce com o total. Ícone + número ocupa a mesma
+ * largura com qualquer quantidade.
  *
  * ── O JOGO CONTINUA EMITINDO O `WRONG_ANSWER` ────────────────────────────
  *

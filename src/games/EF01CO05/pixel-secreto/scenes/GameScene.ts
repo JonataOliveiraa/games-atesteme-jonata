@@ -48,22 +48,6 @@ export class GameScene extends Phaser.Scene {
     ink: 0x25327a,
   };
 
-  private handleExternalFinalGameOver = (raw: Event) => {
-    const event = raw as CustomEvent<{
-      blockedUntil?: string;
-      unlockCost?: number;
-    }>;
-
-    this.showGameOverScreen(
-      event.detail?.blockedUntil,
-      event.detail?.unlockCost ?? 30
-    );
-  };
-
-  private handleExternalResumeGame = () => {
-    this.resumeAfterPlatformModal();
-  };
-
   constructor() {
     super({ key: "GameScene" });
   }
@@ -93,16 +77,6 @@ export class GameScene extends Phaser.Scene {
     this.registerPaintCursorEvents();
     this.registerPlatformCommands();
     this.updatePaintCursor();
-
-    window.addEventListener(
-      "pixel-secret-show-final-game-over",
-      this.handleExternalFinalGameOver as EventListener
-    );
-
-    window.addEventListener(
-      "pixel-secret-resume-game",
-      this.handleExternalResumeGame
-    );
 
     runtimeGameBridge.emit({
       type: "GAME_READY",
@@ -146,16 +120,6 @@ export class GameScene extends Phaser.Scene {
 
   shutdown() {
     this.timerEvent?.destroy();
-
-    window.removeEventListener(
-      "pixel-secret-show-final-game-over",
-      this.handleExternalFinalGameOver as EventListener
-    );
-
-    window.removeEventListener(
-      "pixel-secret-resume-game",
-      this.handleExternalResumeGame
-    );
 
     if (this.unsubscribePlatformCommands) {
       this.unsubscribePlatformCommands();
@@ -1005,260 +969,6 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
-  private showErrorScreen() {
-    this.clearOverlay();
-    this.levelStarted = false;
-
-    if (this.timerEvent) {
-      this.timerEvent.paused = true;
-    }
-
-    const bg = this.addOverlayObject(
-      this.add.rectangle(640, 360, 1280, 720, 0x111827, 0.95).setDepth(300)
-    );
-
-    const title = this.addOverlayObject(
-      this.add
-        .text(640, 175, "Você cometeu um erro!", {
-          fontSize: "52px",
-          fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif",
-          color: "#ffffff",
-          stroke: "#ef4444",
-          strokeThickness: 6,
-        })
-        .setOrigin(0.5)
-        .setDepth(301)
-    );
-
-    const subtitle = this.addOverlayObject(
-      this.add
-        .text(640, 310, "-1 ponto de vida.\nDeseja tentar novamente?", {
-          fontSize: "30px",
-          fontFamily: "DynaPuff, Arial, sans-serif",
-          color: "#ffffff",
-          align: "center",
-          wordWrap: { width: 820 },
-        })
-        .setOrigin(0.5)
-        .setDepth(301)
-    );
-
-    const retryButton = this.addOverlayObject(
-      this.add
-        .rectangle(500, 500, 310, 66, 0x22c55e, 1)
-        .setStrokeStyle(4, 0xffffff)
-        .setInteractive({ useHandCursor: true })
-        .setDepth(302)
-    );
-
-    const retryText = this.addOverlayObject(
-      this.add
-        .text(500, 500, "Tentar novamente", {
-          fontSize: "24px",
-          fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif",
-          color: "#ffffff",
-        })
-        .setOrigin(0.5)
-        .setDepth(303)
-    );
-
-    const exitButton = this.addOverlayObject(
-      this.add
-        .rectangle(790, 500, 220, 66, 0xef4444, 1)
-        .setStrokeStyle(4, 0xffffff)
-        .setInteractive({ useHandCursor: true })
-        .setDepth(302)
-    );
-
-    const exitText = this.addOverlayObject(
-      this.add
-        .text(790, 500, "Sair", {
-          fontSize: "24px",
-          fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif",
-          color: "#ffffff",
-        })
-        .setOrigin(0.5)
-        .setDepth(303)
-    );
-
-    const retry = () => {
-      this.playClick();
-      this.clearOverlay();
-      window.dispatchEvent(new CustomEvent("pixel-secret-show-extra-life-modal"));
-    };
-
-    const exit = () => {
-      this.playClick();
-      window.dispatchEvent(new CustomEvent("pixel-secret-exit-game"));
-    };
-
-    retryButton.on("pointerdown", retry);
-    retryText.setInteractive({ useHandCursor: true });
-    retryText.on("pointerdown", retry);
-
-    exitButton.on("pointerdown", exit);
-    exitText.setInteractive({ useHandCursor: true });
-    exitText.on("pointerdown", exit);
-
-    retryButton.on("pointerover", () => retryButton.setFillStyle(0x16a34a));
-    retryButton.on("pointerout", () => retryButton.setFillStyle(0x22c55e));
-    exitButton.on("pointerover", () => exitButton.setFillStyle(0xdc2626));
-    exitButton.on("pointerout", () => exitButton.setFillStyle(0xef4444));
-
-    this.tweens.add({
-      targets: [title, subtitle, retryButton, retryText, exitButton, exitText],
-      alpha: { from: 0, to: 1 },
-      y: "+=10",
-      duration: 450,
-      ease: "Back.Out",
-    });
-
-    void bg;
-  }
-
-  private showGameOverScreen(blockedUntil?: string, unlockCost = 30) {
-    this.clearOverlay();
-    this.levelStarted = false;
-    this.input.enabled = true;
-    this.timerEvent?.remove(false);
-
-    const formattedDate = blockedUntil
-      ? new Date(blockedUntil).toLocaleString("pt-BR")
-      : "em 2 dias";
-
-    const bg = this.addOverlayObject(
-      this.add.rectangle(640, 360, 1280, 720, 0x111827, 0.96).setDepth(300)
-    );
-
-    const title = this.addOverlayObject(
-      this.add
-        .text(640, 120, "GAME OVER", {
-          fontSize: "64px",
-          fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif",
-          color: "#ffffff",
-          stroke: "#ef4444",
-          strokeThickness: 8,
-        })
-        .setOrigin(0.5)
-        .setDepth(301)
-    );
-
-    const text = this.addOverlayObject(
-      this.add
-        .text(
-          640,
-          270,
-          `Você ficou sem vidas.\n\nO jogo foi bloqueado até:\n${formattedDate}`,
-          {
-            fontSize: "30px",
-            fontFamily: "DynaPuff, Arial, sans-serif",
-            color: "#ffffff",
-            align: "center",
-            wordWrap: { width: 900 },
-          }
-        )
-        .setOrigin(0.5)
-        .setDepth(301)
-    );
-
-    const unlockInfo = this.addOverlayObject(
-      this.add
-        .text(640, 430, `Você pode desbloquear agora usando ${unlockCost} pontos.`, {
-          fontSize: "26px",
-          fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif",
-          color: "#facc15",
-          align: "center",
-          wordWrap: { width: 900 },
-        })
-        .setOrigin(0.5)
-        .setDepth(301)
-    );
-
-    // botão desbloquear
-    const unlockButton = this.addOverlayObject(
-      this.add
-        .rectangle(470, 560, 340, 74, 0x9333ea, 1)
-        .setStrokeStyle(4, 0xffffff)
-        .setInteractive({ useHandCursor: true })
-        .setDepth(302)
-    );
-
-    const unlockText = this.addOverlayObject(
-      this.add
-        .text(470, 560, "Desbloquear jogo", {
-          fontSize: "24px",
-          fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif",
-          color: "#ffffff",
-        })
-        .setOrigin(0.5)
-        .setDepth(303)
-    );
-
-    // botão sair
-    const exitButton = this.addOverlayObject(
-      this.add
-        .rectangle(820, 560, 320, 74, 0xef4444, 1)
-        .setStrokeStyle(4, 0xffffff)
-        .setInteractive({ useHandCursor: true })
-        .setDepth(302)
-    );
-
-    const exitText = this.addOverlayObject(
-      this.add
-        .text(820, 560, "Voltar aos jogos", {
-          fontSize: "24px",
-          fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif",
-          color: "#ffffff",
-        })
-        .setOrigin(0.5)
-        .setDepth(303)
-    );
-
-    const unlock = () => {
-      this.playClick();
-
-      window.dispatchEvent(
-        new CustomEvent("pixel-secret-open-unlock-modal")
-      );
-    };
-
-    const exit = () => {
-      this.playClick();
-
-      window.dispatchEvent(
-        new CustomEvent("pixel-secret-exit-game")
-      );
-    };
-
-    unlockButton.on("pointerdown", unlock);
-
-    unlockText.setInteractive({ useHandCursor: true });
-    unlockText.on("pointerdown", unlock);
-
-    exitButton.on("pointerdown", exit);
-
-    exitText.setInteractive({ useHandCursor: true });
-    exitText.on("pointerdown", exit);
-
-    this.tweens.add({
-      targets: [
-        title,
-        text,
-        unlockInfo,
-        unlockButton,
-        unlockText,
-        exitButton,
-        exitText,
-      ],
-      alpha: { from: 0, to: 1 },
-      y: "+=10",
-      duration: 450,
-      ease: "Back.Out",
-    });
-
-    void bg;
-  }
-
 
   private hideCellLabel(row: number, col: number) {
     const label = this.children.getByName(`label-${row}-${col}`);
@@ -1915,13 +1625,6 @@ export class GameScene extends Phaser.Scene {
     this.livesLeft = this.lives.remaining;
 
     this.emitProgress();
-
-    if (this.lives.remaining <= 0) return;
-
-    this.showFloatingMessage("Tempo esgotado!", 0xef4444);
-    this.time.delayedCall(1600, () => {
-      this.scene.restart({ lives: this.livesLeft, level: this.levelConfig.level });
-    });
   }
 
   private getGridCellSize(rows: number, cols: number) {

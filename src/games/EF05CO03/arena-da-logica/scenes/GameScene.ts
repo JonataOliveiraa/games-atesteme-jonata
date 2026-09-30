@@ -693,6 +693,7 @@ export class GameScene extends Phaser.Scene {
         }
 
         this.emitCheckpoint()
+        if (this.lives.remaining <= 0) return
         this.time.delayedCall(correct ? 700 : 260, () => this.showFeedback(correct, message))
     }
 
@@ -722,6 +723,7 @@ export class GameScene extends Phaser.Scene {
         if (!p.justify) return
 
         this.locked = true
+        this.stopTimer()
         const overlay = this.add.rectangle(W / 2, H / 2, W, H, C.ink, 0.78)
             .setDepth(300).setInteractive()
         const panel = this.add.container(W / 2, H / 2).setDepth(301)
@@ -1100,7 +1102,11 @@ export class GameScene extends Phaser.Scene {
     }
 
     private onTimeUp() {
-        if (this.ended || this.locked) return
+        if (this.ended) return
+        if (this.locked) {
+            this.time.delayedCall(200, () => this.onTimeUp())
+            return
+        }
         this.ended = true
         this.locked = true
         this.stopTimer()
@@ -1110,10 +1116,8 @@ export class GameScene extends Phaser.Scene {
             pointsEarned: -3, stage: this.level.level,
         })
             this.lives.lose(); this.livesLeft = this.lives.remaining
-        runtimeGameBridge.emit({ type: 'GAME_OVER', gameId: GAME_ID, stage: this.level.level })
 
         this.playError()
-        this.showFeedback(false, 'O tempo acabou! Vamos tentar este portão de novo.')
     }
 
     private emitCheckpoint() {

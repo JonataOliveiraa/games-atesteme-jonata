@@ -1,231 +1,317 @@
-# As vidas dos jogos — onde isto parou
+# A derrota dos jogos — a regra e a varredura de 30/09/2026
 
-Anotação de trabalho em andamento. As vidas foram para 11 dos 49 jogos;
-faltam 38. Este arquivo existe para você retomar sem precisar reconstruir o
-raciocínio.
+Este arquivo era a anotação de trabalho das "vidas por jogo". Aquela regra
+acabou. O que vale agora está em "A derrota: um erro, fim de jogo" do
+[INSTRUCOES.md](./INSTRUCOES.md); aqui fica o resumo e o que a varredura dos
+jogos achou.
 
-Última mexida: 01/09/2026.
+## A regra, em quatro linhas
 
----
+- Todo jogo tolera **um** erro. Errou uma decisão, ou o tempo acabou:
+  `WRONG_ANSWER` + `lose()`, e o `GAME_OVER` sai de dentro do `lose()`.
+- O jogo não sabe que vidas existem. Vida, bloqueio de 24 horas e desbloqueio
+  são da plataforma.
+- `shared/level/vidasIniciais.ts` devolve sempre 1. `?lives=` e o `lives` do
+  `START_GAME` são ignorados. Os corações continuam ocultos.
+- O `GAME_OVER` sai na hora e o toque é cortado no mesmo instante
+  (`shared/bridge/partida.ts`). A tela espera 1,35 s
+  (`ESPERA_PARA_VER_O_ERRO_MS`): o jogo segue mostrando o erro, e só então o
+  Phaser congela e a plataforma cobre o jogo (no embed, "Fim de jogo" e
+  `/reprove`; no protótipo, o modal). O bridge descarta qualquer resultado
+  emitido depois do `GAME_OVER`.
 
-## O que se quer
+## A varredura
 
-Uma regra só, igual para os 49: a criança começa a partida com as vidas que a
-plataforma mandou em `?lives=`, cada erro real custa uma, e no zero sai o
-`GAME_OVER` — que é o que reprova o desafio.
+Revisão por leitura do código dos 95 jogos que têm código, procurando onde a
+regra falha.
 
-As vidas valem pela **partida inteira**, não por nível. Trocar de nível não
-devolve vida nenhuma.
+**Estado em 30/09/2026:** os itens 1 (erro de decisão), 2 (guia), 4 (tempo) e
+5 (código depois do `lose()`) foram corrigidos. O item 3 não é defeito, por
+decisão. O que ainda está aberto vem marcado em cada item.
 
-O tempo esgotado continua reprovando na hora, sem passar pelas vidas. Isso é
-decisão de projeto, não esquecimento.
+O ponto central está certo em quase todos: o `WRONG_ANSWER` e o `lose()` andam
+juntos. Não apareceu nenhum caso de `WRONG_ANSWER` sem `lose()`. O que falha
+fica nas bordas, e está abaixo por ordem de gravidade.
 
----
+Limite da revisão: foi leitura dirigida (os pontos de erro, de tempo e o que
+roda depois do `lose()`), sem jogar. Os tempos citados são soma das durações
+lidas no código, não medição.
 
-## Como funciona
+### 1. Erro de decisão que não encerra a partida — corrigido
 
-### O valor chega pelo `registry`, não pelo `START_GAME`
+A criança errava e o jogo seguia. Agora o erro encerra a partida em 14 dos 17
+jogos da tabela. Ficou como estava:
 
-`PhaserCanvas` grava `vidasIniciais` no registry do Phaser dentro do
-`preBoot`, antes de qualquer cena existir. É o mesmo caminho do `faseInicial`,
-e pela mesma razão: o `START_GAME` chega **depois** do boot, com a cena já
-montada, e um jogo que só descobrisse as vidas ali teria que se reiniciar na
-frente da criança para desenhar o número certo.
+- `robo-sorrateiro`: a sala guiada 1-1 continua sem cobrar (treino);
+- `kit-do-solucionador`: caminho ruim com a ferramenta certa continua
+  grátis, à espera de decisão;
+- `desktop-digital-infantil`: calculadora e gaveta erradas agora cobram, mas
+  usar o aplicativo errado ainda só cobra na terceira vez;
+- `escolha-a-ferramenta-certa`: a peneira cobra; a justificativa errada com a
+  ferramenta certa continua só perdendo o bônus.
 
-`shared/level/vidasIniciais.ts` lê esse valor. `lives=0` vira 1 e registra o
-caso no console: zero reprovaria antes do primeiro toque, o que nunca é o que
-se quis dizer.
+No `atelier-codigos-digitais` a saída foi cobrar a célula pintada com a tinta
+errada, como no `pixel-secreto`.
 
-### A regra mora no componente, não nos jogos
+A tabela abaixo descreve o que havia antes.
 
-`shared/hud/createLives.ts` desenha o ícone e o número **e** guarda a regra:
-no zero, emite `GAME_OVER`, uma vez só. Nenhum jogo decide quando reprovar.
-
-Isso é de propósito. São 49 jogos; 49 contadores escritos à mão seriam 49
-chances de errar o mesmo detalhe — e já aconteceu uma vez, no
-`desktop-digital-infantil`, onde um contador que não zerava cobrava uma vida
-por toque a partir do terceiro.
-
-O jogo continua emitindo o `WRONG_ANSWER` dele (cada um tem o seu
-`pointsEarned`). O contrato é:
-
-```ts
-runtimeGameBridge.emit({ type: 'WRONG_ANSWER', ... })   // o jogo
-this.lives.lose()                                       // e depois isto
-```
-
-### O que entra em cada jogo
-
-```ts
-// BootScene.preload()
-preloadLives(this)
-
-// GameScene.init()
-this.livesTotal = vidasIniciais(this, 3)
-this.livesLeft = data?.lives ?? this.livesTotal
-
-// GameScene.create() — FORA de container que sofra removeAll()
-this.lives = createLives(this, {
-    total: this.livesTotal,
-    remaining: this.livesLeft,
-    gameId: GAME_ID,
-    x: 40, y: 40, size: 30,
-    stage: () => this.level.level,
-})
-this.events.once('shutdown', () => this.lives.destroy())
-
-// no erro real
-this.lives.lose(); this.livesLeft = this.lives.remaining
-
-// em cada scene.restart que troca de nível
-this.scene.restart({ ..., lives: this.livesLeft })
-```
-
-O `depth` padrão é **50**: acima do conteúdo do jogo e ABAIXO de qualquer
-overlay — tutorial (9000+), intro e fim de nível (180+). Os corações são parte
-do header e não flutuam por cima dele.
-
----
-
-## Os corações estão OCULTOS
-
-`VIDAS_VISIVEIS = false`, no topo de `shared/hud/createLives.ts`, esconde o
-par ícone+número nos 49 jogos.
-
-**A contagem continua rodando.** `lose()` roda, e no zero o `GAME_OVER` sai
-igual — o que some é só o desenho. Na prática, hoje a criança perde a partida
-sem nenhum aviso na tela.
-
-Isso é aceitável enquanto o recurso está parado, mas **não pode ir para
-produção assim**. Duas saídas quando chegar a hora:
-
-- virar `VIDAS_VISIVEIS` para `true` (as posições precisam estar prontas), ou
-- parar de emitir o `GAME_OVER` enquanto estiver oculto — é um `if` dentro do
-  `lose()`, e aí a reprovação volta a ser só a da `EmbedGamePage`.
-
-Com o modo de ajuste (M) ligado, o componente aparece mesmo oculto: é assim
-que se acerta a posição sem ligar o recurso.
-
-## Ajustar a posição: a tecla M
-
-Só no dev server. Abra o jogo:
-
-```
-http://localhost:5174/jogos/<slug>?embed=1&inline=1&stage=1&points=0&lives=3
-```
-
-- **M** liga o ajuste: aparece uma moldura verde com as coordenadas
-- **WASD** ou **setas** movem de 1 em 1 px
-- **Shift** junto move de 10 em 10
-- **M** de novo desliga e grava em `lives-positions.json`, na raiz
-
-A moldura mostra a caixa real que o componente ocupa — é assim que se vê se
-está encostando em outra coisa do header.
-
-Para aplicar o JSON nos arquivos, um script percorre cada `createLives` e
-troca `x`, `y` e `size`. Ele não está versionado; peça que eu refaça.
-
----
-
-## Onde parou
-
-### O componente está nos 49
-
-Todos criam a barra, todos chamam `lose()` no erro, e as 70 chamadas de
-`lose()` ficam logo depois de um `WRONG_ANSWER` — conferido por varredura.
-
-### A posição foi ajustada em 11
-
-`base-dos-classificadores` · `corrida-dos-parecidos` · `ritmo-da-rotina` ·
-`trilha-do-passo-a-passo` · `oficina-dos-algoritmos` · `pulo-programado` ·
-`correio-multimidia` · `passe-da-mensagem` · `pixel-secreto` ·
-`desktop-digital-infantil` · `hangar-dos-modelos`
-
-**Os outros 38 estão em 40,40**, que é só o ponto de partida. Em vários o
-ícone cai atrás do chip do nível — no `tribunal-do-verdadeiro-ou-falso`, por
-exemplo, ele existe mas some debaixo do "NÍVEL 1". Passe o M em cada um.
-
----
-
-## O que ainda precisa de decisão
-
-### O ícone está branco em todos
-
-`hp-icon.png` é branco de propósito, para ser tingido pelo `tint` de cada
-jogo. Nenhum dos 11 recebeu cor ainda. Em fundo escuro fica bom; no
-`pixel-secreto`, de fundo claro e rosado, ele quase some.
-
-Duas saídas: puxar a cor de destaque do `theme.ts` de cada jogo, ou fixar uma
-cor só para os 49.
-
-### Os sistemas de derrota paralelos foram embora
-
-Nove jogos tinham a regra própria deles. Todas saíram; **errou é
-`WRONG_ANSWER`, e quem decide a derrota são as vidas**.
-
-| Jogo | Tinha | Virou |
+| Jogo | O que acontece | Onde |
 |---|---|---|
-| `cidade-das-decisoes`, `labirinto-do-enquanto`, `monte-seu-computador`, `missao-arquivo-seguro` | `consecutiveErrors >= 3` | `this.lives.remaining <= 0` |
-| `sistema-operacional` | 3 luzes próprias | as luzes mostram as vidas da plataforma |
-| `base-dos-classificadores`, `oficina-dos-algoritmos` | `currentLives` próprio | o componente conta |
-| `desktop-digital-infantil`, `tribunal-do-verdadeiro-ou-falso` | campo `lives` carregador | removido |
+| `museu-das-estruturas` | cada erro só soma num contador; a cobrança sai no fim da tarefa, junto com o "Conseguiu!". Quem erra e não conclui nunca é cobrado. No nível 2, escolher a sala errada não conta nada | `GameScene.ts:1203-1219`, `:395-404` |
+| `circuito-da-verdade` | resposta errada mostra dica e libera de novo; a 3ª dica entrega a resposta. A cobrança só sai no fim da fase | `GameScene.ts:1098-1126`, `:1134-1153` |
+| `a-busca-do-bibliotecario` | o 1º erro de cada passo é de graça; só o 2º no mesmo passo cobra | `GameScene.ts:326-338` |
+| `desktop-digital-infantil` | só o 3º desvio cobra; conta errada na calculadora e arquivo na gaveta errada não cobram | `GameScene.ts:504`, `apps/apps.ts:332-337`, `:480-486` |
+| `revezamento-em-lista` | a única prova do nível 1 é "guiada", e prova guiada não cobra: o nível 1 inteiro tem erro grátis | `GameScene.ts:492`, `data/levels.ts:229-233` |
+| `atelier-codigos-digitais` | pintar a célula errada nunca é erro; os níveis 1 e 2 não têm como perder | `GameScene.ts:341-374` |
+| `curadoria-com-creditos` | selo que não é verde oferece "Refazer etiqueta" sem custo; só "Continuar assim" cobra | `GameScene.ts:779-782`, `:203-218` |
+| `trilha-do-amanha` | frase errada em "O que mudou?" só baixa os pontos | `GameScene.ts:609-614` |
+| `tradutor-da-maquina` | no nível 3, tocar na fileira que chegou certa só avisa | `GameScene.ts:292-297` |
+| `escolha-a-ferramenta-certa` | na peneira do nível 3, marcar a tecnologia errada só treme; justificativa errada só perde bônus | `GameScene.ts:520-526`, `:1056` |
+| `missao-em-pedacos` | começar pela metade errada (nível 3) e passo fora de ordem na fase final não cobram | `GameScene.ts:363-375`, `:822-827` |
+| `kit-do-solucionador` | rota ruim com a ferramenta certa volta sem custo; ferramenta que vai fazer falta só avisa | `GameScene.ts:732-752`, `:533-541` |
+| `corra-enquanto` | segurar o pedal depois que a condição ficou falsa é grátis: quem segura do início ao fim nunca perde | `GameScene.ts:320-329`, `:372-376` |
+| `sistema-operacional` | tocar na peça certa sem energia (a resposta era NÃO DÁ) é grátis, e o NÃO DÁ pulsa | `GameScene.ts:476-481` |
+| `robo-sorrateiro` | na sala guiada 1-1 a carta errada não cobra (e a certa pontua) | `GameScene.ts:644` |
+| `bolhas-da-seguranca` | perigo que chega à borda fica preso, sem custo, e o toque atrasado ainda rende ponto | `GameScene.ts:315` |
+| `esconde-dados` | ser pega pela lanterna no meio da corrida só devolve ao esconderijo | `GameScene.ts:662-684` |
 
-**As telas de derrota ficaram.** O que mudou foi o gatilho: elas aparecem
-quando as vidas acabam, não pela regra antiga. E o `GAME_OVER` delas saiu — o
-componente já emite, e emitir de novo daria dois resultados para a mesma
-partida.
+Vários destes são escolha de desenho anotada no `PLANEJAMENTO.md` do jogo
+("caminho ruim não é julgamento ruim", "demorar não é erro"). Com a regra nova,
+cada um pede decisão: cobrar, ou declarar que aquilo não é erro.
 
-Junto veio um bug que ninguém tinha visto: os `scene.restart` desses jogos
-passavam o **total** de vidas em vez do saldo, e o saldo se recuperava a cada
-troca de nível. Foram 34 chamadas em 34 jogos. Agora só os botões de
-recomeçar do zero (`level: 1`) devolvem vidas cheias.
+Recusas sem custo que parecem corretas como estão: `caverna-dos-dados` (JUNTAR
+incompleto), `detetives-da-busca` (busca que zera o mural), `formato-certo`
+(arrasto para caixa de outro formato), `missao-arquivo-seguro` (nuvem sem
+internet, arquivo que não cabe), `maestro-do-sistema` (peça ocupada).
 
-### Ainda emitem `GAME_OVER` próprio — e devem
+### 2. O guia que pode encerrar a partida — corrigido
 
-Sete, todos por tempo esgotado, que reprova na hora sem passar pelas vidas:
+O primeiro toque ensinado era de verdade: se a criança tocava errado durante o
+guia, caía no `lose()`. Agora o toque errado durante o guia é recusado sem
+custo (em `garra-dos-grupos` a garra devolve o item à bandeja), e o guia
+continua esperando. No `museu-das-estruturas` o estouro do relógio agora
+espera o tutorial de sala fechar.
 
-`arena-da-logica` · `baralho-das-listas` · `fabrica-de-maquinas` ·
-`guardioes-dos-dados` · `mapas-em-rede` · `montador-de-informacoes` ·
-`sistema-operacional`
+| Jogo | O que acontece | Onde |
+|---|---|---|
+| `garra-dos-grupos` | o agarre do treino guiado, com item errado, perde | `GameScene.ts:220-239`, `guide.ts:92` |
+| `subida-do-dia` | no 1º degrau o guia aponta a carta certa mas as duas ficam tocáveis | `GameScene.ts:187-207`, `guide.ts:43-50` |
+| `balao-do-recado` | a 1ª escolha de forma é guiada, e a forma errada perde | `GameScene.ts:509-520`, `guide.ts:137-146` |
+| `canteiro-de-obras` | no guia da 1.1, a peça "menos uma" tocada perde | `GameScene.ts:332-368`, `:474` |
+| `portoes-logicos` | toque durante a demonstração cancela a demo e vale como resposta | `GameScene.ts:333-350` |
+| `museu-das-estruturas` | o relógio do nível 3 corre com o tutorial de sala aberto | `GameScene.ts:1610-1628` |
 
-### Os sete de emit condicional já foram
+### 3. Erro na mecânica do jogo que encerra a partida — é de propósito
 
-`radar-de-confiabilidade` · `curadoria-com-creditos` · `futuro-em-cena` ·
-`escolha-a-ferramenta-certa` · `museu-das-estruturas` · `circuito-da-verdade` ·
-`arquiteto-das-missoes` emitem `acerto ? CORRECT : WRONG` na mesma linha.
-Receberam a chamada guardada pela negação da condição:
+Com um erro só, estes reprovam por mira, tempo ou gesto. **Decisão do dono do
+projeto (30/09/2026): quando o jogo é construído em cima daquela mecânica,
+errar nela é perder, e é proposital** — a bolinha que acerta a plaquinha errada
+no `ache-o-suspeito` conta. A lista fica como registro, não como pendência.
+Os casos de baixo que não são a mecânica do jogo (resposta vazia, botão em
+cima de outro) ainda podem valer um ajuste, caso a caso.
 
-```ts
-if (!(clean)) { this.lives.lose(); this.livesLeft = this.lives.remaining }
-```
+| Jogo | O que acontece | Onde |
+|---|---|---|
+| `missao-em-pedacos` | encostar no lixo durante a corrida de plataforma perde; o próprio plano chama o trecho de "de dedo" | `GameScene.ts:585-608` |
+| `corrida-do-cotidiano` | portão sem toque é julgado pela faixa em que o corredor está | `GameScene.ts:232-234`, `:288-293` |
+| `corrida-dos-parecidos` | item que chega ao carro é julgado pela faixa atual | `GameScene.ts:414-421` |
+| `torres-dos-formatos` | todo arquivo nasce na pista errada; não chegar a tempo é pouso errado | `GameScene.ts:226-296` |
+| `ache-o-suspeito` | com as placas andando, a bolinha acerta a vizinha da que foi mirada | `GameScene.ts:215-228`, `ball.ts:136-143` |
+| `garra-dos-grupos`, `pescaria-dos-codigos` | o alvo é o que está mais perto no instante do toque, com tudo em movimento | `garra: GameScene.ts:252-292` |
+| `pista-binaria` | toque duplo vira resposta para a caixa seguinte | `GameScene.ts:245-258` |
+| `mapas-em-rede` | Confirmar com a rota vazia conta como resposta errada | `GameScene.ts:1063-1065`, `:1040-1056` |
+| `tradutor-da-maquina` | ENVIAR com nenhuma chave acesa conta como resposta errada | `GameScene.ts:193-197` |
+| `expedicao-pixel` | LANÇAR com a mistura em zero conta como resposta errada | `GameScene.ts:236-240` |
+| `ilha-dos-codigos` | no nível 3 o alto-falante fica em cima do cartão: errar o botão de ouvir é responder | `options.ts:146-163` |
+| `museu-vivo-do-computador`, `base-dos-classificadores`, `monte-seu-computador`, `missao-arquivo-seguro` | arrasto solto sobre o destino errado é julgado na hora, sem confirmar | `museu-vivo: GameScene.ts:517` · `base: :488-494` · `monte: :1228-1262` · `missao-arquivo: :659-672` |
+| `arquiteto-das-missoes`, `guilda-dos-criadores`, `pixel-secreto` | um toque já é a resposta, sem confirmar, com alvos vizinhos | `arquiteto: GameScene.ts:362-388` · `guilda: :486-491` · `pixel: :956` |
+| `corra-enquanto` | reapertar o pedal com a condição falsa perde, inclusive no quique do dedo | `GameScene.ts:386-410` |
 
-### A `EmbedGamePage` ainda conta por fora
+### 4. O tempo — corrigido
 
-Enquanto nem todos os jogos contam, [`EmbedGamePage.tsx`][embed] continua
-contando os `WRONG_ANSWER` e emitindo o `GAME_OVER` pelos que não sabem
-perder. Quando os 49 estiverem prontos, **essa contagem tem que sair** — senão
-a partida é julgada duas vezes, e as duas contas podem discordar.
+Decisão do dono do projeto (30/09/2026): **tempo zerou, game over, em todos os
+jogos.** O que mudou:
 
-Junto com ela sai a questão do `inline`: hoje o modo `inline=1` desliga a
-contagem inteira, porque quem hospeda tem a economia dele. Com a contagem
-dentro do jogo, isso deixa de existir — o jogo conta sempre, em qualquer modo.
+- as barras de bônus de `desfile-do-robo-repetidor` e
+  `checklist-do-jogador-seguro` viraram prazo de verdade;
+- em `cabo-de-guerra-da-verdade` o robô puxa a corda e a partida acaba;
+- os 8 jogos que emitiam `GAME_OVER` à mão agora emitem `WRONG_ANSWER` e
+  chamam o `lose()`, como qualquer erro; `mapas-em-rede` e `arena-da-logica`
+  perderam o `GAME_OVER` repetido;
+- nos 7 jogos em que o estouro se perdia com a tela travada (e no
+  `museu-das-estruturas`), o estouro fica pendente e é cobrado assim que o
+  tutorial ou o painel fecha;
+- `serie-do-campeao`: o estouro durante uma animação é cobrado quando ela
+  termina, se a etapa não tiver sido concluída;
+- `museu-vivo-do-computador`: o relógio para quando a missão é resolvida;
+- `museu-das-estruturas`: o relógio do nível 3 volta no segundo passo da
+  fase (recomeça cheio a cada passo) e para quando a tarefa termina;
+- `curadoria-com-creditos`: no mural, o tempo publicava a galeria como estava
+  e podia até aprovar; agora encerra a partida.
 
-[embed]: ../pages/EmbedGamePage.tsx
+O que ficou como estava, de propósito: em `guardioes-dos-dados`,
+`montador-de-informacoes` e `fabrica-de-maquinas` o relógio só começa na
+primeira ação da criança.
 
----
+O que havia antes, para registro.
 
-## O "travamento" do hangar não era bug (29/09/2026)
+**Tempo que não encerrava:**
 
-Esta seção dizia que o `hangar-dos-modelos` travava depois de responder: o
-`delayedCall(1800)` do `confirmSelection()` nunca disparava. Era o Browser
-pane oculto, que congela o loop do Phaser — relógio da cena parado, toques
-funcionando. Com o loop bombeado no ritmo real, o jogo avança para a missão
-seguinte normalmente.
+| Jogo | O que acontece | Onde |
+|---|---|---|
+| `desfile-do-robo-repetidor`, `checklist-do-jogador-seguro` | a barra é de bônus: no zero só some o bônus, mas parece prazo | `desfile: GameScene.ts:174-183` · `checklist: :582-586` |
+| `cabo-de-guerra-da-verdade` | a barra do robô zera, ele puxa a corda e a rodada recomeça, sem custo e sem limite | `GameScene.ts:281-295` |
+| `serie-do-campeao` | se o tempo zera durante uma animação, o relógio só reinicia | `GameScene.ts:342-352` |
+| `museu-das-estruturas` | no nível 3 o relógio não volta no 2º passo da fase | `GameScene.ts:1430`, `:182` |
+| `mapas-em-rede`, `arena-da-logica`, `escolha-a-ferramenta-certa`, `radar-de-confiabilidade`, `circuito-da-verdade`, `missao-arquivo-seguro`, `curadoria-com-creditos` | se o tempo zera com o tutorial ou um painel aberto, o estouro se perde e a fase segue sem relógio | o `if (this.locked) return` do `onTimeUp` de cada um |
+| `museu-vivo-do-computador` | o relógio segue correndo ~2 s depois da missão resolvida e pode reprovar sem erro | `GameScene.ts:576-580`, `:744-755` |
 
-## Atualização de 29/09/2026 — quem para o jogo agora é a plataforma
+**Tempo que encerra, mas com `GAME_OVER` à mão e sem `WRONG_ANSWER`:**
+`guardioes-dos-dados` (`:1385-1396`), `vila-das-maquinas` (`:156-171`),
+`corra-enquanto` (`:540-550`), `baralho-das-listas` (`:781-783`),
+`sistema-operacional` (`:778-786`), `montador-de-informacoes` (`:1050-1062`),
+`fabrica-de-maquinas` (`:1408-1425`), `trilha-do-passo-a-passo` (`:597-601`).
+A partida encerra; só foge do contrato. Em `guardioes`, `montador` e `fabrica`
+o relógio só começa na primeira ação da criança.
 
-Desde `shared/bridge/partida.ts`, todo `GAME_OVER` corta o toque na hora e
-congela o Phaser logo depois, e `PAUSE_GAME`/`RESUME_GAME` pausam o jogo
-inteiro (e atravessam o iframe). O que este arquivo diz sobre jogos que
-"continuam jogáveis depois do zero" ou que "ignoram o `PAUSE_GAME`" não vale
-mais.
+`mapas-em-rede` (`:1238`), `arena-da-logica` (`:1113`) e
+`trilha-do-passo-a-passo` (`:672`) emitem `GAME_OVER` à mão **além** do
+`lose()`; o bridge descarta o segundo.
+
+### 5. O que roda depois do `lose()` — corrigido
+
+O achado mais comum, em mais da metade dos jogos: o código seguia como se
+houvesse segunda tentativa — reabria a pergunta, devolvia a peça, mostrava
+"Tente de novo". Não mudava o resultado, porque a plataforma cobre a tela no
+`GAME_OVER`; era fluxo de uma partida encerrada rodando por baixo.
+
+Corrigido em 59 jogos com a mesma linha, `if (this.lives.remaining <= 0)
+return`, posta depois do feedback imediato do erro e antes do que reabria o
+jogo. Ficou de fora, de propósito:
+
+- o painel de **tempo esgotado** de `sistema-operacional`,
+  `baralho-das-listas` e `trilha-do-passo-a-passo` ficou para o item 4, e foi
+  resolvido lá;
+- `batalha-das-coordenadas`, `oficina-dos-algoritmos` e `mesa-de-edicao`:
+  depois do `lose()` só resta o aviso do erro, nada reabre;
+- os dois casos de `lose()` fora de hora, logo abaixo.
+
+**O que sobra deste item é o inverso:** como a tela é coberta no `GAME_OVER`,
+todo feedback que vem depois do `lose()` não é visto. Na maioria dos jogos
+antigos a explicação do erro (a frase do porquê, o item culpado piscando) vem
+depois. Para a criança ver por que perdeu, a cena tem de tocar antes do
+`lose()`, como nos jogos da 3ª rodada — e isso é reordenar jogo a jogo, não
+uma linha.
+
+Os jogos em que isso foi achado:
+
+- **Painel ou botão de nova tentativa na tela:** `trilha-do-passo-a-passo`,
+  `sistema-operacional`, `estudio-multiformato`, `baralho-das-listas`,
+  `mapas-em-rede`, `arena-da-logica`, `caca-fonte-confiavel`,
+  `missao-etica-digital`, `missao-arquivo-seguro`, `checklist-do-jogador-seguro`,
+  `cidade-das-tecnologias`, `escolha-a-ferramenta-certa`, `radar-de-confiabilidade`,
+  `circuito-da-verdade`, `museu-das-estruturas`, `curadoria-com-creditos`,
+  `futuro-em-cena`, `guilda-dos-criadores`.
+- **Pergunta ou bancada reaberta:** `corrida-do-cotidiano`, `ache-o-suspeito`,
+  `pista-binaria`, `vila-das-maquinas`, `canhao-das-coordenadas`,
+  `torres-dos-formatos`, `detetive-dos-modelos`, `missao-em-pedacos`,
+  `atelier-codigos-digitais`, `pulo-programado`, `ilha-dos-codigos`,
+  `desfile-do-robo-repetidor`, `corra-enquanto`, `danca-aninhada`,
+  `caverna-dos-dados`, `duelo-das-fontes`, `chef-dos-subproblemas`,
+  `central-de-entrada-e-saida`, `a-busca-do-bibliotecario`, `arquivo-dos-registros`,
+  `expedicao-pixel`, `meu-bichinho-conectado`, `esconde-dados`,
+  `batalha-das-coordenadas`, `revezamento-em-lista`, `arquiteto-das-missoes`,
+  `formato-certo`, `tradutor-da-maquina`, `corrida-dos-parecidos`,
+  `ritmo-da-rotina`, `passe-da-mensagem`, `serie-do-campeao`,
+  `academia-dos-algoritmos`, `canteiro-de-obras`, `estudio-producao-digital`,
+  `o-misterio-do-arquivo-vivo`, `maratona-do-algoritmo`, `base-dos-classificadores`,
+  `fase-de-entrada-e-saida`, `predio-dos-lacos`, `raio-x-da-maquina`,
+  `oficina-dos-algoritmos`, `o-cofre-dos-registros`, `mesa-de-edicao`.
+- **`lose()` cedo demais ou tarde demais:** em `olha-o-jornal` e
+  `dia-sem-internet` o `lose()` sai antes da explicação, e o congelamento pode
+  cortá-la; em `a-busca-do-bibliotecario` ele só sai ~2 s depois do toque, com a
+  tela já restaurada.
+- **Teclado:** o corte de toque não alcança o teclado. Em
+  `corrida-do-cotidiano`, `pista-binaria` e `torres-dos-formatos` ainda dá para
+  agir pelas setas até o jogo congelar (1,35 s).
+
+Textos que descrevem a regra antiga e ficaram na tela ou no tutorial:
+`mapas-em-rede` ("dá para tentar quantas vezes quiser"),
+`desfile-do-robo-repetidor` ("é só corrigir"), `tribunal-do-verdadeiro-ou-falso`
+("3 julgamentos errados seguidos"), `sistema-operacional` ("As três luzes
+apagaram"), `labirinto-do-enquanto` ("Três tentativas seguidas").
+
+### 6. Sem achado
+
+`correio-multimidia`, `hangar-dos-modelos`, `labirinto-do-enquanto`,
+`guardiao-etico`, `fuga-do-laboratorio`, `metro-mirim`,
+`tribunal-do-verdadeiro-ou-falso`, `detetives-da-busca`,
+`investigacao-dados-risco`, `achados-e-perdidos`, `maestro-do-sistema`,
+`cidade-das-decisoes`, `decolagem-passo-a-passo`, `show-de-formatos`.
+
+`cidade-das-decisoes` tem um ponto para decidir: a "condição constante" cobra
+o erro depois de o programa funcionar na tela (`GameScene.ts:1516-1529`).
+
+### Fora da varredura
+
+`maquina-dos-ajudantes` e `labirinto-do-cofrinho` só têm planejamento, sem
+código.
+
+## A limpeza (30/09/2026)
+
+Depois dos consertos, o código da regra antiga foi removido:
+
+- o que rodava depois da derrota em 53 jogos: reabrir a pergunta, devolver a
+  peça, a dica depois de dois erros, a frase de "tente de novo";
+- as telas de derrota próprias de `trilha-do-passo-a-passo`,
+  `sistema-operacional`, `estudio-multiformato`, `museu-vivo-do-computador`,
+  `baralho-das-listas`, `labirinto-do-enquanto`, `cidade-das-decisoes`,
+  `monte-seu-computador`, `missao-arquivo-seguro`,
+  `tribunal-do-verdadeiro-ou-falso` e `curadoria-com-creditos`;
+- no `pixel-secreto`, as telas de "vida extra" e de bloqueio da plataforma;
+- os textos que a criança ainda lia e que prometiam segunda tentativa, nos
+  tutoriais de `desfile-do-robo-repetidor`, `curadoria-com-creditos` e
+  `tribunal-do-verdadeiro-ou-falso`, e em 13 linhas de
+  `src/data/gameInstructions.ts`.
+
+**Junto saiu a explicação do erro que vinha depois da derrota** (a frase do
+porquê, o item culpado piscando). Ela já não era vista, porque a plataforma
+cobre a tela no `GAME_OVER`. Os textos continuam nos arquivos de `data/` de
+cada jogo e o código antigo está no histórico do git; para a criança ver por
+que perdeu, a cena tem de ser reescrita na ordem "mostra, depois perde".
+
+O que ficou, de propósito:
+
+- os painéis genéricos de fim de fase (`showFeedback(correct, …)`) ainda têm o
+  ramo do erro, que não é mais chamado;
+- contadores como `stalled`, `tries` e `missesHere`, e os métodos de dica
+  dentro dos componentes (`palette.hint`, `lanes.hint` e parecidos);
+- `canteiro-de-obras`: a segunda tentativa continua viva no guia da 1.1, onde
+  o erro não cobra;
+- os sinais `pixel-secret-*` em `shared/bridge/uiTunnel.ts` e na
+  `GameDetailsPage`, que ninguém mais dispara;
+- o ajuste de posição dos corações (tecla M) e o `lives-positions.json`.
+
+## O 1,35 segundo para ver o erro (30/09/2026)
+
+Tudo acima foi escrito quando a plataforma cobria a tela no instante do
+`GAME_OVER` (150 ms no embed). Isso mudou: a tela agora espera
+`ESPERA_PARA_VER_O_ERRO_MS` (1,35 s, em `shared/bridge/partida.ts`) antes de
+congelar e ser coberta. O resultado continua saindo na hora — o evento e o
+bloqueio não esperam.
+
+Consequência para a limpeza: a explicação curta do erro que vinha depois do
+`lose()` **voltaria a ser vista**, e ela foi removida junto com a segunda
+tentativa. O que vale trazer de volta é o que cabe em 1,35 s — acender a opção
+certa, a frase curta do porquê —, e não as dicas "depois de dois erros" nem os
+painéis com botão. Candidatos, pelo que a limpeza tirou:
+
+- **acender a resposta certa:** `canhao-das-coordenadas`, `ache-o-suspeito`,
+  `pista-binaria`, `o-cofre-dos-registros`, `fase-de-entrada-e-saida`,
+  `a-busca-do-bibliotecario`, `raio-x-da-maquina`, `corrida-dos-parecidos`,
+  `ritmo-da-rotina`;
+- **frase curta do porquê:** `pulo-programado`, `maratona-do-algoritmo`,
+  `expedicao-pixel`, `estudio-producao-digital`, `atelier-codigos-digitais`,
+  `torres-dos-formatos`, `duelo-das-fontes`.
+
+Nada disso foi restaurado ainda.

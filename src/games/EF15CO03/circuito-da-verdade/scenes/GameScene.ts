@@ -1120,8 +1120,9 @@ export class GameScene extends Phaser.Scene {
 
         this.toast(message, C.gold)
         this.time.delayedCall(520, () => {
-            this.locked = false
-            this.say(beat.question, C.gold)
+            runtimeGameBridge.emit({ type: 'WRONG_ANSWER', gameId: GAME_ID, pointsEarned: 0, stage: this.level.level })
+            this.lives.lose()
+            this.livesLeft = this.lives.remaining
         })
     }
 
@@ -1151,6 +1152,7 @@ export class GameScene extends Phaser.Scene {
         // só o erro custa vida: o mesmo emit serve para acerto
         if (!(clean)) { this.lives.lose(); this.livesLeft = this.lives.remaining }
         this.emitCheckpoint()
+        if (this.lives.remaining <= 0) return
 
         const inputs = beat.refs.map(id => this.values.get(id) ?? false)
         const detail = beat.kind === 'valor' ? '' : ` ${explainBeat(beat, inputs)}`
@@ -1226,12 +1228,15 @@ export class GameScene extends Phaser.Scene {
     }
 
     private onTimeUp = () => {
-        if (this.ended || this.locked) return
+        if (this.ended) return
+        if (this.locked) {
+            this.time.delayedCall(200, this.onTimeUp)
+            return
+        }
         this.locked = true
         runtimeGameBridge.emit({ type: 'WRONG_ANSWER', gameId: GAME_ID, pointsEarned: 0, stage: this.level.level })
         this.lives.lose()
         this.livesLeft = this.lives.remaining
-        this.showFeedback(false, false, `O tempo acabou. ${this.phase.explain}`, 0, () => this.completePhase())
     }
 
     // ---------------------------------------------------------------- overlays

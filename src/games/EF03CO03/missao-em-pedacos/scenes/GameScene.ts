@@ -357,8 +357,7 @@ export class GameScene extends Phaser.Scene {
      * O bolo e o café aceitam começar por qualquer painel. A fogueira não: não
      * se assa marshmallow sem fogo, e não se faz a cama sem barraca em pé.
      * Quando o painel escolhido depende do outro, o jogo diz qual vem antes e
-     * devolve a escolha — sem custar vida, porque é justamente a ordem que ele
-     * veio ensinar, e o erro aqui é a pergunta certa feita cedo demais.
+     * encerra a partida: a ordem entre as metades é o que o nível cobra.
      */
     private refuseOrder(tripIndex: number) {
         const doneJobs = new Set(
@@ -371,10 +370,25 @@ export class GameScene extends Phaser.Scene {
         this.audio.tripOut()
         void this.plan.refuse(tripIndex)
         this.hud.setTitle(`Antes disso: ${first?.name ?? 'a outra metade'}.`)
+        this.chargeOrder()
         return true
     }
 
-    /** Misturar as metades: o único erro de cabeça do corte. */
+    private chargeOrder() {
+        this.mode = 'trava'
+        this.errors += 1
+        runtimeGameBridge.emit({
+            type: 'WRONG_ANSWER',
+            gameId: GAME_ID,
+            pointsEarned: 0,
+            stage: this.level.level,
+        })
+        this.lives.lose()
+        this.livesLeft = this.lives.remaining
+        this.emitCheckpoint()
+    }
+
+    /** Misturar as metades: erro de cabeça do corte. */
     private async refusePlan(tripIndex: number, item: Item) {
         const gen = this.gen
         this.mode = 'trava'
@@ -609,12 +623,6 @@ export class GameScene extends Phaser.Scene {
 
         await FX.wait(this, 900)
         if (gen !== this.gen) return
-        this.hero.setPose(null)
-        this.hero.spawn(this.checkpoint)
-        this.hero.setFrozen(false)
-        this.pad.setEnabled(true)
-        this.hud.setTitle(LINE.run)
-        this.mode = 'run'
     }
 
     private onFall() {
@@ -823,6 +831,7 @@ export class GameScene extends Phaser.Scene {
             this.audio.tripOut()
             this.hud.setTitle(step.hint || LINE.finale)
             void this.finale.refuse(itemId)
+            this.chargeOrder()
             return
         }
 

@@ -13,11 +13,10 @@ import {
     formsInformation,
     intruderLine,
     intrudersIn,
-    missingIn,
     shuffledPositions,
     slotsOf,
 } from '../data/rules'
-import { ALTAR, CAVE, FICHA, HUD, SLOTS_BY_COUNT } from '../data/layout'
+import { ALTAR, CAVE,  HUD, SLOTS_BY_COUNT } from '../data/layout'
 import { C } from '../data/theme'
 import type { DatumId, Gallery, LevelDef, LevelNumber, Mode } from '../types'
 import { createCave, type Cave } from './cave'
@@ -49,7 +48,6 @@ export class GameScene extends Phaser.Scene {
     private revealed = false
     private lockedId: DatumId | null = null
     private travas = 0
-    private hinted = false
     private tutorialOpen = false
     private pendingTutorial = false
     private altarTutorialDone = false
@@ -91,7 +89,6 @@ export class GameScene extends Phaser.Scene {
         this.selected = []
         this.lockedId = null
         this.travas = 0
-        this.hinted = false
         this.tutorialOpen = false
         this.pendingTutorial = number === 1
         this.altarTutorialDone = number !== 1
@@ -171,7 +168,6 @@ export class GameScene extends Phaser.Scene {
         this.revealed = false
         this.lockedId = null
         this.travas = 0
-        this.hinted = false
 
         const gallery = this.gallery
 
@@ -497,12 +493,6 @@ export class GameScene extends Phaser.Scene {
 
         await this.altar.lock(intruder)
         if (gen !== this.gen) return
-        this.lock.show(spot.x + FICHA.w / 2 - 6, spot.y - FICHA.h / 2 - 4)
-
-        if (this.travas >= 2 && !this.hinted) {
-            this.hinted = true
-            this.altar.hint(missingIn(gallery, this.selected))
-        }
     }
 
     private async unlockFrom(id: DatumId) {

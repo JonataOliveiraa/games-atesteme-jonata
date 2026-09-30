@@ -906,16 +906,6 @@ export class GameScene extends Phaser.Scene {
 
         await FX.wait(this, 900)
         if (gen !== this.gen) return
-
-        this.boxes.forEach(box => {
-            box.resetFields(fieldId => this.fieldOccupant.has(key(box.spec.id, fieldId)))
-            box.setState(box.spec.preset ? 'broken' : 'open')
-        })
-
-        this.locked = false
-        this.state = 'filling'
-        this.resumeTimer()
-        this.syncReadButton()
     }
 
     /* ═══════════════════════════════════════════════════ cronômetro */
@@ -982,50 +972,8 @@ export class GameScene extends Phaser.Scene {
             this.lives.lose(); this.livesLeft = this.lives.remaining
         this.emitCheckpoint()
 
-        await this.reader.refuse('Acabou o tempo. Vamos de novo.')
+        await this.reader.refuse('Acabou o tempo.')
         if (gen !== this.gen) return
-
-        if (this.state === 'timeout' && this.choiceBoxes.length) {
-            // estourou ainda escolhendo: só devolve o controle
-            this.locked = false
-            this.state = 'choosing'
-            this.choiceBoxes.forEach(b => b.setTappable(true))
-            this.startTimer()
-            return
-        }
-
-        // devolve as peças e, no N3, restaura o defeito de origem
-        const ids = [...this.pieceAt.keys()]
-        ids.forEach(id => this.unassign(id))
-        this.boxes.forEach(box => {
-            box.resetFields(() => false)
-            box.setState(box.spec.preset ? 'broken' : 'open')
-        })
-
-        await FX.stagger(
-            this,
-            ids.map(id => this.pieces.get(id)!.container).filter(Boolean),
-            (node, i) => {
-                const view = this.pieces.get(ids[i])!
-                return FX.to(
-                    this, node,
-                    { x: view.homeX, y: view.homeY, scale: 1, angle: 0 },
-                    { duration: 280, ease: Ease.settle },
-                )
-            },
-            60,
-        )
-        if (gen !== this.gen) return
-
-        this.pieces.forEach(p => { p.place(false); p.compact(false) })
-        this.applyPresets()
-        this.unlocked = this.boxes.map((_, i) => i === 0)
-        this.refreshLocks()
-
-        this.locked = false
-        this.state = 'filling'
-        this.startTimer()
-        this.syncReadButton()
     }
 
     /* ═══════════════════════════════════════════════ avanço de nível */

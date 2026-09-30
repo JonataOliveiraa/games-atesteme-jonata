@@ -507,10 +507,6 @@ export class GameScene extends Phaser.Scene {
 
         await FX.wait(this, 700)
         if (gen !== this.gen) return
-
-        this.mode = 'building'
-        this.applyInput()
-        await this.selectSlot(bad.slot)
     }
 
     /** A frase do §9: específica, e sobre o que fazer — não sobre quem errou. */

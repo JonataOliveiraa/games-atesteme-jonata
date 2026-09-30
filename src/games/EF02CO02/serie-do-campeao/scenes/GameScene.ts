@@ -340,8 +340,15 @@ export class GameScene extends Phaser.Scene {
 
     /** O relógio zerou: custa uma vida e a etapa recomeça com a conta limpa. */
     private async timeUp() {
-        if (this.phase !== 'playing' || this.busy) {
+        if (this.phase !== 'playing') {
             this.hud.resetTime()
+            return
+        }
+        if (this.busy) {
+            const stepGen = this.stepGen
+            this.time.delayedCall(120, () => {
+                if (stepGen === this.stepGen) void this.timeUp()
+            })
             return
         }
         this.busy = true
@@ -372,15 +379,6 @@ export class GameScene extends Phaser.Scene {
         card?.setLocked(true)
         await FX.wait(this, 420)
         if (gen !== this.gen) return
-
-        await card?.emptyDots()
-        if (gen !== this.gen) return
-
-        card?.setLocked(false)
-        this.doneCount = 0
-        this.applyButtons()
-        this.busy = false
-        this.emitCheckpoint()
     }
 
     // ─────────────────────────────────────────────── fim da série

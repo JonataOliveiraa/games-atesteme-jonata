@@ -17,6 +17,7 @@ import { registrarOrigemDeQuemEmbute } from "../shared/bridge/allowedOrigins";
 import SeletorDeFase from "../platform/dev/SeletorDeFase";
 import { useAtalhoDeFase } from "../platform/dev/useAtalhoDeFase";
 import { installGameUiTunnel } from "../shared/bridge/uiTunnel";
+import { ESPERA_PARA_VER_O_ERRO_MS } from "../shared/bridge/partida";
 import type { PlatformEvent } from "../shared/contracts/platformEvents";
 
 /**
@@ -43,6 +44,9 @@ import type { PlatformEvent } from "../shared/contracts/platformEvents";
  */
 
 const ESPERA_ANTES_DE_NAVEGAR_MS = 150;
+
+/** Quanto o "Fim de jogo" fica na tela antes de o iframe ir para `/reprove`. */
+const AVISO_DE_DERROTA_MS = 600;
 
 /** Quantas fases um jogo tem quando o catálogo não diz outra coisa. */
 const FASES_PADRAO = 3;
@@ -79,8 +83,8 @@ export default function EmbedGamePage() {
    */
   const jaFinalizou = useRef(false);
 
-  /** Mostrado quando as vidas acabam, no meio segundo antes de sair da tela. */
-  const [semVidas, setSemVidas] = useState(false);
+  /** Mostrado depois que a criança viu o erro, no meio segundo antes de sair da tela. */
+  const [perdeu, setPerdeu] = useState(false);
 
   /* ── o atalho de teste para pular de fase (tecla L) ────────────────── */
 
@@ -271,9 +275,27 @@ export default function EmbedGamePage() {
        * fora continua sendo a plataforma. Este site só troca o conteúdo do
        * próprio iframe.
        */
+      if (resultado === "approve") {
+        window.setTimeout(() => {
+          window.location.assign(destino);
+        }, ESPERA_ANTES_DE_NAVEGAR_MS);
+        return;
+      }
+
+      /*
+       * NA DERROTA, A TELA ESPERA A CRIANÇA VER O ERRO.
+       *
+       * O jogo segue mostrando o que deu errado por
+       * `ESPERA_PARA_VER_O_ERRO_MS` (é quando ele congela, ver `partida.ts`).
+       * Só então entra o "Fim de jogo", e em seguida a navegação. Trocar de
+       * tela no instante do toque faz a derrota parecer um defeito.
+       */
       window.setTimeout(() => {
-        window.location.assign(destino);
-      }, ESPERA_ANTES_DE_NAVEGAR_MS);
+        setPerdeu(true);
+        window.setTimeout(() => {
+          window.location.assign(destino);
+        }, AVISO_DE_DERROTA_MS);
+      }, ESPERA_PARA_VER_O_ERRO_MS);
     },
     [params.attempt, params.returnBase, params.inline]
   );
@@ -302,19 +324,14 @@ export default function EmbedGamePage() {
        *
        * Esta camada já contou `WRONG_ANSWER` contra as `lives` da query e
        * emitiu o `GAME_OVER` ela mesma, porque a maioria dos jogos não sabia
-       * perder. Hoje os 49 sabem: `shared/hud/createLives.ts` desconta a cada
-       * erro e emite no zero.
+       * perder. Hoje todos sabem: o primeiro erro, ou o tempo esgotado, já
+       * emite o `GAME_OVER` (`shared/hud/createLives.ts`).
        *
-       * Manter a contagem aqui deixaria dois juízes para a mesma partida.
-       * Enquanto os dois lessem o mesmo `lives=` e os mesmos eventos eles
-       * concordariam — mas basta um jogo descontar uma vida sem emitir
-       * `WRONG_ANSWER`, ou o contrário, para o resultado passar a depender de
-       * qual chegou primeiro. Não daria erro e não apareceria na tela.
+       * Contar aqui também deixaria dois juízes para a mesma partida — e
+       * bastaria um jogo emitir `WRONG_ANSWER` sem perder, ou o contrário,
+       * para o resultado passar a depender de qual chegou primeiro.
        */
-      if (evento.type === "GAME_OVER") {
-        setSemVidas(true);
-        finalizar("reprove");
-      }
+      if (evento.type === "GAME_OVER") finalizar("reprove");
     },
     [finalizar, params.inline]
   );
@@ -347,16 +364,16 @@ export default function EmbedGamePage() {
   if (comecou) {
     return (
       <div className="embed-stage">
-        {semVidas && (
+        {perdeu && (
           /*
-           * Sem isto, a tela simplesmente TROCA: a criança erra o último e o
+           * Sem isto, a tela simplesmente TROCA: a criança vê o erro e o
            * jogo desaparece. Meio segundo dizendo o que aconteceu é a
            * diferença entre perder e o jogo ter travado.
            */
           <div className="embed-derrota" role="alert">
             <div className="embed-derrota-caixa">
               <span aria-hidden="true">💔</span>
-              <strong>Suas vidas acabaram</strong>
+              <strong>Fim de jogo</strong>
               <span>Voltando para a atividade...</span>
             </div>
           </div>
@@ -374,7 +391,6 @@ export default function EmbedGamePage() {
           gameId={game.id}
           level={params.stage}
           points={params.points}
-          lives={params.lives}
           config={gameConfig}
           onPlatformEvent={aoReceberEvento}
         />

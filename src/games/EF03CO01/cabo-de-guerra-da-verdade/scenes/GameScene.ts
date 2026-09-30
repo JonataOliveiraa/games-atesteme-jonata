@@ -287,11 +287,19 @@ export class GameScene extends Phaser.Scene {
         this.robotPulls++
         this.audio.robotPull()
         void this.rope.moveTo(this.wins - this.robotPulls)
-        this.hud.say('O robô puxou! A frase continua aí.', undefined)
+        this.hud.say('O robô puxou! O tempo acabou.', undefined)
         await this.fighters.tug('robot')
 
         if (this.phase !== 'locked') return
-        this.beginRound()
+        this.errors++
+        runtimeGameBridge.emit({
+            type: 'WRONG_ANSWER',
+            gameId: GAME_ID,
+            pointsEarned: 0,
+            stage: this.level.level,
+        })
+        this.lives.lose()
+        this.livesLeft = this.lives.remaining
     }
 
     private async finishLevel() {

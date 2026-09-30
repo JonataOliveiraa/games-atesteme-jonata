@@ -357,22 +357,6 @@ export class GameScene extends Phaser.Scene {
             this.lives.lose()
             this.livesLeft = this.lives.remaining
         }
-
-        await FX.wait(this, 900)
-        if (gen !== this.gen) return
-
-        if (this.tries >= 2) {
-            const right = this.deck.findIndex(isSuspicious)
-            if (right >= 0) this.signs.pulse(right)
-        }
-
-        // a bolinha volta ANTES de o modo abrir. Na ordem trocada havia um
-        // vão de meio segundo em que o jogo já se dizia jogável e os botões
-        // ainda estavam desligados: quem apertasse ali não era atendido
-        await this.ball.rest()
-        if (gen !== this.gen) return
-        this.mode = 'choosing'
-        this.applyInput()
     }
 
     private async endLevel() {

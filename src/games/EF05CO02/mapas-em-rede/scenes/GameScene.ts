@@ -1116,6 +1116,7 @@ export class GameScene extends Phaser.Scene {
         }
 
         this.emitCheckpoint()
+        if (this.lives.remaining <= 0) return
         this.showFeedback(correct, message)
     }
 
@@ -1226,7 +1227,11 @@ export class GameScene extends Phaser.Scene {
     }
 
     private onTimeUp() {
-        if (this.ended || this.locked) return
+        if (this.ended) return
+        if (this.locked) {
+            this.time.delayedCall(200, () => this.onTimeUp())
+            return
+        }
         this.ended = true
         this.locked = true
 
@@ -1235,10 +1240,8 @@ export class GameScene extends Phaser.Scene {
             pointsEarned: -3, stage: this.level.level,
         })
             this.lives.lose(); this.livesLeft = this.lives.remaining
-        runtimeGameBridge.emit({ type: 'GAME_OVER', gameId: GAME_ID, stage: this.level.level })
 
         this.playError()
-        this.showFeedback(false, 'O tempo acabou! Vamos tentar esta fase de novo.')
     }
 
     private emitCheckpoint() {
@@ -1399,7 +1402,7 @@ export class GameScene extends Phaser.Scene {
                         shape: 'none', balloonY: 400,
                     },
                     {
-                        text: 'Esta barra é o tempo. Quando ela esvaziar, a fase recomeça — sem pressa, dá para tentar quantas vezes quiser.',
+                        text: 'Esta barra é o tempo. Quando ela esvaziar, o jogo acaba.',
                         shape: 'rect',
                         x: HUD.barCX + HUD.barIconDX / 2, y: HUD.cy,
                         w: HUD.barW + 120, h: 60, balloonY: 400,

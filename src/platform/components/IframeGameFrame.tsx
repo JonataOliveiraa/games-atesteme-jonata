@@ -49,7 +49,6 @@ interface IframeGameFrameProps {
   gameId: string;
   level: 1 | 2 | 3;
   points: number;
-  lives: number;
   src: string;
   onPlatformEvent: (event: PlatformEvent) => void;
 }
@@ -61,7 +60,6 @@ export default function IframeGameFrame({
   gameId,
   level,
   points,
-  lives,
   src,
   onPlatformEvent,
 }: IframeGameFrameProps) {
@@ -164,7 +162,6 @@ export default function IframeGameFrame({
         gameId,
         stage: level,
         points,
-        lives,
       });
     };
 
@@ -191,7 +188,7 @@ export default function IframeGameFrame({
     };
     /*
      * Só `gameId` e `src`: o aperto de mão é UMA vez por jogo carregado.
-     * Incluir `points`/`lives` aqui remontaria o efeito a cada ponto ganho e
+     * Incluir `points` aqui remontaria o efeito a cada ponto ganho e
      * mandaria um `START_GAME` no meio da partida — que é exatamente o bug que
      * o `GAME_READY` único existe para evitar.
      */

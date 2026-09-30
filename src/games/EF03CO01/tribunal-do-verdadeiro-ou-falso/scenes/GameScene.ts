@@ -35,8 +35,6 @@ const POINTS = { hit: 5, miss: -2 } as const
 const HOLD = {
     correct: 2600,
     correctWithNegation: 3400,
-    wrong: 2200,
-    beforeGameOver: 1800,
 } as const
 
 const SUCCESS_MESSAGE: Record<number, string> = {
@@ -84,7 +82,6 @@ export class GameScene extends Phaser.Scene {
     private gavel!: Gavel
     private timerBar?: TimerBar
     private explanation?: ExplanationPanel
-    private modal?: LevelCompleteHandle
 
     /* ── cronômetro (só Nível 3) ───────────────────────────────────── */
 
@@ -116,7 +113,6 @@ export class GameScene extends Phaser.Scene {
         this.gen = 0
         this.buttons = []
         this.explanation = undefined
-        this.modal = undefined
         this.timerBar = undefined
         this.timerTween = undefined
         this.timerRunning = false
@@ -339,24 +335,15 @@ export class GameScene extends Phaser.Scene {
 
         this.explanation = showExplanation(this, sentence)
 
-        const tooManyErrors = !correct && this.livesHud.remaining <= 0
-        const hold = tooManyErrors
-            ? HOLD.beforeGameOver
-            : correct
-                ? (sentence.hasNegation ? HOLD.correctWithNegation : HOLD.correct)
-                : HOLD.wrong
+        if (!correct) return
 
-        await FX.wait(this, hold)
+        await FX.wait(this, sentence.hasNegation ? HOLD.correctWithNegation : HOLD.correct)
         if (gen !== this.gen) return
 
         await this.explanation?.close()
         this.explanation = undefined
         if (gen !== this.gen) return
 
-        if (tooManyErrors) {
-            this.showGameOver('wrong-answer')
-            return
-        }
         this.advance()
     }
 
@@ -426,12 +413,10 @@ export class GameScene extends Phaser.Scene {
                 onClick: () => {
                     this.playTick()
                     handle?.destroy()
-                    this.modal = undefined
                     void this.playSentence(true)
                 },
             }],
         })
-        this.modal = handle
     }
 
     private endLevel() {
@@ -457,7 +442,7 @@ export class GameScene extends Phaser.Scene {
         const next = lvl < 3 ? (lvl + 1) as 2 | 3 : null
 
         if (next) {
-            this.modal = showLevelComplete(this, {
+            showLevelComplete(this, {
                 title: 'Parabéns!',
                 subtitle: `Nível ${lvl} concluído`,
                 message: SUCCESS_MESSAGE[lvl],
@@ -480,7 +465,7 @@ export class GameScene extends Phaser.Scene {
         }
 
         FX.confetti(this, { colors: [C.brass, C.green, C.amber, C.gold] })
-        this.modal = showLevelComplete(this, {
+        showLevelComplete(this, {
             title: 'Jogo concluído!',
             subtitle: 'Você julgou todas as sentenças do tribunal',
             message: `Acertos: ${this.hits}  ·  Erros: ${this.errors}  ·  Pontos: ${this.points}`,
@@ -499,50 +484,6 @@ export class GameScene extends Phaser.Scene {
                 },
                 {
                     label: 'Escolher jogo',
-                    color: C.amber,
-                    onClick: () => EventBus.emit('exit-game'),
-                },
-            ],
-        })
-    }
-
-    private showGameOver(reason: 'timeout' | 'wrong-answer') {
-        if (this.ended) return
-
-        this.ended = true
-        this.gen += 1
-        this.stopTimer()
-        this.syncButtons()
-        this.hud.setHelpEnabled(false)
-
-        // O GAME_OVER sai do componente de vidas, no zero. Aqui é só a tela:
-        // emitir de novo daria dois resultados para a mesma partida.
-        this.emitCheckpoint()
-
-        this.playGameOverSting()
-
-        this.modal = showLevelComplete(this, {
-            title: 'Que pena!',
-            subtitle: reason === 'timeout'
-                ? 'O tempo acabou!'
-                : '3 julgamentos errados seguidos',
-            message: `${this.sentenceIdx} de ${this.total} sentenças julgadas`,
-            accent: C.red,
-            panelColor: C.panel,
-            overlayColor: C.overlay,
-            progress: { total: this.total, current: this.sentenceIdx },
-            buttons: [
-                {
-                    label: 'Tentar de novo',
-                    color: C.green,
-                    onClick: () => this.scene.restart({ 
-                        level: this.levelConfig.level,
-                        points: this.points,
-                        lives: this.livesLeft,
-                    }),
-                },
-                {
-                    label: 'Sair',
                     color: C.amber,
                     onClick: () => EventBus.emit('exit-game'),
                 },
@@ -657,11 +598,11 @@ export class GameScene extends Phaser.Scene {
             },
             {
                 // Balão à direita: o holofote fica na coluna do juiz, à esquerda.
-                text: 'O juiz explica cada resposta — inclusive quando você erra. Assim dá para aprender.',
+                text: 'O juiz explica cada resposta. Assim dá para aprender.',
                 shape: 'circle', ...spot.judge, balloonX: 860, balloonY: BELOW_CARD,
             },
             {
-                text: 'Cuidado: errar 3 frases seguidas encerra o julgamento.',
+                text: 'Cuidado: errar uma frase encerra o julgamento.',
                 shape: 'none', balloonY: 340,
             },
         ]
@@ -772,8 +713,4 @@ export class GameScene extends Phaser.Scene {
             this.time.delayedCall(i * 125, () => this.playTone(f, 0.22, 'sine', 0.3)))
     }
 
-    private playGameOverSting() {
-        this.playTone(330, 0.3, 'square', 0.18)
-        this.time.delayedCall(100, () => this.playTone(220, 0.4, 'square', 0.16))
-    }
 }

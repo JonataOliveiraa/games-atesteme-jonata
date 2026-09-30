@@ -489,7 +489,7 @@ export class GameScene extends Phaser.Scene {
             await this.accept(view, basket, gen)
             return
         }
-        await this.refuse(view, basket, gen)
+        this.refuse(basket)
     }
 
     private async accept(view: StoneView, basket: BasketView, gen: number) {
@@ -527,7 +527,7 @@ export class GameScene extends Phaser.Scene {
         if (this.stones.every(v => v.placed)) void this.finishPhase(gen)
     }
 
-    private async refuse(view: StoneView, basket: BasketView, gen: number) {
+    private refuse(basket: BasketView) {
         this.errors += 1
         runtimeGameBridge.emit({
             type: 'WRONG_ANSWER', gameId: GAME_ID, pointsEarned: 0, stage: this.level.level,
@@ -542,19 +542,6 @@ export class GameScene extends Phaser.Scene {
         FX.ping(this, basket.sign.x, basket.sign.y, C.amber, { radius: 130 })
 
         this.sayWarning(`Este cesto só leva pedra ${ruleLabel(this.phase.rule, basket.value)}.`)
-
-        await FX.all(
-            FX.nope(this, view.sprite),
-            FX.arcTo(this, view.sprite, { x: view.homeX, y: view.homeY }, {
-                height: 90, duration: 420,
-            }),
-        )
-        if (gen !== this.gen) return
-
-        view.sprite.setScale(SIZE_SCALE[view.stone.size]).setDepth(20)
-        basket.sprite.setFrame(0)
-        paintSign(basket.plaque, false)
-        this.emitCheckpoint()
     }
 
     private async finishPhase(gen: number) {
@@ -591,7 +578,7 @@ export class GameScene extends Phaser.Scene {
         this.lives.lose()
         this.livesLeft = this.lives.remaining
         this.playRefuse()
-        this.sayWarning('O tempo acabou! Vamos de novo.')
+        this.sayWarning('O tempo acabou!')
         this.time.delayedCall(1500, () => {
             if (this.ended) return
             this.startPhase()

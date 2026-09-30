@@ -57,6 +57,7 @@ export class GameScene extends Phaser.Scene {
     private unblockTimer?: Phaser.Time.TimerEvent
     private inputBlockedUntil = 0
     private roomTutorialDone = new Set<StructureId>()
+    private roomTutorialOpen = false
 
     private hubLayer?: Phaser.GameObjects.Container
     private roomLayer?: Phaser.GameObjects.Container
@@ -383,7 +384,7 @@ export class GameScene extends Phaser.Scene {
             const step = p.steps[this.stepIdx]
             this.report[id].picks++
             if (id !== step.room) {
-                this.wrongCount++
+                this.registerMistake()
                 this.speak('duvida', `Aqui não cabe. ${step.need} não fica nesta sala.`)
                 return
             }
@@ -394,10 +395,13 @@ export class GameScene extends Phaser.Scene {
 
         if (p.kind === 'vitrine') {
             this.report[id].picks++
-            if (id === p.best) {
-                this.report[id].goodPicks++
-                this.points += 5
+            if (id !== p.best) {
+                this.speak('duvida', `${p.whyOther} A sala do ${ROOMS[p.best].kidName} guardava melhor.`)
+                this.registerMistake()
+                return
             }
+            this.report[id].goodPicks++
+            this.points += 5
             this.stepIdx = ROOM_ORDER.indexOf(id)
             this.enterRoom(id, p.tasks[id])
             return
@@ -675,7 +679,7 @@ export class GameScene extends Phaser.Scene {
             return
         }
 
-        this.wrongCount++
+        this.registerMistake()
         this.placed.forEach(id => {
             const c = this.trayCards.get(id)
             if (!c) return
@@ -687,7 +691,7 @@ export class GameScene extends Phaser.Scene {
     private onInsertPick(task: ListaTask, index: number, gap: Phaser.GameObjects.Container, incoming: Phaser.GameObjects.Container) {
         if (this.isInputBlocked() || this.taskLocked) return
         if (index !== task.insertAt) {
-            this.wrongCount++
+            this.registerMistake()
             this.tweens.add({ targets: gap, x: gap.x + 8, duration: 60, yoyo: true, repeat: 2 })
             this.speak('duvida', task.hint)
             return
@@ -803,7 +807,7 @@ export class GameScene extends Phaser.Scene {
         hit.on('pointerdown', () => {
             if (this.isInputBlocked() || this.taskLocked) return
             if (r !== task.target.row || c !== task.target.col) {
-                this.wrongCount++
+                this.registerMistake()
                 paint(C.warn, 4, C.warnSoft)
                 this.tweens.add({ targets: cont, x: cont.x + 8, duration: 60, yoyo: true, repeat: 2 })
                 this.time.delayedCall(520, () => paint(C.border, 3, C.panelSoft))
@@ -886,7 +890,7 @@ export class GameScene extends Phaser.Scene {
             hit.on('pointerdown', () => {
                 if (this.isInputBlocked() || this.taskLocked) return
                 if (f.key !== task.answerKey) {
-                    this.wrongCount++
+                    this.registerMistake()
                     paint(C.warn, 4, C.warnSoft)
                     this.tweens.add({ targets: row, x: row.x + 8, duration: 60, yoyo: true, repeat: 2 })
                     this.time.delayedCall(520, () => paint(C.border, 3, C.panelSoft))
@@ -914,7 +918,7 @@ export class GameScene extends Phaser.Scene {
             const x = startX + i * (REGISTRO.optionW + REGISTRO.optionGap)
             const btn = this.button(x, oy, REGISTRO.optionW, REGISTRO.optionH, opt, C.lilac, () => {
                 if (opt !== answer) {
-                    this.wrongCount++
+                    this.registerMistake()
                     this.tweens.add({ targets: btn, x: btn.x + 8, duration: 60, yoyo: true, repeat: 2 })
                     this.speak('duvida', task.hint)
                     return
@@ -1018,8 +1022,10 @@ export class GameScene extends Phaser.Scene {
         const key = [from, id].sort().join('|')
         const valid = task.answer.some(([a, b]) => [a, b].sort().join('|') === key)
 
-        if (!valid || this.edges.has(key)) {
-            this.wrongCount++
+        if (this.edges.has(key)) return
+
+        if (!valid) {
+            this.registerMistake()
             this.flashEdge(from, id)
             this.speak('duvida', task.hint)
             return
@@ -1164,7 +1170,7 @@ export class GameScene extends Phaser.Scene {
         const tokenKind = view.getData('kind') as TokenKind
 
         if (tokenKind !== kind) {
-            this.wrongCount++
+            this.registerMistake()
             paint(C.warn, 5, C.warnSoft)
             this.tweens.add({ targets: bin, x: bin.x + 8, duration: 60, yoyo: true, repeat: 2 })
             this.time.delayedCall(520, () => paint(C.stroke, 3, C.panelSoft))
@@ -1200,7 +1206,16 @@ export class GameScene extends Phaser.Scene {
         })
     }
 
+    private registerMistake() {
+        this.wrongCount++
+        this.taskLocked = true
+        runtimeGameBridge.emit({ type: 'WRONG_ANSWER', gameId: GAME_ID, pointsEarned: 0, stage: this.level.level })
+        this.lives.lose()
+        this.livesLeft = this.lives.remaining
+    }
+
     private finishTask(task: TaskConfig) {
+        EventBus.emit('timer-stop')
         const clean = this.wrongCount === 0
         const entry = this.report[task.structure]
         entry.tries++
@@ -1217,6 +1232,7 @@ export class GameScene extends Phaser.Scene {
         })
         // só o erro custa vida: o mesmo emit serve para acerto
         if (!(clean)) { this.lives.lose(); this.livesLeft = this.lives.remaining }
+        if (this.lives.remaining <= 0) return
 
         this.speak('feliz', 'Conseguiu!')
 
@@ -1243,6 +1259,7 @@ export class GameScene extends Phaser.Scene {
                         this.resetTaskState()
                         this.buildHub()
                         this.locked = false
+                        if (this.level.timeLimit) EventBus.emit('timer-start', this.level.timeLimit)
                     })
                 })
             })
@@ -1270,13 +1287,16 @@ export class GameScene extends Phaser.Scene {
     }
 
     private onTimeUp = () => {
-        if (this.ended || this.locked) return
+        if (this.ended) return
+        if (this.locked || this.roomTutorialOpen) {
+            this.time.delayedCall(200, this.onTimeUp)
+            return
+        }
         this.locked = true
         this.taskLocked = true
         runtimeGameBridge.emit({ type: 'WRONG_ANSWER', gameId: GAME_ID, pointsEarned: 0, stage: this.level.level })
         this.lives.lose()
         this.livesLeft = this.lives.remaining
-        this.showFeedback(false, 'O tempo do museu acabou. Vamos ver a próxima sala.', 0, () => this.completePhase())
     }
 
     private completePhase() {
@@ -1614,6 +1634,7 @@ export class GameScene extends Phaser.Scene {
         }
         this.roomTutorialDone.add(id)
         this.taskLocked = true
+        this.roomTutorialOpen = true
         createTutorial(this, {
             key: `museu-sala-${id}`,
             once: false,
@@ -1622,6 +1643,7 @@ export class GameScene extends Phaser.Scene {
             steps: this.roomTutorialSteps(id),
             onFinish: () => {
                 this.taskLocked = false
+                this.roomTutorialOpen = false
                 onDone()
             },
         })

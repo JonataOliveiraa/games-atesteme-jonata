@@ -12,12 +12,28 @@ import { STORAGE_KEY, readPersistedState } from "./migrateState";
 import type {
   BlockedGamesMap,
   GameEventPayload,
-  GameLivesMap,
   UserGameHistory,
 } from "../types/platform";
 
+/**
+ * ══════════════════════════════════════════════════════════════════════
+ *  AS VIDAS SÃO DA PLATAFORMA, A DERROTA É DO JOGO
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * O jogo não sabe que vidas existem. Ele decide sozinho quando a partida
+ * foi perdida e emite `GAME_OVER`; aqui, isso bloqueia o jogo por 24 horas.
+ *
+ * A vida é a moeda que desfaz o bloqueio antes do prazo: uma vida, um jogo
+ * desbloqueado. Perder NÃO gasta vida, e ter vidas NÃO evita o bloqueio.
+ *
+ * O saldo começa infinito porque isto é o protótipo. `JSON.stringify` grava
+ * `Infinity` como `null`, e o `??` do `loadInitialState` devolve o saldo
+ * inicial — então trocar esta constante por um número é a mudança inteira.
+ */
+const INITIAL_LIVES = Infinity;
 const EXTRA_LIFE_COST = 20;
-const UNLOCK_COST = 30;
+const UNLOCK_LIFE_COST = 1;
+const BLOCK_DURATION_MS = 24 * 60 * 60 * 1000;
 const CORRECT_POINTS = 5;
 const WRONG_POINTS = -5;
 const STREAK_BONUS_POINTS = 5;
@@ -25,10 +41,9 @@ const NO_ERROR_BONUS_POINTS = 5;
 
 type PlatformState = {
   points: number;
+  lives: number;
   extraLifeCost: number;
-  unlockCost: number;
   blockedGames: BlockedGamesMap;
-  gameLives: GameLivesMap;
   history: UserGameHistory[];
   gameStreaks: Record<string, number>;
   gameErrorCounts: Record<string, number>;
@@ -36,18 +51,17 @@ type PlatformState = {
 
 export type GameContextType = {
   points: number;
+  lives: number;
   extraLifeCost: number;
-  unlockCost: number;
+  unlockLifeCost: number;
   history: UserGameHistory[];
   blockedGames: BlockedGamesMap;
-  gameLives: GameLivesMap;
   blockedGamesCount: number;
   handleGameEvent: (event: GameEventPayload) => void;
   isGameBlocked: (gameId: string) => boolean;
   getGameBlockedUntil: (gameId: string) => string | null;
   getBlockedGames: () => BlockedGamesMap;
-  getGameLives: (gameId: string) => number;
-  buyExtraLife: (gameId: string) => boolean;
+  buyExtraLife: () => boolean;
   unlockGameAccess: (gameId: string) => boolean;
   resetProgress: () => void;
 };
@@ -58,10 +72,9 @@ type Props = {
 
 const INITIAL_STATE: PlatformState = {
   points: 1000000000,
+  lives: INITIAL_LIVES,
   extraLifeCost: EXTRA_LIFE_COST,
-  unlockCost: UNLOCK_COST,
   blockedGames: {},
-  gameLives: {},
   history: [],
   gameStreaks: {},
   gameErrorCounts: {},
@@ -71,10 +84,8 @@ function normalizeGameId(gameId: string): string {
   return resolveGameId(gameId) ?? gameId;
 }
 
-function getBlockedUntilAfterTwoDays(): string {
-  const now = new Date();
-  now.setDate(now.getDate() + 2);
-  return now.toISOString();
+function getBlockedUntil(): string {
+  return new Date(Date.now() + BLOCK_DURATION_MS).toISOString();
 }
 
 function createHistoryItem(
@@ -145,10 +156,9 @@ function loadInitialState(): PlatformState {
 
   return normalizeState({
     points: parsed.points ?? INITIAL_STATE.points,
+    lives: parsed.lives ?? INITIAL_STATE.lives,
     extraLifeCost: parsed.extraLifeCost ?? INITIAL_STATE.extraLifeCost,
-    unlockCost: parsed.unlockCost ?? INITIAL_STATE.unlockCost,
     blockedGames: parsed.blockedGames ?? {},
-    gameLives: parsed.gameLives ?? {},
     history: parsed.history ?? [],
     gameStreaks: parsed.gameStreaks ?? {},
     gameErrorCounts: parsed.gameErrorCounts ?? {},
@@ -198,15 +208,11 @@ export function GameProvider({ children }: Props) {
       const normalizedGameId = normalizeGameId(event.gameId);
 
       const nextBlockedGames = { ...prev.blockedGames };
-      const nextGameLives = { ...prev.gameLives };
       const nextGameStreaks = { ...prev.gameStreaks };
       const nextGameErrorCounts = { ...prev.gameErrorCounts };
 
       const historyItems: UserGameHistory[] = [];
       let nextPoints = prev.points;
-
-      const currentLives =
-        normalizedGameId in nextGameLives ? nextGameLives[normalizedGameId] : 1;
 
       switch (event.type) {
         case "CORRECT_ANSWER": {
@@ -253,30 +259,6 @@ export function GameProvider({ children }: Props) {
           nextGameErrorCounts[normalizedGameId] =
             (nextGameErrorCounts[normalizedGameId] ?? 0) + 1;
 
-          if (currentLives <= 0) {
-  const blockedUntil = getBlockedUntilAfterTwoDays();
-
-  nextBlockedGames[normalizedGameId] = blockedUntil;
-  nextGameLives[normalizedGameId] = 0;
-
-  historyItems.unshift(
-    createHistoryItem(normalizedGameId, event.stage, "GAME_OVER", 0),
-    createHistoryItem(normalizedGameId, event.stage, "BLOCKED", 0)
-  );
-
-  nextGameStreaks[normalizedGameId] = 0;
-  nextGameErrorCounts[normalizedGameId] = 0;
-
-  break;
-}
-
-const updatedLives = Math.max(0, currentLives - 1);
-nextGameLives[normalizedGameId] = updatedLives;
-
-historyItems.unshift(
-  createHistoryItem(normalizedGameId, event.stage, "LOST_LIFE", 0)
-);
-
           break;
         }
 
@@ -308,9 +290,7 @@ historyItems.unshift(
             createHistoryItem(normalizedGameId, event.stage, "GAME_OVER", 0)
           );
 
-          const blockedUntil = getBlockedUntilAfterTwoDays();
-          nextBlockedGames[normalizedGameId] = blockedUntil;
-          nextGameLives[normalizedGameId] = 0;
+          nextBlockedGames[normalizedGameId] = getBlockedUntil();
 
           historyItems.unshift(
             createHistoryItem(normalizedGameId, event.stage, "BLOCKED", 0)
@@ -336,7 +316,6 @@ historyItems.unshift(
         ...prev,
         points: nextPoints,
         blockedGames: nextBlockedGames,
-        gameLives: nextGameLives,
         history: [...historyItems, ...prev.history],
         gameStreaks: nextGameStreaks,
         gameErrorCounts: nextGameErrorCounts,
@@ -366,21 +345,7 @@ historyItems.unshift(
     return state.blockedGames;
   }, [state.blockedGames]);
 
-  const getGameLives = useCallback(
-    (gameId: string) => {
-      const normalizedGameId = normalizeGameId(gameId);
-
-      if (normalizedGameId in state.gameLives) {
-        return state.gameLives[normalizedGameId];
-      }
-
-      return 1;
-    },
-    [state.gameLives]
-  );
-
-  const buyExtraLife = useCallback((gameId: string) => {
-    const normalizedGameId = normalizeGameId(gameId);
+  const buyExtraLife = useCallback(() => {
     const atual = stateRef.current;
 
     if (atual.points < atual.extraLifeCost) {
@@ -392,23 +357,12 @@ historyItems.unshift(
         return prev;
       }
 
-      const nextLives = { ...prev.gameLives };
-      const currentLives =
-        normalizedGameId in nextLives ? nextLives[normalizedGameId] : 1;
-
-      nextLives[normalizedGameId] = currentLives + 1;
-
       return normalizeState({
         ...prev,
         points: prev.points - prev.extraLifeCost,
-        gameLives: nextLives,
+        lives: prev.lives + 1,
         history: [
-          createHistoryItem(
-            normalizedGameId,
-            0,
-            "BOUGHT_EXTRA_LIFE",
-            -prev.extraLifeCost
-          ),
+          createHistoryItem("", 0, "BOUGHT_EXTRA_LIFE", -prev.extraLifeCost),
           ...prev.history,
         ],
       });
@@ -425,7 +379,7 @@ historyItems.unshift(
       return false;
     }
 
-    if (atual.points < atual.unlockCost) {
+    if (atual.lives < UNLOCK_LIFE_COST) {
       return false;
     }
 
@@ -436,28 +390,20 @@ historyItems.unshift(
         return prev;
       }
 
-      if (prev.points < prev.unlockCost) {
+      if (prev.lives < UNLOCK_LIFE_COST) {
         return prev;
       }
 
       const nextBlockedGames = { ...prev.blockedGames };
-      const nextGameLives = { ...prev.gameLives };
 
       delete nextBlockedGames[normalizedGameId];
-      nextGameLives[normalizedGameId] = 0;
 
       return normalizeState({
         ...prev,
-        points: prev.points - prev.unlockCost,
+        lives: prev.lives - UNLOCK_LIFE_COST,
         blockedGames: nextBlockedGames,
-        gameLives: nextGameLives,
         history: [
-          createHistoryItem(
-            normalizedGameId,
-            0,
-            "UNLOCKED_BY_POINTS",
-            -prev.unlockCost
-          ),
+          createHistoryItem(normalizedGameId, 0, "UNLOCKED_BY_LIFE", 0),
           ...prev.history,
         ],
       });
@@ -480,34 +426,31 @@ historyItems.unshift(
   const value = useMemo<GameContextType>(
     () => ({
       points: state.points,
+      lives: state.lives,
       extraLifeCost: state.extraLifeCost,
-      unlockCost: state.unlockCost,
+      unlockLifeCost: UNLOCK_LIFE_COST,
       history: state.history,
       blockedGames: state.blockedGames,
-      gameLives: state.gameLives,
       blockedGamesCount,
       handleGameEvent,
       isGameBlocked,
       getGameBlockedUntil,
       getBlockedGames,
-      getGameLives,
       buyExtraLife,
       unlockGameAccess,
       resetProgress,
     }),
     [
       state.points,
+      state.lives,
       state.extraLifeCost,
-      state.unlockCost,
       state.history,
       state.blockedGames,
-      state.gameLives,
       blockedGamesCount,
       handleGameEvent,
       isGameBlocked,
       getGameBlockedUntil,
       getBlockedGames,
-      getGameLives,
       buyExtraLife,
       unlockGameAccess,
       resetProgress,

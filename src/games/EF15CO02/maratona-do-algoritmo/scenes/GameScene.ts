@@ -10,7 +10,7 @@ import { formatTime } from '../../../../shared/hud/createTimeBar'
 import { FX } from '../../../../shared/effects/FX'
 import {
     ALGORITHM_LINE, LEVELS, PHASE_CHEER, TOTAL_MARKS,
-    fallSentence, ghostLine, marksBefore, marksInLevel, solves,
+ ghostLine, marksBefore, marksInLevel, solves,
 } from '../data/levels'
 import { C } from '../data/theme'
 import { CARD, GO, MEDAL, PARK, SCROLL, SKATER, W } from '../data/layout'
@@ -480,33 +480,6 @@ export class GameScene extends Phaser.Scene {
 
         await this.park.fall(index)
         if (gen !== this.gen) return
-
-        // a saída do foco já para em cima do espaço culpado, e não no começo
-        void this.focus.view(this.park.marksX[index] + W * 0.15)
-        await this.focus.exit()
-        if (gen !== this.gen) return
-
-        void this.talk.say(fallSentence(this.phase.marks[index]), C.bad)
-        await this.plan.blame(index)
-        if (gen !== this.gen) return
-
-        if (this.slotFalls[index] >= 2) {
-            const right = this.phase.palette.find(kind => solves(this.phase.marks[index], kind))
-            if (right) this.palette.hint(right)
-        }
-
-        /*
-         * A manobra errada sai do espaço sozinha. Deixá-la ali obrigaria a
-         * criança a descobrir que precisa tocar nela primeiro — e o que ela
-         * precisa descobrir é o passo, não a interface.
-         */
-        this.plan.clear(index)
-        this.park.reset()
-        this.state = 'building'
-        this.clockOn = true
-        this.palette.setEnabled(true)
-        this.palette.setReady(this.plan.isFull())
-        this.help.setEnabled(true)
     }
 
     // ─────────────────────────────────────────────────────────── tutorial

@@ -244,6 +244,7 @@ export class GameScene extends Phaser.Scene {
 
     private async grab(counts: boolean) {
         const gen = this.gen
+        const training = counts && this.guiding
         this.mode = 'busy'
         this.setMoving(false)
         this.hud.setHelpEnabled(false)
@@ -270,17 +271,31 @@ export class GameScene extends Phaser.Scene {
         if (gen !== this.gen) return
         await this.claw.rise()
         if (gen !== this.gen) return
-        if (counts) this.childGrabbed()
 
         if (!view) {
+            if (counts) this.childGrabbed()
             this.resume()
             return
         }
 
+        const ok = matches(view, this.current.rule)
+        if (!ok && training) {
+            this.audio.empty()
+            await this.claw.drop(spot.y)
+            if (gen !== this.gen) return
+            const back = this.claw.give()
+            if (back) await this.tray.putBack(spot.index, back)
+            if (gen !== this.gen) return
+            await this.claw.rise()
+            if (gen !== this.gen) return
+            this.resume()
+            return
+        }
+        if (counts) this.childGrabbed()
+
         await this.claw.swing()
         if (gen !== this.gen) return
 
-        const ok = matches(view, this.current.rule)
         const held = this.claw.give()
         if (held) {
             this.audio.whoosh()

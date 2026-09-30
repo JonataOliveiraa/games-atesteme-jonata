@@ -237,6 +237,7 @@ export class GameScene extends Phaser.Scene {
         }
 
         if (this.modo === 'esperando') {
+            if (this.demo && lane !== this.demo.lane) return
             this.demo?.cancelar()
             void this.resolver(lane)
             return

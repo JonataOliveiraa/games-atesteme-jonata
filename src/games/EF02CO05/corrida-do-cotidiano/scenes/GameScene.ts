@@ -19,7 +19,7 @@ import { createSignPair, type SignPair } from './signs'
 import { createHud, type Hud } from './hud'
 import { createAudio, type Audio } from './audio'
 import { rewardPop } from './reward'
-import { showTrava, type Trava } from './trava'
+import type { Trava } from './trava'
 import { runDemo } from './demo'
 
 const GAME_ID = 'corrida-do-cotidiano'
@@ -372,17 +372,6 @@ export class GameScene extends Phaser.Scene {
         })
         this.lives.lose()
         this.livesLeft = this.lives.remaining
-
-        this.trava = showTrava(this, this.pair.techAt(lane))
-
-        this.hintTimer?.remove()
-        if (this.travasInPhase >= 2) {
-            this.pair.hint(this.correctLane)
-        } else {
-            this.hintTimer = this.time.delayedCall(2200, () => {
-                if (this.mode === 'blocked') this.pair?.hint(this.correctLane)
-            })
-        }
     }
 
     private unlock() {

@@ -103,8 +103,6 @@ export class GameScene extends Phaser.Scene {
     /** O avatar que para o caminho no nível 3, e as coisas que morrem com ele. */
     private interceptLayer?: Phaser.GameObjects.Container
     private interceptHits: Phaser.GameObjects.Zone[] = []
-    private noButton?: Phaser.GameObjects.Container
-    private noHintTween?: Phaser.Tweens.Tween
     private missesOnPath = 0
 
     /** Qual dado já foi protegido, para o álbum do fim de nível. */
@@ -205,7 +203,6 @@ export class GameScene extends Phaser.Scene {
         this.sweepTween?.remove()
         this.runTween?.remove()
         this.hintTween?.remove()
-        this.noHintTween?.remove()
         this.phasePulse?.remove()
         EventBus.off('mute-audio', this.onMuteAudio, this)
         EventBus.off('show-tutorial', this.replayTutorial, this)
@@ -654,11 +651,7 @@ export class GameScene extends Phaser.Scene {
         })
     }
 
-    /**
-     * Ser pega pela luz não é erro de segurança: não emite `WRONG_ANSWER` nem
-     * custa vida. Custa a volta ao esconderijo anterior, que é o preço justo
-     * de ter saído com a lanterna quase virando.
-     */
+    /** Ser pega pela luz no meio da corrida encerra a partida. */
     private caught() {
         this.runTween?.remove()
         this.runTween = undefined
@@ -680,6 +673,13 @@ export class GameScene extends Phaser.Scene {
             },
         })
 
+        this.locked = true
+        this.errors += 1
+        runtimeGameBridge.emit({
+            type: 'WRONG_ANSWER', gameId: GAME_ID, pointsEarned: 0, stage: this.level.level,
+        })
+        this.lives.lose()
+        this.livesLeft = this.lives.remaining
         this.emitCheckpoint()
     }
 
@@ -761,7 +761,6 @@ export class GameScene extends Phaser.Scene {
         FX.popIn(this, bubble, { from: 0.6, duration: 300, delay: 320 })
 
         const no = this.buildNoButton()
-        this.noButton = no
         layer.add(no)
         FX.popIn(this, no, { from: 0.6, duration: 360, delay: 620 })
 
@@ -775,7 +774,7 @@ export class GameScene extends Phaser.Scene {
             .setDepth(55).setInteractive({ useHandCursor: true })
         this.interceptHits = [onAvatar, onNo]
 
-        onAvatar.on('pointerdown', () => this.giveToAvatar(holder, bubble))
+        onAvatar.on('pointerdown', () => this.giveToAvatar(holder))
         onNo.on('pointerdown', () => this.refuseAvatar(no))
 
         this.time.delayedCall(760, () => {
@@ -811,9 +810,6 @@ export class GameScene extends Phaser.Scene {
     }
 
     private clearIntercept() {
-        this.noHintTween?.remove()
-        this.noHintTween = undefined
-        this.noButton = undefined
         this.interceptHits.forEach(z => z.destroy())
         this.interceptHits = []
         this.interceptLayer?.destroy()
@@ -821,13 +817,9 @@ export class GameScene extends Phaser.Scene {
     }
 
     /** Tocar no avatar é entregar o cartão. É o erro que a habilidade julga. */
-    private async giveToAvatar(
-        holder: Phaser.GameObjects.Container,
-        bubble: Phaser.GameObjects.Container,
-    ) {
+    private giveToAvatar(holder: Phaser.GameObjects.Container) {
         if (this.locked || this.ended) return
         this.locked = true
-        const gen = this.roundGen
 
         this.errors += 1
         this.missesOnPath += 1
@@ -842,17 +834,6 @@ export class GameScene extends Phaser.Scene {
         this.playBlock()
         FX.shake(this, holder, { amount: 10, times: 3 })
         showToast(this, 'Figurinha não paga um dado seu.', C.red)
-
-        await FX.wait(this, 1000)
-        if (gen !== this.roundGen) return
-
-        // depois de dois, o botão certo respira — é a regra de trava do catálogo
-        if (this.missesOnPath >= 2 && this.noButton && !this.noHintTween) {
-            this.noHintTween = FX.breathe(this, this.noButton, { grow: 1.07, duration: 860 })
-            FX.ping(this, this.noButton.x, this.noButton.y, C.red, { radius: 120 })
-        }
-        if (bubble.active) FX.impact(this, bubble, 0.18)
-        this.locked = false
     }
 
     /** Recusar e seguir: o avatar se apaga e o portão abre. */

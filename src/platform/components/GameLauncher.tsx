@@ -10,7 +10,6 @@ interface GameLauncherProps {
   gameId: string;
   level: 1 | 2 | 3;
   points: number;
-  lives: number;
   config: Phaser.Types.Core.GameConfig;
   onPlatformEvent: (event: PlatformEvent) => void;
 }
@@ -19,7 +18,6 @@ export default function GameLauncher({
   gameId,
   level,
   points,
-  lives,
   config,
   onPlatformEvent,
 }: GameLauncherProps) {
@@ -68,7 +66,6 @@ export default function GameLauncher({
         gameId,
         points,
         stage: level,
-        lives,
       };
 
       gameBridge.send(startCommand);
@@ -98,5 +95,5 @@ export default function GameLauncher({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gameId]);
 
-return <PhaserCanvas key={gameId} gameId={gameId} config={config} stage={level} lives={lives} />;
+return <PhaserCanvas key={gameId} gameId={gameId} config={config} stage={level} />;
 }

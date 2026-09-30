@@ -610,6 +610,16 @@ export class GameScene extends Phaser.Scene {
             this.audio.wrong()
             this.wrongSentence = true
             await this.frases.markWrong(index, frase.porque ?? '')
+            if (gen !== this.gen) return
+            this.errors++
+            runtimeGameBridge.emit({
+                type: 'WRONG_ANSWER',
+                gameId: GAME_ID,
+                pointsEarned: 0,
+                stage: this.level.level,
+            })
+            this.lives.lose()
+            this.livesLeft = this.lives.remaining
             return
         }
 

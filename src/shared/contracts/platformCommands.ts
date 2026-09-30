@@ -4,7 +4,8 @@ export type PlatformCommand =
       gameId: string;
       points: number;
       stage: number;
-      lives: number;
+      /** Aceito por compatibilidade e ignorado: a tolerância a erro é do jogo. */
+      lives?: number;
     }
   | {
       type: "PAUSE_GAME";

@@ -351,12 +351,13 @@ export class GameScene extends Phaser.Scene {
 
         await FX.wait(this, 260)
         if (gen !== this.gen) return
+        if (this.lives.remaining <= 0) return
 
         // ── 4. o porquê ───────────────────────────────────────────────
         this.explicacao = createExplicacao(this, {
             texto: this.explicar(acertou, justificou, i),
             tone: acertou ? C.ok : C.alerta,
-            label: acertou ? 'CONTINUAR' : 'TENTAR DE NOVO',
+            label: 'CONTINUAR',
             onClick: () => this.onContinuar(acertou),
         })
         this.locked = false

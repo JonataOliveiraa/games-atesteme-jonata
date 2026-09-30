@@ -14,6 +14,8 @@ export interface AppCtx {
     done: (actionKey: string) => void
     /** Avisa que o jogador agiu num app que não é o da tarefa. */
     offTask: () => void
+    /** Avisa que a resposta dada na tarefa está errada. */
+    wrong: () => void
 }
 
 export interface AppView {
@@ -334,6 +336,7 @@ export function calcApp(ctx: AppCtx, area: Area): AppView {
                 s.cameras.main.shake(140, 0.004)
                 floatingNote(s, 640, 320, 'Confira a conta', { tone: C.sun, deep: C.sunDeep })
                 s.time.delayedCall(1100, () => { expr = ''; show('') })
+                ctx.wrong()
                 return
             }
 
@@ -478,10 +481,10 @@ export function folderApp(ctx: AppCtx, area: Area): AppView {
             }
 
             if (over >= 0) {
-                // gaveta errada: devolve com sacudida, sem punir
                 s.cameras.main.shake(110, 0.002)
                 floatingNote(s, 640, 300, `${doc.name} vai na gaveta ${doc.name}`,
                     { tone: C.sun, deep: C.sunDeep })
+                if (ctx.step) ctx.wrong()
             }
             s.tweens.add({ targets: card, x: homeX, y: homeY, duration: 260, ease: 'Back.easeOut' })
         }

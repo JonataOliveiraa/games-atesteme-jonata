@@ -590,7 +590,7 @@ export class GameScene extends Phaser.Scene {
     private startTimer() {
         this.timerEvent = this.time.addEvent({
             delay: this.phase.timeLimit * 1000,
-            callback: () => this.handleGameOver(),
+            callback: () => this.handleTimeUp(),
         });
     }
 
@@ -664,68 +664,18 @@ export class GameScene extends Phaser.Scene {
         });
     }
 
+    private handleTimeUp() {
+        if (this.gameEnded) return;
+        this.playWrong();
+        this.emitPlatformEvent('WRONG_ANSWER', { pointsEarned: -5 });
+        this.lives.lose(); this.livesLeft = this.lives.remaining
+        this.handleGameOver();
+    }
+
     private handleGameOver() {
         if (this.gameEnded) return;
         this.gameEnded = true;
         this.timerEvent?.remove();
-
-        this.emitPlatformEvent('GAME_OVER', { pointsEarned: -5 });
-
-        this.time.delayedCall(300, () => this.showResultScreen({
-            won: false,
-            title: 'Ops, tente de novo!',
-            subtitle: `Nível ${this.level.level} — Fase ${this.currentPhaseIdx + 1}`,
-            buttonLabel: 'TENTAR DE NOVO',
-            onButton: () => this.scene.restart({ lives: this.livesLeft, 
-                levelIndex: this.currentLevelIdx,
-                phaseIndex: this.currentPhaseIdx,
-            }),
-        }));
-    }
-
-    private showResultScreen(opts: {
-        won: boolean;
-        title: string;
-        subtitle: string;
-        buttonLabel: string;
-        onButton: () => void;
-        exitButton?: boolean;
-    }) {
-        const { width, height } = this.scale;
-        const container = this.add.container(0, 0).setDepth(1000);
-
-        const overlay = this.add.rectangle(width / 2, height / 2, width, height,
-            opts.won ? 0x7dd3fc : 0x312e81, opts.won ? 0.92 : 0.88);
-
-        const title = this.add.text(width / 2, height * 0.18, opts.title, {
-            fontSize: '42px', fontFamily: '"DynaPuff Black", "Arial Black", sans-serif', color: '#ffffff',
-            stroke: opts.won ? '#4f46e5' : '#ff6fb1', strokeThickness: 7,
-            align: 'center', wordWrap: { width: width - 160 },
-        }).setOrigin(0.5);
-
-        const subtitle = this.add.text(width / 2, height * 0.27, opts.subtitle, {
-            fontSize: '22px', fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif', color: '#fff7c2',
-            stroke: '#1f2937', strokeThickness: 4,
-        }).setOrigin(0.5);
-
-        const robotImg = this.add.image(width / 2, height * 0.52, 'full_robot')
-            .setDisplaySize(230, 330);
-
-        const mainBtn = this.createButton(width / 2, height * (opts.exitButton ? 0.79 : 0.86),
-            340, 64, opts.buttonLabel, opts.won ? COLORS.green : COLORS.lemon, () => {
-                this.playClick();
-                opts.onButton();
-            });
-
-        container.add([overlay, title, subtitle, robotImg, mainBtn]);
-
-        if (opts.exitButton) {
-            container.add(this.createButton(width / 2, height * 0.91, 340, 64,
-                'OUTROS JOGOS', COLORS.lemon, () => {
-                    this.playClick();
-                    EventBus.emit('exit-game');
-                }));
-        }
     }
 
     private showEndScreen(won: boolean) {

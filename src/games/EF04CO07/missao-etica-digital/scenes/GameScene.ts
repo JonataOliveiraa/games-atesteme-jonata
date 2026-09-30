@@ -325,6 +325,7 @@ export class GameScene extends Phaser.Scene {
 
         await FX.wait(this, 260)
         if (gen !== this.gen) return
+        if (this.lives.remaining <= 0) return
 
         /*
          * ── 4. a frase ────────────────────────────────────────────────
@@ -346,9 +347,7 @@ export class GameScene extends Phaser.Scene {
         const ultimo = this.passoIdx >= this.caso.passos.length - 1
         this.continuar = createBigButton(this, {
             x: IMPACTO.cx, y: IMPACTO.botaoY, w: IMPACTO.botaoW, h: IMPACTO.botaoH,
-            label: acao.certa
-                ? (ultimo ? 'CONTINUAR' : 'PRÓXIMA ETAPA')
-                : 'TENTAR DE NOVO',
+            label: ultimo ? 'CONTINUAR' : 'PRÓXIMA ETAPA',
             tone: acao.certa ? C.ok : C.alerta,
             onClick: () => this.onContinuar(acao.certa, ultimo),
         })

@@ -17,7 +17,7 @@ import type { Caso, CaseState, Formato, Level, Veredito as VereditoData } from '
 import {
     createRoom, createHud, createTrilha, createTitulo, createCartaoPedido,
     createLembrete, createOpcoes, createObraMontada, createCarimbos,
-    createVeredito, createCards, createBigButton, showToast, ACCENT,
+   createVeredito, createCards, createBigButton,  ACCENT,
     type BigButton, type Cards, type CartaoPedido, type Carimbos, type Hud,
     type Lembrete, type ObraMontada, type Opcoes, type Titulo, type Trilha,
     type Veredito,
@@ -317,15 +317,6 @@ export class GameScene extends Phaser.Scene {
 
             await this.cards?.reject(escolhida)
             if (gen !== this.gen) return
-
-            showToast(this, caso.porque?.[escolhida] ?? 'Essa mídia não serve para este pedido.',
-                C.warn, 3400)
-
-            await FX.wait(this, 400)
-            if (gen !== this.gen) return
-
-            this.locked = false
-            this.cards?.setEnabled(true)
             return
         }
 
@@ -563,13 +554,6 @@ export class GameScene extends Phaser.Scene {
             })
                 this.lives.lose(); this.livesLeft = this.lives.remaining
             this.emitCheckpoint()
-
-            // a trilha ANDA PARA TRÁS: a criança vê para onde está voltando
-            this.veredito.setVisible(false)
-            this.carimbos.container.removeAll(true)
-            this.locked = false
-            this.revisando = true
-            this.abrirPasso(Math.max(0, v.revisar))
             return
         }
 

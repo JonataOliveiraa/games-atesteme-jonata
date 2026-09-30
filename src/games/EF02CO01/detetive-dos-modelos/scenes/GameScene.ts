@@ -8,7 +8,7 @@ import { FX } from '../../../../shared/effects/FX'
 import { createLives, type Lives } from '../../../../shared/hud/createLives'
 import { vidasIniciais } from '../../../../shared/level/vidasIniciais'
 import { GAME_DONE, LEVELS, LEVEL_DONE, TOTAL_TESTS, testsBefore, testsInLevel } from '../data/levels'
-import { matchesZone, fittingZone, vehicleOf, zoneKey } from '../data/vehicles'
+import { matchesZone,  vehicleOf, zoneKey } from '../data/vehicles'
 import { playTest } from './theatre'
 import { C } from '../data/theme'
 import { MAT } from '../data/layout'
@@ -301,21 +301,6 @@ export class GameScene extends Phaser.Scene {
         void zones.deny(index)
         await pause(this, 900)
         if (gen !== this.gen) return
-
-        await zones.release(index)
-        if (gen !== this.gen) return
-        await this.piece.back()
-        if (gen !== this.gen) return
-        this.detective.hush()
-        this.detective.mood('watch')
-
-        if (this.missesHere >= 2) {
-            const safe = fittingZone(this.vehicle, this.phase.zones)
-            if (safe >= 0) zones.nudge(safe)
-            await pause(this, 750)
-            if (gen !== this.gen) return
-        }
-        this.beginPlay()
     }
 
     private async endPhase() {

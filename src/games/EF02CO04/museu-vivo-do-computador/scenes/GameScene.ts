@@ -281,7 +281,6 @@ export class GameScene extends Phaser.Scene {
       pointsEarned: 0, stage: this.levelConfig.level,
     })
       this.lives.lose(); this.livesLeft = this.lives.remaining
-    this.showGameOverScreen()
   }
 
   private buildMission() {
@@ -538,6 +537,10 @@ export class GameScene extends Phaser.Scene {
     })
       this.lives.lose(); this.livesLeft = this.lives.remaining
     this.emitCheckpoint()
+    if (this.lives.remaining <= 0) {
+      this.gameEnded = true
+      this.timerTween?.stop()
+    }
   }
 
   private placeCorrect(card: ItemCard, zone: ZoneView) {
@@ -576,6 +579,7 @@ export class GameScene extends Phaser.Scene {
   private finishMission() {
     this.hits++
     this.phase = 'feedback'
+    this.timerTween?.pause()
     this.time.delayedCall(900, () => this.celebrateZones())
   }
 
@@ -1165,49 +1169,6 @@ export class GameScene extends Phaser.Scene {
     panel.add([bg, title, subtitle, ...badges, again, exit])
     panel.setScale(0.9).setAlpha(0)
     this.tweens.add({ targets: panel, alpha: 1, scale: 1, duration: 300, ease: 'Back.easeOut' })
-  }
-
-  private showGameOverScreen() {
-    this.clearOverlay()
-    this.clearTutorial()
-    const overlay = this.addOverlayObject(
-      this.add.rectangle(640, 360, 1280, 720, C.blueDark, 0.72).setDepth(450))
-    overlay.setInteractive()
-    const panel = this.addOverlayObject(this.add.container(640, 360).setDepth(451))
-
-    const bg = this.add.graphics()
-    bg.fillStyle(C.offWhite, 0.99)
-    bg.fillRoundedRect(-290, -180, 580, 360, 28)
-    bg.lineStyle(6, C.red, 0.9)
-    bg.strokeRoundedRect(-290, -180, 580, 360, 28)
-
-    const title = this.add.text(0, -110, 'O tempo acabou!', {
-      fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif', fontSize: '36px', color: '#1E3A8A',
-    }).setOrigin(0.5).setResolution(2)
-
-    const total = this.levelConfig.missions.length
-    const stats = this.add.text(0, -36,
-      `${this.currentMissionIndex} de ${total} desafios concluídos`, {
-      fontFamily: 'DynaPuff, Arial, sans-serif', fontStyle: 'bold', fontSize: '20px', color: '#1E293B',
-    }).setOrigin(0.5).setResolution(2)
-
-    const canRetry = this.lives.remaining > 0
-    const exit = this.createModalButton(canRetry ? 140 : 0, 110, 'Sair', C.blue, () => {
-      EventBus.emit('exit-game')
-    })
-    panel.add([bg, title, stats, exit])
-
-    if (canRetry) {
-      const retry = this.createModalButton(-140, 110, 'Tentar novamente', C.green, () => {
-        this.scene.restart({ level: this.levelConfig.level, points: this.currentPoints, lives: this.livesLeft })
-      })
-      panel.add(retry)
-    }
-    panel.setScale(0.9).setAlpha(0)
-    this.tweens.add({ targets: panel, alpha: 1, scale: 1, duration: 260, ease: 'Back.easeOut' })
-
-    this.playTone(330, 0.30, 'square', 0.18)
-    this.time.delayedCall(100, () => this.playTone(220, 0.40, 'square', 0.16))
   }
 
   private showConfirmBar(

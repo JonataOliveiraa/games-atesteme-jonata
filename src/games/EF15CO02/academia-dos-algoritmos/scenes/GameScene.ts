@@ -645,9 +645,6 @@ export class GameScene extends Phaser.Scene {
 
     await this.garden.missGoal()
     if (gen !== this.gen) return
-
-    this.tone(200, 0.18, 'sawtooth')
-    this.backToBuilding()
   }
 
   /** Que buraco visual mora em cada estação lógica. A bifurcação tem dois. */
@@ -768,8 +765,6 @@ export class GameScene extends Phaser.Scene {
 
     this.tone(200, 0.18, 'sawtooth')
     if (gen !== this.gen) return
-
-    this.backToBuilding()
   }
 
   private async stuck(gen: number, actionId: string, slot: number) {
@@ -786,30 +781,6 @@ export class GameScene extends Phaser.Scene {
       await this.garden?.trouble(blame, this.world)
       if (gen !== this.gen) return
     }
-
-    this.versionsOf.push({ filling: this.garden?.filled() ?? [], stuckAt: slot, won: false })
-    this.backToBuilding()
-  }
-
-  /**
-   * ERRAR NÃO LIMPA NADA.
-   *
-   * O tabuleiro volta a aceitar toque com os passos ainda onde ela pôs. É o
-   * que torna isto depuração: ela troca UM gesto e roda de novo.
-   */
-  private backToBuilding() {
-    this.running = false
-    this.followWalker(false)
-
-    this.garden?.light(null)
-    this.garden?.setActive(true)
-    this.belt?.setActive(true)
-
-    this.track?.setActive(true)
-    this.shelf?.setActive(true)
-
-    this.refreshButton()
-    this.emitCheckpoint()
   }
 
   private emitWrong() {

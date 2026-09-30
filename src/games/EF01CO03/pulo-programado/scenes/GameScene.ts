@@ -7,7 +7,7 @@ import { showLevelComplete } from '../../../../shared/level/showLevelComplete'
 import { FX } from '../../../../shared/effects/FX'
 import {
     ALGORITHM_LINE, LEVELS, PHASE_CHEER, TOTAL_MARKS,
-    bumpSentence, marksBefore, marksInLevel, solves,
+ marksBefore, marksInLevel, solves,
 } from '../data/levels'
 import { C } from '../data/theme'
 import {
@@ -320,28 +320,6 @@ export class GameScene extends Phaser.Scene {
 
         await this.world.bump()
         if (gen !== this.gen) return
-
-        void this.talk.say(bumpSentence(this.phase.marks[index]), C.bad)
-        await this.track.blame(index)
-        if (gen !== this.gen) return
-
-        if (this.slotMistakes[index] >= 2) {
-            const right = this.phase.palette.find(
-                kind => solves(this.phase.marks[index], kind),
-            )
-            if (right) this.palette.hint(right)
-        }
-
-        /*
-         * A carta errada sai do quadrado sozinha. Deixá-la ali obrigaria a
-         * criança a descobrir que precisa tocar nela primeiro — e o que ela
-         * precisa descobrir é o passo, não a interface.
-         */
-        this.track.clear(index)
-        this.state = 'building'
-        this.palette.setEnabled(true)
-        this.palette.setReady(this.track.isFull())
-        this.help.setEnabled(true)
     }
 
     // ─────────────────────────────────────────────────────── tutorial

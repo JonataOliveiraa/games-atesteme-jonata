@@ -309,17 +309,6 @@ export class GameScene extends Phaser.Scene {
         this.cameras.main.shake(160, 0.005)
         await this.court.deny('goal', target.index)
         if (gen !== this.gen) return
-
-        this.header.callRecipient()
-        await pause(this, 700)
-        if (gen !== this.gen) return
-
-        if (this.missesHere >= 2) {
-            this.court.point('goal', this.goalIndex)
-            await pause(this, 900)
-            if (gen !== this.gen) return
-        }
-        this.beginPlay()
     }
 
     private async endLevel() {

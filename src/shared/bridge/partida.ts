@@ -32,9 +32,18 @@ import type Phaser from "phaser";
  * som e a tremida do erro terminarem de tocar. Nenhum `RESUME_GAME` religa
  * uma partida encerrada: destravar é trocar de partida, e uma partida nova é
  * um jogo novo.
+ *
+ * ── O ERRO FICA NA TELA ANTES DE ALGUÉM COBRI-LO ─────────────────────────
+ *
+ * O `GAME_OVER` sai na hora — o resultado não espera, senão fechar a aba no
+ * meio da espera apagaria a derrota. O que espera é a TELA: o jogo segue
+ * animando por `ESPERA_PARA_VER_O_ERRO_MS`, e quem hospeda usa o mesmo número
+ * antes de pôr o "Fim de jogo" por cima (`EmbedGamePage`) ou abrir o modal
+ * (`GameDetailsPage`). Um número só, para o congelamento e a cobertura
+ * caírem no mesmo instante.
  */
 
-const ESPERA_ANTES_DE_CONGELAR_MS = 1200;
+export const ESPERA_PARA_VER_O_ERRO_MS = 1350;
 
 let ativo: Phaser.Game | null = null;
 let encerrada = false;
@@ -84,5 +93,5 @@ export function encerrarPartida(): void {
 
   window.setTimeout(() => {
     if (ativo === game && pronto(game)) congelar(game);
-  }, ESPERA_ANTES_DE_CONGELAR_MS);
+  }, ESPERA_PARA_VER_O_ERRO_MS);
 }

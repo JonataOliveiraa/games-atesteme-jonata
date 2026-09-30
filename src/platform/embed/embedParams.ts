@@ -8,18 +8,24 @@ import { isOriginAllowed } from "../../shared/bridge/allowedOrigins";
  * A plataforma abre o jogo assim:
  *
  *   /jogos/sistema-operacional?embed=1&attempt=6f1c…&stage=1&points=120
- *                             &lives=3&returnBase=https%3A%2F%2Fedu.atesteme.com
+ *                             &returnBase=https%3A%2F%2Fedu.atesteme.com
  *
  * ── DUAS CLASSES DE PARÂMETRO, E DUAS REAÇÕES DIFERENTES ─────────────────
  *
- * `stage`, `points`, `lives` e `locale` são AJUSTES: valor estranho vira o
- * padrão e a partida começa. Ninguém deveria ver uma tela de erro porque
+ * `stage`, `points` e `locale` são AJUSTES: valor estranho vira o padrão e a
+ * partida começa. Ninguém deveria ver uma tela de erro porque
  * chegou `stage=9`.
  *
  * `attempt` e `returnBase` são o CONTEXTO: sem eles a partida existe mas o
  * resultado não tem para onde ir. Aí a resposta certa é não começar — jogar
  * uma partida que ninguém consegue creditar é pior que uma mensagem de erro,
  * porque a criança joga, ganha, e o esforço evapora.
+ *
+ * ── `lives` NÃO É MAIS LIDO ──────────────────────────────────────────────
+ *
+ * Ele já foi a tolerância a erro da partida. Hoje a tolerância é do jogo (ver
+ * `shared/level/vidasIniciais.ts`) e as vidas são da plataforma. Uma URL que
+ * ainda traga `lives=3` abre normalmente; o valor só não tem efeito.
  *
  * ── NADA DE SEGREDO AQUI ─────────────────────────────────────────────────
  *
@@ -57,7 +63,6 @@ export type EmbedParams = {
   attempt: string | null;
   stage: 1 | 2 | 3;
   points: number;
-  lives: number;
   locale: string;
   /** Origem da plataforma que recebe o resultado. Sempre normalizada. */
   returnBase: string | null;
@@ -71,7 +76,6 @@ export type EmbedValidation =
 const PADRAO = {
   stage: 1 as const,
   points: 0,
-  lives: 3,
   locale: "pt-BR",
 };
 
@@ -113,7 +117,6 @@ export function parseEmbedParams(query: URLSearchParams): EmbedParams {
     attempt,
     stage: fase(query.get("stage")),
     points: inteiro(query.get("points"), PADRAO.points, 0),
-    lives: inteiro(query.get("lives"), PADRAO.lives, 1),
     locale: query.get("locale")?.trim() || PADRAO.locale,
     returnBase: origem(query.get("returnBase")),
   };

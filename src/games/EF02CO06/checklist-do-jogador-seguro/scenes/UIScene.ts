@@ -141,7 +141,7 @@ export class UIScene extends Phaser.Scene {
       this.timerFill.fillRoundedRect(x, y, Math.max(8, w * p), 8, 4)
     }
     const s = Math.ceil(this.timeLeft)
-    this.timerText.setText(s > 0 ? `bonus ${s}s` : 'sem bonus')
+    this.timerText.setText(`${Math.max(0, s)}s`)
     this.timerText.setColor(hex(p > 0.4 ? C.white : C.sun))
   }
 

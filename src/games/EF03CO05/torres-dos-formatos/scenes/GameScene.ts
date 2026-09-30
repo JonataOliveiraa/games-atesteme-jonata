@@ -10,7 +10,7 @@ import { FX } from '../../../../shared/effects/FX'
 import { LEVELS, belongs, formatOfFile } from '../data/levels'
 import { BUCKET, CONTROLS, DEPTH, FALLER, H, HUD, LANE, W } from '../data/layout'
 import { C } from '../data/theme'
-import type { FormatId, LevelDef, LevelNumber, Mode, WaveDef } from '../types'
+import type { LevelDef, LevelNumber, Mode, WaveDef } from '../types'
 import { createLanes, type Lanes } from './lanes'
 import { createFaller, type Faller } from './faller'
 import { createControls, type Controls } from './controls'
@@ -24,14 +24,6 @@ const SHEET = 'conteudos'
 
 /** Metade do caminho: onde o ninja larga o disfarce. */
 const REVEAL_Y = (LANE.spawnY + LANE.landY) / 2
-
-/** A frase da trava diz o que o arquivo GUARDA — nunca em qual caixa ele vai. */
-const STRUCTURE_LINE: Record<FormatId, string> = {
-    audio: 'Este arquivo guarda amostras de som numa linha.',
-    image: 'Este arquivo guarda pontos de cor numa grade.',
-    text: 'Este arquivo guarda símbolos em sequência.',
-    video: 'Este arquivo guarda quadros em fila.',
-}
 
 export class GameScene extends Phaser.Scene {
     private lives!: Lives
@@ -361,10 +353,6 @@ export class GameScene extends Phaser.Scene {
 
         await FX.wait(this, 260)
         if (gen !== this.gen) return
-
-        const spot = this.faller.pos()
-        this.lock.show(spot.x + 74, spot.y - 118)
-        this.lock.say(STRUCTURE_LINE[formatOfFile(file)], file.payload)
     }
 
     private async tryFix(index: number) {

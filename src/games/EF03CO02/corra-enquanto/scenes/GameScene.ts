@@ -365,14 +365,28 @@ export class GameScene extends Phaser.Scene {
     }
 
     /**
-     * Passou da janela ainda segurando. O robo ja esta parado -- o laco nao
-     * roda com a condicao falsa -- entao aqui nao ha o que punir: o mundo
-     * segue, o pedal continua pedindo SOLTE e a plaquinha explica por que.
+     * Passou da janela ainda segurando: nao parou o laco quando a condicao
+     * ficou falsa. E a habilidade do jogo, e encerra a partida.
      */
     private missedRelease() {
         this.pending = null
+        this.errors += 1
         this.explain(this.travaLine())
         this.card.pulse()
+        this.audio.wrong()
+
+        runtimeGameBridge.emit({
+            type: 'WRONG_ANSWER',
+            gameId: GAME_ID,
+            pointsEarned: 0,
+            stage: this.level.level,
+        })
+        this.lives.lose()
+        this.livesLeft = this.lives.remaining
+
+        this.mode = 'done'
+        this.setAdvancing(false)
+        this.pedal.setEnabled(false)
     }
 
     /**
@@ -407,6 +421,12 @@ export class GameScene extends Phaser.Scene {
         })
         this.lives.lose()
         this.livesLeft = this.lives.remaining
+
+        if (this.lives.remaining <= 0) {
+            this.mode = 'done'
+            this.setAdvancing(false)
+            this.pedal.setEnabled(false)
+        }
     }
 
     /** Plaquinha que explica e sai sozinha. Nao para o mundo. */
@@ -546,7 +566,14 @@ export class GameScene extends Phaser.Scene {
         this.audio.wrong()
         this.travaOpen?.destroy()
         this.travaOpen = showTrava(this, 'O tempo acabou!')
-        runtimeGameBridge.emit({ type: 'GAME_OVER', gameId: GAME_ID, stage: this.level.level })
+        runtimeGameBridge.emit({
+            type: 'WRONG_ANSWER',
+            gameId: GAME_ID,
+            pointsEarned: 0,
+            stage: this.level.level,
+        })
+        this.lives.lose()
+        this.livesLeft = this.lives.remaining
     }
 
     // ─────────────────────────────────────────────── demonstração

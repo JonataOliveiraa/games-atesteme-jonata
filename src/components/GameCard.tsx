@@ -24,7 +24,7 @@ export default function GameCard(props: Props) {
     type: "sine",
   });
 
-  const { isGameBlocked, getGameBlockedUntil, unlockGameAccess, unlockCost } =
+  const { isGameBlocked, getGameBlockedUntil, unlockGameAccess, unlockLifeCost } =
     useGame();
 
   const [showUnlockModal, setShowUnlockModal] = useState(false);
@@ -45,7 +45,7 @@ export default function GameCard(props: Props) {
 
     if (!success) {
       setFeedbackMessage(
-        "Você não possui pontos suficientes para liberar este jogo."
+        "Você está sem vidas para liberar este jogo."
       );
       setShowUnlockModal(false);
       return;
@@ -99,8 +99,8 @@ export default function GameCard(props: Props) {
               blockedUntil
             ).toLocaleString(
               "pt-BR"
-            )} porque suas tentativas foram esgotadas. Deseja liberar o acesso por ${unlockCost} pontos?`
-            : `O jogo "${game.title}" está bloqueado porque suas tentativas foram esgotadas. Deseja liberar o acesso por ${unlockCost} pontos?`
+            )} porque houve game over. Deseja liberar o acesso usando ${unlockLifeCost} vida?`
+            : `O jogo "${game.title}" está bloqueado porque houve game over. Deseja liberar o acesso usando ${unlockLifeCost} vida?`
         }
         confirmText="Confirmar"
         cancelText="Cancelar"

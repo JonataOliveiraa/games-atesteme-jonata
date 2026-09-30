@@ -70,7 +70,7 @@ mais rápido de sair diferente dos outros 49:
 |---|---|---|
 | `loading/createLoadingScreen` | tela de carregamento | 49 |
 | `level/faseInicial` | abrir na fase que a plataforma pediu | 49 |
-| `hud/createLives` | as vidas e a derrota | 49 |
+| `hud/createLives` | a derrota: um erro, fim de jogo | 49 |
 | `level/showLevelComplete` | painel de fim de nível | 48 |
 | `tutorial/createTutorial` | o tutorial guiado | 47 |
 | `effects/FX` | tremida, flash, espera | vários |
@@ -104,7 +104,7 @@ O loop principal deve ser simples e bem acabado:
 1. o jogo apresenta uma situação;
 2. a criança toma uma decisão ou executa uma ação;
 3. o jogo responde com feedback visual e sonoro;
-4. o progresso avança, ou a criança tenta de novo;
+4. no acerto, o progresso avança; no erro, a partida termina (ver "A derrota");
 5. ao concluir o nível, o jogo mostra fechamento claro e passa para o próximo.
 
 Evite mecânicas com muitas regras simultâneas. A dificuldade deve crescer por
@@ -294,27 +294,36 @@ vira mentira silenciosa.
 | `GAME_READY` | uma vez, quando dá para jogar |
 | `GAME_COMPLETED` | ao concluir **cada** nível, não só o último |
 | `CORRECT_ANSWER` | a cada acerto real |
-| `WRONG_ANSWER` | a cada erro real |
+| `WRONG_ANSWER` | a cada erro real — e ele encerra a partida |
 | `CHECKPOINT` | fim de nível ou marco de progresso |
-| `GAME_OVER` | **não emita à mão** — ver abaixo |
+| `GAME_OVER` | **não emita à mão** — sai do `lose()`, ver abaixo |
 
-`WRONG_ANSWER` não é telemetria: cada um custa uma vida. Não emita em erro de
-arrastar, toque fora ou tentativa cancelada.
+`WRONG_ANSWER` não é telemetria: ele anda sempre junto do `lose()`, e o `lose()`
+encerra a partida. Não emita em erro de arrastar, toque fora ou tentativa
+cancelada.
 
-### As vidas, e quem reprova
+### A derrota: um erro, fim de jogo
 
-A criança começa a partida com as vidas que a plataforma mandou em `?lives=`, e
-elas valem pela **partida inteira** — trocar de nível não devolve nenhuma.
+Todo jogo tolera **um** erro. A criança errou uma decisão, ou o tempo acabou: a
+partida termina ali. Não existe segunda chance dentro da partida, nem dica
+depois de dois erros, nem "tente de novo". A segunda chance é jogar outra vez,
+e quem decide quando isso é possível é a plataforma.
 
-Quem conta é `shared/hud/createLives.ts`, e a regra mora lá: no zero, ele emite
-o `GAME_OVER` sozinho. Nenhum jogo decide quando reprovar.
+**O jogo não sabe que vidas existem.** Vida, bloqueio de 24 horas e desbloqueio
+são da plataforma — o protótipo deste site (`src/context/GameContext.tsx`) e,
+de verdade, a Atesteme. O jogo só diverte, testa a habilidade e avisa quando a
+partida foi perdida.
+
+O nome `lives` no código do jogo é histórico: é o contador de tolerância, e ele
+vale sempre 1 (`shared/level/vidasIniciais.ts`). `?lives=` na URL e `lives` no
+`START_GAME` são ignorados. Os corações ficam ocultos e assim permanecem.
 
 ```ts
 // BootScene.preload()
 preloadLives(this)
 
 // GameScene.init()
-this.livesTotal = vidasIniciais(this, 3)
+this.livesTotal = vidasIniciais(this)
 this.livesLeft = data?.lives ?? this.livesTotal
 
 // GameScene.create() — FORA de container que sofra removeAll()
@@ -327,24 +336,96 @@ this.lives = createLives(this, {
 })
 this.events.once('shutdown', () => this.lives.destroy())
 
-// no erro real, DEPOIS do WRONG_ANSWER que o jogo já emite
+// em TODO erro de decisão e no tempo esgotado, uma vez só
+runtimeGameBridge.emit({
+    type: 'WRONG_ANSWER',
+    gameId: GAME_ID,
+    stage: this.level.level,
+    pointsEarned: -5,
+})
 this.lives.lose()
-this.livesLeft = this.lives.remaining
-
-// em cada scene.restart que troca de nível
-this.scene.restart({ ..., lives: this.livesLeft })
+return   // a partida acabou: não avance, não reinicie, não reabra a pergunta
 ```
 
-Duas coisas fáceis de errar aqui:
+O `GAME_OVER` sai de dentro do `lose()`. Nenhum jogo o emite à mão, nem no
+tempo esgotado: relógio no zero é `WRONG_ANSWER` + `lose()`, igual a qualquer
+outro erro.
 
-- **O saldo tem que atravessar o `scene.restart`.** Passar `this.livesTotal` em
-  vez de `this.livesLeft` devolve todas as vidas a cada nível, e o `lives=1`
-  nunca reprova. Só o botão de recomeçar do zero (`level: 1`) devolve cheias.
-- **A posição se ajusta com a tecla M**, no dev server: WASD move, Shift move de
-  10 em 10, M grava em `lives-positions.json`. Ver `src/games/VIDAS.md`.
+#### O que acontece depois do `lose()`
 
-O único caso em que o jogo emite `GAME_OVER` por conta própria é **tempo
-esgotado**, que reprova na hora sem passar pelas vidas. Fora isso, não emita.
+**O jogo tem 1,35 segundo de tela depois do `lose()`.** O `GAME_OVER` sai na
+hora (o resultado não espera), e o toque é cortado no mesmo instante. A tela
+espera: o jogo segue animando por `ESPERA_PARA_VER_O_ERRO_MS` (1,35 s, em
+`shared/bridge/partida.ts`), e só então o Phaser congela e a plataforma cobre
+o jogo — no embed entra o "Fim de jogo" e o iframe vai para `/reprove`
+(`src/pages/EmbedGamePage.tsx`); na plataforma de jogos abre o modal de GAME
+OVER.
+
+Ou seja: **a cena do erro precisa caber em 1,35 segundo.** O que passar disso a
+criança não vê.
+
+Por isso:
+
+- **a cena do erro é curta e visual.** A tremida, o estrago acontecendo, a
+  opção certa acendendo de leve, uma frase de poucas palavras. Pode tocar
+  antes do `lose()` (a ordem dos jogos da 3ª rodada — `garra-dos-grupos`,
+  `subida-do-dia`, `balao-do-recado`: mostra, depois perde) ou logo depois
+  dele, dentro do 1,35 s. Painel com texto longo ou botão "Entendi" não cabe;
+- o jogo **não desenha** tela de game over, botão de tentar de novo nem
+  contagem de tentativas;
+- nada de `scene.restart`, próxima pergunta ou trava reabrindo depois do
+  `lose()`. Logo depois dele: `if (this.lives.remaining <= 0) return`.
+
+#### O que é erro, e o que não é
+
+| Situação | Cobra? |
+|---|---|
+| escolheu a opção errada, confirmou a montagem errada | sim |
+| deixou passar o que devia recusar, recusou o que devia aceitar | sim |
+| o tempo acabou | sim |
+| soltou o arrasto fora do alvo, tocou no vazio, errou a mira | **não** |
+| toque duplo, toque durante uma animação, tentativa cancelada | **não** |
+| qualquer coisa dentro do tutorial ou do treino guiado | **não** |
+
+Erro de cabeça encerra; erro de dedo não emite nada e não chama `lose()`. Com
+tolerância 1, confundir os dois reprova a criança por escorregar o dedo — então
+o gesto físico precisa de trava (botão em vez de arrasto, zona de toque folgada,
+bloqueio de repique), não de punição.
+
+#### Os jeitos de quebrar a regra sem perceber
+
+Todos abaixo foram achados em jogos prontos, na varredura de 30/09/2026
+(a lista por jogo está em [VIDAS.md](./VIDAS.md)):
+
+- **Erro tratado só com feedback.** A peça volta, a tela treme, a criança tenta
+  de novo, e nada foi emitido. Se foi erro de decisão, é erro grátis.
+- **Cobrar no fim da fase, e não na hora.** Somar erros num contador e só
+  emitir quando a tarefa termina deixa a criança errar à vontade — e quem erra
+  e não termina nunca é cobrado. O `lose()` sai no momento do erro.
+- **Contador de perdão.** "O primeiro desvio não conta" não existe mais: o
+  primeiro erro de decisão já encerra.
+- **Fase "guiada" que não cobra.** Treino é o tutorial. Fase que pontua acerto
+  também cobra erro; senão um nível inteiro fica sem derrota possível.
+- **Guia em que o toque da criança é de verdade.** Se o guia espera o toque
+  dela, só o alvo certo pode estar tocável — ou o toque errado é recusado sem
+  `lose()`. Perder a partida no primeiro toque ensinado é o pior começo.
+- **Código que segue depois do `lose()`.** Reabrir a pergunta, devolver a peça
+  ou mostrar "Tente de novo" é fluxo de uma partida que já acabou. Logo depois
+  do `lose()`: `if (this.lives.remaining <= 0) return`.
+- **Explicação que não cabe no 1,35 segundo.** A plataforma cobre a tela 1,35 s
+  depois do `lose()`: o porquê do erro que demora mais que isso nunca é visto.
+  Se a cena é longa, mostre primeiro e perca depois.
+- **Relógio que se perde.** Um `onTimeUp` que sai quando a tela está travada
+  (tutorial do `?`, painel aberto) perde o estouro, e a fase segue sem tempo.
+  Pause o relógio enquanto a tela estiver travada, e pare-o no instante em que
+  a fase foi resolvida.
+- **Barra de bônus com cara de prazo.** Se o relógio no zero não encerra, ele
+  não pode parecer um prazo. Ou encerra, ou não é uma barra que esvazia.
+- **Resposta vazia que vale como errada.** Confirmar, enviar ou lançar sem ter
+  montado nada é toque prematuro: o botão fica desligado até haver o que julgar.
+- **Julgar no instante de soltar.** Arrasto solto sobre o destino errado, ou
+  toque único entre alvos vizinhos, encerra a partida por um escorregão. Dê um
+  passo de confirmar, ou recuse o gesto sem cobrar.
 
 O `progress` do `CHECKPOINT` é porcentagem de 0 a 100, arredondada:
 
@@ -361,18 +442,18 @@ vira mentira no dia em que o jogo ganhar um quarto nível — a criança
 terminaria o nível 3, o total seria 4, e ela nunca seria aprovada. Use
 `this.level.level` para o atual e `LEVELS.length` para o total.
 
-**4. Contador de tolerância precisa zerar.** Se o jogo perdoa os dois primeiros
-desvios e só cobra no terceiro, o contador tem que voltar a zero depois de
-cobrar. Sem isso, o terceiro desvio e **todos os seguintes** custam uma vida
-cada, e a regra generosa vira a mais dura do jogo.
-
 ### Como conferir
 
-Abra o jogo em `?embed=1&inline=1&stage=1&points=0&lives=3` e jogue com o
-console aberto. Se nenhum evento aparecer, o jogo está mudo.
+Abra o jogo em `?embed=1&inline=1&stage=1&points=0` e jogue com o console
+aberto. Se nenhum evento aparecer, o jogo está mudo.
 
 Jogue os três níveis até o fim e confira que sai um `GAME_COMPLETED` por nível,
 com `stage` 1, 2 e 3 — não só um no final.
+
+Depois perca de propósito, uma vez de cada jeito que o jogo permite: cada tipo
+de resposta errada, e o relógio até o zero. Em todos tem que sair um
+`WRONG_ANSWER` seguido de um `GAME_OVER`, e o jogo tem que parar. Se a partida
+continuou depois de um erro, achou um erro grátis.
 
 ## Código
 
@@ -424,14 +505,21 @@ Antes de considerar um jogo pronto, confira:
 - abre na fase certa com `faseInicial`, e não sempre no nível 1;
 - usa os módulos de `src/shared/` em vez de reimplementar tutorial, carregamento
   ou painel de fim de nível;
-- tem as vidas por `createLives`, e o saldo atravessa o `scene.restart`;
+- todo erro de decisão e o tempo esgotado emitem `WRONG_ANSWER` e chamam
+  `lose()`, uma vez, e a partida para ali;
+- erro de dedo (arrasto fora, toque no vazio, mira) não emite nem chama `lose()`;
+- o jogo não desenha tela de game over nem "tentar de novo", e não emite
+  `GAME_OVER` à mão;
+- o jogo não lê vidas da plataforma: `vidasIniciais(this)`, sem padrão próprio;
 - os níveis estão em `data/levels.ts`, e não há outro `LEVELS` na pasta;
 - o jogo importa `runtimeGameBridge`, não `gameBridge`;
 - `GAME_COMPLETED` sai ao fim de cada nível, com `totalStages: LEVELS.length`;
 - `stage` é o número do nível, de 1 a 3, e não está escrito na mão;
 - o jogo não escreve `isFinalStage` em lugar nenhum;
-- todo contador de tolerância zera depois de cobrar;
-- jogou os três níveis e viu um `GAME_COMPLETED` por nível no console.
+- não há contador de perdão: o primeiro erro de decisão encerra;
+- jogou os três níveis e viu um `GAME_COMPLETED` por nível no console;
+- perdeu de propósito de cada jeito possível e viu `WRONG_ANSWER` + `GAME_OVER`
+  em todos.
 
 # Importante
 

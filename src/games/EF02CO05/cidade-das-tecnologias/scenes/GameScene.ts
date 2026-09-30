@@ -425,9 +425,10 @@ export class GameScene extends Phaser.Scene {
       })
         this.lives.lose(); this.livesLeft = this.lives.remaining
     }
+    if (this.lives.remaining <= 0) return
 
     const feedback = this.add.text(640, 529,
-      (correct ? 'Muito bem! ' : chosenId === null ? 'O tempo acabou! ' : 'Tente outra vez. ') + situation.justification, {
+      'Muito bem! ' + situation.justification, {
       fontSize: '20px', fontFamily: 'DynaPuff, Arial, sans-serif', color: correct ? '#A5D6A7' : '#FFCDD2',
       align: 'center', wordWrap: { width: 860 },
     }).setOrigin(0.5)

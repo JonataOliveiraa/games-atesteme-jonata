@@ -417,7 +417,6 @@ export class GameScene extends Phaser.Scene {
              */
             const v = vizinhosDoGap(lista, gap)
             this.vizinhos.set({ ...v, alvo: carta })
-            const gen = this.gen
             this.locked = true
             this.errors += 1
             this.points += POINTS.erro
@@ -435,7 +434,6 @@ export class GameScene extends Phaser.Scene {
                 TINTA.alerta,
             )
             await t.recusarEspaco(gap)
-            if (gen === this.gen) this.locked = false
             return
         }
 
@@ -489,7 +487,6 @@ export class GameScene extends Phaser.Scene {
             this.vizinhos.set(vizinhosDaCarta(lista, i))
 
             if (carta.valor !== passo.valor) {
-                const gen = this.gen
                 this.locked = true
                 this.errors += 1
                 this.points += POINTS.erro
@@ -505,7 +502,6 @@ export class GameScene extends Phaser.Scene {
                     TINTA.alerta,
                 )
                 await t.recusar(i)
-                if (gen === this.gen) this.locked = false
                 return
             }
 
@@ -616,7 +612,6 @@ export class GameScene extends Phaser.Scene {
 
     /** "Não tem" errado: um erro, e o botão fica surdo enquanto o balão fala. */
     private recusarNaoTem(fala: string) {
-        const gen = this.gen
         this.locked = true
         this.errors += 1
         this.points += POINTS.erro
@@ -629,9 +624,6 @@ export class GameScene extends Phaser.Scene {
         this.livesLeft = this.lives.remaining
         this.emitCheckpoint()
         this.balao.dizer(fala, TINTA.alerta)
-        this.time.delayedCall(900, () => {
-            if (gen === this.gen) this.locked = false
-        })
     }
 
     /* ═══════════════════════════════════════════════ passo concluído */
@@ -760,7 +752,7 @@ export class GameScene extends Phaser.Scene {
 
         // mata tudo que estava no ar: animação pendente, `await` de passo,
         // qualquer callback atrasado que fosse mexer num tabuleiro que já era
-        const gen = ++this.gen
+        this.gen++
         this.state = 'perdido'
         this.locked = true
         this.relogioLigado = false
@@ -775,47 +767,16 @@ export class GameScene extends Phaser.Scene {
         this.botao?.destroy(); this.botao = undefined
 
         this.personagem.setPose('pensando')
-        this.balao.dizer('O tempo acabou. Vamos de novo?', TINTA.alerta)
+        this.balao.dizer('O tempo acabou.', TINTA.alerta)
         this.playPerdeu()
 
         runtimeGameBridge.emit({
-            type: 'GAME_OVER', gameId: GAME_ID, stage: this.level.level,
+            type: 'WRONG_ANSWER', gameId: GAME_ID,
+            pointsEarned: 0, stage: this.level.level,
         })
+        this.lives.lose()
+        this.livesLeft = this.lives.remaining
         this.emitCheckpoint()
-
-        // um lampejo rosa e nada mais: a tela do `showLevelComplete` já escurece
-        // tudo, e uma vinheta por cima ficaria pendurada na cena para sempre
-        void FX.flash(this, C.alerta, { duration: 360, peak: 0.16 })
-
-        this.telaPerdeu = showLevelComplete(this, {
-            title: 'O tempo acabou!',
-            subtitle: `Caso ${this.caseIdx + 1} de ${this.level.cases.length}  ·  Nível ${this.level.level}`,
-            // a dica do nível, e não uma bronca: a criança volta sabendo mais
-            // do que quando entrou
-            message: this.level.tip,
-            accent: C.alerta,
-            panelColor: C.creme,
-            overlayColor: C.ink,
-            progress: { total: this.level.cases.length, current: this.caseIdx },
-            buttons: [
-                {
-                    label: 'Tentar de novo',
-                    color: C.ok,
-                    onClick: () => {
-                        if (gen !== this.gen) return
-                        this.telaPerdeu?.destroy()
-                        this.telaPerdeu = undefined
-                        this.hud.setHelpEnabled(true)
-                        void this.playCase(false)
-                    },
-                },
-                {
-                    label: 'Escolher jogo',
-                    color: C.madeira,
-                    onClick: () => EventBus.emit('exit-game'),
-                },
-            ],
-        })
     }
 
     /* ═══════════════════════════════════════════════ avanço de nível */

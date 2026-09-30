@@ -1204,11 +1204,6 @@ export class GameScene extends Phaser.Scene {
                 : `${conditionQuestion(step.condition!)} NÃO — então rodava o SENÃO.`,
             false,
         )
-
-        this.time.delayedCall(2300, () => {
-            if (this.lives.remaining <= 0) this.showGameOver()
-            else this.startChallenge()
-        })
     }
 
     private playTraceFrom(start: number, answered = -1) {
@@ -1491,10 +1486,6 @@ export class GameScene extends Phaser.Scene {
             this.setPose(POSE.confuso)
             this.registerError()
             this.showToast(outcomeMessage(res.outcome), false)
-            this.time.delayedCall(2500, () => {
-                if (this.lives.remaining <= 0) this.showGameOver()
-                else { this.phase = 'montando'; this.resetBoardOnly(); this.refreshScript() }
-            })
             return
         }
 
@@ -1521,10 +1512,6 @@ export class GameScene extends Phaser.Scene {
                     'Deu certo, mas essa pergunta responde igual nos dois cenários — o SE nem chegou a decidir nada.',
                     false,
                 )
-                this.time.delayedCall(3000, () => {
-                    if (this.lives.remaining <= 0) this.showGameOver()
-                    else { this.phase = 'montando'; this.resetBoardOnly(); this.refreshScript() }
-                })
                 return
             }
         }
@@ -1540,11 +1527,6 @@ export class GameScene extends Phaser.Scene {
         this.emitCheckpoint()
 
         this.showDecisionMap(() => this.advance())
-    }
-
-    private resetBoardOnly() {
-        this.envNow = { ...this.challenge.scenarios[0] }
-        this.drawBoard()
     }
 
     private registerError() {
@@ -1897,31 +1879,6 @@ export class GameScene extends Phaser.Scene {
         this.tweens.add({ targets: panel, alpha: 1, scale: 1, duration: 260, ease: 'Back.easeOut' })
     }
 
-
-    private showGameOver() {
-        this.clearOverlay()
-
-        showLevelCompleteModal(this, {
-            title: 'Quase lá!',
-            subtitle: 'As vidas acabaram.',
-            message: this.challenge.explanation,
-            accent: C.vermelho,
-            buttons: [
-                {
-                    label: 'Tentar de novo', color: C.verde,
-                    onClick: () => this.scene.restart({ lives: this.livesLeft, 
-                        level: this.levelConfig.level, points: this.points,
-                    }),
-                },
-                {
-                    label: 'Sair', color: C.normal,
-                    onClick: () => EventBus.emit('exit-game'),
-                },
-            ],
-        })
-
-        // o GAME_OVER sai do componente de vidas, no zero. Aqui é só a tela.
-    }
 
     private modalButton(x: number, y: number, label: string, color: number, onClick: () => void) {
         const w = 240, h = 60

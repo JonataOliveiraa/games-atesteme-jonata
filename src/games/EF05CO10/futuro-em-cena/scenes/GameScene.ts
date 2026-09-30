@@ -1064,6 +1064,7 @@ export class GameScene extends Phaser.Scene {
         })
         // só o erro custa vida: o mesmo emit serve para acerto
         if (!(strong)) { this.lives.lose(); this.livesLeft = this.lives.remaining }
+        if (this.lives.remaining <= 0) return
 
         const overlay = this.add.rectangle(W / 2, H / 2, W, H, C.shadow, 0.58)
             .setDepth(700).setInteractive()

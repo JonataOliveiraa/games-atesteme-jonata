@@ -1042,11 +1042,6 @@ export class GameScene extends Phaser.Scene {
                 : 'Era FALSA — era exatamente aqui que o laço parava.',
             false,
         )
-
-        this.time.delayedCall(2100, () => {
-            if (this.lives.remaining <= 0) this.showGameOver()
-            else this.startChallenge()
-        })
     }
 
     /**
@@ -1219,10 +1214,6 @@ export class GameScene extends Phaser.Scene {
                     : 'O laço parou, mas fora da casa. Onde essa condição vira falsa?'
 
         this.showToast(msg, false)
-        this.time.delayedCall(2400, () => {
-            if (this.lives.remaining <= 0) this.showGameOver()
-            else this.startChallenge()
-        })
     }
 
     private registerError() {
@@ -1581,49 +1572,6 @@ export class GameScene extends Phaser.Scene {
 
         panel.setAlpha(0).setScale(0.9)
         this.tweens.add({ targets: panel, alpha: 1, scale: 1, duration: 280, ease: 'Back.easeOut' })
-    }
-
-    private showGameOver() {
-        this.clearOverlay()
-        this.keep(
-            this.add.rectangle(L.W / 2, L.H / 2, L.W, L.H, C.borda, 0.82)
-                .setDepth(300).setInteractive(),
-        )
-        const panel = this.keep(this.add.container(L.W / 2, L.H / 2).setDepth(301))
-
-        const pw = 620, ph = 344
-
-        const bg = this.add.graphics()
-        bg.fillStyle(C.escuro, 0.99)
-        bg.fillRoundedRect(-pw / 2, -ph / 2, pw, ph, 26)
-        bg.lineStyle(5, C.vermelho, 0.9)
-        bg.strokeRoundedRect(-pw / 2, -ph / 2, pw, ph, 26)
-
-        const title = this.add.text(0, -ph / 2 + 76, 'Quase lá!', {
-            fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif', fontSize: '34px', color: CSS.creme,
-            stroke: CSS.borda, strokeThickness: 5,
-        }).setOrigin(0.5).setResolution(2)
-
-        const reason = this.add.text(0, -ph / 2 + 134, 'Três tentativas seguidas sem acertar.', {
-            fontFamily: 'DynaPuff, Arial, sans-serif', fontStyle: 'bold', fontSize: '22px', color: CSS.claro,
-            align: 'center', wordWrap: { width: pw - 130 },
-        }).setOrigin(0.5).setResolution(2)
-
-        const hint = this.add.text(0, -ph / 2 + 210, this.challenge.explanation, {
-            fontFamily: 'DynaPuff, Arial, sans-serif', fontSize: '19px', color: CSS.amarelo,
-            align: 'center', wordWrap: { width: pw - 130 },
-        }).setOrigin(0.5).setResolution(2)
-
-        panel.add([bg, title, reason, hint])
-        panel.add(this.modalButton(-140, ph / 2 - 58, 'Tentar de novo', C.verde,
-            () => this.scene.restart({ lives: this.livesLeft, level: this.levelConfig.level, points: this.points })))
-        panel.add(this.modalButton(140, ph / 2 - 58, 'Sair', C.normal,
-            () => EventBus.emit('exit-game')))
-
-        panel.setAlpha(0).setScale(0.9)
-        this.tweens.add({ targets: panel, alpha: 1, scale: 1, duration: 260, ease: 'Back.easeOut' })
-
-        // o GAME_OVER sai do componente de vidas, no zero. Aqui é só a tela.
     }
 
     private modalButton(x: number, y: number, label: string, color: number, onClick: () => void) {

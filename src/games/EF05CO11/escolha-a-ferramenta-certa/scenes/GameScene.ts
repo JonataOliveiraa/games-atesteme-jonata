@@ -522,6 +522,10 @@ export class GameScene extends Phaser.Scene {
             this.tweens.add({ targets: card, x: card.x + 10, duration: 60, yoyo: true, repeat: 2 })
             this.time.delayedCall(600, () => paint(C.border, 3))
             this.toast(p.keepReason[id] ?? 'Este pode ficar.', C.teal)
+            this.locked = true
+            runtimeGameBridge.emit({ type: 'WRONG_ANSWER', gameId: GAME_ID, pointsEarned: 0, stage: this.level.level })
+            this.lives.lose()
+            this.livesLeft = this.lives.remaining
             return
         }
 
@@ -1066,6 +1070,7 @@ export class GameScene extends Phaser.Scene {
         })
         // só o erro custa vida: o mesmo emit serve para acerto
         if (!(correct)) { this.lives.lose(); this.livesLeft = this.lives.remaining }
+        if (this.lives.remaining <= 0) return
 
         const extra = correct && reason !== p.decisive
             ? ` O que mais pesou aqui foi: ${CRITERION[p.decisive].label}.`
@@ -1079,13 +1084,16 @@ export class GameScene extends Phaser.Scene {
     }
 
     private onTimeUp = () => {
-        if (this.ended || this.locked) return
+        if (this.ended) return
+        if (this.locked) {
+            this.time.delayedCall(200, this.onTimeUp)
+            return
+        }
         this.locked = true
         this.duelLocked = true
         runtimeGameBridge.emit({ type: 'WRONG_ANSWER', gameId: GAME_ID, pointsEarned: 0, stage: this.level.level })
         this.lives.lose()
         this.livesLeft = this.lives.remaining
-        this.showFeedback(false, `O tempo acabou. ${this.phase.explainRight}`, this.sieveScore, () => this.completePhase())
     }
 
     private showFeedback(correct: boolean, message: string, earned: number, onDone: () => void) {

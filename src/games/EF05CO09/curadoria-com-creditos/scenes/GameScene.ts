@@ -184,7 +184,7 @@ export class GameScene extends Phaser.Scene {
                     this.retryItem(p.item)
                     return
                 }
-                this.resolveFicha(p.item, seal)
+                this.resolveFicha(seal)
             })
         })
     }
@@ -201,7 +201,7 @@ export class GameScene extends Phaser.Scene {
         this.locked = false
     }
 
-    private resolveFicha(item: MediaItem, seal: SealId) {
+    private resolveFicha(seal: SealId) {
         const earned = SEAL_POINTS[seal]
         this.points += earned
 
@@ -213,6 +213,7 @@ export class GameScene extends Phaser.Scene {
         })
         // só o erro custa vida: o mesmo emit serve para acerto
         if (!(seal === 'verde')) { this.lives.lose(); this.livesLeft = this.lives.remaining }
+        if (this.lives.remaining <= 0) return
 
         this.completePhase()
     }
@@ -775,12 +776,7 @@ export class GameScene extends Phaser.Scene {
         }
 
         const buttons: Phaser.GameObjects.Container[] = []
-        if (seal === 'verde') {
-            buttons.push(this.button(0, PH / 2 - 54, 300, 66, 'Continuar', C.green, () => finish(false), '22px', true))
-        } else {
-            buttons.push(this.button(-160, PH / 2 - 54, 300, 66, 'Refazer etiqueta', C.blue, () => finish(true), '20px', true))
-            buttons.push(this.button(160, PH / 2 - 54, 300, 66, 'Continuar assim', C.grey, () => finish(false), '20px', true))
-        }
+        buttons.push(this.button(0, PH / 2 - 54, 300, 66, 'Continuar', seal === 'verde' ? C.green : C.grey, () => finish(false), '22px', true))
 
         modal.add([bg, title, ...rows, note, ...buttons])
         modal.setScale(0.92).setAlpha(0)
@@ -1009,6 +1005,7 @@ export class GameScene extends Phaser.Scene {
         })
         // só o erro custa vida: o mesmo emit serve para acerto
         if (!(clean)) { this.lives.lose(); this.livesLeft = this.lives.remaining }
+        if (this.lives.remaining <= 0) return
 
         const overlay = this.add.rectangle(W / 2, H / 2, W, H, C.shadow, A.overlay)
             .setDepth(700).setInteractive()
@@ -1074,70 +1071,16 @@ export class GameScene extends Phaser.Scene {
     }
 
     private onTimeUp = () => {
-        if (this.ended || this.locked) return
-        this.locked = true
-
-        const p = this.phase
-        // no mural o tempo PUBLICA a galeria como ela está; na ficha ele só
-        // devolve a mesma mídia com a barra cheia, que é perder o caso e não
-        // o nível — errar aqui trava até entender, nunca empurra para a frente
-        if (p.kind === 'mural') {
-            this.showReport(p)
+        if (this.ended) return
+        if (this.locked) {
+            this.time.delayedCall(200, this.onTimeUp)
             return
         }
+        this.locked = true
 
         runtimeGameBridge.emit({ type: 'WRONG_ANSWER', gameId: GAME_ID, pointsEarned: 0, stage: this.level.level })
         this.lives.lose()
         this.livesLeft = this.lives.remaining
-        this.showTimeUp(p.item)
-    }
-
-    private showTimeUp(item: MediaItem) {
-        this.hud.stopTimer()
-
-        const overlay = this.add.rectangle(W / 2, H / 2, W, H, C.shadow, A.overlay)
-            .setDepth(700).setInteractive()
-        const modal = this.add.container(W / 2, H / 2).setDepth(701)
-
-        const message = this.add.text(0, 0, 'A etiqueta desta mídia volta em branco. Desta vez, sem pressa.', {
-            fontFamily: 'DynaPuff, Arial, sans-serif',
-            fontStyle: 'bold',
-            fontSize: '21px',
-            color: hex(C.ink),
-            align: 'center',
-            wordWrap: { width: 520 },
-        }).setOrigin(0.5).setResolution(2)
-
-        const PH = message.height + 260
-        const top = -PH / 2
-
-        const bg = this.add.graphics()
-        bg.fillStyle(C.shadow, 0.22)
-        bg.fillRoundedRect(-310, top + 12, 620, PH, 28)
-        bg.fillStyle(C.paper, 1)
-        bg.fillRoundedRect(-310, top, 620, PH, 28)
-        bg.lineStyle(5, C.easel, 1)
-        bg.strokeRoundedRect(-310, top, 620, PH, 28)
-        bg.fillStyle(C.easel, 1)
-        bg.fillRoundedRect(-150, top - 15, 300, 28, 14)
-
-        const title = this.add.text(0, top + 84, 'O tempo acabou', {
-            fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif',
-            fontSize: '34px',
-            color: hex(C.blueDark),
-        }).setOrigin(0.5).setResolution(2)
-
-        message.setY(top + 142 + message.height / 2)
-
-        const btn = this.button(0, PH / 2 - 56, 340, 68, 'Refazer etiqueta', C.blue, () => {
-            overlay.destroy()
-            modal.destroy()
-            this.retryItem(item)
-        }, '22px', true)
-
-        modal.add([bg, title, message, btn])
-        modal.setScale(0.92).setAlpha(0)
-        this.tweens.add({ targets: modal, alpha: 1, scale: 1, duration: 240, ease: 'Back.easeOut' })
     }
 
     // o placar atravessa o restart da cena, então continua morando no registry
@@ -1341,7 +1284,7 @@ export class GameScene extends Phaser.Scene {
                     shape: 'rect', x: TAG.cx, y: TAG.licenseY, w: 520, h: 90,
                 },
                 {
-                    text: 'Selo amarelo ou vermelho não é o fim: você pode refazer a etiqueta.',
+                    text: 'Só o selo verde passa. Confira a etiqueta antes de carimbar.',
                     shape: 'none', balloonY: 420,
                 },
             ]

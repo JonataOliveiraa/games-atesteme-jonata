@@ -173,7 +173,7 @@ Comandos da plataforma para o jogo:
 
 ```ts
 type PlatformCommand =
-  | { type: "START_GAME"; gameId: string; points: number; stage: number; lives: number }
+  | { type: "START_GAME"; gameId: string; points: number; stage: number }
   | { type: "PAUSE_GAME" }
   | { type: "RESUME_GAME" }
   | { type: "UNLOCK_GAME"; gameId: string }
@@ -461,7 +461,7 @@ dono de renderizar o jogo e relatar o que aconteceu.**
 
 ```html
 <iframe
-  src="https://jogos.atesteme.com/jogos/sistema-operacional?embed=1&attempt=6f1c…&stage=1&points=120&lives=3&returnBase=https%3A%2F%2Fedu.atesteme.com"
+  src="https://jogos.atesteme.com/jogos/sistema-operacional?embed=1&attempt=6f1c…&stage=1&points=120&returnBase=https%3A%2F%2Fedu.atesteme.com"
   width="100%" height="100%" frameborder="0"
   allow="autoplay; fullscreen"
 ></iframe>
@@ -479,13 +479,13 @@ pontuacao, vidas e ranking. Nada do site atual muda.
 | `returnBase` | URL absoluta | **sim** | Origem que recebe o resultado. Precisa estar em `VITE_EMBED_ALLOWED_ORIGINS`. |
 | `stage` | `1 \| 2 \| 3` | nao (1) | Fase inicial. Fora do intervalo cai para 1. |
 | `points` | inteiro >= 0 | nao (0) | Pontuacao inicial exibida. So display. |
-| `lives` | inteiro >= 1 | nao (3) | Tolerancia a erro da partida. |
+| `lives` | — | nao | **Ignorado.** Aceito para nao quebrar iframes ja escritos; a tolerancia a erro e do jogo (ver "Aprovado e reprovado"). |
 | `locale` | BCP-47 | nao (`pt-BR`) | Idioma. |
 
 `id` e aceito como sinonimo legado de `attempt`; se os dois vierem, `attempt`
 vence.
 
-**Duas classes de parametro, duas reacoes.** `stage`, `points`, `lives` e
+**Duas classes de parametro, duas reacoes.** `stage`, `points` e
 `locale` sao ajustes: valor invalido vira o padrao e a partida comeca.
 `attempt` e `returnBase` sao o contexto: sem eles a tela mostra um erro
 legivel e **nao inicia** — jogar uma partida que ninguem consegue creditar e
@@ -565,12 +565,22 @@ reprovado: <returnBase>/reprove?id=<attempt>
 - **Quem navega e a camada de embed, nunca o jogo.** Os 45 jogos so emitem
   eventos; nenhum conhece a URL da Atesteme.
 - `GAME_COMPLETED` com `isFinalStage: true` → `/approve`.
-- `GAME_OVER`, **ou o esgotamento das `lives` recebidas na query**, →
-  `/reprove`. Só 14 dos 45 jogos emitem `GAME_OVER` — o resto nao tem condicao
-  de derrota, e inventar uma seria mexer na jogabilidade deles. Por isso a
-  tolerancia a erro vem de fora, contada pelos `WRONG_ANSWER`.
-- O evento sai antes; a navegacao acontece ~150ms depois e e a rede de
-  seguranca para quando o listener da plataforma falhou.
+- `GAME_OVER` → `/reprove`. **A derrota e do jogo, e de mais ninguem:** todo
+  jogo tolera um erro so. Errou, ou o tempo acabou, ele emite `WRONG_ANSWER` e
+  em seguida `GAME_OVER`, e para. Ninguem de fora conta erros, e nenhum
+  parametro muda essa tolerancia (`shared/level/vidasIniciais.ts`).
+- **Vidas e bloqueio sao da plataforma.** O jogo nao sabe que existem. O que a
+  plataforma faz com um `/reprove` — bloquear o jogo por 24 horas, cobrar uma
+  vida ou pontos para liberar antes — e decisao dela. O prototipo deste site
+  (`/iframe/<slug>`) faz exatamente isso em `src/context/GameContext.tsx`.
+- O evento sai antes; a navegacao e a rede de seguranca para quando o listener
+  da plataforma falhou. No `/approve` ela acontece ~150ms depois.
+- **No `/reprove` a tela espera ~2s.** O `GAME_OVER` sai por `postMessage`
+  na hora, mas o jogo fica mais 1,35s na tela mostrando o erro (toque ja
+  cortado), depois aparece "Fim de jogo" por 0,6s, e so entao o iframe navega.
+  Quem reage ao `postMessage` e quer que a crianca veja o erro deve esperar os
+  mesmos 1,35s antes de cobrir o iframe (`ESPERA_PARA_VER_O_ERRO_MS`, em
+  `src/shared/bridge/partida.ts`).
 - `window.location.assign`, nunca `window.top`.
 - **Uma navegacao por partida.** Eventos de fim posteriores sao ignorados.
 - `returnBase` fora da allowlist nao navega para lugar nenhum — sem essa
@@ -874,8 +884,7 @@ Flutter -> iframe:
     "type": "START_GAME",
     "gameId": "023",
     "stage": 1,
-    "points": 120,
-    "lives": 3
+    "points": 120
   },
   "meta": {
     "sessionId": "b7f0...",
@@ -939,7 +948,6 @@ void sendStartGame() {
       'gameId': gameId,
       'stage': stage,
       'points': points,
-      'lives': lives,
     },
     'meta': {
       'sessionId': sessionId,

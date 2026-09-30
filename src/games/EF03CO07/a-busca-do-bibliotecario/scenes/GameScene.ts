@@ -41,7 +41,6 @@ export class GameScene extends Phaser.Scene {
      */
     private busca: QueryState = { terms: [], engine: 'grimorio' }
     private stepIndex = 0
-    private misses = 0
     private stumbled = false
 
     private tutorialOpen = false
@@ -81,7 +80,6 @@ export class GameScene extends Phaser.Scene {
         this.mode = 'reading'
         this.busca = { terms: [], engine: 'grimorio' }
         this.stepIndex = 0
-        this.misses = 0
         this.stumbled = false
         this.tutorialOpen = false
         this.pendingTutorial = number === 1
@@ -171,7 +169,6 @@ export class GameScene extends Phaser.Scene {
         this.missionIndex = index
         this.mode = 'reading'
         this.stepIndex = 0
-        this.misses = 0
         this.stumbled = false
 
         const mission = this.mission
@@ -255,7 +252,7 @@ export class GameScene extends Phaser.Scene {
         if (gen !== this.gen) return
 
         if (!good) {
-            await this.stall(index, choice, before)
+            await this.stall(index, choice)
             return
         }
 
@@ -285,7 +282,6 @@ export class GameScene extends Phaser.Scene {
             'good',
         )
         this.stepIndex += 1
-        this.misses = 0
         this.cast.keeper(KEEPER.think)
 
         await this.choices.hide()
@@ -297,7 +293,7 @@ export class GameScene extends Phaser.Scene {
         this.applyInput()
     }
 
-    private async stall(index: number, choice: ChoiceDef, before: QueryState) {
+    private async stall(index: number, choice: ChoiceDef) {
         const gen = this.gen
 
         this.audio.stall()
@@ -309,42 +305,15 @@ export class GameScene extends Phaser.Scene {
         await FX.wait(this, 1200)
         if (gen !== this.gen) return
 
-        // A palavra que não serviu VOLTA para o botão de onde veio; o resto
-        // se desfaz repintando a consulta como ela estava.
-        if (choice.kind === 'add') {
-            this.audio.unterm()
-            await this.query.remove(choice.term, this.choices.posOf(index))
-        } else {
-            this.query.set(before)
-        }
-        if (gen !== this.gen) return
-
-        await this.board.reorder(this.top3(before))
-        if (gen !== this.gen) return
-
-        this.stumbled = true
-        this.misses += 1
-
-        if (this.misses >= 2) {
-            this.misses = 0
-            this.errors += 1
-            runtimeGameBridge.emit({
-                type: 'WRONG_ANSWER',
-                gameId: GAME_ID,
-                pointsEarned: 0,
-                stage: this.level.level,
-            })
-            this.lives.lose()
-            this.livesLeft = this.lives.remaining
-
-            const useful = this.mission.steps[this.stepIndex].choices.findIndex(item =>
-                improves(this.mission, this.busca, item),
-            )
-            if (useful >= 0) this.choices.hint(useful)
-        }
-
-        this.mode = 'choosing'
-        this.applyInput()
+        this.errors += 1
+        runtimeGameBridge.emit({
+            type: 'WRONG_ANSWER',
+            gameId: GAME_ID,
+            pointsEarned: 0,
+            stage: this.level.level,
+        })
+        this.lives.lose()
+        this.livesLeft = this.lives.remaining
     }
 
     private async deliver() {

@@ -425,13 +425,6 @@ export class GameScene extends Phaser.Scene {
         )
 
         this.loseOnce()
-
-        // depois de duas tentativas o campo certo pulsa: a ajuda cresce, mas
-        // só depois de a criança ter tido duas chances de ler o nome
-        if (this.tries >= 2 && right) this.record.pulse(right)
-
-        this.mode = 'asking'
-        this.applyInput()
     }
 
     /* ─────────────────── níveis 2 e 3: campo, depois valor ────────────── */
@@ -477,10 +470,6 @@ export class GameScene extends Phaser.Scene {
 
         void this.hint.say(this.wrongFieldText(field, right), 'warn')
         this.loseOnce()
-        if (this.tries >= 2 && right) this.record.pulse(right)
-
-        this.mode = 'asking'
-        this.applyInput()
     }
 
     /**
@@ -522,12 +511,6 @@ export class GameScene extends Phaser.Scene {
 
             void this.hint.say(this.wrongValueText(value), 'warn')
             this.loseOnce()
-            if (this.tries >= 2) {
-                const certo = this.tray.indexOf(right)
-                if (certo >= 0) this.tray.pulse(certo)
-            }
-            this.mode = 'asking'
-            this.applyInput()
             return
         }
 

@@ -442,6 +442,7 @@ export class GameScene extends Phaser.Scene {
         step: isTarget ? (this.step ?? null) : null,
         done: (key) => this.completeAction(id, key),
         offTask: () => this.nudgeOffTask(),
+        wrong: () => this.registerMistake(),
       }, AREA)
       this.activeApp = view
       root.add(view.objects)
@@ -510,6 +511,15 @@ export class GameScene extends Phaser.Scene {
       type: 'WRONG_ANSWER', gameId: GAME_ID, pointsEarned: 0, stage: this.cfg.level,
     })
       this.livesHud.lose(); this.livesLeft = this.livesHud.remaining
+  }
+
+  private registerMistake() {
+    if (this.ended) return
+    this.errors++
+    runtimeGameBridge.emit({
+      type: 'WRONG_ANSWER', gameId: GAME_ID, pointsEarned: 0, stage: this.cfg.level,
+    })
+    this.livesHud.lose(); this.livesLeft = this.livesHud.remaining
   }
 
   // ═══════════════════════════════════════════════ progressão

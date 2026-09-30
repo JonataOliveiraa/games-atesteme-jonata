@@ -2,43 +2,26 @@ import type Phaser from "phaser";
 
 /**
  * ══════════════════════════════════════════════════════════════════════════
- *  COM QUANTAS VIDAS ESTA PARTIDA COMEÇA
+ *  QUANTOS ERROS A PARTIDA TOLERA
  * ══════════════════════════════════════════════════════════════════════════
  *
- * A plataforma manda `?lives=3` na URL. O valor chega aqui pelo `registry` do
- * Phaser, escrito no `preBoot` — o mesmo caminho do `faseInicial`, e pela mesma
- * razão: o `START_GAME` chega DEPOIS de o jogo bootar, com a cena já montada.
- * Um jogo que só descobrisse as vidas ali teria que se reiniciar na frente da
- * criança para desenhar a quantidade certa de corações.
+ * Um. Errou, ou o tempo acabou, perdeu: o primeiro `lose()` do `createLives`
+ * já emite o `GAME_OVER`.
  *
- * ── AS VIDAS VALEM PELA PARTIDA, NÃO PELO NÍVEL ──────────────────────────
+ * ── A DERROTA É DO JOGO, AS VIDAS SÃO DA PLATAFORMA ──────────────────────
  *
- * Este valor é o do COMEÇO. Ao trocar de nível o saldo viaja no
- * `scene.restart({ lives })`, como o `points` já faz — quem chama esta função
- * é só o primeiro nível.
+ * Este valor já veio de fora, pelo `?lives=` da URL, e era aí que duas coisas
+ * diferentes se misturavam: a vida da plataforma (a moeda que desbloqueia um
+ * jogo bloqueado) e a tolerância a erro da partida. Com a mistura, o mesmo
+ * jogo perdia no 1º erro num lugar e no 3º em outro, conforme quem embutia.
  *
- * ── `lives=0` NÃO REPROVA ANTES DE COMEÇAR ───────────────────────────────
- *
- * Zero vidas significaria uma partida perdida antes do primeiro toque, o que
- * nunca é o que se quis dizer. Vira 1 — "errou, perdeu" — e o caso fica
- * registrado no console, porque quase sempre é engano de quem montou a URL.
+ * Agora a regra é uma só, e mora aqui: os jogos chamam esta função por
+ * costume, e ela responde sempre a mesma coisa. O `?lives=` continua aceito
+ * na URL — existem iframes escritos com ele — e é ignorado.
  */
-export function vidasIniciais(scene: Phaser.Scene, padrao = 3): number {
-  const bruto = scene.game.registry.get("vidasIniciais");
+const TOLERANCIA_A_ERRO = 1;
 
-  // fora do embed ninguém escreve no registry, e o padrão do jogo vale
-  if (bruto === undefined || bruto === null) return padrao;
-
-  const n = Number(bruto);
-  if (!Number.isInteger(n) || n < 0) {
-    console.warn(`[vidas] valor inválido na query: ${String(bruto)} — usando ${padrao}`);
-    return padrao;
-  }
-
-  if (n === 0) {
-    console.warn("[vidas] lives=0 reprovaria antes do primeiro toque — usando 1");
-    return 1;
-  }
-
-  return n;
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function vidasIniciais(_scene: Phaser.Scene, _padrao?: number): number {
+  return TOLERANCIA_A_ERRO;
 }

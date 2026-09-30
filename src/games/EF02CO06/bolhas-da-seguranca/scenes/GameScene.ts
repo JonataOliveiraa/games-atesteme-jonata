@@ -317,9 +317,19 @@ export class GameScene extends Phaser.Scene {
         this.paused = true
         this.audio.lock()
         this.hud.flash(C.warn)
-        this.hud.alert('Este perigo ficou preso! Toque nele.')
+        this.hud.alert('Este perigo passou!')
         void FX.shake(this, this.tablet.container, { amount: 9, times: 3 })
             .then(() => this.tablet.container.setPosition(0, 0))
+
+        this.errors++
+        runtimeGameBridge.emit({
+            type: 'WRONG_ANSWER',
+            gameId: GAME_ID,
+            pointsEarned: 0,
+            stage: this.level.level,
+        })
+        this.lives.lose()
+        this.livesLeft = this.lives.remaining
     }
 
     private nextColor() {

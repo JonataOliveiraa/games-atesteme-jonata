@@ -276,7 +276,6 @@ export class GameScene extends Phaser.Scene {
 
             await FX.wait(this, 900)
             if (gen !== this.gen) return
-            this.big?.resetRows()
             return
         }
 
@@ -367,8 +366,6 @@ export class GameScene extends Phaser.Scene {
 
             await FX.wait(this, 700)
             if (gen !== this.gen) return
-            card.clearLights()
-            card.setState('idle')
             return
         }
 

@@ -426,7 +426,7 @@ export class GameScene extends Phaser.Scene {
         /* Prateleira errada conta igual a buraco errado: nos dois casos a
            criança disse "é aqui" e não era. */
         if (qualPrateleira !== daPeca || indice !== certo) {
-            await this.errar(s, certo)
+            await this.errar(s)
             return
         }
 
@@ -480,7 +480,7 @@ export class GameScene extends Phaser.Scene {
      *
      * O Tuca fica **curioso**, nunca bravo.
      */
-    private async errar(s: Solta, certo: number | undefined) {
+    private async errar(s: Solta) {
         this.travado = true
         this.errosNaFase += 1
         this.errors += 1
@@ -504,43 +504,6 @@ export class GameScene extends Phaser.Scene {
                 x: { from: x0 - 14, to: x0 + 14 },
                 duration: 70, yoyo: true, repeat: 2,
                 onComplete: () => { s.obj.x = x0; res() },
-            })
-        })
-
-        this.tweens.add({
-            targets: s.obj,
-            x: s.casa.x, y: s.casa.y, scale: 1,
-            duration: 260, ease: 'Quad.easeOut',
-        })
-        s.obj.setDepth(DEPTH.solta)
-
-        this.tuca.pose(TUCA_F.apontando)
-        const pr = this.prateleiraDe(s.dado)
-        if (pr.forma === 'fila') await this.piscarMenores(s.dado.alvo ?? 0)
-        else if (certo !== undefined) await pr.mostrarOnde(certo)
-
-        /* A FRASE SÓ NO SEGUNDO ERRO. No primeiro, o destaque já disse tudo, e
-           uma frase por cima seria ruído para quem ainda não lê bem. */
-        if (this.errosNaFase >= 2) await this.faixa(this.fase.dica, 2200)
-
-        this.tuca.pose(TUCA_F.esperando)
-        this.travado = false
-    }
-
-    /** Na fila, a dica é ver quais peças ainda são menores que a escolhida. */
-    private async piscarMenores(alvo: number) {
-        const livres = this.soltas
-            .filter(s => !s.guardada && (s.dado.alvo ?? 0) === alvo && s.dado.ordem !== undefined)
-            .sort((a, b) => (a.dado.ordem ?? 0) - (b.dado.ordem ?? 0))
-        const menor = livres[0]
-        if (!menor) return
-
-        await new Promise<void>(res => {
-            this.tweens.add({
-                targets: menor.obj,
-                scale: { from: 1, to: 1.22 },
-                duration: 260, yoyo: true, repeat: 2,
-                onComplete: () => { menor.obj.setScale(1); res() },
             })
         })
     }

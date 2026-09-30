@@ -785,7 +785,7 @@ export class GameScene extends Phaser.Scene {
     this.emitWrongAnswer();
     this.perderVida();
     this.emitCheckpoint();
-    this.showFeedback('Tente novamente!', false);
+    this.showFeedback('Ordem errada!', false);
   }
 
   private updateTestButtonState() {

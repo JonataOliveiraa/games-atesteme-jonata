@@ -274,20 +274,6 @@ export class GameScene extends Phaser.Scene {
         this.xray.dim(true)
         await this.xray.refuse(index)
         if (gen !== this.gen) return
-
-        await this.sign.show(result.hint, this.xray.point(index).x)
-        if (gen !== this.gen) return
-
-        this.xray.dim(false)
-
-        if (this.missesHere >= 2) {
-            this.audio.hint()
-            this.xray.pulse(answerIndex(this.machine.bays, this.ask.asks))
-        }
-
-        this.mode = 'asking'
-        this.xray.setEnabled(true)
-        this.armIdle()
     }
 
     /**

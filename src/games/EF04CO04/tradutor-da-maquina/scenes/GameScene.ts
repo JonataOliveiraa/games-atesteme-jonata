@@ -292,7 +292,16 @@ export class GameScene extends Phaser.Scene {
         if (i !== bad) {
             const ch = (caso.received ?? '')[i] ?? ''
             showToast(this, `Essa chegou certa: ${ch}. Procure a que não bate.`, C.numeroDark, 2200)
-            this.playLookup()
+            this.locked = true
+            this.errors += 1
+            this.points += POINTS.miss
+            this.playError()
+            runtimeGameBridge.emit({
+                type: 'WRONG_ANSWER', gameId: GAME_ID,
+                pointsEarned: POINTS.miss, stage: this.level.level,
+            })
+            this.lives.lose(); this.livesLeft = this.lives.remaining
+            this.emitCheckpoint()
             return
         }
 
@@ -351,13 +360,6 @@ export class GameScene extends Phaser.Scene {
 
             await FX.wait(this, 500)
             if (gen !== this.gen) return
-
-            this.state = 'montando'
-            this.locked = false
-            this.bank.setEnabled(true)
-            this.table.setEnabled(true)
-            this.screen.setRowsEnabled(true)
-            this.refreshSend()
             return
         }
 

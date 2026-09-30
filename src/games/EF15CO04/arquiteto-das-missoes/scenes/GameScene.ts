@@ -590,15 +590,6 @@ export class GameScene extends Phaser.Scene {
 
         await FX.wait(this, 640)
         if (gen !== this.gen) return
-
-        await Promise.race([
-            this.move(entry.card, entry.home, PICK.cy),
-            FX.wait(this, 620),
-        ])
-        if (gen !== this.gen) return
-
-        entry.card.setTone('idle')
-        this.busy = false
     }
 
     private async finishSolve(part: PartDef) {

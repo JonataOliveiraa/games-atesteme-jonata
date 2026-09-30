@@ -651,28 +651,6 @@ export class GameScene extends Phaser.Scene {
         if (gen !== this.roundGen) return
         await FX.wait(this, 620)
         if (gen !== this.roundGen) return
-
-        view.icon.setTexture('artefato-repouso', view.def.frame)
-        FX.to(this, [view.bg, view.label], { alpha: 1 }, { duration: 200 })
-        FX.to(this, view.card, { scale: 1 }, { duration: 320, ease: Ease.smooth })
-        await FX.arcTo(this, view.card, { x: view.x, y: view.y }, { height: 100, duration: 340 })
-
-        if (gen !== this.roundGen) return
-        view.card.setDepth(30)
-        this.pet.setFrame(PET_FRAME.asking)
-
-        if (this.missesOnRequest >= 2) this.showHint()
-        this.locked = false
-    }
-
-    /** Depois de dois erros no mesmo pedido, o nicho certo passa a piscar. */
-    private showHint() {
-        const target = this.niches.find(n => solves(this.request.need, n.def.id))
-        if (!target || this.hintTween) return
-
-        this.setNicheState(target, 'hint')
-        FX.ping(this, target.x, target.y, C.amber, { radius: 120 })
-        this.hintTween = FX.breathe(this, target.card, { grow: 1.06, duration: 900 })
     }
 
     /* ───────────────────────────────────────────────────── fim de nível */

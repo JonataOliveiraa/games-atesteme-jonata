@@ -24,7 +24,7 @@ import EmbedGamePage from "./EmbedGamePage";
  *   /iframe/<slug>   a plataforma de jogos, que embute o de cima
  *
  * A query continua trazendo o CONTEXTO da partida (`stage`, `points`,
- * `lives`, `id`/`attempt`, `returnBase`, `inline`) — ela ajusta a partida,
+ * `id`/`attempt`, `returnBase`, `inline`) — ela ajusta a partida,
  * não troca a página.
  */
 export default function GameDetailsPageRoute() {

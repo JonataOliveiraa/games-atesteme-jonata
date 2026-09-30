@@ -8,7 +8,7 @@ import { LEVELS } from '../data/levels'
 import { ALL_SECURITY_ITEMS } from '../data/items'
 import type { ChecklistRound, GameSceneData, LevelConfig, SecurityItem } from '../types'
 import {
-  W, H, C, hex, label, paperCard, headerBand,
+W, H, C, hex, label, 
   chunkyButton, floatingNote, confetti, type Btn,
 } from '../ui/kit'
 import { createLives, type Lives } from '../../../../shared/hud/createLives'
@@ -44,7 +44,6 @@ export class GameScene extends Phaser.Scene {
 
   private locked = true
   private ended = false
-  private bonusLost = false
 
   private cards: CardView[] = []
   private confirmBtn!: Btn
@@ -72,7 +71,6 @@ export class GameScene extends Phaser.Scene {
     this.cards = []
     this.delayedTimer = undefined
     this.awaitingRisk = false
-    this.bonusLost = false
   }
 
   private get level(): LevelConfig { return LEVELS[this.levelIdx] }
@@ -365,82 +363,12 @@ export class GameScene extends Phaser.Scene {
     })
       this.lives.lose(); this.livesLeft = this.lives.remaining
     this.emitCheckpoint()
-
-    // Não avança: explica, devolve os cartões e espera a correção.
-    this.time.delayedCall(900, () => this.showReviewPanel(wrong))
-  }
-
-  private showReviewPanel(wrong: SecurityItem[]) {
-    this.dimHud(true)
-
-    const shown = wrong.slice(0, 4)
-    const rowH = 82
-    const MH = 226 + shown.length * rowH
-    const MW = 720
-
-    const dim = this.add.rectangle(W / 2, H / 2, W, H, C.shadow, 0.66)
-      .setDepth(320).setInteractive()
-    const modal = this.add.container(W / 2, H / 2).setDepth(321)
-
-    modal.add(paperCard(this, 0, 0, MW, MH, { edge: C.coral }))
-    modal.add(headerBand(this, 0, -MH / 2 + 6, MW - 12, 46, C.coral, C.coralDeep, 20))
-    modal.add(label(this, 0, -MH / 2 + 29, 'VAMOS REVISAR', { size: 19, color: C.white }))
-    modal.add(label(this, 0, -MH / 2 + 90,
-      shown.length === 1 ? 'Um item ficou fora do lugar' : `${shown.length} itens ficaram fora do lugar`,
-      { size: 27, color: C.ink }))
-
-    shown.forEach((item, i) => {
-      const y = -MH / 2 + 148 + i * rowH
-      const strip = this.add.graphics()
-      strip.fillStyle(C.paperEdge, 1)
-      strip.fillRoundedRect(-MW / 2 + 34, y - 32, MW - 68, 68, 16)
-      modal.add(strip)
-      modal.add(this.add.image(-MW / 2 + 74, y, item.iconKey).setDisplaySize(46, 46))
-
-      const state = label(this, -MW / 2 + 112, y - 15,
-        item.shouldBeOn ? 'DEVE FICAR LIGADO' : 'DEVE FICAR DESLIGADO',
-        { size: 15, color: item.shouldBeOn ? C.mintDeep : C.coralDeep })
-      state.setOrigin(0, 0.5)
-      modal.add(state)
-
-      const why = label(this, -MW / 2 + 112, y + 12, item.why,
-        { size: 15, color: C.inkSoft, weight: 'bold', wrap: MW - 190, align: 'left' })
-      why.setOrigin(0, 0.5)
-      modal.add(why)
-    })
-
-    const close = () => {
-      this.tweens.add({
-        targets: [modal, dim], alpha: 0, duration: 200,
-        onComplete: () => {
-          modal.destroy(); dim.destroy()
-          this.dimHud(false)
-          // Só os errados continuam sinalizados; os certos voltam ao neutro
-          this.cards.forEach((card) => {
-            const item = ALL_SECURITY_ITEMS.find(it => it.id === card.itemId)!
-            card.paint(card.isOn() === item.shouldBeOn ? 'idle' : 'wrong')
-          })
-          this.locked = false
-          EventBus.emit('timer-resume')
-          this.cards.forEach(c => c.lock(false))
-          this.refreshConfirm()
-          floatingNote(this, W / 2, 340, 'Corrija os itens marcados e confira de novo',
-            { tone: C.sky, deep: C.skyDeep })
-        },
-      })
-    }
-
-    modal.add(chunkyButton(this, 0, MH / 2 - 58, 300, 62, 'Vou corrigir',
-      C.sky, C.skyDeep, close, { size: 22 }).root)
-
-    modal.setScale(0.9).setAlpha(0)
-    this.tweens.add({ targets: modal, alpha: 1, scale: 1, duration: 260, ease: 'Back.easeOut' })
   }
 
   private succeed() {
     this.hits += 1
     const clean = this.attempts === 1
-    const gained = 10 + (clean ? 5 : 0) + (this.bonusLost ? 0 : 3)
+    const gained = 10 + (clean ? 5 : 0) + 3
     this.score += gained
 
     runtimeGameBridge.emit({
@@ -580,15 +508,26 @@ export class GameScene extends Phaser.Scene {
   private onMute = (m: boolean) => { this.muted = m }
 
   private onTimerEnd = () => {
-    this.bonusLost = true
-    floatingNote(this, W / 2, 340, 'O bônus de tempo acabou. Confira com calma.',
+    if (this.ended) return
+    this.locked = true
+    this.errors += 1
+    this.playError()
+    floatingNote(this, W / 2, 340, 'O tempo acabou!',
       { tone: C.sun, deep: C.sunDeep })
+    runtimeGameBridge.emit({
+      type: 'WRONG_ANSWER', gameId: GAME_ID, pointsEarned: 0, stage: this.level.level,
+    })
+    this.lives.lose(); this.livesLeft = this.lives.remaining
   }
 
   private onShowTutorial = () => {
     if (this.locked || this.ended) return
     const wasLocked = this.locked
-    this.runTutorial(false, () => { this.locked = wasLocked })
+    EventBus.emit('timer-pause')
+    this.runTutorial(false, () => {
+      this.locked = wasLocked
+      EventBus.emit('timer-resume')
+    })
   }
 
   private emitCheckpoint() {

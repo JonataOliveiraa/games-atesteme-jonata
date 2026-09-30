@@ -60,13 +60,13 @@ const POR_SLUG: Record<string, string[]> = {
     "Uma criaturinha marcha pela trilha até a bifurcação.",
     "Cada portão tem uma placa, e a de baixo é sempre o AVESSO da de cima.",
     "Toque no portão cuja frase for verdadeira para a criaturinha da vez.",
-    "Errou? A placa mostra o porquê, termo a termo, e ela volta para tentar de novo.",
+    "Leia a placa com calma antes de tocar: o portão errado encerra o jogo.",
     "No fim da onda, os dois currais mostram as turmas separadas.",
   ],
   "oficina-dos-algoritmos": [
     "Arraste os cartões para os espaços numerados.",
     "Monte todos os passos antes de testar.",
-    "A ordem certa completa a fase; erros custam pontos e vidas.",
+    "A ordem certa completa a fase; testar a ordem errada encerra o jogo.",
   ],
   "ilha-dos-codigos": [
     "O baú fala uma mensagem em batidas, cores ou desenhos.",
@@ -85,7 +85,7 @@ const POR_SLUG: Record<string, string[]> = {
     "O cartão mostra o movimento e quantas vezes repetir.",
     "Toque no botão: cada toque é uma repetição do atleta.",
     "Encha todas as bolinhas para fechar a etapa com o selo.",
-    "Um toque a mais trava o cartão: as bolinhas esvaziam e você refaz só aquela etapa.",
+    "Conte com atenção: um toque a mais, ou o movimento errado, encerra o jogo.",
   ],
   "pixel-secreto": [
     "Observe a legenda de cores.",
@@ -163,7 +163,7 @@ const POR_SLUG: Record<string, string[]> = {
     "Observe qual produto a fábrica precisa produzir.",
     "Arraste as máquinas embaralhadas para a esteira na ordem correta.",
     "Clique em Iniciar Produção para testar a sequência.",
-    "Se a esteira parar, leia a dica e reorganize as etapas.",
+    "Confira as etapas antes de iniciar: se a esteira parar, o jogo acaba.",
   ],
   "fuga-do-laboratorio": [
     "Veja no visor o que a máquina precisa fazer.",
@@ -251,7 +251,7 @@ const POR_SLUG: Record<string, string[]> = {
     "Um arquivo cai por vez. Olhe no corpo dele como os dados estão arrumados.",
     "Use as setas para mover o arquivo de pista.",
     "Deixe ele pousar na caixa do formato certo: som, imagem, texto ou vídeo.",
-    "Se pousar na caixa errada, ele trava ali até você levá-lo para a caixa certa.",
+    "Se pousar na caixa errada, o jogo acaba.",
   ],
   "formato-certo": [
     "Observe qual informação precisa ser guardada.",
@@ -269,7 +269,7 @@ const POR_SLUG: Record<string, string[]> = {
     "Leia o pedido da Lia.",
     "Toque no cartão do aparelho que resolve o pedido.",
     "Nível 1 falta a ENTRADA, nível 2 falta a SAÍDA, nível 3 tem um aparelho que não serve: troque.",
-    "Se errar, a dica diz o que o aparelho faz. Tente o outro.",
+    "Escolha com atenção: o aparelho errado encerra o jogo.",
   ],
   "a-busca-do-bibliotecario": [
     "O resultado com o coração é o que o visitante quer.",
@@ -287,7 +287,7 @@ const POR_SLUG: Record<string, string[]> = {
     "No nível 2 as placas se mexem, e na última onda elas atravessam a sala.",
     "No nível 3 elas vêm tapadas: acerte para ler, e só depois acuse a suspeita.",
     "Ao acertar, a placa cai e o seu dado volta em segurança para você.",
-    "Se acertar uma placa segura, a dica diz por que ela pode ser enviada.",
+    "Acertar uma placa segura encerra o jogo: leia antes de jogar a bolinha.",
   ],
   "show-de-formatos": [
     "Cada cena do show leva três formatos: uma imagem, uma frase e um som.",
@@ -327,7 +327,7 @@ const POR_SLUG: Record<string, string[]> = {
     "Leia a pista da criatura que apareceu no aro de observação.",
     "Toque numa etiqueta da bandeja para escolhê-la; toque de novo para soltar.",
     "Depois toque no campo onde esse valor pertence: CRIATURA, COR ou LOCAL.",
-    "Se o campo recusar, a dica conta o que aquele nome guarda. Tente o campo certo.",
+    "Leia o nome do campo antes de soltar: o campo errado encerra o jogo.",
     "Ficha completa fecha um ferrolho. Três fichas abrem a cápsula do arquivo.",
     "No nível 2 a ficha já vem preenchida e um valor não bate com a pista: toque no campo errado e escolha o valor certo.",
     "No nível 3 a ficha está certa, mas chega uma novidade: toque no campo que mudou. Os outros campos ficam como estão.",
@@ -335,13 +335,13 @@ const POR_SLUG: Record<string, string[]> = {
   "pista-binaria": [
     "Uma fila de caixas vem pelo túnel: dentro de cada uma há um quadradinho cheio ou um buraco vazio.",
     "Toque no botão igual e a nave atira o dígito: 1 é o cheio, 0 é o vazio.",
-    "Dígito errado trava a fila até o certo; sem tiro nenhum a fila só engarrafa, sem custo.",
+    "Dígito errado encerra o jogo; sem tiro nenhum a fila só engarrafa, sem custo.",
     "Cada quadradinho vira um pedaço do desenho na máquina — e no fim o desenho entra na nave. ↑ ou W para 1, ↓ ou S para 0.",
   ],
   "expedicao-pixel": [
     "É noite de festa na praça e você é quem solta os fogos.",
     "A cor do fogo é feita de três luzes: vermelha, verde e azul.",
-    "Toque numa torneira para abrir ou fechar. Mexer é de graça: não conta tentativa nem tira vida.",
+    "Toque numa torneira para abrir ou fechar. Mexer é de graça: só o lançamento conta.",
     "O foguete na rampa vai ficando da cor que você está misturando.",
     "A placa mostra a cor que a festa pediu e a cor que você fez, lado a lado.",
     "O código da sua luz fica escrito embaixo das torneiras: 1 é aberta, 0 é fechada.",
@@ -364,7 +364,7 @@ const POR_SLUG: Record<string, string[]> = {
   "raio-x-da-maquina": [
     "Cada máquina chega para revisão, e o raio-X mostra as peças de dentro dela.",
     "No nível 1 ela diz o nome da peça. No 2, só o que precisa. No 3, não diz nada.",
-    "Toque na peça certa. Se errar, ela conta o que faz de verdade e você tenta a outra.",
+    "Toque na peça certa. A peça errada encerra o jogo.",
     "A cada acerto vem um desafio rápido, para ver a peça trabalhando de perto.",
     "No fim, arraste os cabos na cor certa: sem energia, nenhuma peça funciona.",
   ],
@@ -407,7 +407,7 @@ const POR_SLUG: Record<string, string[]> = {
     "Cada nível é uma oficina: cartaz no 1, slides no 2, vídeo no 3.",
     "Embaixo fica a caixa de ferramentas do editor: cada botão muda a peça na hora.",
     "Mexer é de graça — só ENTREGAR conta. Apertar tudo no máximo estraga a peça.",
-    "Se faltar alguma coisa, o cliente devolve com um bilhete dizendo o que incomoda, e o botão destrava assim que você mexer.",
+    "Confira antes de entregar: se faltar alguma coisa, o cliente devolve a peça e o jogo acaba.",
     "No computador: 1, 2 e 3 são as ferramentas e a barra de espaço entrega.",
   ],
   "canhao-das-coordenadas": [
@@ -417,7 +417,7 @@ const POR_SLUG: Record<string, string[]> = {
     "No nível 2 a janela é apontada: toque no cartão com o nome dela.",
     "No nível 3 cada mancha tem sua cor: MOVER tira a tinta do lugar, COPIAR deixa as duas.",
     "A linha acende primeiro, depois a coluna: é assim que se lê L2, C3.",
-    "Se errar, a tinta sai cinza e não pinta. A dica mostra como pensar.",
+    "Se errar, a tinta sai cinza e o jogo acaba.",
   ],
   "arquivo-dos-registros": [
     "No Nível 1, leia a pergunta e toque na ficha que tem o valor correto no campo pedido.",
@@ -466,6 +466,16 @@ const POR_SLUG: Record<string, string[]> = {
     "Ouça as batidas do tambor no quadro; toque nele para ouvir de novo.",
     "Olhe a vela: ela mostra que cor cada número de batidas quer dizer.",
     "Toque na tela quando o peixe dessa cor estiver na luz embaixo do anzol.",
+  ],
+  "maquina-dos-ajudantes": [
+    "Toque no presente que sai da máquina para abrir.",
+    "Veja o que o aparelho faz; toque nele para ver de novo.",
+    "Toque no quarto de quem esse aparelho ajuda.",
+  ],
+  "labirinto-do-cofrinho": [
+    "Encoste o dedo no labirinto e arraste: a Bia anda pelo caminho até o seu dedo.",
+    "Passe longe das ondinhas do ímã: ele quer copiar os dados do cartão.",
+    "No cofre, toque em quem cuida da Bia para guardar o cartão.",
   ],
   "subida-do-dia": [
     "O quadro mostra o problema; a nuvem no alto da escada mostra ele resolvido.",

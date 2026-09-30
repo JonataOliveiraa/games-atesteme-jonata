@@ -1389,10 +1389,13 @@ export class GameScene extends Phaser.Scene {
     this.showFeedback("Tempo esgotado! A missão foi encerrada.", 0xef4444, "⏰");
 
     runtimeGameBridge.emit({
-      type: "GAME_OVER",
+      type: "WRONG_ANSWER",
       gameId: GAME_ID,
       stage: this.levelConfig.level,
+      pointsEarned: 0,
     });
+    this.lives.lose();
+    this.livesLeft = this.lives.remaining;
   }
 
   private emitProgress() {

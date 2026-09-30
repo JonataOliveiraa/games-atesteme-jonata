@@ -332,10 +332,6 @@ export class GameScene extends Phaser.Scene {
 
         await FX.wait(this, 600)
         if (gen !== this.gen) return
-
-        this.state = 'montando'
-        this.locked = false
-        this.editor.setEnabled(true)
     }
 
     /**

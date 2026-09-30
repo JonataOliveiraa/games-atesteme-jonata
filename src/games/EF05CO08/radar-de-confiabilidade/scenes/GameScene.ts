@@ -1028,12 +1028,17 @@ export class GameScene extends Phaser.Scene {
         })
         // só o erro custa vida: o mesmo emit serve para acerto
         if (!(correct)) { this.lives.lose(); this.livesLeft = this.lives.remaining }
+        if (this.lives.remaining <= 0) return
 
         this.showFeedback(correct, message, () => this.completePhase())
     }
 
     private onTimeUp = () => {
-        if (this.ended || this.locked) return
+        if (this.ended) return
+        if (this.locked) {
+            this.time.delayedCall(200, this.onTimeUp)
+            return
+        }
         this.locked = true
         this.resolvePhase(false, `O tempo acabou. ${this.phase.explanation}`)
     }

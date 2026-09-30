@@ -164,10 +164,13 @@ export class GameScene extends Phaser.Scene {
         void this.ask.worry()
 
         runtimeGameBridge.emit({
-            type: 'GAME_OVER',
+            type: 'WRONG_ANSWER',
             gameId: GAME_ID,
+            pointsEarned: 0,
             stage: this.level.level,
         })
+        this.lives.lose()
+        this.livesLeft = this.lives.remaining
     }
 
     private shutdownScene() {
@@ -411,14 +414,6 @@ export class GameScene extends Phaser.Scene {
 
         await button.land()
         if (gen !== this.gen) return
-
-        button.setSpent(true)
-        if (this.missesOnStep >= 2) this.correctButton()?.setHint(true)
-
-        this.phase = 'choosing'
-        this.hud.setEnabled(true)
-        this.setButtonsEnabled(true)
-        this.busy = false
     }
 
     // ─────────────────────────────────────────────── fim de nível

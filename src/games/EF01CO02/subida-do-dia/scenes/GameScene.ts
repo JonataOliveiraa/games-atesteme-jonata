@@ -208,6 +208,7 @@ export class GameScene extends Phaser.Scene {
 
     private onTap(slot: number) {
         if (this.mode !== 'choose') return
+        if (this.guiding && slot !== this.rightSlot) return
         const resolve = this.tapWaiter
         this.tapWaiter = undefined
         resolve?.()

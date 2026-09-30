@@ -361,7 +361,7 @@ export class GameScene extends Phaser.Scene {
             return
         }
         if (gen !== this.gen) return
-        await this.wrong(choice)
+        await this.wrong()
     }
 
     private async right(choice: Choice) {
@@ -419,7 +419,7 @@ export class GameScene extends Phaser.Scene {
         void this.finishLevel()
     }
 
-    private async wrong(choice: Choice) {
+    private async wrong() {
         const gen = this.gen
 
         this.loseOnce()
@@ -429,49 +429,6 @@ export class GameScene extends Phaser.Scene {
         void this.flashFrame(C.amber)
         await this.slip.shake()
         if (gen !== this.gen) return
-
-        if (choice === 'spread') {
-            // O boato passou: ele grita, e fica maior.
-            this.audio.inflate()
-            void this.robot.inflate()
-        } else {
-            // Ela barrou uma notícia verdadeira: ele não gritou, mas também não
-            // foi pego em nada — fica emburrado sem encolher.
-            void this.robot.sulk()
-        }
-
-        void this.speech.tip(this.tipFor(choice))
-
-        this.phase = 'locked'
-        this.applyInput()
-
-        const everyoneAsked = this.neighbours.every(n => n.asked)
-        if (everyoneAsked) {
-            await FX.wait(this, 1200)
-            if (gen !== this.gen) return
-            this.unlockAfterChange()
-        }
-
-        if (this.errorsInRound >= 2) {
-            const key = decisive(this.headline, this.cast)
-            const view = key ? this.neighbours.find(n => n.id === key.neighbour) : undefined
-            void view?.call()
-        }
-    }
-
-    /**
-     * O bilhete diz o TIPO do engano, nunca onde está a resposta. Cada causa
-     * tem a sua frase: uma frase que serve a três causas não ensina nenhuma.
-     */
-    private tipFor(choice: Choice): string {
-        if (choice === 'hold') return 'Alguém que viu já confirmou.'
-
-        const claimed = this.headline.answers.filter(a => a.kind === 'confirms')
-        const stale = claimed.find(a => !a.fresh)
-        if (stale) return 'Essa resposta é de anos atrás.'
-        const hearsay = claimed.find(a => !this.cast[a.neighbour].firsthand)
-        if (hearsay) return 'Ele só ouviu falar.'
-        return 'Ninguém aqui sabe disso.'
     }
 
     private unlockAfterChange() {

@@ -48,9 +48,7 @@ export function migrateLegacyState(): AnyRecord | null {
     const migrated: AnyRecord = {
       points: old.points ?? 0,
       extraLifeCost: old.extraLifeCost,
-      unlockCost: old.unlockCost,
       blockedGames: remapKeys(old.blockedGames as Record<string, string>),
-      gameLives: remapKeys(old.gameLives as Record<string, number>),
       gameStreaks: remapKeys(old.gameStreaks as Record<string, number>),
       gameErrorCounts: remapKeys(old.gameErrorCounts as Record<string, number>),
       history: remapHistory(old.history as AnyRecord[]),

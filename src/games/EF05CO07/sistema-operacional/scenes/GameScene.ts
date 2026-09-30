@@ -471,12 +471,11 @@ export class GameScene extends Phaser.Scene {
             return
         }
 
-        // a peça certa, mas sem energia: a resposta está no botão, e o botão
-        // pulsa para dizer isso. Não custa luz: descobrir isto é a lição
+        // a peça certa, mas sem energia: a resposta era NÃO DÁ
         if (this.nivel.semEnergia.includes(id)) {
             this.fileira.erro(id)
             this.botao.chamar()
-            this.playAviso()
+            this.errar()
             return
         }
 
@@ -742,25 +741,6 @@ export class GameScene extends Phaser.Scene {
 
         await travar(this)
         if (gen !== this.gen) return
-
-        showLevelComplete(this, {
-            title: 'O computador travou!',
-            subtitle: 'As três luzes apagaram',
-            message: this.nivel.numero === 3
-                ? 'Peça ocupada não fica ocupada para sempre. Atenda o outro e volte depois.'
-                : 'Cada programa precisa da peça certa. Leia o que ele pede e entregue só ela.',
-            accent: C.vermelho,
-            panelColor: C.creme,
-            overlayColor: C.ink,
-            buttons: [
-                {
-                    label: 'Tentar de novo',
-                    color: C.verde,
-                    onClick: () => this.scene.restart({ lives: this.livesLeft, nivel: this.nivel.numero, points: this.pontos }),
-                },
-                { label: 'Escolher jogo', color: C.fosco, onClick: () => EventBus.emit('exit-game') },
-            ],
-        })
     }
 
     /**
@@ -782,28 +762,16 @@ export class GameScene extends Phaser.Scene {
         this.trancar(true)
         this.playTravou()
 
-        runtimeGameBridge.emit({ type: 'GAME_OVER', gameId: GAME_ID, stage: this.nivel.numero })
+        runtimeGameBridge.emit({
+            type: 'WRONG_ANSWER', gameId: GAME_ID,
+            pointsEarned: 0, stage: this.nivel.numero,
+        })
+        this.lives.lose()
+        this.livesLeft = this.lives.remaining
         this.emitCheckpoint()
 
         await travar(this)
         if (gen !== this.gen) return
-
-        showLevelComplete(this, {
-            title: 'O tempo acabou!',
-            subtitle: `${this.acertos} de ${this.nivel.pedidos.length} pedidos atendidos`,
-            message: 'O relógio zerou. Comece de novo — a barra volta cheia.',
-            accent: C.ciano,
-            panelColor: C.creme,
-            overlayColor: C.ink,
-            buttons: [
-                {
-                    label: 'Tentar de novo',
-                    color: C.verde,
-                    onClick: () => this.scene.restart({ lives: this.livesLeft, nivel: this.nivel.numero, points: this.pontos }),
-                },
-                { label: 'Escolher jogo', color: C.fosco, onClick: () => EventBus.emit('exit-game') },
-            ],
-        })
     }
 
     private async terminar() {

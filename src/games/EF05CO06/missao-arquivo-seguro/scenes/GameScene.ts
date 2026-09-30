@@ -664,11 +664,6 @@ export class GameScene extends Phaser.Scene {
             this.cameras.main.shake(160, 0.005)
             this.showToast(`${def.label} não resolve aqui. ${def.limite}`)
             this.returnCard()
-            if (this.lives.remaining <= 0) {
-                this.time.delayedCall(2000, () => this.showGameOver())
-            } else {
-                this.time.delayedCall(700, () => { this.refusing = false })
-            }
             return
         }
 
@@ -708,7 +703,6 @@ export class GameScene extends Phaser.Scene {
 
         if (this.task.requireRemote && !this.copiesDone.some(isRemote)) {
             this.registerError()
-            this.resolve(false, 'As duas cópias ficaram neste computador. Uma precisa ir para fora dele.')
             return
         }
 
@@ -919,6 +913,7 @@ export class GameScene extends Phaser.Scene {
         }
 
         this.emitCheckpoint()
+        if (this.lives.remaining <= 0) return
         this.clearTags()
         this.askBox?.destroy()
         this.askBox = undefined
@@ -1126,38 +1121,13 @@ export class GameScene extends Phaser.Scene {
         })
     }
 
-    private showGameOver() {
-        this.locked = true
-        EventBus.emit('timer-stop')
-        this.clearOverlay()
-
-        // o GAME_OVER sai do componente de vidas, no zero. Aqui é só a tela.
-
-        showLevelComplete(this, {
-            title: 'Quase lá!',
-            subtitle: 'Três escolhas seguidas sem acertar.',
-            message: this.level.tip,
-            accent: C.creme,
-            overlayColor: C.preto,
-            titleColor: CSS.ouro,
-            subtitleColor: CSS.creme,
-            buttons: [
-                {
-                    label: 'Tentar de novo', color: C.ouro,
-                    onClick: () => this.retryPhase(),
-                },
-                {
-                    label: 'Sair', color: C.creme,
-                    onClick: () => EventBus.emit('exit-game'),
-                },
-            ],
-        })
-    }
-
     private onTimeUp() {
-        if (this.ended || this.locked) return
+        if (this.ended) return
+        if (this.locked) {
+            this.time.delayedCall(200, () => this.onTimeUp())
+            return
+        }
         this.registerError()
-        this.resolve(false, 'O tempo acabou. Leia a situação com calma e tente de novo.')
     }
 
     private registerError() {

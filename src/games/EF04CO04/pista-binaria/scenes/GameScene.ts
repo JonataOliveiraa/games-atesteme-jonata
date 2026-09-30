@@ -410,8 +410,6 @@ export class GameScene extends Phaser.Scene {
 
         await target.lock()
         if (gen !== this.gen) return
-
-        this.controls.pulse(expectedBit(this.phase, target.row, target.col))
     }
 
     /** Uma vida por FASE, no primeiro erro dela. Os seguintes, não. */

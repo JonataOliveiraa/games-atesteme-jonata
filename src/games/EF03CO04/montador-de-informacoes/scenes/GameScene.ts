@@ -1055,8 +1055,10 @@ export class GameScene extends Phaser.Scene {
       callback: () => {
         this.errors += 1;
         this.playWrong();
-        runtimeGameBridge.emit({ type: "GAME_OVER", gameId: GAME_ID, stage: this.levelConfig.level });
-        this.showToast("Tempo esgotado. Tente combinar os dados de novo.", COLORS.red);
+        this.showToast("Tempo esgotado.", COLORS.red);
+        runtimeGameBridge.emit({ type: "WRONG_ANSWER", gameId: GAME_ID, stage: this.levelConfig.level, pointsEarned: 0 });
+        this.lives.lose();
+        this.livesLeft = this.lives.remaining;
       },
     });
   }

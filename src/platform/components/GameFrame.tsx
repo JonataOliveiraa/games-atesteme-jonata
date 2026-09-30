@@ -7,7 +7,6 @@ interface GameFrameProps {
   gameId: string;
   level: 1 | 2 | 3;
   points: number;
-  lives: number;
   config: Phaser.Types.Core.GameConfig;
   onPlatformEvent: (event: PlatformEvent) => void;
   mode?: "local" | "iframe";
@@ -18,7 +17,6 @@ export default function GameFrame({
   gameId,
   level,
   points,
-  lives,
   config,
   onPlatformEvent,
   mode = "local",
@@ -30,7 +28,6 @@ export default function GameFrame({
         gameId={gameId}
         level={level}
         points={points}
-        lives={lives}
         src={src}
         onPlatformEvent={onPlatformEvent}
       />
@@ -43,7 +40,6 @@ export default function GameFrame({
       gameId={gameId}
       level={level}
       points={points}
-      lives={lives}
       config={config}
       onPlatformEvent={onPlatformEvent}
     />
