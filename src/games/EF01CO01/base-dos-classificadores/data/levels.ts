@@ -8,9 +8,15 @@ export const SHAPE_FRAME: Record<Shape, number> = {
 }
 
 export const SIZE_SCALE: Record<Size, number> = {
-    pequena: 0.78,
+    pequena: 0.72,
     media: 1.02,
-    grande: 1.26,
+    grande: 1.3,
+}
+
+export const SIGN_SIZE_SCALE: Record<Size, number> = {
+    pequena: 0.6,
+    media: 0.98,
+    grande: 1.38,
 }
 
 export const COLOR_LABEL: Record<Color, string> = {
@@ -43,9 +49,9 @@ export function matches(stone: Stone, rule: Attribute, value: string): boolean {
 }
 
 export const RULE_WORD: Record<Attribute, string> = {
-    cor: 'COR',
-    forma: 'FORMA',
-    tamanho: 'TAMANHO',
+    cor: 'a COR',
+    forma: 'a FORMA',
+    tamanho: 'o TAMANHO',
 }
 
 export function ruleLabel(rule: Attribute, value: string): string {
@@ -76,7 +82,7 @@ export function ruleExamples(rule: Attribute, value: string): Stone[] {
 const s = (color: Color, shape: Shape, size: Size = 'media'): Stone => ({ color, shape, size })
 
 export const MAX_STONES = 6
-export const MAX_COLOR_BASKETS = 3
+export const MAX_BASKETS = 3
 
 export const LEVELS: LevelConfig[] = [
     {
@@ -171,7 +177,55 @@ export const LEVELS: LevelConfig[] = [
             },
         ],
     },
+    {
+        level: 3,
+        title: 'Cor, forma e tamanho',
+        message: 'O tamanho também separa as pedras!',
+        phases: [
+            {
+                id: 'n3-tamanho',
+                rule: 'tamanho',
+                baskets: ['pequena', 'grande'],
+                stones: [
+                    s('vermelho', 'circulo', 'pequena'),
+                    s('azul', 'quadrado', 'grande'),
+                    s('amarelo', 'triangulo', 'pequena'),
+                    s('vermelho', 'quadrado', 'grande'),
+                    s('azul', 'circulo', 'pequena'),
+                    s('amarelo', 'circulo', 'grande'),
+                ],
+            },
+            {
+                id: 'n3-forma-tamanhos',
+                rule: 'forma',
+                baskets: ['triangulo', 'circulo', 'quadrado'],
+                stones: [
+                    s('azul', 'triangulo', 'grande'),
+                    s('vermelho', 'circulo', 'pequena'),
+                    s('amarelo', 'quadrado', 'media'),
+                    s('amarelo', 'triangulo', 'pequena'),
+                    s('azul', 'circulo', 'grande'),
+                    s('vermelho', 'quadrado', 'pequena'),
+                ],
+            },
+            {
+                id: 'n3-tres-tamanhos',
+                rule: 'tamanho',
+                baskets: ['grande', 'pequena', 'media'],
+                stones: [
+                    s('amarelo', 'quadrado', 'media'),
+                    s('vermelho', 'circulo', 'grande'),
+                    s('azul', 'triangulo', 'pequena'),
+                    s('azul', 'circulo', 'media'),
+                    s('amarelo', 'circulo', 'pequena'),
+                    s('azul', 'quadrado', 'grande'),
+                ],
+            },
+        ],
+    },
 ]
+
+const ATTRIBUTES: Attribute[] = ['cor', 'forma', 'tamanho']
 
 export function validateLevels(levels: LevelConfig[]): string[] {
     const problems: string[] = []
@@ -182,13 +236,26 @@ export function validateLevels(levels: LevelConfig[]): string[] {
         if (level.level !== index + 1) problems.push(`${tag}: fora de ordem`)
         if (level.phases.length !== 3) problems.push(`${tag}: ${level.phases.length} fases`)
 
+        const sizeInPlay = level.phases.some(phase => phase.rule === 'tamanho')
+        const active = ATTRIBUTES.filter(a => a !== 'tamanho' || sizeInPlay)
+
         level.phases.forEach((phase, i) => {
             const where = `${tag}/${phase.id}`
             if (phase.stones.length > MAX_STONES) problems.push(`${where}: ${phase.stones.length} pedras`)
             if (phase.stones.some(stone => !colors.includes(stone.color))) problems.push(`${where}: cor fora das 3`)
-            if (phase.rule === 'cor' && phase.baskets.length > MAX_COLOR_BASKETS) {
-                problems.push(`${where}: cestos de cor demais`)
+            if (phase.baskets.length > MAX_BASKETS) problems.push(`${where}: cestos demais`)
+            if (!sizeInPlay && phase.stones.some(stone => stone.size !== 'media')) {
+                problems.push(`${where}: tamanho variando antes de ser critério`)
             }
+            phase.baskets.forEach(value => {
+                const inside = phase.stones.filter(stone => matches(stone, phase.rule, value))
+                if (inside.length < 2) return
+                active.filter(a => a !== phase.rule).forEach(a => {
+                    if (new Set(inside.map(stone => stoneValue(stone, a))).size === 1) {
+                        problems.push(`${where}: o cesto ${value} só recebe ${a} ${stoneValue(inside[0], a)}`)
+                    }
+                })
+            })
             phase.stones.forEach(stone => {
                 const homes = phase.baskets.filter(value => matches(stone, phase.rule, value)).length
                 if (homes !== 1) problems.push(`${where}: pedra ${stone.color}/${stone.shape} com ${homes} cestos`)
@@ -199,8 +266,12 @@ export function validateLevels(levels: LevelConfig[]): string[] {
                 }
             })
             if (level.level === 1 && phase.rule !== 'cor') problems.push(`${where}: o N1 é só cor`)
+            if (level.level < 3 && phase.rule === 'tamanho') problems.push(`${where}: tamanho só no N3`)
+            if (level.level === 3 && i === 0 && phase.rule !== 'tamanho') {
+                problems.push(`${where}: o N3 estreia o tamanho na 1ª fase`)
+            }
             const previous = level.phases[i - 1]
-            if (level.level === 2 && previous && previous.rule === phase.rule) {
+            if (level.level >= 2 && previous && previous.rule === phase.rule) {
                 problems.push(`${where}: a regra não alternou`)
             }
         })

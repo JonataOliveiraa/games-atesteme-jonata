@@ -97,6 +97,8 @@ import coverSubidaDoDia from "../assets/games/EF01CO02/subida-do-dia/cover-subid
 import coverDecolagemPassoAPasso from "../assets/games/EF01CO03/decolagem-passo-a-passo/cover-decolagem-passo-a-passo.png";
 import coverBalaoDoRecado from "../assets/games/EF01CO04/balao-do-recado/cover-balao-do-recado.png";
 import coverPescariaDosCodigos from "../assets/games/EF01CO05/pescaria-dos-codigos/cover-pescaria-dos-codigos.png";
+import coverMaquinaDosAjudantes from "../assets/games/EF01CO06/maquina-dos-ajudantes/cover-maquina-dos-ajudantes.png";
+import coverLabirintoDoCofrinho from "../assets/games/EF01CO07/labirinto-do-cofrinho/cover-labirinto-do-cofrinho.png";
 /**
  * 1. `id` nunca muda e nunca é reaproveitado. Se um jogo for removido,
  *    marque status "draft" — não devolva o id para a fila.
@@ -1744,6 +1746,56 @@ export const catalog: Game[] = [
     icon: "🎣",
     thumbnail: coverPescariaDosCodigos,
   },
+  {
+    id: "096",
+    slug: "maquina-dos-ajudantes",
+    module: "EF01CO06/maquina-dos-ajudantes",
+    skill: "EF01CO06",
+    years: [1],
+    tags: ["artefatos", "necessidades", "cultura digital", "toque"],
+    order: 66,
+    status: "published",
+    title: "Máquina dos Ajudantes",
+    description:
+      "Abra o presente da máquina, veja o que o aparelho faz e leve até quem ele ajuda.",
+    category: "Cultura Digital",
+    points: 40,
+    icon: "🎁",
+    thumbnail: coverMaquinaDosAjudantes,
+  },
+  {
+    id: "097",
+    slug: "labirinto-do-cofrinho",
+    module: "EF01CO07/labirinto-do-cofrinho",
+    skill: "EF01CO07",
+    years: [1],
+    tags: ["dados pessoais", "segurança", "labirinto", "arrastar"],
+    order: 72,
+    status: "published",
+    title: "Labirinto do Cofrinho",
+    description:
+      "Arraste a Bia pelo labirinto, longe do ímã curioso, e guarde o cartão dos dados dela no cofre com quem cuida dela.",
+    category: "Cultura Digital",
+    points: 40,
+    icon: "🔐",
+    thumbnail: coverLabirintoDoCofrinho,
+  },
+  {
+    id: "098",
+    slug: "robo-pintor",
+    module: "EF02CO02/robo-pintor",
+    skill: "EF02CO02",
+    years: [2],
+    tags: ["repetição", "algoritmo", "precisão", "toque"],
+    order: 97,
+    status: "published",
+    title: "Robô Pintor",
+    description:
+      "Conte as tábuas e escreva na lousa quantas vezes o robô repete: pinte e ande. Um número a mais pinta o gato!",
+    category: "Pensamento Computacional",
+    points: 40,
+    icon: "🖌️",
+  },
 ];
 
 /**
@@ -1753,7 +1805,7 @@ export const catalog: Game[] = [
  * saltado de 086 para 090; os oito jogos de 090 a 097 desceram três casas
  * (090→087 … 097→094) para fechar o 087–089.
  */
-export const NEXT_FREE_ID = "096";
+export const NEXT_FREE_ID = "099";
 
 /**
  * AS RODADAS DE PRODUÇÃO.

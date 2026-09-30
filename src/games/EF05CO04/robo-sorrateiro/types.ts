@@ -36,8 +36,6 @@ export interface LegDef {
 export interface RoomDef {
     id: string
     legs: LegDef[]
-    /** A sala de aula: a mão aponta e o erro não custa vida. */
-    guided?: boolean
     close: string
 }
 

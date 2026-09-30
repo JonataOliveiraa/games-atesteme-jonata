@@ -17,7 +17,6 @@ import {
     legsIn,
     branchOf,
     pointsFor,
-    solverIndex,
     stepOutcome,
     validateLevels,
 } from '../data/levels'
@@ -60,10 +59,7 @@ export class GameScene extends Phaser.Scene {
     private tipTurn = 0
 
     private offered: Card[] = []
-    private solver = 0
     private armedCard?: Card
-    private errorsInLeg = 0
-    private chargedThisLeg = false
 
     private score = 0
     private hits = 0
@@ -119,8 +115,6 @@ export class GameScene extends Phaser.Scene {
         this.phase = 'intro'
         this.clock = 0
         this.armedCard = undefined
-        this.errorsInLeg = 0
-        this.chargedThisLeg = false
         this.score = data?.points ?? 0
         this.hits = 0
         this.errors = 0
@@ -370,8 +364,6 @@ export class GameScene extends Phaser.Scene {
     private async startLeg(index: number) {
         const gen = ++this.gen
         this.legIndex = index
-        this.errorsInLeg = 0
-        this.chargedThisLeg = false
         this.armedCard = undefined
 
         const def = this.roomDef.legs[index]
@@ -380,7 +372,6 @@ export class GameScene extends Phaser.Scene {
         this.robot.placeAt(this.room.signPoint(index).x)
 
         this.offered = Phaser.Utils.Array.Shuffle(cardList(def.cards).slice())
-        this.solver = Math.max(0, solverIndex(this.offered, owl.cycle, def.steps))
 
         this.phase = 'choosing'
         const first = this.roomIndex === 0 && index === 0
@@ -520,7 +511,7 @@ export class GameScene extends Phaser.Scene {
     private async legWon() {
         const gen = ++this.gen
         this.cut = false
-        const points = pointsFor(this.errorsInLeg > 0)
+        const points = pointsFor(false)
         this.score += points
         this.hits += 1
         this.legsDone += 1
@@ -596,7 +587,7 @@ export class GameScene extends Phaser.Scene {
         void this.owl?.laugh()
         await this.robot.caught()
         if (gen !== this.gen) return
-        await this.fail('A coruja acordada vê quem anda.')
+        this.fail('A coruja acordada vê quem anda.')
     }
 
     private async stalled() {
@@ -608,40 +599,13 @@ export class GameScene extends Phaser.Scene {
         this.robot.say('Não saí do lugar.', 1600)
         await this.robot.shrug()
         if (gen !== this.gen) return
-        await this.fail('Escondido o tempo todo, ele não chega.')
+        this.fail('Escondido o tempo todo, ele não chega.')
     }
 
-    private async fail(why: string) {
-        const gen = this.gen
-        this.errorsInLeg += 1
-        this.chargeOnce()
+    private fail(why: string) {
         this.cards.light(undefined)
         this.mel.say(why)
-
-        await FX.wait(this, 1400)
-        if (gen !== this.gen) return
-
-        this.robot.placeAt(this.room.signPoint(this.legIndex).x)
-        this.closeUp(600)
-        await this.cards.reopen()
-        if (gen !== this.gen) return
-
-        this.phase = 'choosing'
-        this.cards.setEnabled(true)
-
-        if (this.errorsInLeg >= 2) this.cards.blink(this.solver)
-    }
-
-    /**
-     * Uma vida por TRECHO, no primeiro erro dele — e **nenhuma** na sala
-     * guiada: ali o erro é aula, não castigo. Sem vida perdida não sai
-     * `WRONG_ANSWER`, porque na plataforma um implica o outro.
-     */
-    private chargeOnce() {
-        if (this.chargedThisLeg) return
-        this.chargedThisLeg = true
         this.errors += 1
-        if (this.roomDef.guided) return
         runtimeGameBridge.emit({
             type: 'WRONG_ANSWER',
             gameId: GAME_ID,

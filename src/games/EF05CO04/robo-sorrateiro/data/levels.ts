@@ -63,7 +63,6 @@ export const LEVELS: LevelDef[] = [
         rooms: [
             {
                 id: 'sala-1-1',
-                guided: true,
                 legs: [{ owl: 'ru', steps: 2, cards: ['certa', 'invertida'] }],
                 close: 'Cheguei!',
             },

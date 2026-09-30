@@ -70,6 +70,7 @@ export const SIGN = {
     h: 112,
     exampleSize: 48,
     exampleGap: 64,
+    sizeGap: 72,
     postH: 66,
 }
 

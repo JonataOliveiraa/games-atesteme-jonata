@@ -81,6 +81,12 @@ const POR_SLUG: Record<string, string[]> = {
     "No fim, ponha as partes prontas no plano e toque em VAI!",
     "A cada nível o pedido cresce: duas partes, depois três, depois quatro.",
   ],
+  "robo-pintor": [
+    "Conte quantas tábuas a cerca tem.",
+    "Toque no cartão com esse número: ele vai para a lousa.",
+    "O robô repete pinte e ande exatamente esse número de vezes.",
+    "Um a mais, ele pinta o gato; um a menos, sobra tábua sem tinta.",
+  ],
   "serie-do-campeao": [
     "O cartão mostra o movimento e quantas vezes repetir.",
     "Toque no botão: cada toque é uma repetição do atleta.",
@@ -134,8 +140,8 @@ const POR_SLUG: Record<string, string[]> = {
     "Atenda os três pedidos para deixar o bichinho feliz.",
   ],
   "desktop-digital-infantil": [
-    "Explore os aplicativos disponíveis.",
-    "Use a ferramenta certa para cada missão.",
+    "Leia a missão e abra o aplicativo que resolve: abrir para olhar é de graça.",
+    "Use a ferramenta certa para cada missão: fazer a tarefa no aplicativo errado encerra o jogo.",
     "Complete as missões para avançar.",
   ],
   "detetive-dos-modelos": [
@@ -473,8 +479,9 @@ const POR_SLUG: Record<string, string[]> = {
     "Toque no quarto de quem esse aparelho ajuda.",
   ],
   "labirinto-do-cofrinho": [
-    "Encoste o dedo no labirinto e arraste: a Bia anda pelo caminho até o seu dedo.",
+    "Toque num lugar iluminado perto da Bia: ela anda pelo caminho até lá.",
     "Passe longe das ondinhas do ímã: ele quer copiar os dados do cartão.",
+    "Se alguém no caminho pedir o cartão, não toque nele: siga em frente.",
     "No cofre, toque em quem cuida da Bia para guardar o cartão.",
   ],
   "subida-do-dia": [

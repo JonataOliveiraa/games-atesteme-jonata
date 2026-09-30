@@ -234,6 +234,12 @@ export class GameScene extends Phaser.Scene {
     private async onLaunch() {
         if (this.tutorialOpen || this.phase !== 'misturando') return
 
+        // foguete sem luz nenhuma não é resposta: as torneiras pulsam e nada sai
+        if (this.mix.r + this.mix.g + this.mix.b === 0) {
+            for (const channel of ['r', 'g', 'b'] as const) void this.deck.hint(channel)
+            return
+        }
+
         const gen = this.gen
         const acertou = matches(this.mix, this.round.target)
         const color = toColor(this.mix)

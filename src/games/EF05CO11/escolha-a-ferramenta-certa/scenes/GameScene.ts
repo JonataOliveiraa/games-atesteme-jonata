@@ -1018,7 +1018,7 @@ export class GameScene extends Phaser.Scene {
         bg.fillStyle(C.teal, 1)
         bg.fillRoundedRect(-150, top - 13, 300, 24, 12)
 
-        const title = this.add.text(0, top + 58, 'O que mais te fez escolher?', {
+        const title = this.add.text(0, top + 58, 'O que mais pesa nesta escolha?', {
             fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif',
             fontSize: '28px',
             color: hex(C.tealDark),
@@ -1056,31 +1056,32 @@ export class GameScene extends Phaser.Scene {
 
     private finishPhase(chosen: TechId, reason: CriterionId) {
         const p = this.phase
-        const correct = chosen === p.answer
-        if (correct && reason === p.decisive) this.chipScore += 5
 
-        const earned = (correct ? 10 : 0) + this.chipScore + this.sieveScore
+        if (chosen !== p.answer || reason !== p.decisive) {
+            this.toast(
+                chosen !== p.answer
+                    ? `A melhor aqui era ${TECH[p.answer].name}.`
+                    : `O que mais pesou aqui foi: ${CRITERION[p.decisive].label}.`,
+                C.amber,
+            )
+            runtimeGameBridge.emit({ type: 'WRONG_ANSWER', gameId: GAME_ID, pointsEarned: 0, stage: this.level.level })
+            this.lives.lose()
+            this.livesLeft = this.lives.remaining
+            return
+        }
+
+        this.chipScore += 5
+        const earned = 10 + this.chipScore + this.sieveScore
         this.points += earned
 
         runtimeGameBridge.emit({
-            type: correct ? 'CORRECT_ANSWER' : 'WRONG_ANSWER',
+            type: 'CORRECT_ANSWER',
             gameId: GAME_ID,
             pointsEarned: earned,
             stage: this.level.level,
         })
-        // só o erro custa vida: o mesmo emit serve para acerto
-        if (!(correct)) { this.lives.lose(); this.livesLeft = this.lives.remaining }
-        if (this.lives.remaining <= 0) return
 
-        const extra = correct && reason !== p.decisive
-            ? ` O que mais pesou aqui foi: ${CRITERION[p.decisive].label}.`
-            : ''
-
-        const message = correct
-            ? p.explainRight + extra
-            : p.explainWrong[chosen] ?? `A melhor aqui era ${TECH[p.answer].name}.`
-
-        this.showFeedback(correct, message, earned, () => this.completePhase())
+        this.showFeedback(true, p.explainRight, earned, () => this.completePhase())
     }
 
     private onTimeUp = () => {

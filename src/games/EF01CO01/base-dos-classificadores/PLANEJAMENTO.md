@@ -3,7 +3,7 @@
 EF01CO01 · 1º ano · organizar objetos por características, explicitando
 semelhanças (padrões) e diferenças.
 
-Refeito em 04/09/2026. **Níveis 1 e 2 prontos**; o 3 ainda não.
+Refeito em 04/09/2026. **Os 3 níveis estão prontos** (o N3 entrou em 30/09/2026).
 
 ## O problema que motivou o remake
 
@@ -95,7 +95,8 @@ hesitar é o que a criança faz enquanto compara.
 
 ## Níveis
 
-Os níveis **1 e 2** estão implementados. O 3 não.
+Os três níveis estão implementados. Cada um estreia **uma** característica:
+cor, forma e tamanho.
 
 **N1 — um critério só: COR.** Três fases. A forma varia de propósito em toda
 pedra, para a criança aprender a ignorá-la; o tamanho fica constante, porque
@@ -125,18 +126,39 @@ toda fase, porque o que valia na anterior não vale mais.
 - até 3 cestos de cor;
 - cada pedra com exatamente 1 cesto, e cada cesto com pelo menos 1 pedra;
 - o N1 só com cor;
-- no N2, a regra alternando de uma fase para a outra.
+- do N2 em diante, a regra alternando de uma fase para a outra;
+- o tamanho como critério só no N3, que o estreia na 1ª fase;
+- o tamanho **constante** (médio) nos níveis que não o usam como critério;
+- **nada entrega a regra**: um cesto com 2 pedras ou mais recebe pedras que
+  variam em todo atributo que não é o critério (cor e forma, e também o
+  tamanho no N3).
 
-Quando o critério muda de uma fase para a outra, as placas piscam uma a uma e
-a faixa diz *"A regra mudou: olhe a FORMA!"*. Sem esse aviso a criança começa
+Quando o critério muda de uma fase para a outra, **e também na virada de um
+nível para o outro**, as placas piscam uma a uma e a faixa diz *"A regra mudou:
+olhe a FORMA!"* (ou *"olhe o TAMANHO!"*). Se é a primeira vez no nível, a
+demonstração vem logo depois. Sem esse aviso a criança começa
 a fase nova jogando com a regra velha e perde vida por uma troca que ninguém
 contou para ela.
 
 Com quatro cestos, cesto e placa encolhem (`BASKET.compact`, `SIGN.compact`):
 sem isso as placas vizinhas encostariam.
 
-**N3, quando for feito:** tamanho como critério, regra que vira no meio da
-fase e cesto de exceção.
+**N3 — o terceiro critério: TAMANHO.** Três fases, alternando como no N2. Nos
+níveis anteriores toda pedra é média. Aqui o tamanho varia em **todas** as
+fases, e na fase de forma ele vira o que a criança tem de ignorar.
+
+1. tamanho: pequena e grande, com a cor e a forma variando
+2. forma: triângulo, círculo e quadrado, em três tamanhos misturados
+3. tamanho: grande, pequena e **média**. A média é o par difícil, como o
+   quadrado × retângulo do N2.
+
+As pedras usam `SIZE_SCALE` (0,72 · 1,02 · 1,3). A placa usa uma escala mais
+separada, `SIGN_SIZE_SCALE` (0,6 · 0,98 · 1,38), e um espaço maior entre os
+exemplos (`SIGN.sizeGap`). Com a escala das pedras, os exemplos de 48 px
+deixavam o grande e o médio a 11 px um do outro, parecidos demais.
+
+Ficaram de fora a regra que vira no meio da fase e o cesto de exceção, da nota
+antiga. Junto com o tamanho, seriam três novidades no mesmo nível.
 
 ## Texturas
 
@@ -159,3 +181,11 @@ cores com quatro quadros.
   - Entrou o `validateLevels`.
   - A passagem N1 → N2 já existia (`autoAdvance`), e o N2 é o último nível,
     então aprova. As linhas de tempo esgotado da GameScene não foram tocadas.
+- **30/09/2026, o N3 (pedido do usuário: "faça o n3").**
+  - Entrou o N3, com o tamanho como critério (tamanho → forma → 3 tamanhos).
+  - A regra nova também é anunciada na virada de nível. Antes, só entre fases.
+  - A frase de troca ganhou o artigo certo: *olhe o TAMANHO*.
+  - `validateLevels` passou a cobrar que nenhum cesto receba só pedras
+    iguais num atributo que não é o critério.
+  - O N2 deixou de ser o último: agora ele avança sozinho para o N3, e é o N3
+    que aprova.

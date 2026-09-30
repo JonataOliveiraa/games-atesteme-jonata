@@ -192,8 +192,9 @@ export class GameScene extends Phaser.Scene {
      */
     private canSend(): boolean {
         if (this.state !== 'montando' || this.locked || this.ended) return false
-        if (this.caso.mode === 'conserto') return this.picked >= 0
-        return true
+        if (this.caso.mode === 'conserto' && this.picked < 0) return false
+        // nenhuma lâmpada acesa não é resposta: nenhuma letra da tabela vale zero
+        return this.bank.value() > 0
     }
 
     private refreshSend() {
@@ -267,6 +268,7 @@ export class GameScene extends Phaser.Scene {
     private onBits(bits: boolean[]) {
         this.readout.setMade(valueOf(bits))
         this.playBlip(bits)
+        this.refreshSend()
     }
 
     /**

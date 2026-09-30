@@ -40,15 +40,20 @@ lidas no código, não medição.
 ### 1. Erro de decisão que não encerra a partida — corrigido
 
 A criança errava e o jogo seguia. Agora o erro encerra a partida em 14 dos 17
-jogos da tabela. Ficou como estava:
+jogos da tabela, e numa segunda leva (decisão do dono do projeto, 30/09/2026)
+em mais três:
 
-- `robo-sorrateiro`: a sala guiada 1-1 continua sem cobrar (treino);
+- `robo-sorrateiro`: a sala 1-1 deixou de ser treino; a carta errada encerra
+  em todas as salas;
+- `desktop-digital-infantil`: concluir a ação num aplicativo que não é o da
+  tarefa encerra na primeira vez (abrir para olhar continua de graça);
+- `escolha-a-ferramenta-certa`: a justificativa errada com a ferramenta certa
+  encerra a partida, em vez de só perder o bônus.
+
+Ficou como estava:
+
 - `kit-do-solucionador`: caminho ruim com a ferramenta certa continua
-  grátis, à espera de decisão;
-- `desktop-digital-infantil`: calculadora e gaveta erradas agora cobram, mas
-  usar o aplicativo errado ainda só cobra na terceira vez;
-- `escolha-a-ferramenta-certa`: a peneira cobra; a justificativa errada com a
-  ferramenta certa continua só perdendo o bônus.
+  grátis, à espera de decisão.
 
 No `atelier-codigos-digitais` a saída foi cobrar a célula pintada com a tinta
 errada, como no `pixel-secreto`.
@@ -107,8 +112,15 @@ Com um erro só, estes reprovam por mira, tempo ou gesto. **Decisão do dono do
 projeto (30/09/2026): quando o jogo é construído em cima daquela mecânica,
 errar nela é perder, e é proposital** — a bolinha que acerta a plaquinha errada
 no `ache-o-suspeito` conta. A lista fica como registro, não como pendência.
-Os casos de baixo que não são a mecânica do jogo (resposta vazia, botão em
-cima de outro) ainda podem valer um ajuste, caso a caso.
+Os casos de baixo que não são a mecânica do jogo (botão em cima de outro,
+toque duplo) ainda podem valer um ajuste, caso a caso.
+
+**Resposta vazia — corrigido (30/09/2026).** Confirmar sem ter montado nada
+deixou de valer como resposta errada: em `mapas-em-rede` o Confirmar fica
+apagado sem ligação ou sem rota; em `tradutor-da-maquina` o ENVIAR fica
+desligado com todas as lâmpadas apagadas (nenhuma letra da tabela vale zero);
+em `expedicao-pixel` o LANÇAR com as três torneiras fechadas só faz as
+torneiras pulsarem.
 
 | Jogo | O que acontece | Onde |
 |---|---|---|

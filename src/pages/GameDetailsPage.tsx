@@ -20,6 +20,7 @@ const GAMES_WITH_IN_GAME_COMPLETION_SCREEN = new Set([
   "garra-dos-grupos",
   "pescaria-dos-codigos",
   "maquina-dos-ajudantes",
+  "robo-pintor",
   "labirinto-do-cofrinho",
   "subida-do-dia",
   "balao-do-recado",

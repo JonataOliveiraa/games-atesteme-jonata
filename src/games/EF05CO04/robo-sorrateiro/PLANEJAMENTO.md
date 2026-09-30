@@ -380,10 +380,11 @@ A TRAVA, passo a passo:
 Custo: `WRONG_ANSWER` e uma vida, **uma vez por trecho** — o segundo erro do
 mesmo trecho não cobra de novo, e o contador zera ao trocar de trecho.
 
-**A primeira sala do Nível 1 é guiada** (`guided: true`): ali a mão da Mel
-aponta a carta certa depois de ~3 s sem toque, o erro **não custa vida** e não
-emite `WRONG_ANSWER` — é aula, não prova. Da segunda sala em diante a vida
-volta a valer.
+**A primeira sala do Nível 1 era guiada** e o erro não cobrava. Isso saiu em
+30/09/2026: com a regra de um erro só, a carta errada encerra a partida em
+todas as salas, inclusive na primeira. A TRAVA acima (carta reaberta, segunda
+tentativa, carta certa piscando) também não existe mais — ser visto ou ficar
+parado emite `WRONG_ANSWER` e encerra.
 
 **Nenhum estado sem saída:** ser visto devolve o robô à placa com a carta
 reaberta; ficar parado devolve também; a sala nunca fica impossível porque toda

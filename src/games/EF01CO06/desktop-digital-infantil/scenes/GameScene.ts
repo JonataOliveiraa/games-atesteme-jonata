@@ -16,14 +16,6 @@ import { APP_BUILDERS, type AppView, type Area } from '../apps/apps'
 import { createLives, type Lives } from '../../../../shared/hud/createLives'
 import { vidasIniciais } from '../../../../shared/level/vidasIniciais'
 
-/**
- * Quantos desvios até o jogo contar um erro para a plataforma.
- *
- * Dois são exploração — a criança está descobrindo o que cada app faz, e é
- * isso que a habilidade pede. Do terceiro em diante é outra coisa.
- */
-const DESVIOS_ATE_CONTAR = 3
-
 const GAME_ID = 'desktop-digital-infantil'
 
 const WIN_W = 640, WIN_H = 520
@@ -65,12 +57,6 @@ export class GameScene extends Phaser.Scene {
   private ended = false
   private errors = 0
 
-  /**
-   * Desvios desde a última vida cobrada. Separado de `errors`, que é
-   * telemetria e não pode zerar.
-   */
-  private offTaskTaps = 0
-
   private unsubCommands?: () => void
 
   private wallpaper!: Phaser.GameObjects.Image
@@ -106,7 +92,6 @@ export class GameScene extends Phaser.Scene {
     this.stepIdx = 0
     this.done = 0
     this.errors = 0
-    this.offTaskTaps = 0
     this.points = data?.points ?? 0
     this.startedAt = Date.now()
     this.running = false
@@ -441,7 +426,7 @@ export class GameScene extends Phaser.Scene {
         scene: this,
         step: isTarget ? (this.step ?? null) : null,
         done: (key) => this.completeAction(id, key),
-        offTask: () => this.nudgeOffTask(),
+        offTask: () => this.wrongApp(),
         wrong: () => this.registerMistake(),
       }, AREA)
       this.activeApp = view
@@ -476,41 +461,16 @@ export class GameScene extends Phaser.Scene {
   }
 
   /**
-   * Agiu num app que não é o da tarefa: redireciona sem punir.
-   *
-   * ── E, A PARTIR DO TERCEIRO, TAMBÉM AVISA LÁ FORA ────────────────────
-   *
-   * Este jogo era o ÚNICO dos 45 que não emitia erro nenhum — e, sem erro,
-   * a plataforma não tinha como reprovar ninguém: ele só podia ser aprovado.
-   *
-   * Emitir no primeiro desvio quebraria o que este método é: os dois
-   * primeiros continuam sendo um empurrãozinho, com o bilhete gentil e a
-   * dica aparecendo. Do terceiro em diante a criança não está explorando,
-   * está perdida — e aí vale contar, porque é o sinal de que a atividade não
-   * está funcionando para ela.
-   *
-   * Quem decide o que fazer com esse sinal é a plataforma, pelas `lives` que
-   * ela mandou. Aqui dentro nada muda: o jogo continua sem tela de derrota,
-   * e continua sendo possível terminar.
+   * Usou um app que não é o da tarefa. Abrir e olhar é de graça; concluir a
+   * ação no app errado é a escolha errada, e encerra a partida.
    */
-  private nudgeOffTask() {
-    this.errors++
-    this.offTaskTaps++
-
-    floatingNote(this, W / 2, 240, 'Legal! Mas agora precisamos de outra coisa',
-      { tone: C.sky, deep: C.skyDeep })
+  private wrongApp() {
+    if (this.ended) return
+    floatingNote(this, W / 2, 240, 'A tarefa pedia outro aplicativo',
+      { tone: C.sun, deep: C.sunDeep })
     FX.shake(this, this.taskCard, { amount: 9, times: 2 })
     this.revealHint()
-
-    if (this.offTaskTaps < DESVIOS_ATE_CONTAR) return
-
-    // zera o grupo: a regra é uma vida a cada três desvios, não uma vida por
-    // toque a partir do terceiro
-    this.offTaskTaps = 0
-    runtimeGameBridge.emit({
-      type: 'WRONG_ANSWER', gameId: GAME_ID, pointsEarned: 0, stage: this.cfg.level,
-    })
-      this.livesHud.lose(); this.livesLeft = this.livesHud.remaining
+    this.registerMistake()
   }
 
   private registerMistake() {
@@ -527,7 +487,7 @@ export class GameScene extends Phaser.Scene {
   private completeAction(appId: AppId, actionKey: string) {
     const st = this.step
     if (!st || this.ended) return
-    if (st.appId !== appId || st.actionKey !== actionKey) { this.nudgeOffTask(); return }
+    if (st.appId !== appId || st.actionKey !== actionKey) { this.wrongApp(); return }
 
     this.clearHint()
 

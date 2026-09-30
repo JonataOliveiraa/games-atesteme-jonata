@@ -8,7 +8,7 @@ import { createLives, type Lives } from '../../../../shared/hud/createLives'
 import { createTimeBar, type TimeBar } from '../../../../shared/hud/createTimeBar'
 import { vidasIniciais } from '../../../../shared/level/vidasIniciais'
 import {
-    LEVELS, RULE_WORD, SHAPE_FRAME, SIZE_SCALE, matches, ruleExamples, ruleLabel,
+    LEVELS, RULE_WORD, SHAPE_FRAME, SIGN_SIZE_SCALE, SIZE_SCALE, matches, ruleExamples, ruleLabel,
 } from '../data/levels'
 import { C, FONT, SIZE, STONE_TINT, hex } from '../data/theme'
 import {
@@ -250,22 +250,27 @@ export class GameScene extends Phaser.Scene {
         this.timeBar.setRunning(false)
 
         const first = this.phaseIdx === 0 && !this.demoSeen()
-        const previous = this.phaseIdx > 0 ? this.level.phases[this.phaseIdx - 1] : undefined
-        const ruleChanged = !!previous && previous.rule !== this.phase.rule
+        const ruleChanged = this.previousRule() !== undefined && this.previousRule() !== this.phase.rule
 
-        void this.enterBoard().then(() => {
+        void this.enterBoard().then(async () => {
             if (gen !== this.gen) return
+            if (ruleChanged) {
+                await this.announceRule()
+                if (gen !== this.gen) return
+            }
             if (first) {
                 this.markDemoSeen()
                 void this.playDemo(gen)
                 return
             }
-            if (ruleChanged) {
-                void this.announceRule(gen)
-                return
-            }
             this.unlock()
         })
+    }
+
+    private previousRule() {
+        if (this.phaseIdx > 0) return this.level.phases[this.phaseIdx - 1].rule
+        const before = LEVELS[this.levelIdx - 1]?.phases
+        return before?.[before.length - 1].rule
     }
 
     private unlock() {
@@ -286,8 +291,8 @@ export class GameScene extends Phaser.Scene {
         this.dragging = undefined
     }
 
-    private async announceRule(gen: number) {
-        this.sayRule(`A regra mudou: olhe a ${RULE_WORD[this.phase.rule]}!`)
+    private async announceRule() {
+        this.sayRule(`A regra mudou: olhe ${RULE_WORD[this.phase.rule]}!`)
         this.playRuleChange()
 
         await FX.all(...this.baskets.map((b, i) => FX.wait(this, i * 130).then(async () => {
@@ -296,8 +301,6 @@ export class GameScene extends Phaser.Scene {
             await FX.impact(this, b.sign, 0.16)
             paintSign(b.plaque, false)
         })))
-        if (gen !== this.gen) return
-        this.unlock()
     }
 
     private buildBaskets() {
@@ -320,12 +323,13 @@ export class GameScene extends Phaser.Scene {
             paintSign(plaque, false)
             sign.add(plaque)
 
+            const bySize = this.phase.rule === 'tamanho'
             ruleExamples(this.phase.rule, value).forEach((stone, k) => {
                 const img = this.add.image(
-                    (k - 1) * SIGN.exampleGap, 4, 'formas', SHAPE_FRAME[stone.shape],
+                    (k - 1) * (bySize ? SIGN.sizeGap : SIGN.exampleGap), 4, 'formas', SHAPE_FRAME[stone.shape],
                 )
                 img.setTint(STONE_TINT[stone.color])
-                img.setScale((SIGN.exampleSize / STONE.frame) * SIZE_SCALE[stone.size])
+                img.setScale((SIGN.exampleSize / STONE.frame) * (bySize ? SIGN_SIZE_SCALE : SIZE_SCALE)[stone.size])
                 sign.add(img)
             })
 

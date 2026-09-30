@@ -551,6 +551,20 @@ export class GameScene extends Phaser.Scene {
         }
 
         this.refreshChecklist()
+        this.refreshConfirm()
+    }
+
+    private hasAnswer() {
+        const kind = this.phase.kind
+        if (kind === 'representar') return this.edges.length > 0
+        if (kind === 'rota') return this.routePath.length >= 2
+        if (kind === 'consulta') return this.selectedOption >= 0
+        return true
+    }
+
+    private refreshConfirm() {
+        if (!this.confirmBtn?.active) return
+        this.confirmBtn.setAlpha(this.hasAnswer() ? 1 : 0.4)
     }
 
     private strokeEdge(
@@ -989,7 +1003,7 @@ export class GameScene extends Phaser.Scene {
                     const g = b.getData('bg') as Phaser.GameObjects.Graphics
                     this.paintButton(g, bw, bh, bi === i ? C.amber : C.madeiraEscura)
                 })
-                this.confirmBtn?.setAlpha(1)
+                this.refreshConfirm()
             })
             this.optionButtons.push(btn)
         })
@@ -1026,10 +1040,10 @@ export class GameScene extends Phaser.Scene {
         this.confirmBtn = this.makeButton(
             RODAPE.confirmX, RODAPE.cy, RODAPE.confirmW, RODAPE.confirmH,
             label, C.green, () => {
-            if (this.locked) return
+            if (this.locked || !this.hasAnswer()) return
             onClick()
         })
-        if (this.phase.kind === 'consulta') this.confirmBtn.setAlpha(0.4)
+        this.refreshConfirm()
     }
 
     private confirmRepresent() {
@@ -1084,7 +1098,6 @@ export class GameScene extends Phaser.Scene {
 
     private confirmQuery() {
         const p = this.phase as QueryPhase
-        if (this.selectedOption < 0) return
         const ok = this.selectedOption === p.correctIndex
         this.resolve(ok, ok ? p.explanation : `A resposta certa é ${p.options[p.correctIndex]}. ${p.explanation}`)
     }
