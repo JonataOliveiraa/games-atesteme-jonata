@@ -13,11 +13,11 @@ export const SHEETS: Record<string, { frameWidth: number; frameHeight: number }>
 
 export const TEACHER_ART = {
     cell: 256,
-    h: 248,
+    h: 228,
     wait: 0,
     react: 1,
-    feet: [252, 252],
-    cx: [128, 128],
+    feet: [242, 242],
+    cx: [129, 125],
 } as const
 
 export type PieceFrame =

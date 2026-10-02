@@ -382,9 +382,8 @@ corredor faz o caminho sair lilás e a Bia parar na borda: o atalho mostra o
 perigo sozinho. A validação exige, com `shortcut: true`, que o caminho mais
 curto passe pelo campo e que o seguro tenha no máximo o dobro.
 - Fase A: **professora × vizinho**. A professora faz a abertura (se despede e
-  vai ao cofre) e diz *"Oi, Bia! Sou a prô."*. **Falta a arte dela**: até a
-  `professora.png` chegar (§ "Pedido de arte" no TEXTURAS), ela aparece
-  desenhada em código.
+  vai ao cofre) e diz *"Oi, Bia! Sou a prô."*. A arte é a `professora.png`
+  (§ "Pedido de arte" no TEXTURAS), com o desenho em código só de reserva.
 - Fase B: mãe × mascote.
 
 **N3, o pedido no caminho.** Os mapas do N2 com uma **casinha `T`** ao lado

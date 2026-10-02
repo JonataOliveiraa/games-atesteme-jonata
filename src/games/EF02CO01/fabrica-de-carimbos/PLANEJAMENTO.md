@@ -1,6 +1,6 @@
 # Fábrica de Carimbos — planejamento
 
-Jogo **098** (o `NEXT_FREE_ID` de hoje; confirmar no registro) · EF02CO01 ·
+Jogo **099** (registrado em 02/10/2026; o 098 virou o Robô Pintor) · EF02CO01 ·
 2º ano · 3ª rodada.
 Documento irmão: [TEXTURAS.md](./TEXTURAS.md). Ficha: `docs/rodada-3/EF02CO01.md`
 (a mesma que foi colada no chat em 30/09/2026, sem revisão).
@@ -363,3 +363,86 @@ categoria é **Pensamento Computacional**.
 - **30/09/2026.** Primeiro planejamento, a partir da ficha original. Decidido
   sem dúvidas abertas, pela régua "simples e claro", e com a regra de derrota
   de 30/09 (1 erro encerra, a cena antes do `lose()`).
+- **02/10/2026, o N1 feito, todo em `Graphics`** (pedido do usuário: "faça o
+  jogo, só com n1… por hora só use o Graphics"; as texturas chegam depois).
+  - Id **099**, no catálogo e em `GAMES_WITH_IN_GAME_COMPLETION_SCREEN`, com 3
+    frases em `gameInstructions.ts`. Ainda **sem capa** e sem OG.
+  - Robô, bola, antena, listras, carimbo, caixa e fábrica são desenhados em
+    `scenes/toy.ts`, `stamp.ts`, `box.ts` e `factory.ts`. A `BootScene` já lê
+    `src/assets/games/EF02CO01/fabrica-de-carimbos/*.png`, e a `factory.ts` usa o
+    `bg-fabrica` se ele existir. As peças ainda não trocam sozinhas pelo PNG:
+    isso entra quando a arte chegar, medida no MANIFEST.
+  - Escalas finais dos brinquedos: pequeno 0,55 e grande 0,9. O carimbo fica em
+    y 215 e desce até encostar no brinquedo (o mais alto, o robô grande com
+    antena, só deixa ~50 px de descida).
+  - O ✓/✗ fica **no canto da janelinha**, e não em cima do brinquedo: o
+    carimbo está em cima dele na hora da conferência. Cada janelinha manda um
+    pontilhado até a parte do brinquedo que ela confere.
+  - O `?` repete só o passo 1 (o modelo) e mostra a zona com a frase, sem dedo.
+    A demonstração com os brinquedos de treino só roda na primeira vez.
+  - Conferido no navegador: o guia inteiro, um erro (balão *"A cor não
+    bate!"*, `WRONG_ANSWER` e `GAME_OVER`) e uma partida inteira (9 aprovados,
+    os 3 carimbos no fim, `GAME_COMPLETED` com `totalStages: 1` e o painel com 3
+    estrelas).
+- **02/10/2026, as texturas entraram** (vieram em tamanhos diferentes do
+  pedido; medidas e âncoras no `MANIFEST.md` dos assets e em `data/files.ts`).
+  - O layout seguiu o **fundo**, e não o contrário: o carimbo foi para x 638 (o
+    pistão pintado), a esteira para y ~490, a caixa para o nicho da direita
+    (x 1182). Os túneis, a lona e o pórtico de `Graphics` só aparecem sem o
+    fundo.
+  - O carimbo ficou com escala 0,78 e o topo em y 66: é o maior que cabe entre
+    os pilares e ainda deixa o robô grande com antena passar por baixo. As
+    janelinhas ficaram com ~86 × 74, e as palavras encolheram para **ANTENA** e
+    **LISTRAS** (sem "COM"), em 15 px.
+  - Brinquedos menores: o grande tem ~110 px e o pequeno ~68 px. Na caixa eles
+    entram em 0,8 e com o selo APROVADO apagado, para aparecerem por cima da
+    frente.
+  - No guia, o recorte cobre o carimbo **e** a zona, para a criança ver o ✓ ✓
+    acontecendo; a legenda desce para o chão.
+  - Capa no catálogo e `public/og/fabrica-de-carimbos.jpg` gerado.
+- **02/10/2026, N2 e N3** (pedido do usuário: "adicione n2 e n3").
+  - **N2 — montar o carimbo** (`build: true`, 3 fases, 8 brinquedos): um
+    **bilhete** à esquerda diz o pedido (*"Quero robôs PEQUENOS e AZUIS."*) com
+    o desenho. As janelinhas começam com **?**, e cada uma acende na sua vez
+    com **3 fichas** embaixo do carimbo. Em cada fase, uma das fichas é **o que
+    o desenho tem e o bilhete não pede** (a antena, a cor da bola, o tamanho):
+    é o atributo para descartar. Ficha certa: a janelinha ganha o ✓ (+10,
+    `CORRECT_ANSWER`). Ficha errada = 1 erro: a janelinha fica com ✗, o
+    bilhete pulsa e o balão diz *"Isso não importa aqui!"* (atributo que não
+    está no pedido) ou *"O pedido não é esse!"* (valor errado), e depois
+    `lose()`. Com o carimbo pronto, a esteira roda igual ao N1.
+  - **N3 — conferência fina** (3 fases, 10 brinquedos): carimbo de **3
+    janelinhas** (a célula 1 do `carimbo.png`), montado com 3 toques, e na
+    fila **quase iguais** que só erram uma janelinha. Fonte de 12 px nas
+    janelinhas de 3.
+  - Bonecas **não entraram**: não há arte delas, e robôs e bolas já dão os 3
+    atributos. Ficam para uma folha nova, se você quiser.
+  - Guia: o N1 continua com o treino na esteira; no N2 e no N3 (uma vez cada)
+    o véu mostra o bilhete (*"Leia o pedido."*) e depois o carimbo com as
+    fichas (*"Monte o carimbo!"*), **sem dedo apontando a ficha**. O `?`
+    durante a montagem repete isso.
+  - `validateLevels` cobra: o número de janelinhas e de brinquedos por nível;
+    exatamente uma ficha certa por janelinha e nenhuma que seja a resposta de
+    outra; no N2, uma ficha "do desenho, mas não pedida"; o bilhete escrevendo
+    cada atributo do carimbo; o desenho passando no carimbo; e, no N3, pelo
+    menos 2 quase iguais por fila.
+  - O N1 deixou de ser o último: ele avança sozinho para o N2, e o N3 aprova.
+  - Conferido no navegador: o N2 inteiro (6 janelinhas montadas, 9 aprovados,
+    passagem para o N3), um erro na montagem do N3 (balão, `WRONG_ANSWER`,
+    `GAME_OVER`), o N3 inteiro (`GAME_COMPLETED` com `stage: 3, totalStages: 3`)
+    e o N1 ainda começando pelo guia.
+- **02/10/2026, tutorial com texto** (pedido do usuário: "adicione texto nos
+  tutoriais. um pouquinho. e comece a usar o componente de tutorial").
+  - O guia mudo (`createVisualGuide`) saiu. Agora é o
+    `shared/tutorial/createTutorial`, com balão de texto curto (30 px), recorte
+    no que a frase cita e botão. As frases estão em `TEACH` (`data/words.ts`).
+  - N1: *"O carimbo mostra o que importa: AZUL e PEQUENO."* → o robô de treino
+    que não combina para na luz: *"Este não combina com o carimbo. Deixe
+    passar!"* → o que combina: *"Este combina! Toque nele quando estiver na
+    luz."* (com o dedo tocando) → **Ver**: a conferência e o carimbo acontecem
+    de verdade.
+  - N2/N3: *"Leia o pedido do bilhete."* → *"Toque na ficha que o pedido pede.
+    O que ele não pede, não entra!"* (sem dedo apontando a ficha).
+  - O `?` repete o carimbo e a zona (ou o bilhete e as fichas, na montagem).
+  - Nos passos sobre a esteira o balão fica fixo em y 190, para o botão não
+    cair dentro do recorte.

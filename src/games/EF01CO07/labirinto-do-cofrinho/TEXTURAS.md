@@ -306,7 +306,7 @@ DO NOT INCLUDE: any character or recognizable cast member from the style referen
 ## 8b. Pedido de arte — `professora.png` (N2)
 
 A professora é quem cuida da Bia na fase A do N2, e **não existe na
-`pessoas.png`**. Até esta folha chegar, ela é desenhada em código.
+`pessoas.png`**. Entregue em 02/10/2026 (Aquarela); `TEACHER_ART` medido.
 
 | Arquivo | Grade | Célula | Tamanho final | Alfa |
 |---|---|---|---|---|

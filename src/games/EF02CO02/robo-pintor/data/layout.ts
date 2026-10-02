@@ -34,29 +34,43 @@ export const HUD = {
 } as const
 
 export const BOARD = {
-    x: 440,
-    y: 90,
-    w: 400,
-    h: 160,
-    cy: 158,
-    loopX: 560,
-    loopSize: 150,
-    brushX: 532,
-    stepX: 590,
-    iconSize: 54,
-    timesX: 670,
-    slotX: 752,
-    slotSize: 92,
+    x: 453,
+    y: 106,
+    w: 375,
+    h: 144,
+    cy: 166,
+    loopX: 500,
+    loopSize: 92,
+    brushX: 568,
+    stepX: 628,
+    iconSize: 66,
+    bodyX: 598,
+    bodyW: 132,
+    bodyH: 84,
+    timesX: 684,
+    slotX: 760,
+    slotSize: 84,
     dotsY: 230,
     dotGap: 30,
     dotR: 9,
+    rowsCy: [141, 213],
+    rowScale: 0.72,
+    rowDotsX: 726,
+    rowDotGap: 22,
+    rowDotR: 7,
 } as const
+
+export const boardRow = (rows: number, r: number) => {
+    if (rows === 1) return { cy: BOARD.cy, s: 1, x: (x: number) => x }
+    const s = BOARD.rowScale
+    return { cy: BOARD.rowsCy[r], s, x: (x: number) => BOARD.x + (x - BOARD.x) * s }
+}
 
 export const FENCE = {
     pitch: 150,
-    base: 555,
-    scale: 150 / 256,
-    robotBack: 82,
+    base: 500,
+    scale: 0.66,
+    robotBack: 100,
     enterDX: 900,
 } as const
 
@@ -65,13 +79,14 @@ export const plankX = (boards: number, i: number): number => W / 2 - (boards + 2
 export const robotX = (boards: number, p: number): number => plankX(boards, p) - FENCE.robotBack
 
 export const ROBOT = {
-    foot: 578,
-    scale: 0.52,
+    foot: 522,
+    scale: 0.62,
 } as const
 
 export const CAT = {
-    foot: 584,
-    scale: 0.56,
+    foot: 528,
+    scale: 0.54,
+    originY: 0.91,
 } as const
 
 export const CARDS = {
@@ -79,9 +94,9 @@ export const CARDS = {
     xs: [440, 640, 840],
     w: 170,
     h: 124,
-    scale: 0.86,
-    numberDY: -16,
-    dotsDY: 36,
+    scale: 0.67,
+    numberDY: -22,
+    dotsDY: 20,
     dotGap: 22,
     dotR: 7,
 } as const
@@ -92,7 +107,13 @@ export const ALL_CARDS: Rect = { x: 640, y: CARDS.y, w: 580, h: CARDS.h + 16 }
 
 export const plankRect = (boards: number, i: number): Rect => ({
     x: plankX(boards, i),
-    y: FENCE.base - 118,
+    y: FENCE.base - 95,
     w: 96,
-    h: 250,
+    h: 200,
 })
+
+export const stageRect = (boards: number): Rect => {
+    const left = robotX(boards, 0) - 90
+    const right = plankX(boards, boards) + 90
+    return { x: (left + right) / 2, y: FENCE.base - 85, w: right - left, h: 270 }
+}

@@ -81,6 +81,13 @@ const POR_SLUG: Record<string, string[]> = {
     "No fim, ponha as partes prontas no plano e toque em VAI!",
     "A cada nível o pedido cresce: duas partes, depois três, depois quatro.",
   ],
+  "nave-multiuso": [
+    "Arraste a bolinha do joystick para pilotar a nave para qualquer lado.",
+    "Escolha a ferramenta: assoprador para poeira e folhas, água para fogo, raio-puxa para resgatar o bichinho.",
+    "A ferramenta funciona sozinha quando a coisa entra na faixa à frente da nave.",
+    "Ferramenta errada só atrapalha por um instante: troque e tente de novo. Mas não deixe nada passar, senão a missão acaba!",
+    "No nível 2 a nave vai para o espaço, e no nível 3 chega à Lua!",
+  ],
   "robo-pintor": [
     "Conte quantas tábuas a cerca tem.",
     "Toque no cartão com esse número: ele vai para a lousa.",
@@ -488,6 +495,17 @@ const POR_SLUG: Record<string, string[]> = {
     "O quadro mostra o problema; a nuvem no alto da escada mostra ele resolvido.",
     "Toque na figura do próximo passo para montar o degrau que brilha.",
     "Passo fora da ordem dá errado, e a criança escorrega da escada!",
+  ],
+  "fabrica-de-carimbos": [
+    "O carimbo no alto mostra o que importa: cada janelinha é uma característica.",
+    "Quando um brinquedo que combina passar na luz, embaixo do carimbo, toque nele.",
+    "O carimbo confere janelinha por janelinha. Ache os 3 que combinam!",
+    "Nos níveis 2 e 3, leia o bilhete e monte o carimbo tocando só no que o pedido pede.",
+  ],
+  "trem-peca-e-programa": [
+    "O funil solta um item por vez, e ele para na agulha com o nome embaixo.",
+    "Toque à esquerda para o vagão PEÇAS (dá para pegar) ou à direita para PROGRAMAS (dão ordens).",
+    "Encha os vagões e veja o trem partir!",
   ],
   "decolagem-passo-a-passo": [
     "Olhe a missão: o foguete, o balão ou a pipa precisa subir.",

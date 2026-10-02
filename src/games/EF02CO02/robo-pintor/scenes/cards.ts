@@ -10,6 +10,7 @@ export interface Cards {
     onPick(cb: (index: number) => void): void
     setEnabled(on: boolean): void
     fly(index: number, to: { x: number; y: number }): Promise<void>
+    restore(): Promise<void>
     rect(index: number): Rect
     nod(index: number): void
     clear(): Promise<void>
@@ -85,6 +86,16 @@ export function createCards(scene: Phaser.Scene): Cards {
             cards.forEach((c, i) => {
                 if (i !== index) void FX.to(scene, c, { alpha: 0.35 }, { duration: 200 })
             })
+        },
+        async restore() {
+            await Promise.all(
+                cards.map((c, i) => {
+                    scene.tweens.killTweensOf(c)
+                    c.setPosition(CARDS.xs[i], CARDS.y).setDepth(DEPTH.cards)
+                    if (c.alpha === 0) c.setScale(0).setAlpha(1)
+                    return FX.to(scene, c, { scale: 1, alpha: 1 }, { duration: 260, ease: Ease.back(2) })
+                }),
+            )
         },
         rect: cardRect,
         nod(index) {

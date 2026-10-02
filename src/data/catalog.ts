@@ -99,6 +99,10 @@ import coverBalaoDoRecado from "../assets/games/EF01CO04/balao-do-recado/cover-b
 import coverPescariaDosCodigos from "../assets/games/EF01CO05/pescaria-dos-codigos/cover-pescaria-dos-codigos.png";
 import coverMaquinaDosAjudantes from "../assets/games/EF01CO06/maquina-dos-ajudantes/cover-maquina-dos-ajudantes.png";
 import coverLabirintoDoCofrinho from "../assets/games/EF01CO07/labirinto-do-cofrinho/cover-labirinto-do-cofrinho.png";
+import coverFabricaDeCarimbos from "../assets/games/EF02CO01/fabrica-de-carimbos/cover-fabrica-de-carimbos.png";
+import coverRoboPintor from "../assets/games/EF02CO02/robo-pintor/cover-robo-pintor.png";
+import coverNaveMultiuso from "../assets/games/EF02CO03/nave-multiuso/cover-nave-multiuso.png";
+import coverTremPecaEPrograma from "../assets/games/EF02CO04/trem-peca-e-programa/cover-trem-peca-e-programa.png";
 /**
  * 1. `id` nunca muda e nunca é reaproveitado. Se um jogo for removido,
  *    marque status "draft" — não devolva o id para a fila.
@@ -1795,6 +1799,58 @@ export const catalog: Game[] = [
     category: "Pensamento Computacional",
     points: 40,
     icon: "🖌️",
+    thumbnail: coverRoboPintor,
+  },
+  {
+    id: "099",
+    slug: "fabrica-de-carimbos",
+    module: "EF02CO01/fabrica-de-carimbos",
+    skill: "EF02CO01",
+    years: [2],
+    tags: ["modelos", "atributos", "comparar", "toque"],
+    order: 87,
+    status: "published",
+    title: "Fábrica de Carimbos",
+    description:
+      "O carimbo mostra o que importa: toque no brinquedo da esteira que combina com ele e veja a conferência janelinha por janelinha.",
+    category: "Pensamento Computacional",
+    points: 40,
+    icon: "🏭",
+    thumbnail: coverFabricaDeCarimbos,
+  },
+  {
+    id: "100",
+    slug: "nave-multiuso",
+    module: "EF02CO03/nave-multiuso",
+    skill: "EF02CO03",
+    years: [2],
+    tags: ["instruções de máquina", "nave", "ferramentas", "toque"],
+    order: 107,
+    status: "published",
+    title: "Nave Multiuso",
+    description:
+      "Pilote a nave da Zuri da Terra até a Lua: o assoprador tira a poeira, a água apaga o fogo e o raio-puxa resgata quem está perdido. Cada ferramenta faz só a sua tarefa!",
+    category: "Mundo Digital",
+    points: 40,
+    icon: "🚀",
+    thumbnail: coverNaveMultiuso,
+  },
+  {
+    id: "101",
+    slug: "trem-peca-e-programa",
+    module: "EF02CO04/trem-peca-e-programa",
+    skill: "EF02CO04",
+    years: [2],
+    tags: ["hardware", "software", "classificar", "toque"],
+    order: 117,
+    status: "published",
+    title: "Trem Peça & Programa",
+    description:
+      "O item para na agulha: toque no lado do vagão certo, PEÇAS que dá para pegar ou PROGRAMAS que dão ordens.",
+    category: "Mundo Digital",
+    points: 40,
+    icon: "🚂",
+    thumbnail: coverTremPecaEPrograma,
   },
 ];
 
@@ -1805,7 +1861,7 @@ export const catalog: Game[] = [
  * saltado de 086 para 090; os oito jogos de 090 a 097 desceram três casas
  * (090→087 … 097→094) para fechar o 087–089.
  */
-export const NEXT_FREE_ID = "099";
+export const NEXT_FREE_ID = "102";
 
 /**
  * AS RODADAS DE PRODUÇÃO.

@@ -1,22 +1,23 @@
 export type Paint = 'blue' | 'pink' | 'teal' | 'yellow'
 
-export type Outcome = 'exact' | 'over' | 'under'
+export interface Segment {
+    count: number
+    paint: Paint
+}
 
 export interface FenceDef {
     id: string
-    boards: number
+    segments: Segment[]
     cards: [number, number, number]
-    paint: Paint
+    preset?: number[]
 }
 
 export interface LevelDef {
     level: number
     fences: FenceDef[]
-    steps: 1 | 2
-    debug: boolean
 }
 
-export type Mode = 'intro' | 'guide' | 'enter' | 'choose' | 'run' | 'result' | 'done' | 'panel'
+export type Mode = 'intro' | 'guide' | 'enter' | 'bug' | 'pickSlot' | 'choose' | 'run' | 'result' | 'done' | 'panel'
 
 export interface Rect {
     x: number

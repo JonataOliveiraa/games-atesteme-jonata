@@ -4,12 +4,12 @@ export const FENCE = 'cerca'
 export const PIECES = 'pecas'
 
 export const SHEETS: Record<string, { frameWidth: number; frameHeight: number }> = {
-    [ROBOT]: { frameWidth: 384, frameHeight: 384 },
-    [FENCE]: { frameWidth: 256, frameHeight: 512 },
-    [PIECES]: { frameWidth: 256, frameHeight: 256 },
+    [ROBOT]: { frameWidth: 300, frameHeight: 300 },
+    [FENCE]: { frameWidth: 256, frameHeight: 330 },
+    [PIECES]: { frameWidth: 300, frameHeight: 300 },
 }
 
-export const ROBOT_CELL = { size: 384, foot: 360 } as const
+export const ROBOT_CELL = { size: 300, foot: 297 } as const
 
 export const POSE = {
     idle: 0,
@@ -22,7 +22,7 @@ export const POSE = {
 
 export type Pose = keyof typeof POSE
 
-export const BOARD_CELL = { w: 256, h: 512, base: 500 } as const
+export const BOARD_CELL = { w: 256, h: 330, base: 329, top: 42, rails: [143, 252] } as const
 
 export const PLANK = {
     raw: 0,
@@ -42,6 +42,6 @@ export const PIECE = {
     hand: 8,
 } as const
 
-export const PIECE_SIZE = 256
+export const PIECE_SIZE = 300
 
-export const HAND = { tipX: 96, tipY: 36 } as const
+export const HAND = { tipX: 77, tipY: 34 } as const

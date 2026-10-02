@@ -11,7 +11,7 @@ novo**. Nome aprovado: *Robô Pintor*. Arte: **vetor geométrico** (refs `23` e 
 Padrão: `docs/rodada-3/PADRAO-R3.md`. Modelos: `EF01CO06/maquina-dos-ajudantes`
 e `EF01CO05/pescaria-dos-codigos`.
 
-**Regras de sempre na rodada:** só o **N1**; errou, perdeu (`WRONG_ANSWER` +
+**Regras de sempre na rodada:** começou só com o **N1**, e o N2 e o N3 entraram em 02/10/2026 (§12); errou, perdeu (`WRONG_ANSWER` +
 `lives.loseAll()`); 2º ano com guia **visual**; nada de texto nem de conceito de
 adulto.
 
@@ -218,12 +218,45 @@ código (`for i < n`), com `await` por passo e `if (gen !== this.gen) return`. A
 bridge segue a Garra: `CORRECT_ANSWER` por cerca, `WRONG_ANSWER` no erro,
 `CHECKPOINT` com `progress = round(cercas / 3 × 100)`, `GAME_COMPLETED`.
 
-## 12. Depois do N1
+## 12. Os níveis 2 e 3 (prontos desde 02/10/2026)
 
-| Nível | Assunto | O que entra |
+Os três níveis usam a mesma tela e o mesmo gesto (tocar num cartão). O que muda
+está nos dados (`segments` e `preset` de cada cerca).
+
+| Nível | Assunto | Como é |
 |---|---|---|
-| 2 | **duas repetições em sequência** | a cerca tem tábuas marcadas com uma bolinha de giz de duas cores (3 azuis e depois 2 amarelas). A lousa tem **2 laços**: ↻[🖌️azul ➡️] × ? → ↻[🖌️amarela ➡️] × ?. A criança escreve os dois números (1 toque por laço) |
-| 3 | **depurar** | o robô do **vizinho Exagerado** roda a lousa dele, que tem um número errado, e pinta o cachorro do vizinho. A criança **toca no número errado** e escolhe o certo, e o robô roda de novo |
+| 1 | **um laço** | ↻[🖌️ ➡️] × ?, uma cor; 3, 5 e 4 tábuas |
+| 2 | **dois laços, um depois do outro** | a cerca tem tábuas com **marca de giz** de duas cores (ex.: 1 azul + 3 amarelas). A lousa tem **dois laços**, cada um com a plaquinha na cor da sua tinta. A criança escreve o 1º número (o espaço da vez fica marcado), os cartões voltam, e ela escreve o 2º. O robô roda os dois laços em sequência |
+| 3 | **depurar** | a lousa já vem **escrita, com um número errado**. O robô roda esse programa primeiro, e o estrago aparece **sem custo** (uma tábua da cor errada, o gato pintado, ou uma tábua crua). A tinta é **lavada**, a criança **toca no número errado** da lousa (ele vira "?"), os cartões aparecem, ela escolhe o certo, e o robô roda de novo |
+
+**O erro** é o mesmo nos três: o robô executa tudo, as tábuas que não batem com
+a marca de giz piscam, os números aparecem **por cor** (1, 2, 3 rosa; 1
+verde-água), a lousa mostra os números certos, e sai `WRONG_ANSWER` +
+`loseAll()`. No N3, consertar o laço que já estava certo também é erro.
+
+**As cercas:**
+
+| Nível | Cerca | Laços | Cartões | Programa pronto |
+|---|---|---|---|---|
+| 2 | 1 | 1 azul → 3 amarelo | 1 · 2 · 3 | — |
+| 2 | 2 | 3 rosa → 1 verde-água | 1 · 2 · 3 | — |
+| 2 | 3 | 2 amarelo → 2 azul | 1 · 2 · 3 | — |
+| 3 | 1 | 2 verde-água → 2 rosa | 1 · 2 · 3 | **3** e 2 (pinta uma tábua rosa de verde-água e o gato) |
+| 3 | 2 | 3 azul → 1 amarelo | 1 · 2 · 3 | 3 e **3** (pinta o gato e a grama) |
+| 3 | 3 | 1 rosa → 3 verde-água | 2 · 3 · 4 | 1 e **2** (sobra tábua crua) |
+
+**A validação** (`validateLevels`) cobra: N1 com 1 laço e N2/N3 com 2; 3 a 5
+tábuas; tintas diferentes na mesma cerca; o número certo entre os cartões, com
+vizinho de ±1; no N2, dois cartões grandes não passam de +2 tábuas; no N3,
+**exatamente um** número errado no programa pronto, e nenhuma troca possível
+passa de +2.
+
+**O guia de cada nível** (chave `ef02co02-l<n>`, uma vez por nível):
+- N2: cerca de treino 1 amarela + 2 azuis; o dedo escreve 1 e depois 2, e a
+  vinheta vai para a cerca enquanto o robô pinta;
+- N3: o programa de treino (2 e 2) roda e faz o estrago, a tinta é lavada, o
+  dedo toca o número errado, escolhe o 1, e o robô repinta certo. Na vez da
+  criança, a vinheta fica sobre a lousa até ela tocar num número.
 
 ## 13. Arquivos, texturas e quem mexe
 
@@ -280,3 +313,17 @@ as manchas de tinta do gato (respingos com `tint` por cima dele), o confete.
   `WRONG_ANSWER` + game over) e "a mais" (o gato pintado, a grama).
   A **tábua pintada não tem ripas** (a tinta vazava para a vizinha): o TEXTURAS
   foi corrigido nisso.
+- **02/10/2026, arte entregue.** 4 das 5 folhas chegaram (falta a capa), com
+  tamanhos diferentes do TEXTURAS (robô e peças em células de 300, cerca em
+  3 × 256 × 330, fundo em 1672 × 941). O código foi ajustado às medidas (ver
+  `src/assets/games/EF02CO02/robo-pintor/MANIFEST.md`): a cerca desceu para a
+  base em y 500, porque a grama da arte começa em y ≈ 318; o robô encolheu
+  (escala 0,62) e recuou 100 px para não tapar a tábua da vez; as bolinhas dos
+  cartões saíram de cima da faixa laranja; e a lousa ganhou uma plaquinha
+  clara atrás do pincel e da seta.
+- **02/10/2026, N2 e N3** (pedido do usuário: "adicione n2 e n3 no Robô
+  Pintor"). Como no §12: dois laços em sequência com marcas de giz, e o
+  programa pronto com um número errado para consertar. Sem arte nova: as marcas
+  de giz e a plaquinha colorida de cada laço são código. Conferido no
+  navegador: guias do N2 e do N3, acerto e erro nos dois níveis, e o N1 sem
+  mudança.

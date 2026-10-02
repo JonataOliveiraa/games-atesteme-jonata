@@ -143,22 +143,21 @@ function paintPlank(g: G, kind: number) {
     const wood = kind === 1 ? C.white : C.wood
     const dark = kind === 1 ? C.white : C.woodDark
     if (kind !== 1) {
-        ;[190, 360].forEach(y => {
+        ;BOARD_CELL.rails.forEach(y => {
             g.fillStyle(dark, 1)
             g.fillRect(0, y - 14, kind === 2 ? cx : BOARD_CELL.w, 28)
         })
     }
     const w = kind === 2 ? 110 : 128
     g.fillStyle(wood, 1)
-    g.fillRoundedRect(cx - w / 2, base - 400, w, 400, { tl: w / 2, tr: w / 2, bl: 6, br: 6 })
+    g.fillRoundedRect(cx - w / 2, BOARD_CELL.top, w, base - BOARD_CELL.top, { tl: w / 2, tr: w / 2, bl: 6, br: 6 })
     if (kind === 1) {
         pill(g, cx - 30, base - 60, cx - 30, base - 20, 14, C.white)
         pill(g, cx + 24, base - 90, cx + 24, base - 60, 12, C.white)
     } else {
-        pill(g, cx - 20, base - 300, cx - 20, base - 250, 8, C.woodDark)
-        pill(g, cx + 18, base - 170, cx + 18, base - 120, 8, C.woodDark)
-        dot(g, cx, 190, 6, C.easel)
-        dot(g, cx, 360, 6, C.easel)
+        pill(g, cx - 20, BOARD_CELL.top + 70, cx - 20, BOARD_CELL.top + 110, 8, C.woodDark)
+        pill(g, cx + 18, base - 110, cx + 18, base - 70, 8, C.woodDark)
+        BOARD_CELL.rails.forEach(y => dot(g, cx, y, 6, C.easel))
     }
 }
 
@@ -250,7 +249,7 @@ export function ensureArt(scene: Phaser.Scene) {
         const s = SHEETS[ROBOT]
         bake(scene, ROBOT, s.frameWidth * 3, s.frameHeight * 2, { w: s.frameWidth, h: s.frameHeight }, paintRobot)
     }
-    if (!scene.textures.exists(FENCE)) bake(scene, FENCE, BOARD_CELL.w * 4, BOARD_CELL.h, { w: BOARD_CELL.w, h: BOARD_CELL.h }, (g, i) => {
+    if (!scene.textures.exists(FENCE)) bake(scene, FENCE, BOARD_CELL.w * 3, BOARD_CELL.h, { w: BOARD_CELL.w, h: BOARD_CELL.h }, (g, i) => {
         if (i < 3) paintPlank(g, i)
     })
     if (!scene.textures.exists(PIECES)) bake(scene, PIECES, PIECE_SIZE * 4, PIECE_SIZE * 3, { w: PIECE_SIZE, h: PIECE_SIZE }, paintPiece)
