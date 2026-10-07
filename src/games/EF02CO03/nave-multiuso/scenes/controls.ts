@@ -21,6 +21,8 @@ export interface Controls {
     readonly vector: Vec
     onTool(fn: (tool: Tool) => void): void
     setEnabled(on: boolean): void
+    setStick(on: boolean): void
+    setTools(on: boolean): void
     select(tool: Tool): void
     press(tool: Tool): void
     hint(tool: Tool): Promise<void>
@@ -29,7 +31,8 @@ export interface Controls {
 }
 
 export function createControls(scene: Phaser.Scene): Controls {
-    let enabled = false
+    let stickOn = false
+    let toolsOn = false
     let selected: Tool = 'blower'
     let toolFn: (tool: Tool) => void = () => {}
     const objects: Phaser.GameObjects.GameObject[] = []
@@ -92,7 +95,7 @@ export function createControls(scene: Phaser.Scene): Controls {
     }
 
     const onDown = (p: Phaser.Input.Pointer) => {
-        if (!enabled || grabbed !== null) return
+        if (!stickOn || grabbed !== null) return
         if (Phaser.Math.Distance.Between(p.x, p.y, JOYSTICK.x, JOYSTICK.y) > JOYSTICK.grab) return
         grabbed = p.id
         scene.tweens.killTweensOf(knob)
@@ -155,7 +158,7 @@ export function createControls(scene: Phaser.Scene): Controls {
             .setDepth(DEPTH.controls + 2)
             .setInteractive({ useHandCursor: true })
         zone.on('pointerdown', () => {
-            if (!enabled) return
+            if (!toolsOn) return
             void FX.press(scene, box)
             toolFn(tool)
         })
@@ -175,11 +178,11 @@ export function createControls(scene: Phaser.Scene): Controls {
         TOOLS.forEach(tool => {
             const box = boxes.get(tool)!
             box.x = TOOL_BUTTONS.x - (tool === selected ? 8 : 0)
-            box.setAlpha(enabled ? 1 : 0.75)
+            box.setAlpha(toolsOn ? 1 : 0.75)
             paintRing(tool)
             if (tool === selected) halo.setPosition(box.x, box.y)
         })
-        base.setAlpha(enabled ? 1 : 0.75)
+        base.setAlpha(stickOn ? 1 : 0.75)
     }
 
     return {
@@ -200,9 +203,17 @@ export function createControls(scene: Phaser.Scene): Controls {
             toolFn = fn
         },
         setEnabled(on) {
-            enabled = on
+            this.setStick(on)
+            this.setTools(on)
+        },
+        setStick(on) {
+            stickOn = on
             if (!on && grabbed !== null) release()
             if (!on) held.clear()
+            layout()
+        },
+        setTools(on) {
+            toolsOn = on
             layout()
         },
         select(tool) {

@@ -22,6 +22,7 @@ import coverBolhasDaSeguranca from "../assets/games/EF02CO06/bolhas-da-seguranca
 import checklistThumbnail from "../assets/games/EF02CO06/checklist-do-jogador-seguro/cover.png";
 import tribunalThumbnail from "../assets/games/EF03CO01/tribunal-do-verdadeiro-ou-falso/cover.png";
 import caboDeGuerraThumbnail from "../assets/games/EF03CO01/cabo-de-guerra-da-verdade/cover-cabo-de-guerra-da-verdade.png";
+import coverPonteDoVerdadeiro from "../assets/games/EF03CO01/ponte-do-verdadeiro/cover-ponte-do-verdadeiro.png";
 import mazeThumbnail from "../assets/games/EF03CO02/labirinto-do-enquanto/cover-labirinto-do-enquanto.png";
 import coverCorraEnquanto from "../assets/games/EF03CO02/corra-enquanto/cover-corra-enquanto.png";
 import chefThumbnail from "../assets/games/EF03CO03/chef-dos-subproblemas/cover-chef-dos-subproblemas.png";
@@ -103,6 +104,13 @@ import coverFabricaDeCarimbos from "../assets/games/EF02CO01/fabrica-de-carimbos
 import coverRoboPintor from "../assets/games/EF02CO02/robo-pintor/cover-robo-pintor.png";
 import coverNaveMultiuso from "../assets/games/EF02CO03/nave-multiuso/cover-nave-multiuso.png";
 import coverTremPecaEPrograma from "../assets/games/EF02CO04/trem-peca-e-programa/cover-trem-peca-e-programa.png";
+import coverRotaDoBusao from "../assets/games/EF02CO05/rota-do-busao/cover-rota-do-busao.png";
+import coverFabricaLigaDesliga from "../assets/games/EF03CO02/fabrica-liga-desliga/cover-fabrica-liga-desliga.png";
+import coverCantinhoDoTablet from "../assets/games/EF02CO06/cantinho-do-tablet/cover-cantinho-do-tablet.png";
+import coverRoboEmPedacos from "../assets/games/EF03CO03/robo-em-pedacos/cover-robo-em-pedacos.png";
+import coverRobosFamintos from "../assets/games/EF03CO05/robos-famintos/cover-robos-famintos.png";
+import coverPraiaDosDados from "../assets/games/EF03CO04/praia-dos-dados/cover-praia-dos-dados.png";
+import coverMergulhoDaPesquisa from "../assets/games/EF03CO07/mergulho-da-pesquisa/cover-mergulho-da-pesquisa.png";
 /**
  * 1. `id` nunca muda e nunca é reaproveitado. Se um jogo for removido,
  *    marque status "draft" — não devolva o id para a fila.
@@ -611,6 +619,23 @@ export const catalog: Game[] = [
     points: 55,
     icon: "🪢",
     thumbnail: caboDeGuerraThumbnail,
+  },
+  {
+    id: "105",
+    slug: "ponte-do-verdadeiro",
+    module: "EF03CO01/ponte-do-verdadeiro",
+    skill: "EF03CO01",
+    years: [3],
+    tags: ["lógica", "negação", "verdadeiro ou falso", "toque"],
+    order: 147,
+    status: "published",
+    title: "Ponte do Verdadeiro",
+    description:
+      "A ponte só desce quando a placa diz a verdade: toque nos bichinhos até a frase ficar verdadeira e puxe a alavanca ABRIR.",
+    category: "Pensamento Computacional",
+    points: 40,
+    icon: "🌉",
+    thumbnail: coverPonteDoVerdadeiro,
   },
   {
     id: "015",
@@ -1852,6 +1877,141 @@ export const catalog: Game[] = [
     icon: "🚂",
     thumbnail: coverTremPecaEPrograma,
   },
+  {
+    id: "102",
+    slug: "cantinho-do-tablet",
+    module: "EF02CO06/cantinho-do-tablet",
+    skill: "EF02CO06",
+    years: [2],
+    tags: ["segurança", "cuidados", "tablet", "toque"],
+    order: 136,
+    status: "published",
+    title: "Cantinho do Tablet",
+    description:
+      "Arrume o quarto da Lia antes de ela jogar: tire o suco de perto, ponha o tablet no meio da mesa, recolha o fio e feche a cortina. Depois aperte JOGAR e veja o dia acontecer!",
+    category: "Cultura Digital",
+    points: 40,
+    icon: "📱",
+    thumbnail: coverCantinhoDoTablet,
+  },
+  {
+    id: "103",
+    slug: "rota-do-busao",
+    module: "EF02CO05/rota-do-busao",
+    skill: "EF02CO05",
+    years: [2],
+    tags: ["tecnologia", "cotidiano", "ônibus", "toque"],
+    order: 124,
+    status: "published",
+    title: "Rota do Busão",
+    description:
+      "O busão para no ponto e o letreiro mostra um problema: toque no passageiro-tecnologia que resolve para ele embarcar.",
+    category: "Cultura Digital",
+    points: 40,
+    icon: "🚌",
+    thumbnail: coverRotaDoBusao,
+  },
+  {
+    id: "104",
+    slug: "fabrica-liga-desliga",
+    module: "EF03CO02/fabrica-liga-desliga",
+    skill: "EF03CO02",
+    years: [3],
+    tags: ["laço", "enquanto", "condição", "interruptor"],
+    order: 157,
+    status: "published",
+    title: "Fábrica Liga-Desliga",
+    description:
+      "Ligue a esteira de biscoitos ENQUANTO o forno estiver aceso, e desligue quando ele apagar.",
+    category: "Pensamento Computacional",
+    points: 40,
+    icon: "🍪",
+    thumbnail: coverFabricaLigaDesliga,
+  },
+  {
+    id: "106",
+    slug: "robo-em-pedacos",
+    module: "EF03CO03/robo-em-pedacos",
+    skill: "EF03CO03",
+    years: [3],
+    tags: ["decomposição", "conserto", "montar", "toque"],
+    order: 166,
+    status: "published",
+    title: "Robô em Pedaços",
+    description:
+      "O robô gigante quebrou! Ele se desmonta em partes: conserte cada uma apertando só o que está solto, monte de novo na ordem que fica de pé e ligue.",
+    category: "Pensamento Computacional",
+    points: 40,
+    icon: "🤖",
+    thumbnail: coverRoboEmPedacos,
+  },
+  {
+    id: "107",
+    slug: "robos-famintos",
+    module: "EF03CO05/robos-famintos",
+    skill: "EF03CO05",
+    years: [3],
+    tags: ["formatos", "dados", "estilingue", "música", "foto", "texto", "vídeo"],
+    order: 186,
+    status: "published",
+    title: "Robôs Famintos",
+    description:
+      "Os robôs estão com fome de arquivos! Olhe como os dados estão arrumados e lance cada arquivo no robô que sabe ler aquele formato.",
+    category: "Mundo Digital",
+    points: 90,
+    icon: "🤖",
+    thumbnail: coverRobosFamintos,
+  },
+  {
+    id: "108",
+    slug: "praia-dos-dados",
+    module: "EF03CO04/praia-dos-dados",
+    skill: "EF03CO04",
+    years: [3],
+    tags: ["dados", "informação", "identificar", "toque"],
+    order: 176,
+    status: "published",
+    title: "Praia dos Dados",
+    description:
+      "Um cachorrinho se perdeu na praia! Os dados do dono chegam pelo rádio: tire quem não combina até sobrar só ele.",
+    category: "Mundo Digital",
+    points: 40,
+    icon: "🐶",
+    thumbnail: coverPraiaDosDados,
+  },
+  {
+    id: "109",
+    slug: "mergulho-da-pesquisa",
+    module: "EF03CO07/mergulho-da-pesquisa",
+    skill: "EF03CO07",
+    years: [3],
+    tags: ["busca", "palavras-chave", "navegador", "pesquisa", "submarino"],
+    order: 206,
+    status: "published",
+    title: "Mergulho da Pesquisa",
+    description:
+      "O mar da internet é escuro: use o sonar com as palavras certas para acender o que o cliente pediu, mergulhe até lá e traga o achado de volta ao cais.",
+    category: "Cultura Digital",
+    points: 90,
+    icon: "🔎",
+    thumbnail: coverMergulhoDaPesquisa,
+  },
+  {
+    id: "110",
+    slug: "portas-do-computador",
+    module: "EF03CO06/portas-do-computador",
+    skill: "EF03CO06",
+    years: [3],
+    tags: ["entrada", "saída", "aparelhos", "microfone", "câmera", "teclado"],
+    order: 196,
+    status: "published",
+    title: "Portas do Computador",
+    description:
+      "Os aparelhos ficam ligados nas portas do computador. Ajude o SOM, a IMAGEM e as LETRAS a entrarem no computador pelo aparelho certo.",
+    category: "Mundo Digital",
+    points: 40,
+    icon: "🚪",
+  },
 ];
 
 /**
@@ -1861,7 +2021,7 @@ export const catalog: Game[] = [
  * saltado de 086 para 090; os oito jogos de 090 a 097 desceram três casas
  * (090→087 … 097→094) para fechar o 087–089.
  */
-export const NEXT_FREE_ID = "102";
+export const NEXT_FREE_ID = "111";
 
 /**
  * AS RODADAS DE PRODUÇÃO.

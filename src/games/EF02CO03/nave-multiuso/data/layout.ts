@@ -122,5 +122,21 @@ export const pilotRect = (): Rect => {
     return { x: PILOT_VIEW.x + 10, y: (top + bottom) / 2, w: PILOT_CELL.width * PILOT_VIEW.scale + 20, h: bottom - top + 20 }
 }
 
+export const SIGN = {
+    x: 14,
+    y: 100,
+    w: 282,
+    row: 76,
+    pad: 12,
+    countX: 44,
+    iconX: 108,
+    icon: 74,
+    toolR: 27,
+    nameX: 146,
+    big: 1.15,
+    bigX: W / 2,
+    bigY: 282,
+} as const
+
 export const PARADE_X = 1010
 export const DEMO_Y = 120

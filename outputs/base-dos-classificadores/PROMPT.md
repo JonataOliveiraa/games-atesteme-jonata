@@ -1,0 +1,22 @@
+# `cover-base-dos-classificadores.png` — 1672 × 941, opaco
+
+### Prompt copiável
+
+~~~text
+Use case: illustration-story
+Asset type: opaque 16:9 cover art for a Brazilian children's educational game, final target 1672x941
+
+STYLE — USE ALL FIVE ATTACHED GAME IMAGES AS THE ONLY ART-STYLE AND ASSET REFERENCES. Match the existing game's rendering exactly: bright friendly children's-game illustration; clean rounded silhouettes; dark coloured outlines of medium weight; soft cel shading with glossy highlights on the smooth stone pieces; warm diffuse forest light; cheerful saturated but harmonious palette; readable large shapes and uncluttered composition. Image 1 is composition context only and must NOT be copied where it conflicts with this prompt. Image 2 is the exact forest-clearing environment reference. Image 3 is the exact neutral woven-straw basket design reference. Image 4 is the exact circle, square, triangle and rectangle stone-shape design reference, recoloured only as required below. Image 5 is the vine rendering reference. Preserve the visual identity of this specific game. NO white sticker keyline — this is a full opaque scene.
+
+Create one opaque landscape cover illustration. Scene: the same sunny forest clearing as Image 2, framed by leafy trees and a few hanging vines, with a broad fallen tree trunk crossing the middle-lower part of the composition. On top of the fallen trunk, arrange multiple smooth stone shapes: circles, squares, triangles and rectangles. The stone shapes may use ONLY THREE colours: vivid RED, vivid BLUE and warm YELLOW. Show a useful variety of shape-and-colour combinations. Absolutely no green or purple stones.
+
+In the grass in front of the trunk, place EXACTLY THREE neutral natural woven-straw baskets based on Image 3. Every basket is tan/beige/brown straw with green leaf trim allowed only as foliage decoration matching Image 3; the basket body itself is NEVER coloured red, blue, yellow, green or purple. Above each basket, place one small plain wooden signboard. The three signboards contain PICTURES ONLY, no words or numerals, and each clearly demonstrates one sorting rule with exactly three examples: sign 1 shows three different RED shapes; sign 2 shows the SAME TRIANGLE shape in red, blue and yellow; sign 3 shows three different BLUE shapes. Keep all sign examples small, simple and readable.
+
+Show one BLUE stone shape flying from the fallen trunk toward the clearly correct basket, with a short curved sparkling trail and a warm magical glow that makes the successful sorting action instantly understandable. The baskets and signs remain neutral and equally polished; none looks wrong, disabled, coloured or crossed out.
+
+TITLE, VERBATIM: "Base dos Classificadores". Render exactly these three words, letter for letter: B-a-s-e / d-o-s / C-l-a-s-s-i-f-i-c-a-d-o-r-e-s. Place the title at the TOP, centred, very large rounded chunky colourful letters with a thick dark outline and slight dimensional volume, highly legible at thumbnail size. Use warm red, blue and yellow accents across the title letters. Keep a clearly visible normal word space between "Base" and "dos". No other text anywhere.
+
+Composition: cinematic 16:9; title occupies the clear upper centre; fallen trunk and shape stones in the middle; three baskets evenly spaced across the lower foreground with their wooden example signs immediately above; flying stone and sparkle form the main action focal point. Keep every important object clear of the crop edges. The cover must remain readable as a small catalog thumbnail.
+
+DO NOT INCLUDE: misspelled title, missing word, duplicated word, merged words, extra text, subtitle, captions, labels, letters or numbers on signs, written sorting rules, watermark, logo, green stones, purple stones, orange stones, pink stones, teal stones, green or purple examples on signs, coloured basket bodies, red baskets, blue baskets, yellow baskets, green baskets, purple baskets, plastic bins, pots, buckets, trash cans, more or fewer than three baskets, more or fewer than three wooden signboards, more or fewer than three examples on any sign, symbols of right or wrong, red X, green check mark, arrows, question marks, user interface, buttons, panels, cards, HUD, characters, children, animals, smiling sun, faces on objects, fantasy creatures, indoor scene, classroom, fence, white sticker keyline, pure black outlines, rough sketch, painterly realism, 3D render, photorealism, blur, lens flare, heavy noise, muddy colours, cropped title, cropped baskets, cropped signs.
+~~~

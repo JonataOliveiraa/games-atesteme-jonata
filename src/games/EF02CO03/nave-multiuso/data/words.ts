@@ -1,4 +1,4 @@
-import type { Place, Tool } from '../types'
+import type { Kind, Place, Rule, Tool } from '../types'
 
 export const TEACH = {
     hello: 'Oi! Eu sou a Zuri, piloto desta nave.',
@@ -10,7 +10,17 @@ export const TEACH = {
     back: 'Depois, volte para o assoprador!',
     careful: 'Não deixe nada passar! Ferramenta errada não funciona.',
     stickHelp: 'Arraste a bolinha para voar para qualquer lado.',
+    signRead: 'A placa mostra o que vem, na ordem.',
+    signSwap: 'Troque a ferramenta antes de cada grupo chegar!',
+    toolsRead: 'Agora a placa mostra a ferramenta, e a nave troca sozinha.',
+    toolsGo: 'Voe até a coisa que essa ferramenta resolve!',
+    toolsSkip: 'O que ela não resolve pode passar.',
 } as const
+
+export const SIGN_HELP: Record<Exclude<Rule, 'free'>, string> = {
+    things: 'A placa mostra o que vem, na ordem.',
+    tools: 'Voe até o que a ferramenta da placa resolve.',
+}
 
 export const PLACE_HELLO: Record<Place, string> = {
     earth: 'Vamos limpar o caminho!',
@@ -36,6 +46,18 @@ export const PAIRS: Record<Place, Record<Tool, string>> = {
     },
 }
 
+export const KIND_NAME: Record<Place, Record<Kind, string>> = {
+    earth: { leaves: 'Folhas', fire: 'Fogo', sheep: 'Ovelha' },
+    space: { leaves: 'Poeira', fire: 'Meteoro', sheep: 'Ovelha' },
+    moon: { leaves: 'Poeira', fire: 'Robô', sheep: 'Coelho' },
+}
+
+export const TOOL_NAME: Record<Tool, string> = {
+    blower: 'Assoprador',
+    water: 'Água',
+    pull: 'Raio-puxa',
+}
+
 export const TOOLS_HELP: Record<Place, string> = {
     earth: 'Assoprador: folhas. Água: fogo. Raio-puxa: ovelha.',
     space: 'Assoprador: poeira. Água: meteoro. Raio-puxa: ovelha.',
@@ -48,6 +70,6 @@ export const END = {
 } as const
 
 export const END_BY_LEVEL: Record<number, { title: string; message: string }> = {
-    2: { title: 'Até o espaço!', message: 'Da Terra ao espaço, cada ferramenta fez a sua tarefa!' },
-    3: { title: 'Pouso na Lua!', message: 'No espaço e na Lua, cada ferramenta fez a sua tarefa!' },
+    2: { title: 'Até o espaço!', message: 'Você leu a placa e trocou a ferramenta na hora certa!' },
+    3: { title: 'Pouso na Lua!', message: 'Para cada ferramenta, você achou a tarefa que ela sabe fazer!' },
 }

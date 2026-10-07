@@ -8,7 +8,7 @@ import { faseInicial } from '../../../../shared/level/faseInicial'
 import { FX, Ease } from '../../../../shared/effects/FX'
 import type { TutorialStep } from '../../../../shared/tutorial/createTutorial'
 
-import { LEVELS, POINTS, TOOLS, TOOL_FOR, guideKey, placeKey, totalThings } from '../data/levels'
+import { KINDS, KIND_FOR, LEVELS, POINTS, SIGN_KEY, TOOLS, TOOL_FOR, guideKey, placeKey, signRows, totalThings } from '../data/levels'
 import { PILOT, PILOT_CELL, PILOT_FRAME } from '../data/files'
 import {
     DEMO_Y,
@@ -31,8 +31,8 @@ import {
     toolRect,
 } from '../data/layout'
 import { C, CONFETTI, CSS } from '../data/theme'
-import { END, END_BY_LEVEL, PAIRS, PLACE_HELLO, TEACH, TOOLS_HELP } from '../data/words'
-import type { Kind, LevelDef, Mode, Place, ThingDef, Tool } from '../types'
+import { END, END_BY_LEVEL, PAIRS, PLACE_HELLO, SIGN_HELP, TEACH, TOOLS_HELP } from '../data/words'
+import type { Kind, LevelDef, Mode, Place, SignRow, ThingDef, Tool } from '../types'
 
 import { createAudio, type Audio } from './audio'
 import { createControls, type Controls } from './controls'
@@ -40,15 +40,18 @@ import { ensureArt } from './fallback'
 import { spot, tap, teach, union } from './guide'
 import { createHud, type Hud } from './hud'
 import { createShip, type Ship } from './ship'
+import { createSign, type Sign } from './sign'
 import { createThings, type ThingView, type Things } from './things'
 import { createWorld, type World } from './world'
 
 const GAME_ID = 'nave-multiuso'
 const WAVE_PAUSE_MS = 900
+const SIGN_HOLD_MS = 1300
 const MISS_POINTS = 5
 const WHEEL_MS = 180
 const LOW_BALLOON_Y = 380
 const HIGH_BALLOON_Y = 150
+const SIGN_BALLOON_Y = H - 150
 const SPEAKER = { scale: 0.55, left: 160, right: 1120, depth: 9005 } as const
 const PAIRS_ORDER: [Kind, Tool][] = [
     ['leaves', 'blower'],
@@ -74,6 +77,9 @@ export class GameScene extends Phaser.Scene {
     private perched: Side | null = null
     private speedMul = 1
     private lastWheel = 0
+    private rows: SignRow[] = []
+    private left: number[] = []
+    private group = 0
 
     private score = 0
     private hits = 0
@@ -87,6 +93,7 @@ export class GameScene extends Phaser.Scene {
     private controls!: Controls
     private hud!: Hud
     private pilot!: Phaser.GameObjects.Sprite
+    private sign!: Sign
 
     private unsubPlatform?: () => void
 
@@ -109,6 +116,9 @@ export class GameScene extends Phaser.Scene {
         this.perched = null
         this.speedMul = 1
         this.lastWheel = 0
+        this.rows = []
+        this.left = []
+        this.group = 0
         this.score = data?.points ?? 0
         this.hits = 0
         this.errors = 0
@@ -143,6 +153,8 @@ export class GameScene extends Phaser.Scene {
             .setDepth(DEPTH.pilot)
             .setVisible(false)
 
+        this.sign = createSign(this)
+
         this.controls.onTool(tool => this.equip(tool))
         this.controls.select(this.ship.tool)
         this.input.keyboard?.on('keydown', this.onKeyDown, this)
@@ -160,7 +172,8 @@ export class GameScene extends Phaser.Scene {
     }
 
     update(time: number, delta: number) {
-        this.ship.update(time, this.lockTarget())
+        const locked = this.lockView()
+        this.ship.update(time, locked ? { x: locked.x, y: locked.y } : null)
         this.things.update(time)
         if (this.mode !== 'fly' && this.mode !== 'wave') return
 
@@ -184,12 +197,13 @@ export class GameScene extends Phaser.Scene {
 
         const nose = this.ship.noseY
         this.things.list.forEach(view => {
-            if (view.resolved || Math.abs(view.x - this.ship.x) > REACH.hitX) return
+            if (view.resolved || view.quiet || Math.abs(view.x - this.ship.x) > REACH.hitX) return
             if (view.y + THING_VIEW.half < nose - REACH.len || view.y - THING_VIEW.half > nose) return
             void this.act(view)
         })
 
-        if (!this.guiding && !this.pending.length && !this.things.list.some(view => !view.resolved || view.spoiled)) void this.endWave()
+        const open = this.things.list.some(view => !view.def.decoy && (!view.resolved || view.spoiled))
+        if (!this.guiding && !this.pending.length && !open) void this.endWave()
     }
 
     private shutdownScene() {
@@ -202,25 +216,30 @@ export class GameScene extends Phaser.Scene {
         this.ship?.destroy()
         this.world?.destroy()
         this.audio?.destroy()
+        this.sign?.destroy()
         EventBus.off('mute-audio', this.onMute, this)
         EventBus.off('show-tutorial', this.onShowTutorial, this)
         this.unsubPlatform?.()
     }
 
-    private lockTarget() {
+    private lockView() {
         if (this.mode !== 'fly' && this.mode !== 'guide') return null
         const nose = this.ship.noseY
         let best: ThingView | null = null
         for (const view of this.things.list) {
-            if (view.resolved || Math.abs(view.x - this.ship.x) > REACH.hitX) continue
+            if (view.resolved || view.quiet || Math.abs(view.x - this.ship.x) > REACH.hitX) continue
             if (view.y - THING_VIEW.half > nose || view.y + THING_VIEW.half < nose - REACH.len - REACH.lockAhead) continue
             if (!best || view.y > best.y) best = view
         }
-        return best ? { x: best.x, y: best.y } : null
+        return best
     }
 
     private get live() {
         return this.mode === 'fly' && !this.guiding
+    }
+
+    private get autoTool() {
+        return this.level.rule === 'tools'
     }
 
     private get place(): Place {
@@ -228,7 +247,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     private onWheel(_pointer: Phaser.Input.Pointer, _over: unknown, _dx: number, dy: number) {
-        if (!this.live || Math.abs(dy) < 1 || this.time.now - this.lastWheel < WHEEL_MS) return
+        if (!this.live || this.autoTool || Math.abs(dy) < 1 || this.time.now - this.lastWheel < WHEEL_MS) return
         this.lastWheel = this.time.now
         const i = TOOLS.indexOf(this.ship.tool)
         const next = TOOLS[(i + (dy > 0 ? 1 : TOOLS.length - 1)) % TOOLS.length]
@@ -240,13 +259,13 @@ export class GameScene extends Phaser.Scene {
         const digit = ['Digit1', 'Digit2', 'Digit3'].indexOf(event.code)
         const pad = ['Numpad1', 'Numpad2', 'Numpad3'].indexOf(event.code)
         const i = digit >= 0 ? digit : pad
-        if (i < 0 || !this.live) return
+        if (i < 0 || !this.live || this.autoTool) return
         this.controls.press(TOOLS[i])
         this.equip(TOOLS[i])
     }
 
     private equip(tool: Tool) {
-        if (!this.live) return
+        if (!this.live || this.autoTool) return
         this.setTool(tool)
     }
 
@@ -280,19 +299,88 @@ export class GameScene extends Phaser.Scene {
             await this.placeIntro(gen, first)
             if (gen !== this.gen) return
         }
-        this.startWave(0)
+        void this.beginWave(0)
     }
 
-    private startWave(index: number) {
+    private async beginWave(index: number) {
+        const gen = this.gen
+        const wave = this.level.waves[index]
         this.waveIndex = index
-        this.pending = this.level.waves[index].things.map(def => ({ ...def }))
-        this.distSince = 0
         this.streak = 0
+        this.rows = signRows(wave, this.level.rule)
+        this.left = this.rows.map(row => row.count)
+        this.group = 0
         this.hud.setPhase(index)
+        if (this.rows.length) {
+            await this.showSign(gen)
+            if (gen !== this.gen) return
+        }
+        this.pending = [...wave.things]
+        this.distSince = 0
         this.mode = 'fly'
         this.guiding = false
-        this.controls.setEnabled(true)
+        this.controls.setStick(true)
+        this.controls.setTools(!this.autoTool)
         this.hud.setHelpEnabled(true)
+    }
+
+    private async showSign(gen: number) {
+        const rule = this.level.rule
+        this.mode = 'wave'
+        this.guiding = true
+        this.controls.setEnabled(false)
+        this.hud.setHelpEnabled(false)
+        const tool = this.rows[0].tool
+        if (tool) this.setTool(tool)
+        await this.sign.show(this.rows, this.things.key, this.place)
+        if (gen !== this.gen || rule === 'free') return
+        const key = SIGN_KEY[rule]
+        if (!this.registry.get(key)) {
+            this.registry.set(key, true)
+            if (rule === 'tools') await this.toolsGuide(gen, key)
+            else await this.thingsGuide(gen, key)
+            return
+        }
+        await FX.wait(this, SIGN_HOLD_MS)
+        if (gen !== this.gen) return
+        await this.sign.dock()
+    }
+
+    private async thingsGuide(gen: number, key: string) {
+        this.mode = 'guide'
+        await this.talk(key, [{ text: TEACH.signRead, ...spot(this.sign.rect()), balloonY: SIGN_BALLOON_Y, buttonLabel: 'Próximo' }])
+        if (gen !== this.gen) return
+        await this.sign.dock()
+        if (gen !== this.gen) return
+        await this.talk(key, [{ text: TEACH.signSwap, ...spot(TOOLS_RECT), balloonX: W / 2 + 30, balloonY: LOW_BALLOON_Y }])
+        if (gen !== this.gen) return
+        await this.hidePilot()
+    }
+
+    private async toolsGuide(gen: number, key: string) {
+        this.mode = 'guide'
+        await this.talk(key, [{ text: TEACH.toolsRead, ...spot(this.sign.rect()), balloonY: SIGN_BALLOON_Y, buttonLabel: 'Próximo' }])
+        if (gen !== this.gen) return
+        await this.sign.dock()
+        if (gen !== this.gen) return
+        const kind = KIND_FOR[this.ship.tool]
+        const other = KINDS.find(k => k !== kind)!
+        this.things.spawn({ kind, slot: 3, gap: 0 }, DEMO_Y)
+        const decoy = this.things.spawn({ kind: other, slot: 1, gap: 0, decoy: true }, DEMO_Y)
+        await this.talk(key, [
+            { text: TEACH.toolsGo, ...spot(union(thingRect(slotX(1), DEMO_Y), thingRect(slotX(3), DEMO_Y))), buttonLabel: 'Ver' },
+        ])
+        if (gen !== this.gen) return
+        await this.hidePilot()
+        if (gen !== this.gen) return
+        await this.ship.glide(slotX(3), SHIP_VIEW.y, 600)
+        if (gen !== this.gen) return
+        await this.flyUntilSolved(gen)
+        if (gen !== this.gen) return
+        this.mode = 'guide'
+        await this.talk(key, [{ text: TEACH.toolsSkip, ...spot(thingRect(decoy.x, decoy.y)) }])
+        if (gen !== this.gen) return
+        await Promise.all([this.hidePilot(), this.things.fadeAll()])
     }
 
     private toolSound(tool: Tool) {
@@ -307,14 +395,15 @@ export class GameScene extends Phaser.Scene {
         const kind = view.def.kind
         const nose = () => this.nose()
         const target = () => ({ x: view.x, y: view.y + 20 })
+        const guided = this.guiding
         view.resolved = true
         this.toolSound(tool)
 
         if (TOOL_FOR[kind] === tool) {
-            if (!this.guiding) this.solved()
+            if (!guided) this.solved(view)
             const ms = kind === 'leaves' ? 380 : kind === 'fire' ? 720 : 620
             await Promise.all([this.ship.blast(tool, target, ms), this.things.solve(view, nose)])
-            if (gen !== this.gen || !this.guiding) return
+            if (gen !== this.gen || !guided) return
             this.mode = 'guide'
             this.solvedWaiter?.()
             return
@@ -322,14 +411,14 @@ export class GameScene extends Phaser.Scene {
 
         this.audio.fomfom()
         this.missed()
-        void this.controls.hint(TOOL_FOR[kind])
+        if (!this.autoTool) void this.controls.hint(TOOL_FOR[kind])
         await Promise.all([
             this.ship.blast(tool, target, 560),
             this.things.spoil(view, tool, nose, () => this.ship.shake(), () => this.ship.heat()),
         ])
     }
 
-    private solved() {
+    private solved(view: ThingView) {
         this.score += POINTS
         this.hits += 1
         this.done += 1
@@ -337,6 +426,28 @@ export class GameScene extends Phaser.Scene {
         this.streak += 1
         runtimeGameBridge.emit({ type: 'CORRECT_ANSWER', gameId: GAME_ID, pointsEarned: POINTS, stage: this.level.level })
         this.emitCheckpoint()
+        this.things.list.forEach(other => {
+            if (other.def.decoy && other.y === view.y) other.quiet = true
+        })
+        const group = view.def.group
+        if (group === undefined || !this.left[group]) return
+        this.left[group] -= 1
+        this.sign.tick(group)
+        this.advance()
+    }
+
+    private advance() {
+        const next = this.left.findIndex(count => count > 0)
+        const now = next < 0 ? this.left.length : next
+        if (now === this.group) return
+        this.group = now
+        this.things.list.forEach(view => {
+            if (view.def.decoy && (view.def.group ?? 0) < now) view.quiet = true
+        })
+        if (next < 0) return
+        const tool = this.rows[next].tool
+        if (tool) this.setTool(tool)
+        else this.audio.tick()
     }
 
     private missed() {
@@ -356,6 +467,7 @@ export class GameScene extends Phaser.Scene {
         void this.hud.celebrate(this.waveIndex)
         await FX.wait(this, WAVE_PAUSE_MS)
         if (gen !== this.gen) return
+        this.sign.hide()
         const next = this.waveIndex + 1
         if (next >= this.level.waves.length) {
             void this.endLevel()
@@ -373,7 +485,7 @@ export class GameScene extends Phaser.Scene {
                 if (gen !== this.gen) return
             }
         }
-        this.startWave(next)
+        void this.beginWave(next)
     }
 
     private lose() {
@@ -505,11 +617,11 @@ export class GameScene extends Phaser.Scene {
         await FX.to(this, this.pilot, { x }, { duration: 320, ease: Ease.back(1.4) })
     }
 
-    private async talk(key: string, steps: TutorialStep[], frame: number = PILOT_FRAME.talk) {
+    private async talk(key: string, steps: TutorialStep[], frame: number = PILOT_FRAME.talk, side?: Side) {
         for (let i = 0; i < steps.length; i++) {
             const step = steps[i]
             const last = i === steps.length - 1
-            await this.perch((step.x ?? W / 2) >= W * 0.42 ? 'left' : 'right', frame)
+            await this.perch(side ?? ((step.x ?? W / 2) >= W * 0.42 ? 'left' : 'right'), frame)
             await teach(this, key, [{ ...step, buttonLabel: step.buttonLabel ?? (last ? undefined : 'Próximo') }])
         }
     }
@@ -643,25 +755,29 @@ export class GameScene extends Phaser.Scene {
         if (gen !== this.gen) return
         await Promise.all([this.hidePilot(), this.things.fadeAll()])
         if (gen !== this.gen) return
-        this.startWave(0)
+        void this.beginWave(0)
     }
 
     private async explain() {
         if (!this.live) return
         const gen = this.gen
+        const rule = this.level.rule
         this.mode = 'panel'
         this.guiding = true
         this.controls.setEnabled(false)
         this.hud.setHelpEnabled(false)
-        await this.talk(`${guideKey(this.level.level)}-help`, [
+        const steps: TutorialStep[] = [
             { text: TOOLS_HELP[this.place], ...spot(TOOLS_RECT), balloonY: LOW_BALLOON_Y, buttonLabel: 'Próximo' },
             { text: TEACH.stickHelp, ...spot(JOYSTICK_RECT), balloonY: LOW_BALLOON_Y, buttonLabel: 'Continuar' },
-        ])
+        ]
+        if (rule !== 'free') steps.unshift({ text: SIGN_HELP[rule], ...spot(this.sign.rect()), balloonX: W / 2 + 10, balloonY: LOW_BALLOON_Y, buttonLabel: 'Próximo' })
+        await this.talk(`${guideKey(this.level.level)}-help`, steps)
         await this.hidePilot()
         this.guiding = false
         if (gen !== this.gen) return
         this.mode = 'fly'
-        this.controls.setEnabled(true)
+        this.controls.setStick(true)
+        this.controls.setTools(!this.autoTool)
         this.hud.setHelpEnabled(true)
     }
 

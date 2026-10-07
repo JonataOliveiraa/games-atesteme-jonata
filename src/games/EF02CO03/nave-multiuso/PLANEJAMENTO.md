@@ -9,7 +9,7 @@ Padrão: `docs/rodada-3/PADRAO-R3.md`. Modelos de código: `EF02CO02/robo-pintor
 (estrutura) e `EF02CO04/trem-peca-e-programa` (tutorial com `createTutorial`).
 
 **Regras de sempre na rodada:**
-- errou, perdeu, **do jeito deste jogo** (§7): ferramenta errada só atrapalha por 1,5 s; **deixar uma coisa passar** encerra;
+- errou, perdeu, **do jeito deste jogo** (§7): ferramenta errada só atrapalha por 0,7 s; **deixar uma coisa passar** encerra;
 - 2º ano com tutorial visual e **uma frase curta por balão**;
 - vocabulário de nave, nunca de briga (nada de arma, tiro, inimigo ou alvo).
 
@@ -52,8 +52,9 @@ numa tela parada; o *Robô Pintor* (098) conta repetições. Aqui a máquina é
 
 1. A nave voa, e o mundo rola sozinho para baixo (100, 110 e 120 px/s no N1,
    N2 e N3).
-2. As coisas descem do alto em 5 posições (x 450 a 830). Às vezes vêm **duas
-   juntas**, sempre de poeira ou folhas e afastadas.
+2. As coisas descem do alto em 5 posições (x 450 a 830). No N1, às vezes vêm
+   **duas juntas**, sempre de poeira ou folhas e afastadas. No N2 elas vêm **em
+   grupos** anunciados pela placa, e no N3 vêm **em pares** (§14).
 3. A criança arrasta a bolinha do joystick: a nave voa para qualquer lado, na
    área x 340–940, y 330–615. Ela toca numa ferramenta para encaixá-la, o bico
    muda e a faixa de alcance muda de cor.
@@ -100,8 +101,8 @@ O estrago de cada erro é o mesmo nos três lugares:
 | Nível | Onda 1 | Onda 2 | Onda 3 | Coisas | Velocidade |
 |---|---|---|---|---|---|
 | **N1** | Terra | Terra | Terra | 23 (17 🍂, 3 🔥, 3 🐑) | 100 |
-| **N2** | Terra | Terra | **decola para o espaço** | 25 | 110 |
-| **N3** | espaço | espaço | **pousa na Lua** | 27 | 120 |
+| **N2** | Terra | Terra | **decola para o espaço** | 24, em grupos com a **placa das coisas** (§14) | 105 |
+| **N3** | espaço | espaço | **pousa na Lua** | 15 pares (5 por onda), com a **placa das ferramentas** (§14) | 110 |
 
 - **Entre ondas de lugares diferentes:**
   - o chão novo aparece por cima do antigo em 1,6 s;
@@ -113,19 +114,23 @@ O estrago de cada erro é o mesmo nos três lugares:
   - depois vem o desfile das 3 coisas novas, cada uma ao lado do botão da
     ferramenta dela.
 - **Vãos:**
-  - mínimo de 240 px entre duas coisas;
-  - 360 px em volta de toda surpresa;
-  - par junto (vão 0) só de poeira ou folhas, a pelo menos 2 posições de
+  - N1: mínimo de 240 px entre duas coisas e 360 px em volta de toda surpresa;
+    par junto (vão 0) só de poeira ou folhas, a pelo menos 2 posições de
     distância;
-  - uma coisa que passou volta com vão de 320.
-- **No N3,** a onda 2 junta uma ovelha e um meteoro seguidos: é preciso trocar
-  do raio-puxa direto para a água.
+  - N2: 260 px dentro de um grupo;
+  - N3: 400 px entre um par e o seguinte;
+  - N2 e N3: 480 px antes de cada grupo novo, para dar tempo de trocar.
 
 **A validação (`validateLevels`) confere:**
-- os lugares de cada nível;
+- os lugares e a regra de cada nível (`free`, `things`, `tools`);
 - o primeiro vão = 0;
-- uma surpresa por onda, no mínimo;
+- uma surpresa por onda no N1;
 - as regras dos vãos e dos pares;
+- no N2 e no N3: de 2 a 4 linhas na placa, sem duas linhas iguais seguidas,
+  e cada coisa batendo com a linha dela;
+- no N3: toda coisa vem com uma isca ao lado, a ferramenta da placa resolve a
+  coisa e nunca a isca, e a isca **não fica no caminho** entre uma coisa e a
+  próxima;
 - os três tipos de coisa em todo nível.
 
 ## 6. A tela (1280 × 720, visão de cima)
@@ -164,10 +169,12 @@ atendidas ao mesmo tempo.
 1. o estrago aparece na coisa, que segue descendo: folhas encharcadas, fogo
    grande, bichinho molhado, bichinho tonto girando no lugar, ou poeira sugada
    para a nave;
-2. o botão da ferramenta certa pisca;
-3. depois de **1,5 s**, a coisa **volta ao normal** com um brilho e pode ser
-   resolvida. Se a nave continua embaixo com a ferramenta errada, conta outro
-   erro;
+2. o botão da ferramenta certa pisca (menos no N3, em que a placa escolhe a
+   ferramenta);
+3. depois de **0,7 s fixos** (`SPOIL_MS`, contados do golpe, mesmo que a
+   animação do estrago ainda esteja correndo), a coisa **volta ao normal** com
+   um brilho e pode ser resolvida. Se a nave continua embaixo com a ferramenta
+   errada, conta outro erro;
 4. cada erro manda `WRONG_ANSWER` com -5 pontos e zera a sequência do plim,
    mas **não chama `lives.lose()`**.
 
@@ -176,7 +183,8 @@ estragada ou não, chama `lose()`:
 - a Zuri faz cara de "ops";
 - `WRONG_ANSWER` + `lives.loseAll()`, e a plataforma recebe `GAME_OVER`.
 
-Nos tutoriais isso não vale.
+Nos tutoriais isso não vale. No N3, a **isca** (a coisa que a ferramenta da
+placa não resolve) passa de graça.
 
 As estrelas do painel final medem os erros de ferramenta: 0 erros dão 3
 estrelas, até 2 dão 2, e mais que isso dá 1.
@@ -247,6 +255,20 @@ nave", nunca qual ferramenta usar.
 **N2 e N3, primeira vez:** um balão lembra "Arraste a bolinha para voar para
 qualquer lado."
 
+**Placa do N2, primeira vez** (chave `ef02co03-sign`), com a placa grande no
+meio:
+1. "A placa mostra o que vem, na ordem."
+2. A placa vai para o canto, e o recorte passa para as ferramentas: "Troque a
+   ferramenta antes de cada grupo chegar!"
+
+**Placa do N3, primeira vez** (chave `ef02co03-tools`):
+1. Com a placa grande: "Agora a placa mostra a ferramenta, e a nave troca
+   sozinha."
+2. A placa vai para o canto e descem duas coisas: a da ferramenta atual e uma
+   isca. "Voe até a coisa que essa ferramenta resolve!", com **Ver**.
+3. A nave voa até a coisa certa e resolve.
+4. Recorte na isca: "O que ela não resolve pode passar." e **Vamos começar!**
+
 **Lugar novo, primeira vez** (chaves `ef02co03-earth`, `-space`, `-moon`):
 - a Zuri diz a frase de chegada;
 - o desfile dos 3 pares daquele lugar.
@@ -254,6 +276,8 @@ qualquer lado."
 Quem entra direto no N2 vê também a apresentação da Terra.
 
 **`?`:**
+- no N2 e no N3, primeiro a placa: "A placa mostra o que vem, na ordem." ou
+  "Voe até o que a ferramenta da placa resolve.";
 - o par de cada ferramenta naquele lugar (por exemplo, "Assoprador: poeira.
   Água: meteoro. Raio-puxa: ovelha.");
 - o lembrete do joystick, com **Continuar**.
@@ -274,40 +298,119 @@ Quem entra direto no N2 vê também a apresentação da Terra.
 
 - **`mode`:**
   - `intro`;
-  - `guide`;
+  - `guide`: tutorial, mundo parado;
   - `fly`: voo com controles;
-  - `act`: ferramenta funcionando, mundo parado;
   - `panel`: `?`;
-  - `wave`: entre ondas; o mundo rola, mas nada nasce;
+  - `wave`: entre ondas e enquanto a placa aparece; o mundo rola, mas nada
+    nasce;
   - `done`.
 - O contador `gen` é conferido depois de todo `await`.
 - Tween de objeto que pode ser destruído **nunca é esperado**: o fade do
   cenário antigo na viagem travava a transição (ver a memória
-  *killTweensOf não chama onStop*).
+  *killTweensOf não chama onStop*). A placa segue a mesma regra: dispara o
+  tween e espera com `FX.wait`.
+- O `act` guarda se a jogada era de tutorial (`guided`) **antes** dos `await`.
+  O resgate da ovelha leva 1,3 s, mais que a pausa de 900 ms entre ondas; lendo
+  `this.guiding` depois, a placa da onda seguinte já tinha ligado o `guiding`, e
+  o fim do resgate parava o mundo no meio do anúncio.
 
 ## 12. Próximos passos possíveis
 
-- **Duas máquinas em seguida** (a ideia antiga de N3): coisas que pedem duas
-  ferramentas em ordem, como poeira pegando fogo (água e depois assoprador).
-  Ficou de fora porque o usuário definiu os níveis pelos lugares.
+- **Duas máquinas em seguida**: coisas que pedem duas ferramentas em ordem,
+  como folhas pegando fogo (água e depois assoprador). Existiram no N2 e no N3
+  até 05/10/2026 e saíram porque **não tinham arte própria** (§14). Só voltam
+  com folhas próprias no TEXTURAS.
 
 ## 13. Arquivos
 
 | Arquivo | O quê |
 |---|---|
-| `types.ts` | `Kind`, `Tool`, `Place`, `Slot`, `ThingDef`, `WaveDef`, `LevelDef`, `Mode`, `Vec` |
-| `data/levels.ts` | os 3 níveis, `TOOL_FOR`, vãos, validação |
+| `types.ts` | `Kind`, `Tool`, `Place`, `Slot`, `Rule`, `ThingDef`, `WaveDef`, `LevelDef`, `SignRow`, `Mode`, `Vec` |
+| `data/levels.ts` | os 3 níveis, `TOOL_FOR`, `KIND_FOR`, grupos (`run`, `pick`, `sequence`), `signRows`, vãos, validação |
 | `data/files.ts` | chaves por lugar (`GROUND`, `THINGS`, `SCENERY`), grades e frames |
-| `data/layout.ts` | área de voo, nave, faixa, joystick, ferramentas, HUD |
-| `data/words.ts` | frases do tutorial, por lugar |
+| `data/layout.ts` | área de voo, nave, faixa, joystick, ferramentas, placa, HUD |
+| `data/words.ts` | frases do tutorial, por lugar, e os nomes da placa |
 | `scenes/fallback.ts` | desenhos de reserva da Terra, da nave, da Zuri e dos ícones |
 | `scenes/places.ts` | desenhos de reserva do espaço e da Lua (chão, cenário e coisas) |
 | `scenes/world.ts` | o mundo rolando, os elementos do cenário, nuvens e rastros, e a viagem entre lugares |
 | `scenes/ship.ts` | nave livre, faixa, motores e efeitos das ferramentas |
 | `scenes/things.ts` | coisas: nascer, descer, acerto e estrago, com a folha do lugar |
+| `scenes/sign.ts` | a placa do N2 e do N3: grande no meio, depois no canto, descontando |
 | `scenes/controls.ts` | joystick, teclado e as 3 ferramentas |
 | `scenes/guide.ts` | `teach()` com `createTutorial` |
-| `scenes/GameScene.ts` | laço, ondas, viagens, tutoriais e bridge |
+| `scenes/GameScene.ts` | laço, ondas, placa, viagens, tutoriais e bridge |
+
+## 14. Alinhamento com a EF02CO03: placa das coisas (N2) e placa das ferramentas (N3)
+
+Em 05/10/2026 o usuário trocou o N2 e o N3 (antes: receitas de duas etapas e
+plano de voo, ver o Histórico). Pedidos, na ordem:
+- *"notei que há objeto que nao tem sprite mas o jogo fez gambiarra, como no
+  lvl 2, que tem folha que pega fogo com aqueles desenhos no Graphics.
+  remova-os."* A ovelha presa nas folhas também saiu, a pedido, porque era a
+  ovelha com o montão de folhas colado por cima;
+- *"inves de aparecer varios assim com decorrer do jogo, coloque uma plaquinha
+  mostrando quais virão em sequencia, ex: 3x Moitas, 4x Folhas, etc."* e *"na
+  vdd, isso deveria ser do n2"*;
+- *"o n3 poderia ser o inverso: uma plaquinha mostrando qual ferramenta deve ser
+  usada"*.
+
+| Nível | O que a criança faz | Parte da habilidade |
+|---|---|---|
+| N1 | cada coisa pede **a máquina que sabe** resolvê-la | máquinas diferentes, instruções próprias |
+| N2 | a placa mostra a **sequência de tarefas**; a criança prepara a máquina de cada grupo antes de ele chegar | a sequência de tarefas vira uma sequência de máquinas: o algoritmo |
+| N3 | a placa mostra a **sequência de máquinas**; a nave troca sozinha, e a criança acha a tarefa que a máquina da vez sabe fazer | o inverso: dada a máquina, o conjunto de instruções dela |
+
+### A placa (`scenes/sign.ts`)
+
+- **Uma linha por grupo**, de cima para baixo, na ordem em que vêm: `3×`, o
+  desenho e o nome. No N2, o desenho é a coisa (a mesma figura que desce, com o
+  nome do lugar: Folhas, Fogo, Ovelha; Poeira, Meteoro; Poeira, Robô, Coelho).
+  No N3, é o botão da ferramenta (Assoprador, Água, Raio-puxa).
+- **Antes de cada onda** a placa aparece **grande no meio** (1,15×), as linhas
+  entram uma a uma, ela fica 1,3 s e vai para o **canto esquerdo**, acima do
+  joystick (x 14–296, y 100). O mundo continua rolando e nada nasce enquanto
+  isso.
+- **No voo:** a linha atual fica amarela, e o número **desconta** a cada acerto.
+  Grupo terminado ganha ✓ e fica apagado; a linha seguinte pulsa, e toca o
+  "tic" (no N3, o "clac" da troca).
+- De 2 a 4 linhas por onda, e nunca duas linhas iguais seguidas, para sempre
+  haver troca.
+
+### N2: a placa das coisas
+
+- As coisas vêm **em grupos do mesmo tipo**, uma de cada vez (260 px dentro do
+  grupo, 480 antes do grupo seguinte). Ondas: 🍂3 🔥2 🐑1 🍂2 · 🔥2 🍂3 🐑2 🔥1 ·
+  (espaço) 🍂2 🐑2 🔥2 🍂2.
+- A criança continua escolhendo a ferramenta. A placa não diz qual: diz **o que
+  vem**, e a armadilha do hábito fica na virada de um grupo para o outro.
+- O erro e a derrota são os de sempre (§7).
+
+### N3: a placa das ferramentas (o inverso)
+
+- A placa mostra **a ferramenta de cada grupo** e quantas vezes usar. A nave
+  **troca sozinha** quando o grupo termina. Os botões de ferramenta ficam
+  desligados, e a criança **só pilota**.
+- As coisas descem **em pares**: a que a ferramenta da vez resolve e uma
+  **isca** que ela não resolve, a pelo menos 2 posições de distância (400 px
+  entre um par e o seguinte).
+- **Voar até a isca** usa a ferramenta nela: é o estrago de sempre, conta como
+  erro (-5) e não encerra. **Deixar a isca passar** é de graça. Deixar passar a
+  coisa certa encerra.
+- Quando a criança acerta, a isca ao lado **sai do jogo** (`quiet`: sem anel,
+  sem receber ferramenta). Sem isso, atravessar por baixo dela a caminho do
+  próximo par seria um erro de pilotagem, não de escolha. Pelo mesmo motivo, a
+  validação proíbe a isca **entre** uma coisa e a próxima.
+- As duas coisas do par têm o mesmo anel amarelo: nada marca a certa.
+
+**Conferido no navegador** (05/10/2026), com um piloto automático em JS:
+- o tutorial da placa do N2 e o do N3 com a demonstração;
+- N1 inteiro (23 de 23);
+- N2 inteiro: a placa descontando e trocando de linha, as três ondas e a viagem
+  ao espaço (24 de 24, 0 erros);
+- N3 inteiro: a nave trocando de ferramenta a cada grupo, as iscas passando sem
+  derrota, uma isca acertada de propósito (1 erro, que não encerra) e o pouso na
+  Lua (15 de 15);
+- o `?` do N2 com a fala da placa.
 
 ## Histórico
 
@@ -428,3 +531,27 @@ Quem entra direto no N2 vê também a apresentação da Terra.
     a nuvem de poeira que a criança precisa resolver;
   - o botão da ferramenta encaixada ganhou um **anel amarelo com contorno
     marinho, piscando** (alfa 1 ↔ 0,2 em 420 ms), que acompanha a troca.
+- **02/10/2026, alinhamento com a habilidade.** O usuário perguntou *"tem
+  certeza que o jogo ta bem alinhado?"*, e a resposta foi não: o N2 e o N3 só
+  trocavam o cenário. Ficou:
+  - **N2 com receitas de duas etapas:** folhas pegando fogo (água → assoprador)
+    e ovelha presa nas folhas (assoprador → raio-puxa), com dois pontinhos de
+    passo em cima da coisa;
+  - **N3 com plano de voo:** antes de cada onda, um radar com as coisas em fila
+    e um espaço por passo; a criança enchia com as máquinas, tocava em VOAR, a
+    nave trocava sozinha, e o passo errado era depurado com o mundo parado.
+
+  As duas receitas eram montadas em código, sem arte própria: um anel de
+  labaredas em Graphics em volta das folhas e o montão de folhas colado em
+  cima da ovelha. Isso derrubou as duas em 05/10/2026.
+- **05/10/2026, estrago de 0,7 s fixo.** Pedido do usuário: *"coloque 0.7s
+  fixo"*. Antes eram 1,5 s **no mínimo**: se a animação do estrago passasse
+  disso (folhas sugadas + nave tremendo, ~1,6 s), a espera ia junto. Agora
+  `SPOIL_MS = 700` conta do golpe e a animação corre solta; o `restore` mata os
+  tweens da coisa e da cobertura, e o que sobra (folhas voando, nave tremendo ou
+  esquentando) roda em outros objetos.
+- **05/10/2026, placas no N2 e no N3.** Saíram as coisas sem arte própria (e
+  com elas as receitas, `PHASES`, a cobertura e os pontinhos de passo) e o plano
+  de voo (`scenes/plan.ts`). O N2 ganhou a placa das coisas e o N3 a placa das
+  ferramentas, com iscas (§14). Junto, o `act` passou a guardar `guided` antes
+  dos `await` (§11).

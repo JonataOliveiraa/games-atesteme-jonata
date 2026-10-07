@@ -1,0 +1,56 @@
+import Phaser from 'phaser'
+import { createLoadingScreen } from '../../../../shared/loading/createLoadingScreen'
+import { faseInicial } from '../../../../shared/level/faseInicial'
+import { preloadLives } from '../../../../shared/hud/createLives'
+import { SHEETS } from '../data/files'
+import { C } from '../data/theme'
+
+const FILES = import.meta.glob('../../../../assets/games/EF03CO07/mergulho-da-pesquisa/*.png', {
+    eager: true,
+    import: 'default',
+}) as Record<string, string>
+
+const keyOf = (path: string) => path.split('/').pop()?.replace(/(\.png)+$/i, '') ?? ''
+
+export class BootScene extends Phaser.Scene {
+    constructor() {
+        super({ key: 'BootScene' })
+    }
+
+    preload() {
+        createLoadingScreen(this, {
+            title: 'Mergulho da Pesquisa',
+            subtitle: 'Pesquise no mar da internet',
+            description: 'Ligando o sonar...',
+            theme: {
+                background: { kind: 'dots', base: C.panel, color: C.white, alpha: 0.8, size: 48, radius: 5 },
+                card: C.cream,
+                cardShadow: C.shadow,
+                cardHighlight: C.white,
+                cardBorder: C.blue,
+                title: C.ink,
+                subtitle: C.blueDark,
+                description: C.inkSoft,
+                titleStroke: C.white,
+                progressTrack: C.creamDark,
+                progressBorder: C.ink,
+                progressFill: C.blue,
+                progressHighlight: C.white,
+            },
+        })
+
+        Object.entries(FILES).forEach(([path, url]) => {
+            const key = keyOf(path)
+            if (!key || key.startsWith('cover')) return
+            const sheet = SHEETS[key]
+            if (sheet) this.load.spritesheet(key, url, sheet)
+            else this.load.image(key, url)
+        })
+
+        preloadLives(this)
+    }
+
+    create() {
+        this.scene.start('GameScene', { level: faseInicial(this, 1), points: 0 })
+    }
+}
