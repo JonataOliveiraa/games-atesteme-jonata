@@ -1,7 +1,7 @@
 import Phaser from 'phaser'
 import { FX, Ease } from '../../../../shared/effects/FX'
 import { AIR, AIR_BAR, ASK, BAG, DEPTH, DOCK, minimapBox, SURFACE, W, WORLD } from '../data/layout'
-import { FINDS } from '../data/files'
+import { BUBBLE_FRAME, FINDS, SUBS } from '../data/files'
 import { C, CSS, FONT, SIZE } from '../data/theme'
 import type { FindDef, MapDef, Rect, Vec } from '../types'
 import { miniRocks } from './rocks'
@@ -68,7 +68,25 @@ export function createAirBar(scene: Phaser.Scene): AirBar {
     })
     const frame = scene.add.image(x - w / 2 - 3, y - h / 2 - 3, frameKey).setOrigin(0).setDepth(DEPTH.ui).setScrollFactor(0)
     const fill = scene.add.rectangle(x - w / 2 + 2, y, w - 4, h - 6, C.aqua).setOrigin(0, 0.5).setDepth(DEPTH.ui + 1).setScrollFactor(0)
-    const icon = scene.add.circle(x - w / 2 - 18, y, 12, C.aqua).setStrokeStyle(3, C.ink).setDepth(DEPTH.ui).setScrollFactor(0)
+    const icon = scene.add
+        .sprite(x - w / 2 - AIR_BAR.icon / 2 + 4, y, SUBS, BUBBLE_FRAME.full)
+        .setDisplaySize(AIR_BAR.icon, AIR_BAR.icon)
+        .setDepth(DEPTH.ui)
+        .setScrollFactor(0)
+    const label = scene.add
+        .text(icon.x - AIR_BAR.icon / 2 - 6, y + 1, AIR_BAR.title, {
+            fontFamily: FONT.black,
+            fontSize: `${AIR_BAR.label}px`,
+            color: CSS.white,
+            stroke: CSS.ink,
+            strokeThickness: 6,
+        })
+        .setOrigin(1, 0.5)
+        .setResolution(2)
+        .setDepth(DEPTH.ui)
+        .setScrollFactor(0)
+    const left = label.x - label.width - 8
+    const right = x + w / 2 + 10
     let shown = -1
     const paint = (v: number) => {
         const k = Phaser.Math.Clamp(v / AIR.max, 0, 1)
@@ -82,12 +100,13 @@ export function createAirBar(scene: Phaser.Scene): AirBar {
     return {
         set: paint,
         rect() {
-            return { x: x - 10, y, w: w + 70, h: h + 30 }
+            return { x: (left + right) / 2, y, w: right - left, h: AIR_BAR.icon + 16 }
         },
         destroy() {
             frame.destroy()
             fill.destroy()
             icon.destroy()
+            label.destroy()
         },
     }
 }

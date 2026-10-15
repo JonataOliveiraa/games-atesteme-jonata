@@ -1,0 +1,143 @@
+import { FONT_JOGO } from '../../../../shared/fonts/gameFont'
+
+export const C = {
+    skySunTop: 0x5fbff0,
+    skySunBottom: 0xc4ecff,
+    skyCloudTop: 0x93a2b4,
+    skyCloudBottom: 0xd3dae3,
+    skyRainTop: 0x56637a,
+    skyRainBottom: 0x8e9aab,
+    sun: 0xffd84a,
+    sunDark: 0xf5a623,
+    cloud: 0xd3d9e2,
+    cloudDark: 0xa6b0bf,
+    rainCloud: 0x8a95a8,
+    rainCloudDark: 0x5d6779,
+    drop: 0x4aa3f0,
+    dropLight: 0xd4ecff,
+    wet: 0x1f2c48,
+
+    roof: 0x6fd3c2,
+    roofDark: 0x3fa595,
+    stand: 0xece2d0,
+    standDark: 0xd2c3a8,
+    wall: 0xf1ede6,
+    wallDark: 0xc9c1b4,
+    asphalt: 0x4c5160,
+    asphaltDark: 0x3e424f,
+    lane: 0xe9e6dd,
+    kerbRed: 0xf06a5b,
+    kerbWhite: 0xffffff,
+    grass: 0x8fd36a,
+    grassDark: 0x6bb24c,
+    puddle: 0x6fb8ee,
+    puddleLight: 0xd8f1ff,
+    hay: 0xf2c75c,
+    hayDark: 0xc99a36,
+
+    team: 0x5fd0c0,
+    teamDark: 0x2f9d8f,
+    teamLight: 0xb8f0e6,
+    yellow: 0xffd23f,
+    yellowDark: 0xe0a51f,
+    rival: 0xb79cf0,
+    rivalDark: 0x8a6fd0,
+    rubber: 0x34303d,
+    rubberLight: 0x55505f,
+    rim: 0xdfe3ea,
+    rimDark: 0xa7adbb,
+    slick: 0xf0584a,
+    wetTire: 0x3f8ff0,
+    inter: 0x49c27c,
+    cart: 0xe8664f,
+    cartDark: 0xb84634,
+    metal: 0xb9c0cc,
+    metalDark: 0x7f8796,
+    garage: 0xf6efe2,
+    garageDark: 0xd7cbb6,
+    garageInside: 0x5b5468,
+    garageInsideDark: 0x3f3a4b,
+    lamp: 0xffe9a3,
+
+    skinKika: 0xa8714a,
+    skinKikaDark: 0x7e5133,
+    skinBeto: 0xf3c7a1,
+    skinBetoDark: 0xd9a37c,
+    skinLua: 0xf8d6b6,
+    skinLuaDark: 0xe2b08c,
+    skinDavi: 0x6e4630,
+    skinDaviDark: 0x4e3020,
+    hairBlack: 0x2b2533,
+    hairGinger: 0xe0793a,
+    hairGray: 0xc9c5cf,
+    hairGrayDark: 0x9a95a3,
+    cheek: 0xf59a9a,
+    eye: 0x3a2418,
+    white: 0xffffff,
+    shoe: 0xffffff,
+    shoeDark: 0xdcdde8,
+    clip: 0xc69a6b,
+    clipDark: 0x8f6a44,
+    paper: 0xfffaf0,
+    flagDark: 0x2b2533,
+    wrench: 0xffd23f,
+    wrenchDark: 0xc9951c,
+
+    ink: 0x2b2440,
+    inkSoft: 0x5c5470,
+    line: 0x2e2a40,
+    accent: 0x1f8f86,
+    accentDark: 0x16706a,
+    headerFace: 0xfff8ec,
+    headerSoft: 0xf6ead3,
+    headerRim: 0xeacfa2,
+    headerLine: 0x6b4a2f,
+    cream: 0xfaf1dc,
+    creamDark: 0xe4d2ac,
+    shadow: 0x2a1f30,
+    yes: 0x49c27c,
+    oops: 0xff9d57,
+    butter: 0xffe08a,
+    pulse: 0xffd23f,
+    lit: 0xfff1b0,
+    coral: 0xff8a6b,
+    pink: 0xf5a0bf,
+    lilac: 0xc6b6ea,
+    mint: 0x8fdcc6,
+    smoke: 0xe9e6ef,
+    smokeDark: 0xa9a3b5,
+} as const
+
+export const CROWD = [0xff8a6b, 0x5fd0c0, 0xffd23f, 0xb79cf0, 0x6fb8ee, 0xf5a0bf, 0x8fd36a, 0xffffff] as const
+
+export const CSS = {
+    ink: '#2b2440',
+    inkSoft: '#5c5470',
+    white: '#ffffff',
+    accent: '#1f8f86',
+    then: '#1d63b8',
+    else: '#c2412f',
+} as const
+
+export const FONT = {
+    black: FONT_JOGO.black,
+    body: FONT_JOGO.body,
+} as const
+
+export const SIZE = {
+    help: 40,
+    level: 22,
+    chip: 22,
+    rule: 24,
+    tire: 26,
+    bubble: 27,
+    banner: 38,
+} as const
+
+export function inkOn(tone: number): string {
+    const r = (tone >> 16) & 0xff
+    const g = (tone >> 8) & 0xff
+    const b = tone & 0xff
+    const light = 0.299 * r + 0.587 * g + 0.114 * b
+    return light > 160 ? CSS.ink : CSS.white
+}

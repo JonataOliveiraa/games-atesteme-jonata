@@ -23,6 +23,10 @@ export interface Walker {
     /** volta para a calçada depois de bater na porta */
     bounceBack(): Promise<void>
     plate(on: boolean): void
+    /** a plaquinha pula para chamar atenção para o tipo */
+    callout(): Promise<void>
+    /** de onde sai a seta do guia */
+    point(): { x: number; y: number }
     rect(): { x: number; y: number; w: number; h: number }
     destroy(): void
 }
@@ -122,6 +126,15 @@ export function createWalker(scene: Phaser.Scene, id: InfoId): Walker {
         },
         plate(on) {
             plateBox.setVisible(on)
+        },
+        async callout() {
+            for (let k = 0; k < 2; k++) {
+                await FX.to(scene, plateBox, { scale: 1.3 }, { duration: 160, ease: 'Back.easeOut' })
+                await FX.to(scene, plateBox, { scale: 1 }, { duration: 160 })
+            }
+        },
+        point() {
+            return { x: box.x + 54, y: box.y - INFO_H * 0.75 }
         },
         rect() {
             return { x: box.x, y: box.y - INFO_H / 2 + 14, w: 190, h: INFO_H + 70 }

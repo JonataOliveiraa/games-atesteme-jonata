@@ -37,6 +37,7 @@ import archiveRecordsThumbnail from "../assets/games/EF04CO02/arquivo-dos-regist
 import buildingLoopsThumbnail from "../assets/games/EF04CO03/predio-dos-lacos/cover-predio-dos-lacos.png";
 import machineTranslatorThumbnail from "../assets/games/EF04CO04/tradutor-da-maquina/cover-tradutor-da-maquina.png";
 import binaryTrackThumbnail from "../assets/games/EF04CO04/pista-binaria/cover-pista-binaria.png";
+import cableRaceThumbnail from "../assets/games/EF04CO04/corrida-no-cabo/cover-corrida-no-cabo.png";
 import digitalAtelierThumbnail from "../assets/games/EF04CO05/atelier-codigos-digitais/cover-atelier-codigos-digitais.png";
 import digitalStudioThumbnail from "../assets/games/EF04CO06/estudio-producao-digital/cover-estudio-producao-digital.png";
 import coverMissaoEticaDigital from "../assets/games/EF04CO07/missao-etica-digital/cover-missao-etica-digital.png";
@@ -78,10 +79,14 @@ import coverFaseDeEntradaESaida from "../assets/games/EF03CO06/fase-de-entrada-e
 import coverShowDeFormatos from "../assets/games/EF03CO08/show-de-formatos/cover-show-de-formatos.png";
 import coverAcheOSuspeito from "../assets/games/EF03CO09/ache-o-suspeito/cover-ache-o-suspeito.png";
 import coverCanhaoDasCoordenadas from "../assets/games/EF04CO01/canhao-das-coordenadas/cover-canhao-das-coordenadas.png";
+import coverManobristaDaMatriz from "../assets/games/EF04CO01/manobrista-da-matriz/cover-manobrista-da-matriz.png";
 import coverCofreDosRegistros from "../assets/games/EF04CO02/o-cofre-dos-registros/cover-o-cofre-dos-registros.png";
 import coverDancaAninhada from "../assets/games/EF04CO03/danca-aninhada/cover-danca-aninhada.png";
+import coverFabricaDeEstampas from "../assets/games/EF04CO03/fabrica-de-estampas/cover-fabrica-de-estampas.png";
 import coverExpedicaoPixel from "../assets/games/EF04CO05/expedicao-pixel/cover-expedicao-pixel.png";
+import coverPixelsFujoes from "../assets/games/EF04CO05/pixels-fujoes/cover-pixels-fujoes.png";
 import coverMesaDeEdicao from "../assets/games/EF04CO06/mesa-de-edicao/cover-mesa-de-edicao.png";
+import coverCameraNaTrilha from "../assets/games/EF04CO06/camera-na-trilha/cover-camera-na-trilha.png";
 import coverGuardiaoEtico from "../assets/games/EF04CO07/guardiao-etico/cover-guardiao-etico.png";
 import coverMetroMirim from "../assets/games/EF05CO02/metro-mirim/cover-metro-mirim.png";
 // PROVISÓRIO: a quadra no lugar da capa, que ainda não foi gerada.
@@ -111,6 +116,14 @@ import coverRoboEmPedacos from "../assets/games/EF03CO03/robo-em-pedacos/cover-r
 import coverRobosFamintos from "../assets/games/EF03CO05/robos-famintos/cover-robos-famintos.png";
 import coverPraiaDosDados from "../assets/games/EF03CO04/praia-dos-dados/cover-praia-dos-dados.png";
 import coverMergulhoDaPesquisa from "../assets/games/EF03CO07/mergulho-da-pesquisa/cover-mergulho-da-pesquisa.png";
+import coverPortasDoComputador from "../assets/games/EF03CO06/portas-do-computador/cover-portas-do-computador.png";
+import coverDiarioDasFerias from "../assets/games/EF03CO08/diario-das-ferias/cover-diario-das-ferias.png";
+import coverQuemBateAPorta from "../assets/games/EF03CO09/quem-bate-a-porta/cover-quem-bate-a-porta.png";
+import coverEtiquetaCerta from "../assets/games/EF04CO02/etiqueta-certa/cover-etiqueta-certa.png";
+import coverLancheEmCamadas from "../assets/games/EF05CO01/lanche-em-camadas/cover-lanche-em-camadas.png";
+import coverUmDiaNoCelular from "../assets/games/EF04CO07/um-dia-no-celular/cover-um-dia-no-celular.png";
+import coverRastroDaNoticia from "../assets/games/EF04CO08/rastro-da-noticia/cover-rastro-da-noticia.png";
+import coverArvoreDaFamilia from "../assets/games/EF05CO02/arvore-da-familia/cover-arvore-da-familia.png";
 /**
  * 1. `id` nunca muda e nunca é reaproveitado. Se um jogo for removido,
  *    marque status "draft" — não devolva o id para a fila.
@@ -944,6 +957,23 @@ export const catalog: Game[] = [
     thumbnail: coverCanhaoDasCoordenadas,
   },
   {
+    id: "113",
+    slug: "manobrista-da-matriz",
+    module: "EF04CO01/manobrista-da-matriz",
+    skill: "EF04CO01",
+    years: [4],
+    tags: ["coordenadas", "matriz", "linha e coluna", "dirigir"],
+    order: 236,
+    status: "published",
+    title: "Manobrista da Matriz",
+    description:
+      "O pátio é uma matriz. Gire o volante, acelere e estacione o carro na vaga da linha e da coluna que o painel pede.",
+    category: "Pensamento Computacional",
+    points: 40,
+    icon: "🚗",
+    thumbnail: coverManobristaDaMatriz,
+  },
+  {
     id: "024",
     slug: "arquivo-dos-registros",
     module: "EF04CO02/arquivo-dos-registros",
@@ -976,6 +1006,23 @@ export const catalog: Game[] = [
     points: 90,
     icon: "🔐",
     thumbnail: coverCofreDosRegistros,
+  },
+  {
+    id: "114",
+    slug: "etiqueta-certa",
+    module: "EF04CO02/etiqueta-certa",
+    skill: "EF04CO02",
+    years: [4],
+    tags: ["registro", "campo", "etiqueta", "trem"],
+    order: 246,
+    status: "published",
+    title: "Etiqueta Certa",
+    description:
+      "Os trens chegam ao pátio. Leia na etiqueta o campo que a placa pede, vire a alavanca para o galpão da cidade certa e aperte PARTIR. Depois, um pátio grande para arrastar, a placa que vira para DE e um recado para carimbar na etiqueta.",
+    category: "Pensamento Computacional",
+    points: 40,
+    icon: "🚂",
+    thumbnail: coverEtiquetaCerta,
   },
   {
     id: "025",
@@ -1012,6 +1059,23 @@ export const catalog: Game[] = [
     thumbnail: coverDancaAninhada,
   },
   {
+    id: "115",
+    slug: "fabrica-de-estampas",
+    module: "EF04CO03/fabrica-de-estampas",
+    skill: "EF04CO03",
+    years: [4],
+    tags: ["laço", "repetição", "simulação", "carimbo"],
+    order: 256,
+    status: "published",
+    title: "Fábrica de Estampas",
+    description:
+      "O pedido é um laço: 2 × [flor, flor, estrela]. Carimbe o tecido quadradinho por quadradinho seguindo o pedido e, no fim, diga quantas figuras tem no rolo.",
+    category: "Pensamento Computacional",
+    points: 40,
+    icon: "🌸",
+    thumbnail: coverFabricaDeEstampas,
+  },
+  {
     id: "026",
     slug: "tradutor-da-maquina",
     module: "EF04CO04/tradutor-da-maquina",
@@ -1044,6 +1108,23 @@ export const catalog: Game[] = [
     points: 90,
     icon: "🚀",
     thumbnail: binaryTrackThumbnail,
+  },
+  {
+    id: "116",
+    slug: "corrida-no-cabo",
+    module: "EF04CO04/corrida-no-cabo",
+    skill: "EF04CO04",
+    years: [4],
+    tags: ["binário", "codificação", "transmissão", "corrida"],
+    order: 267,
+    status: "published",
+    title: "Corrida no Cabo",
+    description:
+      "Figurinhas e letras não passam pelo fio: passa o código delas, em 1 e 0. Entre no fio e pilote pelas portas 1 e 0 até o outro computador.",
+    category: "Mundo Digital",
+    points: 40,
+    icon: "🏎️",
+    thumbnail: cableRaceThumbnail,
   },
   {
     id: "027",
@@ -1080,6 +1161,23 @@ export const catalog: Game[] = [
     thumbnail: coverExpedicaoPixel,
   },
   {
+    id: "117",
+    slug: "pixels-fujoes",
+    module: "EF04CO05/pixels-fujoes",
+    skill: "EF04CO05",
+    years: [4],
+    tags: ["pixel", "imagem", "binário", "codificação", "RGB", "ASCII"],
+    order: 277,
+    status: "published",
+    title: "Pixels Fujões",
+    description:
+      "O tablet guarda tudo como 0 e 1: a luz do pixel, a cor e até as letras. Mire nos pixels e letras que fugiram da tela e mande o código deles, número por número, para eles voltarem.",
+    category: "Mundo Digital",
+    points: 40,
+    icon: "👾",
+    thumbnail: coverPixelsFujoes,
+  },
+  {
     id: "028",
     slug: "estudio-producao-digital",
     module: "EF04CO06/estudio-producao-digital",
@@ -1112,6 +1210,23 @@ export const catalog: Game[] = [
     points: 90,
     icon: "🛠️",
     thumbnail: coverMesaDeEdicao,
+  },
+  {
+    id: "118",
+    slug: "camera-na-trilha",
+    module: "EF04CO06/camera-na-trilha",
+    skill: "EF04CO06",
+    years: [4],
+    tags: ["foto", "vídeo", "câmera", "criação"],
+    order: 287,
+    status: "published",
+    title: "Câmera na Trilha",
+    description:
+      "Ande pelo prado com o Téo e crie as fotos e os vídeos que a Feira de Ciências pediu. Confira o modo da câmera antes de disparar: FOTO guarda um instante, VÍDEO guarda o movimento.",
+    category: "Cultura Digital",
+    points: 40,
+    icon: "📸",
+    thumbnail: coverCameraNaTrilha,
   },
   {
     id: "029",
@@ -1148,6 +1263,23 @@ export const catalog: Game[] = [
     thumbnail: coverGuardiaoEtico,
   },
   {
+    id: "120",
+    slug: "um-dia-no-celular",
+    module: "EF04CO07/um-dia-no-celular",
+    skill: "EF04CO07",
+    years: [4],
+    tags: ["dados", "ética", "celular", "permissão", "senha"],
+    order: 297,
+    status: "published",
+    title: "Um Dia no Celular",
+    description:
+      "Os pedidos do dia chegam pelo celular e por quem está perto. Atenda cada um cuidando dos dados: peça antes de fotografar, respeite o não e guarde o que é segredo.",
+    category: "Cultura Digital",
+    points: 40,
+    icon: "📱",
+    thumbnail: coverUmDiaNoCelular,
+  },
+  {
     id: "030",
     slug: "caca-fonte-confiavel",
     module: "EF04CO08/caca-fonte-confiavel",
@@ -1180,6 +1312,23 @@ export const catalog: Game[] = [
     points: 90,
     icon: "📣",
     thumbnail: coverDueloDasFontes,
+  },
+  {
+    id: "119",
+    slug: "rastro-da-noticia",
+    module: "EF04CO08/rastro-da-noticia",
+    skill: "EF04CO08",
+    years: [4],
+    tags: ["fonte", "confiabilidade", "checagem", "notícia", "boato"],
+    order: 307,
+    status: "published",
+    title: "Rastro da Notícia",
+    description:
+      "Chegou uma notícia no celular da Lia. Entre na internet, vá até o site de onde ela veio e veja quem escreveu: dá para confiar?",
+    category: "Cultura Digital",
+    points: 30,
+    icon: "🕵️",
+    thumbnail: coverRastroDaNoticia,
   },
   {
     id: "031",
@@ -1215,6 +1364,23 @@ export const catalog: Game[] = [
     thumbnail: coverRevezamentoEmLista,
   },
   {
+    id: "121",
+    slug: "lanche-em-camadas",
+    module: "EF05CO01/lanche-em-camadas",
+    skill: "EF05CO01",
+    years: [5],
+    tags: ["lista", "ordem", "posição", "sequência"],
+    order: 317,
+    status: "published",
+    title: "Lanche em Camadas",
+    description:
+      "A receita do lanche é uma lista: cada camada tem a sua vez. Pegue os ingredientes que o chef joga, um de cada vez, na ordem da receita.",
+    category: "Pensamento Computacional",
+    points: 30,
+    icon: "🍔",
+    thumbnail: coverLancheEmCamadas,
+  },
+  {
     id: "032",
     slug: "mapas-em-rede",
     module: "EF05CO02/mapas-em-rede",
@@ -1246,6 +1412,23 @@ export const catalog: Game[] = [
     points: 80,
     icon: "🚇",
     thumbnail: coverMetroMirim,
+  },
+  {
+    id: "122",
+    slug: "arvore-da-familia",
+    module: "EF05CO02/arvore-da-familia",
+    skill: "EF05CO02",
+    years: [5],
+    tags: ["grafo", "família", "árvore genealógica", "ligação"],
+    order: 327,
+    status: "published",
+    title: "Árvore da Família",
+    description:
+      "A árvore da família é um grafo: cada pessoa é um ponto, e as linhas ligam pais, filhos e casais. O vento derrubou os cartões: pendure cada um no lugar dele.",
+    category: "Pensamento Computacional",
+    points: 30,
+    icon: "🌳",
+    thumbnail: coverArvoreDaFamilia,
   },
   {
     id: "033",
@@ -1284,6 +1467,22 @@ export const catalog: Game[] = [
     thumbnail: coverPortoesLogicos,
   },
   {
+    id: "124",
+    slug: "rio-de-chocolate",
+    module: "EF05CO03/rio-de-chocolate",
+    skill: "EF05CO03",
+    years: [5],
+    tags: ["lógica", "não", "verdadeiro e falso", "pular"],
+    order: 332,
+    status: "published",
+    title: "Rio de Chocolate",
+    description:
+      "A placa diz qual doce aguenta. Pule de doce em doce pelo rio de chocolate só nos que deixam a frase verdadeira — e cuidado com o NÃO, que troca a resposta!",
+    category: "Pensamento Computacional",
+    points: 30,
+    icon: "🍫",
+  },
+  {
     id: "034",
     slug: "cidade-das-decisoes",
     module: "EF05CO04/cidade-das-decisoes",
@@ -1316,6 +1515,22 @@ export const catalog: Game[] = [
     points: 90,
     icon: "🤖",
     thumbnail: coverRoboSorrateiro,
+  },
+  {
+    id: "123",
+    slug: "pit-stop-da-chuva",
+    module: "EF05CO04/pit-stop-da-chuva",
+    skill: "EF05CO04",
+    years: [5],
+    tags: ["condicional", "se-senão", "simular", "regra"],
+    order: 347,
+    status: "published",
+    title: "Pit Stop da Chuva",
+    description:
+      "A Kika corre de kart e você é a equipe do box: a cada parada, olhe o céu e siga a regra. SE estiver chovendo, pneu de chuva; SENÃO, pneu liso.",
+    category: "Pensamento Computacional",
+    points: 30,
+    icon: "🏎️",
   },
   {
     id: "035",
@@ -1990,7 +2205,7 @@ export const catalog: Game[] = [
     status: "published",
     title: "Mergulho da Pesquisa",
     description:
-      "O mar da internet é escuro: use o sonar com as palavras certas para acender o que o cliente pediu, mergulhe até lá e traga o achado de volta ao cais.",
+      "O mar da internet é escuro: use o filtro com as palavras certas para acender o que o cliente pediu, mergulhe até lá e traga o achado de volta para o cliente.",
     category: "Cultura Digital",
     points: 90,
     icon: "🔎",
@@ -2011,6 +2226,41 @@ export const catalog: Game[] = [
     category: "Mundo Digital",
     points: 40,
     icon: "🚪",
+    thumbnail: coverPortasDoComputador,
+  },
+  {
+    id: "111",
+    slug: "diario-das-ferias",
+    module: "EF03CO08/diario-das-ferias",
+    skill: "EF03CO08",
+    years: [3],
+    tags: ["foto", "som", "formatos", "tablet", "expressão", "férias"],
+    order: 216,
+    status: "published",
+    title: "Diário das Férias",
+    description:
+      "Leve o visor do tablet pela praia e guarde as férias: FOTO para o que se vê, SOM para o que se ouve. No fim, apresente o diário para a turma.",
+    category: "Cultura Digital",
+    points: 50,
+    icon: "📷",
+    thumbnail: coverDiarioDasFerias,
+  },
+  {
+    id: "112",
+    slug: "quem-bate-a-porta",
+    module: "EF03CO09/quem-bate-a-porta",
+    skill: "EF03CO09",
+    years: [3],
+    tags: ["dados pessoais", "compartilhar", "privacidade", "mensagem", "toque"],
+    order: 226,
+    status: "published",
+    title: "Quem Bate à Porta?",
+    description:
+      "Cada porta do tablet é alguém da internet. Quem bate pede uma informação: ENVIAR ou NÃO ENVIAR? O que vai para quem não devia é passado adiante.",
+    category: "Cultura Digital",
+    points: 40,
+    icon: "📨",
+    thumbnail: coverQuemBateAPorta,
   },
 ];
 
@@ -2021,7 +2271,7 @@ export const catalog: Game[] = [
  * saltado de 086 para 090; os oito jogos de 090 a 097 desceram três casas
  * (090→087 … 097→094) para fechar o 087–089.
  */
-export const NEXT_FREE_ID = "111";
+export const NEXT_FREE_ID = "125";
 
 /**
  * AS RODADAS DE PRODUÇÃO.

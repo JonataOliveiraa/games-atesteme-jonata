@@ -1,16 +1,26 @@
 import Phaser from 'phaser'
 import { FX } from '../../../../shared/effects/FX'
-import { INFO } from '../data/devices'
+import { DEVICES } from '../data/devices'
 import { DEPTH, FIN, H, W } from '../data/layout'
 import { C, CSS, FONT, SIZE } from '../data/theme'
-import { FINALE } from '../data/words'
-import type { InfoId } from '../types'
-import { deviceImage, infoImage } from './art'
+import type { DeviceId, InfoId, Wish } from '../types'
+import { deviceImage, infoImage, wishImage } from './art'
+
+export interface FinaleRow {
+    info?: InfoId
+    wish?: Wish
+    devices: DeviceId[]
+    text: string
+}
 
 export interface Finale {
-    show(infos: InfoId[], onPop: (i: number) => void): Promise<void>
+    show(title: string, rows: FinaleRow[], synth: string, onPop: (i: number) => void): Promise<void>
     destroy(): void
 }
+
+const ICON_X = -370
+const DEVICE_X0 = -240
+const DEVICE_GAP = 120
 
 export function createFinale(scene: Phaser.Scene): Finale {
     const parts: Phaser.GameObjects.GameObject[] = []
@@ -20,7 +30,7 @@ export function createFinale(scene: Phaser.Scene): Finale {
     }
 
     return {
-        async show(infos, onPop) {
+        async show(titleText, rows, synthText, onPop) {
             const veil = keep(scene.add.rectangle(W / 2, H / 2, W, H, C.shadow, 0).setDepth(DEPTH.finale))
             await FX.to(scene, veil, { fillAlpha: 0.45 }, { duration: 260 })
 
@@ -32,46 +42,59 @@ export function createFinale(scene: Phaser.Scene): Finale {
             panel.lineStyle(5, C.ink, 1)
             panel.strokeRoundedRect(-FIN.w / 2, -FIN.h / 2, FIN.w, FIN.h, 30)
             const title = scene.add
-                .text(0, -FIN.h / 2 + 44, FINALE.title, { fontFamily: FONT.black, fontSize: `${SIZE.boardTitle}px`, color: CSS.ink })
+                .text(0, -FIN.h / 2 + 44, titleText, { fontFamily: FONT.black, fontSize: `${SIZE.boardTitle}px`, color: CSS.ink })
                 .setOrigin(0.5)
                 .setResolution(2)
             const board = keep(scene.add.container(FIN.x, FIN.y, [panel, title]).setDepth(DEPTH.finale + 1))
             await FX.popIn(scene, board, { from: 0.7, duration: 400 })
 
-            for (let i = 0; i < infos.length; i++) {
-                const id = infos[i]
-                const y = FIN.rowY0 + i * FIN.rowGap
+            const gap = rows.length > 3 ? 86 : FIN.rowGap
+            const y0 = -((rows.length - 1) * gap) / 2 - 20
+            const icon = rows.length > 3 ? FIN.iconSize * 0.8 : FIN.iconSize
+            for (let i = 0; i < rows.length; i++) {
+                const row = rows[i]
+                const y = y0 + i * gap
                 const g = scene.add.graphics()
-                g.fillStyle(C.input, 0.16)
-                g.fillRoundedRect(-150, y - 46, 100, 92, 20)
-                g.lineStyle(4, C.input, 1)
-                g.strokeRoundedRect(-150, y - 46, 100, 92, 20)
-                g.fillStyle(C.ink, 0.6)
-                g.fillRect(-250, y - 5, 56, 10)
-                g.fillTriangle(-196, y - 15, -196, y + 15, -176, y)
-                const line = scene.add
-                    .text(-20, y, FINALE.lines[id], { fontFamily: FONT.black, fontSize: `${SIZE.boardLine + 5}px`, color: CSS.ink })
-                    .setOrigin(0, 0.5)
-                    .setResolution(2)
-                const row = keep(
+                const items: Phaser.GameObjects.GameObject[] = [g]
+                const arrow = (x: number) => {
+                    g.fillStyle(C.ink, 0.6)
+                    g.fillRect(x - 22, y - 5, 28, 10)
+                    g.fillTriangle(x + 6, y - 14, x + 6, y + 14, x + 22, y)
+                }
+                if (row.info) items.push(infoImage(scene, row.info, 'happy', icon).setPosition(ICON_X, y + icon / 2))
+                else if (row.wish) items.push(wishImage(scene, row.wish, icon * 0.9).setPosition(ICON_X, y))
+                arrow(ICON_X + 66)
+                row.devices.forEach((d, k) => {
+                    const x = DEVICE_X0 + k * DEVICE_GAP
+                    const tone = DEVICES[d].side === 'input' ? C.input : C.output
+                    g.fillStyle(tone, 0.16)
+                    g.fillRoundedRect(x - 46, y - 42, 92, 84, 20)
+                    g.lineStyle(4, tone, 1)
+                    g.strokeRoundedRect(x - 46, y - 42, 92, 84, 20)
+                    items.push(deviceImage(scene, d, icon * 0.85).setPosition(x, y))
+                    if (k < row.devices.length - 1) arrow(x + 62)
+                })
+                const textX = DEVICE_X0 + row.devices.length * DEVICE_GAP - 50
+                items.push(
                     scene.add
-                        .container(FIN.x, FIN.y, [
-                            g,
-                            infoImage(scene, id, 'happy', FIN.iconSize).setPosition(-320, y + FIN.iconSize / 2),
-                            deviceImage(scene, INFO[id].door, FIN.iconSize * 0.9).setPosition(-100, y),
-                            line,
-                        ])
-                        .setDepth(DEPTH.finale + 2)
-                        .setAlpha(0),
+                        .text(textX, y, row.text, {
+                            fontFamily: FONT.black,
+                            fontSize: `${SIZE.boardLine + 4}px`,
+                            color: CSS.ink,
+                            wordWrap: { width: FIN.w / 2 - textX - 30 },
+                        })
+                        .setOrigin(0, 0.5)
+                        .setResolution(2),
                 )
+                const line = keep(scene.add.container(FIN.x, FIN.y, items).setDepth(DEPTH.finale + 2).setAlpha(0))
                 onPop(i)
-                await FX.to(scene, row, { alpha: 1 }, { duration: 280 })
+                await FX.to(scene, line, { alpha: 1 }, { duration: 280 })
                 await FX.wait(scene, 160)
             }
 
             const synth = keep(
                 scene.add
-                    .text(FIN.x, FIN.y + FIN.h / 2 - 50, FINALE.synth, {
+                    .text(FIN.x, FIN.y + FIN.h / 2 - 50, synthText, {
                         fontFamily: FONT.black,
                         fontSize: `${SIZE.synth + 2}px`,
                         color: CSS.accent,

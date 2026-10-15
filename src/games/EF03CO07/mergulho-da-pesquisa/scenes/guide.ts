@@ -1,5 +1,6 @@
 import Phaser from 'phaser'
 import { createTutorial, type TutorialStep } from '../../../../shared/tutorial/createTutorial'
+import { DEPTH } from '../data/layout'
 import { C } from '../data/theme'
 
 export type Rect = { x: number; y: number; w: number; h: number }
@@ -34,4 +35,16 @@ export function teach(scene: Phaser.Scene, key: string, steps: TutorialStep[]): 
             onFinish: () => resolve(),
         })
     })
+}
+
+export function beckon(scene: Phaser.Scene, r: Rect, round = false): () => void {
+    const radius = round ? Math.min(r.w, r.h) / 2 : 24
+    const g = scene.add.graphics({ x: r.x, y: r.y }).setScrollFactor(0).setDepth(DEPTH.controls + 5)
+    g.lineStyle(7, C.lemon, 1)
+    g.strokeRoundedRect(-r.w / 2, -r.h / 2, r.w, r.h, radius)
+    const pulse = scene.tweens.add({ targets: g, scale: 1.08, alpha: 0.5, duration: 520, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
+    return () => {
+        pulse.stop()
+        g.destroy()
+    }
 }

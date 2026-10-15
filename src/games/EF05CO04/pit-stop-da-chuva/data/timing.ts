@@ -1,0 +1,18 @@
+export const TIMING = {
+    beat: 550,
+    typeMs: 36,
+    weather: 1600,
+    run: 340,
+    zzzt: 300,
+    wheel: 280,
+    lap: 3900,
+    crashDrive: 1150,
+    spin: 1500,
+    melt: 1700,
+    rivalPass: 1500,
+    error: 2400,
+    finale: 1400,
+    lean: 750,
+    rule: 700,
+    flag: 900,
+} as const

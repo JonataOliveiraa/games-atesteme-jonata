@@ -369,3 +369,40 @@ scenes/ BootScene.ts GameScene.ts fallback.ts
     caminho (com dois achados, a melhor ordem): N1 43–53, N2 28–46, N3 56–74 de 100;
   - mundo com profundidade por nível (`setWorld`), minimapa que se ajusta à proporção;
   - catálogo: 90 pontos (3 níveis); instruções com a volta ao cais, o N2 e o N3.
+- 09/10/2026 — *"é meio confuso no início. Ele pede pra usar o 'sonar', mas não tem nada ali, e também
+  não está claro quem é a barrinha de oxigênio. O N1 F1 deveria já ativar o sonar, mostrar o que é
+  sonar … e troque o nome pra 'Filtro'"*:
+  - **o sonar virou FILTRO** em todo texto que a criança lê (balões, ajuda, lacre, derrota,
+    instruções da plataforma, catálogo). O código segue chamando o módulo de `sonar`;
+  - o painel ganhou uma **aba "FILTRO"** em cima, à esquerda, na mesma cor do painel;
+  - a barra de ar virou **OXIGÊNIO**: a bolha da folha como ícone e o nome escrito ao lado; os
+    textos dizem "oxigênio" no lugar de "ar";
+  - **tutorial do N1**: o oxigênio desce na frente da criança até ficar vermelho ("Este é o seu
+    OXIGÊNIO. Ele vai acabando!") e volta a encher ("Bolhas e o cais enchem de novo."); depois
+    "Este é o FILTRO. Ele procura no mar escuro." [Ver] e **o próprio jogo liga TUCANO**: a onda
+    sai, os lugares acendem, as setas aparecem ("Acendeu tudo de TUCANO. Cada seta aponta um."); só
+    então a criança junta FOTO;
+  - o joystick pega o dedo num raio de 130 (era 150): com 5 fichas no N3 a borda da 1ª ficha também
+    agarrava o controle.
+- 09/10/2026 — *"ao entregar o item pro cliente, deveria vir uma animação dando zoom, ocultando
+  elementos da UI e mostrando a animação de entrega. Enquadre no centro."* A entrega virou um close
+  (`scenes/close.ts`, como a [[abertura-em-close]]): toda a interface de tela (HUD, pedido, oxigênio,
+  bolsa, mapa, FILTRO, controles e o escuro) some; a câmera vai a 2× com o encontro no centro; o
+  cliente anda até a ponta do píer e o submarino sobe ao lado, virado para ele; cada achado salta da
+  escotilha, faz um arco até as mãos do cliente (faíscas, pulinho, pose feliz) e fica flutuando ao
+  lado dele; "Era isso! Obrigado!" sai acima da cabeça. Depois a câmera volta ao plano aberto, a
+  interface reaparece e a bolinha da fase acende. A câmera volta a 1× e a seguir o submarino no
+  começo de cada fase.
+- 09/10/2026 — *"o que seria 'cais'? ninguém conhece essa palavra. A introdução do tutorial parte de
+  se mover e depois pro boost; o boost deveria ser à parte, o que importa é ensinar sobre o filtro.
+  Deixe o tutorial mais visual do que textual."*
+  - **"cais" saiu de todo texto**: "Leve para o cliente!", "Pegue bolhas!", "Mural dos achados",
+    instruções e catálogo ("volte ao cliente"). O código segue com `DOCK`;
+  - **tutorial do N1 começa pelo filtro e mostra antes de pedir**: "Ache este pedido!" → "Use o
+    FILTRO!" [Ver] → **o jogo toca sozinho** em TUCANO (anel no botão, onda, muitas setas) e depois em
+    FOTO (sobra uma seta) → limpa → "Sua vez!" → contorno amarelo pulsando na ficha certa, sem
+    balão, até o toque (TUCANO, depois FOTO) → "O OXIGÊNIO acaba. Pegue bolhas!" com a barra descendo
+    e enchendo de novo → "Siga a seta!" → o joystick se mexe sozinho, com contorno, até a criança
+    pilotar. São 6 balões curtos (antes eram 9 frases longas);
+  - **BOOST à parte**: um balão só, no começo da fase 2 do N1 ("BOOST corre mais. Gasta oxigênio!"),
+    com chave própria no `registry`. O passo do mapa saiu do N1 (fica na ajuda e no N2/N3).

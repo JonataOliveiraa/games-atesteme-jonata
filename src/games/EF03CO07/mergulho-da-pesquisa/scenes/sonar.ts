@@ -21,6 +21,7 @@ export interface Sonar {
     selected(): string[]
     reset(): void
     setEnabled(words: string[] | 'all' | 'none'): void
+    press(word: string): void
     chipRect(word: string): Rect
     rect(): Rect
     destroy(): void
@@ -39,6 +40,13 @@ const chipArt = (scene: Phaser.Scene, on: boolean) => {
 }
 
 const PAD = 16
+const TAB = { w: 150, h: 46, rise: 30, label: 24, title: 'FILTRO' } as const
+
+const tabArt = (scene: Phaser.Scene) =>
+    baked(scene, 'mg-filter-tab', TAB.w + 4, TAB.h + 4, g => {
+        g.fillStyle(C.ink, 1)
+        g.fillRoundedRect(0, 0, TAB.w, TAB.h, { tl: 18, tr: 18, bl: 0, br: 0 })
+    })
 
 const panelArt = (scene: Phaser.Scene, width: number) =>
     baked(scene, `mg-sonar-panel-${width}`, width + 8, PANEL.h + 10, g => {
@@ -52,6 +60,14 @@ export function createSonar(scene: Phaser.Scene, onToggle: (word: string) => voi
     const top = PANEL.y - PANEL.h / 2
     let width = 0
     const base = scene.add.image(0, top, panelArt(scene, CHIP.w + PAD * 2)).setOrigin(0).setDepth(DEPTH.ui).setScrollFactor(0)
+    const tab = scene.add.container(0, top - TAB.rise, [
+        scene.add.image(0, 0, tabArt(scene)).setOrigin(0),
+        scene.add
+            .text(TAB.w / 2, TAB.rise / 2 + 1, TAB.title, { fontFamily: FONT.black, fontSize: `${TAB.label}px`, color: CSS.white })
+            .setOrigin(0.5)
+            .setResolution(2),
+    ])
+    tab.setDepth(DEPTH.ui).setScrollFactor(0)
     const offKey = chipArt(scene, false)
     const onKey = chipArt(scene, true)
     let chips: Chip[] = []
@@ -68,6 +84,19 @@ export function createSonar(scene: Phaser.Scene, onToggle: (word: string) => voi
         c.label.setColor(c.on ? CSS.white : CSS.ink)
     }
 
+    const toggle = (chip: Chip) => {
+        chip.on = !chip.on
+        if (single && chip.on)
+            chips.forEach(c => {
+                if (c !== chip && c.on) {
+                    c.on = false
+                    paint(c)
+                }
+            })
+        paint(chip)
+        void FX.press(scene, chip.box)
+    }
+
     const clear = () => {
         chips.forEach(c => {
             c.zone.destroy()
@@ -81,6 +110,7 @@ export function createSonar(scene: Phaser.Scene, onToggle: (word: string) => voi
             clear()
             width = words.length * CHIP.w + (words.length - 1) * CHIP.gap + PAD * 2
             base.setTexture(panelArt(scene, width)).setX(W / 2 - width / 2)
+            tab.setX(W / 2 - width / 2 + PAD)
             const startX = W / 2 - width / 2 + PAD + CHIP.w / 2
             chips = words.map((word, i) => {
                 const x = startX + i * (CHIP.w + CHIP.gap)
@@ -104,16 +134,7 @@ export function createSonar(scene: Phaser.Scene, onToggle: (word: string) => voi
                 const chip: Chip = { word, box, bg, icon, label, zone, on: false }
                 zone.on('pointerdown', () => {
                     if (enabled !== 'all' && !enabled.has(word)) return
-                    chip.on = !chip.on
-                    if (single && chip.on)
-                        chips.forEach(c => {
-                            if (c !== chip && c.on) {
-                                c.on = false
-                                paint(c)
-                            }
-                        })
-                    paint(chip)
-                    void FX.press(scene, box)
+                    toggle(chip)
                     onToggle(word)
                 })
                 paint(chip)
@@ -136,15 +157,20 @@ export function createSonar(scene: Phaser.Scene, onToggle: (word: string) => voi
                 if (c.zone.input) c.zone.input.enabled = on
             })
         },
+        press(word) {
+            const chip = chips.find(c => c.word === word)
+            if (chip && !chip.on) toggle(chip)
+        },
         chipRect(word) {
             const c = chips.find(k => k.word === word)
             return c ? { x: c.box.x, y: c.box.y, w: CHIP.w + 16, h: CHIP.h + 16 } : this.rect()
         },
         rect() {
-            return { x: W / 2, y: PANEL.y, w: width + 10, h: PANEL.h + 10 }
+            return { x: W / 2, y: PANEL.y - TAB.rise / 2, w: width + 10, h: PANEL.h + 10 + TAB.rise }
         },
         destroy() {
             clear()
+            tab.destroy()
             base.destroy()
         },
     }

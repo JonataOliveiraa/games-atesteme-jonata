@@ -1,10 +1,11 @@
 import Phaser from 'phaser'
 import { FX } from '../../../../shared/effects/FX'
 import { DEVICES } from '../data/devices'
+import { PIECE, SCREEN_AREA } from '../data/files'
 import { COMPUTER, DEPTH, DOOR, DOOR_AT } from '../data/layout'
 import { C, CSS, FONT, SIZE } from '../data/theme'
-import type { DeviceId } from '../types'
-import { deviceImage } from './art'
+import type { DeviceId, InfoId } from '../types'
+import { deviceImage, infoImage, pieceImage } from './art'
 
 export interface DoorView {
     readonly id: DeviceId
@@ -19,8 +20,12 @@ export interface DoorView {
     open(): Promise<void>
     /** a informação bateu e voltou */
     refuse(): Promise<void>
-    /** a informação corre pelo fio até a porta do computador */
+    /** a informação corre pelo fio: para dentro (entrada) ou para fora (saída) */
     pulse(ms: number): Promise<void>
+    /** saída: o aparelho faz o que faz com a informação (toca, mostra, imprime) */
+    perform(info: InfoId): Promise<void>
+    /** some com o que sobrou da última jogada */
+    clear(): void
     destroy(): void
 }
 
@@ -58,7 +63,7 @@ function makeDoor(scene: Phaser.Scene, id: DeviceId): DoorView {
 
     const inward = device.side === 'input' ? 1 : -1
     const from = at.x + (inward * w) / 2
-    const to = COMPUTER.x - (inward * COMPUTER.w) / 2
+    const to = COMPUTER.x - inward * (COMPUTER.side - 6)
     const cable = scene.add.graphics().setDepth(DEPTH.cable).setVisible(false)
     const paintCable = (on: boolean) => {
         cable.clear()
@@ -135,9 +140,64 @@ function makeDoor(scene: Phaser.Scene, id: DeviceId): DoorView {
             box.setX(x)
         },
         async pulse(ms) {
-            const dot = keep(scene.add.circle(from, at.y, 15, C.glow, 1).setStrokeStyle(3, C.white).setDepth(DEPTH.fx))
-            await FX.to(scene, dot, { x: to }, { duration: ms, ease: 'Sine.easeIn' })
+            const [a, b] = device.side === 'input' ? [from, to] : [to, from]
+            paintCable(true)
+            const dot = keep(scene.add.circle(a, at.y, 15, C.glow, 1).setStrokeStyle(3, C.white).setDepth(DEPTH.fx))
+            await FX.to(scene, dot, { x: b }, { duration: ms, ease: 'Sine.easeIn' })
             void FX.to(scene, dot, { scale: 2.2, alpha: 0 }, { duration: 260 })
+        },
+        async perform(info) {
+            glow.setAlpha(1)
+            void FX.to(scene, glow, { alpha: 0 }, { duration: 900, delay: 500 })
+            void FX.impact(scene, box, 0.12)
+            if (id === 'speaker') {
+                if (info !== 'note') {
+                    const g = keep(scene.add.graphics().setDepth(DEPTH.fx))
+                    g.lineStyle(5, C.inkSoft, 1)
+                    for (let k = 0; k < 3; k++) {
+                        const yy = at.y - 60 - k * 18
+                        g.beginPath()
+                        g.moveTo(at.x - 40, yy)
+                        for (let s = 1; s <= 7; s++) g.lineTo(at.x - 40 + s * 12, yy + (s % 2 ? -8 : 8))
+                        g.strokePath()
+                    }
+                    await FX.to(scene, g, { alpha: 0 }, { duration: 900, delay: 400 })
+                    return
+                }
+                for (let k = 0; k < 4; k++) {
+                    const n = keep(pieceImage(scene, PIECE.music, 44).setPosition(at.x + (k % 2 ? 34 : -34), at.y - 30).setDepth(DEPTH.fx))
+                    void FX.to(scene, n, { y: at.y - 120, x: n.x + (k % 2 ? 60 : -30), alpha: 0 }, { duration: 1100 })
+                    await FX.wait(scene, 170)
+                }
+                await FX.wait(scene, 500)
+                return
+            }
+            if (id === 'screen') {
+                const w2 = art.displayWidth
+                const h2 = art.displayHeight
+                const sx = at.x + art.x + (SCREEN_AREA.x - 0.5) * w2
+                const sy = at.y + art.y + (SCREEN_AREA.y - 0.5) * h2
+                const sw = SCREEN_AREA.w * w2
+                const sh = SCREEN_AREA.h * h2
+                const light = keep(scene.add.rectangle(sx, sy, sw, sh, C.white, 1).setDepth(DEPTH.door + 0.5).setAlpha(0))
+                const pic = keep(infoImage(scene, info, 'happy', sh * 0.95).setPosition(sx, sy + sh * 0.47).setDepth(DEPTH.door + 0.6).setScale(0.1))
+                const scale = (sh * 0.95) / pic.height
+                await FX.all(FX.to(scene, light, { alpha: 1 }, { duration: 200 }), FX.to(scene, pic, { scale }, { duration: 320, ease: 'Back.easeOut' }))
+                await FX.wait(scene, 500)
+                return
+            }
+            if (id === 'printer') {
+                const sheet = pieceImage(scene, PIECE.paper, 84)
+                const pic = infoImage(scene, info, 'happy', 50).setPosition(0, 25)
+                const paper = keep(scene.add.container(at.x, at.y - 20, [sheet, pic]).setDepth(DEPTH.door - 0.5))
+                await FX.to(scene, paper, { y: at.y - 118 }, { duration: 760, ease: 'Sine.easeOut' })
+                paper.setDepth(DEPTH.fx)
+                await FX.wait(scene, 300)
+            }
+        },
+        clear() {
+            extras.forEach(e => e.destroy())
+            extras.length = 0
         },
         destroy() {
             extras.forEach(e => e.destroy())

@@ -13,6 +13,8 @@ export interface Computer {
     slot(i: number): { x: number; y: number }
     fill(i: number, info: InfoId): void
     work(on: boolean): void
+    /** acende uma luz e apaga de novo (demonstração) */
+    blink(i: number): Promise<void>
     rect(): Rect
     goalRect(): Rect
     windowRect(): Rect
@@ -61,6 +63,14 @@ export function createComputer(scene: Phaser.Scene, slots: number): Computer {
             filled.push(ring, icon)
             void FX.impact(scene, ring, 0.3)
             void FX.ping(scene, x, y, C.star, { radius: 44, duration: 480, depth: DEPTH.fx })
+        },
+        async blink(i) {
+            const { x, y } = slotAt(i)
+            const ring = scene.add.circle(x, y, GOAL.r, C.glow, 1).setStrokeStyle(3, C.ink).setDepth(DEPTH.goal + 0.1)
+            void FX.ping(scene, x, y, C.star, { radius: 44, duration: 480, depth: DEPTH.fx })
+            await FX.wait(scene, 700)
+            await FX.to(scene, ring, { alpha: 0 }, { duration: 300 })
+            ring.destroy()
         },
         work(on) {
             const scale = chip.scale

@@ -1,5 +1,5 @@
 import Phaser from 'phaser'
-import { BG, COMPUTER_ART, INFO_SHEET, type Sheet } from '../data/files'
+import { BG, COMPUTER_ART, INFO_SHEET, PEOPLE_SHEET, WISH_SHEET, type Sheet } from '../data/files'
 import { CHIP, COMPUTER, GOAL, H, W, WINDOW } from '../data/layout'
 import type { InfoId, InfoPose } from '../types'
 
@@ -35,6 +35,8 @@ export function ensureArt(scene: Phaser.Scene) {
     bakeOne(scene, BG, W, H, world)
     bakeOne(scene, COMPUTER_ART, COMPUTER.w, COMPUTER.h, computer)
     bakeSheet(scene, INFO_SHEET, (g, i) => info(g, INFOS[Math.floor(i / 4)], POSES[i % 4]))
+    bakeSheet(scene, PEOPLE_SHEET, (g, i) => person(g, Math.floor(i / 3), i % 3))
+    bakeSheet(scene, WISH_SHEET, (g, i) => wish(g, i))
 }
 
 // ───────────────────────────────────────────── primitivas
@@ -379,4 +381,57 @@ function info(g: G, id: InfoId, pose: InfoPose) {
         sparkle(g, x - 66, 80 - lift, 7)
     }
     if (pose === 'dizzy') stars(g, x, 30)
+}
+
+// ───────────────────────────────────────────── pessoas e pedidos (reserva simples)
+
+const LOOK = [
+    { hair: 0xf1ece4, shirt: 0xf3a6c0, legs: 0xb8a6ea },
+    { hair: 0x3a2a24, shirt: 0xfff09a, legs: 0x8a8f9c },
+    { hair: 0x7a4a2a, shirt: 0xc9b6f2, legs: 0xfff1d6 },
+]
+
+function person(g: G, row: number, pose: number) {
+    const look = LOOK[row]
+    const x = PEOPLE_SHEET.cellW / 2
+    const feet = PEOPLE_SHEET.cellH - 20
+    const lift = pose === 1 ? 20 : 0
+    box(g, x - 44, feet - 120 - lift, 36, 120, 14, look.legs)
+    box(g, x + 8, feet - 120 - lift, 36, 120, 14, look.legs)
+    box(g, x - 70, feet - 250 - lift, 140, 150, 40, look.shirt)
+    const armUp = pose === 1
+    ;[-1, 1].forEach(side => {
+        g.lineStyle(26, INK, 1)
+        g.lineBetween(x + side * 60, feet - 220 - lift, x + side * 96, armUp ? feet - 320 - lift : feet - 140 - lift)
+        g.lineStyle(18, 0xf2c9a4, 1)
+        g.lineBetween(x + side * 60, feet - 220 - lift, x + side * 96, armUp ? feet - 320 - lift : feet - 140 - lift)
+    })
+    disc(g, x, feet - 320 - lift, 92, look.hair)
+    disc(g, x, feet - 300 - lift, 72, 0xf2c9a4)
+    face(g, x, feet - 300 - lift, 1.3, pose === 1 ? 'happy' : pose === 2 ? 'dizzy' : 'walkA')
+}
+
+function wish(g: G, i: number) {
+    const x = WISH_SHEET.cellW / 2
+    const y = WISH_SHEET.cellH / 2
+    if (i === 0) {
+        oval(g, x - 20, y, 150, 210, 0xf2c9a4)
+        oval(g, x - 10, y - 10, 70, 110, 0xe8a98a, 4)
+        g.lineStyle(10, 0xffc93c, 1)
+        ;[60, 95].forEach(r => {
+            g.beginPath()
+            g.arc(x + 40, y, r, -0.6, 0.6)
+            g.strokePath()
+        })
+    } else if (i === 1) {
+        oval(g, x, y, 240, 150, 0xfffaf0)
+        disc(g, x, y, 56, 0x5b6cc9)
+        disc(g, x, y, 26, INK, 0)
+        g.fillStyle(0xffffff, 1)
+        g.fillCircle(x - 18, y - 20, 12)
+    } else {
+        box(g, x - 90, y - 120, 180, 240, 14, 0xfffaf0)
+        disc(g, x - 30, y - 50, 28, 0xffc93c, 4)
+        box(g, x - 10, y + 10, 70, 60, 6, 0xff9cc8, 4)
+    }
 }

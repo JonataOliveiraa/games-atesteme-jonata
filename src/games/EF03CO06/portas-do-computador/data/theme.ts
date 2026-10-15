@@ -81,7 +81,6 @@ export const FONT = {
 export const SIZE = {
     help: 40,
     level: 22,
-    kid: 26,
     button: 24,
     plate: 17,
     panel: 22,

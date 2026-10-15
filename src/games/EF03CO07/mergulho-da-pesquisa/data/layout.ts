@@ -81,7 +81,7 @@ export const BAG = { x: 836, y: 92, size: 58, gap: 10, art: 0.2 } as const
 
 export const ASK = { x: 640, y: 38, h: 52, minW: 380 } as const
 
-export const AIR_BAR = { x: 640, y: 88, w: 300, h: 18 } as const
+export const AIR_BAR = { x: 660, y: 92, w: 260, h: 18, icon: 52, label: 22, title: 'OXIGÊNIO' } as const
 
 export const MINIMAP = { right: 1262, top: 104, maxW: 300, maxH: 170 } as const
 
@@ -92,7 +92,7 @@ export function minimapBox() {
     return { x: MINIMAP.right - w / 2, y: MINIMAP.top + h / 2, w, h }
 }
 
-export const JOYSTICK = { x: 150, y: 600, r: 78, knob: 36, grab: 150, dead: 0.12 } as const
+export const JOYSTICK = { x: 150, y: 600, r: 78, knob: 36, grab: 130, dead: 0.12 } as const
 
 export const BOOST = { x: 1172, y: 606, r: 62, hit: 150 } as const
 
@@ -109,3 +109,20 @@ export const CARD = { x: 640, y: 400, w: 600, h: 440, art: 1.02 } as const
 export const BALLOON = { h: 62, minW: 240 } as const
 
 export const PANEL_END = { x: 640, y: 390, w: 940, h: 440 } as const
+
+export const HANDOVER = {
+    zoom: 2,
+    zoomMs: 800,
+    backMs: 700,
+    lookY: 180,
+    standIn: 70,
+    subOut: 100,
+    subDip: 14,
+    handX: 34,
+    handY: 70,
+    restY: 64,
+    restGap: 96,
+    giftScale: 0.32,
+    staggerMs: 650,
+    holdMs: 1300,
+} as const

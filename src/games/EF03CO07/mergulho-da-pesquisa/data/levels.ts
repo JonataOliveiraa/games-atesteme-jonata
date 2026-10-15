@@ -113,7 +113,7 @@ export const LEVELS: LevelDef[] = [
     {
         level: 3,
         title: 'Dois achados',
-        message: 'Uma busca para cada achado. Pegue os dois e volte ao cais!',
+        message: 'Uma busca para cada achado. Pegue os dois e leve ao cliente!',
         world: DEEP,
         single: false,
         drain: 1.4,

@@ -99,7 +99,8 @@ export function afastarDoTuca(n: number, cx: number, escala: number): { cx: numb
 /** A grade: 3 × 3, com o bichinho na borda esquerda e a forma no alto. */
 export const GRADE = {
     x: 772,
-    y: 470,
+    /** Com 3 linhas a moldura termina em 712: não desce mais que isso. */
+    y: 482,
     cel: 132,
     vao: 12,
     /** Onde ficam as etiquetas, para fora da moldura. */
@@ -107,8 +108,14 @@ export const GRADE = {
     ficha: 116,
 } as const
 
-/** A bandeja de peças soltas, quando elas são muitas e do mesmo tamanho. */
-export const BANDEJA = { y: 180, passo: 118, ficha: 104 } as const
+/**
+ * A bandeja de peças soltas, quando elas são muitas e do mesmo tamanho.
+ *
+ * Em 180 ela tampava as etiquetas de coluna da grade de 3 linhas (fases 1.4 e
+ * 1.5), que ficam em 182–246. Em 118 as fichas vão de 66 a 170: livres do HUD
+ * em cima e das etiquetas embaixo.
+ */
+export const BANDEJA = { y: 118, passo: 118, ficha: 104 } as const
 
 /** A ficha: campos empilhados, rótulo à esquerda e o buraco à direita. */
 export const FICHA = {

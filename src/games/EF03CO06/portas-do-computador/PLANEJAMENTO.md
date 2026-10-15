@@ -13,7 +13,7 @@ O usuário pediu ideias alinhadas com a habilidade e escolheu esta. Ao aprovar, 
 Regras fixas da rodada:
 - **1 erro encerra**: `WRONG_ANSWER` + `lose()`, uma vez, com a cena do erro **antes**;
 - tutorial com `createTutorial`, uma frase curta por balão e sem mãozinha;
-- a Lily só fala no **começo e no fim** do nível;
+- **sem a Lily** (removida em 08/10/2026): o objetivo é o primeiro balão do tutorial;
 - "faça o jogo" = **só o N1** (N2 e N3 ficam planejados).
 
 ---
@@ -178,24 +178,26 @@ A pessoa **não** decide a resposta. O **pedido** decide, e cada pessoa pede coi
 
 ## 7. O tutorial (N1, uma vez) e as estreias
 
-`createTutorial`, uma frase por balão, com recorte e sem mãozinha:
+**Pouco texto, muita animação** (pedido de 08/10/2026). O jogo **mostra** uma jogada inteira antes de pedir a primeira, e cada balão tem uma frase curta. Usa `createTutorial` (recorte, sem mãozinha).
 
-| # | Recorte | Frase | Botão |
+| # | O que acontece | Texto | Botão |
 |---|---|---|---|
-| 0 | — | a Lily, em close: *"Ajude as informações a ENTRAR no computador pela porta certa!"* | Vamos lá! |
-| 1 | o computador | *"Este é o computador. Os aparelhos ficam ligados nas portas dele."* | Próximo |
-| 2 | a Notinha + a plaquinha | *"Chegou uma informação do mundo lá fora: um SOM."* | Próximo |
-| 3 | o MICROFONE | *"O SOM entra pelo MICROFONE. Toque nele!"* | — (espera o toque; só o microfone responde) |
-| 4 | os lugares do objetivo | *"Ela entrou! Encha todos os lugares."* | Vamos jogar! |
+| 1 | recorte no computador | *"Leve as informações para dentro do computador!"* | Ver |
+| 2 | **demonstração automática** (`demo()`): a Notinha chega, a plaquinha SOM pula, uma **seta de pontinhos animada** sai dela e entra no microfone, o microfone recebe um "toque" (anel de luz), e a Notinha faz o caminho todo: aparelho → fio → processador → luz. A luz acende e apaga, porque a demonstração não conta | — | — |
+| 3 | recorte nas luzes | *"Sua vez! Acenda as 6 luzes."* | Vamos lá! |
+| 4 | a Notinha chega, a plaquinha pula, e a seta animada aponta o microfone **até o toque**. Só o microfone responde | — | — |
 
-**Estreias guiadas.** Na primeira Fotinho (*"A IMAGEM entra pela CÂMERA. Toque nela!"*) e na primeira Letrinha (*"As LETRAS entram pelo TECLADO."*), a porta nova aparece com um pulo e o balão espera o toque nela.
+**Estreias guiadas** (a primeira Fotinho e a primeira Letrinha):
+- a plaquinha pula;
+- um balão de 4 palavras aparece, com o recorte na informação e no aparelho juntos (*"IMAGEM entra pela CÂMERA."*, *"LETRAS entram pelo TECLADO."*);
+- depois, a seta animada aponta o aparelho até o toque.
 
-**N2:**
-- abertura: a Lily diz *"Agora ajude as informações a SAIR pela porta certa!"*;
-- primeiro balão: *"A vovó quer OUVIR. O som SAI pelo ALTO-FALANTE. Toque nele!"*;
-- os pedidos VER e PAPEL estreiam do mesmo jeito.
+Da segunda vez em diante não há seta nem balão.
 
-**N3:** um balão só: *"Agora a informação ENTRA, passa pelo processador e SAI."*
+**Ajuda (`?`):** três balões curtos:
+- *"SOM, IMAGEM ou LETRAS?"*;
+- *"Toque no aparelho certo."*;
+- *"Acenda as 6 luzes."*
 
 ## 8. O erro
 
@@ -293,3 +295,44 @@ Do Pinball aproveita-se:
   - o objetivo virou as **6 luzes** no alto do gabinete.
 
   Código: `scenes/computer.ts` (era `house.ts`), a folha é `computador.png` (era `casinha.png`), e o prompt foi trocado no TEXTURAS (§4 e a capa). Onde este plano ainda disser "porta", leia "aparelho ligado na porta". Conferido: o N1 inteiro de novo, com as 6 luzes acesas.
+- **08/10/2026** — **texturas no jogo e enquadramento.** `bg-mundo`, `computador` e `informacoes` entraram sem mexer no código; `pessoas` e `pedidos` ficam guardados para o N2/N3. As folhas foram limpas de franja. O gabinete foi medido (tabela no `MANIFEST.md` dos assets), e o enquadramento mudou:
+  - o computador cresceu para 600 px de altura;
+  - o processador senta no encaixe desenhado da placa;
+  - as 6 luzes ficam na faixa escura do alto;
+  - os fios entram na borda real do gabinete;
+  - a informação espera mais para dentro da calçada (x 150).
+
+  Conferido no navegador: o tutorial, as 6 missões, as 6 luzes acesas, o fim com a Lily e a porta errada (*"A CÂMERA não pega SOM!"*). Falta a capa.
+- **08/10/2026** — **a Lily saiu do jogo** (pedido do usuário: *"remova a lily"*):
+  - a abertura agora é a câmera se afastando do computador (Sine.easeInOut), e as portas aparecem;
+  - o objetivo, que era a fala dela, virou o **primeiro balão do tutorial** (*"Ajude as informações a ENTRAR no computador pelo aparelho certo!"*, campo `goal` do nível);
+  - no fim, a câmera aproxima as 6 luzes acesas, volta e mostra o quadro;
+  - `kid.ts`, a folha `lily` e o `lily.png` da pasta de assets saíram;
+  - a capa troca a Lily pela Fotinho e pela Letrinha esperando na calçada.
+
+  Onde o §3 e o §7 falam da Lily, vale isto. Conferido no navegador: o tutorial e o N1 até a tela de nível completo.
+- **08/10/2026** — **tutorial com menos texto e mais animação** (*"reduza a quantia de texto no tutorial, e deixe com mais animação pra deixar claro como funciona o jogo"*):
+  - antes da primeira jogada, o jogo faz uma **demonstração automática** completa (`demo()`);
+  - uma **seta de pontinhos animada** (`scenes/hint.ts`) liga a informação ao aparelho certo nas jogadas guiadas;
+  - a plaquinha do tipo pula (`walker.callout()`);
+  - os balões caíram de 4 frases longas para 2 curtas no começo e 4 palavras nas estreias (§7).
+
+  Conferido no navegador: a demonstração, *"Sua vez!"*, o toque real no microfone com a seta, a estreia da câmera e o nível até o fim.
+- **08/10/2026** — **N2 e N3 feitos** (*"faça n2 e n3"*), com as missões do §6 e as texturas `pessoas` e `pedidos`:
+  - **N2, a saída.** A informação já está dentro do computador: o processador trabalha, e ela vai para a direita da janela. Quem pediu chega pelo jardim da direita com um balão de pedido (ícone + *"Quero OUVIR!"*), e a criança toca no aparelho de saída. Na saída certa:
+    - a informação sai pela janela e corre pelo fio **para fora**;
+    - o aparelho faz o que faz com ela (o alto-falante solta notas, a tela mostra a informação, a impressora solta a folha);
+    - o que saiu voa até a pessoa, que pula de alegria, e uma luz acende.
+
+    Na saída errada, o aparelho faz a coisa errada (a tela mostra a nota em silêncio, o alto-falante chia), a pessoa fica confusa e aparece a faixa *"O Theo queria OUVIR!"*. A impressora estreia na missão 4, com zoom. As entradas aparecem apagadas, só para mostrar o computador inteiro.
+  - **N3, o caminho todo.** Os 6 aparelhos ficam na tela desde o começo. A informação chega pela calçada, entra (N1), passa pelo processador e espera na janela; só então a pessoa chega, e vem a saída (N2). São 4 missões, cada uma com um par (entrada, saída) diferente.
+  - **Tutorial.** O N2 tem demonstração automática da saída, como o N1, com a seta saindo do balão do pedido até o aparelho. As estreias dos pedidos VER e PAPEL são guiadas. O N3 tem um balão só: *"Agora a informação ENTRA e SAI!"*.
+  - **Fim.** O quadro serve aos três níveis:
+    - N1: tipo → aparelho de entrada;
+    - N2: pedido → aparelho de saída;
+    - N3: informação → entrada → saída.
+  - **Código.** Entraram `scenes/person.ts`, `doors.perform()`, `doors.clear()` e o fio nos dois sentidos. A `GameScene` tem `phase` (in/out), `inPhase`, `startInside`, `outPhase`, `carryIn`, `carryOut` e `deliver`. O `validateLevels` cobra o guia por tipo (N1) e por pedido (N2), e os pares diferentes no N3. Armadilha: `lights` é nome reservado de cena do Phaser (o gerenciador de luzes); por isso o getter é `lightCount`.
+  - **Conferido no navegador:**
+    - a demonstração do N2, o N2 inteiro (com a estreia da impressora), a passagem automática para o N3 e o N3 inteiro com o quadro do caminho;
+    - a saída errada no N3 (*"O Theo queria OUVIR!"*, o Theo confuso, `GAME_OVER`);
+    - o N1 de novo, sem regressão.

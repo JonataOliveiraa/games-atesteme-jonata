@@ -21,6 +21,7 @@ export interface Controls {
     boosting(now: number): boolean
     onBoost(fn: () => void): void
     setEnabled(on: boolean): void
+    hint(on: boolean): void
     stickRect(): Rect
     boostRect(): Rect
     destroy(): void
@@ -105,9 +106,27 @@ export function createControls(scene: Phaser.Scene): Controls {
         stick.y = 0
         knob.setPosition(JOYSTICK.x, JOYSTICK.y)
     }
+    let hinting: Phaser.Tweens.Tween | undefined
+    const hint = (next: boolean) => {
+        hinting?.stop()
+        hinting = undefined
+        if (grabbed === null) knob.setPosition(JOYSTICK.x, JOYSTICK.y)
+        if (next)
+            hinting = scene.tweens.add({
+                targets: knob,
+                x: JOYSTICK.x + JOYSTICK.r * 0.6,
+                duration: 560,
+                hold: 220,
+                repeatDelay: 260,
+                yoyo: true,
+                repeat: -1,
+                ease: 'Sine.easeInOut',
+            })
+    }
     const onDown = (p: Phaser.Input.Pointer) => {
         if (!on || grabbed !== null) return
         if (Phaser.Math.Distance.Between(p.x, p.y, JOYSTICK.x, JOYSTICK.y) > JOYSTICK.grab) return
+        if (hinting) hint(false)
         grabbed = p.id
         setStick(p.x - JOYSTICK.x, p.y - JOYSTICK.y)
     }
@@ -165,10 +184,12 @@ export function createControls(scene: Phaser.Scene): Controls {
         stickRect() {
             return { x: JOYSTICK.x, y: JOYSTICK.y, w: JOYSTICK.r * 2 + 40, h: JOYSTICK.r * 2 + 40 }
         },
+        hint,
         boostRect() {
             return { x: BOOST.x, y: BOOST.y, w: BOOST.r * 2 + 40, h: BOOST.r * 2 + 40 }
         },
         destroy() {
+            hinting?.stop()
             scene.input.off('pointerdown', onDown)
             scene.input.off('pointermove', onMove)
             scene.input.off('pointerup', onUp)

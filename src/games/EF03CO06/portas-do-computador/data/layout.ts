@@ -13,9 +13,6 @@ export const DEPTH = {
     info: 10,
     fx: 12,
     banner: 30,
-    veil: 18,
-    kid: 20,
-    balloon: 40,
     finale: 60,
     hud: 100,
 } as const
@@ -38,14 +35,15 @@ export const HUD = {
 } as const
 
 /** o computador (gabinete): o PNG cabe nesta caixa, centrado embaixo */
-export const COMPUTER = { x: 640, bottom: 692, w: 400, h: 560 } as const
+/** side = do centro até a borda do corpo, medida no PNG (530 × 742, corpo x 18–513) */
+export const COMPUTER = { x: 640, bottom: 700, w: 430, h: 600, side: 200 } as const
 
 /** a janela de vidro do gabinete, com a placa e o processador por dentro */
-export const WINDOW = { x: 640, y: 420, w: 300, h: 290 } as const
-export const CHIP = { x: 640, y: 420, size: 100, labelY: 334 } as const
+export const WINDOW = { x: 642, y: 387, w: 279, h: 291 } as const
+export const CHIP = { x: 638, y: 379, size: 94, labelY: 300 } as const
 
 /** os lugares do objetivo, na faixa de luzes do alto do gabinete */
-export const GOAL = { y: 172, gap: 54, r: 22, icon: 40 } as const
+export const GOAL = { y: 191, gap: 46, r: 15, icon: 30 } as const
 
 /** os aparelhos ficam do lado de fora, ligados por um fio na porta do gabinete */
 export const DOOR = { w: 150, h: 150, size: 92, plateDY: 52, plateH: 30, socketW: 18, socketH: 34 } as const
@@ -59,16 +57,21 @@ export const DOOR_AT: Record<DeviceId, { x: number; y: number }> = {
 }
 
 /** a calçada: a informação entra pela esquerda e para aqui */
-export const PORCH = { x: 110, feet: 640, startX: -120, plateDY: 26 } as const
+export const PORCH = { x: 150, feet: 640, startX: -120, plateDY: 26 } as const
 export const INFO_H = 150
+
+/** quem recebe fica no jardim da direita, com o pedido num balão em cima */
+export const PERSON = { x: 1172, feet: 664, h: 250, startX: 1420 } as const
+export const WISH_BALLOON = { y: 330, w: 210, h: 132, icon: 64, tail: 22 } as const
+
+/** dentro da janela: onde a informação espera antes de sair (à direita do processador) */
+export const OUT_SPOT = { x: WINDOW.x + 96, edge: WINDOW.x + WINDOW.w / 2 - 20 } as const
 export const WALK_MS = 1500
 
-export const KID = { x: 270, feet: 716, h: 470, outX: -260 } as const
-export const ASK = { x: 700, y: 286, w: 440, pad: 22, buttonH: 52 } as const
 
 export const SHOT = {
     wide: { x: W / 2, y: H / 2, zoom: 1 },
-    kid: { x: 500, y: 410, zoom: 1.32 },
+    open: { x: 640, y: 400, zoom: 1.35 },
     zoom: 1.6,
     ms: 520,
 } as const

@@ -12,6 +12,10 @@ export interface Audio {
     flash(): void
     voice(): void
     melody(): void
+    plim(): void
+    print(): void
+    fizz(): void
+    cheer(): void
     blom(): void
     fail(): void
     lose(): void
@@ -122,6 +126,19 @@ export function createAudio(): Audio {
         },
         voice() {
             ;[0, 0.12, 0.24].forEach((d, i) => tone(392 + i * 98, 0.12, { wave: 'sine', gain: 0.06, delay: d }))
+        },
+        plim() {
+            tone(1319, 0.2, { wave: 'triangle', gain: 0.08 })
+            tone(1760, 0.25, { wave: 'triangle', gain: 0.05, delay: 0.08 })
+        },
+        print() {
+            ;[0, 0.14, 0.28, 0.42].forEach(d => noise(0.08, 900, 0.07, d, 2))
+        },
+        fizz() {
+            noise(0.6, 3000, 0.05, 0, 0.6, 'highpass')
+        },
+        cheer() {
+            ;[659, 784, 1047].forEach((f, i) => tone(f, 0.16, { wave: 'triangle', gain: 0.07, delay: i * 0.09 }))
         },
         melody() {
             ;[523, 659, 784, 659, 1047].forEach((f, i) => tone(f, 0.18, { wave: 'triangle', gain: 0.08, delay: i * 0.16 }))

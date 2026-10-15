@@ -1,0 +1,125 @@
+import { FONT_JOGO } from '../../../../shared/fonts/gameFont'
+
+export const C = {
+    grass: 0x24604f,
+    grassLight: 0x2f7058,
+    grassDark: 0x1c5246,
+    tuft: 0x3f8a6d,
+    trail: 0x93b98c,
+    trailEdge: 0x6e9e7c,
+    trailLight: 0xb5d3a5,
+    sand: 0x5fa889,
+    shade: 0x163f37,
+    water: 0x4fb8b2,
+    waterDeep: 0x2f9195,
+    waterLight: 0x9fe6d8,
+    foam: 0xd7fee1,
+    leaf: 0x92d48a,
+    leafDark: 0x1d5446,
+    leafLight: 0xc0eaa8,
+    trunk: 0xc0916a,
+    trunkDark: 0x8d6446,
+    rock: 0xcdc6dc,
+    rockDark: 0x4f6c73,
+    moss: 0x9fd17e,
+    wood: 0xe8c592,
+    woodDark: 0xbb8f5c,
+    mint: 0x86dcc8,
+    mintDark: 0x3ea18d,
+    lilac: 0xd2b9f0,
+    lilacDark: 0x9b80cf,
+    butter: 0xffe48f,
+    sun: 0xf2c14e,
+    sunDark: 0xe8a63a,
+    seed: 0xa86d3e,
+    coral: 0xffa193,
+    pink: 0xf3d7ec,
+    red: 0xf2645c,
+    redDark: 0xc9433d,
+    cream: 0xf2f7f0,
+    creamDark: 0xc9dbd2,
+    paper: 0xf6faf4,
+    hair: 0xf7d36a,
+    hairDark: 0xdcaa3e,
+    hairLight: 0xfff3b5,
+    eye: 0x47b866,
+    eyeDark: 0x1f6b37,
+    skin: 0xffe1c9,
+    skinDark: 0xeab89a,
+    cheek: 0xf6a3a3,
+    shirt: 0xfff2d8,
+    shorts: 0xae7a52,
+    shortsDark: 0x86593a,
+    pack: 0xb3b36a,
+    packDark: 0x86864a,
+    frog: 0x93d36c,
+    frogDark: 0x5ea24a,
+    belly: 0xecf7bd,
+    duck: 0xfffbf0,
+    beak: 0xffb24d,
+    mushroom: 0xf3dfc2,
+    mushroomDark: 0xc69f74,
+    stem: 0xfff4e2,
+    screen: 0xbfeaff,
+    ink: 0x0f2f30,
+    mossLime: 0xb7d15b,
+    caveFloor: 0x2c4f53,
+    caveLight: 0x3a6464,
+    caveDark: 0x203c40,
+    caveRock: 0x4f7178,
+    caveRockDark: 0x2e4a50,
+    caveRockLight: 0x7aa2a2,
+    caveTrail: 0x45706c,
+    spark: 0x9ff2e2,
+    night: 0x061416,
+    forest: 0x2a6650,
+    forestLight: 0x357a5c,
+    forestDark: 0x1f5444,
+    headerFace: 0xebf8e9,
+    headerSoft: 0xd5efdf,
+    headerRim: 0xa9dccc,
+    headerLine: 0x115c55,
+    inkSoft: 0x3d6a66,
+    accent: 0x2f9e88,
+    yes: 0x49c27c,
+    oops: 0xff9d57,
+    white: 0xffffff,
+    shadow: 0x08201f,
+    film: 0x5a4a7a,
+    filmDark: 0x3b3056,
+    grey: 0xe6e3ee,
+    greyDark: 0xb8b2c9,
+} as const
+
+export const MODE_TONE = { photo: C.mint, video: C.lilac } as const
+export const MODE_DARK = { photo: C.mintDark, video: C.lilacDark } as const
+
+export const CSS = {
+    ink: '#0f2f30',
+    inkSoft: '#3d6a66',
+    white: '#ffffff',
+    accent: '#1f7f6c',
+} as const
+
+export const FONT = {
+    black: FONT_JOGO.black,
+    body: FONT_JOGO.body,
+} as const
+
+export const SIZE = {
+    help: 40,
+    level: 22,
+    mode: 24,
+    pill: 26,
+    name: 34,
+    hint: 23,
+    banner: 40,
+} as const
+
+export function inkOn(tone: number): string {
+    const r = (tone >> 16) & 0xff
+    const g = (tone >> 8) & 0xff
+    const b = tone & 0xff
+    const light = 0.299 * r + 0.587 * g + 0.114 * b
+    return light > 160 ? CSS.ink : CSS.white
+}

@@ -5,11 +5,12 @@ import type { PlatformCommand } from '../../../../shared/contracts/platformComma
 import { showLevelComplete } from '../../../../shared/level/showLevelComplete'
 import { vidasIniciais } from '../../../../shared/level/vidasIniciais'
 import { faseInicial } from '../../../../shared/level/faseInicial'
-import { FX } from '../../../../shared/effects/FX'
+import { Ease, FX } from '../../../../shared/effects/FX'
 
 import { answers, FIND, matches, whyWrong } from '../data/finds'
 import { LEVELS, POINTS_SCORE, guideKey } from '../data/levels'
-import { AIR, CLIENT, DOCK, setWorld, SUB, SURFACE, WORLD } from '../data/layout'
+import { AIR, CLIENT, DEPTH, DOCK, H, HANDOVER, setWorld, SUB, SURFACE, W, WORLD } from '../data/layout'
+import { FINDS, SUB_FRAME } from '../data/files'
 import { C, CSS } from '../data/theme'
 import { SAY, TEACH } from '../data/words'
 import type { FindDef, LevelDef, Mode, PhaseDef, Rect, Request, Vec } from '../types'
@@ -18,9 +19,10 @@ import { createArrows, type Arrows } from './arrows'
 import { createAudio, type Audio } from './audio'
 import { createCard, type Card } from './card'
 import { createClient, type Client } from './client'
+import { hideScreen, moveCamera, resetCamera } from './close'
 import { createControls, type Controls } from './controls'
 import { ensureArt } from './fallback'
-import { spot, teach, union } from './guide'
+import { beckon, spot, teach, union } from './guide'
 import { createHud, type Hud } from './hud'
 import { banner, createAirBar, createAsk, createBag, createMinimap, pin, screenCurtain, type AirBar, type Ask, type Bag, type Minimap } from './overlay'
 import { createSonar, type Sonar } from './sonar'
@@ -30,10 +32,10 @@ import { createWorld, type World } from './world'
 
 const GAME_ID = 'mergulho-da-pesquisa'
 const SHOW_ERROR_MS = 700
-const PING_WAIT_MS = 900
 const PHASE_PAUSE_MS = 900
 const FINALE_MS = 2400
 const MOVE_TO_LEARN = 220
+const DEMO_LOOK_MS = 1700
 
 const grow = (r: Rect, by: number): Rect => ({ x: r.x, y: r.y, w: r.w + by * 2, h: r.h + by * 2 })
 
@@ -56,6 +58,8 @@ export class GameScene extends Phaser.Scene {
     private air: number = AIR.max
     private touched = -1
     private warnedAir = false
+    private airDemo?: Phaser.Tweens.Tween
+    private gifts: Phaser.GameObjects.Image[] = []
 
     private score = 0
     private hits = 0
@@ -103,6 +107,8 @@ export class GameScene extends Phaser.Scene {
         this.carried = []
         this.air = AIR.max
         this.touched = -1
+        this.airDemo = undefined
+        this.gifts = []
         this.score = data?.points ?? 0
         this.hits = 0
         this.errors = 0
@@ -275,7 +281,14 @@ export class GameScene extends Phaser.Scene {
         this.world.load(this.phase.map, this.phase.spots)
         this.minimap.setMap(this.phase.map)
         this.minimap.setMarks(this.world.marks())
+        this.gifts.forEach(g => {
+            this.tweens.killTweensOf(g)
+            g.destroy()
+        })
+        this.gifts = []
         this.sub.reset()
+        resetCamera(this)
+        this.cameras.main.startFollow(this.sub.sprite, true, 0.12, 0.12)
         this.world.reveal(SUB.start)
         this.air = AIR.max
         this.airBar.set(this.air)
@@ -294,6 +307,11 @@ export class GameScene extends Phaser.Scene {
             if (this.level.level === 1) await this.teachFirst(gen)
             else await this.teachIntro(gen)
             return
+        }
+        const boostKey = `${guideKey(this.level.level)}-boost`
+        if (this.level.level === 1 && index === 1 && !this.registry.get(boostKey)) {
+            this.registry.set(boostKey, true)
+            if (!(await this.say(gen, [{ text: TEACH.boost, ...spot(this.controls.boostRect()), balloonY: 330, buttonLabel: 'Ok' }]))) return
         }
         this.play()
     }
@@ -315,6 +333,11 @@ export class GameScene extends Phaser.Scene {
 
     private onToggle(word: string) {
         if (this.mode !== 'play' && !this.expect?.match(`chip:${word}`)) return
+        this.search()
+        this.claim(`chip:${word}`)
+    }
+
+    private search() {
         const words = this.sonar.selected()
         const lit = this.phase.spots.map((s, i) => (matches(FIND[s.find], words) ? i : -1)).filter(i => i >= 0)
         this.audio.chip()
@@ -324,7 +347,19 @@ export class GameScene extends Phaser.Scene {
         }
         this.world.light(lit, this.sub.at())
         this.arrows.update(this.cameras.main, lit.map(i => this.world.spot(i)))
-        this.claim(`chip:${word}`)
+    }
+
+    private showAir(from: number, to: number, ms: number) {
+        this.airDemo?.stop()
+        const shown = { v: from }
+        this.airDemo = this.tweens.add({
+            targets: shown,
+            v: to,
+            duration: ms,
+            ease: 'Sine.easeInOut',
+            onUpdate: () => this.airBar.set(shown.v),
+            onComplete: () => this.airBar.set(to),
+        })
     }
 
     private sealed(i: number) {
@@ -400,10 +435,7 @@ export class GameScene extends Phaser.Scene {
         this.guiding = false
         this.teaching = false
         this.arrows.clear()
-        this.client.pose('happy')
-        this.audio.win()
-        await this.client.say(SAY.thanks)
-        if (gen !== this.gen) return
+        if (!(await this.handOver(gen))) return
         this.delivered.push(...this.carried)
         this.score += POINTS_SCORE
         this.hits += 1
@@ -428,6 +460,58 @@ export class GameScene extends Phaser.Scene {
         void this.startPhase(next)
     }
 
+    private async handOver(gen: number): Promise<boolean> {
+        const standX = DOCK.right - HANDOVER.standIn
+        const sub = this.sub.sprite
+        const subAt = { x: DOCK.right + HANDOVER.subOut, y: SURFACE + HANDOVER.subDip }
+        const showUi = await hideScreen(this)
+        if (gen !== this.gen) return false
+        sub.setFrame(SUB_FRAME.yellow.move).setFlipX(true).setAngle(0)
+        await FX.all(
+            moveCamera(this, { x: (standX + subAt.x) / 2, y: HANDOVER.lookY, zoom: HANDOVER.zoom }, HANDOVER.zoomMs),
+            FX.to(this, sub, { x: subAt.x, y: subAt.y }, { duration: HANDOVER.zoomMs, ease: Ease.smooth }),
+            this.client.walkTo(standX),
+        )
+        if (gen !== this.gen) return false
+        sub.setFrame(SUB_FRAME.yellow.idle)
+        this.client.pose('wait')
+        void FX.float(this, sub, { amount: 5, duration: 1400 })
+        await FX.wait(this, 250)
+        if (gen !== this.gen) return false
+
+        const hands = { x: standX + HANDOVER.handX, y: CLIENT.foot - HANDOVER.handY }
+        await FX.all(
+            ...this.carried.map(async (find, i) => {
+                await FX.wait(this, i * HANDOVER.staggerMs)
+                const gift = this.add
+                    .image(sub.x - 16, sub.y - 24, FINDS, find.frame)
+                    .setScale(0.04)
+                    .setDepth(DEPTH.clientBalloon - 1)
+                this.gifts.push(gift)
+                this.audio.pop()
+                await FX.to(this, gift, { y: sub.y - 96, scale: HANDOVER.giftScale }, { duration: 340, ease: Ease.back(1.6) })
+                await FX.arcTo(this, gift, hands, { height: 70, duration: 520 })
+                this.audio.stamp()
+                this.client.pose('happy')
+                void FX.sparks(this, hands.x, hands.y, { color: C.glow, count: 14, spread: 90, size: 7 })
+                void this.client.hop()
+                const rest = { x: standX + HANDOVER.handX - i * HANDOVER.restGap, y: CLIENT.foot - HANDOVER.restY }
+                await FX.to(this, gift, rest, { duration: 300, ease: Ease.smooth })
+                void FX.float(this, gift, { amount: 6, duration: 1500, delay: i * 200 })
+            }),
+        )
+        if (gen !== this.gen) return false
+        this.audio.win()
+        await this.client.say(SAY.thanks)
+        await FX.wait(this, HANDOVER.holdMs)
+        if (gen !== this.gen) return false
+        this.client.hush()
+        await moveCamera(this, { x: W / 2, y: H / 2, zoom: 1 }, HANDOVER.backMs)
+        if (gen !== this.gen) return false
+        await showUi()
+        return gen === this.gen
+    }
+
     private async wrong(gen: number, find: FindDef) {
         this.hold()
         this.audio.wrong()
@@ -444,7 +528,7 @@ export class GameScene extends Phaser.Scene {
     private async airOut(gen: number) {
         this.hold()
         this.client.pose('point')
-        await banner(this, SAY.airTitle, 'O submarino precisa voltar. Use o sonar para achar mais rápido!')
+        await banner(this, SAY.airTitle, SAY.airLine)
         await this.fail(gen)
     }
 
@@ -477,44 +561,66 @@ export class GameScene extends Phaser.Scene {
         this.guiding = true
         const { topic, kind } = this.phase.requests[0]
         const client: Rect = { x: CLIENT.x, y: CLIENT.foot - 70, w: 170, h: 170 }
-        if (!(await this.say(gen, [{ text: TEACH.ask, ...spot(union(grow(this.ask.rect(), 4), client)), balloonY: 330, buttonLabel: 'Próximo' }]))) return
+        if (
+            !(await this.say(gen, [
+                { text: TEACH.ask, ...spot(union(grow(this.ask.rect(), 4), client)), balloonY: 330, buttonLabel: 'Próximo' },
+                { text: TEACH.filter, ...spot(grow(this.sonar.rect(), 4)), balloonY: 330, buttonLabel: 'Ver' },
+            ]))
+        )
+            return
 
-        if (!(await this.say(gen, [{ text: TEACH.stick, ...spot(this.controls.stickRect()), balloonY: 330, buttonLabel: 'Ok' }]))) return
-        this.mode = 'play'
-        this.controls.setEnabled(true)
-        await this.waitFor('move')
-        if (gen !== this.gen) return
+        if (!(await this.demoPress(gen, topic))) return
+        if (!(await this.demoPress(gen, kind))) return
+        this.clearSearch()
+        if (!(await this.say(gen, [{ text: TEACH.yourTurn, ...spot(grow(this.sonar.rect(), 4)), balloonY: 330, buttonLabel: 'Ok' }]))) return
+        if (!(await this.guideTap(gen, topic))) return
+        if (!(await this.guideTap(gen, kind))) return
 
-        if (!(await this.say(gen, [{ text: TEACH.boost, ...spot(this.controls.boostRect()), balloonY: 330, buttonLabel: 'Ok' }]))) return
-        this.mode = 'play'
-        this.controls.setEnabled(true)
-        await this.waitFor('boost')
-        if (gen !== this.gen) return
-        await FX.wait(this, 700)
-        if (gen !== this.gen) return
+        this.showAir(AIR.max, 15, 1500)
+        const refill = this.time.delayedCall(1700, () => {
+            this.audio.pop()
+            this.showAir(15, AIR.max, 700)
+        })
+        const shown = await this.say(gen, [{ text: TEACH.air, ...spot(grow(this.airBar.rect(), 6)), balloonY: 300, buttonLabel: 'Ok' }])
+        refill.remove(false)
+        this.airDemo?.stop()
+        this.airBar.set(this.air)
+        if (!shown) return
 
-        if (!(await this.say(gen, [{ text: TEACH.air, ...spot(grow(this.airBar.rect(), 6)), balloonY: 300, buttonLabel: 'Ok' }]))) return
-
-        if (!(await this.say(gen, [{ text: TEACH.sonar, ...spot(grow(this.sonar.chipRect(topic), 6)), balloonY: 380, buttonLabel: 'Ok' }]))) return
-        this.sonar.setEnabled([topic])
-        await this.waitFor(`chip:${topic}`)
-        if (gen !== this.gen) return
-        this.sonar.setEnabled('none')
-        await FX.wait(this, PING_WAIT_MS)
-        if (gen !== this.gen) return
-
-        if (!(await this.say(gen, [{ text: TEACH.more, ...spot(grow(this.sonar.chipRect(kind), 6)), balloonY: 380, buttonLabel: 'Ok' }]))) return
-        this.sonar.setEnabled([kind])
-        await this.waitFor(`chip:${kind}`)
-        if (gen !== this.gen) return
-        this.sonar.setEnabled('none')
-        await FX.wait(this, PING_WAIT_MS)
-        if (gen !== this.gen) return
-
-        if (!(await this.say(gen, [{ text: TEACH.map, ...spot(this.minimap.rect()), balloonY: 360, buttonLabel: 'Ok' }]))) return
         if (!(await this.say(gen, [{ text: TEACH.go, ...spot({ x: 640, y: 380, w: 1220, h: 300 }), balloonY: 330, buttonLabel: 'Vamos lá!' }]))) return
         this.warnPick = true
         this.play()
+        this.controls.hint(true)
+        const stop = beckon(this, this.controls.stickRect(), true)
+        await this.waitFor('move')
+        stop()
+        this.controls.hint(false)
+    }
+
+    private clearSearch() {
+        this.sonar.reset()
+        this.world.light([], this.sub.at())
+        this.arrows.clear()
+    }
+
+    private async demoPress(gen: number, word: string) {
+        const r = this.sonar.chipRect(word)
+        void pin(this, () => FX.ping(this, r.x, r.y, C.lemon, { radius: 86, duration: 520 }))
+        this.sonar.press(word)
+        this.search()
+        await FX.wait(this, DEMO_LOOK_MS)
+        return gen === this.gen
+    }
+
+    private async guideTap(gen: number, word: string) {
+        this.sonar.setEnabled([word])
+        const stop = beckon(this, grow(this.sonar.chipRect(word), 6))
+        await this.waitFor(`chip:${word}`)
+        stop()
+        this.sonar.setEnabled('none')
+        if (gen !== this.gen) return false
+        await FX.wait(this, DEMO_LOOK_MS)
+        return gen === this.gen
     }
 
     private async teachIntro(gen: number) {
