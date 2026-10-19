@@ -1567,6 +1567,22 @@ export const catalog: Game[] = [
     thumbnail: coverRaioXDaMaquina,
   },
   {
+    id: "125",
+    slug: "cabo-certo",
+    module: "EF05CO05/cabo-certo",
+    skill: "EF05CO05",
+    years: [5],
+    tags: ["hardware", "entrada e saída", "processador", "armazenamento", "cabos", "arrastar"],
+    order: 357,
+    status: "published",
+    title: "Cabo Certo",
+    description:
+      "O computador está no meio do mapa. Ache o aparelho que o pedido precisa, puxe o cabo até a tomada certa (ENTRADA, SAÍDA ou ARMAZENAMENTO) e veja a informação passar pelo processador.",
+    category: "Mundo Digital",
+    points: 30,
+    icon: "🔌",
+  },
+  {
     id: "036",
     slug: "missao-arquivo-seguro",
     module: "EF05CO06/missao-arquivo-seguro",
@@ -2271,7 +2287,7 @@ export const catalog: Game[] = [
  * saltado de 086 para 090; os oito jogos de 090 a 097 desceram três casas
  * (090→087 … 097→094) para fechar o 087–089.
  */
-export const NEXT_FREE_ID = "125";
+export const NEXT_FREE_ID = "126";
 
 /**
  * AS RODADAS DE PRODUÇÃO.

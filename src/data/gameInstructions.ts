@@ -428,6 +428,12 @@ const POR_SLUG: Record<string, string[]> = {
     "A cada acerto vem um desafio rápido, para ver a peça trabalhando de perto.",
     "No fim, arraste os cabos na cor certa: sem energia, nenhuma peça funciona.",
   ],
+  "cabo-certo": [
+    "O computador está no meio do mapa. Leia o pedido no alto e ache os aparelhos que ele precisa: arraste o chão para andar pelo mapa.",
+    "Puxe o cabo de cada aparelho até a tomada da função dele: verde é ENTRADA, laranja é SAÍDA e roxa é ARMAZENAMENTO. Todo plugue é igual!",
+    "Com tudo ligado, toque no aparelho e veja a informação passar pelo processador. Um aparelho ligado também pode ter tomada própria.",
+    "Cabo na tomada de outra função encerra a partida.",
+  ],
   "maestro-do-sistema": [
     "Cada programa levanta um balão com a peça de que precisa para tocar.",
     "Toque no programa e a peça voa do atril até ele — aí ele começa a tocar.",
