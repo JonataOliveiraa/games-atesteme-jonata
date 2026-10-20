@@ -50,6 +50,8 @@ export const C = {
     saidaDark: 0xd9761c,
     armazenamento: 0x9b6ee6,
     armazenamentoDark: 0x7650c2,
+    memoria: 0x2bb3c9,
+    memoriaDark: 0x1d8a9c,
     hole: 0x262a35,
 
     cable: 0x3d4250,
@@ -77,18 +79,22 @@ export const C = {
     spark: 0xffe066,
     coral: 0xff8a6b,
     lilac: 0xc6b6ea,
+    skin: 0xf6c9a0,
+    skinDark: 0xe0a77c,
 } as const
 
 export const KIND_COLOR: Record<Kind, number> = {
     entrada: C.entrada,
     saida: C.saida,
     armazenamento: C.armazenamento,
+    memoria: C.memoria,
 }
 
 export const KIND_DARK: Record<Kind, number> = {
     entrada: C.entradaDark,
     saida: C.saidaDark,
     armazenamento: C.armazenamentoDark,
+    memoria: C.memoriaDark,
 }
 
 export const CSS = {
@@ -99,6 +105,7 @@ export const CSS = {
     entrada: '#2c9452',
     saida: '#d9761c',
     armazenamento: '#7650c2',
+    memoria: '#1d8a9c',
     screen: '#bff3ff',
 } as const
 
@@ -106,6 +113,7 @@ export const KIND_CSS: Record<Kind, string> = {
     entrada: CSS.entrada,
     saida: CSS.saida,
     armazenamento: CSS.armazenamento,
+    memoria: CSS.memoria,
 }
 
 export const FONT = {
@@ -122,6 +130,7 @@ export const SIZE = {
     bubble: 27,
     banner: 34,
     screen: 34,
+    caption: 42,
 } as const
 
 export function inkOn(tone: number): string {

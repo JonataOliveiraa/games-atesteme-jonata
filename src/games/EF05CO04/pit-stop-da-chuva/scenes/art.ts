@@ -1,6 +1,6 @@
 import Phaser from 'phaser'
 import { cellKey, type Sheet } from '../data/files'
-import { CARTS, STRIP } from '../data/layout'
+import { CARTS, SKY } from '../data/layout'
 import { C } from '../data/theme'
 import type { Weather } from '../types'
 
@@ -31,7 +31,7 @@ const mix = (a: number, b: number, t: number) => {
 }
 
 function gradient(scene: Phaser.Scene, key: string, top: number, bottom: number) {
-    const h = STRIP.y + 140
+    const h = SKY.h
     baked(scene, key, 64, h, g => {
         const band = 8
         for (let y = 0; y < h; y += band) {

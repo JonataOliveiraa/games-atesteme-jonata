@@ -1,10 +1,10 @@
 import Phaser from 'phaser'
 import { FX } from '../../../../shared/effects/FX'
 import { PIECE_CELL, PIECE_SHEET, cellKey } from '../data/files'
-import { CLOUDS, CLOUD_SIZE, DEPTH, H, HEADER, SKY, STRIP, SUN, W } from '../data/layout'
+import { CLOUDS, CLOUD_SIZE, DEPTH, H, HEADER, PIT_LANE, SKY, SUN, W } from '../data/layout'
 import { C } from '../data/theme'
 import { TIMING } from '../data/timing'
-import { WEATHERS } from '../data/weather'
+import { WEATHERS } from '../data/rules'
 import type { Rect, Weather } from '../types'
 import { RAIN, SKY_KEY } from './art'
 import type { View } from './view'
@@ -27,7 +27,7 @@ interface CloudPair {
 const ORDER: Weather[] = ['sol', 'nublado', 'chuva']
 
 export function createSky(scene: Phaser.Scene, view: View): Sky {
-    const skyH = STRIP.y + 140
+    const skyH = SKY.h
     const layers = Object.fromEntries(
         ORDER.map(w => [w, view.world(scene.add.image(0, 0, SKY_KEY[w]).setOrigin(0, 0).setDisplaySize(W, skyH).setDepth(DEPTH.sky))]),
     ) as Record<Weather, Phaser.GameObjects.Image>
@@ -44,7 +44,7 @@ export function createSky(scene: Phaser.Scene, view: View): Sky {
         return { gray: make(PIECE_CELL.cloud), rain: make(PIECE_CELL.rainCloud), speed: 6 + (i % 3) * 3 }
     })
 
-    const wet = view.world(scene.add.rectangle(0, STRIP.y + 60, W, H - STRIP.y - 60, C.wet).setOrigin(0, 0).setDepth(DEPTH.wet))
+    const wet = view.world(scene.add.rectangle(0, PIT_LANE.top, W, H - PIT_LANE.top, C.wet).setOrigin(0, 0).setDepth(DEPTH.wet))
     const rain = view.world(scene.add.tileSprite(0, HEADER.h, W, H - HEADER.h, RAIN).setOrigin(0, 0).setDepth(DEPTH.rain))
 
     let weather: Weather = 'sol'

@@ -1,5 +1,5 @@
 import Phaser from 'phaser'
-import { FX } from '../../../../shared/effects/FX'
+import { FX, type FxTarget } from '../../../../shared/effects/FX'
 import { DEVICE_SHEET, PIECE_CELL, PIECE_SHEET, cellKey } from '../data/files'
 import { CABLE, DEPTH, DEVICE, MONITOR_SCREEN, PC, PLUG } from '../data/layout'
 import { C, CSS, FONT, SIZE } from '../data/theme'
@@ -20,8 +20,15 @@ export interface Gear {
     /** O aparelho cujo plugue está debaixo do ponto (no mapa). */
     plugUnder(at: Vec): DeviceId | null
     deviceUnder(at: Vec): DeviceId | null
-    awake(id: DeviceId): boolean
-    wake(id: DeviceId): Promise<void>
+    /** O centro do aparelho, onde ele está agora. */
+    at(id: DeviceId): Vec
+    visible(id: DeviceId): boolean
+    /** Muda o aparelho de lugar (com o plugue solto ao lado dele). */
+    place(id: DeviceId, at: Vec): void
+    show(id: DeviceId): Promise<void>
+    hide(id: DeviceId): Promise<void>
+    /** O plugue solto pisca: é dali que se puxa. */
+    invite(id: DeviceId, on: boolean): void
     /** Leva o plugue até o ponto, sem animação (durante o arraste). */
     hold(id: DeviceId, at: Vec): void
     snap(id: DeviceId, socket: Vec): Promise<void>
@@ -42,18 +49,20 @@ export interface Gear {
 interface Unit {
     def: DeviceDef
     size: number
+    at: Vec
     dir: Vec
     port: Vec
     rest: Vec
     sprite: Phaser.GameObjects.Image
     name: Phaser.GameObjects.Container
     led: Phaser.GameObjects.Arc
-    zzz?: Phaser.GameObjects.Text
     cable: Phaser.GameObjects.Graphics
     plug: Phaser.GameObjects.Image
     plugPos: Vec
     plugged: boolean
-    awake: boolean
+    shown: boolean
+    halo: Phaser.GameObjects.Arc
+    inviting?: Phaser.Tweens.Tween
     badge?: Phaser.GameObjects.Container
 }
 
@@ -76,19 +85,36 @@ function curve(from: Vec, to: Vec): Vec[] {
     return pts
 }
 
-export function createGear(scene: Phaser.Scene, view: View, defs: DeviceDef[], asleep: DeviceId[]): Gear {
+export function createGear(scene: Phaser.Scene, view: View, defs: DeviceDef[]): Gear {
     const units = new Map<DeviceId, Unit>()
     const toScreen = (at: Vec) => view.toScreen(at)
     let hinted: { id: DeviceId; tween: Phaser.Tweens.Tween } | null = null
 
+    /** O cabo sai do lado do aparelho virado para o computador, e o plugue descansa ali. */
+    function aim(u: Unit) {
+        const toPc = new Phaser.Math.Vector2(PC.x - u.at.x, PC.y - u.at.y).normalize()
+        u.dir = { x: toPc.x, y: toPc.y }
+        const reach = u.size * (DEVICE.port / DEVICE.size)
+        u.port = { x: u.at.x + u.dir.x * reach, y: u.at.y + u.dir.y * reach }
+        u.rest = { x: u.port.x + u.dir.x * DEVICE.rest, y: u.port.y + u.dir.y * DEVICE.rest + 18 }
+        u.sprite.setPosition(u.at.x, u.at.y)
+        u.name.setPosition(u.at.x, u.at.y + u.size * (DEVICE.name / DEVICE.size) * 0.62 + 30)
+        u.badge?.setPosition(u.at.x + u.size * 0.32, u.at.y - u.size * 0.3)
+    }
+
+    /** O plugue volta para o lugar de descanso, sem animação. */
+    function settle(u: Unit) {
+        u.plugged = false
+        u.plugPos = { ...u.rest }
+        u.plug.setPosition(u.rest.x, u.rest.y).setRotation(Math.atan2(u.dir.y, u.dir.x))
+        draw(u)
+    }
+
+    type Part = FxTarget & Phaser.GameObjects.Components.Visible & Phaser.GameObjects.Components.AlphaSingle
+    const parts = (u: Unit): Part[] => [u.sprite, u.name, u.cable, u.plug, ...(u.badge ? [u.badge] : [])]
+
     defs.forEach(def => {
         const size = def.size ?? DEVICE.size
-        const toPc = new Phaser.Math.Vector2(PC.x - def.at.x, PC.y - def.at.y).normalize()
-        const dir = { x: toPc.x, y: toPc.y }
-        const reach = size * (DEVICE.port / DEVICE.size)
-        const port = { x: def.at.x + dir.x * reach, y: def.at.y + dir.y * reach }
-        const rest = { x: port.x + dir.x * DEVICE.rest, y: port.y + dir.y * DEVICE.rest + 18 }
-
         const cable = view.world(scene.add.graphics().setDepth(DEPTH.cable))
         const sprite = view.world(
             scene.add.image(def.at.x, def.at.y, DEVICE_SHEET.key, cellKey(def.cell)).setDisplaySize(size, size).setDepth(DEPTH.device),
@@ -106,12 +132,12 @@ export function createGear(scene: Phaser.Scene, view: View, defs: DeviceDef[], a
         pill.fillRoundedRect(-lw / 2, -lh / 2, lw, lh, lh / 2)
         label.setX(10)
         const led = scene.add.circle(-lw / 2 + 18, 0, 7, C.asleep)
-        const name = view.world(
-            scene.add.container(def.at.x, def.at.y + size * (DEVICE.name / DEVICE.size) * 0.62 + 30, [pill, led, label]).setDepth(DEPTH.device + 1),
-        )
+        const name = view.world(scene.add.container(0, 0, [pill, led, label]).setDepth(DEPTH.device + 1))
+        const halo = view.world(scene.add.circle(0, 0, PLUG.size * 0.62, C.accentYellow, 0.75).setDepth(DEPTH.plug - 1).setVisible(false))
+        halo.setStrokeStyle(5, C.headerLine, 1)
         const plug = view.world(
             scene.add
-                .image(rest.x, rest.y, PIECE_SHEET.key, cellKey(PIECE_CELL.plug))
+                .image(0, 0, PIECE_SHEET.key, cellKey(PIECE_CELL.plug))
                 .setOrigin(0.72, 0.5)
                 .setDisplaySize(PLUG.size, PLUG.size)
                 .setDepth(DEPTH.plug),
@@ -119,39 +145,24 @@ export function createGear(scene: Phaser.Scene, view: View, defs: DeviceDef[], a
         const unit: Unit = {
             def,
             size,
-            dir,
-            port,
-            rest,
+            at: { ...def.at },
+            dir: { x: 1, y: 0 },
+            port: { ...def.at },
+            rest: { ...def.at },
             sprite,
             name,
             led,
             cable,
             plug,
-            plugPos: { ...rest },
+            plugPos: { ...def.at },
             plugged: false,
-            awake: !asleep.includes(def.id),
+            shown: true,
+            halo,
         }
         units.set(def.id, unit)
-        if (!unit.awake) sleep(unit)
-        draw(unit)
+        aim(unit)
+        settle(unit)
     })
-
-    function sleep(u: Unit) {
-        u.sprite.setTint(C.asleep).setAlpha(0.75)
-        u.plug.setAlpha(0.5)
-        u.zzz = view.world(
-            scene.add
-                .text(u.def.at.x + u.size * 0.32, u.def.at.y - u.size * 0.45, 'z z z', {
-                    fontFamily: FONT.black,
-                    fontSize: '30px',
-                    color: CSS.inkSoft,
-                })
-                .setOrigin(0.5)
-                .setResolution(2)
-                .setDepth(DEPTH.fx),
-        )
-        scene.tweens.add({ targets: u.zzz, y: u.zzz.y - 14, alpha: 0.4, duration: 900, yoyo: true, repeat: -1 })
-    }
 
     function cableEnd(u: Unit): Vec {
         const angle = u.plug.rotation
@@ -182,6 +193,7 @@ export function createGear(scene: Phaser.Scene, view: View, defs: DeviceDef[], a
         g.fillStyle(C.cable, 1)
         g.fillCircle(u.port.x, u.port.y, CABLE.width * 0.9)
         g.fillCircle(b.x, b.y, CABLE.width * 0.5)
+        u.halo.setPosition(u.plugPos.x, u.plugPos.y)
     }
 
     const get = (id: DeviceId) => {
@@ -211,8 +223,8 @@ export function createGear(scene: Phaser.Scene, view: View, defs: DeviceDef[], a
     const screenRect = (u: Unit): Rect => {
         const s = u.size / 256
         return {
-            x: u.def.at.x + MONITOR_SCREEN.x * s,
-            y: u.def.at.y + MONITOR_SCREEN.y * s,
+            x: u.at.x + MONITOR_SCREEN.x * s,
+            y: u.at.y + MONITOR_SCREEN.y * s,
             w: MONITOR_SCREEN.w * s,
             h: MONITOR_SCREEN.h * s,
         }
@@ -286,7 +298,7 @@ export function createGear(scene: Phaser.Scene, view: View, defs: DeviceDef[], a
     }
 
     async function play(u: Unit) {
-        const at = toScreen(u.def.at)
+        const at = toScreen(u.at)
         void FX.impact(scene, u.sprite, 0.08)
         const glyphs = ['♪', '♫', '♪', '♬']
         for (let i = 0; i < glyphs.length; i++) {
@@ -301,18 +313,46 @@ export function createGear(scene: Phaser.Scene, view: View, defs: DeviceDef[], a
         }
     }
 
-    async function store(u: Unit) {
-        await FX.impact(scene, u.sprite, 0.2)
-        u.badge?.destroy()
+    function badgeArt(payload: Payload) {
         const g = scene.add.graphics()
         g.fillStyle(C.white, 1)
         g.fillCircle(0, 0, 26)
+        if (payload === 'foto') {
+            g.fillStyle(0x8fd3ff, 1)
+            g.fillRoundedRect(-15, -11, 30, 22, 4)
+            g.fillStyle(C.plant, 1)
+            g.fillTriangle(-13, 9, -3, -4, 7, 9)
+            g.fillStyle(C.accentYellow, 1)
+            g.fillCircle(8, -4, 4)
+            return g
+        }
+        if (payload === 'texto' || payload === 'cursor') {
+            g.fillStyle(C.memoria, 1)
+            ;[-9, 0, 9].forEach(y => g.fillRoundedRect(-13, y - 2.5, y === 9 ? 16 : 26, 5, 2.5))
+            return g
+        }
         g.fillStyle(C.accentBlue, 1)
         g.fillRoundedRect(-6, -14, 12, 20, 6)
         g.fillRect(-1.5, 6, 3, 6)
         g.fillRoundedRect(-9, 11, 18, 4, 2)
-        u.badge = view.world(scene.add.container(u.def.at.x + u.size * 0.32, u.def.at.y - u.size * 0.3, [g]).setDepth(DEPTH.fx))
+        return g
+    }
+
+    async function store(u: Unit, payload: Payload) {
+        await FX.impact(scene, u.sprite, 0.2)
+        u.badge?.destroy()
+        u.badge = view.world(scene.add.container(u.at.x + u.size * 0.32, u.at.y - u.size * 0.3, [badgeArt(payload)]).setDepth(DEPTH.fx))
         await FX.popIn(scene, u.badge, { from: 0.3, duration: 320 })
+    }
+
+    /** A memória segura enquanto usa e depois solta: o selinho aparece e some. */
+    async function holdAWhile(u: Unit, payload: Payload) {
+        await FX.impact(scene, u.sprite, 0.16)
+        const badge = view.world(scene.add.container(u.at.x + u.size * 0.32, u.at.y - u.size * 0.3, [badgeArt(payload)]).setDepth(DEPTH.fx))
+        await FX.popIn(scene, badge, { from: 0.3, duration: 320 })
+        await FX.wait(scene, 900)
+        await FX.to(scene, badge, { alpha: 0, scale: 0.4 }, { duration: 520 })
+        badge.destroy()
     }
 
     const gear: Gear = {
@@ -320,14 +360,14 @@ export function createGear(scene: Phaser.Scene, view: View, defs: DeviceDef[], a
         def: id => get(id).def,
         rect(id) {
             const u = get(id)
-            return { x: u.def.at.x, y: u.def.at.y + 14, w: u.size + 30, h: u.size + 60 }
+            return { x: u.at.x, y: u.at.y + 14, w: u.size + 30, h: u.size + 60 }
         },
         plugAt: id => ({ ...get(id).plugPos }),
         plugUnder(at) {
             let best: DeviceId | null = null
             let bestD = PLUG.hit / 2
             units.forEach((u, id) => {
-                if (!u.awake) return
+                if (!u.shown) return
                 const d = Phaser.Math.Distance.BetweenPoints(at, u.plugPos)
                 if (d < bestD) {
                     bestD = d
@@ -339,35 +379,60 @@ export function createGear(scene: Phaser.Scene, view: View, defs: DeviceDef[], a
         deviceUnder(at) {
             let best: DeviceId | null = null
             units.forEach((u, id) => {
+                if (!u.shown) return
                 const half = (DEVICE.hit * (u.size / DEVICE.size)) / 2
-                if (Math.abs(at.x - u.def.at.x) < half && Math.abs(at.y - u.def.at.y) < half) best = id
+                if (Math.abs(at.x - u.at.x) < half && Math.abs(at.y - u.at.y) < half) best = id
             })
             return best
         },
-        awake: id => get(id).awake,
-        async wake(id) {
+        at: id => ({ ...get(id).at }),
+        visible: id => get(id).shown,
+        place(id, at) {
             const u = get(id)
-            if (u.awake) return
-            u.awake = true
-            if (u.zzz) {
-                scene.tweens.killTweensOf(u.zzz)
-                u.zzz.destroy()
-                u.zzz = undefined
-            }
-            u.sprite.clearTint().setAlpha(1)
-            u.plug.setAlpha(1)
-            const at = toScreen(u.def.at)
-            void FX.sparks(scene, at.x, at.y, { color: C.spark, count: 16, spread: 120, depth: DEPTH.fx })
-            await FX.impact(scene, u.sprite, 0.2)
+            u.at = { ...at }
+            aim(u)
+            if (!u.plugged) settle(u)
+            else draw(u)
+        },
+        async show(id) {
+            const u = get(id)
+            u.shown = true
+            const list = parts(u)
+            list.forEach(o => o.setVisible(true).setAlpha(0))
+            const base = u.size / u.sprite.frame.width
+            u.sprite.setScale(base * 0.4)
+            await FX.all(
+                FX.to(scene, list, { alpha: 1 }, { duration: 260 }),
+                FX.to(scene, u.sprite, { scale: base }, { duration: 420, ease: 'Back.easeOut' }),
+            )
+        },
+        async hide(id) {
+            const u = get(id)
+            u.shown = false
+            gear.invite(id, false)
+            const list = parts(u)
+            await FX.to(scene, list, { alpha: 0 }, { duration: 260 })
+            if (!u.shown) list.forEach(o => o.setVisible(false))
+        },
+        invite(id, on) {
+            const u = get(id)
+            const want = on && u.shown && !u.plugged
+            if (want === Boolean(u.inviting)) return
+            u.inviting?.stop()
+            u.inviting = undefined
+            u.halo.setVisible(want).setScale(1).setAlpha(0.95)
+            if (want) u.inviting = scene.tweens.add({ targets: u.halo, scale: 1.6, alpha: 0, duration: 900, repeat: -1 })
         },
         hold(id, at) {
             const u = get(id)
+            gear.invite(id, false)
             u.plugPos = { ...at }
             u.plug.setPosition(at.x, at.y)
             draw(u)
         },
         async snap(id, socket) {
             const u = get(id)
+            gear.invite(id, false)
             u.plugged = true
             await tweenPlug(u, socket, 140, 'Back.easeOut')
         },
@@ -395,7 +460,7 @@ export function createGear(scene: Phaser.Scene, view: View, defs: DeviceDef[], a
         },
         send(id) {
             const u = get(id)
-            const at = toScreen(u.def.at)
+            const at = toScreen(u.at)
             void FX.impact(scene, u.sprite, 0.14)
             if (id === 'camera') void FX.flash(scene, C.white, { duration: 220, peak: 0.6 })
             if (id === 'microfone' || id === 'teclado' || id === 'mouse' || id === 'camera')
@@ -405,7 +470,8 @@ export function createGear(scene: Phaser.Scene, view: View, defs: DeviceDef[], a
             const u = get(id)
             if (id === 'monitor') await show(u, payload)
             else if (id === 'altofalante') await play(u)
-            else if (id === 'pendrive') await store(u)
+            else if (u.def.kind === 'armazenamento') await store(u, payload)
+            else if (u.def.kind === 'memoria') await holdAWhile(u, payload)
             else await FX.impact(scene, u.sprite, 0.12)
         },
         hint(id) {
@@ -434,16 +500,12 @@ export function createGear(scene: Phaser.Scene, view: View, defs: DeviceDef[], a
             gear.hint(null)
             clearScreen()
             units.forEach(u => {
-                if (u.zzz) scene.tweens.killTweensOf(u.zzz)
-                ;[u.sprite, u.name, u.cable, u.plug, u.zzz, u.badge].forEach(o => o?.destroy())
+                u.inviting?.stop()
+                ;[u.sprite, u.name, u.cable, u.plug, u.halo, u.badge].forEach(o => o?.destroy())
             })
             units.clear()
         },
     }
 
-    units.forEach(u => {
-        u.plug.setRotation(Math.atan2(u.dir.y, u.dir.x))
-        draw(u)
-    })
     return gear
 }

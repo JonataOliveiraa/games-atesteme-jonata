@@ -124,6 +124,8 @@ import coverLancheEmCamadas from "../assets/games/EF05CO01/lanche-em-camadas/cov
 import coverUmDiaNoCelular from "../assets/games/EF04CO07/um-dia-no-celular/cover-um-dia-no-celular.png";
 import coverRastroDaNoticia from "../assets/games/EF04CO08/rastro-da-noticia/cover-rastro-da-noticia.png";
 import coverArvoreDaFamilia from "../assets/games/EF05CO02/arvore-da-familia/cover-arvore-da-familia.png";
+import coverRioDeChocolate from "../assets/games/EF05CO03/rio-de-chocolate/cover-rio-de-chocolate.png";
+import coverCaboCerto from "../assets/games/EF05CO05/cabo-certo/cover-cabo-certo.png";
 /**
  * 1. `id` nunca muda e nunca é reaproveitado. Se um jogo for removido,
  *    marque status "draft" — não devolva o id para a fila.
@@ -1472,15 +1474,16 @@ export const catalog: Game[] = [
     module: "EF05CO03/rio-de-chocolate",
     skill: "EF05CO03",
     years: [5],
-    tags: ["lógica", "não", "verdadeiro e falso", "pular"],
+    tags: ["lógica", "não", "e", "ou", "verdadeiro e falso", "pular"],
     order: 332,
     status: "published",
     title: "Rio de Chocolate",
     description:
-      "A placa diz qual doce aguenta. Pule de doce em doce pelo rio de chocolate só nos que deixam a frase verdadeira — e cuidado com o NÃO, que troca a resposta!",
+      "A placa diz qual doce aguenta. Pule de doce em doce pelo rio de chocolate só nos que deixam a frase verdadeira: o NÃO troca a resposta, o E pede as duas partes e o OU se contenta com uma!",
     category: "Pensamento Computacional",
     points: 30,
     icon: "🍫",
+    thumbnail: coverRioDeChocolate,
   },
   {
     id: "034",
@@ -1522,14 +1525,14 @@ export const catalog: Game[] = [
     module: "EF05CO04/pit-stop-da-chuva",
     skill: "EF05CO04",
     years: [5],
-    tags: ["condicional", "se-senão", "simular", "regra"],
+    tags: ["condicional", "se-senão", "senão-se", "se-aninhado", "simular", "regra"],
     order: 347,
     status: "published",
     title: "Pit Stop da Chuva",
     description:
-      "A Kika corre de kart e você é a equipe do box: a cada parada, olhe o céu e siga a regra. SE estiver chovendo, pneu de chuva; SENÃO, pneu liso.",
+      "Pilote a Kika: acelere, freie e, quando o tempo ou a pista mudarem, pare no box e ponha o pneu que a regra manda — enquanto os rivais continuam correndo.",
     category: "Pensamento Computacional",
-    points: 30,
+    points: 55,
     icon: "🏎️",
   },
   {
@@ -1572,15 +1575,16 @@ export const catalog: Game[] = [
     module: "EF05CO05/cabo-certo",
     skill: "EF05CO05",
     years: [5],
-    tags: ["hardware", "entrada e saída", "processador", "armazenamento", "cabos", "arrastar"],
+    tags: ["hardware", "entrada e saída", "processador", "memória", "armazenamento", "cabos", "arrastar"],
     order: 357,
     status: "published",
     title: "Cabo Certo",
     description:
-      "O computador está no meio do mapa. Ache o aparelho que o pedido precisa, puxe o cabo até a tomada certa (ENTRADA, SAÍDA ou ARMAZENAMENTO) e veja a informação passar pelo processador.",
+      "O computador está no meio. Puxe o cabo de cada aparelho até a tomada certa (ENTRADA, SAÍDA, MEMÓRIA ou ARMAZENAMENTO), monte cabo dentro de cabo com o hub e veja a informação passar pelo processador.",
     category: "Mundo Digital",
-    points: 30,
+    points: 65,
     icon: "🔌",
+    thumbnail: coverCaboCerto,
   },
   {
     id: "036",
@@ -2278,6 +2282,54 @@ export const catalog: Game[] = [
     icon: "📨",
     thumbnail: coverQuemBateAPorta,
   },
+  {
+    id: "126",
+    slug: "catapulta-do-arquivo",
+    module: "EF05CO06/catapulta-do-arquivo",
+    skill: "EF05CO06",
+    years: [5],
+    tags: ["armazenamento", "local ou remoto", "pen drive", "nuvem", "catapulta"],
+    order: 367,
+    status: "published",
+    title: "Catapulta do Arquivo",
+    description:
+      "Lance o arquivo com a catapulta e guarde no lugar que o pedido manda: no LOCAL, o HD de dentro do computador, ou num REMOTO, como o pen drive e a nuvem.",
+    category: "Mundo Digital",
+    points: 40,
+    icon: "🎯",
+  },
+  {
+    id: "127",
+    slug: "pula-pula-na-internet",
+    module: "EF05CO08/pula-pula-na-internet",
+    skill: "EF05CO08",
+    years: [5],
+    tags: ["fonte", "confiabilidade", "checagem", "notícia", "plataforma"],
+    order: 387,
+    status: "published",
+    title: "Pula-Pula na Internet",
+    description:
+      "O celular pula pelas abas da internet. Pegue a notícia, a mensagem ou a foto do caminho e veja quem fez, quando e de onde veio: pode confiar?",
+    category: "Cultura Digital",
+    points: 40,
+    icon: "📱",
+  },
+  {
+    id: "128",
+    slug: "bairro-das-permissoes",
+    module: "EF05CO07/bairro-das-permissoes",
+    skill: "EF05CO07",
+    years: [5],
+    tags: ["sistema operacional", "hardware", "permissões", "bairro", "correr"],
+    order: 377,
+    status: "published",
+    title: "Bairro das Permissões",
+    description:
+      "O bairro é o computador e você é o sistema: corra até a casa do programa que chama e decida se ele PODE usar a peça. Pode? Vá buscar na oficina!",
+    category: "Mundo Digital",
+    points: 40,
+    icon: "🏘️",
+  },
 ];
 
 /**
@@ -2287,7 +2339,7 @@ export const catalog: Game[] = [
  * saltado de 086 para 090; os oito jogos de 090 a 097 desceram três casas
  * (090→087 … 097→094) para fechar o 087–089.
  */
-export const NEXT_FREE_ID = "126";
+export const NEXT_FREE_ID = "129";
 
 /**
  * AS RODADAS DE PRODUÇÃO.

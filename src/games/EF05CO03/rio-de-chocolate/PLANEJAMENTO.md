@@ -34,16 +34,16 @@ Da ficha ficaram os doces e os atributos (cor, forma, cobertura, tamanho), as fr
 | **sentença lógica** | a placa no alto: *"Aguenta o doce que tem GRANULADO"* |
 | **valor verdadeiro / falso** | cada doce deixa a frase verdadeira (aguenta) ou falsa (afunda). O letreiro marca ✓ ou ✗ quando a Mel pousa |
 | **negação** (N1) | *"Aguenta o doce que NÃO é ROSA"*: o letreiro confere *é ROSA* (✓/✗) e o NÃO **vira** a marca |
-| **conjunção e disjunção** (N2, planejado) | *"é ROSA E é REDONDO"*, *"é LISTRADO OU é PEQUENO"*: duas marcas, e o E ou o OU juntam as duas |
+| **conjunção e disjunção** (N2 e N3) | *"é ROSA E é REDONDO"*, *"é LISTRADO OU é PEQUENO"*: duas marcas, e o E ou o OU juntam as duas numa marca final |
 
 ## 3. O laço
 
-1. **Começa uma travessia.** A Mel está na margem da esquerda; a festa, na da direita. Entre as duas boiam **3 fileiras de 3 doces**, uma atrás da outra. A placa entra grande no meio da tela e depois sobe para o alto.
+1. **Começa uma travessia.** A Mel está na margem da esquerda; a festa, na da direita. Entre as duas boiam **3 fileiras de 3 doces** (4 no N3), uma atrás da outra. A placa entra grande no meio da tela e depois sobe para o alto.
 2. **A fileira da vez acende**: os 3 doces dela ganham o mesmo anel amarelo pulsando. As fileiras de depois ficam esmaecidas.
 3. **A criança toca num doce**, e a Mel pula nele.
    - **A frase vale para ele:** o doce balança e aguenta. A peça do letreiro e o doce pulam juntos e aparece o ✓ (com NÃO: primeiro a marca de *é ROSA*, depois o NÃO a vira). Faísca verde, e a tela anda para a próxima fileira.
    - **A frase não vale:** a mesma conferência termina em ✗. O doce treme e afunda, a Mel cai no chocolate (*plof*!) e sai lambuzada. A peça culpada treme, a faixa diz o motivo (*"Esse doce é rosa!"*) e a partida acaba.
-4. **Depois da 3ª fileira** a Mel pula sozinha para a margem da festa, e a bolinha da fase acende. Começa a próxima travessia, com outra placa.
+4. **Depois da última fileira** a Mel pula sozinha para a margem da festa, e a bolinha da fase acende. Começa a próxima travessia, com outra placa.
 
 Não há relógio: a Mel espera em cima do doce o tempo que for preciso.
 
@@ -141,12 +141,63 @@ O `?` (em jogo) tem um balão sobre a placa, *"A placa diz qual aguenta."*, e um
 
 A Mel chega à margem da festa: o mundo anda até a festa aparecer inteira, ela comemora, faíscas sobre o bolo, a bolinha da fase acende (`CORRECT_ANSWER`, 10 pontos por travessia). A tela escurece e abre na próxima travessia, com a Mel de volta à margem de partida.
 
-Na 3ª travessia: confete, `GAME_COMPLETED` e `showLevelComplete` com JOGAR DE NOVO (só existe o N1). Sem quadro de resumo.
+Na 3ª travessia: confete, `GAME_COMPLETED` (com `stage` = nível e `totalStages: LEVELS.length`) e `showLevelComplete`. No N1 e no N2 o painel passa sozinho para o próximo nível (`autoAdvance`, 2,6 s); no N3 tem JOGAR DE NOVO, que volta ao N1. Sem quadro de resumo.
 
-## 11. N2 e N3 (só planejados; entram quando o usuário pedir)
+## 11. N2 e N3
 
-- **N2 — E e OU.** Placas da ficha: *"é ROSA **E** é REDONDO"*, *"é LISTRADO **OU** é PEQUENO"*, *"é QUADRADO **E** NÃO é MARROM"*. O letreiro ganha duas peças de termo e a pílula do operador (E azul, OU âmbar). Ao pousar, cada termo recebe a sua marca e o operador junta as duas numa marca final. Armadilhas obrigatórias na validação: no **E**, toda fileira tem um doce com só uma das duas coisas; no **OU**, nenhum doce tem as duas e há um com só uma (quem acha que OU é E fica sem saída). Três atributos mudam por fase.
-- **N3 — frases compostas.** *"NÃO é VERDE **E** tem GRANULADO"*, *"é GRANDE **OU** NÃO é LISO"*, com 4 fileiras por travessia. O pedido-espelho da ficha fica de fora: ele é o Portões Lógicos.
+### O letreiro com duas partes
+
+`"[NÃO] [termo] [E/OU] [NÃO] [termo]"`. A pílula do operador é **E azul** ou **OU âmbar** (nunca rosa, verde ou caramelo), um pouco mais estreita que a do NÃO (76 px contra 92).
+
+- **Placa grande:** com *"Aguenta o doce que"* na frente. A escala é a menor entre 1,7 e o que cabe em 1200 px.
+- **No cabeçalho:** frase de duas partes perde o *"Aguenta o doce que"* (as peças deslizam juntas ao subir), para caber em escala 1. A placa fica entre os divisores (`SIGN.left` 296 e `SIGN.right` 1136), centrada em 640 quando cabe e empurrada para a direita quando não cabe. A maior, *"NÃO é VERDE E tem GRANULADO"*, cabe inteira em escala 1 (letra de 27 px).
+- **Ao pousar:** cada termo pula e ganha ✓/✗; com NÃO, a marca vira. Depois as duas marcas voam para o operador, ele pula e ganha a **marca final** (som `join`). Frase de um termo não tem esse passo.
+- **Erro:** tremem todas as peças culpadas (`logic.culprits`: no E, as partes falsas; no OU, as duas), e a pílula NÃO junto quando foi ela que virou a marca. A faixa diz o motivo: *"Esse doce não é rosa!"*, *"Esse doce é marrom!"*, *"Esse doce não é listrado nem é pequeno!"*, *"Esse doce é pequeno e é liso!"*.
+
+### O N2 — O E E O OU JUNTAM DUAS PARTES
+
+3 travessias de 3 fileiras. **Três atributos** mudam por fase.
+
+| Fase | Placa | Mudam | Iguais | Ensina |
+|---|---|---|---|---|
+| 1 | **é ROSA E é REDONDO** | cor, forma, cobertura | grande | E |
+| 2 | **é LISTRADO OU é PEQUENO** | cobertura, tamanho, cor | quadrado | OU |
+| 3 | **é QUADRADO E NÃO é MARROM** | forma, cor, cobertura | grande | — |
+
+| Fase | 1ª fileira | 2ª fileira | 3ª fileira |
+|---|---|---|---|
+| 1 | verde redondo · **rosa redondo ✔** · rosa quadrado | **rosa redondo listrado ✔** · marrom redondo · **rosa redondo liso ✔** | verde redondo · **rosa redondo ✔** · rosa quadrado |
+| 2 | verde grande liso · rosa grande granulado · **marrom grande listrado ✔** | **rosa pequeno granulado ✔** · marrom grande liso · **verde grande listrado ✔** | marrom grande granulado · **verde pequeno liso ✔** · rosa grande liso |
+| 3 | marrom quadrado · verde redondo · **rosa quadrado ✔** | **verde quadrado ✔** · **rosa quadrado ✔** · rosa redondo | verde redondo · **verde quadrado ✔** · marrom quadrado |
+
+### O N3 — FRASES COM E, OU E NÃO
+
+3 travessias de **4 fileiras**, toda placa com NÃO e sem demonstração. A Mel continua andando 260 px por pulo; a 4ª fileira começa fora da tela (x 1300) e entra com o primeiro pulo, e a margem da festa recua sozinha (`world.setColumns`).
+
+| Fase | Placa | Mudam | Iguais |
+|---|---|---|---|
+| 1 | **NÃO é VERDE E tem GRANULADO** | cor, cobertura, tamanho | redondo |
+| 2 | **é GRANDE OU NÃO é LISO** | tamanho, cobertura, cor | quadrado |
+| 3 | **NÃO é ROSA OU é QUADRADO** | cor, forma, cobertura | grande |
+
+Nas três, o certo da 1ª fileira fica no meio, os da 2ª em cima e embaixo, os da 3ª no meio (e embaixo, no OU) e o da 4ª em cima; as fileiras completas estão em `data/levels.ts`.
+
+### Validação (além das do N1)
+
+- N2 e N3: frase de dois termos, de atributos diferentes; os dois atributos da placa mudam.
+- N2: mudam exatamente 3 atributos e há 3 fileiras. N3: mudam 3 ou mais, há 4 fileiras e toda frase tem NÃO.
+- **No E:** toda fileira tem um doce com **só uma** das duas partes verdadeira (quem lê só metade da placa afunda).
+- **No OU:** nenhum doce tem as duas partes, toda fileira tem um com só uma, e os certos vêm pelas duas partes (há certo só pela esquerda e certo só pela direita). Quem acha que OU é E fica sem saída.
+- Toda fase que ensina tem 1 certo na 1ª fileira, e `teach` combina com a placa (E/OU/NÃO).
+- Todos os atributos que mudam e não estão na placa variam entre os certos.
+
+### Tutorial do E e do OU
+
+Igual ao do NÃO: a placa entra grande, **guia** com recorte nas duas partes + operador, *"Com E, as duas partes têm que valer."* / *"Com OU, basta uma parte valer."* [Ver]; demonstração com o pé (no E, o pé vai no doce com só uma parte: ✓ ✗ → ✗) e o pulo no certo; *"Sua vez!"*.
+
+A **abertura** (festa, câmera, falas da Mel) sai uma vez por sessão, em qualquer nível (`OPENING_KEY`). Quem entra direto por `?stage=2` ou `?stage=3` vê a abertura e o passo *"A placa diz qual aguenta."* antes do passo do E (no N3, só ele, sem demonstração). Quem chega do N1 vai direto ao passo do E.
+
+O `?` mostra até 3 balões: a placa, o NÃO (se houver) e o E ou o OU.
 
 ## 12. O que mudou da ficha, e por quê
 
@@ -190,3 +241,5 @@ A resposta certa não fica nos dados: `holds(rule, sweet)` em `data/logic.ts` de
 - Jogado no navegador: a abertura (a festa, a câmera correndo até a Mel, o close e as duas falas), a placa grande, as duas demonstrações (granulado e NÃO), um pulo certo, o erro (o doce afunda, a Mel cai, a faixa *"Esse doce não tem granulado!"*, `lose()`), o `?` com os dois balões e o nível inteiro até "Nível 1 completo!" (30 pontos).
 - Ajustes depois de ver: a Mel passou de 150 para 170 px; as fileiras de depois ficaram escurecidas por tinta (com transparência, o chocolate aparecia através delas); as raias desceram para y 285/450/615, porque o chapéu encostava no cabeçalho; o ícone de *é GRANDE* mostra um doce grande e um pequeno.
 - Mesmo dia, pedido do usuário: o rio fica só em Graphics (saiu o `rio.png`), e os prompts foram refeitos na linha **doodle de lápis de cor** (referência `39`). A arte de reserva em código não mudou.
+- 20/10/2026, pedido do Maestro: **N2 e N3**. `LEVELS = [N1, N2, N3]`; letreiro de duas partes com marca final no operador; culpados múltiplos; tutorial do E e do OU; abertura com chave própria; `validateLevels` com as armadilhas do E e do OU. Chegaram os seis PNGs da Aquarela e da Tesoura; a margem de partida andou 35 px para a direita (`nearX` −225, beira em ~365 no mundo) porque a Mel pisava na beira molhada, e o ponto das faíscas da festa foi para x 620. Capa ligada no `catalog.ts`; descrição e tags citam E e OU.
+- Jogado no navegador (`jogos-dev-rio`, porta 5283): `?stage=1` inteiro até o N2 (sem repetir abertura); `?stage=2` com a abertura, as duas demonstrações, um acerto, o `?` com os balões, um erro (*"Esse doce não é rosa!"*, `WRONG_ANSWER` + `GAME_OVER` com `stage: 2`) e o nível completo passando para o N3; `?stage=3` com um erro (*"Esse doce é verde!"*) e o nível completo (`GAME_COMPLETED` `stage: 3`, `totalStages: 3`, JOGAR DE NOVO).

@@ -1,9 +1,12 @@
-import type { Branch } from '../types'
 
 type Wave = 'sine' | 'square' | 'triangle' | 'sawtooth'
 
 export interface Audio {
-    branch(b: Branch): void
+    branch(): void
+    engine(k: number): void
+    gust(): void
+    beep(high: boolean): void
+    mud(): void
     zzzt(): void
     pop(): void
     vroom(): void
@@ -37,6 +40,7 @@ export function createAudio(): Audio {
     let bus: GainNode | undefined
     let muted = false
     let rainTimer: number | undefined
+    let motor: { osc: OscillatorNode; sub: OscillatorNode; gain: GainNode } | undefined
 
     const get = () => {
         if (muted) return undefined
@@ -101,10 +105,53 @@ export function createAudio(): Audio {
         rainTimer = undefined
     }
 
+    const stopMotor = () => {
+        if (!motor) return
+        try {
+            motor.osc.stop()
+            motor.sub.stop()
+        } catch {
+            /* já parado */
+        }
+        motor = undefined
+    }
+
     return {
-        branch(b) {
-            if (b === 'then') notes([659, 988], 120, { wave: 'triangle', gain: 0.13 })
-            else notes([784, 523], 120, { wave: 'triangle', gain: 0.13 })
+        branch() {
+            notes([659, 988], 120, { wave: 'triangle', gain: 0.13 })
+        },
+        engine(k) {
+            const audio = get()
+            if (!audio || !bus) return
+            if (!motor) {
+                const osc = audio.createOscillator()
+                const sub = audio.createOscillator()
+                const gain = audio.createGain()
+                osc.type = 'sawtooth'
+                sub.type = 'square'
+                gain.gain.value = 0
+                osc.connect(gain)
+                sub.connect(gain)
+                gain.connect(bus)
+                osc.start()
+                sub.start()
+                motor = { osc, sub, gain }
+            }
+            const t = audio.currentTime
+            motor.osc.frequency.setTargetAtTime(55 + k * 120, t, 0.08)
+            motor.sub.frequency.setTargetAtTime(28 + k * 60, t, 0.08)
+            motor.gain.gain.setTargetAtTime(k > 0.01 ? 0.018 + k * 0.022 : 0.008, t, 0.1)
+        },
+        gust() {
+            noise(900, 0.1, 0, 600, 'bandpass')
+            tone(220, 700, { wave: 'sine', gain: 0.04, to: 140 })
+        },
+        beep(high) {
+            tone(high ? 880 : 440, high ? 420 : 200, { wave: 'square', gain: 0.07 })
+        },
+        mud() {
+            noise(260, 0.16, 0, 300, 'lowpass')
+            tone(120, 200, { wave: 'sine', gain: 0.1, to: 70 })
         },
         zzzt() {
             tone(170, 220, { wave: 'square', gain: 0.05, to: 260 })
@@ -162,10 +209,14 @@ export function createAudio(): Audio {
         },
         setMuted(on) {
             muted = on
-            if (on) stopRain()
+            if (on) {
+                stopRain()
+                stopMotor()
+            }
         },
         destroy() {
             stopRain()
+            stopMotor()
             void ctx?.close()
             ctx = undefined
             bus = undefined

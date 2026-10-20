@@ -15,32 +15,47 @@ export interface FigureData {
     px?: number
 }
 
-export const KART_SHEET: Sheet = { key: 'karts', cols: 3, rows: 2, cellW: 384, cellH: 256, ref: [0], trim: false }
+export const KART_SHEET: Sheet = { key: 'karts', cols: 4, rows: 2, cellW: 384, cellH: 256, ref: [0], trim: false }
+export const MOTO_SHEET: Sheet = { key: 'motos', cols: 4, rows: 2, cellW: 384, cellH: 256, ref: [0], trim: false }
 export const CREW_SHEET: Sheet = { key: 'equipe', cols: 4, rows: 2, cellW: 320, cellH: 400, ref: [0, 4, 6], trim: true, pin: true }
-export const PIECE_SHEET: Sheet = { key: 'pecas', cols: 4, rows: 3, cellW: 256, cellH: 256, ref: [0], trim: true }
+export const PIECE_SHEET: Sheet = { key: 'pecas', cols: 6, rows: 3, cellW: 256, cellH: 256, ref: [0], trim: true }
+export const CONTROL_SHEET: Sheet = { key: 'controles', cols: 3, rows: 1, cellW: 256, cellH: 256, ref: [0], trim: true }
 
-export const SHEETS = [KART_SHEET, CREW_SHEET, PIECE_SHEET]
+export const SHEETS = [KART_SHEET, MOTO_SHEET, CREW_SHEET, PIECE_SHEET, CONTROL_SHEET]
 
 export const TRACK_KEY = 'autodromo'
-export const BOX_KEY = 'box'
-export const IMAGES = [TRACK_KEY, BOX_KEY]
+export const MUD_KEY = 'lama'
+export const TENT_KEY = 'tenda'
+export const HAND_KEY = 'mao'
+export const IMAGES = [TRACK_KEY, MUD_KEY, TENT_KEY, HAND_KEY]
 
-export const KART_CELL = { idle: 0, race: 1, cheer: 2, dizzy: 3, worried: 4, rival: 5 } as const
+/** A ponta do dedo na `mao.png`, em fração da imagem. */
+export const HAND_TIP = { x: 0.34, y: 0.07 } as const
+
+/** As duas folhas de veículo têm a mesma ordem: a Kika em 5 caras, os dois rivais e o veículo vazio. */
+export const CAR_CELL = { idle: 0, race: 1, cheer: 2, dizzy: 3, worried: 4, rivalA: 5, rivalB: 6, empty: 7 } as const
 export const CREW_CELL = { beto: 0, betoTalk: 1, betoFlag: 2, betoOops: 3, lua: 4, luaWork: 5, davi: 6, daviWork: 7 } as const
 export const PIECE_CELL = {
     liso: 0,
     chuva: 1,
-    inter: 2,
+    cravos: 2,
     flat: 3,
-    cartLiso: 4,
-    cartChuva: 5,
-    cartInter: 6,
-    hay: 7,
-    rainCloud: 8,
-    cloud: 9,
-    sun: 10,
-    puddle: 11,
+    motoLiso: 4,
+    motoChuva: 5,
+    cartLiso: 6,
+    cartChuva: 7,
+    cartCravos: 8,
+    cartMotoLiso: 9,
+    cartMotoChuva: 10,
+    hay: 11,
+    rainCloud: 12,
+    cloud: 13,
+    sun: 14,
+    puddle: 15,
+    mud: 16,
+    flag: 17,
 } as const
+export const CONTROL_CELL = { gas: 0, brake: 1, pit: 2 } as const
 
 export const cellKey = (index: number) => `c${index}`
 

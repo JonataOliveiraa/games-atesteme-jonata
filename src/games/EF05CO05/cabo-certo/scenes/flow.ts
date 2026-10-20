@@ -8,7 +8,7 @@ import type { View } from './view'
 
 /** A bolinha de informação, que corre pelos cabos com um rastro de luz. */
 export interface Flow {
-    travel(points: Vec[], payload: Payload): Promise<void>
+    travel(points: Vec[], payload: Payload, tone?: number): Promise<void>
     /** Onde está a bolinha mais nova, para a câmera acompanhar. */
     lead(): Vec | null
     clear(): void
@@ -40,9 +40,9 @@ export function createFlow(scene: Phaser.Scene, view: View): Flow {
     }
 
     return {
-        travel(points, payload) {
+        travel(points, payload, tone) {
             if (points.length < 2) return Promise.resolve()
-            const color = PAYLOAD_COLOR[payload]
+            const color = tone ?? PAYLOAD_COLOR[payload]
             const lengths = [0]
             for (let i = 1; i < points.length; i++) lengths.push(lengths[i - 1] + Phaser.Math.Distance.BetweenPoints(points[i - 1], points[i]))
             const total = lengths[lengths.length - 1]

@@ -46,10 +46,13 @@ export const HUD = {
 export const SIGN = {
     x: 640,
     y: 48,
-    maxW: 820,
+    left: 296,
+    right: 1136,
+    bigMaxW: 1200,
     chipH: 58,
     chipPad: 16,
     pillW: 92,
+    opW: 76,
     gap: 12,
     icon: 40,
     lead: 23,
@@ -83,13 +86,13 @@ export const MEL = {
 } as const
 
 export const BANK = {
-    nearX: -260,
+    nearX: -225,
     nearW: 640,
-    nearShore: 330,
+    nearShore: 365,
     farGap: 120,
     farW: 1280,
     farShore: 40,
-    party: { x: 560, y: 330 },
+    party: { x: 620, y: 330 },
 } as const
 
 export const RIVER = {

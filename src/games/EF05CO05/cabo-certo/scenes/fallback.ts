@@ -1,5 +1,5 @@
 import Phaser from 'phaser'
-import { DEVICE_SHEET, FLOOR_KEY, PC_KEY, PIECE_SHEET, type Sheet } from '../data/files'
+import { DEVICE_SHEET, FLOOR_KEY, HAND_KEY, PC_KEY, PIECE_SHEET, type Sheet } from '../data/files'
 import { WORLD } from '../data/layout'
 import { C } from '../data/theme'
 
@@ -47,6 +47,25 @@ export function ensureArt(scene: Phaser.Scene) {
     bakeSheet(scene, PIECE_SHEET, piece)
     bakeImage(scene, PC_KEY, 400, 480, computer)
     bakeImage(scene, FLOOR_KEY, WORLD.w, WORLD.h, floor)
+    bakeImage(scene, HAND_KEY, 256, 256, hand)
+}
+
+// ───────────────────────────────────────────── mãozinha (256 × 256)
+
+/** Dedo indicador em pé, ponta em (87, 18): é o HAND_TIP. Borda branca para aparecer sobre tudo. */
+function hand(g: G) {
+    const paint = (grow: number, tone: number, dark: number) => {
+        rr(g, 68 - grow, 10 - grow, 38 + grow * 2, 130 + grow, 19 + grow, tone)
+        rr(g, 104 - grow, 92 - grow, 34 + grow * 2, 70 + grow, 17 + grow, tone)
+        rr(g, 134 - grow, 102 - grow, 32 + grow * 2, 64 + grow, 16 + grow, tone)
+        rr(g, 162 - grow, 114 - grow, 28 + grow * 2, 56 + grow, 14 + grow, tone)
+        rr(g, 30 - grow, 128 - grow, 70 + grow * 2, 34 + grow * 2, 17 + grow, tone)
+        rr(g, 64 - grow, 120 - grow, 128 + grow * 2, 110 + grow * 2, 40 + grow, tone)
+        if (dark >= 0) rr(g, 76, 196, 104, 12, 6, dark)
+    }
+    paint(10, C.white, -1)
+    paint(0, C.skin, C.skinDark)
+    rr(g, 76, 22, 22, 18, 9, C.white)
 }
 
 // ───────────────────────────────────────────── aparelhos (256 × 256)
@@ -67,6 +86,12 @@ function device(g: G, i: number) {
             return speaker(g)
         case 6:
             return flashDrive(g)
+        case 7:
+            return memoryStick(g)
+        case 8:
+            return hub(g)
+        case 9:
+            return card(g)
         default:
             return
     }
@@ -160,6 +185,35 @@ function flashDrive(g: G) {
     dot(g, 204, 122, 6, C.ice)
 }
 
+function memoryStick(g: G) {
+    rr(g, 20, 104, 216, 70, 10, C.boardDark)
+    rr(g, 20, 98, 216, 70, 10, C.board)
+    for (let k = 0; k < 4; k++) rr(g, 36 + k * 48, 110, 38, 34, 5, C.chip)
+    for (let k = 0; k < 18; k++) {
+        if (k === 7) continue
+        rr(g, 28 + k * 11.4, 156, 7, 16, 2, C.pin)
+    }
+}
+
+function hub(g: G) {
+    rr(g, 34, 104, 188, 74, 24, C.slate)
+    rr(g, 34, 96, 188, 74, 24, C.slateLight)
+    rr(g, 52, 108, 152, 20, 10, C.ice)
+    ;[86, 128, 170].forEach(x => {
+        dot(g, x, 148, 10, C.graphiteDark)
+        dot(g, x, 148, 5, C.accentYellow)
+    })
+}
+
+function card(g: G) {
+    g.fillStyle(C.slate, 1)
+    g.fillPoints([{ x: 76, y: 46 }, { x: 160, y: 46 }, { x: 190, y: 76 }, { x: 190, y: 220 }, { x: 76, y: 220 }], true)
+    g.fillStyle(C.slateLight, 1)
+    g.fillPoints([{ x: 76, y: 40 }, { x: 160, y: 40 }, { x: 190, y: 70 }, { x: 190, y: 212 }, { x: 76, y: 212 }], true)
+    for (let k = 0; k < 5; k++) rr(g, 90 + k * 16, 50, 9, 30, 3, C.pin)
+    rr(g, 92, 120, 82, 70, 10, C.ice)
+}
+
 // ───────────────────────────────────────────── peças (128 × 128)
 
 function piece(g: G, i: number) {
@@ -171,13 +225,19 @@ function piece(g: G, i: number) {
         rr(g, 28, 50, 34, 8, 4, C.cableLight)
         return
     }
-    const tone = i === 1 ? C.entrada : i === 2 ? C.saida : C.armazenamento
-    const dark = i === 1 ? C.entradaDark : i === 2 ? C.saidaDark : C.armazenamentoDark
+    if (i > 4) return
+    const tone = [0, C.entrada, C.saida, C.armazenamento, C.memoria][i]
+    const dark = [0, C.entradaDark, C.saidaDark, C.armazenamentoDark, C.memoriaDark][i]
     dot(g, 64, 68, 56, dark)
     dot(g, 64, 62, 56, tone)
     dot(g, 64, 50, 24, dark)
     dot(g, 64, 50, 17, C.hole)
     g.fillStyle(C.white, 1)
+    if (i === 4) {
+        rr(g, 38, 82, 52, 20, 4, C.white)
+        for (let k = 0; k < 5; k++) rr(g, 42 + k * 9.5, 102, 5, 8, 1, C.white)
+        return
+    }
     if (i === 3) {
         rr(g, 44, 82, 40, 26, 6, C.white)
         rr(g, 44, 78, 40, 12, 6, C.white)
@@ -222,24 +282,12 @@ function floor(g: G) {
     g.fillRect(0, 0, w, h)
     rr(g, 110, 96, w - 220, h - 190, 90, C.rugEdge)
     rr(g, 126, 112, w - 252, h - 222, 80, C.rug)
-    g.fillStyle(C.rugLine, 1)
-    for (let x = 216; x < w - 140; x += 120) g.fillRect(x, 140, 4, h - 278)
-    for (let y = 200; y < h - 130; y += 120) g.fillRect(150, y, w - 300, 4)
-    rr(g, 950, 452, 500, 540, 60, C.tableDark)
-    rr(g, 950, 440, 500, 540, 60, C.table)
-
-    rr(g, 1960, 18, 340, 88, 18, C.shelfDark)
-    rr(g, 1960, 10, 340, 80, 18, C.shelf)
-    ;[2000, 2070, 2130, 2210].forEach((x, k) => rr(g, x, 22, 30 + (k % 2) * 12, 56, 6, [C.accentPink, C.accentYellow, C.accentBlue, C.lilac][k]))
+    // Tapete liso: nada no chão disputa a atenção com os aparelhos e os cabos.
     dot(g, 70, 1270, 54, C.pot)
     dot(g, 70, 1236, 62, C.plantDark)
     dot(g, 50, 1214, 40, C.plant)
     dot(g, 100, 1222, 36, C.plant)
-    dot(g, 2300, 1250, 78, C.puffDark)
-    dot(g, 2300, 1240, 74, C.puff)
     dot(g, 2330, 90, 48, C.pot)
     dot(g, 2330, 60, 54, C.plantDark)
     dot(g, 2310, 44, 34, C.plant)
-    rr(g, 40, 40, 200, 120, 40, C.lilac)
-    rr(g, 60, 58, 160, 84, 30, C.white)
 }

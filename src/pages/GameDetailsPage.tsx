@@ -57,6 +57,7 @@ const GAMES_WITH_IN_GAME_COMPLETION_SCREEN = new Set([
   "trilha-do-amanha",
   "guilda-dos-criadores",
   "olha-o-jornal",
+  "pula-pula-na-internet",
   "dia-sem-internet",
   "maestro-do-sistema",
   "raio-x-da-maquina",

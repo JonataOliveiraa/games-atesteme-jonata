@@ -1,0 +1,17 @@
+export const TIMING = {
+    pan: 650,
+    zoom: 900,
+    caption: 1100,
+    beat: 500,
+    beam: 900,
+    works: 1100,
+    recap: 1300,
+    error: 2400,
+    finale: 1400,
+    stamp: 420,
+    smoke: 260,
+    dust: 70,
+    demoRun: 1200,
+    idle: 7000,
+    gateNope: 1200,
+} as const

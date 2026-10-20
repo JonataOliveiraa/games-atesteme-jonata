@@ -2,13 +2,14 @@ import Phaser from 'phaser'
 import { FX } from '../../../../shared/effects/FX'
 import { createLives, type Lives } from '../../../../shared/hud/createLives'
 import { DEPTH, HEADER, HUD, W } from '../data/layout'
-import { C, FONT, SIZE, inkOn } from '../data/theme'
+import { C, CSS, FONT, SIZE, inkOn } from '../data/theme'
 import { LABEL } from '../data/words'
 import type { Rect } from '../types'
 
 export interface Header {
     readonly lives: Lives
     setPhase(index: number): void
+    setRace(player: number, rivals: number[], place: number): void
     celebrate(index: number): Promise<void>
     setHelpEnabled(on: boolean): void
     visible(on: boolean): void
@@ -60,6 +61,37 @@ export function createHeader(scene: Phaser.Scene, opts: HeaderOptions): Header {
     const pips = Array.from({ length: opts.phases }, (_, i) =>
         scene.add.circle(HUD.pipsX + i * HUD.pipGap, HUD.y, HUD.pipR, C.headerSoft).setDepth(DEPTH.hud + 1),
     )
+    const map = scene.add.graphics().setDepth(DEPTH.hud)
+    const mapW = HUD.mapX1 - HUD.mapX0
+    map.fillStyle(C.headerLine, 0.25)
+    map.fillRoundedRect(HUD.mapX0, HUD.y - 5, mapW, 10, 5)
+    map.fillStyle(C.white, 1)
+    map.fillRoundedRect(HUD.mapX0, HUD.y - 3, mapW, 6, 3)
+    for (let k = 1; k < opts.phases; k++) {
+        map.fillStyle(C.headerLine, 0.5)
+        map.fillRect(HUD.mapX0 + (k * mapW) / opts.phases - 1.5, HUD.y - 10, 3, 20)
+    }
+    const flag = scene.add.graphics().setDepth(DEPTH.hud)
+    for (let r = 0; r < 3; r++)
+        for (let c = 0; c < 3; c++) {
+            flag.fillStyle((r + c) % 2 ? C.white : C.flagDark, 1)
+            flag.fillRect(HUD.mapX1 + 6 + c * 8, HUD.y - 22 + r * 8, 8, 8)
+        }
+    flag.lineStyle(2, C.line, 1)
+    flag.strokeRect(HUD.mapX1 + 6, HUD.y - 22, 24, 24)
+    flag.fillStyle(C.metalDark, 1)
+    flag.fillRect(HUD.mapX1 + 4, HUD.y - 22, 3, 34)
+    const rivalDots = [C.rival, C.rivalB].map(tone =>
+        scene.add.circle(HUD.mapX0, HUD.y, HUD.mapDot - 2, tone).setStrokeStyle(3, C.headerLine).setDepth(DEPTH.hud + 1),
+    )
+    const playerDot = scene.add.circle(HUD.mapX0, HUD.y, HUD.mapDot, C.team).setStrokeStyle(4, C.headerLine).setDepth(DEPTH.hud + 2)
+    const placeText = scene.add
+        .text(HUD.posX, HUD.y, '', { fontFamily: FONT.black, fontSize: `${SIZE.pos}px`, color: CSS.ink })
+        .setOrigin(0.5)
+        .setResolution(2)
+        .setDepth(DEPTH.hud + 1)
+    let shownPlace = 0
+
     let current = 0
     const paint = () =>
         pips.forEach((pip, i) => {
@@ -124,6 +156,17 @@ export function createHeader(scene: Phaser.Scene, opts: HeaderOptions): Header {
             current = Phaser.Math.Clamp(index, 0, opts.phases)
             paint()
         },
+        setRace(player, rivals, place) {
+            const at = (k: number) => HUD.mapX0 + Phaser.Math.Clamp(k, 0, 1) * mapW
+            playerDot.setX(at(player))
+            rivalDots.forEach((dot, i) => dot.setVisible(shown && i < rivals.length).setX(at(rivals[i] ?? 0)))
+            placeText.setVisible(shown && place > 0)
+            if (place === shownPlace) return
+            const better = shownPlace > 0 && place < shownPlace
+            shownPlace = place
+            placeText.setText(place > 0 ? LABEL.place(place) : '')
+            if (better) void FX.to(scene, placeText, { scale: 1.3 }, { duration: 140, yoyo: true }).then(() => placeText.setScale(1))
+        },
         async celebrate(index) {
             current = index + 1
             paint()
@@ -139,7 +182,7 @@ export function createHeader(scene: Phaser.Scene, opts: HeaderOptions): Header {
         },
         visible(on) {
             shown = on
-            ;[band, pill, levelText, ...pips].forEach(o => o.setVisible(on))
+            ;[band, pill, levelText, ...pips, map, flag, ...rivalDots, playerDot, placeText].forEach(o => o.setVisible(on))
             paintHelp()
         },
         helpRect: () => ({ x: HUD.helpX, y: HUD.helpY, w: HUD.helpR * 2 + 16, h: HUD.helpR * 2 + 16 }),
@@ -149,6 +192,7 @@ export function createHeader(scene: Phaser.Scene, opts: HeaderOptions): Header {
             help.destroy()
             levelText.destroy()
             pips.forEach(p => p.destroy())
+            ;[map, flag, ...rivalDots, playerDot, placeText].forEach(o => o.destroy())
             pill.destroy()
             band.destroy()
             lives.destroy()

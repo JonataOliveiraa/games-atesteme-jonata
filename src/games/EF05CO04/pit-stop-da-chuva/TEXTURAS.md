@@ -1,63 +1,88 @@
 # Pit Stop da Chuva — texturas
 
+Documento irmão: [PLANEJAMENTO.md](./PLANEJAMENTO.md) (§3 o laço, §5 a tela, §6 os níveis, §8 os erros).
+
 Destino: `src/assets/games/EF05CO04/pit-stop-da-chuva/`
-Planejamento: [PLANEJAMENTO.md](./PLANEJAMENTO.md) (§3 o laço, §5 a tela, §7 os erros).
 
-**Linha de arte: moda chapada** (nova, 15/10/2026, pedida pelo usuário). Anexe em **toda geração** as duas referências que ele mandou:
-- `references/40-moda-chapada-a.png`: o casal no parque. Ela de cabelo escuro ondulado, laço vermelho, casaquinho amarelo e saia xadrez azul, fazendo "paz e amor"; ele de camisa xadrez azul e calça branca.
-- `references/41-moda-chapada-b.png`: o casal de mãos dadas sobre fundo azul-claro. Ela de lenço de bolinhas e bolsa vermelha; ele de suéter azul e creme, fazendo "paz e amor"; com coração, nuvens e brilhinhos.
+## A linha de arte: moda chapada
 
-Regras dos prompts:
+São as duas imagens que o usuário mandou (15/10 e de novo em 20/10/2026). **Anexe as duas em toda geração:**
+- `references/40-moda-chapada-a.png`: o casal no parque, sobre fundo bege. Ela de cabelo escuro ondulado, laço vermelho, casaquinho amarelo e saia xadrez lavanda; ele de camisa xadrez lavanda e calça branca. Atrás, arbustos sálvia e o chão cinza quente.
+- `references/41-moda-chapada-b.png`: o casal de mãos dadas sobre fundo azul-água. Ela de camisa ardósia, lenço azul de bolinhas, calça sálvia clara e bolsa coral; ele de suéter creme com painel azul-royal e calça verde-oliva. Em volta, um coração, nuvens brancas e brilhinhos de 4 pontas.
+
+**O que define o estilo (é o que os prompts descrevem):**
+
+| Traço | Como é nas referências |
+|---|---|
+| contorno | **fino, uniforme, marrom-carvão**, com jeito de feito à mão: às vezes a linha não fecha, e alguns tracinhos soltos marcam dobra ou movimento |
+| cor | **chapada**, sem degradê e sem brilho |
+| sombra | **manchas chapadas** um tom mais escuro, de borda irregular, só nas dobras (como as manchas na calça verde da ref. 41) |
+| cabelo | um bloco de cor só, com 2 ou 3 linhas finas de mecha |
+| rosto | pequeno: **olhos de pontinho** ou arquinho, nariz de um traço, sorriso curto e **oval rosa** na bochecha |
+| proporção | **esguia, não chibi**: cabeça ≈ 1/7 da altura no adulto e ≈ 1/5,5 na criança, pernas longas e tênis brancos robustos |
+| paleta | pastel apagado (sálvia, ardósia, lavanda, amarelo-manteiga, creme, verde-oliva, cinza quente, azul-água) com acentos pontuais (coral, azul-royal, vermelho do laço) |
+| enfeite | **brilhinho branco de 4 pontas**, nuvem branca chapada e tracinho de movimento, só onde o prompt pedir |
+| keyline branca | não |
+
+**Regras dos prompts:**
 - Todo bloco STYLE começa mandando usar as imagens anexadas e termina em *"Take ONLY the art style"*.
-- O elenco das referências vai no negativo de **todos** os prompts. Isso inclui o casal, o coração, a pose de "paz e amor" e o xadrez das roupas.
+- O elenco das referências vai no negativo de todos os prompts: o casal, as roupas, o coração, a pose de "paz e amor" e o xadrez.
 - Cada prompt vem inteiro (estilo + corpo + negativo), pronto para copiar.
 
-### Em que esta linha difere das vizinhas
+**O jogo já roda sem nenhum PNG.** A arte de reserva em `scenes/fallback.ts` desenha as mesmas folhas, grades e ordem de células daqui. Um PNG com o mesmo nome na pasta de destino substitui a reserva sem mudar código.
 
-| | moda chapada (este jogo) | chibi de caderno (`37`/`38`) | chibi voador (`35`) |
-|---|---|---|---|
-| traço | **fino e uniforme, marrom-carvão**, com jeito de feito à mão | fino a médio, marrom quente, ponta afinando | liso médio, tom escuro da própria cor |
-| cor | **100 % chapada**, quase sem sombra: no máximo umas manchas lisas mais escuras nas dobras | chapada e apagada, sem sombra | chapada + 1 sombra macia |
-| rosto | pequeno e simples: **olho de pontinho ou tracinho**, sorriso curto, bochecha rosa | olho redondo com brilhos, bochecha com tracinhos | olho enorme com brilhos |
-| proporção | **esguia, não chibi**: cabeça ≈ 1/6 da altura no adulto e ≈ 1/5 na criança | chibi um pouco alongado | cabeça ≈ metade |
-| paleta | pastel apagado (amarelo-manteiga, azul-lavanda, ardósia, sálvia, creme, cinza quente) + acento coral e azul-royal | tijolo, cacau, mostarda, sálvia | lilás, verde-água, creme |
-| enfeite | brilhinho de 4 pontas e tracinho de movimento, só onde pedido | florzinhas | "+" brancos |
-| keyline branca | não | não | não |
-
-**O jogo já roda sem nenhum PNG.** A arte de reserva é desenhada em código nas mesmas folhas, grades e ordem de células daqui. Um PNG com o mesmo nome na pasta de destino substitui a reserva sem mudar código.
-
-**Ficam no código para sempre:** o céu (degradê de sol, nublado e chuva), as gotas de chuva, os espirros das poças, a fumaça das rodas, as estrelinhas da tontura, as linhas de velocidade e o confete.
+**Ficam no código para sempre:**
+- o céu (degradê de sol, nublado e chuva), as gotas de chuva e os respingos de água e de barro;
+- a fumaça, as estrelinhas da tontura, as linhas de velocidade, o vento da rajada e o confete;
+- o retângulo de parada, a linha de chegada com o pórtico e as placas dos botões (o desenho dentro de cada botão vem de `controles.png`).
 
 ## 1. Os arquivos
 
 | Arquivo | Grade | Célula | Tamanho final | Alfa | Uso |
 |---|---|---|---|---|---|
-| `karts.png` | 3 × 2 | 384 × 256 | 1152 × 512 | sim | o kart da Kika **sem rodas**, de lado e virado para a direita, em 5 expressões, e o kart do rival |
-| `equipe.png` | 4 × 2 | 320 × 400 | 1280 × 800 | sim | o Tio Beto (chefe da equipe) e os dois mecânicos |
-| `pecas.png` | 4 × 3 | 256 | 1024 × 768 | sim | pneus, carrinhos de pneus (os botões), fardo de feno, nuvens, sol e poça |
-| `autodromo.png` | — | — | 1280 × 520 | sim (céu) | a faixa que se repete: arquibancada, mureta, pista e grama |
-| `box.png` | — | — | 800 × 400 | sim | o prédio do box da equipe, atrás da pista |
+| `karts.png` | 4 × 2 | 384 × 256 | 1536 × 512 | sim | o kart **sem rodas**: a Kika em 5 caras, os 2 rivais e o kart vazio |
+| `motos.png` | 4 × 2 | 384 × 256 | 1536 × 512 | sim | a moto **sem rodas**, na mesma ordem (N3) |
+| `equipe.png` | 4 × 2 | 320 × 400 | 1280 × 800 | sim | o Tio Beto e os dois mecânicos |
+| `pecas.png` | 6 × 3 | 256 × 256 | 1536 × 768 | sim | pneus, carrinhos de pneu, fardo, nuvens, sol, poças e bandeira |
+| `controles.png` | 3 × 1 | 256 × 256 | 768 × 256 | sim | os desenhos dos botões: acelerador, freio e chave com pneu |
+| `autodromo.png` | — | — | 1280 × 520 | sim (céu) | a faixa que se repete: arquibancada, faixa do box, pista e grama |
+| `lama.png` | — | — | 1280 × 204 | não | a faixa do box e a pista **de terra**, nos trechos de lama (N2) |
+| `tenda.png` | — | — | 600 × 360 | sim | a tenda da equipe, onde a Kika para |
+| `mao.png` | — | — | 256 × 256 | sim | a mãozinha da demonstração |
 | `cover-pit-stop-da-chuva.png` | — | — | 1672 × 941 | opaco | capa **com o título** |
 
-**A ordem das células é contrato com o código.** O tamanho pode variar, porque o jogo mede cada célula na carga, mas a grade, a ordem, o conteúdo e a **direção** de cada peça não podem mudar.
+**A ordem das células é contrato com o código.** O tamanho pode variar, porque o jogo mede cada folha na carga. O que não pode mudar é a grade, a ordem, o conteúdo e a **direção** de cada peça.
 
 ## 2. Regras deste jogo
 
-- **Nenhum texto na arte.** "SE", "SENÃO", "CHUVA", "LISO", números de kart e patrocínios são do código ou não existem. A única exceção é o título da capa.
-- **Os três pneus são diferentes de longe, pela faixa colorida da lateral:** liso = faixa **vermelha** e banda lisa; chuva = faixa **azul** e sulcos fundos; intermediário = faixa **verde** e sulcos rasos. A faixa é o que liga o carrinho ao desenho da regra.
+- **Nenhum texto na arte.** "SE", "SENÃO", os nomes dos pneus, números de kart e patrocínios são do código ou não existem. A única exceção é o título da capa.
+- **Os pneus se distinguem de longe pela faixa colorida da lateral**, e é ela que liga o carrinho ao desenho da regra:
+
+  | Pneu | Faixa | Banda |
+  |---|---|---|
+  | LISO | **vermelha** | lisa |
+  | CHUVA | **azul** | sulcos fundos |
+  | CRAVOS | **verde** | blocos grandes e separados |
+
+  Os **pneus de moto** têm a mesma faixa do pneu de carro equivalente, mas são **altos e finos**: borracha estreita, aro grande e raios.
 - **Nenhum carrinho brilha mais que o outro:** a cor do certo não pode entregar a resposta.
-- **O kart vem SEM RODAS**, com os dois arcos das rodas vazios. É o código que põe o pneu escolhido.
-- Tudo de lado, sem perspectiva: a câmera vê a pista de frente, como num jogo de plataforma.
-- Peça solta e centrada na célula, com cerca de 8 % de margem. **Personagens pisam no fundo da célula.**
-- **Gente com cara de criança e de adulto de verdade, não chibi.** A Kika e os mecânicos têm uns 10 anos e são menores e mais redondinhos que o Tio Beto.
+- **Os veículos vêm SEM RODAS**, com os arcos das rodas vazios. É o código que põe o pneu escolhido.
+- Tudo é visto **exatamente de lado**, sem perspectiva, como num jogo de plataforma: a câmera vê a pista de frente.
+- Cada peça fica solta e centrada na célula, com cerca de 8 % de margem. **Personagens pisam no fundo da célula.**
+- **Gente com cara de criança e de adulto de verdade, não chibi.** A Kika, os rivais e os mecânicos têm uns 10 anos e são menores e mais redondinhos que o Tio Beto.
 
 ---
 
-## 3. `karts.png` — 3 × 2 células de 384 × 256 (1152 × 512), alfa
+## 3. `karts.png` — 4 × 2 células de 384 × 256 (1536 × 512), alfa
 
-A pilota é a **Kika**, uma menina de uns 10 anos de pele morena e cabelo preto cacheado preso num rabo alto que sai por trás do capacete. Usa capacete **verde-água** com a viseira levantada (o rosto aparece), macacão de corrida verde-água e amarelo e um cachecolzinho amarelo. O kart é baixinho, verde-água com faixas amarelas, visto **exatamente de lado, virado para a DIREITA**.
+A pilota é a **Kika**: uma menina de uns 10 anos, de pele morena e cabelo preto cacheado preso num rabo alto que sai por trás do capacete. Ela usa:
+- capacete **verde-menta** com a viseira levantada (o rosto aparece);
+- macacão de corrida verde-menta e amarelo-manteiga;
+- um cachecolzinho amarelo.
 
-**Em todas as células o kart tem o mesmo tamanho, na mesma posição**, com a base do chassi na mesma altura: o código põe as rodas sempre no mesmo lugar.
+O kart é baixinho, verde-menta com faixas amarelas, visto **exatamente de lado e virado para a DIREITA**.
+
+**Em todas as células o kart tem o mesmo tamanho e a mesma posição**, com os dois arcos das rodas no mesmo lugar: o código põe as rodas sempre ali.
 
 | Célula | Conteúdo |
 |---|---|
@@ -66,30 +91,67 @@ A pilota é a **Kika**, uma menina de uns 10 anos de pele morena e cabelo preto 
 | 2 | Kika comemorando: um punho no ar, boca aberta de alegria |
 | 3 | Kika tonta: olhos em espiral, língua de fora, capacete torto |
 | 4 | Kika preocupada: careta, gota de suor, as duas mãos firmes no volante |
-| 5 | o **rival**: um menino de capacete lilás num kart lilás, correndo, inclinado para a frente |
+| 5 | **rival lilás**: um menino de capacete e kart lilás com faixas brancas, inclinado para a frente |
+| 6 | **rival coral**: uma menina de rabo de cavalo castanho, capacete e kart coral com faixas creme, inclinada para a frente |
+| 7 | o **kart da Kika vazio**, sem ninguém (é também o desenho de "carro" na bandeja do N3) |
 
 ~~~text
-STYLE — USE THE TWO ATTACHED IMAGES AS THE ART STYLE REFERENCE, and match their rendering exactly: a trendy flat hand-drawn illustration, like a Korean fashion illustration; thin, clean lineart of even weight in a dark charcoal-brown, slightly hand-drawn, never thick and never pure black; 100% flat fill colors with almost no shading (at most a few simple flat darker shapes on clothing folds), no gradients, no glossy highlights; small, simple faces with tiny dot or short-line eyes, a small curved smile and soft pink blush ovals on the cheeks; slender, natural proportions with small heads (NOT chibi); a soft, muted palette (butter yellow, periwinkle and slate blue, sage green, cream, white, warm gray) with a few clear accents (coral red, royal blue). Take ONLY the art style: do NOT copy their characters, couples, outfits, poses, hearts or backgrounds.
+STYLE — USE THE TWO ATTACHED IMAGES AS THE ART STYLE REFERENCE and match their rendering exactly: a trendy flat hand-drawn fashion illustration; thin, even, slightly sketchy lineart in dark charcoal-brown (never black, never thick), with lines that sometimes do not fully close and a few tiny loose strokes for folds or motion; 100% flat fill colors, no gradients, no glossy highlights; shading only as a few flat, irregular, slightly darker patches on folds; hair as one flat color mass with two or three thin strand lines; small simple faces with tiny dot or short-arc eyes, a one-stroke nose, a short curved smile and soft pink oval blush; slender natural proportions with small heads (NOT chibi); a muted pastel palette (sage, slate and lavender blue, butter yellow, cream, olive green, warm gray, pale aqua) with a few clear accents (coral, royal blue). Take ONLY the art style: do NOT copy their characters, couples, outfits, poses, hearts or backgrounds.
 
-A game sprite sheet on a fully TRANSPARENT background: a grid of 3 columns x 2 rows, each cell 384 x 256 (total 1152 x 512), read left to right, top row first. In every cell a low, chunky go-KART seen EXACTLY FROM THE SIDE, facing RIGHT, flat side view with no perspective, about 85% of the cell wide, centered, the same size and the same position in every cell, with the bottom of the chassis at the same height in every cell. IMPORTANT: the kart has NO WHEELS: the two round wheel arches (one at the back, one at the front) are EMPTY, the game draws the wheels. Cells 1 to 5 show the same mint-teal kart with yellow stripes driven by KIKA, a 10-year-old girl with brown skin, curly black hair in a high ponytail coming out of the back of her helmet, a mint-teal racing helmet with the visor raised so her face shows, a mint-teal and yellow racing suit and a small yellow scarf.
+A game sprite sheet on a fully TRANSPARENT background: a grid of 4 columns x 2 rows, each cell 384 x 256 (total 1536 x 512), read left to right, top row first. In every cell a low, chunky go-KART seen EXACTLY FROM THE SIDE, facing RIGHT, flat side view with no perspective, about 85% of the cell wide, centered, the same size and the same position in every cell, with the bottom of the chassis at the same height in every cell. IMPORTANT: the kart has NO WHEELS: the two round wheel arches (one at the back, one at the front) are EMPTY, the game draws the wheels. Cells 1 to 5 show the same mint-green kart with butter-yellow stripes driven by KIKA, a 10-year-old girl with brown skin, curly black hair in a high ponytail coming out of the back of her helmet, a mint-green racing helmet with the visor raised so her face shows, a mint and butter-yellow racing suit and a small yellow scarf.
 1. Kika stopped, smiling, both hands on the steering wheel.
-2. Kika racing: leaning forward, scarf and ponytail flying backward.
+2. Kika racing: leaning forward, scarf and ponytail flying backward, two tiny motion strokes behind her.
 3. Kika celebrating: one fist raised high, mouth open with joy.
 4. Kika dizzy: spiral eyes, tongue out, helmet a little crooked.
 5. Kika worried: a grimace, a sweat drop, both hands tight on the wheel.
-6. The RIVAL: a boy of about 10 with a lilac helmet in a lilac kart with white stripes, racing, leaning forward.
+6. RIVAL ONE: a 10-year-old boy in a lavender helmet and suit, in the same kart shape painted lavender with white stripes, racing, leaning forward.
+7. RIVAL TWO: a 10-year-old girl with a brown ponytail, a coral helmet and suit, in the same kart shape painted coral with cream stripes, racing, leaning forward.
+8. Kika's mint-green kart EMPTY, with nobody in it.
 
-DO NOT INCLUDE: wheels, tires, rims, the ground, a road, shadows on the ground, motion lines, dust, smoke, numbers, letters, text, sponsor logos, brand marks, real racing brands, 3/4 or top-down views, karts facing left, different kart sizes between cells, other characters, ghost duplicates, items crossing cell borders, items cut by the cell edge, the people from the reference images (a girl with long wavy dark hair, a red bow headband, a yellow cardigan and a blue plaid skirt; a young man in a blue plaid overshirt and white pants; a woman with a polka-dot neckerchief and a red shoulder bag; a young man in a blue-and-cream sweater), couples, holding hands, romantic poses, hearts, peace-sign gestures, plaid clothes, chibi proportions, big anime eyes with highlights, cel shading, gradients, glossy highlights, thick outlines, white sticker keyline, watermarks, signatures, @handles, website names, painterly rendering, 3D render, photorealistic.
+DO NOT INCLUDE: wheels, tires, rims, the ground, a road, shadows on the ground, smoke, dust, numbers, letters, text, sponsor logos, brand marks, real racing brands, 3/4 or top-down views, karts facing left, different kart sizes between cells, ghost duplicates, items crossing cell borders, items cut by the cell edge, the people from the reference images (a girl with long wavy dark hair, a red bow headband, a yellow cardigan and a lavender plaid skirt; a young man in a lavender plaid overshirt and white pants; a woman with a blue polka-dot neckerchief and a coral shoulder bag; a young man in a cream sweater with a royal-blue panel), couples, holding hands, romantic poses, hearts, peace-sign gestures, plaid clothes, chibi proportions, big anime eyes with highlights, cel shading, gradients, glossy highlights, thick outlines, white sticker keyline, watermarks, signatures, @handles, website names, painterly rendering, 3D render, photorealistic.
 ~~~
 
 ---
 
-## 4. `equipe.png` — 4 × 2 células de 320 × 400 (1280 × 800), alfa
+## 4. `motos.png` — 4 × 2 células de 384 × 256 (1536 × 512), alfa
+
+É a **mesma ordem e as mesmas pessoas** de `karts.png`, mas numa **moto de corrida infantil** (uma pit bike baixinha, de trilha leve), vista **de lado e virada para a DIREITA**. As duas rodas são **grandes e altas**, com os espaços **vazios**:
+- o centro da roda de trás fica em ~21 % da largura e o da roda da frente em ~80 %;
+- os eixos ficam a ~75 % da altura, e as rodas descem até ~96 %.
+
+O piloto vai sentado, com as mãos no guidão e um pé na pedaleira. O garfo da frente desce até o eixo vazio.
+
+| Célula | Conteúdo |
+|---|---|
+| 0–4 | Kika na moto verde-menta: parada, correndo, comemorando, tonta e preocupada (as mesmas caras do kart) |
+| 5 | rival lilás na moto lilás |
+| 6 | rival coral na moto coral |
+| 7 | a **moto da Kika vazia** (é também o desenho de "moto" na regra e na bandeja) |
+
+~~~text
+STYLE — USE THE TWO ATTACHED IMAGES AS THE ART STYLE REFERENCE and match their rendering exactly: a trendy flat hand-drawn fashion illustration; thin, even, slightly sketchy lineart in dark charcoal-brown (never black, never thick), with lines that sometimes do not fully close and a few tiny loose strokes for folds or motion; 100% flat fill colors, no gradients, no glossy highlights; shading only as a few flat, irregular, slightly darker patches on folds; hair as one flat color mass with two or three thin strand lines; small simple faces with tiny dot or short-arc eyes, a one-stroke nose, a short curved smile and soft pink oval blush; slender natural proportions with small heads (NOT chibi); a muted pastel palette (sage, slate and lavender blue, butter yellow, cream, olive green, warm gray, pale aqua) with a few clear accents (coral, royal blue). Take ONLY the art style: do NOT copy their characters, couples, outfits, poses, hearts or backgrounds.
+
+A game sprite sheet on a fully TRANSPARENT background: a grid of 4 columns x 2 rows, each cell 384 x 256 (total 1536 x 512), read left to right, top row first. In every cell a small kids' racing MOTORBIKE (a low pit bike) seen EXACTLY FROM THE SIDE, facing RIGHT, flat side view with no perspective, about 85% of the cell wide, centered, the same size and the same position in every cell. IMPORTANT: the motorbike has NO WHEELS: the two large round wheel spaces are EMPTY (rear wheel center at about 21% of the cell width, front wheel center at about 80%, both axles at about 75% of the cell height, wheels reaching about 96% of the height); the front fork goes down to the empty front axle. The rider sits on the seat, hands on the handlebar, one foot on the footpeg. Cells 1 to 5: the mint-green bike with butter-yellow stripes ridden by KIKA, a 10-year-old girl with brown skin, curly black hair in a high ponytail coming out of the back of her helmet, a mint-green helmet with the visor raised, a mint and butter-yellow racing suit and a small yellow scarf.
+1. Kika stopped, smiling.
+2. Kika racing: leaning forward, scarf and ponytail flying backward, two tiny motion strokes behind her.
+3. Kika celebrating: one fist raised high, mouth open with joy.
+4. Kika dizzy: spiral eyes, tongue out, helmet a little crooked.
+5. Kika worried: a grimace, a sweat drop, both hands tight on the handlebar.
+6. RIVAL ONE: a 10-year-old boy in a lavender helmet and suit on the same bike shape painted lavender with white stripes, racing, leaning forward.
+7. RIVAL TWO: a 10-year-old girl with a brown ponytail, a coral helmet and suit, on the same bike shape painted coral with cream stripes, racing, leaning forward.
+8. Kika's mint-green motorbike EMPTY, with nobody on it.
+
+DO NOT INCLUDE: wheels, tires, rims, spokes, the ground, a road, shadows on the ground, smoke, dust, a kickstand, numbers, letters, text, sponsor logos, brand marks, real motorcycle brands, 3/4 or top-down views, bikes facing left, different bike sizes between cells, ghost duplicates, items crossing cell borders, items cut by the cell edge, the people from the reference images (a girl with long wavy dark hair, a red bow headband, a yellow cardigan and a lavender plaid skirt; a young man in a lavender plaid overshirt and white pants; a woman with a blue polka-dot neckerchief and a coral shoulder bag; a young man in a cream sweater with a royal-blue panel), couples, holding hands, romantic poses, hearts, peace-sign gestures, plaid clothes, chibi proportions, big anime eyes with highlights, cel shading, gradients, glossy highlights, thick outlines, white sticker keyline, watermarks, signatures, @handles, website names, painterly rendering, 3D render, photorealistic.
+~~~
+
+---
+
+## 5. `equipe.png` — 4 × 2 células de 320 × 400 (1280 × 800), alfa
 
 | Célula | Quem | Pose |
 |---|---|---|
-| 0 | **Tio Beto** | parado, de frente virado um pouco para a direita, segurando uma prancheta |
-| 1 | Tio Beto | falando: uma mão aberta explicando, sorriso, prancheta na outra mão |
+| 0 | **Tio Beto** | parado, de frente e virado um pouco para a direita, segurando uma prancheta |
+| 1 | Tio Beto | acenando com uma mão aberta, sorrindo, com a prancheta na outra mão |
 | 2 | Tio Beto | feliz, agitando no alto uma **bandeira quadriculada** preta e branca |
 | 3 | Tio Beto | "ops": mão na testa, olhos fechados |
 | 4 | **mecânica Lua** | parada, de frente |
@@ -97,121 +159,201 @@ DO NOT INCLUDE: wheels, tires, rims, the ground, a road, shadows on the ground, 
 | 6 | **mecânico Davi** | parado, de frente |
 | 7 | Davi | agachado, de lado, virado para a **ESQUERDA**, segurando uma parafusadeira apontada para a frente |
 
-O Tio Beto é um senhor gordinho e simpático, de bigode grosso grisalho, boné verde-água da equipe e camisa polo verde-água e amarela. Os mecânicos são crianças de uns 10 anos de macacão verde-água: **Lua** tem cabelo ruivo curto e boné virado para trás; **Davi** tem pele escura e cabelo bem curtinho.
+- **O Tio Beto** é um senhor gordinho e simpático, de bigode grosso grisalho, boné verde-menta da equipe e camisa polo verde-menta e amarela.
+- **Os mecânicos** são crianças de uns 10 anos de macacão verde-menta:
+  - **Lua** tem cabelo ruivo curto e boné virado para trás;
+  - **Davi** tem pele escura e cabelo bem curtinho.
 
 ~~~text
-STYLE — USE THE TWO ATTACHED IMAGES AS THE ART STYLE REFERENCE, and match their rendering exactly: a trendy flat hand-drawn illustration, like a Korean fashion illustration; thin, clean lineart of even weight in a dark charcoal-brown, slightly hand-drawn, never thick and never pure black; 100% flat fill colors with almost no shading (at most a few simple flat darker shapes on clothing folds), no gradients, no glossy highlights; small, simple faces with tiny dot or short-line eyes, a small curved smile and soft pink blush ovals on the cheeks; slender, natural proportions with small heads (NOT chibi); a soft, muted palette (butter yellow, periwinkle and slate blue, sage green, cream, white, warm gray) with a few clear accents (coral red, royal blue). Take ONLY the art style: do NOT copy their characters, couples, outfits, poses, hearts or backgrounds.
+STYLE — USE THE TWO ATTACHED IMAGES AS THE ART STYLE REFERENCE and match their rendering exactly: a trendy flat hand-drawn fashion illustration; thin, even, slightly sketchy lineart in dark charcoal-brown (never black, never thick), with lines that sometimes do not fully close and a few tiny loose strokes for folds or motion; 100% flat fill colors, no gradients, no glossy highlights; shading only as a few flat, irregular, slightly darker patches on clothing folds; hair as one flat color mass with two or three thin strand lines; small simple faces with tiny dot or short-arc eyes, a one-stroke nose, a short curved smile and soft pink oval blush; slender natural proportions with small heads (NOT chibi) and chunky white sneakers; a muted pastel palette (sage, slate and lavender blue, butter yellow, cream, olive green, warm gray, pale aqua) with a few clear accents (coral, royal blue). Take ONLY the art style: do NOT copy their characters, couples, outfits, poses, hearts or backgrounds.
 
-A character sprite sheet on a fully TRANSPARENT background: a grid of 4 columns x 2 rows, each cell 320 x 400 (total 1280 x 800), read left to right, top row first. STRICT CELL SEPARATION: each figure fits fully within the CENTRAL 80% WIDTH of its cell, with empty transparent space on both sides. The PIT CREW of a kids' kart racing team, all in mint-teal team clothes with yellow details. Natural proportions: the adult's head is about 1/6 of his height, the kids' heads about 1/5 of theirs. Every figure is complete, with the soles of the shoes touching the BOTTOM edge of the cell, one single fully opaque figure per cell.
-1. UNCLE BETO, the team boss: a chubby, friendly older man with a thick gray mustache, a mint-teal team cap and a mint-teal and yellow polo shirt, standing, facing the viewer turned slightly to the right, holding a clipboard.
-2. Uncle Beto talking: one open hand explaining, smiling, the clipboard in the other hand.
+A character sprite sheet on a fully TRANSPARENT background: a grid of 4 columns x 2 rows, each cell 320 x 400 (total 1280 x 800), read left to right, top row first. STRICT CELL SEPARATION: each figure fits fully within the CENTRAL 80% WIDTH of its cell, with empty transparent space on both sides. The PIT CREW of a kids' racing team, all in mint-green team clothes with butter-yellow details. Natural proportions: the adult's head is about 1/7 of his height, the kids' heads about 1/5.5 of theirs. Every figure is complete, with the soles of the shoes touching the BOTTOM edge of the cell, one single fully opaque figure per cell.
+1. UNCLE BETO, the team boss: a chubby, friendly older man with a thick gray mustache, a mint-green team cap and a mint and butter-yellow polo shirt, standing, facing the viewer turned slightly to the right, holding a clipboard.
+2. Uncle Beto waving one open hand, smiling, the clipboard in the other hand.
 3. Uncle Beto very happy, waving a black-and-white CHECKERED FLAG high above his head.
 4. Uncle Beto "oops": a hand on his forehead, eyes closed.
-5. LUA, a 10-year-old girl mechanic: short ginger hair, a backwards mint-teal cap, mint-teal overalls, standing, facing the viewer.
+5. LUA, a 10-year-old girl mechanic: short ginger hair, a backwards mint-green cap, mint-green overalls, standing, facing the viewer.
 6. Lua crouching, seen from the SIDE facing RIGHT, holding a chunky yellow power wrench pointed forward.
-7. DAVI, a 10-year-old boy mechanic: dark skin, very short hair, mint-teal overalls, standing, facing the viewer.
+7. DAVI, a 10-year-old boy mechanic: dark skin, very short hair, mint-green overalls, standing, facing the viewer.
 8. Davi crouching, seen from the SIDE facing LEFT, holding a chunky yellow power wrench pointed forward.
 
-DO NOT INCLUDE: karts, wheels, tires, tools other than the clipboard, the flag and the power wrenches, ground, shadows on the ground, backgrounds, text, letters, numbers, logos, sponsor marks, different outfits or faces for the same person, ghost duplicates, items crossing cell borders, items cut by the cell edge, the people from the reference images (a girl with long wavy dark hair, a red bow headband, a yellow cardigan and a blue plaid skirt; a young man in a blue plaid overshirt and white pants; a woman with a polka-dot neckerchief and a red shoulder bag; a young man in a blue-and-cream sweater), couples, holding hands, romantic poses, hearts, peace-sign gestures, plaid clothes, fashion poses, chibi proportions, big anime eyes with highlights, cel shading, gradients, glossy highlights, thick outlines, white sticker keyline, watermarks, signatures, @handles, website names, painterly rendering, 3D render, photorealistic.
+DO NOT INCLUDE: karts, motorbikes, wheels, tires, tools other than the clipboard, the flag and the power wrenches, ground, shadows on the ground, backgrounds, text, letters, numbers, logos, sponsor marks, different outfits or faces for the same person, ghost duplicates, items crossing cell borders, items cut by the cell edge, the people from the reference images (a girl with long wavy dark hair, a red bow headband, a yellow cardigan and a lavender plaid skirt; a young man in a lavender plaid overshirt and white pants; a woman with a blue polka-dot neckerchief and a coral shoulder bag; a young man in a cream sweater with a royal-blue panel), couples, holding hands, romantic poses, hearts, peace-sign gestures, plaid clothes, fashion poses, chibi proportions, big anime eyes with highlights, cel shading, gradients, glossy highlights, thick outlines, white sticker keyline, watermarks, signatures, @handles, website names, painterly rendering, 3D render, photorealistic.
 ~~~
 
 ---
 
-## 5. `pecas.png` — 4 × 3 células de 256 (1024 × 768), alfa
+## 6. `pecas.png` — 6 × 3 células de 256 (1536 × 768), alfa
 
 | Célula | Peça | Uso |
 |---|---|---|
-| 0 | **pneu LISO**, de lado: banda lisa, **faixa vermelha** na lateral, aro prateado | roda do kart e regra |
-| 1 | **pneu de CHUVA**, de lado: sulcos fundos aparecendo na borda, **faixa azul** na lateral, aro prateado | roda do kart e regra |
-| 2 | **pneu INTERMEDIÁRIO** (N3), de lado: sulcos rasos, **faixa verde**, aro prateado | N3 |
-| 3 | **pneu de chuva murcho**: o mesmo pneu de faixa azul, achatado embaixo e mole | o erro do pneu de chuva no seco |
-| 4 | **carrinho com 2 pneus LISOS** em pé (faixa vermelha) | botão da direita |
-| 5 | **carrinho com 2 pneus de CHUVA** em pé (faixa azul) | botão da esquerda |
-| 6 | **carrinho com 2 pneus INTERMEDIÁRIOS** (faixa verde) | N3 |
-| 7 | **fardo de feno** redondo, de lado | onde o kart para quando aquaplana |
-| 8 | **nuvem de chuva**: cinza-escura, com três gotas azuis caindo | céu de chuva e ícone da regra |
-| 9 | **nuvem cinza** fofa, sem gotas | céu nublado |
-| 10 | **sol** amarelo com raios, sem rosto | céu de sol |
-| 11 | **poça d'água** achatada, vista de lado na pista (uma elipse azul brilhante, bem larga e fina) | pista molhada |
+| 0 | **pneu LISO** de carro, de lado: banda lisa, **faixa vermelha**, aro prateado | roda do kart e regra |
+| 1 | **pneu de CHUVA** de carro: sulcos fundos na borda, **faixa azul** | roda do kart e regra |
+| 2 | **pneu de CRAVOS** de carro: blocos grandes e separados, **faixa verde** | N2 |
+| 3 | o pneu de chuva **murcho**: achatado embaixo e mole | o erro do pneu de chuva no seco |
+| 4 | **pneu LISO de moto**: alto e fino, aro grande com raios, **faixa vermelha** | N3 |
+| 5 | **pneu de CHUVA de moto**: alto e fino, sulcos rasos, raios, **faixa azul** | N3 |
+| 6 | carrinho com 2 pneus LISOS de carro em pé | botão |
+| 7 | o mesmo carrinho com 2 pneus de CHUVA de carro | botão |
+| 8 | o mesmo carrinho com 2 pneus de CRAVOS | botão (N2) |
+| 9 | o mesmo carrinho com 2 pneus LISOS de moto | botão (N3) |
+| 10 | o mesmo carrinho com 2 pneus de CHUVA de moto | botão (N3) |
+| 11 | **fardo de feno** redondo, de lado | onde o carro para quando aquaplana |
+| 12 | **nuvem de chuva** cinza-escura com três gotas azuis caindo | céu e ícone da regra |
+| 13 | **nuvem cinza** fofa, sem gotas | céu nublado |
+| 14 | **sol** amarelo com raios curtos, sem rosto | céu de sol |
+| 15 | **poça d'água**: elipse azul bem larga e fina, com um brilho branco | pista molhada |
+| 16 | **poça de lama**: mancha marrom de borda ondulada, com três respingos | ícone "lama" da regra |
+| 17 | **bandeira quadriculada** num mastro | mapa da corrida |
 
-Os três carrinhos (4, 5, 6) são **o mesmo carrinho**, do mesmo tamanho e na mesma posição: só muda o pneu.
+Os cinco carrinhos (6 a 10) são **o mesmo carrinho**, do mesmo tamanho e na mesma posição: só mudam os pneus.
 
 ~~~text
-STYLE — USE THE TWO ATTACHED IMAGES AS THE ART STYLE REFERENCE, and match their rendering exactly: a trendy flat hand-drawn illustration, like a Korean fashion illustration; thin, clean lineart of even weight in a dark charcoal-brown, slightly hand-drawn, never thick and never pure black; 100% flat fill colors with almost no shading (at most a few simple flat darker shapes), no gradients, no glossy highlights; a soft, muted palette (butter yellow, periwinkle and slate blue, sage green, cream, white, warm gray) with a few clear accents (coral red, royal blue). Take ONLY the art style: do NOT copy their characters, couples, outfits, poses, hearts or backgrounds.
+STYLE — USE THE TWO ATTACHED IMAGES AS THE ART STYLE REFERENCE and match their rendering exactly: a trendy flat hand-drawn fashion illustration; thin, even, slightly sketchy lineart in dark charcoal-brown (never black, never thick); 100% flat fill colors, no gradients, no glossy highlights; shading only as a few flat, irregular, slightly darker patches; a muted pastel palette (sage, slate and lavender blue, butter yellow, cream, olive green, warm gray, pale aqua) with a few clear accents (coral, royal blue); white flat clouds like the reference. Take ONLY the art style: do NOT copy their characters, couples, outfits, poses, hearts or backgrounds.
 
-A game sprite sheet on a fully TRANSPARENT background: a grid of 4 columns x 3 rows, each cell 256 x 256 (total 1024 x 768), read left to right, top row first. Simple, chunky pieces for a kids' go-kart racing game, each centered with about 8% margin, flat side view, no ground, no shadow. The three tire types must be easy to tell apart by the COLORED STRIPE on the sidewall.
-1. A SLICK kart TIRE seen exactly from the side: a black tire with a perfectly smooth tread, a bright RED stripe ring on the sidewall, a silver rim in the middle.
-2. A RAIN kart TIRE seen exactly from the side: a black tire with deep chunky grooves visible all around the edge, a bright BLUE stripe ring on the sidewall, a silver rim.
-3. An INTERMEDIATE kart TIRE seen exactly from the side: a black tire with shallow small grooves around the edge, a bright GREEN stripe ring on the sidewall, a silver rim.
-4. The same RAIN tire (blue stripe) but FLAT and squashed at the bottom, soft and saggy.
-5. A small red-and-gray pit-lane TIRE CART on two little wheels, carrying TWO SLICK tires standing upright side by side (red stripes).
-6. The SAME tire cart, same size and position, carrying TWO RAIN tires (blue stripes, deep grooves).
-7. The SAME tire cart, same size and position, carrying TWO INTERMEDIATE tires (green stripes).
-8. A round golden HAY BALE seen from the side.
-9. A RAIN CLOUD: a puffy dark gray cloud with three blue rain drops falling below it.
-10. A puffy light GRAY CLOUD with no drops.
-11. A bright yellow SUN with short rounded rays, no face.
-12. A flat shiny blue WATER PUDDLE seen from the side on a road: a very wide, very thin ellipse with a white shine.
+A game sprite sheet on a fully TRANSPARENT background: a grid of 6 columns x 3 rows, each cell 256 x 256 (total 1536 x 768), read left to right, top row first. Simple, chunky pieces for a kids' racing game, each centered with about 8% margin, flat side view, no ground, no shadow. The tire types must be easy to tell apart by the COLORED STRIPE ring on the sidewall: RED = slick, BLUE = rain, GREEN = knobby.
+1. A SLICK kart TIRE seen exactly from the side: a black tire with a perfectly smooth tread, a RED stripe ring on the sidewall, a silver rim.
+2. A RAIN kart TIRE: a black tire with deep grooves all around the edge, a BLUE stripe ring, a silver rim.
+3. A KNOBBY mud kart TIRE: a black tire with big, chunky, widely spaced blocks around the edge, a GREEN stripe ring, a silver rim.
+4. The same RAIN kart tire (blue stripe) but FLAT and squashed at the bottom, soft and saggy.
+5. A SLICK MOTORBIKE TIRE: tall and thin, a narrow smooth black rubber ring, a big silver rim with thin spokes, a thin RED stripe.
+6. A RAIN MOTORBIKE TIRE: the same tall thin shape with small grooves around the edge, spokes, a thin BLUE stripe.
+7. A small coral-and-gray pit-lane TIRE CART on two little wheels, carrying TWO SLICK kart tires standing upright side by side.
+8. The SAME tire cart, same size and position, carrying TWO RAIN kart tires.
+9. The SAME tire cart, same size and position, carrying TWO KNOBBY kart tires.
+10. The SAME tire cart, same size and position, carrying TWO SLICK motorbike tires.
+11. The SAME tire cart, same size and position, carrying TWO RAIN motorbike tires.
+12. A round golden HAY BALE seen from the side.
+13. A RAIN CLOUD: a puffy dark gray cloud with three blue rain drops falling below it.
+14. A puffy light GRAY CLOUD with no drops.
+15. A butter-yellow SUN with short rounded rays, no face.
+16. A flat shiny blue WATER PUDDLE seen from the side: a very wide, very thin ellipse with a white shine.
+17. A MUD PUDDLE: a brown splat with a wavy edge, a darker center and three small mud drops flying up.
+18. A black-and-white CHECKERED FLAG on a short pole.
 
-DO NOT INCLUDE: karts, cars, people, hands, faces or eyes on any object, text, letters, numbers, brand names on tires, logos, rainbows, lightning, sparkles, hearts, the ground, shadows, backgrounds, items crossing cell borders, items cut by the cell edge, the people from the reference images (a girl with long wavy dark hair, a red bow headband, a yellow cardigan and a blue plaid skirt; a young man in a blue plaid overshirt and white pants; a woman with a polka-dot neckerchief and a red shoulder bag; a young man in a blue-and-cream sweater), plaid patterns, polka dots, cel shading, gradients, glossy highlights, thick outlines, white sticker keyline, watermarks, signatures, @handles, website names, painterly rendering, 3D render, photorealistic.
+DO NOT INCLUDE: karts, cars, motorbikes, people, hands, faces or eyes on any object, text, letters, numbers, brand names on tires, logos, rainbows, lightning, sparkles, hearts, the ground, shadows, backgrounds, items crossing cell borders, items cut by the cell edge, the people from the reference images (a girl with long wavy dark hair, a red bow headband, a yellow cardigan and a lavender plaid skirt; a young man in a lavender plaid overshirt and white pants; a woman with a blue polka-dot neckerchief and a coral shoulder bag; a young man in a cream sweater with a royal-blue panel), plaid patterns, polka dots, cel shading, gradients, glossy highlights, thick outlines, white sticker keyline, watermarks, signatures, @handles, website names, painterly rendering, 3D render, photorealistic.
 ~~~
 
 ---
 
-## 6. `autodromo.png` — 1280 × 520, alfa só no céu
+## 7. `controles.png` — 3 × 1 células de 256 (768 × 256), alfa
 
-A faixa do autódromo, **de frente e sem perspectiva**, que se repete na horizontal: a borda da esquerda tem de **emendar** com a da direita (tileable). O alto é **transparente** (o código pinta o céu atrás) e a faixa entra na tela em y 200.
+São só os desenhos que ficam dentro dos botões. A placa colorida e a palavra (ACELERAR, FREIO, TROCAR PNEU) são do código.
+
+| Célula | Desenho |
+|---|---|
+| 0 | o **pedal do acelerador**: comprido e estreito, de metal, com frisos, inclinado |
+| 1 | o **pedal do freio**: largo e baixo, de metal, com frisos |
+| 2 | uma **chave de roda** cruzando um **pneu** de carro (faixa azul) |
+
+~~~text
+STYLE — USE THE TWO ATTACHED IMAGES AS THE ART STYLE REFERENCE and match their rendering exactly: a trendy flat hand-drawn fashion illustration; thin, even, slightly sketchy lineart in dark charcoal-brown (never black, never thick); 100% flat fill colors, no gradients, no glossy highlights; shading only as a few flat, irregular, slightly darker patches; a muted pastel palette (sage, slate blue, butter yellow, cream, warm gray) with a few clear accents (coral, royal blue). Take ONLY the art style: do NOT copy their characters, couples, outfits, poses, hearts or backgrounds.
+
+A game icon sheet on a fully TRANSPARENT background: a grid of 3 columns x 1 row, each cell 256 x 256 (total 768 x 256), read left to right. Simple, bold, readable icons centered with about 10% margin.
+1. A car ACCELERATOR PEDAL: long and narrow, light metal with horizontal ridges, tilted slightly.
+2. A car BRAKE PEDAL: wide and short, light metal with horizontal ridges, tilted slightly.
+3. A silver LUG WRENCH crossing in front of a black kart tire with a blue stripe ring on its sidewall.
+
+DO NOT INCLUDE: feet, shoes, hands, people, cars, text, letters, numbers, arrows, logos, backgrounds, shadows, the people from the reference images, hearts, sparkles, plaid patterns, cel shading, gradients, glossy highlights, thick outlines, white sticker keyline, watermarks, signatures, @handles, website names, 3D render, photorealistic.
+~~~
+
+---
+
+## 8. `autodromo.png` — 1280 × 520, alfa só no céu
+
+A faixa do autódromo, **de frente e sem perspectiva**, que se repete na horizontal: a borda da esquerda tem de **emendar** com a da direita (tileable). O alto é **transparente** (o código pinta o céu atrás), e a faixa entra na tela em y 200.
 
 | Faixa (y) | O que tem |
 |---|---|
-| 0–60 | transparente, acima do telhado da arquibancada |
-| 60–260 | **arquibancada** com cobertura e uma torcida pequenininha e colorida (cabecinhas, bandeirinhas, mãos para cima) |
-| 260–300 | **mureta** de concreto clara, com painéis lisos (sem letra nenhuma) |
-| 300–450 | **pista** de asfalto cinza-escuro, com zebra vermelha e branca na borda de cima e na de baixo |
-| 450–520 | **grama** verde |
+| 0–60 | transparente |
+| 60–220 | **arquibancada** coberta, com uma torcida pequenininha e colorida (cabecinhas, bandeirinhas lisas, mãos para cima) |
+| 220–236 | **mureta** baixa de concreto claro |
+| 236–290 | **faixa do box**: asfalto cinza mais claro, com um tracejado branco fino |
+| 290–300 | **linha branca** cheia, separando o box da pista |
+| 300–440 | **pista** de asfalto cinza-escuro com duas faixas (tracejado no meio) e zebra vermelha e branca em cima e embaixo |
+| 440–520 | **grama** sálvia |
 
 ~~~text
-STYLE — USE THE TWO ATTACHED IMAGES AS THE ART STYLE REFERENCE, and match their rendering exactly: a trendy flat hand-drawn illustration, like a Korean fashion illustration; thin, clean lineart of even weight in a dark charcoal-brown, slightly hand-drawn, never thick and never pure black; 100% flat fill colors with almost no shading, no gradients, no glossy highlights; tiny, simple people with dot eyes; a soft, muted palette (butter yellow, periwinkle and slate blue, sage green, cream, white, warm gray) with a few clear accents (coral red, royal blue), like the calm sage bushes and warm gray ground of the reference. Take ONLY the art style: do NOT copy their characters, couples, outfits, poses, hearts or backgrounds.
+STYLE — USE THE TWO ATTACHED IMAGES AS THE ART STYLE REFERENCE and match their rendering exactly: a trendy flat hand-drawn fashion illustration; thin, even, slightly sketchy lineart in dark charcoal-brown (never black, never thick); 100% flat fill colors, no gradients, no glossy highlights; tiny simple people with dot eyes; a muted pastel palette (sage, slate and lavender blue, butter yellow, cream, olive green, warm gray) with a few clear accents (coral, royal blue), like the calm sage bushes and warm gray ground of the reference. Take ONLY the art style: do NOT copy their characters, couples, outfits, poses, hearts or backgrounds.
 
-A horizontal background STRIP for a side-view kids' kart racing game, 1280 x 520, SEAMLESS: the left edge must tile perfectly with the right edge. Flat front view with NO perspective, like a 2D platformer. The top part (above the grandstand roof, about the top 60 pixels) is fully TRANSPARENT: the game paints the sky behind it. From top to bottom: (1) a long covered GRANDSTAND full of a tiny, cheerful, colorful crowd (little heads, raised hands, small plain flags), about 200 pixels tall; (2) a light concrete PIT WALL with plain panels, about 40 pixels tall; (3) the RACE TRACK: a wide dark gray asphalt band about 150 pixels tall, with red-and-white KERBS along its top and bottom edges and a faint dashed center line; (4) a band of soft green GRASS at the bottom, about 70 pixels tall. Calm, readable, not too busy, so the karts in front stand out.
+A horizontal background STRIP for a side-view kids' racing game, 1280 x 520, SEAMLESS: the left edge must tile perfectly with the right edge. Flat front view with NO perspective, like a 2D platformer. From top to bottom: (1) the top 60 pixels fully TRANSPARENT (the game paints the sky); (2) a long covered GRANDSTAND full of a tiny, cheerful, colorful crowd (little heads, raised hands, small plain flags), about 160 pixels tall; (3) a low light concrete WALL, about 16 pixels tall; (4) the PIT LANE: a lighter gray asphalt band about 54 pixels tall with a thin dashed white line; (5) a solid white line about 10 pixels tall; (6) the RACE TRACK: a dark gray asphalt band about 140 pixels tall with two lanes (a dashed center line) and red-and-white KERBS along its top and bottom edges; (7) a band of soft sage GRASS at the bottom, about 80 pixels tall. Calm, readable, not too busy, so the karts in front stand out.
 
-DO NOT INCLUDE: the sky, clouds, sun, karts, cars, characters in front of the wall, a pit garage, text, letters, numbers, sponsor logos, ad boards with words, brand marks, perspective, vanishing points, curves in the track, trees in front of the track, night, the people from the reference images (a girl with long wavy dark hair, a red bow headband, a yellow cardigan and a blue plaid skirt; a young man in a blue plaid overshirt and white pants; a woman with a polka-dot neckerchief and a red shoulder bag; a young man in a blue-and-cream sweater), couples, hearts, sparkles, plaid patterns, cel shading, gradients, glossy highlights, thick outlines, NO white sticker keyline here, watermarks, signatures, @handles, website names, painterly rendering, 3D render, photorealistic.
+DO NOT INCLUDE: the sky, clouds, sun, karts, cars, motorbikes, characters in front of the wall, pit garages or tents, text, letters, numbers, sponsor logos, ad boards with words, brand marks, perspective, vanishing points, curves in the track, trees in front of the track, night, the people from the reference images (a girl with long wavy dark hair, a red bow headband, a yellow cardigan and a lavender plaid skirt; a young man in a lavender plaid overshirt and white pants; a woman with a blue polka-dot neckerchief and a coral shoulder bag; a young man in a cream sweater with a royal-blue panel), couples, hearts, sparkles, plaid patterns, cel shading, gradients, glossy highlights, thick outlines, white sticker keyline, watermarks, signatures, @handles, website names, painterly rendering, 3D render, photorealistic.
 ~~~
 
 ---
 
-## 7. `box.png` — 800 × 400, alfa
+## 9. `lama.png` — 1280 × 204, opaco
 
-O **box da equipe**: o prédio da garagem, de frente, que fica atrás da pista no lugar onde a Kika para. A base é reta e encosta no fundo da imagem (ela pousa na mureta).
+É a mesma faixa do box e da pista de `autodromo.png` (y 236 a 440 dela), agora **de terra molhada**. Também se repete na horizontal. O código a põe por cima do asfalto nos trechos de lama do N2.
+
+| Faixa (y) | O que tem |
+|---|---|
+| 0–56 | **faixa do box de terra** batida, marrom-claro, com marcas de pneu |
+| 56–64 | uma cerquinha baixa de madeira, no lugar da linha branca |
+| 64–204 | **pista de lama**: marrom, com sulcos de roda compridos e manchas mais escuras e mais claras |
 
 ~~~text
-STYLE — USE THE TWO ATTACHED IMAGES AS THE ART STYLE REFERENCE, and match their rendering exactly: a trendy flat hand-drawn illustration, like a Korean fashion illustration; thin, clean lineart of even weight in a dark charcoal-brown, slightly hand-drawn, never thick and never pure black; 100% flat fill colors with almost no shading (at most a few simple flat darker shapes), no gradients, no glossy highlights; a soft, muted palette (butter yellow, periwinkle and slate blue, sage green, cream, white, warm gray) with a few clear accents (coral red, royal blue). Take ONLY the art style: do NOT copy their characters, couples, outfits, poses, hearts or backgrounds.
+STYLE — USE THE TWO ATTACHED IMAGES AS THE ART STYLE REFERENCE and match their rendering exactly: a trendy flat hand-drawn fashion illustration; thin, even, slightly sketchy lineart in dark charcoal-brown (never black, never thick); 100% flat fill colors, no gradients, no glossy highlights; shading only as a few flat, irregular, slightly darker patches; a muted warm palette (cocoa, clay brown, sand, olive). Take ONLY the art style: do NOT copy their characters, couples, outfits, poses, hearts or backgrounds.
 
-A single object on a fully TRANSPARENT background, 800 x 400: the front of a kids' racing team PIT GARAGE, seen straight from the front with no perspective. A wide, OPEN garage door shows a cozy, tidy inside: a tool wall, a few stacked kart tires and a warm hanging light. Above the door, a mint-teal and yellow striped AWNING, and two small plain mint-teal team pennants. The bottom edge of the building is straight and touches the bottom of the image.
+A horizontal ground STRIP for a side-view kids' racing game, 1280 x 204, opaque, SEAMLESS: the left edge must tile perfectly with the right edge. Flat front view with NO perspective. From top to bottom: (1) a packed light-brown DIRT pit lane about 56 pixels tall with faint tire marks; (2) a low wooden rail about 8 pixels tall; (3) a MUDDY race track about 140 pixels tall: wet brown mud with long wheel ruts running left to right and flat patches of darker wet mud and lighter dry mud.
 
-DO NOT INCLUDE: karts, people, characters, the race track, the ground, the sky, text, letters, numbers, logos, sponsor marks, team names, perspective, the people from the reference images (a girl with long wavy dark hair, a red bow headband, a yellow cardigan and a blue plaid skirt; a young man in a blue plaid overshirt and white pants; a woman with a polka-dot neckerchief and a red shoulder bag; a young man in a blue-and-cream sweater), hearts, sparkles, plaid patterns, cel shading, gradients, glossy highlights, thick outlines, white sticker keyline, watermarks, signatures, @handles, website names, painterly rendering, 3D render, photorealistic.
+DO NOT INCLUDE: sky, grass, grandstand, karts, motorbikes, people, puddles of water, rocks, text, letters, numbers, logos, perspective, curves, the people from the reference images, hearts, sparkles, plaid patterns, cel shading, gradients, glossy highlights, thick outlines, white sticker keyline, watermarks, signatures, @handles, website names, painterly rendering, 3D render, photorealistic.
 ~~~
 
 ---
 
-## 8. `cover-pit-stop-da-chuva.png` — 1672 × 941, opaco, com o título
+## 10. `tenda.png` — 600 × 360, alfa
+
+É a **tenda da equipe**, onde a Kika para, vista de frente. Ela fica na frente da arquibancada, com a base apoiada na faixa do box. A base é reta e encosta no fundo da imagem.
 
 ~~~text
-STYLE — USE THE TWO ATTACHED IMAGES AS THE ART STYLE REFERENCE, and match their rendering exactly: a trendy flat hand-drawn illustration, like a Korean fashion illustration; thin, clean lineart of even weight in a dark charcoal-brown, slightly hand-drawn, never thick and never pure black; 100% flat fill colors with almost no shading (at most a few simple flat darker shapes on clothing folds), no gradients, no glossy highlights; small, simple faces with tiny dot or short-line eyes, a small curved smile and soft pink blush ovals on the cheeks; slender, natural proportions with small heads (NOT chibi); a soft, muted palette (butter yellow, periwinkle and slate blue, sage green, cream, white, warm gray) with a few clear accents (coral red, royal blue); a few small 4-point sparkles are welcome. Take ONLY the art style: do NOT copy their characters, couples, outfits, poses, hearts or backgrounds.
+STYLE — USE THE TWO ATTACHED IMAGES AS THE ART STYLE REFERENCE and match their rendering exactly: a trendy flat hand-drawn fashion illustration; thin, even, slightly sketchy lineart in dark charcoal-brown (never black, never thick); 100% flat fill colors, no gradients, no glossy highlights; shading only as a few flat, irregular, slightly darker patches; a muted pastel palette (sage, slate blue, butter yellow, cream, warm gray) with a few clear accents (coral, royal blue). Take ONLY the art style: do NOT copy their characters, couples, outfits, poses, hearts or backgrounds.
 
-A cover illustration for a children's game, 16:9 (1672 x 941), opaque. At the TOP, a big, bold, friendly title lettering that reads exactly "Pit Stop da Chuva" (Portuguese), in chunky rounded letters, white with a mint-teal outline. Below: a kart race on a rainy day, side view. In front of a mint-teal and yellow pit garage, two kid mechanics of about 10 in mint-teal overalls change the tires of a mint-teal kart with power wrenches, while the driver KIKA (a 10-year-old girl with brown skin, a curly black ponytail, a mint-teal helmet with the visor up and a yellow scarf) gives a big smile. A chubby mustached team boss in a mint-teal cap holds a clipboard. Half of the sky is sunny and half has a gray rain cloud with falling drops; water splashes from a puddle on the track. A lilac rival kart races by in the background. Bright, playful, energetic mood.
+A single object on a fully TRANSPARENT background, 600 x 360: a kids' racing team PIT TENT seen straight from the front with no perspective. A cream canopy roof with a scalloped mint-green and butter-yellow striped valance, two thin metal poles at the sides and a small mint pennant on top. Under it, an open, cozy work area: a back wall with a pegboard of tools, two small stacks of kart tires at the sides and a warm hanging lamp. The bottom edge is straight and touches the bottom of the image.
 
-DO NOT INCLUDE: any text other than the title "Pit Stop da Chuva", misspelled title, extra titles, numbers on karts, sponsor logos, real racing brands, car crashes, fire, scary elements, lightning, night, the people from the reference images (a girl with long wavy dark hair, a red bow headband, a yellow cardigan and a blue plaid skirt; a young man in a blue plaid overshirt and white pants; a woman with a polka-dot neckerchief and a red shoulder bag; a young man in a blue-and-cream sweater), couples, holding hands, romantic poses, hearts, peace-sign gestures, plaid clothes, chibi proportions, big anime eyes with highlights, cel shading, gradients, glossy highlights, thick outlines, NO white sticker keyline here, watermarks, signatures, @handles, website names, painterly rendering, 3D render, photorealistic.
+DO NOT INCLUDE: karts, motorbikes, people, characters, the race track, the ground, the sky, text, letters, numbers, logos, sponsor marks, team names, perspective, the people from the reference images, hearts, sparkles, plaid patterns, cel shading, gradients, glossy highlights, thick outlines, white sticker keyline, watermarks, signatures, @handles, website names, painterly rendering, 3D render, photorealistic.
 ~~~
 
 ---
 
-## 9. Quando a arte chegar
+## 11. `mao.png` — 256 × 256, alfa
 
-- Medir cada folha por colunas antes de medir por célula (objeto que vaza para a vizinha pede reempacotar) e zerar a franja de alfa baixo.
-- **Karts:** medir o centro dos dois arcos das rodas, a altura do eixo e a base do chassi (em fração da célula), e ajustar `KART.rearFX`, `KART.frontFX`, `KART.axleFY`, `KART.wheelFR` e `KART.bottomFY` em `data/layout.ts`. Os arcos têm de estar no mesmo lugar nas 6 células, porque a folha é cortada pela grade, sem medir o alfa.
-- **Equipe:** com proporção esguia, a cabeça fica mais alta na figura. Conferir `betoHead()` em `scenes/crew.ts` (0,62 da altura), que é de onde sai o balão do Tio Beto.
-- **Autódromo:** conferir onde ficaram a mureta e a pista e ajustar `GROUND`, `RIVAL.ground`, `LAP.puddleY` e `LAP.hayY`. Se a emenda não fechar, espelhar a metade da direita.
-- **Box:** conferir a base e a porta, e ajustar `BOX` e `CREW.idleFeet` (os mecânicos esperam na porta).
+É a mãozinha da demonstração, com o **dedo indicador em pé**. **A ponta do dedo fica em (87, 18)**: é o `HAND_TIP` (0,34 · 0,07) em `data/files.ts`. Ela tem uma borda branca grossa para aparecer em cima de tudo.
+
+~~~text
+STYLE — USE THE TWO ATTACHED IMAGES AS THE ART STYLE REFERENCE and match their rendering exactly: thin, even, slightly sketchy lineart in dark charcoal-brown; 100% flat fill colors, no gradients; one flat darker patch for shading. Take ONLY the art style: do NOT copy their characters, couples, outfits, poses, hearts or backgrounds.
+
+A single cartoon HAND on a fully TRANSPARENT background, 256 x 256: a child's hand seen from the back, the index finger pointing straight UP with its tip at about x 87, y 18, the other fingers curled, light peach skin, and a thick WHITE outline all around the hand so it reads over any background.
+
+DO NOT INCLUDE: arms beyond the wrist, sleeves, rings, nails painted, peace-sign or other gestures, text, backgrounds, shadows, hearts, sparkles, gradients, 3D render, photorealistic.
+~~~
+
+---
+
+## 12. `cover-pit-stop-da-chuva.png` — 1672 × 941, opaco, com o título
+
+~~~text
+STYLE — USE THE TWO ATTACHED IMAGES AS THE ART STYLE REFERENCE and match their rendering exactly: a trendy flat hand-drawn fashion illustration; thin, even, slightly sketchy lineart in dark charcoal-brown (never black, never thick); 100% flat fill colors, no gradients, no glossy highlights; shading only as a few flat, irregular, slightly darker patches on folds; small simple faces with tiny dot eyes, a one-stroke nose, a short curved smile and soft pink oval blush; slender natural proportions with small heads (NOT chibi); a muted pastel palette (sage, slate and lavender blue, butter yellow, cream, olive green, warm gray, pale aqua) with a few clear accents (coral, royal blue); a few small white 4-point sparkles and flat white clouds are welcome. Take ONLY the art style: do NOT copy their characters, couples, outfits, poses, hearts or backgrounds.
+
+A cover illustration for a children's game, 16:9 (1672 x 941), opaque. At the TOP, a big, bold, friendly title lettering that reads exactly "Pit Stop da Chuva" (Portuguese), in chunky rounded letters, white with a mint-green outline. Below: a kids' race on a side-view track, half of the sky sunny and half with a gray rain cloud and falling drops. In front of a cream-and-mint pit tent, two kid mechanics of about 10 in mint-green overalls change the tires of a mint-green kart with yellow power wrenches, while the driver KIKA (a 10-year-old girl with brown skin, a curly black ponytail, a mint-green helmet with the visor up and a yellow scarf) gives a big smile. A chubby mustached team boss in a mint-green cap waves a checkered flag. A lavender kart and a coral motorbike race by on the track, one splashing a puddle and the other throwing a little mud. Bright, playful, energetic mood.
+
+DO NOT INCLUDE: any text other than the title "Pit Stop da Chuva", misspelled title, extra titles, numbers on karts, sponsor logos, real racing brands, crashes, fire, scary elements, lightning, night, the people from the reference images (a girl with long wavy dark hair, a red bow headband, a yellow cardigan and a lavender plaid skirt; a young man in a lavender plaid overshirt and white pants; a woman with a blue polka-dot neckerchief and a coral shoulder bag; a young man in a cream sweater with a royal-blue panel), couples, holding hands, romantic poses, hearts, peace-sign gestures, plaid clothes, chibi proportions, big anime eyes with highlights, cel shading, gradients, glossy highlights, thick outlines, white sticker keyline, watermarks, signatures, @handles, website names, painterly rendering, 3D render, photorealistic.
+~~~
+
+---
+
+## 13. Quando a arte chegar
+
+- **Todas as folhas:** medir por colunas antes de medir por célula (objeto que vaza para a vizinha pede reempacotar) e zerar a franja de alfa baixo.
+- **`karts.png` e `motos.png`** (são cortadas pela grade, sem medir o alfa):
+  - medir o centro dos dois arcos das rodas, a altura do eixo e a base do chassi, em fração da célula;
+  - ajustar `GEOMETRY.carro` e `GEOMETRY.moto` em `data/layout.ts` (`rearFX`, `frontFX`, `axleFY`, `wheelFR`, `bottomFY`);
+  - os arcos têm de estar no mesmo lugar nas 8 células.
+- **`equipe.png`:** com proporção esguia, a cabeça fica mais alta na figura. Conferir `betoHead()` em `scenes/crew.ts`.
+- **`autodromo.png` e `lama.png`:**
+  - conferir onde ficaram a faixa do box e as duas faixas da pista, e ajustar `LANES`, `PIT_LANE`, `TRACK_BAND` e `MUD`;
+  - se a emenda não fechar, espelhar a metade da direita.
+- **`tenda.png`:** conferir a base e ajustar `TENT` e `CREW.idleFeet` (os mecânicos esperam na frente da tenda).
+- **`mao.png`:** conferir a ponta do dedo contra o `HAND_TIP`.
 - **Capa:** ligar no `catalog.ts` e gerar o `public/og/pit-stop-da-chuva.jpg` (1200 × 630).
 - Registrar medidas e limpezas no `MANIFEST.md` da pasta de assets.

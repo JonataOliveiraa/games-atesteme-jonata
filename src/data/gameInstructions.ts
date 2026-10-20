@@ -51,6 +51,12 @@ const POR_SLUG: Record<string, string[]> = {
     "Nome errado? A plaquinha não gruda, e o verso continua lá para conferir.",
     "Com a plaquinha pronta, a obra sobe para o mural da festa.",
   ],
+  "pula-pula-na-internet": [
+    "O celular pula sozinho. Segure o lado esquerdo ou o direito da tela (ou as setas do teclado) para levá-lo até as abas mais altas.",
+    "No caminho tem uma notícia, uma mensagem ou uma foto. Encostou, ela abre na tela com três pistas: quem fez, quando e de onde veio.",
+    "Com as três pistas boas, PODE CONFIAR. Se alguma falta, NÃO CONFIE. Acertou, a nuvem abre e o celular sobe. Errou, a partida acaba.",
+    "Caiu? Sem problema: o celular volta para a última aba em que pisou.",
+  ],
   "olha-o-jornal": [
     "O carteiro traz dois jornais sobre a mesma coisa.",
     "Leia os dois e toque no que você acredita.",
@@ -421,6 +427,11 @@ const POR_SLUG: Record<string, string[]> = {
     "Toque no botão do lugar onde você achou, e o jogo viaja até lá para abrir.",
     "Mais para a frente o fio arrebenta, e o que estava na nuvem tranca.",
   ],
+  "catapulta-do-arquivo": [
+    "No alto aparece o pedido: guarde o arquivo num lugar LOCAL ou num lugar REMOTO.",
+    "Cada rodada tem um mapa diferente, maior que a tela: arraste a tela (ou toque no mapinha) para ver tudo e planejar. Depois puxe a catapulta para trás, mire e solte. O arquivo voa, quica nas molas, rola e cai num buraco (que leva a um aparelho embaixo da terra) ou entra numa nuvem.",
+    "LOCAL é o HD de dentro do computador. REMOTO é o que sai dele: pen drive, cartão de memória, HD externo e nuvem. Se o arquivo parar no chão, é só lançar de novo.",
+  ],
   "raio-x-da-maquina": [
     "Cada máquina chega para revisão, e o raio-X mostra as peças de dentro dela.",
     "No nível 1 ela diz o nome da peça. No 2, só o que precisa. No 3, não diz nada.",
@@ -429,10 +440,16 @@ const POR_SLUG: Record<string, string[]> = {
     "No fim, arraste os cabos na cor certa: sem energia, nenhuma peça funciona.",
   ],
   "cabo-certo": [
-    "O computador está no meio do mapa. Leia o pedido no alto e ache os aparelhos que ele precisa: arraste o chão para andar pelo mapa.",
-    "Puxe o cabo de cada aparelho até a tomada da função dele: verde é ENTRADA, laranja é SAÍDA e roxa é ARMAZENAMENTO. Todo plugue é igual!",
-    "Com tudo ligado, toque no aparelho e veja a informação passar pelo processador. Um aparelho ligado também pode ter tomada própria.",
+    "Leia o pedido no alto. Os dois aparelhos dele aparecem dos lados do computador.",
+    "Puxe o plugue que pisca até a tomada da função do aparelho: verde é ENTRADA, laranja é SAÍDA e roxa é ARMAZENAMENTO.",
+    "Com tudo ligado, toque no aparelho e veja a informação passar pelo processador.",
     "Cabo na tomada de outra função encerra a partida.",
+  ],
+  "bairro-das-permissoes": [
+    "Você é o SISTEMA do bairro: só você anda entre as casas dos programas e as oficinas das peças.",
+    "Segure o dedo na tela para correr para aquele lado (ou use as setas). Solte e você desliza um pouquinho.",
+    "Corra até a casa que solta fumaça. Na porta, decida: o programa PRECISA daquela peça? Toque em PODE ou NÃO PODE.",
+    "Se PODE, vá buscar a peça na oficina dela. Responder errado encerra a partida.",
   ],
   "maestro-do-sistema": [
     "Cada programa levanta um balão com a peça de que precisa para tocar.",

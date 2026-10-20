@@ -1,13 +1,14 @@
-import type { DeviceDef, DeviceId, Kind, Payload } from '../types'
+import type { DeviceDef, DeviceId, Kind } from '../types'
 
 /**
- * Os sete aparelhos do mapa. A posição é no mapa de 2400 × 1350, com o
- * computador em (1200, 700). Os que começam fora da vista estão marcados.
+ * Os aparelhos do mapa. A posição é no mapa de 2400 × 1350, com o computador
+ * em (1200, 700); cada pedido diz onde eles aparecem (`MissionDef.place`).
  */
 export const DEVICES: Record<DeviceId, DeviceDef> = {
     teclado: {
         id: 'teclado',
         name: 'TECLADO',
+        gender: 'o',
         kind: 'entrada',
         cell: 0,
         at: { x: 800, y: 960 },
@@ -17,59 +18,101 @@ export const DEVICES: Record<DeviceId, DeviceDef> = {
     mouse: {
         id: 'mouse',
         name: 'MOUSE',
+        gender: 'o',
         kind: 'entrada',
         cell: 1,
-        at: { x: 430, y: 860 }, // fora da vista, à esquerda
+        at: { x: 430, y: 860 },
         sends: 'cursor',
         why: 'O mouse faz o seu movimento ENTRAR no computador.',
     },
     microfone: {
         id: 'microfone',
         name: 'MICROFONE',
+        gender: 'o',
         kind: 'entrada',
         cell: 2,
-        at: { x: 380, y: 430 }, // fora da vista, em cima à esquerda
+        at: { x: 380, y: 430 },
         sends: 'voz',
         why: 'O microfone faz a sua voz ENTRAR no computador.',
     },
     camera: {
         id: 'camera',
         name: 'CÂMERA',
+        gender: 'a',
         kind: 'entrada',
         cell: 3,
-        at: { x: 760, y: 240 }, // fora da vista, em cima
+        at: { x: 760, y: 240 },
         sends: 'foto',
+        sockets: [{ id: 'camera-armazenamento', kind: 'armazenamento', at: { x: -135, y: 20 } }],
         why: 'A câmera faz a imagem ENTRAR no computador.',
     },
     monitor: {
         id: 'monitor',
         name: 'MONITOR',
+        gender: 'o',
         kind: 'saida',
         cell: 4,
         at: { x: 1640, y: 520 },
         size: 240,
         takes: ['texto', 'cursor', 'foto', 'musica'],
-        sockets: [{ id: 'monitor-saida', kind: 'saida', at: { x: 134, y: 40 } }],
+        sockets: [{ id: 'monitor-saida', kind: 'saida', at: { x: 150, y: 40 } }],
         why: 'O monitor MOSTRA o que SAI do computador.',
     },
     altofalante: {
         id: 'altofalante',
         name: 'ALTO-FALANTE',
+        gender: 'o',
         kind: 'saida',
         cell: 5,
-        at: { x: 2150, y: 830 }, // fora da vista, à direita
-        takes: ['musica'],
+        at: { x: 2150, y: 830 },
+        takes: ['musica', 'voz'],
         why: 'O alto-falante faz o som SAIR do computador.',
     },
     pendrive: {
         id: 'pendrive',
         name: 'PENDRIVE',
+        gender: 'o',
         kind: 'armazenamento',
         cell: 6,
         at: { x: 1520, y: 1000 },
         sends: 'musica',
-        takes: ['voz'],
+        takes: ['voz', 'foto'],
         why: 'O pendrive GUARDA para depois: é ARMAZENAMENTO.',
+    },
+    memoria: {
+        id: 'memoria',
+        name: 'MEMÓRIA',
+        gender: 'a',
+        kind: 'memoria',
+        cell: 7,
+        at: { x: 760, y: 1000 },
+        takes: ['texto', 'cursor', 'foto'],
+        why: 'A MEMÓRIA só SEGURA enquanto o computador usa.',
+    },
+    hub: {
+        id: 'hub',
+        name: 'HUB',
+        gender: 'o',
+        kind: 'entrada',
+        cell: 8,
+        at: { x: 760, y: 700 },
+        sockets: [
+            { id: 'hub-1', kind: 'entrada', at: { x: -100, y: -82 } },
+            { id: 'hub-2', kind: 'entrada', at: { x: -118, y: 0 } },
+            { id: 'hub-3', kind: 'entrada', at: { x: -100, y: 82 } },
+        ],
+        why: 'O HUB dá mais tomadas de ENTRADA.',
+    },
+    cartao: {
+        id: 'cartao',
+        name: 'CARTÃO',
+        gender: 'o',
+        kind: 'armazenamento',
+        cell: 9,
+        at: { x: 700, y: 1200 },
+        size: 140,
+        takes: ['foto'],
+        why: 'O cartão GUARDA as fotos: é ARMAZENAMENTO.',
     },
 }
 
@@ -77,13 +120,14 @@ export const KIND_NAME: Record<Kind, string> = {
     entrada: 'ENTRADA',
     saida: 'SAÍDA',
     armazenamento: 'ARMAZENAMENTO',
+    memoria: 'MEMÓRIA',
 }
 
-/** O que falta, dito pelo processador, quando a informação não tem para onde ir. */
-export const MISSING: Record<Payload, string> = {
-    texto: 'Não tenho onde MOSTRAR!',
-    cursor: 'Não tenho onde MOSTRAR!',
-    foto: 'Não tenho onde MOSTRAR!',
-    voz: 'Não tenho onde GUARDAR!',
-    musica: 'Não tenho quem TOQUE o som!',
+/** O que o processador diz quando a informação não chega ao destino do pedido. */
+export const MISSING: Partial<Record<DeviceId, string>> = {
+    monitor: 'Não tenho onde MOSTRAR!',
+    altofalante: 'Não tenho quem TOQUE o som!',
+    pendrive: 'Não tenho onde GUARDAR!',
+    cartao: 'Não tenho onde GUARDAR!',
+    memoria: 'Não tenho onde SEGURAR!',
 }

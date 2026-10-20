@@ -6,15 +6,16 @@ import { showLevelComplete } from '../../../../shared/level/showLevelComplete'
 import { vidasIniciais } from '../../../../shared/level/vidasIniciais'
 import { faseInicial } from '../../../../shared/level/faseInicial'
 import { FX } from '../../../../shared/effects/FX'
+import type { TutorialStep } from '../../../../shared/tutorial/createTutorial'
 
 import { MEL_CELL } from '../data/files'
 import { MEL, MID_LANE } from '../data/layout'
-import { LEVELS, POINTS, guideKey } from '../data/levels'
+import { LEVELS, OPENING_KEY, POINTS, guideKey, trueParts } from '../data/levels'
 import { culprits, has, holds, literals } from '../data/logic'
 import { C, CSS } from '../data/theme'
 import { TIMING } from '../data/timing'
 import { HELP, TEACH, why } from '../data/words'
-import type { LevelDef, PhaseDef, State } from '../types'
+import type { LevelDef, PhaseDef, State, Teach } from '../types'
 
 import { createAudio, type Audio } from './audio'
 import { createBanner, type Banner } from './banner'
@@ -39,6 +40,7 @@ export class GameScene extends Phaser.Scene {
     private state: State = 'intro'
     private gen = 0
     private introduce = false
+    private opening = false
 
     private score = 0
     private hits = 0
@@ -74,6 +76,7 @@ export class GameScene extends Phaser.Scene {
         this.k = 0
         this.state = 'intro'
         this.introduce = false
+        this.opening = false
         this.score = data?.points ?? 0
         this.hits = 0
         this.errors = 0
@@ -115,6 +118,8 @@ export class GameScene extends Phaser.Scene {
         const key = guideKey(this.level.level)
         this.introduce = !this.registry.get(key)
         this.registry.set(key, true)
+        this.opening = !this.registry.get(OPENING_KEY)
+        this.registry.set(OPENING_KEY, true)
         void this.startPhase(++this.gen, 0)
     }
 
@@ -162,13 +167,14 @@ export class GameScene extends Phaser.Scene {
         this.sign.clearMarks()
         this.sign.visible(false)
         const tutorial = this.introduce && !!phase.teach
+        const opened = index === 0 && this.opening
 
         if (index > 0) {
             await this.fade(false)
             if (gen !== this.gen) return
         }
-        if (index === 0 && this.introduce) {
-            await this.opening(gen)
+        if (opened) {
+            await this.playOpening(gen)
             if (gen !== this.gen) return
         } else {
             await FX.wait(this, TIMING.beat)
@@ -179,12 +185,9 @@ export class GameScene extends Phaser.Scene {
         this.audio.pop()
         await this.sign.showBig()
         if (gen !== this.gen) return
-        if (tutorial) {
-            const area = phase.teach === 'not' ? (this.sign.notRect() ?? this.sign.rect()) : this.sign.rect()
-            await teach(this, guideKey(this.level.level), [
-                { text: phase.teach === 'not' ? TEACH.not : TEACH.rule, ...spot(area, 10), balloonY: 540, buttonLabel: 'Ver' },
-            ])
-        } else await FX.wait(this, TIMING.ruleRead)
+        const steps = this.teachSteps(opened, tutorial ? phase.teach : undefined)
+        if (steps.length) await teach(this, guideKey(this.level.level), steps)
+        else await FX.wait(this, TIMING.ruleRead)
         if (gen !== this.gen) return
         await this.sign.dock()
         if (gen !== this.gen) return
@@ -203,7 +206,25 @@ export class GameScene extends Phaser.Scene {
         this.play()
     }
 
-    private async opening(gen: number) {
+    private teachSteps(opened: boolean, topic?: Teach): TutorialStep[] {
+        const topics: Teach[] = []
+        if (opened && topic !== 'rule') topics.push('rule')
+        if (topic) topics.push(topic)
+        return topics.map((t, i) => ({
+            text: TEACH[t],
+            ...spot(this.areaOf(t), 10),
+            balloonY: 540,
+            buttonLabel: i < topics.length - 1 ? 'Próximo' : 'Ver',
+        }))
+    }
+
+    private areaOf(topic: Teach) {
+        if (topic === 'not') return this.sign.notRect() ?? this.sign.rect()
+        if (topic === 'and' || topic === 'or') return this.sign.pairRect() ?? this.sign.rect()
+        return this.sign.rect()
+    }
+
+    private async playOpening(gen: number) {
         this.header.visible(false)
         this.view.setK(this.phase.columns.length + 1)
         await FX.wait(this, 800)
@@ -234,7 +255,8 @@ export class GameScene extends Phaser.Scene {
         this.state = 'demo'
         const rule = this.phase.rule
         const column = this.sweets.column(this.k)
-        const bad = column.find(s => !holds(rule, s.def))
+        const bads = column.filter(s => !holds(rule, s.def))
+        const bad = bads.find(s => trueParts(this.phase, s.def) === 1) ?? bads[0]
         const good = column.find(s => holds(rule, s.def))
         if (!bad || !good) return
         await FX.wait(this, TIMING.beat)
@@ -307,6 +329,14 @@ export class GameScene extends Phaser.Scene {
                 if (gen !== this.gen) return
             }
         }
+        if (!this.phase.rule.op) return
+        this.audio.join()
+        const ok = holds(this.phase.rule, s.def)
+        await this.sign.join(ok)
+        if (gen !== this.gen) return
+        if (ok) this.audio.yes()
+        else this.audio.no()
+        await FX.wait(this, TIMING.mark)
     }
 
     private async landedWell(gen: number, s: SweetView) {
@@ -379,10 +409,9 @@ export class GameScene extends Phaser.Scene {
     private async sinkWith(gen: number, s: SweetView) {
         this.state = 'error'
         const rule = this.phase.rule
-        const culprit = culprits(rule, s.def)[0] ?? rule.left
-        const index = literals(rule).indexOf(culprit)
-        this.sign.blame(index, culprit.not && has(s.def, culprit.term))
-        this.banner.say(why(s.def, culprit))
+        const all = literals(rule)
+        culprits(rule, s.def).forEach(l => this.sign.blame(all.indexOf(l), l.not && has(s.def, l.term)))
+        this.banner.say(why(s.def, rule))
         this.audio.glub()
         await FX.all(
             this.sweets.sink(s),
@@ -416,12 +445,20 @@ export class GameScene extends Phaser.Scene {
         this.state = 'help'
         this.sweets.deactivate()
         this.header.setHelpEnabled(false)
-        const not = this.phase.rule.left.not || !!this.phase.rule.right?.not
-        const notArea = this.sign.notRect()
-        await teach(this, `${guideKey(this.level.level)}-help`, [
-            { text: HELP.rule, ...spot(this.sign.rect(), 6), balloonY: 260, buttonLabel: not ? 'Próximo' : 'Continuar' },
-            ...(not && notArea ? [{ text: HELP.not, ...spot(notArea, 6), balloonY: 260, buttonLabel: 'Continuar' }] : []),
-        ])
+        const rule = this.phase.rule
+        const topics: Teach[] = ['rule']
+        if (literals(rule).some(l => l.not) && this.sign.notRect()) topics.push('not')
+        if (rule.op) topics.push(rule.op === 'e' ? 'and' : 'or')
+        await teach(
+            this,
+            `${guideKey(this.level.level)}-help`,
+            topics.map((t, i) => ({
+                text: HELP[t],
+                ...spot(this.areaOf(t), 6),
+                balloonY: 260,
+                buttonLabel: i < topics.length - 1 ? 'Próximo' : 'Continuar',
+            })),
+        )
         if (gen !== this.gen) return
         this.play()
     }

@@ -3,16 +3,19 @@ import { H, VIEW, W, WORLD } from '../data/layout'
 import type { Rect, Vec } from '../types'
 
 /**
- * Duas câmeras. A principal é a janela sobre o mapa, abaixo do cabeçalho, e
- * anda quando a criança arrasta o chão. A de cima (ui) desenha o cabeçalho, os
- * balões e o tutorial sem andar. Tudo nasce na ui; o que é do mapa passa por
- * `world()`.
+ * Duas câmeras. A principal é a janela sobre o mapa, abaixo do cabeçalho: anda
+ * quando a criança arrasta o chão e dá zoom na demonstração. A de cima (ui)
+ * desenha o cabeçalho, as legendas e a mãozinha sem andar. Tudo nasce na ui; o
+ * que é do mapa passa por `world()`.
  */
 export interface View {
+    readonly zoom: number
     world<T extends Phaser.GameObjects.GameObject>(obj: T): T
     /** Anda o mapa em pixels de tela. */
     pan(dx: number, dy: number): void
     panTo(at: Vec, ms: number): Promise<void>
+    /** Leva o centro da janela até o ponto e muda o zoom junto. */
+    zoomTo(at: Vec, zoom: number, ms: number): Promise<void>
     center(): Vec
     toScreen(at: Vec): Vec
     toScreenRect(r: Rect): Rect
@@ -36,22 +39,6 @@ export function createView(scene: Phaser.Scene, home: Vec): View {
     scene.sys.events.on(Phaser.Scenes.Events.ADDED_TO_SCENE, onAdded)
     scene.children.list.forEach(toUi)
 
-    const scroll = { x: 0, y: 0 }
-    let tween: Phaser.Tweens.Tween | undefined
-
-    const clampX = (x: number) => Phaser.Math.Clamp(x, 0, WORLD.w - VIEW.w)
-    const clampY = (y: number) => Phaser.Math.Clamp(y, 0, WORLD.h - VIEW.h)
-    const apply = () => {
-        scroll.x = clampX(scroll.x)
-        scroll.y = clampY(scroll.y)
-        main.setScroll(Math.round(scroll.x), Math.round(scroll.y))
-    }
-    const centerOn = (at: Vec) => {
-        scroll.x = at.x - VIEW.w / 2
-        scroll.y = at.y - VIEW.h / 2
-        apply()
-    }
-
     // O contêiner confere o filtro de cada filho na hora de desenhar: os filhos
     // também precisam sair da ui, senão o contêiner aparece vazio no mapa.
     const intoWorld = (obj: Phaser.GameObjects.GameObject) => {
@@ -59,22 +46,41 @@ export function createView(scene: Phaser.Scene, home: Vec): View {
         if (obj instanceof Phaser.GameObjects.Container) obj.list.forEach(intoWorld)
     }
 
+    // O centro da janela, no mapa. Com zoom, a janela mostra VIEW / zoom do mapa.
+    const center = { x: home.x, y: home.y }
+    let zoom = 1
+    let tween: Phaser.Tweens.Tween | undefined
+
+    const clamp = () => {
+        const hw = VIEW.w / (2 * zoom)
+        const hh = VIEW.h / (2 * zoom)
+        center.x = Phaser.Math.Clamp(center.x, hw, WORLD.w - hw)
+        center.y = Phaser.Math.Clamp(center.y, hh, WORLD.h - hh)
+    }
+    const apply = () => {
+        clamp()
+        main.setZoom(zoom)
+        main.setScroll(center.x - VIEW.w / 2, center.y - VIEW.h / 2)
+    }
+
     const view: View = {
+        get zoom() {
+            return zoom
+        },
         world(obj) {
             intoWorld(obj)
             return obj
         },
         pan(dx, dy) {
             tween?.stop()
-            scroll.x -= dx
-            scroll.y -= dy
+            center.x -= dx / zoom
+            center.y -= dy / zoom
             apply()
         },
-        panTo(at, ms) {
+        panTo: (at, ms) => view.zoomTo(at, zoom, ms),
+        zoomTo(at, to, ms) {
             tween?.stop()
-            const from = { x: scroll.x, y: scroll.y }
-            const to = { x: clampX(at.x - VIEW.w / 2), y: clampY(at.y - VIEW.h / 2) }
-            if (Math.abs(from.x - to.x) < 2 && Math.abs(from.y - to.y) < 2) return Promise.resolve()
+            const from = { x: center.x, y: center.y, z: zoom }
             const k = { t: 0 }
             return new Promise<void>(resolve => {
                 tween = scene.tweens.add({
@@ -83,8 +89,9 @@ export function createView(scene: Phaser.Scene, home: Vec): View {
                     duration: ms,
                     ease: 'Sine.easeInOut',
                     onUpdate: () => {
-                        scroll.x = Phaser.Math.Linear(from.x, to.x, k.t)
-                        scroll.y = Phaser.Math.Linear(from.y, to.y, k.t)
+                        zoom = Phaser.Math.Linear(from.z, to, k.t)
+                        center.x = Phaser.Math.Linear(from.x, at.x, k.t)
+                        center.y = Phaser.Math.Linear(from.y, at.y, k.t)
                         apply()
                     },
                     onComplete: () => resolve(),
@@ -92,13 +99,19 @@ export function createView(scene: Phaser.Scene, home: Vec): View {
                 })
             })
         },
-        center: () => ({ x: scroll.x + VIEW.w / 2, y: scroll.y + VIEW.h / 2 }),
-        toScreen: at => ({ x: at.x - scroll.x + VIEW.x, y: at.y - scroll.y + VIEW.y }),
+        center: () => ({ ...center }),
+        toScreen: at => ({
+            x: VIEW.x + VIEW.w / 2 + (at.x - center.x) * zoom,
+            y: VIEW.y + VIEW.h / 2 + (at.y - center.y) * zoom,
+        }),
         toScreenRect(r) {
             const pt = view.toScreen(r)
-            return { x: pt.x, y: pt.y, w: r.w, h: r.h }
+            return { x: pt.x, y: pt.y, w: r.w * zoom, h: r.h * zoom }
         },
-        toWorld: (x, y) => ({ x: x - VIEW.x + scroll.x, y: y - VIEW.y + scroll.y }),
+        toWorld: (x, y) => ({
+            x: center.x + (x - VIEW.x - VIEW.w / 2) / zoom,
+            y: center.y + (y - VIEW.y - VIEW.h / 2) / zoom,
+        }),
         inView(at, pad = 0) {
             const s = view.toScreen(at)
             return s.x > VIEW.x + pad && s.x < VIEW.x + VIEW.w - pad && s.y > VIEW.y + pad && s.y < VIEW.y + VIEW.h - pad
@@ -108,9 +121,9 @@ export function createView(scene: Phaser.Scene, home: Vec): View {
             tween?.stop()
             scene.sys.events.off(Phaser.Scenes.Events.ADDED_TO_SCENE, onAdded)
             scene.cameras.remove(ui)
-            main.setViewport(0, 0, W, H).setScroll(0, 0)
+            main.setViewport(0, 0, W, H).setZoom(1).setScroll(0, 0)
         },
     }
-    centerOn(home)
+    apply()
     return view
 }

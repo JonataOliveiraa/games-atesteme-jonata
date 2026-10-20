@@ -8,21 +8,22 @@ import { faseInicial } from '../../../../shared/level/faseInicial'
 import { FX } from '../../../../shared/effects/FX'
 
 import { DEVICES, MISSING } from '../data/devices'
-import { DEPTH, PC, SOCKET, VIEW } from '../data/layout'
-import { LEVELS, POINTS, guideKey } from '../data/levels'
+import { DEPTH, PC, SOCKET, VIEW, ZOOM } from '../data/layout'
+import { BASICS_KEY, LEVELS, POINTS, devicesOf, onTable, teachKey } from '../data/levels'
 import { Net, type Hop, type Route } from '../data/route'
 import { C, CSS, KIND_COLOR } from '../data/theme'
 import { TIMING } from '../data/timing'
-import { HELP, LABEL, SAY, TEACH } from '../data/words'
-import type { DeviceId, LevelDef, MissionDef, State, Vec } from '../types'
+import { CAPTION, LABEL, SAY, TEACH } from '../data/words'
+import type { DeviceId, Kind, LevelDef, MissionDef, State, Vec } from '../types'
 
 import { createAudio, type Audio } from './audio'
 import { createBanner, type Banner } from './banner'
 import { createBoard, type Board } from './board'
 import { createBubble, type Bubble } from './bubble'
+import { createCaption, type Caption } from './caption'
 import { createFlow, type Flow } from './flow'
 import { createGear, type Gear } from './gear'
-import { spot, teach } from './guide'
+import { createHand, type Hand } from './hand'
 import { createHeader, type Header } from './header'
 import { createMarkers, type Markers } from './markers'
 import { createView, type View } from './view'
@@ -34,6 +35,10 @@ const DRAG_START = 14
 
 /** Margem da tela dentro da qual a bolinha pode andar sem a câmera ir atrás. */
 const FOLLOW_PAD = 150
+
+const KINDS: Kind[] = ['entrada', 'saida', 'armazenamento', 'memoria']
+
+const HOME: Vec = { x: PC.x, y: PC.y - 10 }
 
 type Press =
     | { kind: 'pan'; last: Vec }
@@ -52,6 +57,9 @@ export class GameScene extends Phaser.Scene {
     private press: Press | null = null
     private hooked = new Set<DeviceId>()
     private hinted: DeviceId | null = null
+    private demoing = false
+    private skip = false
+    private idleSince = 0
 
     private score = 0
     private hits = 0
@@ -68,6 +76,8 @@ export class GameScene extends Phaser.Scene {
     private header!: Header
     private bubble!: Bubble
     private banner!: Banner
+    private caption!: Caption
+    private hand!: Hand
     private keys?: Record<'up' | 'down' | 'left' | 'right' | 'w' | 'a' | 's' | 'd', Phaser.Input.Keyboard.Key>
 
     private unsubPlatform?: () => void
@@ -87,6 +97,9 @@ export class GameScene extends Phaser.Scene {
         this.press = null
         this.hooked = new Set()
         this.hinted = null
+        this.demoing = false
+        this.skip = false
+        this.idleSince = 0
         this.score = data?.points ?? 0
         this.hits = 0
         this.errors = 0
@@ -96,12 +109,13 @@ export class GameScene extends Phaser.Scene {
 
     create() {
         this.input.topOnly = true
-        const defs = this.level.devices.map(id => DEVICES[id])
-        this.view = createView(this, { x: PC.x, y: PC.y - 10 })
+        // Tomada própria de aparelho (o monitor que leva o alto-falante) é coisa dos níveis altos.
+        const defs = devicesOf(this.level).map(id => (this.level.nested ? DEVICES[id] : { ...DEVICES[id], sockets: undefined }))
+        this.view = createView(this, HOME)
         this.audio = createAudio()
         this.net = new Net(this.level.pc, defs)
-        this.board = createBoard(this, this.view, this.net)
-        this.gear = createGear(this, this.view, defs, this.level.asleep)
+        this.board = createBoard(this, this.view, this.net, this.level.plates)
+        this.gear = createGear(this, this.view, defs)
         this.flow = createFlow(this, this.view)
         this.markers = createMarkers(this, this.view)
         this.header = createHeader(this, {
@@ -115,6 +129,8 @@ export class GameScene extends Phaser.Scene {
         })
         this.bubble = createBubble(this)
         this.banner = createBanner(this)
+        this.caption = createCaption(this)
+        this.hand = createHand(this, this.view)
         this.header.setHelpEnabled(false)
 
         const kb = this.input.keyboard
@@ -145,9 +161,8 @@ export class GameScene extends Phaser.Scene {
         runtimeGameBridge.emit({ type: 'GAME_READY', gameId: GAME_ID })
         this.emitCheckpoint()
 
-        const key = guideKey(this.level.level)
-        this.introduce = !this.registry.get(key)
-        this.registry.set(key, true)
+        this.introduce = !this.registry.get(BASICS_KEY)
+        this.registry.set(BASICS_KEY, true)
         void this.openLevel()
     }
 
@@ -161,6 +176,8 @@ export class GameScene extends Phaser.Scene {
         this.input.off('pointerup', this.onUp, this)
         this.input.off('pointerupoutside', this.onUp, this)
         this.game.canvas?.removeEventListener('pointerdown', this.focusGame)
+        this.hand?.destroy()
+        this.caption?.destroy()
         this.banner?.destroy()
         this.bubble?.destroy()
         this.header?.destroy()
@@ -177,7 +194,7 @@ export class GameScene extends Phaser.Scene {
 
     // ───────────────────────────────────────────── o quadro a quadro
 
-    update(_time: number, deltaMs: number) {
+    update(time: number, deltaMs: number) {
         if (!this.gear) return
         const delta = Math.min(deltaMs, 50)
         if (this.state === 'play' && this.keys) {
@@ -189,10 +206,15 @@ export class GameScene extends Phaser.Scene {
         }
         if (this.state === 'drag' && this.press?.kind === 'cable') this.edgePan(delta)
         if (this.state === 'flow') this.follow(delta)
+        if (this.state === 'play' && !this.hinted && !this.press && time - this.idleSince > TIMING.idle) {
+            this.idleSince = time
+            void this.nudge()
+        }
         const loose = this.gear
             .ids()
-            .filter(id => id === this.hinted || (this.gear.awake(id) && !this.net.socketOf(id) && this.press?.kind !== 'cable'))
-            .map(id => ({ id, at: DEVICES[id].at }))
+            .filter(id => this.gear.visible(id) && this.current().needs.includes(id))
+            .filter(id => id === this.hinted || (!this.net.socketOf(id) && this.press?.kind !== 'cable'))
+            .map(id => ({ id, at: this.gear.at(id) }))
         this.markers.update(this.state === 'intro' ? [] : loose)
     }
 
@@ -222,6 +244,14 @@ export class GameScene extends Phaser.Scene {
     // ───────────────────────────────────────────── o dedo
 
     private onDown(pointer: Phaser.Input.Pointer) {
+        // Só um toque no mapa pula: o toque no "?" que abriu a demonstração
+        // chega aqui logo depois dela começar, e não pode encerrá-la.
+        if (this.demoing) {
+            if (this.view.onMap(pointer.x, pointer.y)) this.skip = true
+            return
+        }
+        this.idleSince = this.time.now
+        if (!this.hinted) this.hand.stop()
         if (this.state !== 'play' || this.press) return
         if (!this.view.onMap(pointer.x, pointer.y)) return
         const here = { x: pointer.x, y: pointer.y }
@@ -250,7 +280,7 @@ export class GameScene extends Phaser.Scene {
         }
         if (press.kind === 'device') {
             if (Phaser.Math.Distance.BetweenPoints(here, press.start) < DRAG_START) return
-            if (this.gear.awake(press.id) && !this.net.socketOf(press.id)) this.startCable(press.id, here)
+            if (!this.net.socketOf(press.id)) this.startCable(press.id, here)
             else this.press = { kind: 'pan', last: press.last }
             return
         }
@@ -295,6 +325,7 @@ export class GameScene extends Phaser.Scene {
         let busy: { socket: string; d: number } | null = null
         this.net.sockets.forEach(info => {
             if (info.owner === id || !this.net.open(info.id)) return
+            if (info.owner !== 'pc' && !this.nestOn()) return
             const d = Phaser.Math.Distance.BetweenPoints(at, this.board.socketAt(info.id))
             if (d > SOCKET.snap) return
             const taken = this.net.occupant(info.id)
@@ -332,12 +363,11 @@ export class GameScene extends Phaser.Scene {
 
     private sayBusy(id: DeviceId, socket: string) {
         const kind = DEVICES[id].kind
-        const other = [...this.net.sockets.values()].find(
-            s => s.owner !== 'pc' && s.owner !== id && s.kind === kind && this.net.open(s.id) && !this.net.occupant(s.id),
-        )
-        if (other && this.net.kindOf(socket) === kind) {
+        const other = this.ownSocket(kind, id)
+        if (other && other.owner !== 'pc' && this.net.kindOf(socket) === kind) {
             this.board.point(other.id)
-            this.think(TEACH.nest, this.board.socketAt(socket), 3600)
+            void this.board.ping(other.id)
+            this.think(TEACH.nest(DEVICES[other.owner]), this.board.socketAt(socket), 2600)
             return
         }
         this.think(SAY.busy, this.board.socketAt(socket), TIMING.hint)
@@ -360,13 +390,17 @@ export class GameScene extends Phaser.Scene {
             this.hits += 1
             runtimeGameBridge.emit({ type: 'CORRECT_ANSWER', gameId: GAME_ID, pointsEarned: POINTS, stage: this.level.level })
         }
+        if (await this.reveal(gen)) return
         this.state = 'play'
         this.checkReady()
     }
 
     private updatePower() {
-        this.gear.ids().forEach(id => this.gear.setPowered(id, this.net.powered(id)))
-        this.board.refresh(this.net)
+        this.gear.ids().forEach(id => {
+            this.gear.setPowered(id, this.net.powered(id))
+            this.gear.invite(id, !this.net.socketOf(id))
+        })
+        this.board.refresh(this.net, this.nestOn())
         this.board.point(null)
     }
 
@@ -375,11 +409,8 @@ export class GameScene extends Phaser.Scene {
     private async tap(id: DeviceId) {
         if (this.state !== 'play') return
         const def = DEVICES[id]
-        const above = { x: def.at.x, y: def.at.y - (def.size ?? 170) * 0.42 }
-        if (!this.gear.awake(id)) {
-            this.gear.nope(id)
-            return
-        }
+        const at = this.gear.at(id)
+        const above = { x: at.x, y: at.y - (def.size ?? 170) * 0.42 }
         if (!this.net.socketOf(id)) {
             this.gear.nope(id)
             this.audio.blip()
@@ -389,10 +420,11 @@ export class GameScene extends Phaser.Scene {
         if (!this.net.powered(id)) {
             const owner = this.net.sockets.get(this.net.socketOf(id) ?? '')?.owner
             this.gear.nope(id)
-            this.think(SAY.noPower(owner && owner !== 'pc' ? DEVICES[owner].name : 'computador'), above, TIMING.hint)
+            this.think(SAY.noPower(owner && owner !== 'pc' ? DEVICES[owner] : null), above, TIMING.hint)
             return
         }
-        const route = this.net.route(id)
+        const full = this.net.route(id)
+        const route = full && { ...full, down: full.down.filter(d => this.current().needs.includes(d.to)) }
         if (!route) {
             this.gear.press(id)
             this.audio.blip()
@@ -405,7 +437,9 @@ export class GameScene extends Phaser.Scene {
         const gen = this.gen
         const mission = this.current()
         this.state = 'flow'
+        this.header.setHelpEnabled(false)
         this.bubble.hide()
+        this.hand.stop()
         this.hinted = null
         this.gear.hint(null)
         this.gear.send(id)
@@ -423,7 +457,7 @@ export class GameScene extends Phaser.Scene {
         const goal = mission.goal
         const reached = route.down.some(d => d.to === goal.at)
         if (!route.down.length || (route.payload === goal.payload && !reached)) {
-            this.think(MISSING[route.payload], this.board.chip(), 2600)
+            this.think(MISSING[goal.at] ?? MISSING.monitor ?? '', this.board.chip(), 2600)
         }
         await Promise.all(
             route.down.map(async d => {
@@ -438,12 +472,11 @@ export class GameScene extends Phaser.Scene {
             await this.finishMission(gen)
             return
         }
-        this.state = 'play'
-        this.checkReady()
+        this.play()
     }
 
     private center(id: DeviceId): Vec {
-        return DEVICES[id].at
+        return this.gear.at(id)
     }
 
     /** Do aparelho até o processador, cabo por cabo. */
@@ -497,65 +530,351 @@ export class GameScene extends Phaser.Scene {
         const m = this.current()
         this.hinted = this.ready(m) ? m.use : null
         this.gear.hint(this.hinted)
-        if (this.hinted) this.header.ask(LABEL.tapNow(DEVICES[m.use].name), true)
-        else this.header.ask(m.ask)
+        if (this.hinted) {
+            this.header.ask(LABEL.tapNow(DEVICES[m.use]), true)
+            this.hand.tapLoop(this.gear.at(m.use))
+        } else {
+            this.header.ask(m.ask)
+            this.hand.stop()
+        }
     }
 
     private async openLevel() {
         const gen = ++this.gen
         this.state = 'intro'
-        this.header.setPhase(0)
-        this.header.ask(this.level.missions[0].ask)
+        this.gear.ids().forEach(id => void this.gear.hide(id))
+        await this.setTable(gen, 0)
+        if (gen !== this.gen) return
         if (this.introduce) {
-            await this.intro(gen)
+            await this.demo(gen)
             if (gen !== this.gen) return
         }
-        await this.startMission(gen, 0)
+        await this.teachMemory(gen)
+        if (gen !== this.gen) return
+        this.play()
     }
 
-    private async intro(gen: number) {
-        await FX.wait(this, TIMING.beat)
-        if (gen !== this.gen) return
-        await this.bubble.say(SAY.hello, this.chipTail(), 'Próximo')
-        if (gen !== this.gen) return
-        const r = (rect: { x: number; y: number; w: number; h: number }) => spot(this.view.toScreenRect(rect))
-        const teclado = this.view.toScreen(this.gear.plugAt('teclado'))
-        const pc = this.view.toScreen({ x: PC.x, y: PC.y })
-        await teach(this, guideKey(this.level.level), [
-            { text: TEACH.pc, ...r(this.board.pcRect()), balloonY: 190, buttonLabel: 'Próximo' },
-            { text: TEACH.entrada, ...r(this.board.groupRect('entrada')), balloonY: 190, buttonLabel: 'Próximo' },
-            { text: TEACH.saida, ...r(this.board.groupRect('saida')), balloonY: 190, buttonLabel: 'Próximo' },
-            { text: TEACH.armazenamento, ...r(this.board.groupRect('armazenamento')), balloonY: 200, buttonLabel: 'Próximo' },
-            {
-                text: TEACH.drag,
-                shape: 'none',
-                balloonY: 190,
-                buttonLabel: 'Próximo',
-                pointer: { fromX: teclado.x, fromY: teclado.y, toX: pc.x - 60, toY: pc.y },
-            },
-            { text: TEACH.pan, shape: 'none', balloonY: 190, buttonLabel: 'Vamos!' },
-        ])
+    /** A novidade aparece com demonstração só na primeira vez da sessão. */
+    private firstTime(topic: string): boolean {
+        const key = teachKey(topic)
+        if (this.registry.get(key)) return false
+        this.registry.set(key, true)
+        return true
     }
 
-    private async startMission(gen: number, index: number) {
+    /**
+     * A estreia da MEMÓRIA, ao lado do ARMAZENAMENTO: a bolinha entra na
+     * tomada da memória e some ("só agora"); entra no baú e fica ("para sempre").
+     */
+    private async teachMemory(gen: number) {
+        const m = this.current()
+        if (m.teach !== 'memoria' || !this.firstTime(m.teach)) return
+        this.demoing = true
+        this.skip = false
+        this.markers.visible(false)
+        this.header.setHelpEnabled(false)
+        this.hand.stop()
+        const on = () => gen === this.gen && !this.skip
+        const chip = this.board.chip()
+        try {
+            for (const kind of ['memoria', 'armazenamento'] as Kind[]) {
+                const id = this.board.pcSocket(kind)
+                if (!id) continue
+                const s = this.board.socketAt(id)
+                const away = this.awayFrom(kind, s)
+                await this.view.zoomTo({ x: Phaser.Math.Linear(s.x, chip.x, 0.35), y: Phaser.Math.Linear(s.y, chip.y, 0.35) }, ZOOM.bottom, TIMING.zoom)
+                if (!on()) return
+                this.caption.say(CAPTION[kind], KIND_COLOR[kind])
+                void this.board.ping(id)
+                this.audio.blip()
+                await this.flow.travel([chip, s, away], 'texto', KIND_COLOR[kind])
+                if (!on()) return
+                const dot = this.view.world(this.add.circle(away.x, away.y, 18, KIND_COLOR[kind], 1).setDepth(DEPTH.fx))
+                dot.setStrokeStyle(5, C.white, 1)
+                if (kind === 'memoria') {
+                    this.caption.say(CAPTION.forget, KIND_COLOR[kind])
+                    await FX.wait(this, 500)
+                    await FX.to(this, dot, { alpha: 0, scale: 0.2 }, { duration: 700 })
+                } else {
+                    this.audio.gulp()
+                    this.caption.say(CAPTION.keep, KIND_COLOR[kind])
+                    await FX.to(this, dot, { scale: 1.3 }, { duration: 260, yoyo: true })
+                    await FX.wait(this, 900)
+                }
+                dot.destroy()
+                if (!on()) return
+                await FX.wait(this, 350)
+                if (!on()) return
+            }
+            await this.view.zoomTo(HOME, 1, TIMING.zoom)
+            if (!on()) return
+            this.audio.wake()
+            this.caption.say(CAPTION.yourTurn, C.yes)
+            await FX.wait(this, TIMING.caption)
+        } finally {
+            if (gen === this.gen) await this.endDemo()
+        }
+    }
+
+    /**
+     * A estreia de um aparelho que dá tomada (o HUB) ou de uma cadeia de dois
+     * cabos (o cartão na câmera, que está no hub): a bolinha percorre o caminho
+     * entre o processador e a tomada nova.
+     */
+    private async teachNest(gen: number, owner: DeviceId, socket: string, kind: Kind) {
+        const down = [...this.downPath(this.net.chain(owner).reverse(), owner), this.board.socketAt(socket)]
+        const path = kind === 'entrada' ? [...down].reverse() : down
+        const xs = path.map(p => p.x)
+        const ys = path.map(p => p.y)
+        const focus = { x: (Math.min(...xs) + Math.max(...xs)) / 2, y: (Math.min(...ys) + Math.max(...ys)) / 2 }
+        const zoom = Phaser.Math.Clamp(Math.min(VIEW.w / (Math.max(...xs) - Math.min(...xs) + 360), VIEW.h / (Math.max(...ys) - Math.min(...ys) + 300)), 0.8, ZOOM.socket)
+        await this.view.zoomTo(focus, zoom, TIMING.zoom)
+        if (gen !== this.gen) return
+        this.caption.say(owner === 'hub' ? CAPTION.hub : CAPTION.chain, KIND_COLOR[kind])
+        this.audio.blip()
+        if (owner === 'hub') {
+            for (const s of DEVICES.hub.sockets ?? []) {
+                void this.board.ping(s.id)
+                await FX.wait(this, 180)
+            }
+        }
+        await this.flow.travel(path, 'texto', KIND_COLOR[kind])
+        if (gen !== this.gen) return
+        await FX.wait(this, 500)
+    }
+
+    /**
+     * A demonstração, quase sem texto: zoom no processador, zoom em cada tomada
+     * com a informação de luz entrando, saindo e indo para o baú, e a mãozinha
+     * puxando um cabo até a frente do computador ("qual tomada?"). Ela não
+     * encaixa o plugue: a escolha fica para a criança. Um toque pula tudo.
+     */
+    private async demo(gen: number) {
+        this.demoing = true
+        this.skip = false
+        this.markers.visible(false)
+        this.header.setHelpEnabled(false)
+        this.bubble.hide()
+        this.hand.stop()
+        this.gear.hint(null)
+        const on = () => gen === this.gen && !this.skip
+        const chip = this.board.chip()
+        try {
+            await this.view.zoomTo(chip, ZOOM.chip, TIMING.zoom)
+            if (!on()) return
+            this.caption.say(CAPTION.chip)
+            this.board.think(true)
+            this.audio.think()
+            await FX.wait(this, TIMING.caption)
+            this.board.think(false)
+            if (!on()) return
+
+            for (const kind of KINDS) {
+                const id = this.board.pcSocket(kind)
+                if (!id) continue
+                const s = this.board.socketAt(id)
+                const away = this.awayFrom(kind, s)
+                // O enquadramento fica perto da tomada, mas ainda pega o processador.
+                const focus = { x: Phaser.Math.Linear(s.x, chip.x, 0.35), y: Phaser.Math.Linear(s.y, chip.y, 0.35) }
+                await this.view.zoomTo(focus, kind === 'entrada' || kind === 'saida' ? ZOOM.socket : ZOOM.bottom, TIMING.zoom)
+                if (!on()) return
+                this.caption.say(CAPTION[kind], KIND_COLOR[kind])
+                this.audio.blip()
+                void this.board.ping(id)
+                await this.flow.travel(kind === 'entrada' ? [away, s, chip] : [chip, s, away], 'texto', KIND_COLOR[kind])
+                if (kind === 'armazenamento') this.audio.gulp()
+                await FX.wait(this, 450)
+                if (!on()) return
+            }
+
+            await this.view.zoomTo(HOME, 1, TIMING.zoom)
+            if (!on()) return
+            const id = this.current().needs.find(d => this.gear.visible(d) && !this.net.socketOf(d))
+            if (!id) return
+            this.caption.say(CAPTION.drag)
+            this.audio.grab()
+            const from = this.gear.plugAt(id)
+            await this.hand.drag(from, this.frontOf(from), TIMING.demoDrag, at => this.gear.hold(id, at))
+            if (!on()) return
+            this.caption.say(CAPTION.which)
+            for (const kind of KINDS) {
+                const sid = this.board.pcSocket(kind)
+                if (!sid) continue
+                this.audio.blip()
+                await this.board.ping(sid)
+                if (!on()) return
+            }
+            await FX.wait(this, 400)
+            if (!on()) return
+            this.hand.stop()
+            await this.gear.retract(id)
+            if (!on()) return
+            this.audio.wake()
+            this.caption.say(CAPTION.yourTurn, C.yes)
+            await FX.wait(this, TIMING.caption)
+        } finally {
+            if (gen === this.gen) await this.endDemo()
+        }
+    }
+
+    private async endDemo() {
+        this.hand.stop()
+        this.board.think(false)
+        this.caption.hide()
+        this.flow.clear()
+        this.gear.ids().forEach(id => {
+            if (this.gear.visible(id) && !this.net.socketOf(id)) void this.gear.retract(id)
+        })
+        await this.view.zoomTo(HOME, 1, TIMING.zoom / 2)
+        this.updatePower()
+        this.markers.visible(true)
+        this.demoing = false
+        this.skip = false
+    }
+
+    private awayFrom(kind: Kind, s: Vec): Vec {
+        if (kind === 'entrada') return { x: s.x - 200, y: s.y }
+        if (kind === 'saida') return { x: s.x + 200, y: s.y }
+        return { x: s.x, y: s.y + 85 }
+    }
+
+    /** Muda o aparelho de lugar, e as tomadas dele vão junto. */
+    private placeDevice(id: DeviceId, at: Vec) {
+        this.gear.place(id, at)
+        this.board.moveOwner(id, at)
+    }
+
+    /** Em frente ao computador, do lado de onde o plugue vem, sem escolher tomada. */
+    private frontOf(from: Vec): Vec {
+        return { x: PC.x + (from.x < PC.x ? -240 : 240), y: PC.y + 90 }
+    }
+
+    /** As tomadas dos aparelhos só valem no pedido do aninhamento. */
+    private nestOn(): boolean {
+        return this.level.nested && Boolean(this.current().nested)
+    }
+
+    /** Uma tomada livre e acesa desta família num aparelho (não no computador). */
+    private ownSocket(kind: Kind, except: DeviceId) {
+        if (!this.nestOn()) return undefined
+        return [...this.net.sockets.values()].find(
+            s => s.owner !== 'pc' && s.owner !== except && s.kind === kind && this.net.open(s.id) && !this.net.occupant(s.id),
+        )
+    }
+
+    /**
+     * O aninhamento chegando: com os primeiros aparelhos ligados, a câmera vai até
+     * a tomada própria do monitor, ela pula, e o aparelho que vai nela entra na mesa.
+     * Devolve `true` quando assumiu a vez (e já devolveu o jogo à criança).
+     */
+    private async reveal(gen: number): Promise<boolean> {
+        const m = this.current()
+        const waiting = (m.later ?? []).filter(id => !this.gear.visible(id))
+        if (!waiting.length) return false
+        if (!m.needs.filter(id => !m.later?.includes(id)).every(id => this.net.powered(id))) return false
+        this.state = 'intro'
+        this.header.setHelpEnabled(false)
+        this.hand.stop()
+        let last: Vec = HOME
+        for (const id of waiting) {
+            const own = this.ownSocket(DEVICES[id].kind, id)
+            if (own && own.owner !== 'pc') {
+                if (m.teach && this.firstTime(m.teach)) {
+                    await this.teachNest(gen, own.owner, own.id, own.kind)
+                    if (gen !== this.gen) return true
+                }
+                const at = this.board.socketAt(own.id)
+                await this.view.zoomTo(at, ZOOM.socket, TIMING.zoom)
+                if (gen !== this.gen) return true
+                this.caption.say(CAPTION.nest(DEVICES[own.owner]), KIND_COLOR[own.kind])
+                this.audio.blip()
+                await this.board.ping(own.id)
+                await this.board.ping(own.id)
+                if (gen !== this.gen) return true
+            }
+            const place = m.place[id]
+            if (place) this.placeDevice(id, place)
+            this.audio.wake()
+            await this.gear.show(id)
+            if (gen !== this.gen) return true
+            this.updatePower()
+            const socket = own ? this.board.socketAt(own.id) : HOME
+            const device = this.gear.at(id)
+            last = { x: (socket.x + device.x) / 2, y: (socket.y + device.y) / 2 }
+            await this.view.panTo(last, TIMING.zoom)
+            if (gen !== this.gen) return true
+            await FX.wait(this, TIMING.caption)
+            if (gen !== this.gen) return true
+        }
+        this.caption.hide()
+        await this.view.zoomTo(last, 1, TIMING.zoom)
+        if (gen !== this.gen) return true
+        this.play()
+        return true
+    }
+
+    /** A criança parou: a mãozinha mostra de novo o gesto de puxar o cabo. */
+    private async nudge() {
+        const id = this.current().needs.find(d => this.gear.visible(d) && !this.net.socketOf(d))
+        if (!id) return
+        const from = this.gear.plugAt(id)
+        // No aninhamento, o aparelho que entrou depois vai para o lado do dono
+        // da tomada (o monitor). A mãozinha para no caminho, sem encaixar.
+        const own = this.current().later?.includes(id) ? this.ownSocket(DEVICES[id].kind, id) : undefined
+        const to = own ? Phaser.Math.LinearXY(new Phaser.Math.Vector2(from.x, from.y), new Phaser.Math.Vector2(this.board.socketAt(own.id)), 0.6) : this.frontOf(from)
+        await this.hand.drag(from, { x: to.x, y: to.y }, TIMING.demoDrag)
+        await FX.wait(this, 300)
+        if (this.state === 'play' && !this.hinted) this.hand.stop()
+    }
+
+    /**
+     * Monta a mesa do pedido: com `reset`, os cabos se soltam e os aparelhos do
+     * pedido anterior saem; os deste pedido aparecem no lugar deles.
+     */
+    private async setTable(gen: number, index: number) {
         this.mission = index
         const m = this.current()
         this.header.setPhase(index)
         this.header.ask(m.ask)
-        for (const id of m.wake ?? []) {
-            if (this.gear.awake(id)) continue
-            this.state = 'intro'
-            await this.view.panTo(this.center(id), TIMING.pan)
-            if (gen !== this.gen) return
-            this.audio.wake()
-            await this.gear.wake(id)
-            if (gen !== this.gen) return
-            const def = DEVICES[id]
-            this.think(SAY.welcome, { x: def.at.x, y: def.at.y - (def.size ?? 170) * 0.45 }, TIMING.hint)
-            await FX.wait(this, TIMING.hint)
+        const jobs: Promise<void>[] = []
+        if (this.level.reset) {
+            this.gear.ids().forEach(id => {
+                if (this.net.socketOf(id)) {
+                    this.net.unplug(id)
+                    jobs.push(this.gear.retract(id))
+                }
+            })
+            this.updatePower()
+        }
+        await FX.all(...jobs, this.view.panTo(HOME, TIMING.pan))
+        if (gen !== this.gen) return
+        const table = onTable(m)
+        const leaving = this.gear.ids().filter(id => this.gear.visible(id) && !table.includes(id) && (this.level.reset || !this.net.socketOf(id)))
+        await FX.all(...leaving.map(id => this.gear.hide(id)))
+        if (gen !== this.gen) return
+        for (const id of table) {
+            const at = m.place[id]
+            if (m.later?.includes(id)) {
+                if (this.gear.visible(id)) await this.gear.hide(id)
+                continue
+            }
+            if (!this.gear.visible(id)) {
+                if (at) this.placeDevice(id, at)
+                this.audio.pop()
+                await this.gear.show(id)
+            } else if (at && !this.net.socketOf(id) && (this.gear.at(id).x !== at.x || this.gear.at(id).y !== at.y)) {
+                await this.gear.hide(id)
+                this.placeDevice(id, at)
+                await this.gear.show(id)
+            }
             if (gen !== this.gen) return
         }
+        this.updatePower()
+    }
+
+    private play() {
         this.state = 'play'
+        this.idleSince = this.time.now
         this.header.setHelpEnabled(true)
         this.checkReady()
     }
@@ -574,20 +893,22 @@ export class GameScene extends Phaser.Scene {
         if (gen !== this.gen) return
         await FX.wait(this, TIMING.done)
         if (gen !== this.gen) return
-        await this.view.panTo({ x: PC.x, y: PC.y - 10 }, TIMING.pan)
+        await this.view.panTo(HOME, TIMING.pan)
         if (gen !== this.gen) return
-        await this.bubble.say(m.done, this.chipTail(), 'Próximo')
+        this.caption.say(m.done, C.yes)
+        await FX.wait(this, TIMING.recap)
         if (gen !== this.gen) return
+        this.caption.hide()
         if (this.mission + 1 >= this.level.missions.length) {
             void this.endLevel()
             return
         }
-        await this.startMission(gen, this.mission + 1)
-    }
-
-    private chipTail(): Vec {
-        const s = this.view.toScreen(this.board.chip())
-        return { x: s.x, y: s.y - 70 }
+        this.state = 'intro'
+        await this.setTable(gen, this.mission + 1)
+        if (gen !== this.gen) return
+        await this.teachMemory(gen)
+        if (gen !== this.gen) return
+        this.play()
     }
 
     private think(text: string, worldAt: Vec, ms: number) {
@@ -600,6 +921,7 @@ export class GameScene extends Phaser.Scene {
     private async wrong(gen: number, id: DeviceId, socket: string) {
         this.state = 'error'
         this.header.setHelpEnabled(false)
+        this.hand.stop()
         this.hinted = null
         this.gear.hint(null)
         const at = this.board.socketAt(socket)
@@ -631,25 +953,15 @@ export class GameScene extends Phaser.Scene {
 
     // ───────────────────────────────────────────── ajuda
 
+    /** O "?" passa a demonstração de novo. */
     private async explain() {
         if (this.state !== 'play') return
         const gen = this.gen
         this.state = 'help'
-        this.header.setHelpEnabled(false)
-        this.bubble.hide()
-        await this.view.panTo({ x: PC.x, y: PC.y - 10 }, TIMING.pan)
+        this.hand.stop()
+        await this.demo(gen)
         if (gen !== this.gen) return
-        const r = (rect: { x: number; y: number; w: number; h: number }) => spot(this.view.toScreenRect(rect))
-        await teach(this, `${guideKey(this.level.level)}-help`, [
-            { text: HELP[0], ...r(this.board.groupRect('entrada')), balloonY: 190, buttonLabel: 'Próximo' },
-            { text: HELP[1], ...r(this.board.groupRect('saida')), balloonY: 190, buttonLabel: 'Próximo' },
-            { text: HELP[2], ...r(this.board.groupRect('armazenamento')), balloonY: 200, buttonLabel: 'Próximo' },
-            { text: HELP[3], shape: 'none', balloonY: 190, buttonLabel: 'Continuar' },
-        ])
-        if (gen !== this.gen) return
-        this.state = 'play'
-        this.header.setHelpEnabled(true)
-        this.checkReady()
+        this.play()
     }
 
     private onShowTutorial() {
@@ -662,6 +974,8 @@ export class GameScene extends Phaser.Scene {
         const gen = ++this.gen
         this.state = 'finale'
         this.header.setHelpEnabled(false)
+        this.header.ask('')
+        this.hand.stop()
         this.audio.win()
         void FX.confetti(this, { colors: [C.entrada, C.saida, C.armazenamento, C.accentYellow, C.accentBlue] })
         await FX.wait(this, TIMING.finale)

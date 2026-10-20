@@ -1,16 +1,17 @@
 import Phaser from 'phaser'
 import { createTutorial, type TutorialStep } from '../../../../shared/tutorial/createTutorial'
 import { C } from '../data/theme'
-import type { Rect } from '../types'
+
+export type Rect = { x: number; y: number; w: number; h: number }
 
 const TEXT_SIZE = 32
 
-export const spot = (r: Rect, pad = 0): Pick<TutorialStep, 'shape' | 'x' | 'y' | 'w' | 'h'> => ({
+export const spot = (r: Rect): Pick<TutorialStep, 'shape' | 'x' | 'y' | 'w' | 'h'> => ({
     shape: 'rect',
     x: r.x,
     y: r.y,
-    w: r.w + pad * 2,
-    h: r.h + pad * 2,
+    w: r.w,
+    h: r.h,
 })
 
 export const union = (a: Rect, b: Rect): Rect => {
@@ -21,7 +22,7 @@ export const union = (a: Rect, b: Rect): Rect => {
     return { x: (left + right) / 2, y: (top + bottom) / 2, w: right - left, h: bottom - top }
 }
 
-export function teach(scene: Phaser.Scene, key: string, steps: TutorialStep[]): Promise<void> {
+export function teach(scene: Phaser.Scene, key: string, steps: TutorialStep[], balloonWidth?: number): Promise<void> {
     return new Promise(resolve => {
         createTutorial(scene, {
             key,
@@ -30,6 +31,7 @@ export function teach(scene: Phaser.Scene, key: string, steps: TutorialStep[]): 
             textSize: TEXT_SIZE,
             accent: C.accent,
             safeTop: 100,
+            balloonWidth,
             onFinish: () => resolve(),
         })
     })

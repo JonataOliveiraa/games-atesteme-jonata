@@ -1,6 +1,11 @@
 import Phaser from 'phaser'
-import { BOX_KEY, CREW_SHEET, KART_SHEET, PIECE_SHEET, TRACK_KEY, type Sheet } from '../data/files'
+import { CONTROL_SHEET, CREW_SHEET, HAND_KEY, KART_SHEET, MOTO_SHEET, MUD_KEY, PIECE_SHEET, TENT_KEY, TRACK_KEY, type Sheet } from '../data/files'
 import { C, CROWD } from '../data/theme'
+
+/**
+ * A arte de reserva: as mesmas folhas, grades e ordem de células do TEXTURAS,
+ * desenhadas em Graphics. Um PNG com o mesmo nome substitui cada uma.
+ */
 
 type G = Phaser.GameObjects.Graphics
 type P = { x: number; y: number }
@@ -33,10 +38,14 @@ function bakeImage(scene: Phaser.Scene, key: string, w: number, h: number, line:
 
 export function ensureArt(scene: Phaser.Scene) {
     bakeSheet(scene, KART_SHEET, 5, kart)
+    bakeSheet(scene, MOTO_SHEET, 5, moto)
     bakeSheet(scene, CREW_SHEET, 5, crew)
     bakeSheet(scene, PIECE_SHEET, 5, piece)
+    bakeSheet(scene, CONTROL_SHEET, 6, control)
     bakeImage(scene, TRACK_KEY, 1280, 520, 4, track)
-    bakeImage(scene, BOX_KEY, 800, 400, 5, garage)
+    bakeImage(scene, MUD_KEY, 1280, 204, 4, mudStrip)
+    bakeImage(scene, TENT_KEY, 600, 360, 5, tent)
+    bakeImage(scene, HAND_KEY, 256, 256, 0, hand)
 }
 
 // ───────────────────────────────────────────── primitivas
@@ -136,52 +145,23 @@ function shoe(g: G, x: number, y: number, flip = false) {
     g.fillEllipse(x + (flip ? -8 : 8), y + 5, 26, 7)
 }
 
-// ───────────────────────────────────────────── karts (384 × 256, sem rodas)
+// ───────────────────────────────────────────── pilotos
 
-const WHEELS = [
-    { x: 94, y: 205 },
-    { x: 303, y: 205 },
-]
+type Who = 'kika' | 'rivalA' | 'rivalB'
 
-function kart(g: G, i: number) {
-    const rival = i === 5
-    const body = rival ? C.rival : C.team
-    const dark = rival ? C.rivalDark : C.teamDark
-    const stripe = rival ? C.white : C.yellow
-    const lean = i === 1 || i === 5 ? 10 : 0
+const whoOf = (i: number): Who | null => (i === 7 ? null : i === 5 ? 'rivalA' : i === 6 ? 'rivalB' : 'kika')
 
-    rbox(g, 30, 132, 60, 40, 8, C.metal)
-    rbox(g, 14, 150, 24, 12, 5, C.metalDark)
-    rbox(g, 118, 98, 28, 70, 10, dark)
-
-    poly(
-        g,
-        [
-            { x: 28, y: 214 },
-            { x: 34, y: 178 },
-            { x: 84, y: 166 },
-            { x: 150, y: 160 },
-            { x: 262, y: 158 },
-            { x: 320, y: 166 },
-            { x: 362, y: 180 },
-            { x: 374, y: 200 },
-            { x: 366, y: 218 },
-            { x: 28, y: 220 },
-        ],
-        body,
-    )
-    g.fillStyle(stripe, 1)
-    g.fillRect(64, 184, 286, 9)
-    WHEELS.forEach(w => disc(g, w.x, w.y, 47, C.garageInsideDark))
-
-    limb(g, { x: 262, y: 160 }, { x: 246, y: 124 }, 7, C.metalDark)
-    oval(g, 246, 118, 14, 36, C.rubber, 4)
-
-    driver(g, i, body, lean)
+const SUIT: Record<Who, { body: number; dark: number; stripe: number; scarf: number }> = {
+    kika: { body: C.team, dark: C.teamDark, stripe: C.yellow, scarf: C.yellow },
+    rivalA: { body: C.rival, dark: C.rivalDark, stripe: C.white, scarf: C.white },
+    rivalB: { body: C.rivalB, dark: C.rivalBDark, stripe: C.cream, scarf: C.cream },
 }
 
-function driver(g: G, i: number, suit: number, lean: number) {
-    const rival = i === 5
+/** O piloto sentado, com as mãos em (hand). `i` é a cara (0 a 4); rivais ficam inclinados. */
+function driver(g: G, i: number, who: Who, hand: P) {
+    const suit = SUIT[who]
+    const rival = who !== 'kika'
+    const lean = i === 1 || rival ? 10 : 0
     const hx = 180 + lean
     const hy = 66 + lean * 0.4
 
@@ -193,42 +173,47 @@ function driver(g: G, i: number, suit: number, lean: number) {
             { x: 208 + lean, y: 112 },
             { x: 160 + lean, y: 106 },
         ],
-        suit,
+        suit.body,
     )
-    g.fillStyle(rival ? C.white : C.yellow, 1)
+    g.fillStyle(suit.stripe, 1)
     g.fillRect(168 + lean, 122, 36, 8)
 
-    if (i === 2) {
-        limb(g, { x: 190 + lean, y: 118 }, { x: 214, y: 34 }, 15, suit)
+    if (i === 2 && !rival) {
+        limb(g, { x: 190 + lean, y: 118 }, { x: 214, y: 34 }, 15, suit.body)
         disc(g, 216, 28, 13, C.skinKika)
-        limb(g, { x: 198 + lean, y: 124 }, { x: 240, y: 124 }, 14, suit)
-        disc(g, 242, 124, 9, C.skinKika)
+        limb(g, { x: 198 + lean, y: 124 }, hand, 14, suit.body)
+        disc(g, hand.x + 2, hand.y, 9, C.skinKika)
     } else {
-        limb(g, { x: 198 + lean, y: 122 }, { x: 240, y: 126 }, 14, suit)
-        disc(g, 242, 124, 9, rival ? C.rivalDark : C.skinKika)
+        limb(g, { x: 198 + lean, y: 122 }, hand, 14, suit.body)
+        disc(g, hand.x + 2, hand.y - 2, 9, rival ? suit.dark : C.skinKika)
     }
 
-    if (!rival) {
-        const back = i === 1 ? 22 : 0
-        disc(g, hx - 56 - back, hy - 2, 20, C.hairBlack)
-        disc(g, hx - 70 - back, hy + 14, 16, C.hairBlack)
-        disc(g, hx - 62 - back, hy + 30, 12, C.hairBlack)
-        if (i === 1) {
-            g.lineStyle(3, C.white, 0.9)
-            g.lineBetween(hx - 120, hy - 6, hx - 96, hy - 6)
-            g.lineBetween(hx - 126, hy + 12, hx - 98, hy + 12)
-        }
+    const back = i === 1 || rival ? 22 : 0
+    const hair = who === 'rivalB' ? 0x6b3f2a : C.hairBlack
+    if (who !== 'rivalA') {
+        disc(g, hx - 56 - back, hy - 2, 20, hair)
+        disc(g, hx - 70 - back, hy + 14, 16, hair)
+        disc(g, hx - 62 - back, hy + 30, 12, hair)
+    }
+    if (i === 1 && !rival) {
+        g.lineStyle(3, C.white, 0.9)
+        g.lineBetween(hx - 120, hy - 6, hx - 96, hy - 6)
+        g.lineBetween(hx - 126, hy + 12, hx - 98, hy + 12)
     }
 
     g.save()
     g.translateCanvas(hx, hy)
-    if (i === 3) g.rotateCanvas(-0.22)
-    disc(g, 0, 0, 48, suit)
+    if (i === 3 && !rival) g.rotateCanvas(-0.22)
+    disc(g, 0, 0, 48, suit.body)
     if (rival) {
-        rbox(g, -6, -18, 56, 30, 12, 0x3a4566)
-        g.fillStyle(C.white, 0.6)
-        g.fillRect(6, -12, 22, 5)
-        smile(g, 22, 30, 7)
+        oval(g, 12, 10, 64, 60, who === 'rivalA' ? C.skinLua : C.skinBeto, 4)
+        rbox(g, -30, -50, 74, 16, 8, suit.stripe, 4)
+        eye(g, 4, 6, 0.85)
+        eye(g, 30, 6, 0.85)
+        g.lineStyle(3, INK, 1)
+        g.lineBetween(-4, -8, 12, -4)
+        g.lineBetween(38, -8, 22, -4)
+        smile(g, 18, 30, 7)
     } else {
         oval(g, 12, 10, 64, 60, C.skinKika, 4)
         rbox(g, -30, -50, 74, 16, 8, C.yellow, 4)
@@ -236,10 +221,9 @@ function driver(g: G, i: number, suit: number, lean: number) {
     }
     g.restore()
 
-    const scarf = rival ? C.white : C.yellow
-    rbox(g, 158 + lean, 104, 50, 14, 7, scarf, 4)
-    if (i === 1 || i === 5) poly(g, [{ x: 160 + lean, y: 108 }, { x: 108, y: 100 }, { x: 116, y: 114 }, { x: 160 + lean, y: 118 }], scarf, 4)
-    else poly(g, [{ x: 162, y: 112 }, { x: 150, y: 140 }, { x: 166, y: 140 }, { x: 172, y: 116 }], scarf, 4)
+    rbox(g, 158 + lean, 104, 50, 14, 7, suit.scarf, 4)
+    if (i === 1 || rival) poly(g, [{ x: 160 + lean, y: 108 }, { x: 108, y: 100 }, { x: 116, y: 114 }, { x: 160 + lean, y: 118 }], suit.scarf, 4)
+    else poly(g, [{ x: 162, y: 112 }, { x: 150, y: 140 }, { x: 166, y: 140 }, { x: 172, y: 116 }], suit.scarf, 4)
 }
 
 function face(g: G, i: number) {
@@ -270,6 +254,102 @@ function face(g: G, i: number) {
     cheek(g, 40, 22)
     if (i === 2) openMouth(g, 18, 28, 20, 14)
     else smile(g, 18, 30, 9)
+}
+
+// ───────────────────────────────────────────── karts (384 × 256, sem rodas)
+
+/** Centros dos arcos das rodas: KART em `data/layout.ts` (0,245 / 0,79 · 0,8 · r 0,16). */
+const KART_WHEELS = [
+    { x: 94, y: 205 },
+    { x: 303, y: 205 },
+]
+
+function kart(g: G, i: number) {
+    const who = whoOf(i)
+    const suit = SUIT[who ?? 'kika']
+    rbox(g, 30, 132, 60, 40, 8, C.metal)
+    rbox(g, 14, 150, 24, 12, 5, C.metalDark)
+    rbox(g, 118, 98, 28, 70, 10, suit.dark)
+    poly(
+        g,
+        [
+            { x: 28, y: 214 },
+            { x: 34, y: 178 },
+            { x: 84, y: 166 },
+            { x: 150, y: 160 },
+            { x: 262, y: 158 },
+            { x: 320, y: 166 },
+            { x: 362, y: 180 },
+            { x: 374, y: 200 },
+            { x: 366, y: 218 },
+            { x: 28, y: 220 },
+        ],
+        suit.body,
+    )
+    g.fillStyle(suit.stripe, 1)
+    g.fillRect(64, 184, 286, 9)
+    KART_WHEELS.forEach(w => disc(g, w.x, w.y, 47, C.garageInsideDark))
+    limb(g, { x: 262, y: 160 }, { x: 246, y: 124 }, 7, C.metalDark)
+    oval(g, 246, 118, 14, 36, C.rubber, 4)
+    if (who) driver(g, i, who, { x: 240, y: 126 })
+}
+
+// ───────────────────────────────────────────── motos (384 × 256, sem rodas)
+
+/** Centros das rodas da moto: MOTO em `data/layout.ts` (0,21 / 0,8 · 0,75 · r 0,21). */
+const MOTO_WHEELS = [
+    { x: 81, y: 192 },
+    { x: 307, y: 192 },
+]
+
+function moto(g: G, i: number) {
+    const who = whoOf(i)
+    const suit = SUIT[who ?? 'kika']
+    MOTO_WHEELS.forEach(w => disc(g, w.x, w.y, 58, C.garageInsideDark))
+    limb(g, { x: 81, y: 192 }, { x: 176, y: 172 }, 12, C.metalDark)
+    limb(g, { x: 307, y: 192 }, { x: 282, y: 104 }, 11, C.metal)
+    limb(g, { x: 268, y: 100 }, { x: 292, y: 92 }, 8, C.metalDark)
+    limb(g, { x: 196, y: 196 }, { x: 64, y: 172 }, 10, C.metalDark)
+    rbox(g, 170, 158, 70, 44, 10, C.metal)
+    g.fillStyle(C.metalDark, 1)
+    g.fillRect(180, 170, 50, 6)
+    g.fillRect(180, 184, 50, 6)
+    poly(
+        g,
+        [
+            { x: 40, y: 132 },
+            { x: 132, y: 128 },
+            { x: 160, y: 144 },
+            { x: 150, y: 158 },
+            { x: 48, y: 150 },
+        ],
+        suit.body,
+    )
+    poly(
+        g,
+        [
+            { x: 150, y: 144 },
+            { x: 236, y: 112 },
+            { x: 286, y: 116 },
+            { x: 290, y: 140 },
+            { x: 246, y: 166 },
+            { x: 160, y: 166 },
+        ],
+        suit.body,
+    )
+    g.fillStyle(suit.stripe, 1)
+    g.fillRect(176, 146, 92, 8)
+    rbox(g, 120, 130, 110, 16, 8, C.rubber, 4)
+    poly(g, [{ x: 288, y: 132 }, { x: 344, y: 138 }, { x: 330, y: 150 }, { x: 290, y: 146 }], suit.body, 4)
+    oval(g, 300, 110, 22, 30, C.lamp, 4)
+    if (!who) return
+    limb(g, { x: 212, y: 150 }, { x: 258, y: 168 }, 18, suit.dark)
+    limb(g, { x: 258, y: 168 }, { x: 240, y: 204 }, 16, suit.dark)
+    rbox(g, 228, 198, 34, 16, 6, C.shoe, 4)
+    g.save()
+    g.translateCanvas(30, -14)
+    driver(g, i, who, { x: 250, y: 112 })
+    g.restore()
 }
 
 // ───────────────────────────────────────────── equipe (320 × 400)
@@ -471,41 +551,91 @@ function crouch(g: G, davi: boolean) {
     head(g, 168, 194, davi)
 }
 
-// ───────────────────────────────────────────── peças (256)
+// ───────────────────────────────────────────── peças (256, 6 × 3)
 
 function piece(g: G, i: number) {
     const c = 128
-    if (i <= 2) return tire(g, c, c, 100, i)
-    if (i === 3) return flatTire(g)
-    if (i <= 6) return cart(g, i - 4)
-    if (i === 7) return hay(g)
-    if (i === 8) return rainCloud(g)
-    if (i === 9) return cloud(g, c, 132, C.cloud, C.cloudDark, 1)
-    if (i === 10) return sun(g)
-    return puddle(g)
+    switch (i) {
+        case 0:
+        case 1:
+        case 2:
+            return tire(g, c, c, 100, i)
+        case 3:
+            return flatTire(g)
+        case 4:
+        case 5:
+            return motoTire(g, c, c, 108, i - 4)
+        case 6:
+        case 7:
+        case 8:
+            return cart(g, (x, y) => tire(g, x, y, 60, i - 6))
+        case 9:
+        case 10:
+            return cart(g, (x, y) => motoTire(g, x, y - 10, 70, i - 9), true)
+        case 11:
+            return hay(g)
+        case 12:
+            return rainCloud(g)
+        case 13:
+            return cloud(g, c, 132, C.cloud, C.cloudDark, 1)
+        case 14:
+            return sun(g)
+        case 15:
+            return puddle(g)
+        case 16:
+            return mudPuddle(g)
+        default:
+            return checkered(g)
+    }
 }
 
-const STRIPE = [C.slick, C.wetTire, C.inter]
+const STRIPE = [C.slick, C.wetTire, C.knobby]
 
+/** Pneu de carro: 0 liso, 1 chuva (sulcos fundos), 2 cravos (blocos grandes). */
 function tire(g: G, x: number, y: number, r: number, kind: number) {
     if (kind === 0) disc(g, x, y, r, C.rubber)
     else {
-        const deep = kind === 1
-        const teeth = 18
+        const teeth = kind === 1 ? 18 : 11
+        const depth = kind === 1 ? 0.88 : 0.8
         const pts: P[] = []
-        for (let k = 0; k < teeth * 2; k++) {
-            const a = (k * Math.PI) / teeth
-            const rr = k % 2 ? r * (deep ? 0.88 : 0.95) : r
+        for (let k = 0; k < teeth * 4; k++) {
+            const a = (k * Math.PI) / (teeth * 2)
+            const out = kind === 1 ? k % 2 === 0 : k % 4 < 2
+            const rr = out ? r : r * depth
             pts.push({ x: x + Math.cos(a) * rr, y: y + Math.sin(a) * rr })
         }
         poly(g, pts, C.rubber)
     }
     g.lineStyle(r * 0.13, STRIPE[kind], 1)
-    g.strokeCircle(x, y, r * 0.7)
-    disc(g, x, y, r * 0.5, C.rim, lw - 1)
-    disc(g, x, y, r * 0.2, C.rimDark, lw - 2)
+    g.strokeCircle(x, y, r * 0.64)
+    disc(g, x, y, r * 0.46, C.rim, lw - 1)
+    disc(g, x, y, r * 0.18, C.rimDark, lw - 2)
     g.fillStyle(C.white, 0.7)
-    g.fillEllipse(x - r * 0.2, y - r * 0.25, r * 0.22, r * 0.12)
+    g.fillEllipse(x - r * 0.18, y - r * 0.22, r * 0.2, r * 0.11)
+}
+
+/** Pneu de moto: borracha fina, aro grande e raios. 0 liso, 1 chuva. */
+function motoTire(g: G, x: number, y: number, r: number, kind: number) {
+    if (kind === 0) disc(g, x, y, r, C.rubber)
+    else {
+        const teeth = 26
+        const pts: P[] = []
+        for (let k = 0; k < teeth * 2; k++) {
+            const a = (k * Math.PI) / teeth
+            const rr = k % 2 ? r * 0.92 : r
+            pts.push({ x: x + Math.cos(a) * rr, y: y + Math.sin(a) * rr })
+        }
+        poly(g, pts, C.rubber)
+    }
+    g.lineStyle(r * 0.08, STRIPE[kind], 1)
+    g.strokeCircle(x, y, r * 0.8)
+    disc(g, x, y, r * 0.72, C.rim, lw - 1)
+    g.lineStyle(3, C.spoke, 1)
+    for (let k = 0; k < 8; k++) {
+        const a = (k * Math.PI) / 8
+        g.lineBetween(x + Math.cos(a) * r * 0.68, y + Math.sin(a) * r * 0.68, x - Math.cos(a) * r * 0.68, y - Math.sin(a) * r * 0.68)
+    }
+    disc(g, x, y, r * 0.14, C.rimDark, lw - 2)
 }
 
 function flatTire(g: G) {
@@ -534,7 +664,8 @@ function flatTire(g: G) {
     g.lineBetween(40, 196, 216, 196)
 }
 
-function cart(g: G, kind: number) {
+/** O mesmo carrinho nas cinco células: só muda o pneu. */
+function cart(g: G, draw: (x: number, y: number) => void, tall = false) {
     limb(g, { x: 38, y: 210 }, { x: 30, y: 96 }, 10, C.metalDark)
     limb(g, { x: 30, y: 96 }, { x: 50, y: 92 }, 10, C.metalDark)
     disc(g, 66, 226, 18, C.rubber)
@@ -544,8 +675,9 @@ function cart(g: G, kind: number) {
     rbox(g, 30, 194, 200, 24, 8, C.cart)
     g.fillStyle(C.cartDark, 1)
     g.fillRect(36, 210, 188, 6)
-    tire(g, 96, 128, 64, kind)
-    tire(g, 166, 128, 64, kind)
+    const y = tall ? 126 : 134
+    draw(tall ? 92 : 98, y)
+    draw(tall ? 168 : 164, y)
 }
 
 function hay(g: G) {
@@ -612,19 +744,93 @@ function puddle(g: G) {
     g.fillEllipse(170, 136, 40, 7)
 }
 
+/** A poça de lama: é também o desenho da condição "lama" na regra. */
+function mudPuddle(g: G) {
+    const blobs = [
+        { x: 70, y: 150, r: 46 },
+        { x: 128, y: 134, r: 58 },
+        { x: 186, y: 150, r: 44 },
+        { x: 128, y: 168, r: 50 },
+    ]
+    blobs.forEach(b => disc(g, b.x, b.y, b.r + lw, INK, 0))
+    blobs.forEach(b => disc(g, b.x, b.y, b.r, C.mud, 0))
+    g.fillStyle(C.mudDark, 1)
+    g.fillEllipse(128, 160, 120, 40)
+    g.fillStyle(C.mudLight, 1)
+    g.fillEllipse(96, 118, 40, 14)
+    ;[
+        { x: 40, y: 96, r: 12 },
+        { x: 216, y: 100, r: 10 },
+        { x: 190, y: 74, r: 8 },
+    ].forEach(d => disc(g, d.x, d.y, d.r, C.mud, 4))
+}
+
+function checkered(g: G) {
+    g.lineStyle(8, C.metalDark, 1)
+    g.lineBetween(56, 236, 56, 28)
+    disc(g, 56, 24, 9, C.yellow, 4)
+    const x = 60
+    const y = 34
+    const w = 160
+    const h = 112
+    for (let r = 0; r < 4; r++)
+        for (let c = 0; c < 5; c++) {
+            g.fillStyle((r + c) % 2 ? C.white : C.flagDark, 1)
+            g.fillRect(x + (c * w) / 5, y + (r * h) / 4 + Math.sin(c * 1.3) * 4, w / 5, h / 4)
+        }
+    g.lineStyle(lw, INK, 1)
+    g.strokeRect(x, y, w, h)
+}
+
+// ───────────────────────────────────────────── controles (256, 3 × 1)
+
+function control(g: G, i: number) {
+    if (i === 2) return wrench(g)
+    const gas = i === 0
+    const w = gas ? 110 : 170
+    const h = gas ? 190 : 130
+    g.save()
+    g.translateCanvas(128, 128)
+    g.rotateCanvas(-0.18)
+    rbox(g, -w / 2, -h / 2 + 8, w, h, 26, C.metalDark)
+    rbox(g, -w / 2, -h / 2, w, h, 26, C.metal)
+    g.fillStyle(C.metalDark, 1)
+    const n = gas ? 6 : 4
+    for (let k = 0; k < n; k++) g.fillRoundedRect(-w / 2 + 16, -h / 2 + 20 + k * ((h - 40) / (n - 1)) - 5, w - 32, 10, 5)
+    g.restore()
+}
+
+function wrench(g: G) {
+    tire(g, 150, 136, 78, 1)
+    g.save()
+    g.translateCanvas(110, 130)
+    g.rotateCanvas(-0.75)
+    rbox(g, -16, -10, 32, 150, 14, C.metal)
+    g.fillStyle(INK, 1)
+    g.fillCircle(0, -26, 44)
+    g.fillStyle(C.metal, 1)
+    g.fillCircle(0, -26, 38)
+    g.fillStyle(C.white, 1)
+    g.fillRect(-14, -78, 28, 44)
+    g.lineStyle(lw, INK, 1)
+    g.lineBetween(-14, -70, -14, -40)
+    g.lineBetween(14, -70, 14, -40)
+    g.restore()
+}
+
 // ───────────────────────────────────────────── autódromo (1280 × 520, céu transparente)
 
 function track(g: G) {
     const W = 1280
     const rnd = new Phaser.Math.RandomDataGenerator(['autodromo'])
     g.fillStyle(C.stand, 1)
-    g.fillRect(0, 96, W, 168)
-    for (let r = 0; r < 5; r++) {
+    g.fillRect(0, 96, W, 124)
+    for (let r = 0; r < 4; r++) {
         g.fillStyle(r % 2 ? C.stand : C.standDark, 1)
-        g.fillRect(0, 118 + r * 28, W, 14)
+        g.fillRect(0, 118 + r * 26, W, 13)
     }
-    for (let r = 0; r < 5; r++) {
-        const y = 112 + r * 28
+    for (let r = 0; r < 4; r++) {
+        const y = 112 + r * 26
         for (let x = 14 + (r % 2) * 10; x < W - 12; x += 21) {
             const color = CROWD[rnd.between(0, CROWD.length - 1)]
             g.fillStyle(color, 1)
@@ -651,86 +857,157 @@ function track(g: G) {
     g.lineBetween(0, 60, W, 60)
     for (let x = 32; x < W; x += 160) {
         g.fillStyle(C.metalDark, 1)
-        g.fillRect(x - 4, 120, 8, 144)
+        g.fillRect(x - 4, 120, 8, 100)
     }
 
     g.fillStyle(C.wall, 1)
-    g.fillRect(0, 260, W, 40)
+    g.fillRect(0, 216, W, 20)
     g.fillStyle(C.wallDark, 1)
-    g.fillRect(0, 294, W, 6)
-    for (let x = 0; x < W; x += 160) g.fillRect(x, 262, 4, 32)
-    g.lineStyle(3, C.wallDark, 1)
-    g.lineBetween(0, 260, W, 260)
+    g.fillRect(0, 232, W, 4)
+    for (let x = 0; x < W; x += 160) g.fillRect(x, 218, 4, 16)
+
+    g.fillStyle(C.pitLane, 1)
+    g.fillRect(0, 236, W, 54)
+    g.fillStyle(C.pitLaneDark, 1)
+    g.fillRect(0, 236, W, 10)
+    for (let x = 0; x < W; x += 64) {
+        g.fillStyle(C.lane, 0.55)
+        g.fillRect(x + 12, 266, 30, 4)
+    }
+    g.fillStyle(C.white, 1)
+    g.fillRect(0, 290, W, 10)
 
     g.fillStyle(C.asphalt, 1)
-    g.fillRect(0, 300, W, 150)
+    g.fillRect(0, 300, W, 140)
     g.fillStyle(C.asphaltDark, 1)
-    g.fillRect(0, 300, W, 26)
+    g.fillRect(0, 310, W, 18)
     for (let x = 0; x < W; x += 80) {
         g.fillStyle(C.lane, 0.75)
-        g.fillRect(x + 10, 372, 40, 6)
+        g.fillRect(x + 10, 384, 40, 6)
     }
     for (let x = 0; x < W; x += 40) {
         g.fillStyle((x / 40) % 2 ? C.kerbWhite : C.kerbRed, 1)
-        g.fillRect(x, 300, 40, 12)
-        g.fillRect(x, 438, 40, 12)
+        g.fillRect(x, 300, 40, 10)
+        g.fillRect(x, 430, 40, 10)
     }
 
     g.fillStyle(C.grass, 1)
-    g.fillRect(0, 450, W, 70)
+    g.fillRect(0, 440, W, 80)
     for (let x = 0; x < W; x += 160) {
         g.fillStyle(C.grassDark, 0.5)
-        g.fillRect(x, 450, 80, 70)
+        g.fillRect(x, 440, 80, 80)
     }
 }
 
-// ───────────────────────────────────────────── box (800 × 400)
+/** A lama (1280 × 204): o mesmo desenho da faixa do box e da pista, só que de terra. */
+function mudStrip(g: G) {
+    const W = 1280
+    const rnd = new Phaser.Math.RandomDataGenerator(['lama'])
+    g.fillStyle(C.mudLight, 1)
+    g.fillRect(0, 0, W, 56)
+    g.fillStyle(C.mud, 1)
+    g.fillRect(0, 0, W, 8)
+    for (let x = 0; x < W; x += 80) {
+        g.fillStyle(C.mud, 0.7)
+        g.fillEllipse(x + 40, 30, 44, 8)
+    }
+    g.fillStyle(C.tentDark, 1)
+    g.fillRect(0, 54, W, 10)
+    for (let x = 0; x < W; x += 64) {
+        g.fillStyle(C.clipDark, 1)
+        g.fillRect(x + 4, 50, 10, 18)
+    }
+    g.fillStyle(C.mud, 1)
+    g.fillRect(0, 64, W, 140)
+    g.fillStyle(C.mudDark, 1)
+    ;[92, 118, 150, 178].forEach(y => g.fillRect(0, y, W, 6))
+    for (let k = 0; k < 40; k++) {
+        const x = rnd.between(0, W)
+        const y = rnd.between(76, 196)
+        const w = rnd.between(40, 110)
+        g.fillStyle(rnd.frac() < 0.5 ? C.mudWet : C.mudLight, rnd.frac() < 0.5 ? 0.8 : 0.6)
+        g.fillEllipse(x, y, w, w * 0.18)
+        if (x + w > W) g.fillEllipse(x - W, y, w, w * 0.18)
+        if (x - w < 0) g.fillEllipse(x + W, y, w, w * 0.18)
+    }
+}
 
-function garage(g: G) {
-    rbox(g, 40, 96, 720, 304, 10, C.garage)
-    rbox(g, 150, 160, 500, 240, 8, C.garageInside)
+// ───────────────────────────────────────────── tenda da equipe (600 × 360)
+
+function tent(g: G) {
+    rbox(g, 70, 120, 460, 236, 6, C.garageInside)
     g.fillStyle(C.garageInsideDark, 1)
-    g.fillRect(156, 166, 488, 40)
+    g.fillRect(76, 126, 448, 34)
     g.lineStyle(3, C.garageInsideDark, 1)
-    for (let x = 200; x < 620; x += 36)
-        for (let y = 220; y < 320; y += 28) g.strokeCircle(x, y, 3)
+    for (let x = 120; x < 480; x += 36)
+        for (let y = 180; y < 270; y += 28) g.strokeCircle(x, y, 3)
     ;[
-        { x: 230, y: 250, w: 60, h: 10 },
-        { x: 330, y: 236, w: 10, h: 54 },
-        { x: 470, y: 254, w: 70, h: 10 },
-        { x: 560, y: 232, w: 12, h: 48 },
+        { x: 150, y: 196, w: 60, h: 10 },
+        { x: 250, y: 184, w: 10, h: 54 },
+        { x: 360, y: 200, w: 70, h: 10 },
     ].forEach(t => {
         g.fillStyle(C.metal, 1)
         g.fillRoundedRect(t.x, t.y, t.w, t.h, 4)
     })
-    ;[190, 610].forEach(x => {
+    ;[120, 480].forEach(x => {
         for (let k = 0; k < 3; k++) {
             g.fillStyle(C.rubber, 1)
-            g.fillRoundedRect(x - 30, 380 - (k + 1) * 26, 60, 24, 10)
+            g.fillRoundedRect(x - 30, 350 - (k + 1) * 26, 60, 24, 10)
             g.fillStyle(C.rubberLight, 1)
-            g.fillRect(x - 22, 380 - (k + 1) * 26 + 9, 44, 4)
+            g.fillRect(x - 22, 350 - (k + 1) * 26 + 9, 44, 4)
         }
     })
     g.lineStyle(3, C.metalDark, 1)
-    g.lineBetween(400, 166, 400, 196)
-    oval(g, 400, 204, 50, 22, C.lamp, 4)
+    g.lineBetween(300, 126, 300, 150)
+    oval(g, 300, 156, 46, 20, C.lamp, 4)
     g.fillStyle(C.lamp, 0.18)
-    g.fillTriangle(400, 210, 300, 380, 500, 380)
-
-    for (let k = 0; k < 13; k++) {
-        const x = 20 + k * 58
+    g.fillTriangle(300, 162, 210, 352, 390, 352)
+    ;[52, 548].forEach(x => rbox(g, x - 9, 96, 18, 262, 6, C.metal, 4))
+    poly(
+        g,
+        [
+            { x: 20, y: 110 },
+            { x: 120, y: 30 },
+            { x: 480, y: 30 },
+            { x: 580, y: 110 },
+        ],
+        C.tent,
+    )
+    for (let k = 0; k < 10; k++) {
+        const x = 40 + k * 52
         g.fillStyle(k % 2 ? C.yellow : C.team, 1)
-        g.fillRect(x, 60, 58, 50)
-        g.fillCircle(x + 29, 110, 29)
+        g.fillRect(x, 108, 52, 26)
+        g.fillCircle(x + 26, 134, 26)
     }
     g.lineStyle(lw, INK, 1)
-    g.strokeRect(20, 60, 754, 50)
-    ;[70, 730].forEach(x => {
-        g.lineStyle(4, C.metalDark, 1)
-        g.lineBetween(x, 60, x, 10)
-        poly(g, [{ x, y: 12 }, { x: x + 44, y: 24 }, { x, y: 38 }], C.team, 4)
-    })
+    g.strokeRect(40, 108, 520, 26)
+    g.fillStyle(C.team, 1)
+    g.fillTriangle(240, 30, 300, 4, 360, 30)
     g.lineStyle(lw, INK, 1)
-    g.strokeRoundedRect(150, 160, 500, 240, 8)
-    g.lineBetween(40, 398, 760, 398)
+    g.strokeTriangle(240, 30, 300, 4, 360, 30)
+    g.lineStyle(lw, INK, 1)
+    g.lineBetween(64, 356, 536, 356)
+}
+
+// ───────────────────────────────────────────── mãozinha (256 × 256)
+
+/** Dedo indicador em pé, ponta em (87, 18): é o HAND_TIP. Borda branca para aparecer sobre tudo. */
+function hand(g: G) {
+    const rr = (x: number, y: number, w: number, h: number, r: number, fill: number) => {
+        g.fillStyle(fill, 1)
+        g.fillRoundedRect(x, y, w, h, Math.min(r, w / 2, h / 2))
+    }
+    const paint = (grow: number, tone: number, dark: number) => {
+        rr(68 - grow, 10 - grow, 38 + grow * 2, 130 + grow, 19 + grow, tone)
+        rr(104 - grow, 92 - grow, 34 + grow * 2, 70 + grow, 17 + grow, tone)
+        rr(134 - grow, 102 - grow, 32 + grow * 2, 64 + grow, 16 + grow, tone)
+        rr(162 - grow, 114 - grow, 28 + grow * 2, 56 + grow, 14 + grow, tone)
+        rr(30 - grow, 128 - grow, 70 + grow * 2, 34 + grow * 2, 17 + grow, tone)
+        rr(64 - grow, 120 - grow, 128 + grow * 2, 110 + grow * 2, 40 + grow, tone)
+        if (dark >= 0) rr(76, 196, 104, 12, 6, dark)
+    }
+    paint(14, INK, -1)
+    paint(10, C.white, -1)
+    paint(0, C.skinHand, C.skinHandDark)
+    rr(76, 22, 22, 18, 9, C.white)
 }

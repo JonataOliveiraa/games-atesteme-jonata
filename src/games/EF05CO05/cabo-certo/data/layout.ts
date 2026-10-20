@@ -15,6 +15,7 @@ export const DEPTH = {
     screen: 16,
     packet: 20,
     fx: 22,
+    hand: 24,
     marker: 90,
     header: 100,
     hud: 106,
@@ -24,7 +25,7 @@ export const DEPTH = {
 
 export const HEADER = {
     h: 96,
-    dividers: [282, 1150],
+    dividers: [300, 1150],
 } as const
 
 export const HUD = {
@@ -33,7 +34,7 @@ export const HUD = {
     levelW: 132,
     levelH: 44,
     pipsX: 186,
-    pipGap: 32,
+    pipGap: 30,
     pipR: 11,
     helpX: 1216,
     helpY: 48,
@@ -87,7 +88,7 @@ export const MONITOR_SCREEN = {
 } as const
 
 export const SOCKET = {
-    size: 74,
+    size: 86,
     /** Raio em que o plugue solto "acha" a tomada. */
     snap: 72,
 } as const
@@ -103,6 +104,15 @@ export const CABLE = {
     sag: 0.28,
     maxSag: 140,
 } as const
+
+/** A legenda curta da demonstração, logo abaixo do cabeçalho. */
+export const CAPTION = { x: 640, y: 168 } as const
+
+/** A mãozinha: tamanho no mapa e quanto ela sobe entre um toque e outro. */
+export const HAND = { size: 130, tapLift: 26 } as const
+
+/** Zoom da demonstração: no processador e em cada tomada. */
+export const ZOOM = { chip: 2.1, socket: 1.4, bottom: 1.2 } as const
 
 export const MARKER = {
     inset: 46,

@@ -37,7 +37,7 @@ export interface Rule {
     right?: Literal
 }
 
-export type Teach = 'rule' | 'not'
+export type Teach = 'rule' | 'not' | 'and' | 'or'
 
 export interface PhaseDef {
     id: string

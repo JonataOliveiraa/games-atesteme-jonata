@@ -6,6 +6,7 @@ export interface Audio {
     yes(): void
     no(): void
     flip(): void
+    join(): void
     glub(): void
     splash(): void
     step(): void
@@ -109,6 +110,10 @@ export function createAudio(): Audio {
         flip() {
             tone(440, 160, { wave: 'sine', gain: 0.1, to: 880 })
             tone(880, 120, { wave: 'sine', gain: 0.06, delay: 120, to: 660 })
+        },
+        join() {
+            tone(520, 140, { wave: 'triangle', gain: 0.09, to: 660 })
+            tone(830, 140, { wave: 'triangle', gain: 0.09, to: 660 })
         },
         glub() {
             tone(220, 160, { wave: 'sine', gain: 0.14, to: 110 })

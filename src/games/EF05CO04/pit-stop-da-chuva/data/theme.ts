@@ -34,6 +34,14 @@ export const C = {
     puddleLight: 0xd8f1ff,
     hay: 0xf2c75c,
     hayDark: 0xc99a36,
+    mud: 0x8d6243,
+    mudDark: 0x6a452d,
+    mudLight: 0xb5875e,
+    mudWet: 0x5b3b27,
+    pitLane: 0x6a6f7d,
+    pitLaneDark: 0x5a5f6c,
+    tent: 0xfaf3e3,
+    tentDark: 0xe3d6bb,
 
     team: 0x5fd0c0,
     teamDark: 0x2f9d8f,
@@ -42,13 +50,16 @@ export const C = {
     yellowDark: 0xe0a51f,
     rival: 0xb79cf0,
     rivalDark: 0x8a6fd0,
+    rivalB: 0xff9a7a,
+    rivalBDark: 0xd9684c,
+    spoke: 0x9aa2b0,
     rubber: 0x34303d,
     rubberLight: 0x55505f,
     rim: 0xdfe3ea,
     rimDark: 0xa7adbb,
     slick: 0xf0584a,
     wetTire: 0x3f8ff0,
-    inter: 0x49c27c,
+    knobby: 0x49c27c,
     cart: 0xe8664f,
     cartDark: 0xb84634,
     metal: 0xb9c0cc,
@@ -106,6 +117,14 @@ export const C = {
     mint: 0x8fdcc6,
     smoke: 0xe9e6ef,
     smokeDark: 0xa9a3b5,
+    gas: 0x49c27c,
+    gasDark: 0x2f9a5c,
+    brake: 0xf06a5b,
+    brakeDark: 0xc0473b,
+    pit: 0xffd23f,
+    pitDark: 0xd9a21c,
+    skinHand: 0xf3c7a1,
+    skinHandDark: 0xd9a37c,
 } as const
 
 export const CROWD = [0xff8a6b, 0x5fd0c0, 0xffd23f, 0xb79cf0, 0x6fb8ee, 0xf5a0bf, 0x8fd36a, 0xffffff] as const
@@ -117,6 +136,9 @@ export const CSS = {
     accent: '#1f8f86',
     then: '#1d63b8',
     else: '#c2412f',
+    slick: '#c2412f',
+    wet: '#1d63b8',
+    knobby: '#23864d',
 } as const
 
 export const FONT = {
@@ -127,11 +149,15 @@ export const FONT = {
 export const SIZE = {
     help: 40,
     level: 22,
-    chip: 22,
-    rule: 24,
-    tire: 26,
-    bubble: 27,
-    banner: 38,
+    chip: 18,
+    rule: 21,
+    tire: 22,
+    cart: 24,
+    control: 22,
+    pos: 34,
+    caption: 40,
+    count: 120,
+    banner: 36,
 } as const
 
 export function inkOn(tone: number): string {

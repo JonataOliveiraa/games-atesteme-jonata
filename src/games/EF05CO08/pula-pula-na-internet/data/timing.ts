@@ -1,0 +1,17 @@
+export const TIMING = {
+    grab: 420,
+    cardIn: 380,
+    clue: 360,
+    buttons: 260,
+    read: 2300,
+    cardOut: 520,
+    stamp: 700,
+    cloud: 620,
+    pan: 600,
+    error: 1700,
+    caption: 1200,
+    demoHold: 900,
+    finale: 1500,
+    idle: 8000,
+    blink: 260,
+} as const
