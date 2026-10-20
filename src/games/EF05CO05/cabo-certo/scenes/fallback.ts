@@ -1,5 +1,5 @@
 import Phaser from 'phaser'
-import { DEVICE_SHEET, FLOOR_KEY, HAND_KEY, PC_KEY, PIECE_SHEET, type Sheet } from '../data/files'
+import { DEVICE_SHEET, FLOOR_KEY, PC_KEY, PIECE_SHEET, type Sheet } from '../data/files'
 import { WORLD } from '../data/layout'
 import { C } from '../data/theme'
 
@@ -47,25 +47,6 @@ export function ensureArt(scene: Phaser.Scene) {
     bakeSheet(scene, PIECE_SHEET, piece)
     bakeImage(scene, PC_KEY, 400, 480, computer)
     bakeImage(scene, FLOOR_KEY, WORLD.w, WORLD.h, floor)
-    bakeImage(scene, HAND_KEY, 256, 256, hand)
-}
-
-// ───────────────────────────────────────────── mãozinha (256 × 256)
-
-/** Dedo indicador em pé, ponta em (87, 18): é o HAND_TIP. Borda branca para aparecer sobre tudo. */
-function hand(g: G) {
-    const paint = (grow: number, tone: number, dark: number) => {
-        rr(g, 68 - grow, 10 - grow, 38 + grow * 2, 130 + grow, 19 + grow, tone)
-        rr(g, 104 - grow, 92 - grow, 34 + grow * 2, 70 + grow, 17 + grow, tone)
-        rr(g, 134 - grow, 102 - grow, 32 + grow * 2, 64 + grow, 16 + grow, tone)
-        rr(g, 162 - grow, 114 - grow, 28 + grow * 2, 56 + grow, 14 + grow, tone)
-        rr(g, 30 - grow, 128 - grow, 70 + grow * 2, 34 + grow * 2, 17 + grow, tone)
-        rr(g, 64 - grow, 120 - grow, 128 + grow * 2, 110 + grow * 2, 40 + grow, tone)
-        if (dark >= 0) rr(g, 76, 196, 104, 12, 6, dark)
-    }
-    paint(10, C.white, -1)
-    paint(0, C.skin, C.skinDark)
-    rr(g, 76, 22, 22, 18, 9, C.white)
 }
 
 // ───────────────────────────────────────────── aparelhos (256 × 256)

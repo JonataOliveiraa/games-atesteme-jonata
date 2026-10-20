@@ -24,6 +24,8 @@ export const CAPTION = {
     armazenamento: 'GUARDA',
     memoria: 'SEGURA',
     drag: 'PUXE O CABO',
+    /** O aparelho sem cabo (pendrive, memória, cartão) vai inteiro até a tomada. */
+    carry: 'PEGUE E ENCAIXE',
     which: 'QUAL TOMADA?',
     yourTurn: 'SUA VEZ!',
     /** O aninhamento: a tomada própria de um aparelho ("TOMADA DO MONITOR"). */

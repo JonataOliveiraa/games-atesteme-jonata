@@ -13,10 +13,14 @@ export const DEPTH = {
     socket: 12,
     plug: 14,
     screen: 16,
+    /** O aparelho sem cabo na mão da criança: por cima das tomadas e dos plugues. */
+    carry: 18,
     packet: 20,
     fx: 22,
-    hand: 24,
-    marker: 90,
+    touch: 24,
+    /** A vinheta do foco: por cima do mapa, por baixo das setas da borda, do cabeçalho e das legendas. */
+    veil: 95,
+    marker: 97,
     header: 100,
     hud: 106,
     bubble: 130,
@@ -105,14 +109,34 @@ export const CABLE = {
     maxSag: 140,
 } as const
 
-/** A legenda curta da demonstração, logo abaixo do cabeçalho. */
-export const CAPTION = { x: 640, y: 168 } as const
+/** A legenda curta da demonstração, logo abaixo do cabeçalho; no foco, sobe para onde ele estava. */
+export const CAPTION = { x: 640, y: 168, top: 64 } as const
 
-/** A mãozinha: tamanho no mapa e quanto ela sobe entre um toque e outro. */
-export const HAND = { size: 130, tapLift: 26 } as const
+/**
+ * O toque mostrado pelo jogo (a bolinha): raio no mapa, grossura da ondinha,
+ * até quantas vezes o raio ela abre e de quanto em quanto tempo ela toca.
+ */
+export const TOUCH = { r: 17, wave: 6, reach: 4, every: 1150 } as const
 
-/** Zoom da demonstração: no processador e em cada tomada. */
-export const ZOOM = { chip: 2.1, socket: 1.4, bottom: 1.2 } as const
+/** Zoom da demonstração (processador, tomadas), da bolinha correndo, do erro e do resumo. */
+export const ZOOM = { chip: 2.1, socket: 1.4, bottom: 1.2, flow: 1.22, error: 1.35, recapMin: 0.8, recapMax: 1.15 } as const
+
+/**
+ * O foco das animações: o cabeçalho sobe (`lift`, com a sombra), o mapa fica com
+ * a tela toda e a vinheta escurece tudo menos um círculo macio em volta do que
+ * está acontecendo. `alpha` é o escuro da borda.
+ */
+export const FOCUS = { lift: HEADER.h + 14, alpha: 0.72, asideMs: 200, hintAlpha: 0.62, hintMs: 320 } as const
+
+/**
+ * Raio do círculo claro do foco, em pixels do mapa (o zoom aumenta junto). O
+ * escuro completo chega a 1,7 × o raio. `device` é o que soma ao meio aparelho,
+ * para o nome embaixo dele caber.
+ */
+export const SPOT = { chip: 118, socket: 112, packet: 120, device: 34, pc: { rx: 330, ry: 290 } } as const
+
+/** A bolinha de informação: o disco com o desenho do que ela leva e o brilho em volta. */
+export const PACKET = { r: 21, ring: 5, halo: 36, trail: 18 } as const
 
 export const MARKER = {
     inset: 46,

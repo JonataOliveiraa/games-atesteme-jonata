@@ -1,0 +1,17 @@
+export const TIMING = {
+    beat: 550,
+    cdIn: 380,
+    cdGap: 320,
+    discFly: 720,
+    eject: 520,
+    waves: 1100,
+    refuse: 1500,
+    error: 2600,
+    finale: 1400,
+    lean: 750,
+    hitWindow: 170,
+    perfect: 70,
+    cutin: 1000,
+    live: 2400,
+    combo: 8,
+} as const

@@ -1,5 +1,5 @@
 import Phaser from 'phaser'
-import { CONTROL_SHEET, CREW_SHEET, HAND_KEY, KART_SHEET, MOTO_SHEET, MUD_KEY, PIECE_SHEET, TENT_KEY, TRACK_KEY, type Sheet } from '../data/files'
+import { CONTROL_SHEET, CREW_SHEET, KART_SHEET, MOTO_SHEET, MUD_KEY, PIECE_SHEET, TENT_KEY, TIRE_SHEET, TRACK_KEY, TRAIL_KEY, TRAIL_SHEET, type Sheet } from '../data/files'
 import { C, CROWD } from '../data/theme'
 
 /**
@@ -41,11 +41,13 @@ export function ensureArt(scene: Phaser.Scene) {
     bakeSheet(scene, MOTO_SHEET, 5, moto)
     bakeSheet(scene, CREW_SHEET, 5, crew)
     bakeSheet(scene, PIECE_SHEET, 5, piece)
+    bakeSheet(scene, TIRE_SHEET, 5, piece)
     bakeSheet(scene, CONTROL_SHEET, 6, control)
     bakeImage(scene, TRACK_KEY, 1280, 520, 4, track)
     bakeImage(scene, MUD_KEY, 1280, 204, 4, mudStrip)
+    bakeImage(scene, TRAIL_KEY, 1280, 204, 4, trailStrip)
+    bakeSheet(scene, TRAIL_SHEET, 5, trailPiece)
     bakeImage(scene, TENT_KEY, 600, 360, 5, tent)
-    bakeImage(scene, HAND_KEY, 256, 256, 0, hand)
 }
 
 // ───────────────────────────────────────────── primitivas
@@ -932,6 +934,99 @@ function mudStrip(g: G) {
     }
 }
 
+/** A trilha (1280 × 204): box de terra, cerquinha, pedras, a trilha estreita, pedras. */
+function trailStrip(g: G) {
+    const W = 1280
+    const rnd = new Phaser.Math.RandomDataGenerator(['trilha'])
+    g.fillStyle(C.mudLight, 1)
+    g.fillRect(0, 0, W, 56)
+    for (let x = 0; x < W; x += 80) {
+        g.fillStyle(C.sandDark, 0.6)
+        g.fillEllipse(x + 40, 30, 44, 6)
+    }
+    g.fillStyle(C.tentDark, 1)
+    g.fillRect(0, 54, W, 10)
+    for (let x = 0; x < W; x += 64) {
+        g.fillStyle(C.clipDark, 1)
+        g.fillRect(x + 4, 50, 10, 18)
+    }
+    g.fillStyle(C.sageDark, 1)
+    g.fillRect(0, 64, W, 140)
+    g.fillStyle(C.sand, 1)
+    g.fillRect(0, 110, W, 50)
+    g.fillStyle(C.sandDark, 1)
+    g.fillRect(0, 133, W, 4)
+    g.fillRect(0, 110, W, 3)
+    g.fillRect(0, 157, W, 3)
+    const lump = (y0: number, y1: number) => {
+        for (let k = 0; k < 30; k++) {
+            const x = rnd.between(0, W)
+            const y = rnd.between(y0, y1)
+            const rock = rnd.frac() < 0.5
+            const w = rnd.between(34, 70)
+            const h = w * (rock ? 0.6 : 0.7)
+            ;[x, x - W, x + W].forEach(cx => {
+                if (cx < -w || cx > W + w) return
+                oval(g, cx, y, w, h, rock ? C.rock : C.sage, 3)
+                g.fillStyle(rock ? C.rockDark : C.sageDark, 1)
+                g.fillEllipse(cx + w * 0.12, y + h * 0.18, w * 0.5, h * 0.3)
+            })
+        }
+    }
+    lump(80, 100)
+    lump(176, 194)
+}
+
+/** As peças da trilha: a placa de pista estreita e o cone. */
+function trailPiece(g: G, i: number) {
+    if (i === 0) {
+        rbox(g, 120, 120, 16, 120, 4, C.post)
+        const pts = [
+            { x: 128, y: 22 },
+            { x: 216, y: 106 },
+            { x: 128, y: 190 },
+            { x: 40, y: 106 },
+        ]
+        poly(g, pts, C.sign)
+        g.lineStyle(10, INK, 1)
+        g.beginPath()
+        g.moveTo(98, 60)
+        g.lineTo(98, 82)
+        g.lineTo(116, 106)
+        g.lineTo(116, 152)
+        g.strokePath()
+        g.beginPath()
+        g.moveTo(158, 60)
+        g.lineTo(158, 82)
+        g.lineTo(140, 106)
+        g.lineTo(140, 152)
+        g.strokePath()
+        return
+    }
+    rbox(g, 58, 214, 140, 22, 6, C.coneDark)
+    poly(
+        g,
+        [
+            { x: 112, y: 30 },
+            { x: 144, y: 30 },
+            { x: 180, y: 216 },
+            { x: 76, y: 216 },
+        ],
+        C.cone,
+    )
+    poly(
+        g,
+        [
+            { x: 101, y: 92 },
+            { x: 155, y: 92 },
+            { x: 164, y: 138 },
+            { x: 92, y: 138 },
+        ],
+        C.cream,
+        3,
+    )
+}
+
 // ───────────────────────────────────────────── tenda da equipe (600 × 360)
 
 function tent(g: G) {
@@ -987,27 +1082,4 @@ function tent(g: G) {
     g.strokeTriangle(240, 30, 300, 4, 360, 30)
     g.lineStyle(lw, INK, 1)
     g.lineBetween(64, 356, 536, 356)
-}
-
-// ───────────────────────────────────────────── mãozinha (256 × 256)
-
-/** Dedo indicador em pé, ponta em (87, 18): é o HAND_TIP. Borda branca para aparecer sobre tudo. */
-function hand(g: G) {
-    const rr = (x: number, y: number, w: number, h: number, r: number, fill: number) => {
-        g.fillStyle(fill, 1)
-        g.fillRoundedRect(x, y, w, h, Math.min(r, w / 2, h / 2))
-    }
-    const paint = (grow: number, tone: number, dark: number) => {
-        rr(68 - grow, 10 - grow, 38 + grow * 2, 130 + grow, 19 + grow, tone)
-        rr(104 - grow, 92 - grow, 34 + grow * 2, 70 + grow, 17 + grow, tone)
-        rr(134 - grow, 102 - grow, 32 + grow * 2, 64 + grow, 16 + grow, tone)
-        rr(162 - grow, 114 - grow, 28 + grow * 2, 56 + grow, 14 + grow, tone)
-        rr(30 - grow, 128 - grow, 70 + grow * 2, 34 + grow * 2, 17 + grow, tone)
-        rr(64 - grow, 120 - grow, 128 + grow * 2, 110 + grow * 2, 40 + grow, tone)
-        if (dark >= 0) rr(76, 196, 104, 12, 6, dark)
-    }
-    paint(14, INK, -1)
-    paint(10, C.white, -1)
-    paint(0, C.skinHand, C.skinHandDark)
-    rr(76, 22, 22, 18, 9, C.white)
 }

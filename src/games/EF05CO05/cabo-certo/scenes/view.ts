@@ -3,19 +3,29 @@ import { H, VIEW, W, WORLD } from '../data/layout'
 import type { Rect, Vec } from '../types'
 
 /**
- * Duas câmeras. A principal é a janela sobre o mapa, abaixo do cabeçalho: anda
- * quando a criança arrasta o chão e dá zoom na demonstração. A de cima (ui)
- * desenha o cabeçalho, as legendas e a mãozinha sem andar. Tudo nasce na ui; o
- * que é do mapa passa por `world()`.
+ * Duas câmeras. A principal desenha o mapa na tela inteira (ele continua por
+ * baixo do cabeçalho), anda quando a criança arrasta o chão e dá zoom nas
+ * animações. A de cima (ui) desenha o cabeçalho, as legendas e a vinheta sem
+ * andar. Tudo nasce na ui; o que é do mapa passa por `world()`.
+ *
+ * A janela do mapa (`rect`) é a parte da tela que não está sob o cabeçalho.
+ * Quando o cabeçalho sobe no foco, ela vai até o alto (`setTop`), e o centro
+ * dela é o centro da tela.
  */
 export interface View {
     readonly zoom: number
+    /** A câmera está indo para algum lugar (zoom ou panorâmica). */
+    readonly busy: boolean
     world<T extends Phaser.GameObjects.GameObject>(obj: T): T
     /** Anda o mapa em pixels de tela. */
     pan(dx: number, dy: number): void
     panTo(at: Vec, ms: number): Promise<void>
     /** Leva o centro da janela até o ponto e muda o zoom junto. */
     zoomTo(at: Vec, zoom: number, ms: number): Promise<void>
+    /** Onde começa a janela do mapa na tela (embaixo do cabeçalho, ou 0). */
+    setTop(top: number): void
+    /** A janela do mapa, em pixels de tela (canto e tamanho). */
+    rect(): Rect
     center(): Vec
     toScreen(at: Vec): Vec
     toScreenRect(r: Rect): Rect
@@ -28,7 +38,7 @@ export interface View {
 
 export function createView(scene: Phaser.Scene, home: Vec): View {
     const main = scene.cameras.main
-    main.setViewport(VIEW.x, VIEW.y, VIEW.w, VIEW.h)
+    main.setViewport(0, 0, W, H)
     const ui = scene.cameras.add(0, 0, W, H)
     ui.setName('ui')
 
@@ -46,26 +56,33 @@ export function createView(scene: Phaser.Scene, home: Vec): View {
         if (obj instanceof Phaser.GameObjects.Container) obj.list.forEach(intoWorld)
     }
 
-    // O centro da janela, no mapa. Com zoom, a janela mostra VIEW / zoom do mapa.
+    const port: Rect = { x: VIEW.x, y: VIEW.y, w: VIEW.w, h: VIEW.h }
+    const mid = () => ({ x: port.x + port.w / 2, y: port.y + port.h / 2 })
+
+    // O ponto do mapa que fica no meio da janela. Com zoom, a tela mostra W / zoom do mapa.
     const center = { x: home.x, y: home.y }
     let zoom = 1
     let tween: Phaser.Tweens.Tween | undefined
 
     const clamp = () => {
-        const hw = VIEW.w / (2 * zoom)
-        const hh = VIEW.h / (2 * zoom)
-        center.x = Phaser.Math.Clamp(center.x, hw, WORLD.w - hw)
-        center.y = Phaser.Math.Clamp(center.y, hh, WORLD.h - hh)
+        // A câmera desenha a tela inteira: é ela toda que não pode passar da borda do mapa.
+        const m = mid()
+        center.x = Phaser.Math.Clamp(center.x, m.x / zoom, WORLD.w - (W - m.x) / zoom)
+        center.y = Phaser.Math.Clamp(center.y, m.y / zoom, WORLD.h - (H - m.y) / zoom)
     }
     const apply = () => {
         clamp()
+        const m = mid()
         main.setZoom(zoom)
-        main.setScroll(center.x - VIEW.w / 2, center.y - VIEW.h / 2)
+        main.setScroll(center.x - W / 2 - (m.x - W / 2) / zoom, center.y - H / 2 - (m.y - H / 2) / zoom)
     }
 
     const view: View = {
         get zoom() {
             return zoom
+        },
+        get busy() {
+            return Boolean(tween?.isPlaying())
         },
         world(obj) {
             intoWorld(obj)
@@ -99,24 +116,35 @@ export function createView(scene: Phaser.Scene, home: Vec): View {
                 })
             })
         },
+        setTop(top) {
+            if (top === port.y) return
+            const before = mid().y
+            port.y = top
+            port.h = H - top
+            // Com a câmera parada, o mapa fica parado na tela: só o cabeçalho sai
+            // de cima dele. Com ela andando, quem decide o centro é o zoom.
+            if (!view.busy) center.y += (mid().y - before) / zoom
+            apply()
+        },
+        rect: () => ({ ...port }),
         center: () => ({ ...center }),
-        toScreen: at => ({
-            x: VIEW.x + VIEW.w / 2 + (at.x - center.x) * zoom,
-            y: VIEW.y + VIEW.h / 2 + (at.y - center.y) * zoom,
-        }),
+        toScreen(at) {
+            const m = mid()
+            return { x: m.x + (at.x - center.x) * zoom, y: m.y + (at.y - center.y) * zoom }
+        },
         toScreenRect(r) {
             const pt = view.toScreen(r)
             return { x: pt.x, y: pt.y, w: r.w * zoom, h: r.h * zoom }
         },
-        toWorld: (x, y) => ({
-            x: center.x + (x - VIEW.x - VIEW.w / 2) / zoom,
-            y: center.y + (y - VIEW.y - VIEW.h / 2) / zoom,
-        }),
+        toWorld(x, y) {
+            const m = mid()
+            return { x: center.x + (x - m.x) / zoom, y: center.y + (y - m.y) / zoom }
+        },
         inView(at, pad = 0) {
             const s = view.toScreen(at)
-            return s.x > VIEW.x + pad && s.x < VIEW.x + VIEW.w - pad && s.y > VIEW.y + pad && s.y < VIEW.y + VIEW.h - pad
+            return s.x > port.x + pad && s.x < port.x + port.w - pad && s.y > port.y + pad && s.y < port.y + port.h - pad
         },
-        onMap: (x, y) => x >= VIEW.x && x <= VIEW.x + VIEW.w && y >= VIEW.y && y <= VIEW.y + VIEW.h,
+        onMap: (x, y) => x >= port.x && x <= port.x + port.w && y >= port.y && y <= port.y + port.h,
         destroy() {
             tween?.stop()
             scene.sys.events.off(Phaser.Scenes.Events.ADDED_TO_SCENE, onAdded)

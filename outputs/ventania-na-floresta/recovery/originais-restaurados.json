@@ -1,0 +1,158 @@
+{
+  "selection": "Versões mais recentes por conteúdo no mesmo lote de geração do N1",
+  "files": [
+    {
+      "name": "filhotes.png",
+      "source": "C:/Users/teste123/.codex/generated_images/01a159bf-1ac5-78f3-8e09-cc27f7ed96dc/exec-d64fc944-1650-4874-bf5e-e96b7308bac0.png",
+      "path": "D:/Documentos/Atesteme Jogos Fund 1/outputs/ventania-na-floresta/raw/filhotes.png",
+      "width": 1254,
+      "height": 1254,
+      "alpha": true,
+      "sha256": "ee373bdf9f6208b49ad5bac2131cef19befd32cbbee5b10708df98a81341282d"
+    },
+    {
+      "name": "tece.png",
+      "source": "C:/Users/teste123/.codex/generated_images/01a159bf-1ac5-78f3-8e09-cc27f7ed96dc/exec-e1cbeb73-f4b3-4930-a218-2caa8e52d882.png",
+      "path": "D:/Documentos/Atesteme Jogos Fund 1/outputs/ventania-na-floresta/raw/tece.png",
+      "width": 1536,
+      "height": 1024,
+      "alpha": true,
+      "sha256": "21e78cfeeae6110d27c23afb368724f07f573ab9d5754252694e3e7276f1c135"
+    },
+    {
+      "name": "bichos.png",
+      "source": "C:/Users/teste123/.codex/generated_images/01a159bf-1ac5-78f3-8e09-cc27f7ed96dc/exec-a46ba834-99ba-42b2-acfc-b843dc3ec715.png",
+      "path": "D:/Documentos/Atesteme Jogos Fund 1/outputs/ventania-na-floresta/raw/bichos.png",
+      "width": 1774,
+      "height": 887,
+      "alpha": true,
+      "sha256": "3d15d4ed32921548ef95cd6f0fc19922da3167014c729bc1a9bc4da9a5ae6e89"
+    },
+    {
+      "name": "objetos2.png",
+      "source": "C:/Users/teste123/.codex/generated_images/01a159bf-1ac5-78f3-8e09-cc27f7ed96dc/exec-5ca87694-8175-4209-9178-f0c06f391421.png",
+      "path": "D:/Documentos/Atesteme Jogos Fund 1/outputs/ventania-na-floresta/raw/objetos2.png",
+      "width": 1774,
+      "height": 887,
+      "alpha": true,
+      "sha256": "1f8d16ba04b17f96c28e4e1c5e654a2a4b1e39b789b85fb3c0c5f24b16394767"
+    },
+    {
+      "name": "casas.png",
+      "source": "C:/Users/teste123/.codex/generated_images/01a159bf-1ac5-78f3-8e09-cc27f7ed96dc/exec-694fbe4c-bd6b-455a-aabc-76972226a96d.png",
+      "path": "D:/Documentos/Atesteme Jogos Fund 1/outputs/ventania-na-floresta/raw/casas.png",
+      "width": 1536,
+      "height": 1024,
+      "alpha": true,
+      "sha256": "3721642df8bc0892ed8964fecf40857cc47c5dc4d38bb06e0719feff81f725b5"
+    },
+    {
+      "name": "pedacos.png",
+      "source": "C:/Users/teste123/.codex/generated_images/01a159bf-1ac5-78f3-8e09-cc27f7ed96dc/exec-b104b28a-1b80-4a1e-ad53-673d28c1fe8c.png",
+      "path": "D:/Documentos/Atesteme Jogos Fund 1/outputs/ventania-na-floresta/raw/pedacos.png",
+      "width": 1448,
+      "height": 1086,
+      "alpha": true,
+      "sha256": "058dd206600a5464d8ff1d7e34d7f215a7575ed01a3608dd871fa045c3fff4f5"
+    },
+    {
+      "name": "bg-ninhos.png",
+      "source": "C:/Users/teste123/.codex/generated_images/01a159bf-1ac5-78f3-8e09-cc27f7ed96dc/exec-957dee9f-2b1a-4462-8ed4-366b81c02fa0.png",
+      "path": "D:/Documentos/Atesteme Jogos Fund 1/outputs/ventania-na-floresta/raw/bg-ninhos.png",
+      "width": 1672,
+      "height": 941,
+      "alpha": false,
+      "sha256": "15d3404d5a8ad4bf385e6c0df200cda493a39fb134c2c3f150b4ad3b9a4cd8cd"
+    },
+    {
+      "name": "bg-teia.png",
+      "source": "C:/Users/teste123/.codex/generated_images/01a159bf-1ac5-78f3-8e09-cc27f7ed96dc/exec-737bdda8-fc5c-40be-ad0f-9238b5091a6c.png",
+      "path": "D:/Documentos/Atesteme Jogos Fund 1/outputs/ventania-na-floresta/raw/bg-teia.png",
+      "width": 1672,
+      "height": 941,
+      "alpha": false,
+      "sha256": "f13d9178b39113449e980eefff9684d6581f65d56249ebd48785ce618618ca0c"
+    },
+    {
+      "name": "bg-redemoinho.png",
+      "source": "C:/Users/teste123/.codex/generated_images/01a159bf-1ac5-78f3-8e09-cc27f7ed96dc/exec-687efaf4-e0a9-4544-b67f-d187a9458f73.png",
+      "path": "D:/Documentos/Atesteme Jogos Fund 1/outputs/ventania-na-floresta/raw/bg-redemoinho.png",
+      "width": 1672,
+      "height": 941,
+      "alpha": false,
+      "sha256": "40973e71fb11fb7e1dcfd89d304c051443531bdb2b116e725f5ff00afc67c379"
+    },
+    {
+      "name": "cover-ventania-na-floresta.png",
+      "source": "C:/Users/teste123/.codex/generated_images/01a159bf-1ac5-78f3-8e09-cc27f7ed96dc/exec-dd92aa2d-7064-4824-86e4-68f7668de722.png",
+      "path": "D:/Documentos/Atesteme Jogos Fund 1/outputs/ventania-na-floresta/raw/cover-ventania-na-floresta.png",
+      "width": 1672,
+      "height": 941,
+      "alpha": false,
+      "sha256": "a9b3735157e3a22edc1c63b184b613ad964a96037ab5cd3bff775a7193eb429b"
+    },
+    {
+      "name": "formigas.png",
+      "source": "C:/Users/teste123/.codex/generated_images/01a159bf-1ac5-78f3-8e09-cc27f7ed96dc/exec-1e318a4f-1921-4221-9221-647c4397fa56.png",
+      "path": "D:/Documentos/Atesteme Jogos Fund 1/outputs/ventania-na-floresta/raw/formigas.png",
+      "width": 1774,
+      "height": 887,
+      "alpha": true,
+      "sha256": "daecfa6749efab147ec00ffcf8899e72ae261a9846431c78b05f5c7bf723dcf7"
+    },
+    {
+      "name": "bg-trilha.png",
+      "source": "C:/Users/teste123/.codex/generated_images/01a159bf-1ac5-78f3-8e09-cc27f7ed96dc/exec-6c15c0c2-c04e-4fb9-a9a7-fa4055a8ad0a.png",
+      "path": "D:/Documentos/Atesteme Jogos Fund 1/outputs/ventania-na-floresta/raw/bg-trilha.png",
+      "width": 1672,
+      "height": 941,
+      "alpha": false,
+      "sha256": "55ef3dbc788d863605a6ebf210228f10cb8f95980d29c4d63597bfdd5d1664cd"
+    },
+    {
+      "name": "bg-jardim.png",
+      "source": "C:/Users/teste123/.codex/generated_images/01a159bf-1ac5-78f3-8e09-cc27f7ed96dc/exec-be7d717b-e4e7-4be2-a419-51b3a8204066.png",
+      "path": "D:/Documentos/Atesteme Jogos Fund 1/outputs/ventania-na-floresta/raw/bg-jardim.png",
+      "width": 1672,
+      "height": 941,
+      "alpha": false,
+      "sha256": "ae7c9f4e8c61dd6f9db4e29e66801ec7f837c2ab9a7bef885c27417468bd64fd"
+    },
+    {
+      "name": "zuzu.png",
+      "source": "C:/Users/teste123/.codex/generated_images/01a159bf-1ac5-78f3-8e09-cc27f7ed96dc/exec-d4250704-fa99-4f70-b663-66e14cd74b00.png",
+      "path": "D:/Documentos/Atesteme Jogos Fund 1/outputs/ventania-na-floresta/raw/zuzu.png",
+      "width": 1536,
+      "height": 1024,
+      "alpha": true,
+      "sha256": "f5bea7d023d00286a3f36356c787f61201207ddf38f62d0cc6395d3c9f1a47a5"
+    },
+    {
+      "name": "flores.png",
+      "source": "C:/Users/teste123/.codex/generated_images/01a159bf-1ac5-78f3-8e09-cc27f7ed96dc/exec-c698459b-1635-44fd-ad1d-db838b4fb35b.png",
+      "path": "D:/Documentos/Atesteme Jogos Fund 1/outputs/ventania-na-floresta/raw/flores.png",
+      "width": 1254,
+      "height": 1254,
+      "alpha": true,
+      "sha256": "e87019818ecbfa407d82319436591a1cf89185a689b5f83b9df6a9567e18e36f"
+    },
+    {
+      "name": "objetos.png",
+      "source": "C:/Users/teste123/.codex/generated_images/01a159bf-1ac5-78f3-8e09-cc27f7ed96dc/exec-93dccc4e-eca9-45b1-90f0-9d545550e380.png",
+      "path": "D:/Documentos/Atesteme Jogos Fund 1/outputs/ventania-na-floresta/raw/objetos.png",
+      "width": 1774,
+      "height": 887,
+      "alpha": true,
+      "sha256": "810bb194dacb8e2ebfa537ff6c9d15ab23e019625f296cdb443d5d6c9b6fde61"
+    },
+    {
+      "name": "pipa.png",
+      "source": "C:/Users/teste123/.codex/generated_images/01a159bf-1ac5-78f3-8e09-cc27f7ed96dc/exec-8c40817a-db2f-4401-9c31-8e435c3fb0fe.png",
+      "path": "D:/Documentos/Atesteme Jogos Fund 1/outputs/ventania-na-floresta/raw/pipa.png",
+      "width": 1586,
+      "height": 992,
+      "alpha": true,
+      "sha256": "91e40a3f5fe4bcf6ba4b9d95894b0fd85c58e02cf22ea7ea26808477bd4694f5"
+    }
+  ]
+}

@@ -20,12 +20,19 @@ export const PIT = {
     zone: 170,
     /** Entrou no retângulo até esta velocidade: estaciona sozinho. Fica abaixo de vmax × wrong, para o freio valer sempre. */
     parkV: 200,
-    /** A tenda escolhida fica pelo menos tanto à frente. */
+    /**
+     * A tenda escolhida fica pelo menos a distância de frenagem + `margin` à frente, e nunca
+     * mais que `minAhead`: com 520 fixo, quem chamava o box logo ao sair da lama (tenda 11 000
+     * do N2) passava pela tenda vazia e era mandado para a seguinte, fora da tela.
+     */
     minAhead: 520,
+    margin: 200,
     /** Daqui para perto, o FREIO pisca se o carro vem rápido. */
     warn: 760,
     /** A essa distância do fim da volta, o revezamento chama o box. */
     relayCall: 900,
+    /** Tanto tempo com o pneu errado e o TROCAR PNEU começa a chamar. */
+    nudge: 2500,
 } as const
 
 /** `spot`: a vaga do rival na faixa do box, tanto depois da tenda da Kika (as tendas são da equipe dela). */
@@ -34,9 +41,12 @@ export const RIVALS = [
     { factor: 0.84, start: 280, cell: 6, spot: 950 },
 ] as const
 
+/** A cada mudança que pede pneu, cada rival sorteia quanto demora para perceber e se vai ignorar até a próxima. */
 export const RIVAL_AI = {
-    react: 1500,
-    pit: 4500,
-    relay: 5600,
+    reactMin: 3500,
+    reactMax: 6000,
+    ignore: 0.35,
+    pit: 6000,
+    relay: 7000,
     minAhead: 320,
 } as const

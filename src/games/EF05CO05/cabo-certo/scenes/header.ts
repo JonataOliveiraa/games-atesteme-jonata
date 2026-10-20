@@ -14,7 +14,8 @@ export interface Header {
     askRect(): Rect
     celebrate(index: number): Promise<void>
     setHelpEnabled(on: boolean): void
-    visible(on: boolean): void
+    /** Sobe a faixa inteira `px` pixels (o foco das animações); o "?" só pega toque no lugar. */
+    setLift(px: number): void
     helpRect(): Rect
     destroy(): void
 }
@@ -30,7 +31,7 @@ export interface HeaderOptions {
 }
 
 export function createHeader(scene: Phaser.Scene, opts: HeaderOptions): Header {
-    const band = scene.add.graphics().setDepth(DEPTH.header)
+    const band = scene.add.graphics()
     band.fillStyle(C.shadow, 0.16)
     band.fillRect(0, HEADER.h + 2, W, 8)
     band.fillStyle(C.headerFace, 1)
@@ -44,7 +45,7 @@ export function createHeader(scene: Phaser.Scene, opts: HeaderOptions): Header {
         band.fillRoundedRect(x - 1.5, 18, 3, HEADER.h - 40, 1.5)
     })
 
-    const pill = scene.add.graphics().setDepth(DEPTH.hud)
+    const pill = scene.add.graphics()
     const top = HUD.y - HUD.levelH / 2
     pill.fillStyle(C.headerLine, 1)
     pill.fillRoundedRect(HUD.levelX, top + 4, HUD.levelW, HUD.levelH, HUD.levelH / 2)
@@ -58,11 +59,8 @@ export function createHeader(scene: Phaser.Scene, opts: HeaderOptions): Header {
         })
         .setOrigin(0.5)
         .setResolution(2)
-        .setDepth(DEPTH.hud + 1)
 
-    const pips = Array.from({ length: opts.phases }, (_, i) =>
-        scene.add.circle(HUD.pipsX + i * HUD.pipGap, HUD.y, HUD.pipR, C.headerSoft).setDepth(DEPTH.hud + 1),
-    )
+    const pips = Array.from({ length: opts.phases }, (_, i) => scene.add.circle(HUD.pipsX + i * HUD.pipGap, HUD.y, HUD.pipR, C.headerSoft))
     let current = 0
     const paint = () =>
         pips.forEach((pip, i) => {
@@ -84,7 +82,6 @@ export function createHeader(scene: Phaser.Scene, opts: HeaderOptions): Header {
         })
         .setOrigin(0.5)
         .setResolution(2)
-        .setDepth(DEPTH.hud + 1)
 
     const lives = createLives(scene, {
         total: opts.livesTotal,
@@ -107,15 +104,17 @@ export function createHeader(scene: Phaser.Scene, opts: HeaderOptions): Header {
         .text(0, 1, '?', { fontFamily: FONT.black, fontSize: `${SIZE.help - 4}px`, color: '#ffffff' })
         .setOrigin(0.5)
         .setResolution(2)
-    const help = scene.add.container(HUD.helpX, HUD.helpY, [helpArt, helpText]).setDepth(DEPTH.hud)
+    const help = scene.add.container(HUD.helpX, HUD.helpY, [helpArt, helpText])
+    // Uma peça só, para a faixa subir inteira no foco das animações.
+    const root = scene.add.container(0, 0, [band, pill, levelText, ...pips, askText, help]).setDepth(DEPTH.header)
     const helpZone = scene.add
         .zone(HUD.helpX, HUD.helpY, HUD.helpHit, HUD.helpHit)
         .setDepth(DEPTH.hud + 2)
         .setInteractive({ useHandCursor: true })
     let helpOn = false
-    let shown = true
+    let lift = 0
     const askHelp = () => {
-        if (!helpOn || !shown) return
+        if (!helpOn || lift > 0) return
         scene.tweens.killTweensOf(help)
         help.setScale(1)
         void FX.press(scene, help)
@@ -128,8 +127,8 @@ export function createHeader(scene: Phaser.Scene, opts: HeaderOptions): Header {
     scene.input.keyboard?.on('keydown', onKey)
 
     const paintHelp = () => {
-        if (helpZone.input) helpZone.input.enabled = helpOn && shown
-        help.setAlpha(shown ? (helpOn ? 1 : 0.45) : 0)
+        if (helpZone.input) helpZone.input.enabled = helpOn && lift === 0
+        help.setAlpha(helpOn ? 1 : 0.45)
     }
     paintHelp()
 
@@ -153,7 +152,7 @@ export function createHeader(scene: Phaser.Scene, opts: HeaderOptions): Header {
             paint()
             const pip = pips[index]
             if (!pip) return
-            void FX.sparks(scene, pip.x, pip.y, { color: C.yes, count: 12, spread: 50, size: 8, duration: 500, depth: DEPTH.hud + 2 })
+            void FX.sparks(scene, pip.x, pip.y + root.y, { color: C.yes, count: 12, spread: 50, size: 8, duration: 500, depth: DEPTH.hud + 2 })
             await FX.to(scene, pip, { y: HUD.y - 10 }, { duration: 150, yoyo: true })
             pip.setY(HUD.y)
         },
@@ -161,21 +160,16 @@ export function createHeader(scene: Phaser.Scene, opts: HeaderOptions): Header {
             helpOn = on
             paintHelp()
         },
-        visible(on) {
-            shown = on
-            ;[band, pill, levelText, askText, ...pips].forEach(o => o.setVisible(on))
+        setLift(px) {
+            lift = px
+            root.setY(-px)
             paintHelp()
         },
         helpRect: () => ({ x: HUD.helpX, y: HUD.helpY, w: HUD.helpR * 2 + 16, h: HUD.helpR * 2 + 16 }),
         destroy() {
             scene.input.keyboard?.off('keydown', onKey)
             helpZone.destroy()
-            help.destroy()
-            levelText.destroy()
-            askText.destroy()
-            pips.forEach(p => p.destroy())
-            pill.destroy()
-            band.destroy()
+            root.destroy()
             lives.destroy()
         },
     }

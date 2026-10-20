@@ -20,17 +20,18 @@ export const MOTO_SHEET: Sheet = { key: 'motos', cols: 4, rows: 2, cellW: 384, c
 export const CREW_SHEET: Sheet = { key: 'equipe', cols: 4, rows: 2, cellW: 320, cellH: 400, ref: [0, 4, 6], trim: true, pin: true }
 export const PIECE_SHEET: Sheet = { key: 'pecas', cols: 6, rows: 3, cellW: 256, cellH: 256, ref: [0], trim: true }
 export const CONTROL_SHEET: Sheet = { key: 'controles', cols: 3, rows: 1, cellW: 256, cellH: 256, ref: [0], trim: true }
+export const TRAIL_SHEET: Sheet = { key: 'trilha-pecas', cols: 2, rows: 1, cellW: 256, cellH: 256, ref: [0], trim: true }
+/** As rodas que giram no veículo, em perfil puro; as células são as 0–5 da `pecas`. */
+export const TIRE_SHEET: Sheet = { key: 'pneus', cols: 6, rows: 1, cellW: 256, cellH: 256, ref: [0], trim: true }
 
-export const SHEETS = [KART_SHEET, MOTO_SHEET, CREW_SHEET, PIECE_SHEET, CONTROL_SHEET]
+export const SHEETS = [KART_SHEET, MOTO_SHEET, CREW_SHEET, PIECE_SHEET, CONTROL_SHEET, TRAIL_SHEET, TIRE_SHEET]
 
 export const TRACK_KEY = 'autodromo'
 export const MUD_KEY = 'lama'
+export const TRAIL_KEY = 'trilha'
 export const TENT_KEY = 'tenda'
-export const HAND_KEY = 'mao'
-export const IMAGES = [TRACK_KEY, MUD_KEY, TENT_KEY, HAND_KEY]
+export const IMAGES = [TRACK_KEY, MUD_KEY, TRAIL_KEY, TENT_KEY]
 
-/** A ponta do dedo na `mao.png`, em fração da imagem. */
-export const HAND_TIP = { x: 0.34, y: 0.07 } as const
 
 /** As duas folhas de veículo têm a mesma ordem: a Kika em 5 caras, os dois rivais e o veículo vazio. */
 export const CAR_CELL = { idle: 0, race: 1, cheer: 2, dizzy: 3, worried: 4, rivalA: 5, rivalB: 6, empty: 7 } as const
@@ -56,6 +57,7 @@ export const PIECE_CELL = {
     flag: 17,
 } as const
 export const CONTROL_CELL = { gas: 0, brake: 1, pit: 2 } as const
+export const TRAIL_CELL = { sign: 0, cone: 1 } as const
 
 export const cellKey = (index: number) => `c${index}`
 

@@ -1,0 +1,1235 @@
+{
+  "files": [
+    {
+      "file": "filhotes.png",
+      "width": 768,
+      "height": 768,
+      "grid": [
+        3,
+        3
+      ],
+      "cell": [
+        256,
+        256
+      ],
+      "channels": 4,
+      "bytes": 677150,
+      "sha256": "87ebe5c4a749994c649d406ee705e992c3f7fee71d500c3eb4c2968d897e416c",
+      "sourceSha256": "ee373bdf9f6208b49ad5bac2131cef19befd32cbbee5b10708df98a81341282d",
+      "lowAlpha1to47": 0,
+      "nonzeroRGBatAlphaZero": 0,
+      "cells": [
+        {
+          "cell": 0,
+          "bounds": {
+            "x": 23,
+            "y": 21,
+            "width": 210,
+            "height": 215
+          },
+          "boundsAnyAlpha": {
+            "x": 23,
+            "y": 21,
+            "width": 210,
+            "height": 215
+          },
+          "baseY": 235
+        },
+        {
+          "cell": 1,
+          "bounds": {
+            "x": 25,
+            "y": 21,
+            "width": 207,
+            "height": 215
+          },
+          "boundsAnyAlpha": {
+            "x": 25,
+            "y": 21,
+            "width": 207,
+            "height": 215
+          },
+          "baseY": 235
+        },
+        {
+          "cell": 2,
+          "bounds": {
+            "x": 25,
+            "y": 21,
+            "width": 206,
+            "height": 215
+          },
+          "boundsAnyAlpha": {
+            "x": 25,
+            "y": 21,
+            "width": 206,
+            "height": 215
+          },
+          "baseY": 235
+        },
+        {
+          "cell": 3,
+          "bounds": {
+            "x": 22,
+            "y": 21,
+            "width": 212,
+            "height": 215
+          },
+          "boundsAnyAlpha": {
+            "x": 22,
+            "y": 21,
+            "width": 212,
+            "height": 215
+          },
+          "baseY": 235
+        },
+        {
+          "cell": 4,
+          "bounds": {
+            "x": 24,
+            "y": 21,
+            "width": 209,
+            "height": 215
+          },
+          "boundsAnyAlpha": {
+            "x": 24,
+            "y": 21,
+            "width": 209,
+            "height": 215
+          },
+          "baseY": 235
+        },
+        {
+          "cell": 5,
+          "bounds": {
+            "x": 23,
+            "y": 21,
+            "width": 211,
+            "height": 215
+          },
+          "boundsAnyAlpha": {
+            "x": 23,
+            "y": 21,
+            "width": 211,
+            "height": 215
+          },
+          "baseY": 235
+        },
+        {
+          "cell": 6,
+          "bounds": {
+            "x": 21,
+            "y": 21,
+            "width": 214,
+            "height": 215
+          },
+          "boundsAnyAlpha": {
+            "x": 21,
+            "y": 21,
+            "width": 214,
+            "height": 215
+          },
+          "baseY": 235
+        },
+        {
+          "cell": 7,
+          "bounds": {
+            "x": 22,
+            "y": 21,
+            "width": 213,
+            "height": 215
+          },
+          "boundsAnyAlpha": {
+            "x": 22,
+            "y": 21,
+            "width": 213,
+            "height": 215
+          },
+          "baseY": 235
+        },
+        {
+          "cell": 8,
+          "bounds": {
+            "x": 22,
+            "y": 21,
+            "width": 212,
+            "height": 215
+          },
+          "boundsAnyAlpha": {
+            "x": 22,
+            "y": 21,
+            "width": 212,
+            "height": 215
+          },
+          "baseY": 235
+        }
+      ]
+    },
+    {
+      "file": "tece.png",
+      "width": 768,
+      "height": 512,
+      "grid": [
+        3,
+        2
+      ],
+      "cell": [
+        256,
+        256
+      ],
+      "channels": 4,
+      "bytes": 351048,
+      "sha256": "7c6b90c4c8d7458469d41f062cc3711cf8c4c7912437903d593d9e918fcc8b92",
+      "sourceSha256": "21e78cfeeae6110d27c23afb368724f07f573ab9d5754252694e3e7276f1c135",
+      "lowAlpha1to47": 0,
+      "nonzeroRGBatAlphaZero": 0,
+      "cells": [
+        {
+          "cell": 0,
+          "bounds": {
+            "x": 21,
+            "y": 35,
+            "width": 215,
+            "height": 186
+          },
+          "boundsAnyAlpha": {
+            "x": 21,
+            "y": 35,
+            "width": 215,
+            "height": 186
+          },
+          "baseY": null
+        },
+        {
+          "cell": 1,
+          "bounds": {
+            "x": 54,
+            "y": 21,
+            "width": 149,
+            "height": 215
+          },
+          "boundsAnyAlpha": {
+            "x": 54,
+            "y": 21,
+            "width": 149,
+            "height": 215
+          },
+          "baseY": null
+        },
+        {
+          "cell": 2,
+          "bounds": {
+            "x": 21,
+            "y": 46,
+            "width": 215,
+            "height": 164
+          },
+          "boundsAnyAlpha": {
+            "x": 21,
+            "y": 46,
+            "width": 215,
+            "height": 164
+          },
+          "baseY": null
+        },
+        {
+          "cell": 3,
+          "bounds": {
+            "x": 21,
+            "y": 25,
+            "width": 215,
+            "height": 206
+          },
+          "boundsAnyAlpha": {
+            "x": 21,
+            "y": 25,
+            "width": 215,
+            "height": 206
+          },
+          "baseY": null
+        },
+        {
+          "cell": 4,
+          "bounds": {
+            "x": 23,
+            "y": 21,
+            "width": 211,
+            "height": 215
+          },
+          "boundsAnyAlpha": {
+            "x": 23,
+            "y": 21,
+            "width": 211,
+            "height": 215
+          },
+          "baseY": null
+        },
+        {
+          "cell": 5,
+          "bounds": {
+            "x": 21,
+            "y": 45,
+            "width": 215,
+            "height": 166
+          },
+          "boundsAnyAlpha": {
+            "x": 21,
+            "y": 45,
+            "width": 215,
+            "height": 166
+          },
+          "baseY": null
+        }
+      ]
+    },
+    {
+      "file": "bichos.png",
+      "width": 1024,
+      "height": 512,
+      "grid": [
+        4,
+        2
+      ],
+      "cell": [
+        256,
+        256
+      ],
+      "channels": 4,
+      "bytes": 604792,
+      "sha256": "4299992dc022dc8b77d04d0039d5694627015944e9c21334d2b328a7db76ed44",
+      "sourceSha256": "3d15d4ed32921548ef95cd6f0fc19922da3167014c729bc1a9bc4da9a5ae6e89",
+      "lowAlpha1to47": 0,
+      "nonzeroRGBatAlphaZero": 0,
+      "cells": [
+        {
+          "cell": 0,
+          "bounds": {
+            "x": 21,
+            "y": 39,
+            "width": 215,
+            "height": 197
+          },
+          "boundsAnyAlpha": {
+            "x": 21,
+            "y": 39,
+            "width": 215,
+            "height": 197
+          },
+          "baseY": 235
+        },
+        {
+          "cell": 1,
+          "bounds": {
+            "x": 21,
+            "y": 26,
+            "width": 215,
+            "height": 210
+          },
+          "boundsAnyAlpha": {
+            "x": 21,
+            "y": 26,
+            "width": 215,
+            "height": 210
+          },
+          "baseY": 235
+        },
+        {
+          "cell": 2,
+          "bounds": {
+            "x": 21,
+            "y": 45,
+            "width": 215,
+            "height": 191
+          },
+          "boundsAnyAlpha": {
+            "x": 21,
+            "y": 45,
+            "width": 215,
+            "height": 191
+          },
+          "baseY": 235
+        },
+        {
+          "cell": 3,
+          "bounds": {
+            "x": 21,
+            "y": 42,
+            "width": 215,
+            "height": 194
+          },
+          "boundsAnyAlpha": {
+            "x": 21,
+            "y": 42,
+            "width": 215,
+            "height": 194
+          },
+          "baseY": 235
+        },
+        {
+          "cell": 4,
+          "bounds": {
+            "x": 21,
+            "y": 34,
+            "width": 215,
+            "height": 202
+          },
+          "boundsAnyAlpha": {
+            "x": 21,
+            "y": 34,
+            "width": 215,
+            "height": 202
+          },
+          "baseY": 235
+        },
+        {
+          "cell": 5,
+          "bounds": {
+            "x": 21,
+            "y": 21,
+            "width": 215,
+            "height": 215
+          },
+          "boundsAnyAlpha": {
+            "x": 21,
+            "y": 21,
+            "width": 215,
+            "height": 215
+          },
+          "baseY": 235
+        },
+        {
+          "cell": 6,
+          "bounds": {
+            "x": 21,
+            "y": 56,
+            "width": 215,
+            "height": 180
+          },
+          "boundsAnyAlpha": {
+            "x": 21,
+            "y": 56,
+            "width": 215,
+            "height": 180
+          },
+          "baseY": 235
+        },
+        {
+          "cell": 7,
+          "bounds": {
+            "x": 21,
+            "y": 42,
+            "width": 215,
+            "height": 194
+          },
+          "boundsAnyAlpha": {
+            "x": 21,
+            "y": 42,
+            "width": 215,
+            "height": 194
+          },
+          "baseY": 235
+        }
+      ]
+    },
+    {
+      "file": "objetos2.png",
+      "width": 1024,
+      "height": 512,
+      "grid": [
+        4,
+        2
+      ],
+      "cell": [
+        256,
+        256
+      ],
+      "channels": 4,
+      "bytes": 307173,
+      "sha256": "35c18cd817880ff5a48f0ab76107e60c5ba5e1d992f66d5187c1bf8bc99cd47d",
+      "sourceSha256": "1f8d16ba04b17f96c28e4e1c5e654a2a4b1e39b789b85fb3c0c5f24b16394767",
+      "lowAlpha1to47": 0,
+      "nonzeroRGBatAlphaZero": 0,
+      "cells": [
+        {
+          "cell": 0,
+          "bounds": {
+            "x": 26,
+            "y": 54,
+            "width": 205,
+            "height": 149
+          },
+          "boundsAnyAlpha": {
+            "x": 26,
+            "y": 54,
+            "width": 205,
+            "height": 149
+          },
+          "baseY": null
+        },
+        {
+          "cell": 1,
+          "bounds": {
+            "x": 56,
+            "y": 21,
+            "width": 145,
+            "height": 215
+          },
+          "boundsAnyAlpha": {
+            "x": 56,
+            "y": 21,
+            "width": 145,
+            "height": 215
+          },
+          "baseY": null
+        },
+        {
+          "cell": 2,
+          "bounds": {
+            "x": 54,
+            "y": 39,
+            "width": 149,
+            "height": 179
+          },
+          "boundsAnyAlpha": {
+            "x": 54,
+            "y": 39,
+            "width": 149,
+            "height": 179
+          },
+          "baseY": null
+        },
+        {
+          "cell": 3,
+          "bounds": {
+            "x": 80,
+            "y": 77,
+            "width": 97,
+            "height": 102
+          },
+          "boundsAnyAlpha": {
+            "x": 80,
+            "y": 77,
+            "width": 97,
+            "height": 102
+          },
+          "baseY": null
+        },
+        {
+          "cell": 4,
+          "bounds": {
+            "x": 64,
+            "y": 58,
+            "width": 129,
+            "height": 141
+          },
+          "boundsAnyAlpha": {
+            "x": 64,
+            "y": 58,
+            "width": 129,
+            "height": 141
+          },
+          "baseY": null
+        },
+        {
+          "cell": 5,
+          "bounds": {
+            "x": 71,
+            "y": 86,
+            "width": 115,
+            "height": 85
+          },
+          "boundsAnyAlpha": {
+            "x": 71,
+            "y": 86,
+            "width": 115,
+            "height": 85
+          },
+          "baseY": null
+        },
+        {
+          "cell": 6,
+          "bounds": {
+            "x": 58,
+            "y": 60,
+            "width": 141,
+            "height": 137
+          },
+          "boundsAnyAlpha": {
+            "x": 58,
+            "y": 60,
+            "width": 141,
+            "height": 137
+          },
+          "baseY": null
+        },
+        {
+          "cell": 7,
+          "bounds": {
+            "x": 21,
+            "y": 57,
+            "width": 215,
+            "height": 142
+          },
+          "boundsAnyAlpha": {
+            "x": 21,
+            "y": 57,
+            "width": 215,
+            "height": 142
+          },
+          "baseY": null
+        }
+      ]
+    },
+    {
+      "file": "casas.png",
+      "width": 768,
+      "height": 512,
+      "grid": [
+        3,
+        2
+      ],
+      "cell": [
+        256,
+        256
+      ],
+      "channels": 4,
+      "bytes": 377600,
+      "sha256": "3ca4487552dde7a3b4ac2b6e32e7577fc063bea4a022348c7dfc8d72427abf39",
+      "sourceSha256": "3721642df8bc0892ed8964fecf40857cc47c5dc4d38bb06e0719feff81f725b5",
+      "lowAlpha1to47": 0,
+      "nonzeroRGBatAlphaZero": 0,
+      "cells": [
+        {
+          "cell": 0,
+          "bounds": {
+            "x": 21,
+            "y": 35,
+            "width": 215,
+            "height": 186
+          },
+          "boundsAnyAlpha": {
+            "x": 21,
+            "y": 35,
+            "width": 215,
+            "height": 186
+          },
+          "baseY": null
+        },
+        {
+          "cell": 1,
+          "bounds": {
+            "x": 21,
+            "y": 36,
+            "width": 215,
+            "height": 185
+          },
+          "boundsAnyAlpha": {
+            "x": 21,
+            "y": 36,
+            "width": 215,
+            "height": 185
+          },
+          "baseY": null
+        },
+        {
+          "cell": 2,
+          "bounds": {
+            "x": 28,
+            "y": 21,
+            "width": 200,
+            "height": 215
+          },
+          "boundsAnyAlpha": {
+            "x": 28,
+            "y": 21,
+            "width": 200,
+            "height": 215
+          },
+          "baseY": null
+        },
+        {
+          "cell": 3,
+          "bounds": {
+            "x": 21,
+            "y": 32,
+            "width": 215,
+            "height": 193
+          },
+          "boundsAnyAlpha": {
+            "x": 21,
+            "y": 32,
+            "width": 215,
+            "height": 193
+          },
+          "baseY": null
+        },
+        {
+          "cell": 4,
+          "bounds": {
+            "x": 21,
+            "y": 27,
+            "width": 215,
+            "height": 203
+          },
+          "boundsAnyAlpha": {
+            "x": 21,
+            "y": 27,
+            "width": 215,
+            "height": 203
+          },
+          "baseY": null
+        },
+        {
+          "cell": 5,
+          "empty": true,
+          "bounds": null,
+          "rgbaZero": true
+        }
+      ]
+    },
+    {
+      "file": "pedacos.png",
+      "width": 1024,
+      "height": 768,
+      "grid": [
+        4,
+        3
+      ],
+      "cell": [
+        256,
+        256
+      ],
+      "channels": 4,
+      "bytes": 718416,
+      "sha256": "cff0f8aef5f46d4ff215132088519a100acef809115ab52c7f8f7d98ab27c7ca",
+      "sourceSha256": "058dd206600a5464d8ff1d7e34d7f215a7575ed01a3608dd871fa045c3fff4f5",
+      "lowAlpha1to47": 0,
+      "nonzeroRGBatAlphaZero": 0,
+      "cells": [
+        {
+          "cell": 0,
+          "bounds": {
+            "x": 21,
+            "y": 88,
+            "width": 215,
+            "height": 81
+          },
+          "boundsAnyAlpha": {
+            "x": 21,
+            "y": 88,
+            "width": 215,
+            "height": 81
+          },
+          "baseY": null
+        },
+        {
+          "cell": 1,
+          "bounds": {
+            "x": 57,
+            "y": 21,
+            "width": 142,
+            "height": 215
+          },
+          "boundsAnyAlpha": {
+            "x": 57,
+            "y": 21,
+            "width": 142,
+            "height": 215
+          },
+          "baseY": null
+        },
+        {
+          "cell": 2,
+          "bounds": {
+            "x": 21,
+            "y": 25,
+            "width": 215,
+            "height": 207
+          },
+          "boundsAnyAlpha": {
+            "x": 21,
+            "y": 25,
+            "width": 215,
+            "height": 207
+          },
+          "baseY": null
+        },
+        {
+          "cell": 3,
+          "bounds": {
+            "x": 21,
+            "y": 37,
+            "width": 215,
+            "height": 182
+          },
+          "boundsAnyAlpha": {
+            "x": 21,
+            "y": 37,
+            "width": 215,
+            "height": 182
+          },
+          "baseY": null
+        },
+        {
+          "cell": 4,
+          "bounds": {
+            "x": 21,
+            "y": 32,
+            "width": 215,
+            "height": 193
+          },
+          "boundsAnyAlpha": {
+            "x": 21,
+            "y": 32,
+            "width": 215,
+            "height": 193
+          },
+          "baseY": null
+        },
+        {
+          "cell": 5,
+          "bounds": {
+            "x": 21,
+            "y": 32,
+            "width": 215,
+            "height": 193
+          },
+          "boundsAnyAlpha": {
+            "x": 21,
+            "y": 32,
+            "width": 215,
+            "height": 193
+          },
+          "baseY": null
+        },
+        {
+          "cell": 6,
+          "bounds": {
+            "x": 21,
+            "y": 70,
+            "width": 215,
+            "height": 117
+          },
+          "boundsAnyAlpha": {
+            "x": 21,
+            "y": 70,
+            "width": 215,
+            "height": 117
+          },
+          "baseY": null
+        },
+        {
+          "cell": 7,
+          "bounds": {
+            "x": 21,
+            "y": 34,
+            "width": 215,
+            "height": 188
+          },
+          "boundsAnyAlpha": {
+            "x": 21,
+            "y": 34,
+            "width": 215,
+            "height": 188
+          },
+          "baseY": null
+        },
+        {
+          "cell": 8,
+          "bounds": {
+            "x": 21,
+            "y": 57,
+            "width": 215,
+            "height": 142
+          },
+          "boundsAnyAlpha": {
+            "x": 21,
+            "y": 57,
+            "width": 215,
+            "height": 142
+          },
+          "baseY": null
+        },
+        {
+          "cell": 9,
+          "bounds": {
+            "x": 21,
+            "y": 53,
+            "width": 215,
+            "height": 150
+          },
+          "boundsAnyAlpha": {
+            "x": 21,
+            "y": 53,
+            "width": 215,
+            "height": 150
+          },
+          "baseY": null
+        },
+        {
+          "cell": 10,
+          "bounds": {
+            "x": 21,
+            "y": 42,
+            "width": 215,
+            "height": 172
+          },
+          "boundsAnyAlpha": {
+            "x": 21,
+            "y": 42,
+            "width": 215,
+            "height": 172
+          },
+          "baseY": null
+        },
+        {
+          "cell": 11,
+          "empty": true,
+          "bounds": null,
+          "rgbaZero": true
+        }
+      ]
+    }
+  ],
+  "backgrounds": [
+    {
+      "file": "bg-ninhos.png",
+      "width": 1672,
+      "height": 941,
+      "bytes": 1780372,
+      "channels": 3,
+      "isOpaque": true,
+      "identicalToRaw": true,
+      "sha256": "15d3404d5a8ad4bf385e6c0df200cda493a39fb134c2c3f150b4ad3b9a4cd8cd"
+    },
+    {
+      "file": "bg-teia.png",
+      "width": 1672,
+      "height": 941,
+      "bytes": 1707758,
+      "channels": 3,
+      "isOpaque": true,
+      "identicalToRaw": true,
+      "sha256": "f13d9178b39113449e980eefff9684d6581f65d56249ebd48785ce618618ca0c"
+    },
+    {
+      "file": "bg-redemoinho.png",
+      "width": 1672,
+      "height": 941,
+      "bytes": 1545239,
+      "channels": 3,
+      "isOpaque": true,
+      "identicalToRaw": true,
+      "sha256": "40973e71fb11fb7e1dcfd89d304c051443531bdb2b116e725f5ff00afc67c379"
+    },
+    {
+      "file": "cover-ventania-na-floresta.png",
+      "width": 1672,
+      "height": 941,
+      "bytes": 2294451,
+      "channels": 3,
+      "isOpaque": true,
+      "identicalToRaw": true,
+      "sha256": "a9b3735157e3a22edc1c63b184b613ad964a96037ab5cd3bff775a7193eb429b"
+    }
+  ],
+  "birdAnchors": [
+    {
+      "cell": 0,
+      "headTop": {
+        "x": 120,
+        "y": 21
+      },
+      "headTopSpan": [
+        108,
+        132
+      ],
+      "beak": {
+        "colorBounds": {
+          "x": 81,
+          "y": 103,
+          "width": 32,
+          "height": 20
+        },
+        "center": {
+          "x": 97.38,
+          "y": 112.34
+        },
+        "anchor": {
+          "x": 97,
+          "y": 112
+        }
+      }
+    },
+    {
+      "cell": 1,
+      "headTop": {
+        "x": 123,
+        "y": 21
+      },
+      "headTopSpan": [
+        113,
+        133
+      ],
+      "beak": {
+        "colorBounds": {
+          "x": 83,
+          "y": 104,
+          "width": 32,
+          "height": 19
+        },
+        "center": {
+          "x": 99.33,
+          "y": 112.82
+        },
+        "anchor": {
+          "x": 99,
+          "y": 113
+        }
+      }
+    },
+    {
+      "cell": 2,
+      "headTop": {
+        "x": 121.5,
+        "y": 21
+      },
+      "headTopSpan": [
+        111,
+        132
+      ],
+      "beak": {
+        "colorBounds": {
+          "x": 81,
+          "y": 104,
+          "width": 33,
+          "height": 19
+        },
+        "center": {
+          "x": 97.8,
+          "y": 112.69
+        },
+        "anchor": {
+          "x": 98,
+          "y": 113
+        }
+      }
+    },
+    {
+      "cell": 3,
+      "headTop": {
+        "x": 120.5,
+        "y": 21
+      },
+      "headTopSpan": [
+        108,
+        133
+      ],
+      "beak": {
+        "colorBounds": {
+          "x": 81,
+          "y": 104,
+          "width": 33,
+          "height": 20
+        },
+        "center": {
+          "x": 97.62,
+          "y": 113.5
+        },
+        "anchor": {
+          "x": 98,
+          "y": 114
+        }
+      }
+    },
+    {
+      "cell": 4,
+      "headTop": {
+        "x": 120.5,
+        "y": 21
+      },
+      "headTopSpan": [
+        108,
+        133
+      ],
+      "beak": {
+        "colorBounds": {
+          "x": 82,
+          "y": 104,
+          "width": 33,
+          "height": 20
+        },
+        "center": {
+          "x": 98.84,
+          "y": 113.27
+        },
+        "anchor": {
+          "x": 99,
+          "y": 113
+        }
+      }
+    },
+    {
+      "cell": 5,
+      "headTop": {
+        "x": 121,
+        "y": 21
+      },
+      "headTopSpan": [
+        110,
+        132
+      ],
+      "beak": {
+        "colorBounds": {
+          "x": 82,
+          "y": 105,
+          "width": 33,
+          "height": 19
+        },
+        "center": {
+          "x": 98.58,
+          "y": 113.84
+        },
+        "anchor": {
+          "x": 99,
+          "y": 114
+        }
+      }
+    },
+    {
+      "cell": 6,
+      "headTop": {
+        "x": 120.5,
+        "y": 21
+      },
+      "headTopSpan": [
+        109,
+        132
+      ],
+      "beak": {
+        "colorBounds": {
+          "x": 81,
+          "y": 105,
+          "width": 33,
+          "height": 19
+        },
+        "center": {
+          "x": 97.57,
+          "y": 113.99
+        },
+        "anchor": {
+          "x": 98,
+          "y": 114
+        }
+      }
+    },
+    {
+      "cell": 7,
+      "headTop": {
+        "x": 121,
+        "y": 21
+      },
+      "headTopSpan": [
+        110,
+        132
+      ],
+      "beak": {
+        "colorBounds": {
+          "x": 82,
+          "y": 105,
+          "width": 32,
+          "height": 19
+        },
+        "center": {
+          "x": 98.39,
+          "y": 113.99
+        },
+        "anchor": {
+          "x": 98,
+          "y": 114
+        }
+      }
+    },
+    {
+      "cell": 8,
+      "headTop": {
+        "x": 121,
+        "y": 21
+      },
+      "headTopSpan": [
+        111,
+        131
+      ],
+      "beak": {
+        "colorBounds": {
+          "x": 80,
+          "y": 105,
+          "width": 33,
+          "height": 19
+        },
+        "center": {
+          "x": 96.56,
+          "y": 114.3
+        },
+        "anchor": {
+          "x": 97,
+          "y": 114
+        }
+      }
+    }
+  ],
+  "textAreas": [
+    {
+      "cell": 5,
+      "name": "crachá do grilo",
+      "blankFaceBounds": {
+        "x": 135,
+        "y": 130,
+        "width": 61,
+        "height": 32
+      },
+      "textBounds": {
+        "x": 139,
+        "y": 133,
+        "width": 53,
+        "height": 26
+      },
+      "center": {
+        "x": 165,
+        "y": 145.5
+      },
+      "sample": "6"
+    },
+    {
+      "cell": 8,
+      "name": "pedra lisa",
+      "textBounds": {
+        "x": 75,
+        "y": 108,
+        "width": 100,
+        "height": 49
+      },
+      "center": {
+        "x": 124.5,
+        "y": 132
+      },
+      "sample": "7"
+    },
+    {
+      "cell": 9,
+      "name": "balão de fala",
+      "textBounds": {
+        "x": 66,
+        "y": 94,
+        "width": 120,
+        "height": 51
+      },
+      "center": {
+        "x": 125.5,
+        "y": 119
+      },
+      "sample": "OI"
+    }
+  ],
+  "previousPNGsUnchanged": 7
+}

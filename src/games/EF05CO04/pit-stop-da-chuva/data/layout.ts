@@ -7,6 +7,7 @@ export const DEPTH = {
     clouds: 2,
     strip: 4,
     mud: 5,
+    sign: 9.5,
     tent: 6,
     crewBack: 7,
     beto: 7.5,
@@ -19,10 +20,10 @@ export const DEPTH = {
     back: 13,
     front: 15,
     hay: 17,
+    cone: 17.5,
     fx: 20,
     rain: 30,
     header: 100,
-    rule: 104,
     hud: 106,
     controls: 110,
     carts: 112,
@@ -55,21 +56,6 @@ export const HUD = {
     livesX: 1100,
     livesY: 48,
     livesSize: 30,
-} as const
-
-/** O painel da regra: uma linha por ramo, no canto de cima à esquerda. */
-export const RULE = {
-    x: 14,
-    y: 108,
-    rowH: 44,
-    pad: 10,
-    indent: 34,
-    chipH: 32,
-    icon: 38,
-    gap: 8,
-    bigX: 640,
-    bigY: 340,
-    bigScale: 1.55,
 } as const
 
 export const SKY = {
@@ -106,12 +92,40 @@ export const MUD = {
     h: 204,
 } as const
 
+/**
+ * A trilha (`trilha.png`) tem a geometria da lama e entra no mesmo lugar; a terra
+ * estreita fica em y 546–596. A boca fica `mouth` depois da tenda da troca, além
+ * das vagas dos rivais, e a placa vem `sign` antes da boca.
+ */
+export const TRAIL = {
+    mouth: 1200,
+    sign: 800,
+    signY: 716,
+    signH: 150,
+    coneH: 62,
+    cones: [
+        { dx: -50, y: 606 },
+        { dx: 0, y: 624 },
+        { dx: 50, y: 642 },
+    ],
+    spare: 560,
+    ahead: 2600,
+} as const
+
 /** Onde a roda pisa em cada faixa, e o tamanho do carro nela. */
 export const LANES = {
     pit: { ground: 486, scale: 0.8 },
     back: { ground: 560, scale: 0.88 },
     front: { ground: 626, scale: 1 },
 } as const
+
+/** A moto roda dentro da trilha estreita. */
+export const MOTO_LANES = {
+    back: { ground: 580, scale: 0.86 },
+    front: { ground: 592, scale: 0.9 },
+} as const
+
+export const laneOf = (lane: 'pit' | 'back' | 'front', moto: boolean) => (moto && lane !== 'pit' ? MOTO_LANES[lane] : LANES[lane])
 
 export const PIT_LANE = { top: 436, bottom: 492 } as const
 export const TRACK_BAND = { top: 500, bottom: 640 } as const
@@ -122,7 +136,13 @@ export const CAR_X = 400
 /** Geometria dos veículos, em fração da célula (384 × 256). As folhas vêm SEM rodas. */
 export const GEOMETRY = {
     carro: { w: 236, cellW: 384, cellH: 256, rearFX: 0.245, frontFX: 0.79, axleFY: 0.8, wheelFR: 0.16, bottomFY: 0.96 },
-    moto: { w: 236, cellW: 384, cellH: 256, rearFX: 0.21, frontFX: 0.8, axleFY: 0.75, wheelFR: 0.21, bottomFY: 0.96 },
+    moto: { w: 236, cellW: 384, cellH: 256, rearFX: 0.294, frontFX: 0.706, axleFY: 0.789, wheelFR: 0.18, bottomFY: 0.97 },
+} as const
+
+/** Na folha de motos os eixos mudam de lugar (MANIFEST, Tesoura): a Kika nos de GEOMETRY, os rivais e a moto vazia aqui. */
+export const MOTO_AXES = {
+    rival: [0.266, 0.734],
+    empty: [0.273, 0.727],
 } as const
 
 export const TENT = {
@@ -168,8 +188,17 @@ export const CREW = {
 export const CONTROLS = {
     brake: { x: 112, y: 640, w: 188, h: 124 },
     gas: { x: 1168, y: 640, w: 188, h: 124 },
-    pit: { x: 790, y: 664, w: 310, h: 84 },
+    pit: { x: 938, y: 640, w: 232, h: 124 },
     icon: 82,
+} as const
+
+/** A etiqueta da regra em cima de cada botão do box: "SE ☁", "SENÃO SE 🟤", "SENÃO". */
+export const TAG = {
+    h: 34,
+    icon: 42,
+    gap: 6,
+    pad: 8,
+    dy: 2,
 } as const
 
 export const CARTS = {
@@ -179,10 +208,8 @@ export const CARTS = {
     size: 140,
     artDY: -18,
     labelDY: 62,
-    badge: 54,
     center: 700,
     gap: 220,
-    groupGap: 36,
 } as const
 
 export const BANNER = {
@@ -195,6 +222,7 @@ export const BANNER = {
 export const CAPTION = {
     x: 780,
     y: 168,
+    icon: 64,
 } as const
 
 export const CAMERA = {
@@ -202,4 +230,4 @@ export const CAMERA = {
     closeZoom: 1.55,
 } as const
 
-export const HAND = { size: 120, tapLift: 24 } as const
+export const HAND = { r: 30, stroke: 7, wave: 6, spread: 2.6 } as const

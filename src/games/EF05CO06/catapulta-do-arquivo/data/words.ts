@@ -1,8 +1,13 @@
-import type { DeviceId, FileId, Kind } from '../types'
+import type { DeviceId, FileId, Want } from '../types'
 
 export const TITLE = 'Catapulta do Arquivo'
 
-export const KIND_WORD: Record<Kind, string> = { local: 'LOCAL', remoto: 'REMOTO' }
+export const WANT_WORD: Record<Want, string> = {
+    local: 'LOCAL',
+    remoto: 'REMOTO',
+    removivel: 'REMOVÍVEL',
+    internet: 'INTERNET',
+}
 
 export const NAME: Record<DeviceId, string> = {
     hdInterno: 'HD do computador',
@@ -20,22 +25,32 @@ export const SHORT: Record<DeviceId, string> = {
     nuvem: 'NUVEM',
 }
 
-export const ORDER_WORD = 'Guarde no'
+export const ORDER_WORD: Record<Want, string> = {
+    local: 'Guarde no',
+    remoto: 'Guarde no',
+    removivel: 'Guarde no',
+    internet: 'Guarde na',
+}
+
+const cap = (t: string) => t.charAt(0) + t.slice(1).toLowerCase()
 
 const FILE: Record<FileId, string> = { video: 'o VÍDEO', foto: 'a FOTO', musica: 'a MÚSICA', trabalho: 'o TRABALHO' }
 
-const cap = (t: string) => t.charAt(0).toUpperCase() + t.slice(1)
-
 export const TEACH = {
-    order: (file: FileId, want: Kind) => `Guarde ${FILE[file]} num lugar ${KIND_WORD[want]}.`,
-    local: 'O HD de dentro do computador é LOCAL.',
-    remote: (id: DeviceId) => `${cap(NAME[id])} e nuvem saem do computador: são REMOTOS.`,
-    pan: 'Arraste a tela para ver o mapa todo. O mapinha mostra onde você está.',
-    shoot: 'Puxe a catapulta para trás, mire e solte!',
+    order: (file: FileId, want: Want) => `Guarde ${FILE[file]} ${want === 'internet' ? 'na' : 'no'} ${WANT_WORD[want]}.`,
+    local: 'HD de dentro: LOCAL.',
+    remote: (id: DeviceId, cloud: boolean) => (cloud ? `${cap(SHORT[id])} e nuvem saem: REMOTOS.` : `${cap(SHORT[id])} sai: REMOTO.`),
+    look: 'Veja o mapa todo.',
+    removable: 'Tira e leva: REMOVÍVEL.',
+    internet: 'Nuvem: INTERNET.',
+    split: 'Remoto tem dois jeitos!',
+    read: 'Leia o pedido.',
+    where: 'Onde ele precisa estar?',
+    go: 'Sua vez!',
 }
 
 export const SAY = {
-    is: (id: DeviceId, kind: Kind) => `${SHORT[id]} = ${KIND_WORD[kind]}`,
-    wanted: (kind: Kind) => `O pedido era ${KIND_WORD[kind]}!`,
+    is: (id: DeviceId, kind: Want) => `${SHORT[id]} = ${WANT_WORD[kind]}`,
+    wanted: (want: Want) => `O pedido era ${WANT_WORD[want]}!`,
     miss: 'Quase! De novo!',
 }

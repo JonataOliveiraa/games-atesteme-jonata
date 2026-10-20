@@ -63,12 +63,13 @@ Ficou no N1:
 ## 4. O laço
 
 1. **O pedido** aparece no alto: *"Quero escrever e ver na tela."* Os dois aparelhos entram na mesa com um pulinho.
-2. **A criança puxa o cabo** (pegando o plugue ou o aparelho) até uma tomada. O cabo estica com barriga e segue o dedo.
+2. **A criança puxa o cabo** (pegando o plugue ou o aparelho) até uma tomada. O cabo estica com barriga e segue o dedo. **Pendrive, memória e cartão não têm cabo**, como na vida real: a criança pega o próprio aparelho e leva até a tomada, e ele encaixa com o conector em cima dela (pendrive deitado, ponta na tomada; memória em pé, dentes na tomada; cartão com os contatos na tomada). O nome dele vai para o lado de fora. Arrastar o aparelho encaixado tira ele da tomada. A primeira vez que um deles está na mesa, a bolinha do toque mostra o gesto (**PEGUE E ENCAIXE**, depois **QUAL TOMADA?**).
+   Enquanto a criança arrasta (o mapa, um cabo ou um aparelho), **o cabeçalho sai do caminho** e volta um instante depois de ela soltar. Um toque que não virou arraste não esconde nada; as setinhas da borda ficam.
 3. **Soltou na tomada certa:** clique, faísca da cor da tomada, a luzinha do aparelho acende e o anel do plugue para.
-4. **Com tudo ligado,** o alto diz *"Tudo ligado! Toque no TECLADO."* e a **mãozinha fica tocando no aparelho**.
+4. **Com tudo ligado,** o alto diz *"Tudo ligado! Toque no TECLADO."*, o resto da mesa **escurece em volta do aparelho** (o cabeçalho fica, é ele que diz o que tocar) e uma **bolinha amarela de contorno marrom fica tocando nele**: afunda e solta ondinhas. Arrastou alguma coisa, a luz volta enquanto arrasta.
 5. **Tocar no aparelho ligado faz ele funcionar:** a bolinha de luz sai dele, corre pelo cabo, passa pelo **processador** (que pisca), sai pela tomada do outro aparelho e chega: as letras aparecem na tela, a voz entra no pendrive, a música toca. Se a bolinha sai da vista, a câmera vai atrás.
 6. **Pedido cumprido:** a bolinha do cabeçalho fica verde e o caminho aparece em letras grandes, sem botão: **ENTRA → PROCESSA → MOSTRA**. A mesa troca sozinha.
-7. Parou por 7 segundos sem ligar nada: **a mãozinha mostra de novo** o gesto de puxar o cabo.
+7. Parou por 7 segundos sem ligar nada: **a bolinha do toque mostra de novo** o gesto de puxar o cabo (ou de levar o aparelho sem cabo).
 
 ## 5. A demonstração (sem balão, sem botão)
 
@@ -80,11 +81,23 @@ Abre na primeira vez e toda vez que se toca no **?** (ou na tecla H). **Um toque
 | 2 | zoom ×1,4 na tomada verde | uma bolinha verde vem de fora e entra até o chip; a tomada pula | **ENTRA** (verde) |
 | 3 | zoom ×1,4 na tomada laranja | a bolinha laranja sai do chip para fora | **SAI** (laranja) |
 | 4 | zoom ×1,4 na tomada roxa | a bolinha roxa desce do chip para o baú, com *gulp* | **GUARDA** (roxo) |
-| 5 | volta ao normal | a mãozinha pega o plugue do primeiro aparelho e o puxa até a frente do computador | **PUXE O CABO** |
+| 5 | volta ao normal | a bolinha do toque afunda no plugue do primeiro aparelho, com uma ondinha, e o leva até a frente do computador | **PUXE O CABO** |
 | 6 | — | as três tomadas pulam uma depois da outra; o plugue **não** encaixa | **QUAL TOMADA?** |
 | 7 | — | o plugue volta ao lugar | **SUA VEZ!** (verde) |
 
-A demonstração nunca responde um pedido: a mãozinha leva o cabo até a frente do computador e para entre as tomadas.
+A demonstração nunca responde um pedido: a bolinha leva o cabo até a frente do computador e para entre as tomadas.
+
+### O foco das animações
+
+Toda vez que o jogo **mostra** em vez de pedir (a demonstração, as estreias, a bolinha correndo, o aninhamento chegando, o erro), o cabeçalho sobe e sai, o mapa fica com a tela toda e uma **vinheta** escurece tudo menos um círculo macio em volta do que está acontecendo (`scenes/focus.ts`). O círculo anda com a coisa: segue a bolinha pelo cabo, para no processador enquanto ele pensa, abre sobre o computador inteiro no "QUAL TOMADA?" e vira elipse quando precisa pegar dois pontos (a tomada do monitor e o alto-falante). Quando o jogo volta a pedir, o cabeçalho desce e a mesa aparece inteira.
+
+- **A bolinha mostra o que leva** (linhas de texto, ondas de voz, nota de música, foto, setinha do mouse) num disco branco com o aro da cor, sai do aparelho com um pulinho, freia antes de cada parada e é engolida por quem recebe. O cabo por onde ela passou acende atrás dela.
+- **Tocar no aparelho ligado:** a câmera chega perto dele (×1,22) e depois vai atrás da bolinha até o destino; no fim volta para onde a criança estava.
+- **Pedido cumprido:** o resumo se monta uma palavra por vez, e cada palavra acende a peça que ela nomeia (ENTRA → o aparelho tocado, PROCESSA → o processador, MOSTRA → o destino; MONITOR e HUB acendem o aparelho de mesmo nome). Depois a luz volta, a bolinha do cabeçalho fica verde e a mesa troca.
+- **Ligar um cabo:** a luzinha do aparelho acende com um estalo e ele dá um pulinho (também quando acorda por outro cabo, como o alto-falante no monitor).
+- **Erro:** o choque na tomada, a câmera chega perto, e a luz volta com o cabo até o aparelho enquanto a faixa explica.
+
+A câmera do mapa desenha a tela toda (o mapa continua por baixo do cabeçalho); a "janela do mapa" é a parte abaixo dele e cresce até o alto quando ele sobe (`view.setTop`).
 
 ## 6. O nível 1
 
@@ -112,7 +125,7 @@ O alto-falante entra depois por um motivo: se ele estivesse na mesa desde o come
 |---|---|
 | alto-falante na SAÍDA do computador (ocupada) | o plugue volta, a tomada do monitor pula e o processador diz *"Use a tomada do MONITOR!"* Sem custo |
 | monitor desligado depois | a tomada dele continua com o cabo, mas o alto-falante apaga: *"O MONITOR não está ligado."* |
-| parou sem fazer nada | a mãozinha leva o plugue do alto-falante até perto do monitor, sem encaixar |
+| parou sem fazer nada | a bolinha do toque leva o plugue do alto-falante até perto do monitor, sem encaixar |
 
 Posições no mapa de 2400 × 1350, com o computador em (1200, 700): ver `place` em `data/levels.ts`.
 
@@ -123,7 +136,7 @@ Posições no mapa de 2400 × 1350, com o computador em (1200, 700): ver `place`
 | plugue na tomada da função certa | clique, faísca da cor da tomada, o aparelho acende. `CORRECT_ANSWER` na **primeira** ligação de cada aparelho |
 | plugue na tomada de **outra função** | faísca, o cabo se solta e a faixa explica: *"O monitor MOSTRA o que SAI do computador."* **A partida acaba** (padrão do catálogo: um erro encerra, as vidas são da plataforma) |
 | tomada ocupada | o plugue volta sozinho, sem custo: *"Essa tomada já tem cabo."* |
-| soltou longe de tomada | o plugue volta para perto do aparelho, sem custo |
+| soltou longe de tomada | o plugue volta para perto do aparelho (o aparelho sem cabo volta voando para o lugar dele), sem custo |
 | tocou num aparelho sem cabo | ele balança: *"Ligue meu cabo primeiro!"* |
 | tocou e falta o destino | a bolinha chega no processador, ele pisca e pensa: *"Não tenho onde MOSTRAR!"* (ou GUARDAR, ou TOCAR). Sem custo |
 
@@ -197,9 +210,10 @@ Tomada do computador ocupada continua sem custo: o plugue volta e o processador 
 | `data/route.ts` | a lógica pura: quem está ligado, por onde a informação passa |
 | `scenes/board.ts` | o chão, o computador, o processador e as tomadas |
 | `scenes/gear.ts` | os aparelhos, os cabos, os plugues (que piscam) e o que cada um faz ao funcionar |
-| `scenes/flow.ts` | a bolinha de informação viajando pelos cabos |
+| `scenes/flow.ts` | a bolinha de informação viajando pelos cabos, com o desenho do que leva e o rastro de luz |
+| `scenes/focus.ts` | o foco das animações: o cabeçalho sai e a vinheta acende em volta do que acontece |
 | `scenes/view.ts` | a câmera do mapa: arrastar, setas, zoom da demonstração |
-| `scenes/hand.ts` | a mãozinha que puxa o cabo e toca no aparelho |
+| `scenes/touch.ts` | o toque mostrado pelo jogo (sem mão): a bolinha que afunda, solta ondinhas e leva o plugue |
 | `scenes/caption.ts` | a legenda de uma ou duas palavras |
 | `scenes/fallback.ts` | a arte de reserva em Graphics, nas mesmas chaves do [TEXTURAS.md](./TEXTURAS.md) |
 
@@ -209,3 +223,6 @@ Tomada do computador ocupada continua sem custo: o plugue volta e o processador 
 - 20/10/2026, pedido do Maestro: **N2 e N3**. Tipos: família `memoria`, aparelhos `memoria`, `hub` e `cartao`, `extra` e `teach` no pedido, `plates` no nível. As tomadas próprias acompanham o aparelho quando ele muda de lugar (`board.moveOwner`). A rota entrega só aos aparelhos do pedido, e o "não tenho onde..." depende do destino. A demonstração inicial sai uma vez por sessão (`BASICS_KEY`), e cada estreia nova também. Folhas novas combinadas com a Aquarela e a Tesoura: `aparelhos.png` 4 × 3 (7 memória, 8 hub, 9 cartão) e `pecas.png` 4 × 2 (4 tomada de memória, turquesa). Ajustes depois de jogar: tomadas do hub encostadas no corpo dele, tomada do monitor longe do nome, tomada da câmera do lado oposto ao cabo, nomes de baixo dentro da tela, zoom mais aberto nas tomadas de baixo, bolinhas do cabeçalho longe do divisor (divisor em 300, vão 30). Catálogo: descrição com MEMÓRIA e hub, pontos 65.
 - Jogado no navegador (porta 5283, arraste por eventos de ponteiro): `?stage=2` inteiro (estreia da memória, setinhas, distratores, 4 pedidos, `GAME_COMPLETED` 2/3, passa ao N3) e o erro do par (memória no baú, `WRONG_ANSWER` + `GAME_OVER`); `?stage=3` inteiro (estreia do hub, alto-falante no monitor, estreia dos dois cabos, `GAME_COMPLETED` 3/3, JOGAR DE NOVO) e o erro do hub na SAÍDA; `?stage=1` abre igual, com placas.
 - Mesmo dia, depois do resumo: o anel do plugue solto ficou amarelo-forte com contorno marrom (o amarelo claro sumia no chão creme); o cabeçalho é limpo quando o painel de fim de nível abre. Chegaram as seis texturas na linha **chibi de caderno**: o chip do `computador.png` cai em `PC.chip`, a tela do monitor de `aparelhos.png` recebe o texto no retângulo do contrato, a ponta da `mao.png` é o `HAND_TIP`. Com a `pecas.png`, o ícone fica pequeno dentro da placa da tomada: `SOCKET.size` foi de 74 para 86. Capa ligada no `catalog.ts`.
+- 20/10/2026, pedido do usuário: *"melhore a animação, e deixe os elementos mais focados qnd for animar, por exemplo esconder o header deixando uma vinheta focada no tal elemento"*. Entrou o foco das animações (§5): cabeçalho que sobe, vinheta que segue a coisa animada, bolinha com o desenho do que leva e rastro de luz no cabo, câmera seguindo a bolinha, resumo que acende peça por peça, luzinha que estala ao ligar e o erro com a luz voltando até o aparelho. Conferido no navegador: demonstração (processador, ENTRA, SAI, PUXE O CABO, QUAL TOMADA?), o pedido 1 inteiro, a chegada do alto-falante no pedido 3, a passagem para o N2 e o erro do mouse na SAÍDA.
+- Mesmo dia, pedido do usuário: *"há componentes, como pendrive, que sequer tem [cabo], e que deveria ser pego e encaixado"* e *"ao estiver movendo o cenario, movendo cabo, etc. o header deve ser escondido"*. Pendrive, memória e cartão perderam o cabo e o plugue (`dock` em `data/devices.ts`, com o conector medido no PNG) e são levados inteiros; a estreia **PEGUE E ENCAIXE** sai uma vez por sessão; o cabeçalho sai do caminho em todo arraste (`focus.aside`). Conferido no navegador: a estreia no pedido 2 do N1, o pendrive encaixado pelo toque de verdade, o arraste do mapa (5 px não esconde; volta ~200 ms depois de soltar), a memória e o pendrive encaixados no N2 e o cartão na câmera do N3, com a foto chegando nele.
+- Mesmo dia, pedido do usuário: *"remova aquela maozinha indicando clique. quero so algo no graphics de bolinhas clicando e emitindo ondinha e um foco do jogo deixando bg escuro"*. A mão saiu de vez (`mao.png` não é mais carregada; o desenho de reserva dela também saiu). No lugar, `scenes/touch.ts`: bolinha amarela de contorno marrom (o anel do plugue solto) que afunda e solta duas ondinhas, e que leva o plugue nas demonstrações. Com tudo ligado, a vinheta acende em volta do aparelho a tocar sem tirar o cabeçalho (`focus.glow`, 62 % de escuro) e as setinhas da borda ficam por cima dela. Conferido no navegador: o "Toque no TECLADO" com fundo escuro e ondinha, e o PUXE O CABO com a bolinha levando o plugue.

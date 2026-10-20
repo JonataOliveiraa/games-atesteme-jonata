@@ -1,4 +1,4 @@
-import type { RuleNode, RuleRow, Situation, Test, TireDef, TireId, Weather, WeatherDef } from '../types'
+import type { RuleNode, RuleRow, Situation, Test, TireDef, TireId, Vehicle, Weather, WeatherDef } from '../types'
 import { PIECE_CELL } from './files'
 import { C } from './theme'
 
@@ -25,12 +25,21 @@ export const TIRE_INK: Record<TireId, 'slick' | 'wet' | 'knobby'> = {
     motoChuva: 'wet',
 }
 
+const MOTO_TIRE: Partial<Record<TireId, TireId>> = { liso: 'motoLiso', chuva: 'motoChuva' }
+
+export const motoTireOf = (tire: TireId) => (TIRES[tire].vehicle === 'moto' ? tire : MOTO_TIRE[tire])
+
 export const isLeaf = (node: RuleNode): node is { tire: TireId } => 'tire' in node
 
 export function passes(test: Test, s: Situation): boolean {
     if (test === 'chovendo') return WEATHERS[s.weather].raining
     if (test === 'lama') return s.ground === 'lama'
-    return s.vehicle === 'moto'
+    return s.narrow
+}
+
+export function tests(rule: RuleNode, test: Test): boolean {
+    if (isLeaf(rule)) return false
+    return rule.test === test || tests(rule.then, test) || tests(rule.otherwise, test)
 }
 
 /** O veredito: percorre a regra como o computador faria. */
@@ -75,13 +84,10 @@ export function rowsOf(rule: RuleNode): RuleRow[] {
     return rows
 }
 
-/** As linhas que acendem para um pneu: a dele e as de fora, que o contêm. */
-export function pathOf(rows: RuleRow[], tire: TireId): number[] {
-    const path: number[] = []
-    let row = rows.find(r => r.tire === tire)
-    while (row) {
-        path.push(row.id)
-        row = row.parent === null ? undefined : rows[row.parent]
-    }
-    return path
+/** A linha de fora que escolhe o veículo: `SE pista estreita` para a moto, o `SENÃO` dela para o carro. */
+export function vehicleRow(rows: RuleRow[], vehicle: Vehicle): number | null {
+    const head = rows.find(r => r.test === 'estreita')
+    if (!head) return null
+    if (vehicle === 'moto') return head.id
+    return rows.find(r => r.id > head.id && r.indent === head.indent && r.parent === head.parent && r.word === 'SENÃO')?.id ?? null
 }

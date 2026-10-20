@@ -1,6 +1,7 @@
 import type Phaser from 'phaser'
-import type { ClueId, ItemKind, PlatformKind } from '../types'
+import type { ClueId, ItemKind, PhotoId } from '../types'
 import { PLATFORM } from './layout'
+import { DECOR, SKIES, type Ground } from './scenery'
 
 export interface Sheet {
     key: string
@@ -13,23 +14,26 @@ export interface Sheet {
 export const PHONE_SHEET: Sheet = { key: 'celular', cols: 3, rows: 2, cellW: 256, cellH: 256 }
 export const ITEM_SHEET: Sheet = { key: 'itens', cols: 3, rows: 1, cellW: 192, cellH: 192 }
 export const CLUE_SHEET: Sheet = { key: 'pistas', cols: 3, rows: 1, cellW: 96, cellH: 96 }
-export const PHOTO_SHEET: Sheet = { key: 'fotos', cols: 2, rows: 2, cellW: 400, cellH: 260 }
 export const PLATFORM_SHEET: Sheet = { key: 'plataformas', cols: 1, rows: 4, cellW: PLATFORM.cellW, cellH: PLATFORM.cellH }
-export const CLOUD_SHEET: Sheet = { key: 'nuvem', cols: 2, rows: 1, cellW: 400, cellH: 180 }
 
-export const SHEETS = [PHONE_SHEET, ITEM_SHEET, CLUE_SHEET, PHOTO_SHEET, PLATFORM_SHEET, CLOUD_SHEET]
+export const SHEETS = [PHONE_SHEET, ITEM_SHEET, CLUE_SHEET, PLATFORM_SHEET]
 
 export const SUMMIT_KEY = 'topo'
-export const SKY_KEY = 'fundo'
-export const NET_KEY = 'rede'
-export const HAND_KEY = 'mao'
-export const IMAGES = [SUMMIT_KEY, SKY_KEY, NET_KEY, HAND_KEY]
+export const STARS_KEY = 'estrelas'
+export const PANEL_KEY = 'painel'
+export const groundKey = (ground: Ground) => `base-${ground}`
+export const GROUND_KEYS = ['floresta', 'nuvem', 'lua'].map(g => groundKey(g as Ground))
+export const DECOR_KEYS = [...new Set(DECOR.map(d => d.key)), 'cometa']
 
-export const HAND_TIP = { x: 0.34, y: 0.07 } as const
+export const PHOTOS: PhotoId[] = ['alienigenas', 'enchente', 'capivaras', 'piscina', 'lua', 'dinossauro']
+export const photoKey = (photo: PhotoId) => `foto-${photo}`
+export const PHOTO_SIZE = { w: 400, h: 260 }
+
+export const IMAGES = [SUMMIT_KEY, STARS_KEY, PANEL_KEY, ...GROUND_KEYS, ...DECOR_KEYS, ...SKIES.map(s => s.key), ...PHOTOS.map(photoKey)]
+
+export const GROUND_TOP = 60
 
 export const PHONE_FOOT = 240 / 256
-
-export const CLOUD_BASE = 170 / 180
 
 export const POSE = { up: 0, fall: 1, read: 2, happy: 3, sad: 4, dizzy: 5 } as const
 export type Pose = keyof typeof POSE
@@ -38,7 +42,8 @@ export const ITEM_CELL: Record<ItemKind, number> = { jornal: 0, alerta: 1, image
 
 export const CLUE_CELL: Record<ClueId, number> = { quem: 0, quando: 1, onde: 2 }
 
-export const PLATFORM_ROW: Record<PlatformKind, number> = { aba: 0, parada: 1, chao: 2, topo: 3 }
+export const PLATFORM_ROW = { aba: 0, noite: 1, parada: 2, topo: 3 } as const
+export type PlatformRow = keyof typeof PLATFORM_ROW
 
 export const cellKey = (index: number) => `c${index}`
 

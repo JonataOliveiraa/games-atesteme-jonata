@@ -1,40 +1,48 @@
 import Phaser from 'phaser'
 import { FX, type FxTarget } from '../../../../shared/effects/FX'
 import { DEVICE_SHEET, PIECE_CELL, PIECE_SHEET, cellKey } from '../data/files'
-import { CABLE, DEPTH, DEVICE, MONITOR_SCREEN, PC, PLUG } from '../data/layout'
+import { CABLE, DEPTH, DEVICE, MONITOR_SCREEN, PC, PLUG, SOCKET } from '../data/layout'
 import { C, CSS, FONT, SIZE } from '../data/theme'
 import { SCREEN } from '../data/words'
 import type { DeviceDef, DeviceId, Payload, Rect, Vec } from '../types'
 import type { View } from './view'
 
 /**
- * Os aparelhos do mapa, cada um com o seu cabo e o seu plugue. O cabo é uma
- * curva com barriga que vai do aparelho até o plugue, onde quer que ele esteja:
- * na mão da criança, descansando no chão ou encaixado numa tomada.
+ * Os aparelhos do mapa. Quase todos têm cabo e plugue: o cabo é uma curva com
+ * barriga que vai do aparelho até o plugue, onde quer que ele esteja (na mão
+ * da criança, descansando no chão ou encaixado numa tomada). Os que não têm
+ * cabo na vida real (pendrive, memória, cartão) vão INTEIROS até a tomada, e
+ * encaixam com o conector em cima dela.
  */
 export interface Gear {
     ids(): DeviceId[]
     def(id: DeviceId): DeviceDef
     rect(id: DeviceId): Rect
+    /** O que entra na tomada: a ponta do plugue, ou o conector do aparelho sem cabo. */
     plugAt(id: DeviceId): Vec
+    /** Onde a mão pega para levar: o plugue, ou o próprio aparelho sem cabo. */
+    grabAt(id: DeviceId): Vec
     /** O aparelho cujo plugue está debaixo do ponto (no mapa). */
     plugUnder(at: Vec): DeviceId | null
     deviceUnder(at: Vec): DeviceId | null
     /** O centro do aparelho, onde ele está agora. */
     at(id: DeviceId): Vec
     visible(id: DeviceId): boolean
-    /** Muda o aparelho de lugar (com o plugue solto ao lado dele). */
+    /** Muda o lugar do aparelho na mesa (com o plugue solto ao lado dele). */
     place(id: DeviceId, at: Vec): void
     show(id: DeviceId): Promise<void>
     hide(id: DeviceId): Promise<void>
     /** O plugue solto pisca: é dali que se puxa. */
     invite(id: DeviceId, on: boolean): void
-    /** Leva o plugue até o ponto, sem animação (durante o arraste). */
+    /** O dedo pegou no ponto `at`: o aparelho sem cabo sobe por cima de tudo. */
+    lift(id: DeviceId, at: Vec): void
+    /** Leva o plugue (ou o aparelho sem cabo) até o dedo, sem animação. */
     hold(id: DeviceId, at: Vec): void
     snap(id: DeviceId, socket: Vec): Promise<void>
+    /** Solta: o plugue volta para perto do aparelho, o aparelho sem cabo volta para o lugar dele. */
     retract(id: DeviceId): Promise<void>
     setPowered(id: DeviceId, on: boolean): void
-    /** Os pontos do cabo, do aparelho até o plugue. */
+    /** Os pontos do cabo, do aparelho até o plugue (sem cabo: do centro até o conector). */
     cable(id: DeviceId): Vec[]
     press(id: DeviceId): void
     nope(id: DeviceId): void
@@ -49,7 +57,15 @@ export interface Gear {
 interface Unit {
     def: DeviceDef
     size: number
+    /** O lugar dele na mesa. */
+    home: Vec
+    /** Onde ele está agora: no lugar, na mão (sem cabo) ou encaixado (sem cabo). */
     at: Vec
+    /** Sem cabo, na mão da criança: do dedo até o centro. */
+    grab: Vec
+    carried: boolean
+    nameW: number
+    nameH: number
     dir: Vec
     port: Vec
     rest: Vec
@@ -60,6 +76,7 @@ interface Unit {
     plug: Phaser.GameObjects.Image
     plugPos: Vec
     plugged: boolean
+    powered: boolean
     shown: boolean
     halo: Phaser.GameObjects.Arc
     inviting?: Phaser.Tweens.Tween
@@ -90,6 +107,49 @@ export function createGear(scene: Phaser.Scene, view: View, defs: DeviceDef[]): 
     const toScreen = (at: Vec) => view.toScreen(at)
     let hinted: { id: DeviceId; tween: Phaser.Tweens.Tween } | null = null
 
+    /** O meio do conector do aparelho sem cabo: é ele que entra na tomada. */
+    function connector(u: Unit): Vec {
+        const d = u.def.dock
+        if (!d) return { ...u.plugPos }
+        return { x: u.at.x + d.tip.x * d.reach * u.size, y: u.at.y + d.tip.y * d.reach * u.size }
+    }
+
+    /** Onde o centro fica com o conector em cima da tomada. */
+    function dockCenter(u: Unit, socket: Vec): Vec {
+        const d = u.def.dock
+        if (!d) return { ...socket }
+        return { x: socket.x - d.tip.x * d.reach * u.size, y: socket.y - d.tip.y * d.reach * u.size }
+    }
+
+    /**
+     * O nome fica embaixo do aparelho. Encaixado, ele vai para o lado de fora:
+     * depois da ponta (pendrive deitado) ou abaixo da tomada e do aparelho (memória, cartão).
+     */
+    function nameSpot(u: Unit): Vec {
+        const below = { x: u.at.x, y: u.at.y + u.size * (DEVICE.name / DEVICE.size) * 0.62 + 30 }
+        const d = u.def.dock
+        if (!d || !u.plugged || u.carried) return below
+        const far = d.body * u.size
+        if (Math.abs(d.tip.x) > Math.abs(d.tip.y)) return { x: u.at.x - d.tip.x * (far + u.nameW / 2 + 14), y: u.at.y }
+        const socket = connector(u)
+        const reach = d.tip.y < 0 ? far : d.reach * u.size + 6
+        const lowest = Math.max(socket.y + SOCKET.size / 2, u.at.y + reach)
+        return { x: u.at.x, y: lowest + u.nameH / 2 + 10 }
+    }
+
+    /** Põe o desenho, o nome, o selinho e o anel onde o aparelho está, na camada certa. */
+    function layout(u: Unit) {
+        const depth = u.carried ? DEPTH.carry : u.def.dock && u.plugged ? DEPTH.plug : DEPTH.device
+        u.sprite.setPosition(u.at.x, u.at.y).setDepth(depth)
+        const n = nameSpot(u)
+        u.name.setPosition(n.x, n.y).setDepth(u.carried ? DEPTH.carry + 1 : DEPTH.device + 1)
+        u.badge?.setPosition(u.at.x + u.size * 0.32, u.at.y - u.size * 0.3)
+        if (u.def.dock) {
+            const c = connector(u)
+            u.halo.setPosition(c.x, c.y)
+        }
+    }
+
     /** O cabo sai do lado do aparelho virado para o computador, e o plugue descansa ali. */
     function aim(u: Unit) {
         const toPc = new Phaser.Math.Vector2(PC.x - u.at.x, PC.y - u.at.y).normalize()
@@ -97,21 +157,25 @@ export function createGear(scene: Phaser.Scene, view: View, defs: DeviceDef[]): 
         const reach = u.size * (DEVICE.port / DEVICE.size)
         u.port = { x: u.at.x + u.dir.x * reach, y: u.at.y + u.dir.y * reach }
         u.rest = { x: u.port.x + u.dir.x * DEVICE.rest, y: u.port.y + u.dir.y * DEVICE.rest + 18 }
-        u.sprite.setPosition(u.at.x, u.at.y)
-        u.name.setPosition(u.at.x, u.at.y + u.size * (DEVICE.name / DEVICE.size) * 0.62 + 30)
-        u.badge?.setPosition(u.at.x + u.size * 0.32, u.at.y - u.size * 0.3)
+        layout(u)
     }
 
-    /** O plugue volta para o lugar de descanso, sem animação. */
+    /** O plugue volta para o lugar de descanso (o aparelho sem cabo, para o lugar dele), sem animação. */
     function settle(u: Unit) {
         u.plugged = false
+        u.carried = false
+        if (u.def.dock) {
+            u.at = { ...u.home }
+            layout(u)
+            return
+        }
         u.plugPos = { ...u.rest }
         u.plug.setPosition(u.rest.x, u.rest.y).setRotation(Math.atan2(u.dir.y, u.dir.x))
         draw(u)
     }
 
     type Part = FxTarget & Phaser.GameObjects.Components.Visible & Phaser.GameObjects.Components.AlphaSingle
-    const parts = (u: Unit): Part[] => [u.sprite, u.name, u.cable, u.plug, ...(u.badge ? [u.badge] : [])]
+    const parts = (u: Unit): Part[] => [u.sprite, u.name, ...(u.def.dock ? [] : [u.cable, u.plug]), ...(u.badge ? [u.badge] : [])]
 
     defs.forEach(def => {
         const size = def.size ?? DEVICE.size
@@ -142,10 +206,20 @@ export function createGear(scene: Phaser.Scene, view: View, defs: DeviceDef[]): 
                 .setDisplaySize(PLUG.size, PLUG.size)
                 .setDepth(DEPTH.plug),
         )
+        // Sem cabo, não há cabo nem plugue para mostrar.
+        if (def.dock) {
+            cable.setVisible(false)
+            plug.setVisible(false)
+        }
         const unit: Unit = {
             def,
             size,
+            home: { ...def.at },
             at: { ...def.at },
+            grab: { x: 0, y: 0 },
+            carried: false,
+            nameW: lw,
+            nameH: lh,
             dir: { x: 1, y: 0 },
             port: { ...def.at },
             rest: { ...def.at },
@@ -156,6 +230,7 @@ export function createGear(scene: Phaser.Scene, view: View, defs: DeviceDef[]): 
             plug,
             plugPos: { ...def.at },
             plugged: false,
+            powered: false,
             shown: true,
             halo,
         }
@@ -171,6 +246,7 @@ export function createGear(scene: Phaser.Scene, view: View, defs: DeviceDef[]): 
     }
 
     function draw(u: Unit) {
+        if (u.def.dock) return
         const pts = curve(u.port, cableEnd(u))
         const n = pts.length
         const a = pts[n - 2]
@@ -215,6 +291,24 @@ export function createGear(scene: Phaser.Scene, view: View, defs: DeviceDef[]): 
                     u.plugPos = lerp(from, to, k.t)
                     u.plug.setPosition(u.plugPos.x, u.plugPos.y)
                     draw(u)
+                },
+                onComplete: () => resolve(),
+            })
+        })
+
+    /** O aparelho sem cabo andando inteiro até `to`. */
+    const tweenDevice = (u: Unit, to: Vec, ms: number, ease: string) =>
+        new Promise<void>(resolve => {
+            const from = { ...u.at }
+            const k = { t: 0 }
+            scene.tweens.add({
+                targets: k,
+                t: 1,
+                duration: FX.ms(scene, ms),
+                ease,
+                onUpdate: () => {
+                    u.at = lerp(from, to, k.t)
+                    layout(u)
                 },
                 onComplete: () => resolve(),
             })
@@ -362,12 +456,16 @@ export function createGear(scene: Phaser.Scene, view: View, defs: DeviceDef[]): 
             const u = get(id)
             return { x: u.at.x, y: u.at.y + 14, w: u.size + 30, h: u.size + 60 }
         },
-        plugAt: id => ({ ...get(id).plugPos }),
+        plugAt: id => connector(get(id)),
+        grabAt(id) {
+            const u = get(id)
+            return u.def.dock ? { ...u.at } : { ...u.plugPos }
+        },
         plugUnder(at) {
             let best: DeviceId | null = null
             let bestD = PLUG.hit / 2
             units.forEach((u, id) => {
-                if (!u.shown) return
+                if (!u.shown || u.def.dock) return
                 const d = Phaser.Math.Distance.BetweenPoints(at, u.plugPos)
                 if (d < bestD) {
                     bestD = d
@@ -389,6 +487,11 @@ export function createGear(scene: Phaser.Scene, view: View, defs: DeviceDef[]): 
         visible: id => get(id).shown,
         place(id, at) {
             const u = get(id)
+            u.home = { ...at }
+            if (u.def.dock) {
+                if (!u.plugged) settle(u)
+                return
+            }
             u.at = { ...at }
             aim(u)
             if (!u.plugged) settle(u)
@@ -423,9 +526,22 @@ export function createGear(scene: Phaser.Scene, view: View, defs: DeviceDef[]): 
             u.halo.setVisible(want).setScale(1).setAlpha(0.95)
             if (want) u.inviting = scene.tweens.add({ targets: u.halo, scale: 1.6, alpha: 0, duration: 900, repeat: -1 })
         },
+        lift(id, at) {
+            const u = get(id)
+            if (!u.def.dock) return
+            gear.invite(id, false)
+            u.carried = true
+            u.grab = { x: u.at.x - at.x, y: u.at.y - at.y }
+            layout(u)
+        },
         hold(id, at) {
             const u = get(id)
             gear.invite(id, false)
+            if (u.def.dock) {
+                u.at = { x: at.x + u.grab.x, y: at.y + u.grab.y }
+                layout(u)
+                return
+            }
             u.plugPos = { ...at }
             u.plug.setPosition(at.x, at.y)
             draw(u)
@@ -434,22 +550,50 @@ export function createGear(scene: Phaser.Scene, view: View, defs: DeviceDef[]): 
             const u = get(id)
             gear.invite(id, false)
             u.plugged = true
-            await tweenPlug(u, socket, 140, 'Back.easeOut')
+            const d = u.def.dock
+            if (!d) {
+                await tweenPlug(u, socket, 140, 'Back.easeOut')
+                return
+            }
+            // Encosta na frente da tomada e entra, com um estalo.
+            const end = dockCenter(u, socket)
+            await tweenDevice(u, { x: end.x - d.tip.x * 18, y: end.y - d.tip.y * 18 }, 110, 'Sine.easeOut')
+            u.carried = false
+            await tweenDevice(u, end, 130, 'Back.easeOut')
+            void FX.impact(scene, u.sprite, 0.1)
         },
         async retract(id) {
             const u = get(id)
             u.plugged = false
+            if (u.def.dock) {
+                // Volta voando por cima de tudo e pousa no lugar dele.
+                u.carried = true
+                await tweenDevice(u, u.home, 340, 'Cubic.easeOut')
+                u.carried = false
+                layout(u)
+                return
+            }
             await tweenPlug(u, u.rest, 320, 'Cubic.easeOut')
             u.plug.setRotation(Math.atan2(u.dir.y, u.dir.x))
             draw(u)
         },
         setPowered(id, on) {
             const u = get(id)
+            const woke = on && !u.powered
+            u.powered = on
             u.led.setFillStyle(on ? C.accentYellow : C.asleep)
+            // Acordou: a luzinha acende com um estalo e o aparelho dá um pulinho.
+            if (woke && u.shown) {
+                scene.tweens.killTweensOf(u.led)
+                u.led.setScale(1)
+                void FX.to(scene, u.led, { scale: 2.1 }, { duration: 150, yoyo: true, ease: 'Sine.easeOut' })
+                void FX.impact(scene, u.sprite, 0.08)
+            }
             if (!on && u.def.id === 'monitor') clearScreen()
         },
         cable(id) {
             const u = get(id)
+            if (u.def.dock) return [{ ...u.at }, connector(u)]
             return [...curve(u.port, cableEnd(u)), { ...u.plugPos }]
         },
         press(id) {

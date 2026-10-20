@@ -20,6 +20,12 @@ const POR_SLUG: Record<string, string[]> = {
     "Toque num pedaço para chegar perto dele.",
     "Toque nas peças que são daquele pedaço — uma é de outro!",
   ],
+  "boliche-magico": [
+    "Alguns pinos estão com sono e querem deitar. A Bola Mágica derruba quem a frase dela diz.",
+    "Toque numa carta para pôr a parte dela na frase, como Derruba quem tem ESTRELA. Você pode trocar quantas vezes quiser.",
+    "O NÃO troca a resposta: em Derruba quem NÃO tem ÓCULOS, cai quem está sem óculos.",
+    "Aperte JOGAR: a bola confere a frase em cada pino. Derrubar um pino acordado, ou deixar de pé um com sono, encerra a partida.",
+  ],
   "achados-e-perdidos": [
     "Um bichinho perdido chegou no balcão.",
     "O cartaz dele só pode dizer a VERDADE.",
@@ -38,6 +44,13 @@ const POR_SLUG: Record<string, string[]> = {
     "Um recado, uma encomenda, ou um olhar: cada nível pede uma coisa.",
     "Deu certo? Então conte o que mudou.",
   ],
+  "pescadores-do-tempo": [
+    "Você é uma família de pescadores: o bisavô, o vovô e a neta. A vila do outro lado do rio pede um peixe.",
+    "Toque no peixe que a vila pediu e o pescador pesca com a ferramenta dele.",
+    "Não deu? Os anos passam sozinhos e chega o próximo pescador da família, com uma ferramenta nova. Tente de novo!",
+    "Hoje a neta usa um celular com sonar: toque na água, e depois no peixe que aparece na tela.",
+    "Depois de pescar com uma ferramenta nova, escolha a frase que diz o que mudou. Escolher a frase errada encerra a partida.",
+  ],
   "maratona-do-algoritmo": [
     "Um skatista azul passa primeiro e mostra o caminho.",
     "Toque nas figuras embaixo para fazer o mesmo caminho.",
@@ -51,11 +64,21 @@ const POR_SLUG: Record<string, string[]> = {
     "Nome errado? A plaquinha não gruda, e o verso continua lá para conferir.",
     "Com a plaquinha pronta, a obra sobe para o mural da festa.",
   ],
+  "radio-da-escola": [
+    "O show da rádio vai ao ar do palco no espaço. Cada CD tem um dono, e o bilhete preso nele diz se ele deixa a música tocar.",
+    "Leia os bilhetes e toque no CD cujo dono deixou. Se o dono não deixou, ele ouve ao vivo, reclama, e a partida acaba.",
+    "No ar, o alto da tela mostra o nome do dono. Toque cada nota quando ela chegar na linha brilhante (ou use A S D F). Perder nota não tem problema: só o combo volta a zero.",
+  ],
+  "rota-da-madrugada": [
+    "Você leva a encomenda da Dona Cida no carrinho elétrico, de noite. O carro anda sozinho.",
+    "Quando aparece um problema, o carro para e espera. Leia o problema no alto da tela.",
+    "Toque na tecnologia do carro que resolve ESTE problema: BUZINA, FAROL, MENSAGEM ou LIMPADOR (ou as teclas 1, 2, 3 e 4). A tecnologia errada encerra a partida.",
+  ],
   "pula-pula-na-internet": [
-    "O celular pula sozinho. Segure o lado esquerdo ou o direito da tela (ou as setas do teclado) para levá-lo até as abas mais altas.",
-    "No caminho tem uma notícia, uma mensagem ou uma foto. Encostou, ela abre na tela com três pistas: quem fez, quando e de onde veio.",
-    "Com as três pistas boas, PODE CONFIAR. Se alguma falta, NÃO CONFIE. Acertou, a nuvem abre e o celular sobe. Errou, a partida acaba.",
-    "Caiu? Sem problema: o celular volta para a última aba em que pisou.",
+    "O celular pula sozinho. Segure o lado esquerdo ou o direito da tela (ou as setas do teclado) para levá-lo até as abas mais altas: da floresta ao céu, e do céu ao espaço.",
+    "No caminho, numa aba dourada, tem uma notícia, uma mensagem ou uma foto. Pegue todas: se uma ficar para trás, a partida acaba.",
+    "Pegou, ela abre na tela com três pistas: quem fez, quando e de onde veio. Com as três boas, PODE CONFIAR. Se alguma falta, NÃO CONFIE. Errou, a partida acaba.",
+    "Caiu? Sem problema: o celular volta para a última aba em que pisou. No espaço, o pulo fica mais leve.",
   ],
   "olha-o-jornal": [
     "O carteiro traz dois jornais sobre a mesma coisa.",
@@ -431,6 +454,7 @@ const POR_SLUG: Record<string, string[]> = {
     "No alto aparece o pedido: guarde o arquivo num lugar LOCAL ou num lugar REMOTO.",
     "Cada rodada tem um mapa diferente, maior que a tela: arraste a tela (ou toque no mapinha) para ver tudo e planejar. Depois puxe a catapulta para trás, mire e solte. O arquivo voa, quica nas molas, rola e cai num buraco (que leva a um aparelho embaixo da terra) ou entra numa nuvem.",
     "LOCAL é o HD de dentro do computador. REMOTO é o que sai dele: pen drive, cartão de memória, HD externo e nuvem. Se o arquivo parar no chão, é só lançar de novo.",
+    "No nível 2 o remoto se divide em dois: REMOVÍVEL (pen drive, cartão, HD externo) e INTERNET (a nuvem). No nível 3 o pedido conta uma situação, e você decide onde o arquivo precisa estar.",
   ],
   "raio-x-da-maquina": [
     "Cada máquina chega para revisão, e o raio-X mostra as peças de dentro dela.",
@@ -438,6 +462,12 @@ const POR_SLUG: Record<string, string[]> = {
     "Toque na peça certa. A peça errada encerra o jogo.",
     "A cada acerto vem um desafio rápido, para ver a peça trabalhando de perto.",
     "No fim, arraste os cabos na cor certa: sem energia, nenhuma peça funciona.",
+  ],
+  "circuito-de-bolinha": [
+    "O Nico quer montar o circuito de bolinha igual ao desenho da caixa, mas ele só faz o que o manual mostra.",
+    "Toque nas páginas da direita para pôr cada uma no manual, na ordem: página 1, 2, 3… Tocar numa página do manual devolve ela.",
+    "Com o manual cheio, toque em MONTAR. O Nico segue as páginas uma por uma.",
+    "Peça sem bloco embaixo cai, e a partida acaba. Se tudo ficar de pé, a bolinha desce até o sino.",
   ],
   "cabo-certo": [
     "Leia o pedido no alto. Os dois aparelhos dele aparecem dos lados do computador.",
@@ -449,7 +479,9 @@ const POR_SLUG: Record<string, string[]> = {
     "Você é o SISTEMA do bairro: só você anda entre as casas dos programas e as oficinas das peças.",
     "Segure o dedo na tela para correr para aquele lado (ou use as setas). Solte e você desliza um pouquinho.",
     "Corra até a casa que solta fumaça. Na porta, decida: o programa PRECISA daquela peça? Toque em PODE ou NÃO PODE.",
-    "Se PODE, vá buscar a peça na oficina dela. Responder errado encerra a partida.",
+    "Se PODE, vá buscar a peça na oficina dela. Quando o programa termina, a peça volta para casa.",
+    "Às vezes o programa pede duas peças. E uma peça só atende um programa de cada vez: se ela estiver EM USO, toque em ESPERAR.",
+    "Responder errado encerra a partida.",
   ],
   "maestro-do-sistema": [
     "Cada programa levanta um balão com a peça de que precisa para tocar.",
@@ -463,9 +495,10 @@ const POR_SLUG: Record<string, string[]> = {
     "A carta vale o trecho todo: a cada passo ela decide, e a linha que decidiu acende.",
   ],
   "pit-stop-da-chuva": [
-    "A regra da equipe fica no alto: SE estiver chovendo, pneu de CHUVA; SENÃO, pneu LISO.",
-    "A cada parada no box, olhe o céu daquele momento e toque no carrinho com o pneu certo.",
-    "Nublado não é chuva: vale o SENÃO. Pneu errado faz o kart rodar na poça ou o pneu murchar, e a partida acaba.",
+    "Segure ACELERAR e FREIO para pilotar. Quando o céu ou a pista mudarem, toque em TROCAR PNEU, entre no box e pare no retângulo.",
+    "A regra da equipe fica no alto: SE estiver chovendo, pneu de CHUVA; SENÃO, pneu LISO. Nublado não é chuva: vale o SENÃO.",
+    "Nível 2: a regra é lida de cima para baixo, e a lama vem primeiro. Na pista estreita, só a MOTO passa.",
+    "Nível 3: primeiro escolha MOTO ou CARRO (pista estreita?), depois o pneu pelo céu. Escolha errada encerra a partida.",
   ],
   "arvore-da-familia": [
     "A árvore da família é um grafo: cada pessoa é um ponto, e as linhas ligam pais, filhos e casais.",
@@ -473,6 +506,11 @@ const POR_SLUG: Record<string, string[]> = {
     "Nível 2 (praia): a onda leva um lado da família de cada vez. O cartão diz a ligação, como Mãe da Mãe ou Irmão do Pai.",
     "Nível 3 (quintal): três famílias de bichos. O pombo traz um cartão por vez para a cesta; arraste o quintal para os lados para achar a árvore certa.",
     "Cartão no lugar errado, ou na família de outro bicho, encerra a partida.",
+  ],
+  "ventania-na-floresta": [
+    "Uma ventania bagunçou a floresta! Cada bicho tem um jeito de se organizar, e você põe tudo de volta no lugar.",
+    "Na FILA, as formigas vão da maior para a menor: toque na formiga que vem agora e ela corre para o fim da fila.",
+    "Na GRADE, cada flor mora no cruzamento da linha do tipo dela com a coluna da cor dela: toque na casinha certa e a abelha Zuzu planta a flor.",
   ],
   "rio-de-chocolate": [
     "A Mel precisa atravessar o rio de chocolate pulando nos doces que boiam. A placa no alto diz qual doce aguenta, como Aguenta o doce que tem GRANULADO.",

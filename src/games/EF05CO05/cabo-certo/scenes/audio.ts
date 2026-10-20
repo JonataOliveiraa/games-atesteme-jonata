@@ -15,6 +15,8 @@ export interface Audio {
     melody(): void
     wake(): void
     good(): void
+    /** Uma nota por palavra do resumo, cada uma mais aguda. */
+    step(index: number): void
     lose(): void
     win(): void
     setMuted(on: boolean): void
@@ -137,6 +139,10 @@ export function createAudio(): Audio {
         },
         good() {
             notes([523, 659, 784], 90, { wave: 'triangle', gain: 0.1 })
+        },
+        step(index) {
+            const scale = [523, 659, 784, 1047, 1319]
+            tone(scale[Math.min(index, scale.length - 1)], 160, { wave: 'triangle', gain: 0.1 })
         },
         lose() {
             notes([392, 330, 262], 170, { wave: 'triangle', gain: 0.1 })

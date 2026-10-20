@@ -13,6 +13,7 @@ export const DEPTH = {
     hand: 50,
     marker: 90,
     header: 100,
+    bag: 103,
     hud: 106,
     door: 120,
     banner: 140,
@@ -20,7 +21,11 @@ export const DEPTH = {
 
 export const HEADER = {
     h: 96,
-    dividers: [282, 1150],
+    dividers: [306, 1150],
+    hideAfter: 140,
+    showAfter: 380,
+    ease: 110,
+    moving: 60,
 } as const
 
 export const HUD = {
@@ -38,17 +43,26 @@ export const HUD = {
     livesX: 1100,
     livesY: 48,
     livesSize: 30,
-    askX: 716,
-    askW: 820,
+} as const
+
+export const GOAL = {
+    x: 640,
+    maxW: 660,
+    disc: 29,
+    icon: 46,
+    gap: 14,
+    padX: 22,
+    h: 70,
+    compact: 0.92,
 } as const
 
 export const VIEW = {
     x: 0,
-    y: HEADER.h,
+    y: 0,
     w: W,
-    h: H - HEADER.h,
+    h: H,
+    top: HEADER.h,
     follow: 170,
-    lead: 0.22,
 } as const
 
 export const RUN = {
@@ -71,14 +85,19 @@ export const HOUSE = {
     size: 330,
     body: { w: 280, h: 150, lift: 6 },
     door: { dy: 46, r: 120 },
+    gate: 100,
     name: 20,
     arrow: 64,
+    shot: 150,
 } as const
 
 export const DECO = {
     size: 190,
     fountain: 300,
-    solid: { arvore: 40, pinheiro: 36, chafariz: 112 } as Record<string, number>,
+    pond: 260,
+    solid: { arvore: 40, pinheiro: 36, chafariz: 112, lago: 80, pedra: 48, escorregador: 46, sorvete: 40 } as Record<string, number>,
+    lift: { chafariz: 52, lago: 44, pedra: 40, escorregador: 50, sorvete: 40 } as Record<string, number>,
+    shadow: { poste: 0.3, hidrante: 0.3, correio: 0.3, lago: 0.92, canteiro: 0.86 } as Record<string, number>,
 } as const
 
 export const ROAD = { width: 116, edge: 10, path: 64 } as const
@@ -98,19 +117,53 @@ export const PANEL = {
     buttonDx: 230,
     buttonW: 300,
     buttonH: 84,
+    trio: { dx: 296, w: 240 },
+    pair: { dx: [140, 262], icon: 84 },
+    seal: { r: 24, icon: 34, at: 0.74 },
+    tag: { w: 100, h: 32, at: 0.72 },
+    glass: 64,
     arm: 450,
-    focus: -16,
+    focus: 32,
+} as const
+
+export const BAG = {
+    slots: 3,
+    x: 70,
+    w: 112,
+    top: 200,
+    bottom: 540,
+    art: 100,
+    artY: 214,
+    slotY: 318,
+    slotGap: 84,
+    slotR: 36,
+    icon: 58,
+    fly: 600,
+    peek: 900,
+} as const
+
+export const SWAP = {
+    titleY: -96,
+    itemY: 6,
+    itemDx: 260,
+    r: 62,
+    icon: 94,
+    nameY: 96,
 } as const
 
 export const CAPTION = { x: 640, y: 168 } as const
 
-export const HAND = { size: 130, tapLift: 26 } as const
+export const BUSY = { dx: 104, dy: -6, r: 34, icon: 46, tagY: 50, tagW: 92, tagH: 30, spin: 7000 } as const
 
-export const ZOOM = { town: 0.98, show: 0.62 } as const
+export const HAND = { r: 30, stroke: 7, wave: 6, spread: 2.6 } as const
+
+export const ZOOM = { town: 0.98, show: 0.62, call: 0.8 } as const
 
 export const MARKER = {
     inset: 46,
-    size: 30,
+    size: 36,
+    icon: 48,
+    tip: 16,
 } as const
 
 export const BANNER = {
@@ -119,5 +172,3 @@ export const BANNER = {
     w: 1060,
     h: 96,
 } as const
-
-export const CARRY = { lift: 168, size: 70 } as const

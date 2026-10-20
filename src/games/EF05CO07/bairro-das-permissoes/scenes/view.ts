@@ -38,11 +38,11 @@ export function createView(scene: Phaser.Scene, size: { w: number; h: number }, 
     let zoom = 1
     let tween: Phaser.Tweens.Tween | undefined
 
+    const fit = (c: number, half: number, len: number) =>
+        half * 2 >= len ? Phaser.Math.Clamp(c, len - half, half) : Phaser.Math.Clamp(c, half, len - half)
     const clamp = () => {
-        const hw = VIEW.w / (2 * zoom)
-        const hh = VIEW.h / (2 * zoom)
-        center.x = hw * 2 >= size.w ? size.w / 2 : Phaser.Math.Clamp(center.x, hw, size.w - hw)
-        center.y = hh * 2 >= size.h ? size.h / 2 : Phaser.Math.Clamp(center.y, hh, size.h - hh)
+        center.x = fit(center.x, VIEW.w / (2 * zoom), size.w)
+        center.y = fit(center.y, VIEW.h / (2 * zoom), size.h)
     }
     const apply = () => {
         clamp()
@@ -102,7 +102,7 @@ export function createView(scene: Phaser.Scene, size: { w: number; h: number }, 
         }),
         inView(at, pad = 0) {
             const s = view.toScreen(at)
-            return s.x > VIEW.x + pad && s.x < VIEW.x + VIEW.w - pad && s.y > VIEW.y + pad && s.y < VIEW.y + VIEW.h - pad
+            return s.x > VIEW.x + pad && s.x < VIEW.x + VIEW.w - pad && s.y > VIEW.y + VIEW.top + pad && s.y < VIEW.y + VIEW.h - pad
         },
         onMap: (x, y) => x >= VIEW.x && x <= VIEW.x + VIEW.w && y >= VIEW.y && y <= VIEW.y + VIEW.h,
         destroy() {

@@ -2,7 +2,7 @@ import Phaser from 'phaser'
 import { DEPTH } from '../data/layout'
 import type { Vec } from '../types'
 
-export type Layer = 'platform' | 'summit' | 'item' | 'phone' | 'cloud' | 'fx'
+export type Layer = 'platform' | 'summit' | 'item' | 'phone' | 'fx'
 
 export interface View {
     add<T extends Phaser.GameObjects.GameObject>(obj: T, layer: Layer): T
@@ -19,7 +19,6 @@ export function createView(scene: Phaser.Scene, startTop: number): View {
         summit: scene.add.container(0, 0).setDepth(DEPTH.summit),
         item: scene.add.container(0, 0).setDepth(DEPTH.item),
         phone: scene.add.container(0, 0).setDepth(DEPTH.phone),
-        cloud: scene.add.container(0, 0).setDepth(DEPTH.cloud),
         fx: scene.add.container(0, 0).setDepth(DEPTH.fx),
     }
     let top = startTop

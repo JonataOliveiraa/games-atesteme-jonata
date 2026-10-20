@@ -1,4 +1,5 @@
 import { FONT_JOGO } from '../../../../shared/fonts/gameFont'
+import type { Scenery } from '../types'
 
 export const C = {
     grass: 0x8fd16f,
@@ -16,6 +17,7 @@ export const C = {
     remoteDark: 0x2f7fd0,
     local: 0xff9f43,
     localDark: 0xd9771c,
+    internet: 0x46c7b0,
     preview: 0xffffff,
     wall: 0xfbefd9,
     wallStripe: 0xf6e4c6,
@@ -115,6 +117,52 @@ export const C = {
     shadow: 0x2a1f33,
 } as const
 
+export interface Land {
+    /** a faixa grossa na borda de cima do chão e o fio claro em cima dela */
+    edge: number
+    edgeLight: number
+    /** uma segunda faixa, mais fina, logo abaixo da borda (a areia molhada da praia) */
+    band: number | null
+    chamber: number
+    chamberRim: number
+    mapSky: number
+    mapGround: number
+    mapEdge: number
+}
+
+export const LAND: Record<Scenery, Land> = {
+    campo: {
+        edge: C.grass,
+        edgeLight: C.grassLight,
+        band: null,
+        chamber: C.chamber,
+        chamberRim: C.chamberRim,
+        mapSky: C.sky,
+        mapGround: C.dirt,
+        mapEdge: C.grassDark,
+    },
+    praia: {
+        edge: 0xfbe9c4,
+        edgeLight: 0xffffff,
+        band: 0xd9b07c,
+        chamber: 0x6b5242,
+        chamberRim: 0x8c6e56,
+        mapSky: 0xf8d6c8,
+        mapGround: 0xe9c48f,
+        mapEdge: 0xc9965e,
+    },
+    serra: {
+        edge: 0xe4dcf7,
+        edgeLight: 0xfbf9ff,
+        band: null,
+        chamber: 0x3c3758,
+        chamberRim: 0x56507a,
+        mapSky: 0x5d5694,
+        mapGround: 0x8e93b0,
+        mapEdge: 0xe4dcf7,
+    },
+}
+
 export const CSS = {
     ink: '#3d2c3e',
     inkSoft: '#75667a',
@@ -135,6 +183,7 @@ export const SIZE = {
     help: 40,
     level: 22,
     order: 36,
+    situation: 25,
     label: 20,
     banner: 38,
     tag: 30,

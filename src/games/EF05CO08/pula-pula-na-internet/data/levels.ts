@@ -1,5 +1,6 @@
-import type { ItemDef, LevelDef } from '../types'
-import { buildCourse, checkCourse } from './course'
+import type { DemoDef, ItemDef, LevelDef } from '../types'
+import { FRESH, buildCourse, checkCourse } from './course'
+import { SUMMIT } from './physics'
 
 export const POINTS = 10
 
@@ -7,18 +8,69 @@ export const guideKey = (level: number) => `ef05co08-pula-l${level}`
 
 export const trusts = (item: ItemDef) => item.clues.quem.ok && item.clues.quando.ok && item.clues.onde.ok
 
+const DEMO: Record<'feira' | 'parque' | 'gato', DemoDef> = {
+    feira: {
+        text: 'Pistas boas? PODE CONFIAR. Ruim? NÃO CONFIE.',
+        item: {
+            id: 'demo-feira',
+            kind: 'jornal',
+            from: 'Jornal da Cidade',
+            title: 'A feira do bairro volta no domingo',
+            clues: {
+                quem: { text: 'Léo Souza, repórter', ok: true },
+                quando: { text: 'hoje', ok: true },
+                onde: { text: 'a Prefeitura informou', ok: true },
+            },
+            why: 'Tem quem escreveu, a data e de onde veio.',
+        },
+    },
+    parque: {
+        text: 'Gritou, mas tem as três pistas!',
+        item: {
+            id: 'demo-parque',
+            kind: 'jornal',
+            from: 'Grita Notícia',
+            title: 'UAU!!! O PARQUE GANHOU UM ESCORREGADOR GIGANTE!!!',
+            clues: {
+                quem: { text: 'Bia Nunes, repórter', ok: true },
+                quando: { text: 'hoje', ok: true },
+                onde: { text: 'a Prefeitura informou', ok: true },
+            },
+            why: 'Grita, mas tem quem escreveu, a data e de onde veio.',
+        },
+    },
+    gato: {
+        text: 'Uma pista ruim já basta!',
+        item: {
+            id: 'demo-gato',
+            kind: 'jornal',
+            from: 'Portal Curioso',
+            title: 'Gato de rua aprende a ler sozinho',
+            clues: {
+                quem: { text: 'Davi Costa, repórter', ok: true },
+                quando: { text: 'ontem', ok: true },
+                onde: { text: 'copiou de um vídeo sem nome', ok: false },
+            },
+            why: 'Tem autor e data, mas copiou de um vídeo sem nome.',
+        },
+    },
+}
+
 const N1: LevelDef = {
     level: 1,
     title: 'Confira antes de subir',
     message: 'Quem fez, quando e de onde veio: com as três pistas boas, dá para confiar.',
+    altitude: 0,
     bad: 3,
     course: {
         seed: 51,
-        sections: [2, 4, 4, 5],
+        sections: [5, 6, 6, 7],
+        finish: 3,
         step: { min: 135, max: 165 },
         width: { min: 210, max: 260 },
         shift: 230,
     },
+    demos: [DEMO.feira],
     items: [
         {
             id: 'vacina',
@@ -35,8 +87,9 @@ const N1: LevelDef = {
         {
             id: 'chocolate',
             kind: 'alerta',
-            from: 'Mensagem encaminhada',
+            from: 'Grupo da família',
             title: 'CHOCOLATE CURA TUDO!!! Mande para todo mundo!',
+            forwarded: true,
             clues: {
                 quem: { text: 'ninguém assina', ok: false },
                 quando: { text: 'não diz', ok: false },
@@ -46,28 +99,28 @@ const N1: LevelDef = {
         },
         {
             id: 'arvores',
-            kind: 'imagem',
+            kind: 'jornal',
             from: 'Site da Escola',
             title: 'A turma do 5º ano plantou 20 árvores',
-            photo: 0,
             clues: {
                 quem: { text: 'Professor Rui', ok: true },
                 quando: { text: 'ontem', ok: true },
-                onde: { text: 'fotos da turma, na escola', ok: true },
+                onde: { text: 'a escola publicou', ok: true },
             },
-            why: 'Quem tirou, quando e onde: está tudo lá.',
+            why: 'Tem quem escreveu, a data e de onde veio.',
         },
         {
-            id: 'ferias',
-            kind: 'jornal',
-            from: 'Blog Fofoca Total',
-            title: 'As férias vão durar 3 meses',
+            id: 'alienigenas',
+            kind: 'imagem',
+            from: 'Perfil @misterios',
+            title: 'ALIENÍGENAS POUSARAM NA PRAÇA!!!',
+            photo: 'alienigenas',
             clues: {
-                quem: { text: 'não diz quem escreveu', ok: false },
+                quem: { text: 'ninguém assina', ok: false },
                 quando: { text: 'sem data', ok: false },
-                onde: { text: '"ouvi dizer"', ok: false },
+                onde: { text: '"um amigo mandou"', ok: false },
             },
-            why: 'Ninguém assina, não tem data e é só "ouvi dizer".',
+            why: 'Ninguém assina, não tem data e é só "um amigo mandou".',
         },
     ],
 }
@@ -76,32 +129,37 @@ const N2: LevelDef = {
     level: 2,
     title: 'O grito não decide',
     message: 'Manchete gritada pode ser verdade, e foto de verdade pode ser velha. Quem decide são as três pistas.',
+    altitude: 1,
     course: {
         seed: 52,
-        sections: [3, 4, 5, 5],
+        sections: [6, 6, 7, 7],
+        finish: 3,
         step: { min: 145, max: 180 },
         width: { min: 190, max: 230 },
         shift: 250,
         move: { range: 70, period: 2600, every: 3 },
     },
+    demos: [DEMO.parque],
     items: [
         {
-            id: 'robos',
-            kind: 'jornal',
+            id: 'capivaras',
+            kind: 'imagem',
             from: 'Grita Notícia',
-            title: 'URGENTE!!! A ESCOLA GANHOU ROBÔS!!!',
+            title: 'UAU!!! CAPIVARAS PARAM O TRÂNSITO NO LAGO!!!',
+            photo: 'capivaras',
             clues: {
-                quem: { text: 'Tino Rocha, repórter', ok: true },
+                quem: { text: 'Tino Rocha, fotógrafo', ok: true },
                 quando: { text: 'hoje', ok: true },
-                onde: { text: 'a Secretaria de Educação informou', ok: true },
+                onde: { text: 'o Parque do Lago confirmou', ok: true },
             },
-            why: 'Grita, mas tem quem escreveu, a data e de onde veio.',
+            why: 'Grita e parece estranho, mas tem quem tirou, a data e de onde veio.',
         },
         {
             id: 'aula',
             kind: 'alerta',
-            from: 'Mensagem encaminhada',
+            from: 'Grupo da escola',
             title: 'Amanhã não vai ter aula. Avise todo mundo.',
+            forwarded: true,
             clues: {
                 quem: { text: 'ninguém assina', ok: false },
                 quando: { text: 'não diz', ok: false },
@@ -114,7 +172,7 @@ const N2: LevelDef = {
             kind: 'imagem',
             from: 'Perfil @noticiasja',
             title: 'Olha a enchente na nossa rua HOJE!',
-            photo: 2,
+            photo: 'enchente',
             clues: {
                 quem: { text: 'Ana Lima, fotógrafa', ok: true },
                 quando: { text: 'a foto é de 2015', ok: false },
@@ -141,21 +199,25 @@ const N3: LevelDef = {
     level: 3,
     title: 'Uma pista basta',
     message: 'Basta uma pista ruim para não confiar. E um alerta pode ser confiável, se tiver as três.',
+    altitude: 2,
     bad: 1,
     course: {
         seed: 53,
-        sections: [4, 5, 5, 5],
+        sections: [5, 6, 6, 6],
+        finish: 3,
         step: { min: 150, max: 178 },
         width: { min: 170, max: 210 },
         shift: 270,
         move: { range: 90, period: 2200, every: 2 },
     },
+    demos: [DEMO.gato],
     items: [
         {
-            id: 'dormir',
-            kind: 'jornal',
+            id: 'dinossauro',
+            kind: 'imagem',
             from: 'Site Saber Tudo',
-            title: 'Dormir tarde deixa a gente mais inteligente',
+            title: 'Dinossauro escapou do museu e passeia pelo centro',
+            photo: 'dinossauro',
             clues: {
                 quem: { text: 'Carla Dias, repórter', ok: true },
                 quando: { text: 'ontem', ok: true },
@@ -180,7 +242,7 @@ const N3: LevelDef = {
             kind: 'imagem',
             from: 'Perfil @fofoqueiro',
             title: 'A piscina do clube fechou PARA SEMPRE!!!',
-            photo: 1,
+            photo: 'piscina',
             clues: {
                 quem: { text: 'Rafa, sócio do clube', ok: true },
                 quando: { text: 'hoje', ok: true },
@@ -193,7 +255,7 @@ const N3: LevelDef = {
             kind: 'imagem',
             from: 'Site da Escola',
             title: 'A lua cheia de ontem, vista do pátio',
-            photo: 3,
+            photo: 'lua',
             clues: {
                 quem: { text: 'Professora Bia', ok: true },
                 quando: { text: 'ontem à noite', ok: true },
@@ -215,14 +277,25 @@ export function validateLevels(levels: LevelDef[] = LEVELS) {
             problems.push(`${tag}: ${level.items.length} conteúdos para ${level.course.sections.length} trechos`)
         const answers = new Set(level.items.map(trusts))
         if (answers.size < 2) problems.push(`${tag}: todos os conteúdos têm a mesma resposta`)
+        if (!level.demos.length) problems.push(`${tag}: sem demonstração`)
+        ;[...level.items, ...level.demos.map(d => d.item)].forEach(item => {
+            if (item.forwarded && item.kind !== 'alerta') problems.push(`${tag} ${item.id}: só mensagem é encaminhada`)
+            if (item.forwarded && trusts(item)) problems.push(`${tag} ${item.id}: encaminhada e confiável`)
+            if (level.items.some(i => i !== item && i.title === item.title)) problems.push(`${tag} ${item.id}: manchete repetida`)
+        })
+        const photos = level.items.filter(item => item.photo).length
+        if (photos !== level.level) problems.push(`${tag}: ${photos} fotos, o nível pede ${level.level}`)
         level.items.forEach(item => {
-            if (item.kind === 'imagem' && item.photo === undefined) problems.push(`${tag} ${item.id}: foto sem imagem`)
+            if ((item.kind === 'imagem') !== (item.photo !== undefined)) problems.push(`${tag} ${item.id}: foto só no conteúdo de imagem`)
             const bad = Object.values(item.clues).filter(c => !c.ok).length
             if (level.bad !== undefined && bad > 0 && bad !== level.bad)
                 problems.push(`${tag} ${item.id}: ${bad} pistas ruins, o nível pede ${level.bad}`)
         })
-        problems.push(...checkCourse(buildCourse(level.course), level.course).map(p => `${tag}: ${p}`))
+        const start = level.level > 1 ? { y: 0, w: SUMMIT.w } : FRESH
+        problems.push(...checkCourse(buildCourse(level.course, level.altitude, start)).map(p => `${tag}: ${p}`))
     })
+    const used = levels.flatMap(level => level.items.flatMap(item => (item.photo ? [item.photo] : [])))
+    if (new Set(used).size !== used.length) problems.push('foto repetida entre os níveis')
     if (problems.length) throw new Error(`Pula-Pula na Internet — níveis inválidos:\n${problems.join('\n')}`)
 }
 

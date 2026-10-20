@@ -41,12 +41,14 @@ São as duas imagens que o usuário mandou (15/10 e de novo em 20/10/2026). **An
 | Arquivo | Grade | Célula | Tamanho final | Alfa | Uso |
 |---|---|---|---|---|---|
 | `karts.png` | 4 × 2 | 384 × 256 | 1536 × 512 | sim | o kart **sem rodas**: a Kika em 5 caras, os 2 rivais e o kart vazio |
-| `motos.png` | 4 × 2 | 384 × 256 | 1536 × 512 | sim | a moto **sem rodas**, na mesma ordem (N3) |
+| `motos.png` | 4 × 2 | 384 × 256 | 1536 × 512 | sim | a moto **sem rodas**, na mesma ordem (pista estreita do N2 e do N3) |
 | `equipe.png` | 4 × 2 | 320 × 400 | 1280 × 800 | sim | o Tio Beto e os dois mecânicos |
 | `pecas.png` | 6 × 3 | 256 × 256 | 1536 × 768 | sim | pneus, carrinhos de pneu, fardo, nuvens, sol, poças e bandeira |
 | `controles.png` | 3 × 1 | 256 × 256 | 768 × 256 | sim | os desenhos dos botões: acelerador, freio e chave com pneu |
 | `autodromo.png` | — | — | 1280 × 520 | sim (céu) | a faixa que se repete: arquibancada, faixa do box, pista e grama |
 | `lama.png` | — | — | 1280 × 204 | não | a faixa do box e a pista **de terra**, nos trechos de lama (N2) |
+| `trilha.png` | — | — | 1280 × 204 | não | a faixa do box e a **pista estreita**: uma trilha de terra entre pedras e arbustos, onde só a moto passa (N2 e N3) |
+| `trilha-pecas.png` | 2 × 1 | 256 × 256 | 512 × 256 | sim | a placa de "pista estreita" e o cone |
 | `tenda.png` | — | — | 600 × 360 | sim | a tenda da equipe, onde a Kika para |
 | `mao.png` | — | — | 256 × 256 | sim | a mãozinha da demonstração |
 | `cover-pit-stop-da-chuva.png` | — | — | 1672 × 941 | opaco | capa **com o título** |
@@ -235,6 +237,39 @@ DO NOT INCLUDE: karts, cars, motorbikes, people, hands, faces or eyes on any obj
 
 ---
 
+## 6b. `pneus.png` — 6 × 1 células de 256 (1536 × 256), alfa
+
+As rodas que **giram** no veículo (20/10/2026). Os pneus 0–5 do §6 vieram em 3/4, com a banda de rodagem à mostra de um lado: no arco do kart, que é de perfil, a roda não encaixa, e ao girar a banda dá voltas em torno do aro. Aqui eles vêm em **perfil puro**: um círculo perfeito, aro no centro exato, nenhuma espessura à vista. Os do §6 continuam nos carrinhos e na regra.
+
+| Célula | Peça |
+|---|---|
+| 0 | pneu LISO de carro, faixa vermelha |
+| 1 | pneu de CHUVA de carro, faixa azul |
+| 2 | pneu de CRAVOS de carro, faixa verde |
+| 3 | o pneu de chuva MURCHO, achatado embaixo |
+| 4 | pneu LISO de moto, faixa vermelha, raios |
+| 5 | pneu de CHUVA de moto, faixa azul, raios |
+
+Contrato: em 0, 1, 2, 4 e 5 o pneu é um círculo cujo centro é o centro da célula, com o mesmo diâmetro dentro de cada tipo (carro: 0–2 iguais; moto: 4–5 iguais), ~8% de margem. Girado em qualquer ângulo, o desenho não pode "andar".
+
+~~~text
+STYLE — USE THE TWO ATTACHED IMAGES AS THE ART STYLE REFERENCE and match their rendering exactly: a trendy flat hand-drawn fashion illustration; thin, even, slightly sketchy lineart in dark charcoal-brown (never black, never thick); 100% flat fill colors, no gradients, no glossy highlights; shading only as a few flat, irregular, slightly darker patches; a muted pastel palette (sage, slate and lavender blue, butter yellow, cream, olive green, warm gray, pale aqua) with a few clear accents (coral, royal blue); white flat clouds like the reference. Take ONLY the art style: do NOT copy their characters, couples, outfits, poses, hearts or backgrounds.
+
+A game sprite sheet on a fully TRANSPARENT background: a single row of 6 cells, each cell 256 x 256 (total 1536 x 256), read left to right. Wheels for a kids' racing game that will SPIN in the game, so each one is drawn in a PERFECTLY FLAT, ORTHOGRAPHIC SIDE VIEW, exactly like a wheel seen straight from the side of a car: a PERFECT CIRCLE, the hub EXACTLY in the center of the circle, all rings concentric, NO perspective, NO three-quarter view, NO visible tread width, NO visible thickness of the tire on any side. Each wheel is centered in its cell with about 8% margin. The tire types must be easy to tell apart by the COLORED STRIPE ring on the sidewall: RED = slick, BLUE = rain, GREEN = knobby.
+1. A SLICK kart WHEEL: a perfect circle of smooth black rubber, a RED stripe ring, a silver rim with five thick spokes and a round hub in the exact center.
+2. A RAIN kart WHEEL, same diameter as wheel 1: black rubber with short grooves notched evenly all around the outer edge, a BLUE stripe ring, the same silver rim.
+3. A KNOBBY mud kart WHEEL, same diameter as wheel 1: big chunky blocks sticking out evenly all around the outer edge, a GREEN stripe ring, the same silver rim.
+4. The RAIN kart wheel (blue stripe) gone FLAT: still seen straight from the side, the bottom squashed flat and bulging sideways, soft and saggy, its bottom edge touching the lower part of the cell.
+5. A SLICK MOTORBIKE WHEEL: a tall perfect circle, a narrow smooth black rubber ring, a big silver rim with thin straight spokes from the center hub, a thin RED stripe.
+6. A RAIN MOTORBIKE WHEEL, same diameter as wheel 5: the same narrow ring with small even grooves all around the edge, thin spokes, a thin BLUE stripe.
+
+DO NOT INCLUDE: three-quarter view, perspective, visible tread surface, tire thickness, cylinders, ellipses, tilted wheels, karts, cars, motorbikes, axles, people, hands, faces or eyes on any object, text, letters, numbers, brand names on tires, logos, sparkles, the ground, shadows, backgrounds, items crossing cell borders, items cut by the cell edge, the people from the reference images (a girl with long wavy dark hair, a red bow headband, a yellow cardigan and a lavender plaid skirt; a young man in a lavender plaid overshirt and white pants; a woman with a blue polka-dot neckerchief and a coral shoulder bag; a young man in a cream sweater with a royal-blue panel), plaid patterns, polka dots, cel shading, gradients, glossy highlights, thick outlines, white sticker keyline, watermarks, signatures, @handles, website names, painterly rendering, 3D render, photorealistic.
+~~~
+
+**Geração Aquarela — 20/10/2026:** ferramenta integrada, uma única geração com o bloco completo acima, sem cortes, e as duas referências 40/41 anexadas. Bruto original 2172 × 724 preservado em `outputs/pit-stop-da-chuva/raw/pneus.png` e `src/assets/games/EF05CO04/pit-stop-da-chuva/raw/pneus.png`. Final reempacotado com sharp em 1536 × 256, grade 6 × 1 de 256; origem de rotação (128,128), calculada pelos anéis circulares, sem centralizar pelo bbox. Diâmetro externo nominal 216 px nos pneus redondos de cada tipo; ajuste de escala e circularidade, com variação raster de até 1 px. Murcha com base em y=235, alinhada aos pneus redondos de carro. Alfa abaixo de 32 zerado antes e depois do reempacotamento. Medidas em `MANIFEST.md`; código e `pecas.png` preservados.
+
+---
+
 ## 7. `controles.png` — 3 × 1 células de 256 (768 × 256), alfa
 
 São só os desenhos que ficam dentro dos botões. A placa colorida e a palavra (ACELERAR, FREIO, TROCAR PNEU) são do código.
@@ -338,6 +373,47 @@ STYLE — USE THE TWO ATTACHED IMAGES AS THE ART STYLE REFERENCE and match their
 A cover illustration for a children's game, 16:9 (1672 x 941), opaque. At the TOP, a big, bold, friendly title lettering that reads exactly "Pit Stop da Chuva" (Portuguese), in chunky rounded letters, white with a mint-green outline. Below: a kids' race on a side-view track, half of the sky sunny and half with a gray rain cloud and falling drops. In front of a cream-and-mint pit tent, two kid mechanics of about 10 in mint-green overalls change the tires of a mint-green kart with yellow power wrenches, while the driver KIKA (a 10-year-old girl with brown skin, a curly black ponytail, a mint-green helmet with the visor up and a yellow scarf) gives a big smile. A chubby mustached team boss in a mint-green cap waves a checkered flag. A lavender kart and a coral motorbike race by on the track, one splashing a puddle and the other throwing a little mud. Bright, playful, energetic mood.
 
 DO NOT INCLUDE: any text other than the title "Pit Stop da Chuva", misspelled title, extra titles, numbers on karts, sponsor logos, real racing brands, crashes, fire, scary elements, lightning, night, the people from the reference images (a girl with long wavy dark hair, a red bow headband, a yellow cardigan and a lavender plaid skirt; a young man in a lavender plaid overshirt and white pants; a woman with a blue polka-dot neckerchief and a coral shoulder bag; a young man in a cream sweater with a royal-blue panel), couples, holding hands, romantic poses, hearts, peace-sign gestures, plaid clothes, chibi proportions, big anime eyes with highlights, cel shading, gradients, glossy highlights, thick outlines, white sticker keyline, watermarks, signatures, @handles, website names, painterly rendering, 3D render, photorealistic.
+~~~
+
+---
+
+## 13a. `trilha.png` — 1280 × 204, opaco
+
+É a mesma faixa de `lama.png` (y 236 a 440 do `autodromo.png`), agora com a **pista estreita**, e também se repete na horizontal. O código a põe por cima do asfalto nos trechos estreitos, que dão motivo à moto: a pista larga vira uma trilha onde o kart **não cabe**.
+
+| Faixa (y) | O que tem |
+|---|---|
+| 0–56 | a **faixa do box** de terra batida, igual à de `lama.png` (a moto e o carro param nas tendas daqui) |
+| 56–64 | a cerquinha baixa de madeira |
+| 64–110 | **pedras cinza-quente e arbustos sálvia** cobrindo a metade de cima da pista |
+| 110–160 | a **trilha**: uma faixa estreita de terra batida, cor de areia, com um sulco fino de roda de moto no meio |
+| 160–204 | **pedras e arbustos** de novo, cobrindo a metade de baixo |
+
+~~~text
+STYLE — USE THE TWO ATTACHED IMAGES AS THE ART STYLE REFERENCE and match their rendering exactly: a trendy flat hand-drawn fashion illustration; thin, even, slightly sketchy lineart in dark charcoal-brown (never black, never thick); 100% flat fill colors, no gradients, no glossy highlights; shading only as a few flat, irregular, slightly darker patches; a muted warm palette (sand, clay brown, warm gray, sage green, olive). Take ONLY the art style: do NOT copy their characters, couples, outfits, poses, hearts or backgrounds.
+
+A horizontal ground STRIP for a side-view kids' racing game, 1280 x 204, opaque, SEAMLESS: the left edge must tile perfectly with the right edge. Flat front view with NO perspective. From top to bottom: (1) a packed light-brown DIRT pit lane about 56 pixels tall with faint tire marks; (2) a low wooden rail about 8 pixels tall; (3) a band about 46 pixels tall of rounded warm-gray ROCKS and small sage-green BUSHES, crowding in; (4) a NARROW sandy DIRT TRAIL about 50 pixels tall running left to right, with one thin single-wheel rut in its middle, clearly too narrow for a car; (5) another band about 44 pixels tall of rocks and bushes at the bottom. The trail must read instantly as "a narrow path between rocks".
+
+DO NOT INCLUDE: sky, grandstand, trees taller than the strip, karts, motorbikes, people, signs, cones, mud puddles, water, text, letters, numbers, logos, perspective, curves, the people from the reference images, hearts, sparkles, plaid patterns, cel shading, gradients, glossy highlights, thick outlines, white sticker keyline, watermarks, signatures, @handles, website names, painterly rendering, 3D render, photorealistic.
+~~~
+
+---
+
+## 13b. `trilha-pecas.png` — 2 × 1 células de 256 (512 × 256), alfa
+
+| Célula | Peça | Uso |
+|---|---|---|
+| 0 | a **placa de pista estreita**: placa amarela em losango num poste, com o desenho de duas linhas pretas se aproximando no meio (o funil), **sem letras** | aparece na beira da pista antes do trecho estreito |
+| 1 | um **cone** laranja com faixa branca | na boca da trilha; balança quando o carro bate |
+
+~~~text
+STYLE — USE THE TWO ATTACHED IMAGES AS THE ART STYLE REFERENCE and match their rendering exactly: a trendy flat hand-drawn fashion illustration; thin, even, slightly sketchy lineart in dark charcoal-brown (never black, never thick); 100% flat fill colors, no gradients, no glossy highlights; shading only as a few flat, irregular, slightly darker patches; a muted palette with a few clear accents (butter yellow, coral orange, cream). Take ONLY the art style: do NOT copy their characters, couples, outfits, poses, hearts or backgrounds.
+
+A game sprite sheet on a fully TRANSPARENT background: a grid of 2 columns x 1 row, each cell 256 x 256 (total 512 x 256). Each object centered, standing on the bottom of its cell with about 8% margin, seen from the FRONT.
+1. A roadside "ROAD NARROWS" sign: a butter-yellow diamond sign on a thin wooden post, with a simple pictogram of two dark lines that come closer together in the middle (a funnel shape). No letters.
+2. A coral-orange TRAFFIC CONE with one cream stripe, flat base.
+
+DO NOT INCLUDE: letters, words, numbers, arrows other than the funnel lines, karts, motorbikes, people, ground, shadows on the ground, backgrounds, items crossing cell borders, items cut by the cell edge, the people from the reference images, hearts, sparkles, plaid patterns, cel shading, gradients, glossy highlights, thick outlines, white sticker keyline, watermarks, signatures, @handles, website names, painterly rendering, 3D render, photorealistic.
 ~~~
 
 ---

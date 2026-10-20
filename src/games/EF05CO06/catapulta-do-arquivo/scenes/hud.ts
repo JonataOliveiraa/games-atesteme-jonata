@@ -9,6 +9,8 @@ export interface Hud {
     setRound(index: number): void
     celebrate(index: number): Promise<void>
     setHelpEnabled(on: boolean): void
+    /** recolhido, a faixa sobe e esmaece; o `?` não pega toque */
+    setShown(on: boolean): void
     destroy(): void
 }
 
@@ -23,7 +25,7 @@ export interface HudOptions {
 }
 
 export function createHud(scene: Phaser.Scene, opts: HudOptions): Hud {
-    const header = scene.add.graphics().setDepth(DEPTH.header).setScrollFactor(0)
+    const header = scene.add.graphics()
     header.fillStyle(C.shadow, 0.12)
     header.fillRect(0, HEADER.height, W, 8)
     header.fillStyle(C.headerCream, 1)
@@ -38,7 +40,7 @@ export function createHud(scene: Phaser.Scene, opts: HudOptions): Hud {
     const chipW = pipX(opts.rounds - 1) + HUD.pipR + 22 - HUD.chipX
     const chipTop = HUD.pipsY - chipH / 2
 
-    const chip = scene.add.graphics().setDepth(DEPTH.hud).setScrollFactor(0)
+    const chip = scene.add.graphics()
     chip.fillStyle(C.shadow, 0.12)
     chip.fillRoundedRect(HUD.chipX + 2, chipTop + 4, chipW, chipH, chipH / 2)
     chip.fillStyle(C.cream, 1)
@@ -60,10 +62,8 @@ export function createHud(scene: Phaser.Scene, opts: HudOptions): Hud {
         })
         .setOrigin(0.5)
         .setResolution(2)
-        .setDepth(DEPTH.hud + 1)
-        .setScrollFactor(0)
 
-    const pips = scene.add.graphics().setDepth(DEPTH.hud + 1).setScrollFactor(0)
+    const pips = scene.add.graphics()
     let current = 0
     const paint = () => {
         pips.clear()
@@ -102,18 +102,29 @@ export function createHud(scene: Phaser.Scene, opts: HudOptions): Hud {
         .text(0, 1, '?', { fontFamily: FONT.black, fontSize: `${SIZE.help}px`, color: CSS.ink })
         .setOrigin(0.5)
         .setResolution(2)
-    const help = scene.add.container(HUD.helpX, HUD.helpY, [helpArt, helpText]).setDepth(DEPTH.hud).setScrollFactor(0)
+    const help = scene.add.container(HUD.helpX, HUD.helpY, [helpArt, helpText])
+    const back = scene.add.container(0, 0, [header]).setDepth(DEPTH.header).setScrollFactor(0)
+    const front = scene.add.container(0, 0, [chip, levelText, pips, help]).setDepth(DEPTH.hud).setScrollFactor(0)
     const helpZone = scene.add
         .zone(HUD.helpX, HUD.helpY, HUD.helpHit, HUD.helpHit)
         .setDepth(DEPTH.hud + 2)
         .setScrollFactor(0)
         .setInteractive({ useHandCursor: true })
     let helpOn = true
+    let shown = true
+    const reachable = () => helpOn && shown
     helpZone.on('pointerdown', () => {
-        if (!helpOn) return
+        if (!reachable()) return
         void FX.press(scene, help)
         opts.onHelp()
     })
+
+    const slide = { k: 0 }
+    const place = () => {
+        const y = -(HEADER.height + 14) * slide.k
+        back.setY(y).setAlpha(1 - slide.k)
+        front.setY(y).setAlpha(1 - slide.k)
+    }
 
     const setRound = (index: number) => {
         current = Phaser.Math.Clamp(index, 0, opts.rounds)
@@ -136,16 +147,27 @@ export function createHud(scene: Phaser.Scene, opts: HudOptions): Hud {
         },
         setHelpEnabled(on) {
             helpOn = on
-            if (helpZone.input) helpZone.input.enabled = on
+            if (helpZone.input) helpZone.input.enabled = reachable()
             help.setAlpha(on ? 1 : 0.4)
         },
+        setShown(on) {
+            shown = on
+            if (helpZone.input) helpZone.input.enabled = reachable()
+            const k = on ? 0 : 1
+            scene.tweens.killTweensOf(slide)
+            const duration = FX.ms(scene, HEADER.slideMs)
+            if (duration <= 0 || slide.k === k) {
+                slide.k = k
+                place()
+                return
+            }
+            scene.tweens.add({ targets: slide, k, duration, ease: on ? 'Sine.easeOut' : 'Sine.easeIn', onUpdate: place })
+        },
         destroy() {
+            scene.tweens.killTweensOf(slide)
             helpZone.destroy()
-            help.destroy()
-            pips.destroy()
-            levelText.destroy()
-            chip.destroy()
-            header.destroy()
+            front.destroy()
+            back.destroy()
             lives.destroy()
         },
     }

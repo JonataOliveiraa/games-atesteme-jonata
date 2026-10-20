@@ -77,6 +77,7 @@ export const DEVICES: Record<DeviceId, DeviceDef> = {
         at: { x: 1520, y: 1000 },
         sends: 'musica',
         takes: ['voz', 'foto'],
+        dock: { tip: { x: -1, y: 0 }, reach: 0.32, body: 0.41 },
         why: 'O pendrive GUARDA para depois: é ARMAZENAMENTO.',
     },
     memoria: {
@@ -87,6 +88,7 @@ export const DEVICES: Record<DeviceId, DeviceDef> = {
         cell: 7,
         at: { x: 760, y: 1000 },
         takes: ['texto', 'cursor', 'foto'],
+        dock: { tip: { x: 0, y: 1 }, reach: 0.11, body: 0.14 },
         why: 'A MEMÓRIA só SEGURA enquanto o computador usa.',
     },
     hub: {
@@ -112,6 +114,7 @@ export const DEVICES: Record<DeviceId, DeviceDef> = {
         at: { x: 700, y: 1200 },
         size: 140,
         takes: ['foto'],
+        dock: { tip: { x: 0, y: -1 }, reach: 0.29, body: 0.41 },
         why: 'O cartão GUARDA as fotos: é ARMAZENAMENTO.',
     },
 }

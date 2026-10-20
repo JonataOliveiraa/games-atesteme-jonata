@@ -1,15 +1,17 @@
 import Phaser from 'phaser'
 import { FX } from '../../../../shared/effects/FX'
-import { MUD_KEY, PIECE_CELL, PIECE_SHEET, TENT_KEY, TRACK_KEY, cellKey } from '../data/files'
-import { CAR_X, DEPTH, FINISH, HAY, MUD, PIT_LANE, PIT_MARK, PUDDLES, STRIP, TENT, TRACK_BAND, W } from '../data/layout'
+import { MUD_KEY, PIECE_CELL, PIECE_SHEET, TENT_KEY, TRACK_KEY, TRAIL_CELL, TRAIL_KEY, TRAIL_SHEET, cellKey } from '../data/files'
+import { CAR_X, DEPTH, FINISH, HAY, MUD, PIT_LANE, PIT_MARK, PUDDLES, STRIP, TENT, TRACK_BAND, TRAIL, W } from '../data/layout'
+import { totalOf } from '../data/levels'
 import { C } from '../data/theme'
-import type { LevelDef } from '../types'
+import type { LevelDef, Sector } from '../types'
 import type { View } from './view'
 
 /**
  * O mundo que corre. Tudo é desenhado em função da distância da Kika (`d`):
  * ela fica em CAR_X, e um ponto `p` da corrida aparece em CAR_X + (p − d).
- * O que é da volta (tendas, lama, poças, chegada) se repete a cada `lap`.
+ * O que é da volta (tendas, poças, chegada) se repete a cada `lap`; a lama e a
+ * trilha estreita são trechos da corrida, em distância absoluta.
  */
 export interface Track {
     readonly d: number
@@ -21,6 +23,9 @@ export interface Track {
     hay(p: number | null): void
     hayX(): number
     tentRect(p: number): { x: number; y: number; w: number; h: number }
+    gateAhead(p: number): number | null
+    cones(p: number | null): void
+    bump(p: number): Promise<void>
     destroy(): void
 }
 
@@ -31,12 +36,36 @@ export function createTrack(scene: Phaser.Scene, view: View, level: LevelDef): T
     const sx = W / src.width
     strip.setTileScale(sx, STRIP.h / src.height)
 
-    const mudSrc = scene.textures.get(MUD_KEY).getSourceImage() as { width: number; height: number }
-    const mudScale = { x: W / mudSrc.width, y: MUD.h / mudSrc.height }
-    const muds = level.mud.map(() => {
-        const t = view.world(scene.add.tileSprite(0, MUD.y, W, MUD.h, MUD_KEY).setOrigin(0, 0).setDepth(DEPTH.mud))
-        t.setTileScale(mudScale.x, mudScale.y)
-        return t
+    const total = totalOf(level)
+    const band = (key: string, sectors: Sector[]) => {
+        const src = scene.textures.get(key).getSourceImage() as { width: number; height: number }
+        const scale = { x: W / src.width, y: MUD.h / src.height }
+        return sectors.map(s => {
+            const t = view.world(scene.add.tileSprite(0, MUD.y, W, MUD.h, key).setOrigin(0, 0).setDepth(DEPTH.mud))
+            t.setTileScale(scale.x, scale.y)
+            return { t, s, scale }
+        })
+    }
+    const muds = band(MUD_KEY, level.mud)
+    const trails = band(
+        TRAIL_KEY,
+        level.narrow.map(s => ({ from: s.from <= 0 ? -W * 2 : s.from + TRAIL.mouth, to: s.to >= total ? total + W * 2 : s.to - TRAIL.mouth })),
+    )
+    const entries = level.narrow.filter(s => s.from > 0).map(s => s.from + TRAIL.mouth)
+
+    const coneSet = (at: number | null) => {
+        const imgs = TRAIL.cones.map(c => {
+            const img = view.world(scene.add.image(0, c.y, TRAIL_SHEET.key, cellKey(TRAIL_CELL.cone)).setOrigin(0.5, 1).setDepth(DEPTH.cone))
+            return img.setScale(TRAIL.coneH / img.frame.height)
+        })
+        return { at, imgs }
+    }
+    const gates = entries.map(p => coneSet(p))
+    const spare = coneSet(null)
+    const signs = entries.map(p => {
+        const img = view.world(scene.add.image(0, TRAIL.signY, TRAIL_SHEET.key, cellKey(TRAIL_CELL.sign)).setOrigin(0.5, 1).setDepth(DEPTH.sign))
+        img.setScale(TRAIL.signH / img.frame.height)
+        return { img, at: p - TRAIL.sign }
     })
 
     const tents = level.boxes.map(() => {
@@ -93,21 +122,26 @@ export function createTrack(scene: Phaser.Scene, view: View, level: LevelDef): T
 
     const paint = () => {
         strip.tilePositionX = d / sx
-        level.mud.forEach((s, i) => {
-            const len = s.to - s.from
-            const p0 = near((s.from + s.to) / 2) - len / 2
-            const x0 = screenX(p0)
+        ;[...muds, ...trails].forEach(({ t, s, scale }) => {
+            const x0 = screenX(s.from)
             const a = Math.max(0, x0)
-            const b = Math.min(W, x0 + len)
-            const t = muds[i]
+            const b = Math.min(W, screenX(s.to))
             if (b <= a) {
                 t.setVisible(false)
                 return
             }
             t.setVisible(true).setPosition(a, MUD.y)
             t.setSize(b - a, MUD.h)
-            t.tilePositionX = (a - x0 + p0) / mudScale.x
+            t.tilePositionX = (a - x0 + s.from) / scale.x
         })
+        ;[...gates, spare].forEach(g => {
+            g.imgs.forEach((img, i) => {
+                if (g.at === null) return img.setVisible(false)
+                const x = screenX(g.at) + TRAIL.cones[i].dx
+                img.setVisible(x > -100 && x < W + 100).setX(x)
+            })
+        })
+        signs.forEach(s => s.img.setX(screenX(s.at)))
         level.boxes.forEach((q, i) => tents[i].setX(screenX(near(q))))
         puddles.forEach((img, i) => img.setX(screenX(near(PUDDLES.at[i] * L))))
         finish.setX(screenX(near(0)))
@@ -147,10 +181,27 @@ export function createTrack(scene: Phaser.Scene, view: View, level: LevelDef): T
             const x = screenX(p)
             return { x, y: TENT.base - 110, w: TENT.w, h: 240 }
         },
+        gateAhead(p) {
+            return entries.find(e => e > p && e - p < TRAIL.ahead) ?? null
+        },
+        cones(p) {
+            spare.at = p
+            paint()
+        },
+        async bump(p) {
+            const g = [...gates, spare].find(x => x.at !== null && Math.abs(x.at - p) < 10)
+            if (!g) return
+            await FX.all(
+                ...g.imgs.map((img, i) =>
+                    FX.to(scene, img, { angle: i % 2 ? -14 : 14 }, { duration: 110, yoyo: true, repeat: 2, delay: i * 40 }).then(() => img.setAngle(0)),
+                ),
+            )
+        },
         destroy() {
             pulse.remove()
-            scene.tweens.killTweensOf([...puddles, markG])
-            ;[strip, ...muds, ...tents, ...puddles, finish, markG, hayImg].forEach(o => o.destroy())
+            const cones = [...gates, spare].flatMap(g => g.imgs)
+            scene.tweens.killTweensOf([...puddles, markG, ...cones])
+            ;[strip, ...muds.map(m => m.t), ...trails.map(m => m.t), ...cones, ...signs.map(s => s.img), ...tents, ...puddles, finish, markG, hayImg].forEach(o => o.destroy())
         },
     }
     paint()

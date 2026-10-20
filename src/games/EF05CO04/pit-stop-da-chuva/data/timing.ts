@@ -16,6 +16,9 @@ export const TIMING = {
     count: 700,
     finale: 1600,
     lean: 750,
-    rule: 700,
     caption: 1400,
+    /** A criança parada no box: depois de tanto tempo, as etiquetas leem a regra sozinhas. */
+    hintFirst: 4000,
+    hintEvery: 5000,
+    hintStep: 450,
 } as const

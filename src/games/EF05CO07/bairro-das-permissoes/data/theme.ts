@@ -27,6 +27,12 @@ export const C = {
     wallD: 0xc9b3f2,
     roofD: 0x5d7299,
     doorD: 0xff86d0,
+    wallE: 0xffc79a,
+    roofE: 0x7a4a2e,
+    doorE: 0x8fd3ff,
+    wallF: 0xc8f0ee,
+    roofF: 0x2f6f84,
+    doorF: 0xffc23d,
     window: 0xfff6d8,
     windowDark: 0x7aa7d9,
 
@@ -66,6 +72,9 @@ export const C = {
     shoe: 0xffffff,
     shoeDark: 0xdfe5ee,
     wheel: 0xffc800,
+    pack: 0xf59a3a,
+    packDark: 0xd47a22,
+    packFlap: 0xffb860,
     eye: 0xffffff,
     pupil: 0x1d1d26,
     mouth: 0x7a2a3a,
@@ -105,6 +114,9 @@ export const C = {
     yesDark: 0x2c9452,
     no: 0xff5a4f,
     noDark: 0xc93a31,
+    busyShop: 0x7b8194,
+    wait: 0xf5a524,
+    waitDark: 0xc27a0e,
     oops: 0xff9d57,
     butter: 0xffe08a,
     spark: 0xffe066,
@@ -121,6 +133,7 @@ export const CSS = {
     accent: '#157bb3',
     yes: '#2c9452',
     no: '#c93a31',
+    wait: '#c27a0e',
 } as const
 
 export const FONT = {
@@ -138,6 +151,7 @@ export const SIZE = {
     banner: 34,
     caption: 42,
     stamp: 64,
+    tag: 19,
 } as const
 
 export function inkOn(tone: number): string {

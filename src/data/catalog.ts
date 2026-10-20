@@ -124,8 +124,15 @@ import coverLancheEmCamadas from "../assets/games/EF05CO01/lanche-em-camadas/cov
 import coverUmDiaNoCelular from "../assets/games/EF04CO07/um-dia-no-celular/cover-um-dia-no-celular.png";
 import coverRastroDaNoticia from "../assets/games/EF04CO08/rastro-da-noticia/cover-rastro-da-noticia.png";
 import coverArvoreDaFamilia from "../assets/games/EF05CO02/arvore-da-familia/cover-arvore-da-familia.png";
+import coverCatapultaDoArquivo from "../assets/games/EF05CO06/catapulta-do-arquivo/cover-catapulta-do-arquivo.png";
 import coverRioDeChocolate from "../assets/games/EF05CO03/rio-de-chocolate/cover-rio-de-chocolate.png";
-import coverCaboCerto from "../assets/games/EF05CO05/cabo-certo/cover-cabo-certo.png";
+import coverPitStopDaChuva from "../assets/games/EF05CO04/pit-stop-da-chuva/cover-pit-stop-da-chuva.png";
+import coverRotaDaMadrugada from "../assets/games/EF05CO11/rota-da-madrugada/cover-rota-da-madrugada.png";
+import coverCaboCerto from"../assets/games/EF05CO05/cabo-certo/cover-cabo-certo.png";
+import coverBairroDasPermissoes from "../assets/games/EF05CO07/bairro-das-permissoes/cover-bairro-das-permissoes.png";
+import coverRadioDaEscola from "../assets/games/EF05CO09/radio-da-escola/cover-radio-da-escola.png";
+import coverPulaPulaNaInternet from "../assets/games/EF05CO08/pula-pula-na-internet/cover-pula-pula-na-internet.png";
+import coverPescadoresDoTempo from "../assets/games/EF05CO10/pescadores-do-tempo/cover-pescadores-do-tempo.png";
 /**
  * 1. `id` nunca muda e nunca é reaproveitado. Se um jogo for removido,
  *    marque status "draft" — não devolva o id para a fila.
@@ -1532,8 +1539,9 @@ export const catalog: Game[] = [
     description:
       "Pilote a Kika: acelere, freie e, quando o tempo ou a pista mudarem, pare no box e ponha o pneu que a regra manda — enquanto os rivais continuam correndo.",
     category: "Pensamento Computacional",
-    points: 55,
+    points: 50,
     icon: "🏎️",
+    thumbnail: coverPitStopDaChuva,
   },
   {
     id: "035",
@@ -1723,6 +1731,23 @@ export const catalog: Game[] = [
     thumbnail: coverCuradoriaComCreditos,
   },
   {
+    id: "129",
+    slug: "radio-da-escola",
+    module: "EF05CO09/radio-da-escola",
+    skill: "EF05CO09",
+    years: [5],
+    tags: ["direitos autorais", "dono", "permissão", "crédito", "música", "ritmo"],
+    order: 392,
+    status: "published",
+    title: "Rádio da Escola",
+    description:
+      "O show da rádio vai ao ar do palco no espaço! Leia o bilhete de cada CD, ponha no ar só a música que o dono deixou tocar e toque as notas que descem pela pista.",
+    category: "Cultura Digital",
+    points: 30,
+    icon: "📻",
+    thumbnail: coverRadioDaEscola,
+  },
+  {
     id: "040",
     slug: "futuro-em-cena",
     module: "EF05CO10/futuro-em-cena",
@@ -1890,6 +1915,22 @@ export const catalog: Game[] = [
     points: 65,
     icon: "🧸",
     thumbnail: coverAchadosEPerdidos,
+  },
+  {
+    id: "134",
+    slug: "boliche-magico",
+    module: "EF15CO03/boliche-magico",
+    skill: "EF15CO03",
+    years: [1, 2, 3, 4, 5],
+    tags: ["lógica", "não", "verdadeiro e falso", "montar frase", "boliche"],
+    order: 447,
+    status: "published",
+    title: "Boliche Mágico",
+    description:
+      "Alguns pinos estão com sono! Monte a frase da Bola Mágica e ela derruba só quem a frase diz. Cuidado: o NÃO troca quem cai.",
+    category: "Pensamento Computacional",
+    points: 30,
+    icon: "🎳",
   },
   {
     id: "045",
@@ -2293,9 +2334,10 @@ export const catalog: Game[] = [
     status: "published",
     title: "Catapulta do Arquivo",
     description:
-      "Lance o arquivo com a catapulta e guarde no lugar que o pedido manda: no LOCAL, o HD de dentro do computador, ou num REMOTO, como o pen drive e a nuvem.",
+      "Lance o arquivo com a catapulta e guarde no lugar certo: no LOCAL, o HD de dentro do computador, ou num REMOTO, que pode ser REMOVÍVEL, como o pen drive, ou estar na INTERNET, como a nuvem.",
     category: "Mundo Digital",
-    points: 40,
+    points: 120,
+    thumbnail: coverCatapultaDoArquivo,
     icon: "🎯",
   },
   {
@@ -2313,6 +2355,7 @@ export const catalog: Game[] = [
     category: "Cultura Digital",
     points: 40,
     icon: "📱",
+    thumbnail: coverPulaPulaNaInternet,
   },
   {
     id: "128",
@@ -2329,6 +2372,73 @@ export const catalog: Game[] = [
     category: "Mundo Digital",
     points: 40,
     icon: "🏘️",
+    thumbnail: coverBairroDasPermissoes,
+  },
+  {
+    id: "130",
+    slug: "pescadores-do-tempo",
+    module: "EF05CO10/pescadores-do-tempo",
+    skill: "EF05CO10",
+    years: [5],
+    tags: ["tempo", "trabalho", "pescador", "tecnologia", "sonar"],
+    order: 402,
+    status: "published",
+    title: "Pescadores do Tempo",
+    description:
+      "Você é uma família de pescadores. A vila pede um peixe: toque nele para pescar! Os anos passam, chegam ferramentas novas, e você conta o que mudou.",
+    category: "Cultura Digital",
+    points: 40,
+    icon: "🎣",
+    thumbnail: coverPescadoresDoTempo,
+  },
+  {
+    id: "131",
+    slug: "ventania-na-floresta",
+    module: "EF15CO01/ventania-na-floresta",
+    skill: "EF15CO01",
+    years: [1, 2, 3, 4, 5],
+    tags: ["estrutura de dados", "organização", "lista", "matriz", "natureza"],
+    order: 422,
+    status: "published",
+    title: "Ventania na Floresta",
+    description:
+      "O vento bagunçou a floresta! Ponha as formigas de volta na fila e o mel de volta no favo, cada coisa no seu lugar.",
+    category: "Pensamento Computacional",
+    points: 40,
+    icon: "🍃",
+  },
+  {
+    id: "132",
+    slug: "rota-da-madrugada",
+    module: "EF05CO11/rota-da-madrugada",
+    skill: "EF05CO11",
+    years: [5],
+    tags: ["tecnologia", "adequação", "problema", "carro", "noite"],
+    order: 418,
+    status: "published",
+    title: "Rota da Madrugada",
+    description:
+      "Leve a encomenda da Dona Cida de noite. Escureceu, choveu, a ponte caiu, acabou o sinal: use a tecnologia do carro que resolve ESTE problema.",
+    category: "Cultura Digital",
+    points: 40,
+    icon: "🚗",
+    thumbnail: coverRotaDaMadrugada,
+  },
+  {
+    id: "133",
+    slug: "circuito-de-bolinha",
+    module: "EF15CO02/circuito-de-bolinha",
+    skill: "EF15CO02",
+    years: [1, 2, 3, 4, 5],
+    tags: ["algoritmo", "sequência", "manual", "montagem"],
+    order: 437,
+    status: "published",
+    title: "Circuito de Bolinha",
+    description:
+      "O Nico só monta o que o manual mostra: ponha as páginas na ordem certa e veja a bolinha descer até o sino.",
+    category: "Pensamento Computacional",
+    points: 40,
+    icon: "🔔",
   },
 ];
 
@@ -2339,7 +2449,7 @@ export const catalog: Game[] = [
  * saltado de 086 para 090; os oito jogos de 090 a 097 desceram três casas
  * (090→087 … 097→094) para fechar o 087–089.
  */
-export const NEXT_FREE_ID = "129";
+export const NEXT_FREE_ID = "135";
 
 /**
  * AS RODADAS DE PRODUÇÃO.

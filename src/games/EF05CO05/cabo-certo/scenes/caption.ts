@@ -8,8 +8,13 @@ import { C, CSS, FONT, SIZE, inkOn } from '../data/theme'
  * ("PROCESSADOR", "ENTRA", "SUA VEZ!"). Ela é o texto que sobrou do tutorial.
  */
 export interface Caption {
-    say(text: string, tone?: number): void
+    /** `grow`: a legenda só ganhou palavra nova (o resumo), então ela não salta de novo. */
+    say(text: string, tone?: number, grow?: boolean): void
     hide(): void
+    /** Some devagar, em vez de sumir de uma vez. */
+    fade(): Promise<void>
+    /** A altura da legenda: logo abaixo do cabeçalho, ou no lugar dele quando ele sobe. */
+    setY(y: number): void
     destroy(): void
 }
 
@@ -27,7 +32,8 @@ export function createCaption(scene: Phaser.Scene): Caption {
     }
 
     return {
-        say(text, tone = C.white) {
+        say(text, tone = C.white, grow = false) {
+            const was = box.visible
             hide()
             label.setText(text).setColor(inkOn(tone))
             const w = label.width + 70
@@ -38,9 +44,19 @@ export function createCaption(scene: Phaser.Scene): Caption {
             g.fillStyle(tone, 1)
             g.fillRoundedRect(-w / 2, -h / 2, w, h, h / 2)
             box.setVisible(true).setAlpha(1).setScale(1)
-            void FX.popIn(scene, box, { from: 0.5, duration: 340 })
+            if (grow && was) void FX.press(scene, box, 1.06)
+            else void FX.popIn(scene, box, { from: 0.5, duration: 340 })
         },
         hide,
+        async fade() {
+            if (!box.visible) return
+            scene.tweens.killTweensOf(box)
+            await FX.to(scene, box, { alpha: 0, scale: 0.92 }, { duration: 220 })
+            box.setVisible(false)
+        },
+        setY(y) {
+            box.setY(y)
+        },
         destroy() {
             hide()
             box.destroy()

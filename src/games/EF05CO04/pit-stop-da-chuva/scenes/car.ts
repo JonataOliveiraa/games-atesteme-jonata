@@ -1,7 +1,7 @@
 import Phaser from 'phaser'
 import { FX } from '../../../../shared/effects/FX'
-import { CAR_CELL, KART_SHEET, MOTO_SHEET, PIECE_CELL, PIECE_SHEET, cellKey } from '../data/files'
-import { GEOMETRY } from '../data/layout'
+import { CAR_CELL, KART_SHEET, MOTO_SHEET, PIECE_CELL, TIRE_SHEET, cellKey } from '../data/files'
+import { GEOMETRY, MOTO_AXES } from '../data/layout'
 import { TIMING } from '../data/timing'
 import { TIRES } from '../data/rules'
 import type { TireId, Vec, Vehicle } from '../types'
@@ -23,7 +23,6 @@ export interface Car {
     pose(cell: number): void
     setTire(tire: TireId | null): void
     swapTires(tire: TireId): Promise<void>
-    bounceOff(tire: TireId): Promise<void>
     roll(dd: number): void
     jiggle(t: number, amount: number): void
     tilt(deg: number): void
@@ -43,6 +42,29 @@ export interface CarOptions {
     cell?: number
 }
 
+/** O veículo vazio com rodas lisas, do tamanho `width`: o desenho dos botões MOTO e CARRO. */
+export function vehicleIcon(scene: Phaser.Scene, vehicle: Vehicle, width: number) {
+    const g = GEOMETRY[vehicle]
+    const s = width / g.cellW
+    const body = scene.add.image(0, 0, (vehicle === 'moto' ? MOTO_SHEET : KART_SHEET).key, cellKey(CAR_CELL.empty)).setScale(s)
+    const r = g.wheelFR * g.cellH * s
+    const tire = TIRES[vehicle === 'moto' ? 'motoLiso' : 'liso']
+    const wheels = axesOf(vehicle, CAR_CELL.empty).map(fx => {
+        const w = scene.add.image((fx - 0.5) * g.cellW * s, (g.axleFY - 0.5) * g.cellH * s, TIRE_SHEET.key, cellKey(tire.cell))
+        return w.setScale((r * 2) / Math.max(w.frame.width, w.frame.height))
+    })
+    return scene.add.container(0, 0, [body, ...wheels])
+}
+
+/** Onde ficam os dois eixos, em fração da célula: na moto, cada grupo de células tem os seus. */
+function axesOf(vehicle: Vehicle, cell: number): readonly number[] {
+    const g = GEOMETRY[vehicle]
+    if (vehicle !== 'moto') return [g.rearFX, g.frontFX]
+    if (cell === CAR_CELL.empty) return MOTO_AXES.empty
+    if (cell === CAR_CELL.rivalA || cell === CAR_CELL.rivalB) return MOTO_AXES.rival
+    return [g.rearFX, g.frontFX]
+}
+
 export function createCar(scene: Phaser.Scene, view: View, opts: CarOptions): Car {
     let vehicle: Vehicle = opts.vehicle
     let tire: TireId | null = null
@@ -60,13 +82,13 @@ export function createCar(scene: Phaser.Scene, view: View, opts: CarOptions): Ca
     let half = (g.bottomFY - 0.5) * dispH
     let r = g.wheelFR * dispH
     let axle = (g.axleFY - g.bottomFY) * dispH + half
-    let spots = [(g.rearFX - 0.5) * dispW, (g.frontFX - 0.5) * dispW]
+    let spots = axesOf(vehicle, cell).map(fx => (fx - 0.5) * dispW)
 
     const sheetOf = (v: Vehicle) => (v === 'moto' ? MOTO_SHEET : KART_SHEET)
 
     const shadow = view.world(scene.add.image(0, 0, SHADOW).setAlpha(0.22))
     const body = view.world(scene.add.image(0, 0, sheetOf(vehicle).key, cellKey(cell)))
-    let wheels = [0, 1].map(() => view.world(scene.add.image(0, 0, PIECE_SHEET.key, cellKey(PIECE_CELL.liso))))
+    let wheels = [0, 1].map(() => view.world(scene.add.image(0, 0, TIRE_SHEET.key, cellKey(PIECE_CELL.liso))))
     const inner = view.world(scene.add.container(0, 0, [body, ...wheels]))
     const root = view.world(scene.add.container(px, pg, [inner]))
 
@@ -80,7 +102,7 @@ export function createCar(scene: Phaser.Scene, view: View, opts: CarOptions): Ca
         half = (g.bottomFY - 0.5) * dispH
         r = g.wheelFR * dispH
         axle = (g.axleFY - g.bottomFY) * dispH + half
-        spots = [(g.rearFX - 0.5) * dispW, (g.frontFX - 0.5) * dispW]
+        spots = axesOf(vehicle, cell).map(fx => (fx - 0.5) * dispW)
         body.setTexture(sheetOf(vehicle).key, cellKey(cell)).setOrigin(0.5, g.bottomFY).setScale(s).setPosition(0, half)
         inner.setPosition(0, -half)
         wheels.forEach((w, i) => w.setOrigin(0.5).setPosition(spots[i], axle))
@@ -149,27 +171,6 @@ export function createCar(scene: Phaser.Scene, view: View, opts: CarOptions): Ca
             const base = wheels[0].scaleX
             wheels.forEach(w => w.setScale(base * 0.3))
             await FX.to(scene, wheels, { scale: base }, { duration: TIMING.wheel, ease: 'Back.easeOut' })
-        },
-        async bounceOff(next) {
-            const wrong = TIRES[next]
-            const size = wrong.vehicle === 'moto' ? 1.45 : 0.7
-            wheels.forEach(w => {
-                w.setFrame(cellKey(wrong.cell)).setVisible(true)
-                w.setScale(((r * 2) / Math.max(w.frame.width, w.frame.height)) * size)
-            })
-            await FX.wait(scene, TIMING.wheel)
-            const p = inner.getWorldTransformMatrix()
-            wheels.forEach((w, i) => {
-                const at = p.transformPoint(w.x, w.y)
-                const copy = view.world(scene.add.image(at.x, at.y, w.texture.key, w.frame.name))
-                copy.setScale(w.scaleX * ls).setDepth(root.depth + 1)
-                const dir = i === 0 ? -1 : 1
-                void FX.arcTo(scene, copy, { x: at.x + dir * 260, y: at.y + 40 }, { height: 140, duration: 900 }).then(() => copy.destroy())
-                void FX.to(scene, copy, { angle: dir * 540 }, { duration: 900 })
-                w.setVisible(false)
-            })
-            tire = null
-            await FX.to(scene, body, { y: half + r * 0.6 }, { duration: 240, ease: 'Bounce.easeOut' })
         },
         roll(dd) {
             if (flat) return

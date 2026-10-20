@@ -1,6 +1,6 @@
 /**
  * EF05CO04: algoritmo com seleção condicional. A Kika corre e a criança pilota;
- * quando o tempo, o chão ou o veículo mudam, ela chama o box e executa a regra
+ * quando o tempo, o chão ou a pista mudam, ela chama o box e executa a regra
  * da equipe. A regra é uma árvore: SE/SENÃO (N1), SENÃO SE (N2), SE aninhado (N3).
  */
 
@@ -12,18 +12,18 @@ export type Vehicle = 'carro' | 'moto'
 
 export type TireId = 'liso' | 'chuva' | 'cravos' | 'motoLiso' | 'motoChuva'
 
-export type Test = 'chovendo' | 'lama' | 'moto'
+export type Test = 'chovendo' | 'lama' | 'estreita'
 
 export type State = 'intro' | 'demo' | 'grid' | 'race' | 'pit' | 'swap' | 'error' | 'help' | 'finish' | 'done'
 
 export type Lane = 'front' | 'back' | 'pit'
 
-export type Failure = 'aquaplana' | 'esquenta' | 'atola' | 'naoServe'
+export type Failure = 'aquaplana' | 'esquenta' | 'atola' | 'naoCabe' | 'pistaLarga'
 
 export interface Situation {
     weather: Weather
     ground: Ground
-    vehicle: Vehicle
+    narrow: boolean
 }
 
 export interface Vec {
@@ -89,5 +89,11 @@ export interface LevelDef {
     mud: Sector[]
     start: Weather
     events: WeatherEvent[]
-    vehicles: Vehicle[]
+    narrow: Sector[]
+    pitZone?: number
+    parkV?: number
+    nudgeMs?: number
+    calm?: number
+    /** Multiplica a velocidade dos rivais (1 = a de RIVALS). */
+    rivalPace?: number
 }

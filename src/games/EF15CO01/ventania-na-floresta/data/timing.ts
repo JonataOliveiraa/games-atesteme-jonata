@@ -1,0 +1,17 @@
+export const TIMING = {
+    beat: 550,
+    march: 1300,
+    gust: 1500,
+    tumble: 900,
+    walk: 900,
+    settle: 260,
+    fly: 620,
+    pick: 380,
+    plant: 420,
+    bounce: 360,
+    error: 2200,
+    fade: 420,
+    done: 1100,
+    finale: 1500,
+    enter: 520,
+} as const

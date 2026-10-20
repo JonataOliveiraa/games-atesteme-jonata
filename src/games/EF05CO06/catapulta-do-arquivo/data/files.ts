@@ -1,5 +1,5 @@
 import type Phaser from 'phaser'
-import type { DeviceId, FileId } from '../types'
+import type { DeviceId, FileId, Scenery } from '../types'
 
 export interface Sheet {
     key: string
@@ -11,12 +11,24 @@ export interface Sheet {
     crop: boolean
 }
 
-export const SKY = 'bg-ceu'
-/** a terra, repetida por baixo de qualquer relevo */
-export const DIRT = 'terra'
+/** cada lugar tem o seu céu fixo, o seu chão (repetido por baixo do relevo), a borda de cima e o túnel */
+export const SCENERY: Record<Scenery, { sky: string; ground: string; edge: string; tunnel: string }> = {
+    campo: { sky: 'bg-ceu', ground: 'terra', edge: 'borda-campo', tunnel: 'tunel-campo' },
+    praia: { sky: 'bg-praia', ground: 'areia', edge: 'borda-praia', tunnel: 'tunel-praia' },
+    serra: { sky: 'bg-serra', ground: 'pedra', edge: 'borda-serra', tunnel: 'tunel-serra' },
+}
+
+/** a borda repete na horizontal; a linha do chão fica em `line` do PNG */
+export const EDGE = { w: 512, h: 96, line: 36 } as const
+/** o túnel repete na vertical e encolhe/estica até a largura da boca */
+export const TUNNEL = { w: 128, h: 256 } as const
+
+export const SKY = SCENERY.campo.sky
+export const DIRT = SCENERY.campo.ground
 /** a tábua, esticada pelo meio até a largura de cada plataforma */
 export const PLANK = 'tabua'
-export const PLANK_CORNER = 18
+/** os pregos da tábua ficam a ~31 px das pontas (PNG 772 × 40): as pontas não esticam */
+export const PLANK_CORNER = 48
 
 export const DEVICE_SHEET: Sheet = { key: 'aparelhos', cols: 3, rows: 2, cellW: 320, cellH: 320, crop: false }
 export const PIECE_SHEET: Sheet = { key: 'pecas', cols: 4, rows: 2, cellW: 200, cellH: 200, crop: true }

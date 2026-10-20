@@ -1,7 +1,7 @@
 import Phaser from 'phaser'
 import { FX } from '../../../../shared/effects/FX'
 import { DEVICE_CELL, DEVICE_SHEET, GABINETE_CELL } from '../data/files'
-import { CLOUD, DEPTH, DEVICE_SCALE, GABINETE, HOLE_ART } from '../data/layout'
+import { CLOUD, DEPTH, DEVICE_ART, DEVICE_H, DEVICE_SCALE } from '../data/layout'
 import { deviceAt, targetsOf } from '../data/levels'
 import { C, CSS, FONT, SIZE } from '../data/theme'
 import { NAME } from '../data/words'
@@ -44,40 +44,40 @@ function label(scene: Phaser.Scene, x: number, y: number, text: string) {
     return scene.add.container(x, y, [g, t]).setDepth(DEPTH.label)
 }
 
+/** a arte do aparelho em pé, com a base na origem; o HD interno aparece como o computador que o traz dentro */
 function deviceArt(scene: Phaser.Scene, id: DeviceId) {
-    if (id === 'hdInterno') {
-        const box = cell(scene, DEVICE_SHEET, GABINETE_CELL, GABINETE.scale)
-        const hd = cell(scene, DEVICE_SHEET, DEVICE_CELL.hdInterno, GABINETE.scale * 0.9).setY(GABINETE.bayDy * GABINETE.scale)
-        return [box, hd]
-    }
-    if (id === 'nuvem') return [cell(scene, DEVICE_SHEET, DEVICE_CELL.nuvem, CLOUD.scale)]
-    return [cell(scene, DEVICE_SHEET, DEVICE_CELL[id], DEVICE_SCALE[id])]
+    if (id === 'nuvem') return cell(scene, DEVICE_SHEET, DEVICE_CELL.nuvem, CLOUD.scale)
+    const index = id === 'hdInterno' ? GABINETE_CELL : DEVICE_CELL[id]
+    return cell(scene, DEVICE_SHEET, index, DEVICE_SCALE[id]).setOrigin(0.5, DEVICE_ART.baseY / DEVICE_SHEET.cellH)
 }
 
-/** os alvos do mapa: um dispositivo no fundo de cada buraco e as nuvens do céu */
+/** os alvos do mapa: os aparelhos em pé na superfície e as nuvens do céu */
 export function createTargets(scene: Phaser.Scene, round: Round, world: World): Targets {
     const items = new Map<TargetId, Item>()
     const tags: Phaser.GameObjects.Text[] = []
     const cloudX = round.map.clouds.map(c => c.x)
+    const labelY = (i: number) => world.deviceBase(i).y - DEVICE_H[round.map.devices[i].device] - DEVICE_ART.labelGap
 
     targetsOf(round).forEach(id => {
         const i = Number(id.slice(1))
         const device = deviceAt(round, id)
-        if (id.startsWith('h')) {
-            const spot = world.deviceSpot(i)
-            const root = scene.add.container(spot.x, spot.y, deviceArt(scene, device)).setDepth(DEPTH.device)
-            const top = world.holeTop(i)
-            items.set(id, { root, label: label(scene, spot.x, top + HOLE_ART.labelDy, NAME[device]) })
+        if (id.startsWith('d')) {
+            const base = world.deviceBase(i)
+            const root = scene.add.container(base.x, base.y, [deviceArt(scene, device)]).setDepth(DEPTH.device)
+            items.set(id, { root, label: label(scene, base.x, labelY(i), NAME[device]) })
             return
         }
         const c = round.map.clouds[i]
-        const root = scene.add.container(c.x, c.y, deviceArt(scene, device)).setDepth(DEPTH.cloud)
+        const root = scene.add.container(c.x, c.y, [deviceArt(scene, device)]).setDepth(DEPTH.cloud)
         items.set(id, { root, label: label(scene, c.x, c.y + CLOUD.labelDy, NAME[device]) })
     })
 
     const pos = (id: TargetId) => {
         const item = items.get(id)
-        return item ? { x: item.root.x, y: item.root.y } : { x: 0, y: 0 }
+        if (!item) return { x: 0, y: 0 }
+        if (id.startsWith('c')) return { x: item.root.x, y: item.root.y }
+        const box = world.deviceBox(Number(id.slice(1)))
+        return { x: box.x, y: box.y }
     }
 
     return {
@@ -94,9 +94,10 @@ export function createTargets(scene: Phaser.Scene, round: Round, world: World): 
         rect(id) {
             const p = pos(id)
             if (id.startsWith('c')) return { x: p.x, y: p.y + 20, w: 240, h: 200 }
-            const top = world.holeTop(Number(id.slice(1)))
-            const bottom = p.y + 60
-            return { x: p.x, y: (top - 70 + bottom) / 2, w: 200, h: bottom - top + 70 }
+            const i = Number(id.slice(1))
+            const top = labelY(i) - 26
+            const bottom = world.deviceBase(i).y + 16
+            return { x: p.x, y: (top + bottom) / 2, w: 200, h: bottom - top }
         },
         glow(id, color) {
             const p = pos(id)
@@ -110,7 +111,7 @@ export function createTargets(scene: Phaser.Scene, round: Round, world: World): 
         },
         tag(id, text, color) {
             const p = pos(id)
-            const y = id.startsWith('c') ? p.y - 96 : world.holeTop(Number(id.slice(1))) - 100
+            const y = id.startsWith('c') ? p.y - 96 : labelY(Number(id.slice(1))) - 50
             const t = scene.add
                 .text(p.x, y, text, { fontFamily: FONT.black, fontSize: '30px', color, stroke: CSS.white, strokeThickness: 8 })
                 .setOrigin(0.5)

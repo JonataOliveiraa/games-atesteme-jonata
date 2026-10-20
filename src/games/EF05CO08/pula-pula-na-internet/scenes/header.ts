@@ -5,10 +5,14 @@ import { DEPTH, HEADER, HUD, W } from '../data/layout'
 import { C, CSS, FONT, SIZE, inkOn } from '../data/theme'
 import { LABEL } from '../data/words'
 
+const BAND_KEY = 'cabecalho'
+const HELP_KEY = 'ajuda'
+
 export interface Header {
     readonly lives: Lives
     ask(text: string, strong?: boolean): void
     celebrate(index: number): Promise<void>
+    setLevel(level: number): void
     setHelpEnabled(on: boolean): void
     destroy(): void
 }
@@ -24,26 +28,38 @@ export interface HeaderOptions {
 }
 
 export function createHeader(scene: Phaser.Scene, opts: HeaderOptions): Header {
-    const band = scene.add.graphics().setDepth(DEPTH.header)
-    band.fillStyle(C.shadow, 0.16)
-    band.fillRect(0, HEADER.h + 2, W, 8)
-    band.fillStyle(C.headerFace, 1)
-    band.fillRect(0, 0, W, HEADER.h)
-    band.fillStyle(C.headerRim, 1)
-    band.fillRect(0, HEADER.h - 6, W, 6)
-    band.fillStyle(C.headerLine, 0.55)
-    band.fillRect(0, HEADER.h, W, 2)
-    HEADER.dividers.forEach(x => {
-        band.fillStyle(C.headerRim, 1)
-        band.fillRoundedRect(x - 1.5, 18, 3, HEADER.h - 40, 1.5)
-    })
-
-    const pill = scene.add.graphics().setDepth(DEPTH.hud)
-    const top = HUD.y - HUD.levelH / 2
-    pill.fillStyle(C.headerLine, 1)
-    pill.fillRoundedRect(HUD.levelX, top + 4, HUD.levelW, HUD.levelH, HUD.levelH / 2)
-    pill.fillStyle(C.accent, 1)
-    pill.fillRoundedRect(HUD.levelX, top, HUD.levelW, HUD.levelH, HUD.levelH / 2)
+    if (!scene.textures.exists(BAND_KEY)) {
+        const g = scene.make.graphics({ x: 0, y: 0 }, false)
+        g.fillStyle(C.shadow, 0.16)
+        g.fillRect(0, HEADER.h + 2, W, 8)
+        g.fillStyle(C.headerFace, 1)
+        g.fillRect(0, 0, W, HEADER.h)
+        g.fillStyle(C.headerRim, 1)
+        g.fillRect(0, HEADER.h - 6, W, 6)
+        g.fillStyle(C.headerLine, 0.55)
+        g.fillRect(0, HEADER.h, W, 2)
+        HEADER.dividers.forEach(x => {
+            g.fillStyle(C.headerRim, 1)
+            g.fillRoundedRect(x - 1.5, 18, 3, HEADER.h - 40, 1.5)
+        })
+        const top = HUD.y - HUD.levelH / 2
+        g.fillStyle(C.headerLine, 1)
+        g.fillRoundedRect(HUD.levelX, top + 4, HUD.levelW, HUD.levelH, HUD.levelH / 2)
+        g.fillStyle(C.accent, 1)
+        g.fillRoundedRect(HUD.levelX, top, HUD.levelW, HUD.levelH, HUD.levelH / 2)
+        g.generateTexture(BAND_KEY, W, HEADER.h + 10)
+        g.destroy()
+    }
+    if (!scene.textures.exists(HELP_KEY)) {
+        const g = scene.make.graphics({ x: 0, y: 0 }, false)
+        g.fillStyle(C.shadow, 0.25)
+        g.fillCircle(HUD.helpR, HUD.helpR + 4, HUD.helpR)
+        g.fillStyle(C.headerLine, 1)
+        g.fillCircle(HUD.helpR, HUD.helpR, HUD.helpR)
+        g.generateTexture(HELP_KEY, HUD.helpR * 2, HUD.helpR * 2 + 4)
+        g.destroy()
+    }
+    const band = scene.add.image(0, 0, BAND_KEY).setOrigin(0).setDepth(DEPTH.header)
     const levelText = scene.add
         .text(HUD.levelX + HUD.levelW / 2, HUD.y, `${LABEL.level} ${opts.level}`, {
             fontFamily: FONT.black,
@@ -91,11 +107,7 @@ export function createHeader(scene: Phaser.Scene, opts: HeaderOptions): Header {
     })
     lives.container.setVisible(false)
 
-    const helpArt = scene.add.graphics()
-    helpArt.fillStyle(C.shadow, 0.25)
-    helpArt.fillCircle(0, 4, HUD.helpR)
-    helpArt.fillStyle(C.headerLine, 1)
-    helpArt.fillCircle(0, 0, HUD.helpR)
+    const helpArt = scene.add.image(0, 2, HELP_KEY)
     const helpText = scene.add
         .text(0, 1, '?', { fontFamily: FONT.black, fontSize: `${SIZE.help - 4}px`, color: '#ffffff' })
         .setOrigin(0.5)
@@ -144,6 +156,16 @@ export function createHeader(scene: Phaser.Scene, opts: HeaderOptions): Header {
             await FX.to(scene, pip, { y: HUD.y - 10 }, { duration: 150, yoyo: true })
             pip.setY(HUD.y)
         },
+        setLevel(level) {
+            levelText.setText(`${LABEL.level} ${level}`)
+            void FX.to(scene, levelText, { scale: 1.25 }, { duration: 160, yoyo: true })
+            current = 0
+            paint()
+            pips.forEach((pip, i) => {
+                pip.setScale(0)
+                void FX.to(scene, pip, { scale: i === 0 ? 1.15 : 1 }, { duration: 240, delay: 120 + i * 70, ease: 'Back.easeOut' })
+            })
+        },
         setHelpEnabled(on) {
             helpOn = on
             paintHelp()
@@ -155,7 +177,6 @@ export function createHeader(scene: Phaser.Scene, opts: HeaderOptions): Header {
             levelText.destroy()
             askText.destroy()
             pips.forEach(p => p.destroy())
-            pill.destroy()
             band.destroy()
             lives.destroy()
         },

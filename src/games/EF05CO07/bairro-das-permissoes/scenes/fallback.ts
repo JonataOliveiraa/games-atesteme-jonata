@@ -1,5 +1,5 @@
 import Phaser from 'phaser'
-import { DECO_SHEET, GRASS_KEY, HAND_KEY, HOUSE_SHEET, ICON_SHEET, KID_SHEET, type Sheet } from '../data/files'
+import { BAG_KEY, DECO2_SHEET, DECO_SHEET, GRASS_KEY, HOUSE_SHEET, ICON_SHEET, KID_SHEET, type Sheet } from '../data/files'
 import { C } from '../data/theme'
 
 type G = Phaser.GameObjects.Graphics
@@ -71,8 +71,20 @@ export function ensureArt(scene: Phaser.Scene) {
     bakeSheet(scene, HOUSE_SHEET, house)
     bakeSheet(scene, ICON_SHEET, icon)
     bakeSheet(scene, DECO_SHEET, deco)
+    bakeSheet(scene, DECO2_SHEET, deco2)
     bakeImage(scene, GRASS_KEY, 512, 512, grass)
-    bakeImage(scene, HAND_KEY, 256, 256, hand)
+    bakeImage(scene, BAG_KEY, 128, 128, bag)
+}
+
+function bag(g: G) {
+    g.lineStyle(9, C.packDark, 1)
+    g.strokeRoundedRect(44, 8, 40, 34, 14)
+    rr(g, 16, 30, 96, 90, 28, C.packDark)
+    rr(g, 18, 26, 92, 88, 28, C.pack)
+    rr(g, 18, 26, 92, 42, 21, C.packFlap)
+    rr(g, 56, 52, 16, 22, 6, C.butter)
+    rr(g, 34, 80, 60, 30, 13, C.packDark)
+    rr(g, 42, 86, 44, 6, 3, C.pack)
 }
 
 type Facing = 'down' | 'up' | 'side'
@@ -176,6 +188,8 @@ function kid(g: G, facing: Facing, pose: Pose, moving: boolean) {
     if (side) {
         arm(1, C.shirtDark)
         leg(0)
+        rr(g, CX - 40, 70 + b, 30, 50, 12, C.pack)
+        rr(g, CX - 40, 70 + b, 30, 18, 9, C.packFlap)
     } else {
         leg(0)
         leg(1)
@@ -184,10 +198,20 @@ function kid(g: G, facing: Facing, pose: Pose, moving: boolean) {
     if (side) {
         rr(g, CX - 21, 66 + b, 42, 54, 15, C.shirt)
         rr(g, CX - 21, 112 + b, 42, 22, 9, C.shorts)
+        rr(g, CX - 9, 68 + b, 8, 42, 4, C.packDark)
     } else {
         rr(g, CX - 27, 66 + b, 54, 54, 15, C.shirt)
-        if (facing === 'down') rr(g, CX - 10, 70 + b, 20, 7, 3.5, C.shirtDark)
+        if (facing === 'down') {
+            rr(g, CX - 10, 70 + b, 20, 7, 3.5, C.shirtDark)
+            rr(g, CX - 22, 68 + b, 8, 40, 4, C.packDark)
+            rr(g, CX + 14, 68 + b, 8, 40, 4, C.packDark)
+        }
         rr(g, CX - 25, 112 + b, 50, 22, 9, C.shorts)
+        if (facing === 'up') {
+            rr(g, CX - 25, 70 + b, 50, 56, 15, C.pack)
+            rr(g, CX - 25, 70 + b, 50, 22, 11, C.packFlap)
+            rr(g, CX - 15, 100 + b, 30, 20, 8, C.packDark)
+        }
     }
 
     if (side) leg(1)
@@ -242,11 +266,13 @@ const LOOKS = [
     { wall: C.wallB, roof: C.roofB, door: C.doorB },
     { wall: C.wallC, roof: C.roofC, door: C.doorC },
     { wall: C.wallD, roof: C.roofD, door: C.doorD },
+    { wall: C.wallE, roof: C.roofE, door: C.doorE },
+    { wall: C.wallF, roof: C.roofF, door: C.doorF },
 ]
 
 function house(g: G, i: number) {
-    if (i < 4) return appHouse(g, LOOKS[i])
-    return workshop(g, i === 5)
+    if (i === 4 || i === 5) return workshop(g, i === 5)
+    return appHouse(g, LOOKS[i < 4 ? i : i - 2])
 }
 
 function appHouse(g: G, look: { wall: number; roof: number; door: number }) {
@@ -446,6 +472,108 @@ function deco(g: G, i: number) {
     }
 }
 
+function deco2(g: G, i: number) {
+    switch (i) {
+        case 0:
+            g.fillStyle(C.stoneDark, 1)
+            g.fillEllipse(128, 200, 240, 88)
+            g.fillStyle(C.water, 1)
+            g.fillEllipse(128, 196, 220, 72)
+            rr(g, 70, 186, 54, 8, 4, C.waterLight)
+            rr(g, 150, 208, 40, 7, 3.5, C.waterLight)
+            dot(g, 168, 186, 18, C.leaf)
+            tri(g, { x: 168, y: 186 }, { x: 188, y: 178 }, { x: 188, y: 194 }, C.water)
+            g.fillStyle(C.stone, 1)
+            g.fillEllipse(30, 214, 36, 26)
+            g.fillEllipse(222, 178, 30, 22)
+            return
+        case 1:
+            g.fillStyle(C.stoneDark, 1)
+            g.fillEllipse(112, 168, 168, 148)
+            g.fillStyle(C.stone, 1)
+            g.fillEllipse(106, 160, 150, 132)
+            g.fillStyle(C.stoneDark, 1)
+            g.fillEllipse(196, 214, 72, 52)
+            g.fillStyle(C.stone, 1)
+            g.fillEllipse(192, 208, 60, 42)
+            rr(g, 64, 118, 38, 12, 6, C.ice)
+            return
+        case 2:
+            rr(g, 46, 70, 12, 170, 6, C.accentYellow)
+            rr(g, 86, 70, 12, 170, 6, C.accentYellow)
+            for (let y = 100; y <= 220; y += 30) rr(g, 50, y, 44, 9, 4.5, darken(C.accentYellow, 0.85))
+            rr(g, 40, 60, 80, 22, 10, C.accentBlue)
+            g.save()
+            g.translateCanvas(108, 72)
+            g.rotateCanvas(0.78)
+            rr(g, 0, -14, 200, 34, 17, C.accentBlue)
+            rr(g, 0, -14, 200, 10, 5, darken(C.accentBlue, 1.15))
+            g.restore()
+            return
+        case 3:
+            tri(g, { x: 128, y: 168 }, { x: 98, y: 236 }, { x: 158, y: 236 }, C.metal)
+            g.save()
+            g.translateCanvas(128, 168)
+            g.rotateCanvas(-0.2)
+            rr(g, -118, -12, 236, 24, 12, C.coral)
+            rr(g, -110, -44, 10, 34, 5, darken(C.coral, 0.8))
+            rr(g, 100, -44, 10, 34, 5, darken(C.coral, 0.8))
+            rr(g, -116, -48, 22, 10, 5, darken(C.coral, 0.8))
+            rr(g, 94, -48, 22, 10, 5, darken(C.coral, 0.8))
+            g.restore()
+            return
+        case 4:
+            rr(g, 124, 40, 8, 112, 4, C.metal)
+            for (let k = 0; k < 6; k++) {
+                g.fillStyle(k % 2 ? C.white : C.accentBlue, 1)
+                g.slice(128, 70, 88, Math.PI + (k * Math.PI) / 6, Math.PI + ((k + 1) * Math.PI) / 6, false)
+                g.fillPath()
+            }
+            rr(g, 40, 64, 176, 12, 6, darken(C.accentBlue, 0.85))
+            rr(g, 52, 128, 152, 80, 18, C.ice)
+            rr(g, 52, 128, 152, 22, 11, C.accentPink)
+            dot(g, 92, 172, 14, C.accentYellow)
+            dot(g, 128, 172, 14, C.accentPink)
+            dot(g, 164, 172, 14, C.waterLight)
+            dot(g, 84, 216, 22, C.graphite)
+            dot(g, 84, 216, 9, C.metalLight)
+            dot(g, 172, 216, 22, C.graphite)
+            dot(g, 172, 216, 9, C.metalLight)
+            return
+        case 5:
+            rr(g, 96, 224, 64, 16, 8, darken(C.accentYellow, 0.8))
+            rr(g, 104, 124, 48, 104, 14, C.accentYellow)
+            dot(g, 128, 124, 28, C.accentYellow)
+            rr(g, 118, 88, 20, 14, 6, darken(C.accentYellow, 0.8))
+            rr(g, 80, 150, 96, 22, 11, darken(C.accentYellow, 0.85))
+            dot(g, 128, 186, 9, darken(C.accentYellow, 0.8))
+            return
+        case 6:
+            rr(g, 120, 140, 16, 100, 6, C.woodDark)
+            rr(g, 100, 232, 56, 10, 5, C.woodDark)
+            rr(g, 70, 70, 116, 76, 36, C.accentBlue)
+            rr(g, 70, 112, 116, 34, 12, C.accentBlue)
+            rr(g, 70, 70, 116, 22, 11, darken(C.accentBlue, 1.15))
+            rr(g, 84, 104, 50, 10, 5, darken(C.accentBlue, 0.7))
+            rr(g, 176, 64, 10, 52, 5, C.metal)
+            rr(g, 176, 64, 32, 20, 6, C.coral)
+            return
+        case 7:
+            for (let k = 0; k < 7; k++) {
+                const x = 44 + k * 28
+                rr(g, x - 4, 150, 8, 40, 4, C.leafDark)
+                dot(g, x, 146 - (k % 2) * 16, 16, [C.note, C.accentYellow, C.white][k % 3])
+                dot(g, x, 146 - (k % 2) * 16, 6, k % 3 === 1 ? C.coral : C.sun)
+            }
+            rr(g, 20, 176, 216, 64, 14, C.woodDark)
+            rr(g, 20, 176, 216, 50, 14, C.wood)
+            rr(g, 34, 196, 188, 8, 4, C.woodDark)
+            return
+        default:
+            return
+    }
+}
+
 function grass(g: G) {
     g.fillStyle(C.grass, 1)
     g.fillRect(0, 0, 512, 512)
@@ -468,19 +596,4 @@ function grass(g: G) {
         const y = rand.between(20, 492)
         dot(g, x, y, 4, k % 2 ? C.flowerA : C.flowerB)
     }
-}
-
-function hand(g: G) {
-    const paint = (grow: number, tone: number, dark: number) => {
-        rr(g, 68 - grow, 10 - grow, 38 + grow * 2, 130 + grow, 19 + grow, tone)
-        rr(g, 104 - grow, 92 - grow, 34 + grow * 2, 70 + grow, 17 + grow, tone)
-        rr(g, 134 - grow, 102 - grow, 32 + grow * 2, 64 + grow, 16 + grow, tone)
-        rr(g, 162 - grow, 114 - grow, 28 + grow * 2, 56 + grow, 14 + grow, tone)
-        rr(g, 30 - grow, 128 - grow, 70 + grow * 2, 34 + grow * 2, 17 + grow, tone)
-        rr(g, 64 - grow, 120 - grow, 128 + grow * 2, 110 + grow * 2, 40 + grow, tone)
-        if (dark >= 0) rr(g, 76, 196, 104, 12, 6, dark)
-    }
-    paint(10, C.white, -1)
-    paint(0, C.skin, C.skinDark)
-    rr(g, 76, 22, 22, 18, 9, C.white)
 }

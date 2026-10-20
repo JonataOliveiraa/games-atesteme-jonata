@@ -1,6 +1,5 @@
 import Phaser from 'phaser'
 import { FX } from '../../../../shared/effects/FX'
-import { HAND_KEY, HAND_TIP } from '../data/files'
 import { DEPTH, HAND } from '../data/layout'
 import { C } from '../data/theme'
 import type { Vec } from '../types'
@@ -15,37 +14,39 @@ export interface Hand {
 }
 
 export function createHand(scene: Phaser.Scene, view: View): Hand {
-    const img = view.world(
-        scene.add
-            .image(0, 0, HAND_KEY)
-            .setOrigin(HAND_TIP.x, HAND_TIP.y)
-            .setDisplaySize(HAND.size, HAND.size)
-            .setDepth(DEPTH.hand)
-            .setVisible(false),
-    )
-    const base = img.scale
+    const shade = scene.add.circle(3, 5, HAND.r, C.shadow, 0.22)
+    const face = scene.add.circle(0, 0, HAND.r, C.white, 0.92).setStrokeStyle(HAND.stroke, C.accent, 1)
+    const core = scene.add.circle(0, 0, HAND.r * 0.42, C.accent, 1)
+    const dot = view.world(scene.add.container(0, 0, [shade, face, core]).setDepth(DEPTH.hand).setVisible(false))
     let ring: Phaser.Time.TimerEvent | undefined
 
     const ripple = (at: Vec) => {
-        const g = view.world(scene.add.circle(at.x, at.y, 22, C.white, 0.5).setDepth(DEPTH.hand - 1))
-        g.setStrokeStyle(4, C.white, 0.9)
-        scene.tweens.add({ targets: g, scale: 2.2, alpha: 0, duration: 520, onComplete: () => g.destroy() })
+        const g = view.world(scene.add.circle(at.x, at.y, HAND.r, C.white, 0).setDepth(DEPTH.hand - 1))
+        g.setStrokeStyle(HAND.wave, C.white, 0.95)
+        scene.tweens.add({ targets: g, scale: HAND.spread, alpha: 0, duration: 720, ease: 'Sine.easeOut', onComplete: () => g.destroy() })
+    }
+
+    const tap = () => {
+        scene.tweens.killTweensOf(dot)
+        dot.setScale(1)
+        scene.tweens.add({ targets: dot, scale: 0.82, duration: 110, yoyo: true })
+        ripple({ x: dot.x, y: dot.y })
     }
 
     const stop = () => {
         ring?.remove()
         ring = undefined
-        scene.tweens.killTweensOf(img)
-        img.setVisible(false).setScale(base).setAlpha(1)
+        scene.tweens.killTweensOf(dot)
+        dot.setVisible(false).setScale(1).setAlpha(1)
     }
 
     const hand: Hand = {
         async press(at) {
             stop()
-            img.setPosition(at.x + HAND.tapLift, at.y + HAND.tapLift).setVisible(true).setAlpha(0).setScale(base * 1.1)
-            await FX.to(scene, img, { alpha: 1, x: at.x, y: at.y, scale: base * 0.9 }, { duration: 300 })
-            ripple(at)
-            ring = scene.time.addEvent({ delay: 420, loop: true, callback: () => ripple({ x: img.x, y: img.y }) })
+            dot.setPosition(at.x, at.y).setVisible(true).setAlpha(0).setScale(1.4)
+            await FX.to(scene, dot, { alpha: 1, scale: 1 }, { duration: 240, ease: 'Back.easeOut' })
+            tap()
+            ring = scene.time.addEvent({ delay: 520, loop: true, callback: tap })
         },
         async hold(at, ms) {
             await hand.press(at)
@@ -54,14 +55,15 @@ export function createHand(scene: Phaser.Scene, view: View): Hand {
         async lift() {
             ring?.remove()
             ring = undefined
-            if (!img.visible) return
-            await FX.to(scene, img, { alpha: 0, x: img.x + HAND.tapLift, y: img.y + HAND.tapLift, scale: base * 1.1 }, { duration: 260 })
-            img.setVisible(false)
+            if (!dot.visible) return
+            scene.tweens.killTweensOf(dot)
+            await FX.to(scene, dot, { alpha: 0, scale: 1.3 }, { duration: 220 })
+            dot.setVisible(false).setScale(1)
         },
         stop,
         destroy() {
             stop()
-            img.destroy()
+            dot.destroy()
         },
     }
     return hand

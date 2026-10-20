@@ -1,0 +1,124 @@
+import { FONT_JOGO } from '../../../../shared/fonts/gameFont'
+
+export const C = {
+    azul: 0x4f9bea,
+    azulDark: 0x2f74c4,
+    verde: 0x5cc46a,
+    verdeDark: 0x3b9a4a,
+    vermelho: 0xef5a5a,
+    vermelhoDark: 0xc43c3c,
+    star: 0xffd23f,
+    starDark: 0xe0a91c,
+    glasses: 0x2b2440,
+    lens: 0xdff3ff,
+    ball: 0x3b3f8f,
+    ballDark: 0x2a2d6e,
+    ballLight: 0x5a5fb8,
+    ballHole: 0x1c1d4a,
+    wallTop: 0xffe3cc,
+    wall: 0xfff0e0,
+    wallPanel: 0xffe7d3,
+    wallLine: 0xf2cfb1,
+    bulb: 0xfff3a8,
+    bulbRim: 0xe8b65c,
+    neonPink: 0xff7fb6,
+    neonYellow: 0xffd84a,
+    neonCyan: 0x6fdcf0,
+    wood: 0xf3c27a,
+    woodLight: 0xf9d9a0,
+    woodDark: 0xd99a52,
+    woodEdge: 0xb87a3c,
+    woodLine: 0xe3ac63,
+    carpet: 0x7d5ec7,
+    carpetDark: 0x6a4cb2,
+    carpetDot: 0xffd84a,
+    carpetDot2: 0x6fdcf0,
+    pit: 0x2a2140,
+    pitCurtain: 0x3e2f60,
+    machine: 0xfff3e2,
+    machineDark: 0xe8d6bc,
+    machineTeal: 0x2fb4a8,
+    machineTealDark: 0x1f8f86,
+    rake: 0xc9ced9,
+    rakeDark: 0x99a0b2,
+    skin: 0xffffff,
+    eye: 0x2b2440,
+    cheek: 0xff9fb0,
+    mouth: 0x9a3248,
+    zz: 0x5b6cd6,
+    line: 0x34283f,
+    ink: 0x2b2440,
+    inkSoft: 0x5c5470,
+    accent: 0x2a9d93,
+    accentDark: 0x1d7a72,
+    accentYellow: 0xffd84a,
+    headerFace: 0xfff8ec,
+    headerSoft: 0xf6ead3,
+    headerRim: 0xeacfa2,
+    headerLine: 0x6b4a2f,
+    bench: 0x6b4a8f,
+    benchDark: 0x52357a,
+    benchTop: 0x8a69b0,
+    card: 0xffffff,
+    cardRim: 0xe9dcc4,
+    cardOn: 0xfff3c4,
+    not: 0x8b5cf6,
+    notDark: 0x6a3fd0,
+    play: 0x2fb36a,
+    playDark: 0x1f8a4e,
+    off: 0xc9c2d6,
+    offDark: 0xa39bb3,
+    chipFace: 0xffffff,
+    chipRim: 0xe9dcc4,
+    slot: 0xf6ead3,
+    slotRim: 0xc9ab7e,
+    white: 0xffffff,
+    cream: 0xfaf1dc,
+    creamDark: 0xe4d2ac,
+    shadow: 0x2a1f30,
+    yes: 0x49c27c,
+    yesDark: 0x2f9a5c,
+    oops: 0xff9d57,
+    oopsDark: 0xd9742e,
+    butter: 0xffe08a,
+    sky: 0x9ed3f0,
+    lilac: 0xc6b6ea,
+    coral: 0xff8a6b,
+} as const
+
+export const PIN_TONE: Record<string, { fill: number; dark: number }> = {
+    azul: { fill: C.azul, dark: C.azulDark },
+    verde: { fill: C.verde, dark: C.verdeDark },
+    vermelho: { fill: C.vermelho, dark: C.vermelhoDark },
+}
+
+export const CSS = {
+    ink: '#2b2440',
+    inkSoft: '#5c5470',
+    white: '#ffffff',
+    accent: '#1d7a72',
+    zz: '#5b6cd6',
+} as const
+
+export const FONT = {
+    black: FONT_JOGO.black,
+    body: FONT_JOGO.body,
+} as const
+
+export const SIZE = {
+    help: 40,
+    level: 22,
+    bubble: 28,
+    banner: 36,
+    card: 26,
+    play: 32,
+    zz: 30,
+} as const
+
+export function inkOn(tone: number): string {
+    const r = (tone >> 16) & 0xff
+    const g = (tone >> 8) & 0xff
+    const b = tone & 0xff
+    const light = 0.299 * r + 0.587 * g + 0.114 * b
+    return light > 160 ? CSS.ink : CSS.white
+}

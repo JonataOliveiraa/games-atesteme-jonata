@@ -14,20 +14,25 @@ export const CLUE_LABEL: Record<ItemKind, Record<ClueId, string>> = {
 
 export const LABEL = {
     level: 'Nível',
-    goTo: (kind: ItemKind) => `Suba até a ${KIND_NAME[kind]}!`,
+    goTo: (kind: ItemKind) => `Pegue a ${KIND_NAME[kind]}!`,
+    hurry: (kind: ItemKind) => `Volte! A ${KIND_NAME[kind]} vai passar!`,
     goTop: 'Suba até o TOPO!',
     trustAsk: 'Dá para confiar?',
     trust: 'PODE CONFIAR',
     distrust: 'NÃO CONFIE',
     forwarded: 'Encaminhada',
-    saved: 'GUARDADO!',
-    blocked: 'BLOQUEADO!',
     oops: 'Ops!',
+    missed: (kind: ItemKind) => `A ${KIND_NAME[kind]} ficou para trás!`,
 } as const
 
 export const CAPTION = {
-    move: 'SEGURE PARA ANDAR',
-    climb: (kind: ItemKind) => `SUBA ATÉ A ${KIND_NAME[kind]}`,
-    yourTurn: 'SUA VEZ!',
+    sky: 'CÉU!',
+    space: 'ESPAÇO!',
     top: 'TOPO!',
+} as const
+
+export const TUTOR = {
+    collect: 'Pegue todas! Nenhuma pode passar.',
+    yourTurn: 'Sua vez!',
+    see: 'Ver',
 } as const

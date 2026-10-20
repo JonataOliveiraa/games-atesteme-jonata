@@ -1,4 +1,5 @@
 import type Phaser from 'phaser'
+import type { DecoKind } from '../types'
 
 export interface Sheet {
     key: string
@@ -9,17 +10,16 @@ export interface Sheet {
 }
 
 export const KID_SHEET: Sheet = { key: 'crianca', cols: 4, rows: 4, cellW: 192, cellH: 192 }
-export const HOUSE_SHEET: Sheet = { key: 'casas', cols: 3, rows: 2, cellW: 384, cellH: 384 }
+export const HOUSE_SHEET: Sheet = { key: 'casas', cols: 4, rows: 2, cellW: 384, cellH: 384 }
 export const ICON_SHEET: Sheet = { key: 'icones', cols: 4, rows: 3, cellW: 128, cellH: 128 }
 export const DECO_SHEET: Sheet = { key: 'enfeites', cols: 4, rows: 2, cellW: 256, cellH: 256 }
+export const DECO2_SHEET: Sheet = { key: 'enfeites2', cols: 4, rows: 2, cellW: 256, cellH: 256 }
 
-export const SHEETS = [KID_SHEET, HOUSE_SHEET, ICON_SHEET, DECO_SHEET]
+export const SHEETS = [KID_SHEET, HOUSE_SHEET, ICON_SHEET, DECO_SHEET, DECO2_SHEET]
 
 export const GRASS_KEY = 'grama'
-export const HAND_KEY = 'mao'
-export const IMAGES = [GRASS_KEY, HAND_KEY]
-
-export const HAND_TIP = { x: 0.34, y: 0.07 } as const
+export const BAG_KEY = 'mochila'
+export const IMAGES = [GRASS_KEY, BAG_KEY]
 
 export const KID_FOOT = 0.92
 export const HOUSE_FOOT = 352 / 384
@@ -31,7 +31,23 @@ export const KID_FRAME = {
     skid: 15,
 } as const
 
-export const DECO_CELL = { arvore: 0, pinheiro: 1, arbusto: 2, flores: 3, banco: 4, poste: 5, chafariz: 6 } as const
+export const DECO_CELL: Record<DecoKind, { sheet: string; cell: number }> = {
+    arvore: { sheet: DECO_SHEET.key, cell: 0 },
+    pinheiro: { sheet: DECO_SHEET.key, cell: 1 },
+    arbusto: { sheet: DECO_SHEET.key, cell: 2 },
+    flores: { sheet: DECO_SHEET.key, cell: 3 },
+    banco: { sheet: DECO_SHEET.key, cell: 4 },
+    poste: { sheet: DECO_SHEET.key, cell: 5 },
+    chafariz: { sheet: DECO_SHEET.key, cell: 6 },
+    lago: { sheet: DECO2_SHEET.key, cell: 0 },
+    pedra: { sheet: DECO2_SHEET.key, cell: 1 },
+    escorregador: { sheet: DECO2_SHEET.key, cell: 2 },
+    gangorra: { sheet: DECO2_SHEET.key, cell: 3 },
+    sorvete: { sheet: DECO2_SHEET.key, cell: 4 },
+    hidrante: { sheet: DECO2_SHEET.key, cell: 5 },
+    correio: { sheet: DECO2_SHEET.key, cell: 6 },
+    canteiro: { sheet: DECO2_SHEET.key, cell: 7 },
+}
 
 export const cellKey = (index: number) => `c${index}`
 

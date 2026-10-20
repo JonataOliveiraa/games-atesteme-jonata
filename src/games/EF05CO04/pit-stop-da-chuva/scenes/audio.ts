@@ -1,9 +1,12 @@
 
+import type { Vehicle } from '../types'
+
 type Wave = 'sine' | 'square' | 'triangle' | 'sawtooth'
 
 export interface Audio {
     branch(): void
-    engine(k: number): void
+    /** 0 parado … 1 velocidade máxima; o ronco gravado do veículo sobe o tom e o volume. Negativo desliga. */
+    engine(k: number, vehicle?: Vehicle): void
     gust(): void
     beep(high: boolean): void
     mud(): void
@@ -35,12 +38,64 @@ interface ToneOpts {
 
 const MASTER = 0.5
 
+const ENGINE_FILES = Object.fromEntries(
+    Object.entries(
+        import.meta.glob('../../../../assets/games/EF05CO04/pit-stop-da-chuva/sons/*.mp3', { eager: true, import: 'default' }) as Record<string, string>,
+    ).map(([path, url]) => [path.split('/').pop()?.replace(/.mp3$/i, '') ?? '', url]),
+)
+
+/** O ronco fica baixo (pedido do usuário): é fundo, não pode cobrir os sons da regra. */
+const ENGINE = { level: 0.16, idle: 0.4, rate: 0.8, rateUp: 0.5 } as const
+
 export function createAudio(): Audio {
     let ctx: AudioContext | undefined
     let bus: GainNode | undefined
     let muted = false
     let rainTimer: number | undefined
     let motor: { osc: OscillatorNode; sub: OscillatorNode; gain: GainNode } | undefined
+    const buffers: Partial<Record<Vehicle, AudioBuffer>> = {}
+    let loading = false
+    let voice: { vehicle: Vehicle; src: AudioBufferSourceNode; gain: GainNode } | undefined
+
+    const load = (audio: AudioContext) => {
+        if (loading) return
+        loading = true
+        ;(['carro', 'moto'] as Vehicle[]).forEach(async v => {
+            const url = ENGINE_FILES[v]
+            if (!url) return
+            try {
+                const res = await fetch(url)
+                buffers[v] = await audio.decodeAudioData(await res.arrayBuffer())
+            } catch {
+                /* fica o motor sintetizado */
+            }
+        })
+    }
+
+    const stopVoice = () => {
+        if (!voice) return
+        const { src, gain } = voice
+        voice = undefined
+        if (!ctx) return
+        gain.gain.setTargetAtTime(0, ctx.currentTime, 0.1)
+        try {
+            src.stop(ctx.currentTime + 0.5)
+        } catch {
+            /* já parado */
+        }
+    }
+
+    const startVoice = (audio: AudioContext, vehicle: Vehicle, buffer: AudioBuffer) => {
+        if (!bus) return
+        const src = audio.createBufferSource()
+        src.buffer = buffer
+        src.loop = true
+        const gain = audio.createGain()
+        gain.gain.value = 0
+        src.connect(gain).connect(bus)
+        src.start(audio.currentTime, Math.random() * buffer.duration)
+        voice = { vehicle, src, gain }
+    }
 
     const get = () => {
         if (muted) return undefined
@@ -120,9 +175,26 @@ export function createAudio(): Audio {
         branch() {
             notes([659, 988], 120, { wave: 'triangle', gain: 0.13 })
         },
-        engine(k) {
+        engine(k, vehicle = 'carro') {
             const audio = get()
             if (!audio || !bus) return
+            load(audio)
+            if (k < 0) {
+                stopVoice()
+                stopMotor()
+                return
+            }
+            const buffer = buffers[vehicle]
+            if (buffer) {
+                stopMotor()
+                if (voice && voice.vehicle !== vehicle) stopVoice()
+                if (!voice) startVoice(audio, vehicle, buffer)
+                if (!voice) return
+                const t = audio.currentTime
+                voice.gain.gain.setTargetAtTime(ENGINE.level * (ENGINE.idle + (1 - ENGINE.idle) * k), t, 0.1)
+                voice.src.playbackRate.setTargetAtTime(ENGINE.rate + ENGINE.rateUp * k, t, 0.1)
+                return
+            }
             if (!motor) {
                 const osc = audio.createOscillator()
                 const sub = audio.createOscillator()
@@ -212,11 +284,13 @@ export function createAudio(): Audio {
             if (on) {
                 stopRain()
                 stopMotor()
+                stopVoice()
             }
         },
         destroy() {
             stopRain()
             stopMotor()
+            stopVoice()
             void ctx?.close()
             ctx = undefined
             bus = undefined

@@ -1,11 +1,12 @@
 import Phaser from 'phaser'
 import { FX } from '../../../../shared/effects/FX'
 import { DECO_CELL, GRASS_KEY, HOUSE_FOOT, HOUSE_PLATE, cellKey } from '../data/files'
-import { DECO, DEPTH, FENCE, HOUSE, ROAD } from '../data/layout'
+import { BUSY, DECO, DEPTH, FENCE, HOUSE, ROAD } from '../data/layout'
 import { GATE_OPEN, PLACES } from '../data/places'
-import { C, FONT, SIZE } from '../data/theme'
+import { C, CSS, FONT, SIZE } from '../data/theme'
 import { TIMING } from '../data/timing'
-import type { DecoSpot, LevelDef, PlaceId, Solid, Vec, Works } from '../types'
+import { LABEL } from '../data/words'
+import type { AppId, DecoSpot, LevelDef, PartId, PlaceId, Solid, Vec, Works } from '../types'
 import type { View } from './view'
 
 export interface Town {
@@ -18,12 +19,18 @@ export interface Town {
     call(id: PlaceId | null): void
     aim(id: PlaceId | null): void
     gate(id: PlaceId, open: boolean): void
+    peek(id: PlaceId, ms: number): void
+    gateAt(id: PlaceId): Vec
     nope(id: PlaceId): void
     happy(id: PlaceId): void
     dim(id: PlaceId, on: boolean): void
     works(id: PlaceId, kind: Works): Promise<void>
     beam(from: Vec, to: Vec): Promise<void>
     fly(icon: number, from: Vec, to: Vec, size: number): Promise<void>
+    use(part: PartId, app: AppId | null): void
+    holder(part: PartId): AppId | null
+    usedAt(app: AppId, part: PartId): Vec
+    home(part: PartId, from: Vec): Promise<void>
     demo(on: boolean): void
     destroy(): void
 }
@@ -37,7 +44,9 @@ interface House {
     base: number
 }
 
-export const sortDepth = (y: number) => DEPTH.sorted + y / 1000
+const CHUNK = 1024
+
+export const sortDepth =(y: number) => DEPTH.sorted + y / 1000
 
 export function createTown(scene: Phaser.Scene, view: View, level: LevelDef): Town {
     const { w, h } = level.world
@@ -50,11 +59,11 @@ export function createTown(scene: Phaser.Scene, view: View, level: LevelDef): To
 
     own(scene.add.tileSprite(0, 0, w, h, GRASS_KEY).setOrigin(0).setDepth(DEPTH.ground))
 
-    const ground = own(scene.add.graphics().setDepth(DEPTH.road))
+    const ground = scene.make.graphics({ x: 0, y: 0 }, false)
     paintFence(ground, w, h)
     paintRoads(ground, level)
 
-    const shade = own(scene.add.graphics().setDepth(DEPTH.shade))
+    const shade = scene.make.graphics({ x: 0, y: 0 }, false)
     const solids: Solid[] = []
     const houses = new Map<PlaceId, House>()
     const plateD = HOUSE_PLATE.d * HOUSE.size
@@ -97,20 +106,30 @@ export function createTown(scene: Phaser.Scene, view: View, level: LevelDef): To
 
     level.decor.forEach(spot => placeDeco(spot))
 
+    for (let cy = 0; cy < h; cy += CHUNK)
+        for (let cx = 0; cx < w; cx += CHUNK) {
+            const tile = own(scene.add.renderTexture(cx, cy, Math.min(CHUNK, w - cx), Math.min(CHUNK, h - cy)).setOrigin(0).setDepth(DEPTH.road))
+            tile.draw(ground, -cx, -cy)
+            tile.draw(shade, -cx, -cy)
+        }
+    ground.destroy()
+    shade.destroy()
+
     function placeDeco(spot: DecoSpot) {
-        const size = spot.kind === 'chafariz' ? DECO.fountain : DECO.size
+        const size = spot.kind === 'chafariz' ? DECO.fountain : spot.kind === 'lago' ? DECO.pond : DECO.size
         const { x, y } = spot.at
+        const art = DECO_CELL[spot.kind]
         shade.fillStyle(C.shade, 0.14)
-        shade.fillEllipse(x, y - 6, size * (spot.kind === 'poste' ? 0.3 : 0.62), size * 0.14)
+        shade.fillEllipse(x, y - 6, size * (DECO.shadow[spot.kind] ?? 0.62), size * 0.14)
         own(
             scene.add
-                .image(x, y, 'enfeites', cellKey(DECO_CELL[spot.kind]))
+                .image(x, y, art.sheet, cellKey(art.cell))
                 .setOrigin(0.5, 240 / 256)
                 .setDisplaySize(size, size)
                 .setDepth(sortDepth(y)),
         )
         const r = DECO.solid[spot.kind]
-        if (r) solids.push({ kind: 'circle', x, y: y - (spot.kind === 'chafariz' ? 52 : 12), r })
+        if (r) solids.push({ kind: 'circle', x, y: y - (DECO.lift[spot.kind] ?? 12), r })
     }
 
     const door = (id: PlaceId): Vec => {
@@ -171,6 +190,92 @@ export function createTown(scene: Phaser.Scene, view: View, level: LevelDef): To
         scene.tweens.add({ targets: ring, alpha: 0.35, duration: 520, yoyo: true, repeat: -1 })
     }
 
+    const shut = new Map<PlaceId, Phaser.Time.TimerEvent>()
+    const opened = new Set<PlaceId>()
+    const dimmed = new Set<PlaceId>()
+    const held = new Map<PartId, AppId>()
+    const seals = new Map<PartId, Phaser.GameObjects.Container>()
+
+    const isPart = (id: PlaceId): id is PartId => PLACES[id].family === 'peca'
+
+    const tone = (hs: House) => {
+        const parts = [hs.art, hs.icon]
+        parts.forEach(o => o.clearTint())
+        if (dimmed.has(hs.id)) parts.forEach(o => o.setTint(C.dim))
+        else if (isPart(hs.id) && held.has(hs.id) && !opened.has(hs.id)) hs.art.setTint(C.busyShop)
+    }
+
+    const frameOf = (id: PlaceId) => (isPart(id) && (opened.has(id) || held.has(id)) ? GATE_OPEN : PLACES[id].look)
+
+    const refresh = (id: PlaceId) => {
+        const hs = houses.get(id)
+        if (!hs || !isPart(id)) return
+        hs.art.setFrame(cellKey(frameOf(id)))
+        hs.art.setDisplaySize(HOUSE.size, HOUSE.size)
+        tone(hs)
+    }
+
+    const heldBy = (app: AppId) => [...held].filter(([, a]) => a === app).map(([p]) => p)
+
+    const sealSpot = (app: AppId, index: number): Vec => {
+        const hs = houses.get(app)
+        if (!hs) return { x: 0, y: 0 }
+        return { x: hs.icon.x + (index === 0 ? 1 : -1) * BUSY.dx, y: hs.icon.y + BUSY.dy }
+    }
+
+    const placeSeals = (app: AppId) => heldBy(app).forEach((p, i) => {
+        const at = sealSpot(app, i)
+        seals.get(p)?.setPosition(at.x, at.y)
+    })
+
+    const makeSeal = (part: PartId) => {
+        const g = scene.add.graphics()
+        g.fillStyle(C.shadow, 0.2)
+        g.fillCircle(3, 5, BUSY.r)
+        g.fillStyle(C.white, 1)
+        g.fillCircle(0, 0, BUSY.r)
+        g.lineStyle(5, C.ink, 1)
+        g.strokeCircle(0, 0, BUSY.r)
+        const img = scene.add.image(0, 0, 'icones', cellKey(PLACES[part].icon)).setDisplaySize(BUSY.icon, BUSY.icon)
+        const tagG = scene.add.graphics()
+        tagG.fillStyle(C.ink, 1)
+        tagG.fillRoundedRect(-BUSY.tagW / 2, BUSY.tagY - BUSY.tagH / 2, BUSY.tagW, BUSY.tagH, BUSY.tagH / 2)
+        const tag = scene.add
+            .text(0, BUSY.tagY + 1, LABEL.busy, { fontFamily: FONT.black, fontSize: `${SIZE.tag}px`, color: CSS.white })
+            .setOrigin(0.5)
+            .setResolution(2)
+        const seal = temp(scene.add.container(0, 0, [g, img, tagG, tag]).setDepth(DEPTH.label + 0.5))
+        scene.tweens.add({ targets: img, angle: 360, duration: BUSY.spin, repeat: -1 })
+        return seal
+    }
+
+    const dropSeal = (part: PartId) => {
+        const seal = seals.get(part)
+        seals.delete(part)
+        if (!seal) return
+        scene.tweens.killTweensOf(seal)
+        seal.each((o: Phaser.GameObjects.GameObject) => scene.tweens.killTweensOf(o))
+        seal.destroy()
+    }
+
+    const arc = async (img: Phaser.GameObjects.Image, from: Vec, to: Vec) => {
+        const lift = Math.max(120, Phaser.Math.Distance.BetweenPoints(from, to) * 0.3)
+        const k = { t: 0 }
+        await new Promise<void>(resolve => {
+            scene.tweens.add({
+                targets: k,
+                t: 1,
+                duration: FX.ms(scene, TIMING.beam),
+                ease: 'Sine.easeInOut',
+                onUpdate: () => {
+                    const u = k.t
+                    img.setPosition(Phaser.Math.Linear(from.x, to.x, u), Phaser.Math.Linear(from.y, to.y, u) - Math.sin(u * Math.PI) * lift)
+                },
+                onComplete: () => resolve(),
+            })
+        })
+    }
+
     let balloons: Phaser.GameObjects.Container[] = []
     let locks: Phaser.GameObjects.Graphics[] = []
 
@@ -207,11 +312,22 @@ export function createTown(scene: Phaser.Scene, view: View, level: LevelDef): To
             pointAt(id ?? calling)
         },
         gate(id, open) {
+            shut.get(id)?.remove()
+            shut.delete(id)
             const hs = houses.get(id)
-            if (!hs || PLACES[id].family !== 'peca') return
-            hs.art.setFrame(cellKey(open ? GATE_OPEN : PLACES[id].look))
-            hs.art.setDisplaySize(HOUSE.size, HOUSE.size)
+            if (!hs || !isPart(id)) return
+            if (open) opened.add(id)
+            else opened.delete(id)
+            refresh(id)
             if (open) void FX.to(scene, hs.art, { scaleY: hs.base * 1.04 }, { duration: 140, yoyo: true })
+        },
+        peek(id, ms) {
+            town.gate(id, true)
+            shut.set(id, scene.time.delayedCall(ms, () => town.gate(id, false)))
+        },
+        gateAt(id) {
+            const d = door(id)
+            return { x: d.x, y: d.y - HOUSE.gate }
         },
         nope(id) {
             const hs = houses.get(id)
@@ -231,7 +347,9 @@ export function createTown(scene: Phaser.Scene, view: View, level: LevelDef): To
         dim(id, on) {
             const hs = houses.get(id)
             if (!hs) return
-            ;[hs.art, hs.icon].forEach(o => (on ? o.setTint(C.dim) : o.clearTint()))
+            if (on) dimmed.add(id)
+            else dimmed.delete(id)
+            tone(hs)
         },
         async works(id, kind) {
             const hs = houses.get(id)
@@ -295,22 +413,51 @@ export function createTown(scene: Phaser.Scene, view: View, level: LevelDef): To
         },
         async fly(icon, from, to, size) {
             const img = temp(scene.add.image(from.x, from.y, 'icones', cellKey(icon)).setDisplaySize(size, size).setDepth(DEPTH.beam))
-            const lift = Math.max(120, Phaser.Math.Distance.BetweenPoints(from, to) * 0.3)
-            const k = { t: 0 }
-            await new Promise<void>(resolve => {
-                scene.tweens.add({
-                    targets: k,
-                    t: 1,
-                    duration: FX.ms(scene, TIMING.beam),
-                    ease: 'Sine.easeInOut',
-                    onUpdate: () => {
-                        const u = k.t
-                        img.setPosition(Phaser.Math.Linear(from.x, to.x, u), Phaser.Math.Linear(from.y, to.y, u) - Math.sin(u * Math.PI) * lift)
-                    },
-                    onComplete: () => resolve(),
-                })
-            })
+            await arc(img, from, to)
             img.destroy()
+        },
+        use(part, app) {
+            const prev = held.get(part) ?? null
+            if (prev === app) return
+            if (prev) {
+                held.delete(part)
+                dropSeal(part)
+                placeSeals(prev)
+            }
+            if (app && houses.has(app)) {
+                held.set(part, app)
+                const seal = makeSeal(part)
+                seals.set(part, seal)
+                placeSeals(app)
+                seal.setScale(0)
+                scene.tweens.add({ targets: seal, scale: 1, duration: 280, ease: 'Back.easeOut' })
+            }
+            refresh(part)
+        },
+        holder: part => held.get(part) ?? null,
+        usedAt(app, part) {
+            const list = heldBy(app)
+            const i = list.indexOf(part)
+            return sealSpot(app, i >= 0 ? i : list.length)
+        },
+        async home(part, from) {
+            const hs = houses.get(part)
+            town.use(part, null)
+            if (!hs) return
+            town.gate(part, true)
+            const to = town.gateAt(part)
+            const size = BUSY.icon * 1.6
+            const img = temp(scene.add.image(from.x, from.y, 'icones', cellKey(PLACES[part].icon)).setDisplaySize(size, size).setDepth(DEPTH.beam))
+            await arc(img, from, to)
+            await FX.to(scene, img, { y: to.y - 40 }, { duration: 160, ease: 'Quad.easeOut' })
+            await FX.to(scene, img, { y: to.y + 40, scale: 0, alpha: 0.4 }, { duration: 220, ease: 'Quad.easeIn' })
+            img.destroy()
+            scene.tweens.killTweensOf(hs.art)
+            hs.art.setScale(hs.base)
+            await FX.to(scene, hs.art, { scaleY: hs.base * 1.08, scaleX: hs.base * 0.96 }, { duration: 140, yoyo: true })
+            hs.art.setScale(hs.base)
+            await FX.wait(scene, 220)
+            town.gate(part, false)
         },
         demo(on) {
             balloons.forEach(b => {
@@ -324,14 +471,19 @@ export function createTown(scene: Phaser.Scene, view: View, level: LevelDef): To
             level.calls.forEach((c, i) => {
                 const hs = houses.get(c.app)
                 if (!hs) return
+                const pair = c.wants.length > 1
+                const bw = pair ? 190 : 116
                 const g = scene.add.graphics()
                 g.fillStyle(C.shadow, 0.2)
-                g.fillRoundedRect(-58, -50, 116, 96, 30)
+                g.fillRoundedRect(-bw / 2 + 2, -50, bw, 96, 30)
                 g.fillStyle(C.white, 1)
-                g.fillRoundedRect(-60, -56, 116, 96, 30)
+                g.fillRoundedRect(-bw / 2 - 2, -56, bw, 96, 30)
                 g.fillTriangle(-16, 36, 14, 36, -4, 64)
-                const want = scene.add.image(-2, -8, 'icones', cellKey(PLACES[c.wants].icon)).setDisplaySize(74, 74)
-                const b = temp(scene.add.container(hs.at.x + 120, hs.icon.y - 40, [g, want]).setDepth(DEPTH.label + 2))
+                const size = pair ? 66 : 74
+                const wants = c.wants.map((p, k) =>
+                    scene.add.image(pair ? (k === 0 ? -42 : 38) : -2, -8, 'icones', cellKey(PLACES[p].icon)).setDisplaySize(size, size),
+                )
+                const b = temp(scene.add.container(hs.at.x + 120 + (pair ? 36 : 0), hs.icon.y - 40, [g, ...wants]).setDepth(DEPTH.label + 2))
                 b.setScale(0)
                 scene.tweens.add({ targets: b, scale: 1, duration: 300, delay: i * 120, ease: 'Back.easeOut' })
                 scene.tweens.add({ targets: b, angle: { from: -6, to: 6 }, duration: 160, yoyo: true, repeat: -1, delay: 400 + i * 90 })
@@ -356,6 +508,10 @@ export function createTown(scene: Phaser.Scene, view: View, level: LevelDef): To
         },
         destroy() {
             smoke?.remove()
+            shut.forEach(t => t.remove())
+            shut.clear()
+            ;[...seals.keys()].forEach(dropSeal)
+            held.clear()
             scene.tweens.killTweensOf([arrow, ring])
             town.demo(false)
             objects.forEach(o => {

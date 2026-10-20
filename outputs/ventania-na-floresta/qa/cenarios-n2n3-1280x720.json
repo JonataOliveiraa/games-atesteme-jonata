@@ -1,0 +1,173 @@
+{
+  "coordinateSystem": {
+    "width": 1280,
+    "height": 720,
+    "source": [
+      1672,
+      941
+    ],
+    "scaleX": 0.7655502392344498,
+    "scaleY": 0.7651434643995749,
+    "precision": "Regiões visuais aproximadas ±10 px; perfil superior do galho medido por cor, ±2 px."
+  },
+  "ninhos": {
+    "file": "bg-ninhos.png",
+    "branch": {
+      "bounds": {
+        "x": 240,
+        "y": 200,
+        "width": 1040,
+        "height": 160
+      },
+      "supportLine": [
+        {
+          "x": 250,
+          "y": 205
+        },
+        {
+          "x": 400,
+          "y": 242
+        },
+        {
+          "x": 600,
+          "y": 242
+        },
+        {
+          "x": 800,
+          "y": 238
+        },
+        {
+          "x": 1000,
+          "y": 249
+        },
+        {
+          "x": 1200,
+          "y": 264
+        }
+      ]
+    },
+    "cardsAir": {
+      "bounds": {
+        "x": 300,
+        "y": 370,
+        "width": 750,
+        "height": 215
+      }
+    },
+    "leafPile": {
+      "bounds": {
+        "x": 210,
+        "y": 592,
+        "width": 920,
+        "height": 128
+      },
+      "center": {
+        "x": 640,
+        "y": 650
+      },
+      "landingArea": {
+        "x": 400,
+        "y": 620,
+        "width": 480,
+        "height": 80
+      }
+    }
+  },
+  "teia": {
+    "file": "bg-teia.png",
+    "freeWebArea": {
+      "bounds": {
+        "x": 300,
+        "y": 150,
+        "width": 680,
+        "height": 400
+      },
+      "center": {
+        "x": 640,
+        "y": 350
+      }
+    },
+    "leftInnerBranch": [
+      {
+        "x": 240,
+        "y": 130
+      },
+      {
+        "x": 125,
+        "y": 300
+      },
+      {
+        "x": 135,
+        "y": 400
+      },
+      {
+        "x": 330,
+        "y": 550
+      }
+    ],
+    "rightInnerBranch": [
+      {
+        "x": 1115,
+        "y": 130
+      },
+      {
+        "x": 1210,
+        "y": 300
+      },
+      {
+        "x": 1200,
+        "y": 400
+      },
+      {
+        "x": 1060,
+        "y": 550
+      }
+    ]
+  },
+  "redemoinho": {
+    "file": "bg-redemoinho.png",
+    "whirlwindArea": {
+      "bounds": {
+        "x": 420,
+        "y": 150,
+        "width": 440,
+        "height": 275
+      },
+      "center": {
+        "x": 640,
+        "y": 287.5
+      }
+    },
+    "housesBand": {
+      "bounds": {
+        "x": 170,
+        "y": 535,
+        "width": 940,
+        "height": 145
+      },
+      "suggestedBaseY": 660,
+      "anchors": [
+        {
+          "x": 245,
+          "y": 660
+        },
+        {
+          "x": 425,
+          "y": 660
+        },
+        {
+          "x": 610,
+          "y": 660
+        },
+        {
+          "x": 795,
+          "y": 660
+        },
+        {
+          "x": 975,
+          "y": 660
+        }
+      ]
+    }
+  }
+}

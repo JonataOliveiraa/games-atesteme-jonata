@@ -8,9 +8,26 @@ export type Family = 'app' | 'peca'
 
 export type Works = 'flash' | 'notes' | 'glow'
 
-export type DecoKind = 'arvore' | 'pinheiro' | 'arbusto' | 'flores' | 'banco' | 'poste' | 'chafariz'
+export type DecoKind =
+    | 'arvore'
+    | 'pinheiro'
+    | 'arbusto'
+    | 'flores'
+    | 'banco'
+    | 'poste'
+    | 'chafariz'
+    | 'lago'
+    | 'pedra'
+    | 'escorregador'
+    | 'gangorra'
+    | 'sorvete'
+    | 'hidrante'
+    | 'correio'
+    | 'canteiro'
 
-export type State = 'intro' | 'run' | 'ask' | 'fetch' | 'show' | 'error' | 'help' | 'done' | 'finale'
+export type Answer = 'pode' | 'nao' | 'espera'
+
+export type State = 'intro' | 'run' | 'ask' | 'fetch' | 'bring' | 'swap' | 'show' | 'error' | 'help' | 'done' | 'finale'
 
 export interface Vec {
     x: number
@@ -27,6 +44,7 @@ export interface Rect {
 export interface PlaceDef {
     id: PlaceId
     name: string
+    the: string
     family: Family
     icon: number
     look: number
@@ -48,22 +66,33 @@ export interface DecoSpot {
 export interface CallDef {
     id: string
     app: AppId
-    wants: PartId
-    ok: boolean
+    wants: PartId[]
+    answer: Answer
+    keep?: boolean
     says: string
     why: string
 }
+
+export interface Use {
+    part: PartId
+    app: AppId
+}
+
+export type Intro = 'full' | 'grow' | 'busy'
 
 export interface LevelDef {
     level: number
     title: string
     message: string
+    intro: Intro
+    wait: boolean
     world: { w: number; h: number }
     start: Vec
     plaza: { x: number; y: number; r: number }
     roads: Vec[][]
     houses: HouseSpot[]
     decor: DecoSpot[]
+    using: Use[]
     calls: CallDef[]
 }
 

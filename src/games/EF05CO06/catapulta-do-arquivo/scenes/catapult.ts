@@ -15,7 +15,8 @@ export interface Catapult {
     pullLength(): number
     rest(): void
     fire(): void
-    drawPreview(dots: Array<{ x: number; y: number }>): void
+    /** a linha de bolinhas até a aterrissagem, apagando para a ponta; `zoom` mantém o tamanho na tela */
+    drawPreview(dots: Array<{ x: number; y: number }>, zoom?: number): void
     rect(): { x: number; y: number; w: number; h: number }
     destroy(): void
 }
@@ -65,7 +66,7 @@ export function createCatapult(scene: Phaser.Scene): Catapult {
         pull(dx, dy) {
             const length = Math.hypot(dx, dy)
             const k = length > CATAPULT.maxPull ? CATAPULT.maxPull / length : 1
-            offset = { x: dx * k, y: dy * k }
+            offset = { x: dx * k, y: Math.min(dy * k, CATAPULT.maxDown) }
             place()
             frame.setAngle(Phaser.Math.Clamp(offset.x / 30, -4, 4))
             return { x: ball.x, y: ball.y }
@@ -85,16 +86,24 @@ export function createCatapult(scene: Phaser.Scene): Catapult {
             frame.setAngle(0)
             void FX.impact(scene, frame, 0.12)
         },
-        drawPreview(list) {
+        drawPreview(list, zoom = 1) {
             dots.clear()
+            const k = 1 / zoom
+            const last = list.length - 1
             list.forEach((p, i) => {
-                if (i % 2) return
-                const a = 1 - i / (list.length + 4)
-                dots.fillStyle(C.ink, a * 0.5)
-                dots.fillCircle(p.x, p.y + 2, 8)
+                if (i === last) return
+                const a = 0.95 - (0.6 * i) / Math.max(1, last)
+                dots.fillStyle(C.ink, a * 0.45)
+                dots.fillCircle(p.x, p.y + 2 * k, 7 * k)
                 dots.fillStyle(C.preview, a)
-                dots.fillCircle(p.x, p.y, 7)
+                dots.fillCircle(p.x, p.y, 6 * k)
             })
+            if (last < 1) return
+            const end = list[last]
+            dots.fillStyle(C.preview, 0.3)
+            dots.fillCircle(end.x, end.y, BALL.r)
+            dots.lineStyle(3 * k, C.preview, 0.55)
+            dots.strokeCircle(end.x, end.y, BALL.r)
         },
         rect: () => ({ x: CATAPULT.x, y: 370, w: 240, h: 230 }),
         destroy() {

@@ -8,20 +8,20 @@ import { faseInicial } from '../../../../shared/level/faseInicial'
 import { FX } from '../../../../shared/effects/FX'
 
 import { CAR_CELL, CREW_CELL } from '../data/files'
-import { CAR_X, DEPTH, H, HAY, LANES, W } from '../data/layout'
-import { LEVELS, POINTS, groundAt, guideKey, lapOf, lapPos, nextBox, situationAt, startTire, totalOf, vehicleAt } from '../data/levels'
+import { CAR_X, DEPTH, H, HAY, LANES, SKY, TRAIL, W, laneOf } from '../data/layout'
+import { LEVELS, POINTS, asksVehicle, groundAt, guideKey, lapOf, lapPos, needOf, nextBox, pitOf, situationAt, startTire, totalOf, vehicleAt } from '../data/levels'
 import { DRIVE, GUST, PIT } from '../data/physics'
-import { TIRES, WEATHERS, pathOf, tireFor } from '../data/rules'
+import { TIRES, WEATHERS, rowsOf, tireFor } from '../data/rules'
 import { C, CSS } from '../data/theme'
 import { TIMING } from '../data/timing'
-import { CAPTION, LABEL, WHY } from '../data/words'
-import type { Failure, Lane, LevelDef, Situation, State, TireId, Vehicle, Weather } from '../types'
+import { CAPTION, CONDITION_ICON, GUIDE, LABEL, SKY_WORD, WHY } from '../data/words'
+import type { Failure, Lane, LevelDef, Rect, Situation, State, TireId, Vehicle, Weather } from '../types'
 
 import { createAudio, type Audio } from './audio'
 import { createBanner, type Banner } from './banner'
 import { createCaption, type Caption } from './caption'
 import { createCar, type Car } from './car'
-import { createCarts, type Carts } from './carts'
+import { createCarts, isVehicle, type Carts, type Pick } from './carts'
 import { createControls, type Controls, type Pedal } from './controls'
 import { createCrew, type Crew } from './crew'
 import { createEffects, type Effects } from './effects'
@@ -29,7 +29,6 @@ import { spot, teach } from './guide'
 import { createHand, type Hand } from './hand'
 import { createHeader, type Header } from './header'
 import { createRacers, type Racers } from './racers'
-import { createRule, type RuleBoard } from './rule'
 import { createSky, type Sky } from './sky'
 import { createTrack, type Track } from './track'
 import { createView, type View } from './view'
@@ -62,11 +61,11 @@ export class GameScene extends Phaser.Scene {
     private weather: Weather = 'sol'
     private gustMs = 0
     private wrongMs = 0
+    private pit = pitOf(LEVELS[0])
     private pitCalled = false
     private target: number | null = null
     private relayed = false
     private relayAuto = false
-    private seenMud = false
     private auto: { gas: boolean; brake: boolean } | null = null
     private trayReady: (() => void) | null = null
 
@@ -84,7 +83,6 @@ export class GameScene extends Phaser.Scene {
     private car!: Car
     private effects!: Effects
     private header!: Header
-    private rule!: RuleBoard
     private controls!: Controls
     private carts!: Carts
     private caption!: Caption
@@ -102,6 +100,7 @@ export class GameScene extends Phaser.Scene {
         this.livesLeft = data?.lives ?? this.livesTotal
         const number = Phaser.Math.Clamp(data?.level ?? faseInicial(this, 1), 1, LEVELS.length)
         this.level = LEVELS[number - 1]
+        this.pit = pitOf(this.level)
         this.state = 'intro'
         this.introduce = false
         this.paused = false
@@ -112,7 +111,7 @@ export class GameScene extends Phaser.Scene {
         this.lane = 'front'
         this.laneFrom = 'front'
         this.laneK = 1
-        this.vehicle = this.level.vehicles[0]
+        this.vehicle = vehicleAt(this.level, 0)
         this.tire = startTire(this.level)
         this.weather = this.level.start
         this.gustMs = 0
@@ -120,7 +119,6 @@ export class GameScene extends Phaser.Scene {
         this.pitCalled = false
         this.target = null
         this.relayed = false
-        this.seenMud = false
         this.auto = null
         this.trayReady = null
         this.score = data?.points ?? 0
@@ -149,9 +147,8 @@ export class GameScene extends Phaser.Scene {
             stage: () => this.level.level,
             onHelp: () => void this.explain(),
         })
-        this.rule = createRule(this, this.level.rule)
         this.controls = createControls(this, () => this.callPit(false))
-        this.carts = createCarts(this, this.level.carts, this.level.vehicles.includes('moto'), tire => void this.onPick(tire))
+        this.carts = createCarts(this, this.level.carts, this.level.narrow.length > 0, rowsOf(this.level.rule), id => void this.onPick(id))
         this.caption = createCaption(this)
         this.hand = createHand(this)
         this.banner = createBanner(this)
@@ -177,7 +174,7 @@ export class GameScene extends Phaser.Scene {
     private shutdownScene() {
         this.gen++
         this.game.canvas?.removeEventListener('pointerdown', this.focusGame)
-        ;[this.banner, this.hand, this.caption, this.carts, this.controls, this.rule, this.header, this.effects, this.car, this.racers, this.crew, this.track, this.sky, this.audio, this.view].forEach(m =>
+        ;[this.banner, this.hand, this.caption, this.carts, this.controls, this.header, this.effects, this.car, this.racers, this.crew, this.track, this.sky, this.audio, this.view].forEach(m =>
             m?.destroy(),
         )
         EventBus.off('mute-audio', this.onMute, this)
@@ -202,12 +199,12 @@ export class GameScene extends Phaser.Scene {
         this.track.paint(this.d)
         this.crew.update(this.track.screenX, this.track.near)
         this.placeCar()
-        this.car.roll(moved)
-        if (this.state !== 'error') this.car.jiggle(time, speed > 40 ? 1.6 : 0)
-
         const s = this.situation()
         const raining = WEATHERS[this.weather].raining
-        const wrong = this.tire !== null && this.tire !== tireFor(this.level.rule, s)
+        const wrong = this.tire !== null && this.tire !== needOf(this.level, s, this.vehicle)
+        const slipping = wrong && s.ground === 'lama' && speed > 20 && (this.state === 'race' || this.state === 'demo')
+        this.car.roll(slipping ? moved * 3 : moved)
+        if (this.state !== 'error') this.car.jiggle(time, slipping ? 3.2 : speed > 40 ? 1.6 : 0)
         if (this.state === 'race' || this.state === 'demo') this.car.tilt(wrong && raining && speed > 60 ? Math.sin(time * 0.012) * 6 : 0)
         this.sky.update(delta, moved)
         this.effects.update(delta, this.car, speed, {
@@ -223,16 +220,17 @@ export class GameScene extends Phaser.Scene {
                 this.racers.ds.map(x => x / total),
                 this.d >= total ? 1 + this.racers.finishedBefore() : 1 + this.racers.ahead(this.d),
             )
-        this.audio.engine(this.state === 'race' || this.state === 'demo' ? Phaser.Math.Clamp(speed / DRIVE.vmax, 0, 1) : 0)
+        this.audio.engine(this.state === 'race' || this.state === 'demo' ? Phaser.Math.Clamp(speed / DRIVE.vmax, 0, 1) : this.state === 'done' ? -1 : 0, this.vehicle)
         const near = this.target !== null ? this.target - this.d : Infinity
-        this.controls.warnBrake(this.state === 'race' && this.pitCalled && this.lane === 'pit' && near < PIT.warn && near > -PIT.zone && this.v > PIT.parkV)
-        this.controls.nudgePit(this.state === 'race' && !this.pitCalled && this.wrongMs > 2500)
+        this.controls.warnBrake(this.state === 'race' && this.pitCalled && this.lane === 'pit' && near < PIT.warn && near > -this.pit.zone && this.v > this.pit.parkV)
+        this.controls.nudgePit(this.state === 'race' && !this.pitCalled && this.wrongMs > this.pit.nudge)
         this.view.update(delta, W / 2)
     }
 
     private placeCar() {
-        const from = LANES[this.laneFrom]
-        const to = LANES[this.lane]
+        const moto = this.vehicle === 'moto'
+        const from = laneOf(this.laneFrom, moto)
+        const to = laneOf(this.lane, moto)
         const k = easeInOut(this.laneK)
         this.car.place(CAR_X, Phaser.Math.Linear(from.ground, to.ground, k), Phaser.Math.Linear(from.scale, to.scale, k))
         this.car.setDepth(this.lane === 'pit' ? (k > 0.5 ? DEPTH.pit : DEPTH.front) : k > 0.5 ? DEPTH.front : DEPTH.pit)
@@ -246,14 +244,14 @@ export class GameScene extends Phaser.Scene {
     }
 
     private situation(at = this.d): Situation {
-        return situationAt(this.level, at, this.weather, this.vehicle)
+        return situationAt(this.level, at, this.weather)
     }
 
     // ───────────────────────────────────────────── pilotar
 
     private drive(dt: number) {
         const ms = dt * 1000
-        const need = tireFor(this.level.rule, this.situation())
+        const need = needOf(this.level, this.situation(), this.vehicle)
         const right = this.tire === need
         this.wrongMs = right ? 0 : this.wrongMs + ms
         let cap = DRIVE.vmax * (right ? 1 : DRIVE.wrong)
@@ -278,28 +276,29 @@ export class GameScene extends Phaser.Scene {
 
         if (this.pitCalled && this.target !== null && this.lane === 'pit') {
             const off = this.d - this.target
-            if (off >= -PIT.zone && off <= PIT.zone && this.v <= PIT.parkV) {
+            if (off >= -this.pit.zone && off <= this.pit.zone && this.v <= this.pit.parkV) {
                 void this.park(this.gen)
                 return
             }
-            if (off > PIT.zone) this.missBox()
+            if (off > this.pit.zone) this.missBox()
+        }
+        const was = groundAt(this.level, prev)
+        const now = groundAt(this.level, this.d)
+        if (was !== now) {
+            this.caption.say(now === 'lama' ? CAPTION.mud : CAPTION.mudOut, C.mudLight, TIMING.caption, undefined, CONDITION_ICON.lama)
+            if (now === 'lama') {
+                this.audio.mud()
+                this.effects.mudBurst(this.car.wheel(1))
+            }
         }
         if (this.demoing) return
 
         this.level.events.forEach(e => {
             if (prev < e.at && this.d >= e.at) this.changeWeather(e.weather)
         })
-        const was = groundAt(this.level, prev)
-        const now = groundAt(this.level, this.d)
-        if (was !== now && now === 'lama') {
-            this.audio.mud()
-            this.effects.mudBurst(this.car.wheel(1))
-            if (!this.seenMud) this.caption.say(CAPTION.mud, C.mudLight, TIMING.caption)
-            this.seenMud = true
-        }
         const lap = Math.floor(this.d / this.level.lap)
         if (lap > Math.floor(prev / this.level.lap) && lap < this.level.laps) this.onLap(lap)
-        if (!this.pitCalled && this.relayAhead()) this.callPit(true)
+        if (!this.relayAuto && this.relayAhead()) this.callPit(true)
         if (this.lapIndex() === this.level.laps - 1 && lapPos(this.level, this.d) > this.level.lap - 1600) this.crew.beto(CREW_CELL.betoFlag)
         if (this.d >= totalOf(this.level)) void this.finish(this.gen)
     }
@@ -309,9 +308,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     private relayAhead() {
-        const next = this.level.vehicles[this.lapIndex() + 1]
-        const soon = next !== undefined && next !== this.vehicle && lapPos(this.level, this.d) >= this.level.lap - PIT.relayCall
-        return soon || vehicleAt(this.level, this.d) !== this.vehicle
+        return vehicleAt(this.level, this.d + PIT.relayCall) !== this.vehicle || vehicleAt(this.level, this.d) !== this.vehicle
     }
 
     private changeWeather(w: Weather) {
@@ -324,6 +321,7 @@ export class GameScene extends Phaser.Scene {
         this.effects.wind()
         this.audio.gust()
         if (raining !== was) this.audio.rain(raining)
+        this.caption.say(SKY_WORD[w].text, SKY_WORD[w].tone, TIMING.caption, undefined, SKY_WORD[w].icon)
         void this.sky.change(w)
         void this.track.setWet(raining, TIMING.weather)
     }
@@ -349,7 +347,7 @@ export class GameScene extends Phaser.Scene {
 
     private callPit(relay: boolean, scripted = false) {
         if (this.state !== 'race' && !(this.state === 'demo' && scripted)) return
-        if (this.pitCalled) {
+        if (this.pitCalled && !(relay && !this.relayAuto)) {
             if (this.relayAhead()) return
             this.pitCalled = false
             this.target = null
@@ -358,22 +356,29 @@ export class GameScene extends Phaser.Scene {
             this.controls.setPit('off')
             return
         }
-        this.pitCalled = true
-        this.target = nextBox(this.level, this.d, PIT.minAhead)
-        this.crew.call(this.target)
-        this.track.mark(this.target)
-        this.setLane('pit')
+        if (!this.pitCalled) {
+            this.pitCalled = true
+            this.target = nextBox(this.level, this.d, this.pitAhead())
+            this.crew.call(this.target)
+            this.track.mark(this.target)
+            this.setLane('pit')
+            this.audio.pop()
+        }
         this.controls.setPit(relay ? 'relay' : 'on')
-        this.audio.pop()
         if (relay) {
             this.relayAuto = true
             this.controls.setEnabled(false)
-            this.caption.say(CAPTION.relay, C.butter, TIMING.caption)
+            const into = vehicleAt(this.level, this.d + PIT.relayCall) === 'moto'
+            this.caption.say(into ? CAPTION.narrowIn : CAPTION.narrowOut, C.butter, TIMING.caption, undefined, CONDITION_ICON.estreita)
         }
     }
 
+    private pitAhead() {
+        return Math.min(PIT.minAhead, (this.v * this.v) / (2 * DRIVE.brake) + PIT.margin)
+    }
+
     private missBox() {
-        this.target = nextBox(this.level, this.d, PIT.minAhead)
+        this.target = nextBox(this.level, this.d, this.pitAhead())
         this.crew.call(this.target)
         this.track.mark(this.target)
         this.caption.say(CAPTION.missed, C.oops, TIMING.caption)
@@ -411,12 +416,19 @@ export class GameScene extends Phaser.Scene {
         this.car.pose(CAR_CELL.idle)
         await this.crew.toWheels(this.car, this.d)
         if (gen !== this.gen) return
-        this.relayed = vehicleAt(this.level, this.d) !== this.vehicle
-        if (this.relayed) {
-            await this.relay()
-            if (gen !== this.gen) return
-        }
-        await this.carts.open()
+        this.relayed = false
+        if (asksVehicle(this.level) || vehicleAt(this.level, this.d) !== this.vehicle) await this.askVehicle(gen)
+        else if (this.vehicle === 'moto') await this.fitMoto(gen)
+        else await this.openTray(this.tiresOf(this.vehicle), gen)
+    }
+
+    private tiresOf(vehicle: Vehicle): TireId[] {
+        return this.level.carts.filter(t => TIRES[t].vehicle === vehicle)
+    }
+
+    private async openTray(ids: Pick[], gen: number) {
+        this.state = 'pit'
+        await this.carts.open(ids)
         if (gen !== this.gen) return
         if (!this.demoing) {
             this.carts.setEnabled(true)
@@ -427,39 +439,122 @@ export class GameScene extends Phaser.Scene {
         ready?.()
     }
 
-    /** O revezamento: o veículo velho entra na tenda e o novo sai sem pneus. */
-    private async relay() {
+    /** Etapa 1 do box que pede veículo: só MOTO e CARRO. */
+    private askVehicle(gen: number) {
+        if (!asksVehicle(this.level)) this.caption.say(CAPTION.vehicle, C.butter, TIMING.caption)
+        return this.openTray(['moto', 'carro'], gen)
+    }
+
+    /** A troca de veículo: o velho entra na tenda e o novo sai sem pneus. */
+    private async relay(next: Vehicle) {
         this.audio.whoosh()
         await this.car.fade(0, TIMING.relay / 2)
-        this.vehicle = vehicleAt(this.level, this.d)
-        this.car.setVehicle(this.vehicle)
+        this.vehicle = next
+        this.car.setVehicle(next)
         this.tire = null
         this.car.setTire(null)
         this.car.pose(CAR_CELL.idle)
         await this.car.fade(1, TIMING.relay / 2)
     }
 
-    private async onPick(tire: TireId) {
+    private async onPick(id: Pick) {
         if (this.state !== 'pit') return
+        if (isVehicle(id)) await this.onVehicle(id)
+        else await this.onTire(id)
+    }
+
+    private async onVehicle(picked: Vehicle) {
+        const gen = this.gen
+        this.state = 'swap'
+        this.header.setHelpEnabled(false)
+        this.carts.setEnabled(false)
+        this.audio.press()
+        const due = vehicleAt(this.level, this.d)
+        if (asksVehicle(this.level)) this.audio.branch()
+        await this.carts.close()
+        if (gen !== this.gen) return
+        if (picked !== due) {
+            const s = this.situation()
+            if (asksVehicle(this.level)) {
+                await this.crash(gen, picked === 'carro' ? 'naoCabe' : 'pistaLarga', needOf(this.level, s, due), s)
+                return
+            }
+            await this.bumpBack(gen)
+            if (gen !== this.gen) return
+            await this.askVehicle(gen)
+            return
+        }
+        if (picked !== this.vehicle) {
+            await this.relay(picked)
+            if (gen !== this.gen) return
+            this.relayed = true
+        }
+        if (picked === 'moto' && !asksVehicle(this.level)) await this.fitMoto(gen)
+        else await this.openTray(this.tiresOf(picked), gen)
+    }
+
+    /** N2: a regra não fala de moto, então a equipe põe sozinha o pneu de moto que a regra pede. */
+    private async fitMoto(gen: number) {
+        this.state = 'swap'
+        const s = this.situation()
+        const need = needOf(this.level, s, 'moto')
+        const before = this.tire
+        this.audio.branch()
+        await this.crew.work()
+        if (gen !== this.gen) return
+        this.audio.pop()
+        await this.car.swapTires(need)
+        if (gen !== this.gen) return
+        this.tire = need
+        await this.leaveBox(gen, this.relayed || before !== need)
+    }
+
+    private gateFor(d: number) {
+        const gate = this.track.gateAhead(d)
+        if (gate !== null) return gate
+        this.track.cones(d + TRAIL.spare)
+        return d + TRAIL.spare
+    }
+
+    /** N2: o carro tenta entrar na pista estreita, bate nos cones e volta para a tenda. Não é erro. */
+    private async bumpBack(gen: number) {
+        const home = this.d
+        const gate = this.gateFor(this.d)
+        await this.crew.back()
+        if (gen !== this.gen) return
+        this.car.pose(CAR_CELL.race)
+        this.audio.vroom()
+        this.setLane('front')
+        await this.glide(gate - 150, TIMING.crashDrive, easeIn)
+        if (gen !== this.gen) return
+        this.audio.thump()
+        FX.shakeCam(this, 'leve')
+        this.car.pose(CAR_CELL.worried)
+        void this.track.bump(gate)
+        this.caption.say(CAPTION.onlyMoto, C.oops, TIMING.caption)
+        await this.glide(gate - 280, 320, easeOut)
+        if (gen !== this.gen) return
+        await FX.wait(this, 500)
+        if (gen !== this.gen) return
+        this.setLane('pit')
+        await this.glide(home, TIMING.crashDrive, easeInOut)
+        if (gen !== this.gen) return
+        this.car.pose(CAR_CELL.idle)
+        this.track.cones(null)
+        await this.crew.toWheels(this.car, this.d)
+    }
+
+    private async onTire(tire: TireId) {
         const gen = this.gen
         this.state = 'swap'
         this.header.setHelpEnabled(false)
         this.carts.setEnabled(false)
         this.audio.press()
         const s = this.situation()
-        const need = tireFor(this.level.rule, s)
+        const need = needOf(this.level, s, this.vehicle)
         const before = this.tire
-        this.rule.light(pathOf(this.rule.rows, tire))
         this.audio.branch()
         void this.carts.close()
-        if (TIRES[tire].vehicle !== this.vehicle) {
-            await this.crew.work()
-            if (gen !== this.gen) return
-            await this.car.bounceOff(tire)
-            if (gen !== this.gen) return
-            await this.crash(gen, 'naoServe', need, s)
-            return
-        }
         await this.crew.work()
         if (gen !== this.gen) return
         this.audio.pop()
@@ -470,7 +565,10 @@ export class GameScene extends Phaser.Scene {
             await this.crash(gen, this.failureOf(need), need, s)
             return
         }
-        const needed = this.relayed || before !== need
+        await this.leaveBox(gen, this.relayed || before !== need)
+    }
+
+    private async leaveBox(gen: number, needed: boolean) {
         if (!this.demoing && needed) {
             this.score += POINTS
             this.hits += 1
@@ -489,7 +587,6 @@ export class GameScene extends Phaser.Scene {
         this.controls.setPit('off')
         this.setLane('front')
         this.wrongMs = 0
-        this.time.delayedCall(900, () => gen === this.gen && this.rule.light(null))
         this.state = this.demoing ? 'demo' : 'race'
         this.controls.visible(true)
         this.controls.setEnabled(true)
@@ -505,7 +602,8 @@ export class GameScene extends Phaser.Scene {
 
     private whyOf(failure: Failure, s: Situation) {
         const raining = WEATHERS[s.weather].raining
-        if (failure === 'naoServe') return this.vehicle === 'moto' ? WHY.moto : WHY.carro
+        if (failure === 'naoCabe') return WHY.narrow
+        if (failure === 'pistaLarga') return WHY.wide
         if (failure === 'atola') return raining ? WHY.mudFirst : WHY.mud
         if (failure === 'aquaplana') return WHY.rain
         if (this.level.mud.length) return WHY.dryNoMud
@@ -516,13 +614,38 @@ export class GameScene extends Phaser.Scene {
         this.state = 'error'
         this.controls.visible(false)
         this.header.setHelpEnabled(false)
-        this.car.pose(CAR_CELL.worried)
-        if (failure !== 'naoServe') {
-            this.setLane('front')
-            this.car.pose(CAR_CELL.race)
-            this.audio.vroom()
+        const due = vehicleAt(this.level, this.d)
+        if (failure === 'naoCabe') {
+            await this.relay('carro')
+            if (gen !== this.gen) return
+            this.tire = tireFor(this.level.rule, { ...s, narrow: false })
+            this.car.setTire(this.tire)
         }
-        if (failure === 'aquaplana') {
+        this.setLane('front')
+        this.car.pose(CAR_CELL.race)
+        this.audio.vroom()
+        if (failure === 'naoCabe') {
+            const gate = this.gateFor(this.d)
+            await this.glide(gate - 150, TIMING.crashDrive, easeIn)
+            if (gen !== this.gen) return
+            this.audio.thump()
+            FX.shakeCam(this, 'leve')
+            void this.track.bump(gate)
+            this.car.pose(CAR_CELL.dizzy)
+            await this.glide(gate - 280, 320, easeOut)
+            if (gen !== this.gen) return
+            this.effects.dizzy(true)
+        } else if (failure === 'pistaLarga') {
+            void this.glide(this.d + 420, TIMING.stuck, easeOut)
+            this.audio.skid()
+            for (let i = 0; i < 10; i++) {
+                this.car.tilt(i % 2 ? -9 : 9)
+                await FX.wait(this, TIMING.stuck / 10)
+                if (gen !== this.gen) return
+            }
+            this.car.tilt(0)
+            this.car.pose(CAR_CELL.worried)
+        } else if (failure === 'aquaplana') {
             const hayAt = this.d + 300 + HAY.ahead
             this.track.hay(hayAt)
             await this.glide(this.d + 300, TIMING.crashDrive, easeIn)
@@ -562,7 +685,6 @@ export class GameScene extends Phaser.Scene {
             await this.car.sink(14)
             if (gen !== this.gen) return
         }
-        void this.rule.shake(pathOf(this.rule.rows, need))
         this.banner.say(this.whyOf(failure, s))
         await FX.wait(this, TIMING.error)
         if (gen !== this.gen) return
@@ -611,8 +733,9 @@ export class GameScene extends Phaser.Scene {
         this.track.mark(null)
         this.crew.call(null)
         this.crew.beto(CREW_CELL.beto)
-        this.vehicle = this.level.vehicles[0]
+        this.vehicle = vehicleAt(this.level, d)
         this.car.setVehicle(this.vehicle)
+        this.track.cones(null)
         this.tire = startTire(this.level)
         this.car.setTire(this.tire)
         this.car.reset()
@@ -620,7 +743,6 @@ export class GameScene extends Phaser.Scene {
         this.setLane('front', true)
         this.setWeather(this.level.start)
         this.controls.setPit('off')
-        this.rule.light(null)
         this.track.paint(d)
     }
 
@@ -630,7 +752,6 @@ export class GameScene extends Phaser.Scene {
         this.racers.grid()
         this.racers.setActive(true)
         this.header.visible(true)
-        this.rule.visible(true)
         this.controls.visible(true)
         this.controls.setEnabled(false)
         await FX.wait(this, TIMING.beat)
@@ -651,36 +772,27 @@ export class GameScene extends Phaser.Scene {
 
     // ───────────────────────────────────────────── demonstração (N1) e apresentação (N2, N3)
 
-    private async showRule(gen: number, groups: { ids: number[]; caption: string }[]) {
-        this.header.visible(true)
-        this.controls.visible(false)
-        this.audio.pop()
-        await this.rule.big()
-        for (const group of groups) {
-            if (gen !== this.gen) return
-            this.caption.say(group.caption, C.butter)
-            for (const id of group.ids) {
-                await this.rule.flash(id)
-                await FX.wait(this, 320)
-                if (gen !== this.gen) return
-            }
-            await FX.wait(this, 500)
-        }
-        this.caption.hide()
-        this.rule.light(null)
-        await this.rule.dock()
+    /** Um balão da história: a corrida congela, o recorte pega o que a fala cita, e só segue no botão. */
+    private async say(gen: number, text: string, r: Rect, buttonLabel = 'Próximo', balloonY?: number) {
+        if (gen !== this.gen) return
+        this.paused = true
+        this.controls.release()
+        await teach(this, `${guideKey(this.level.level)}-${text}`, [{ text, ...spot(r, 14), buttonLabel, balloonY }])
+        this.paused = false
     }
 
+    private carRect(): Rect {
+        const g = laneOf(this.lane, this.vehicle === 'moto').ground
+        return this.view.toScreenRect({ x: CAR_X, y: g - 80, w: 300, h: 190 })
+    }
+
+    /**
+     * N2 e N3: a condição nova aparece acontecendo, numa parada feita pelo próprio jogo.
+     * Nada de quadro grande: a regra está nas etiquetas dos botões do box.
+     */
     private async introRule(gen: number) {
-        const rows = this.rule.rows
-        const groups =
-            this.level.level === 2
-                ? [{ ids: rows.map(r => r.id), caption: CAPTION.topDown }]
-                : [
-                      { ids: rows.filter(r => r.indent === 0).map(r => r.id), caption: CAPTION.which },
-                      { ids: rows.filter(r => r.indent > 0).map(r => r.id), caption: CAPTION.thenSky },
-                  ]
-        await this.showRule(gen, groups)
+        if (this.level.level === 2) await this.mudDemo(gen)
+        else await this.narrowDemo(gen)
     }
 
     private pedal(which: Pedal) {
@@ -710,63 +822,126 @@ export class GameScene extends Phaser.Scene {
         })
     }
 
-    private async demo(gen: number) {
-        await this.showRule(gen, [{ ids: this.rule.rows.map(r => r.id), caption: CAPTION.rule }])
-        if (gen !== this.gen) return
+    /** Começa uma história: a corrida no ponto `d`, com tudo à vista. */
+    private startDemo(d: number) {
         this.demoing = true
-        this.resetPlayer(this.level.boxes[1] - 1700)
+        this.resetPlayer(d)
+        this.header.visible(true)
         this.controls.visible(true)
         this.controls.setEnabled(true)
         this.state = 'demo'
+        this.car.pose(CAR_CELL.race)
+    }
 
-        this.caption.say(CAPTION.gas, C.gas)
+    private endDemo() {
+        this.hand.hide()
+        this.demoing = false
+        this.state = 'intro'
+    }
+
+    private async driveFor(gen: number, ms: number) {
         await this.holdPedal('gas')
-        await FX.wait(this, 1700)
-        if (gen !== this.gen) return
-        this.caption.say(CAPTION.brake, C.brake)
-        await this.holdPedal('brake')
-        await FX.wait(this, 600)
-        if (gen !== this.gen) return
-        await this.holdPedal('gas')
-        await FX.wait(this, 500)
-        if (gen !== this.gen) return
+        await FX.wait(this, ms)
+        return gen === this.gen
+    }
 
-        this.changeWeather('chuva')
-        this.caption.say(CAPTION.rained, C.drop)
-        void this.view.lean(true, { x: CAR_X + 80, y: 560 })
-        await FX.wait(this, 2000)
-        if (gen !== this.gen) return
-        await this.view.lean(false, { x: W / 2, y: 0 })
-
-        this.caption.say(CAPTION.box, C.pit)
-        await this.hand.press(this.pedal('pit'))
+    /** A bolinha aperta TROCAR PNEU, o carro entra no box e para; depois toca cada escolha, na ordem. */
+    private async scriptedStop(gen: number, picks: Pick[], atTray?: () => Promise<void>) {
         this.callPit(false, true)
+        await this.hand.press(this.pedal('pit'))
         await this.holdPedal('gas')
-        await this.until(() => this.target !== null && this.target - this.d < PIT.zone - 30, gen)
+        await this.until(() => this.target !== null && this.target - this.d < this.pit.zone - 30, gen)
         if (gen !== this.gen) return
-        this.caption.say(CAPTION.stop, C.brake)
         const tray = new Promise<void>(resolve => (this.trayReady = resolve))
         await this.holdPedal('brake')
         await tray
         if (gen !== this.gen) return
         this.controls.show('brake', false)
         this.hand.hide()
+        if (atTray) await atTray()
+        if (gen !== this.gen) return
+        for (const pick of picks) {
+            await FX.wait(this, 700)
+            if (gen !== this.gen) return
+            const r = this.carts.rect(pick)
+            await this.hand.press({ x: r.x, y: r.y })
+            void this.carts.press(pick)
+            await this.onPick(pick)
+            if (gen !== this.gen) return
+        }
+        this.hand.hide()
+    }
 
-        const need = tireFor(this.level.rule, this.situation())
-        this.caption.say(CAPTION.rainRain, C.drop)
-        for (const id of pathOf(this.rule.rows, need)) await this.rule.flash(id)
+    /**
+     * N1: a história da primeira parada, feita pelo próprio jogo. Cada balão espera o botão
+     * e fala da regra, nunca do controle: os pedais se explicam com a bolinha apertando.
+     */
+    private async demo(gen: number) {
+        this.startDemo(this.level.boxes[1] - 2400)
+        await this.say(gen, GUIDE.hello, this.carRect())
+
+        if (!(await this.driveFor(gen, 1700))) return
+        await this.holdPedal('brake')
+        await FX.wait(this, 600)
+        if (gen !== this.gen) return
+        if (!(await this.driveFor(gen, 500))) return
+
+        this.changeWeather('chuva')
+        void this.view.lean(true, { x: CAR_X + 80, y: 560 })
+        await FX.wait(this, 1600)
+        if (gen !== this.gen) return
+        await this.view.lean(false, { x: W / 2, y: 0 })
+        this.hand.hide()
+        await this.say(gen, GUIDE.rained, SKY.rect)
+        await this.scriptedStop(gen, [tireFor(this.level.rule, this.situation())], async () => {
+            await this.say(gen, GUIDE.rule, this.carts.area(), 'Próximo', 300)
+            this.carts.read()
+            await FX.wait(this, TIMING.hintStep * 2 + 600)
+        })
+        if (gen !== this.gen) return
+        await FX.wait(this, 500)
+        await this.say(gen, GUIDE.yourTurn, this.carRect(), 'Vamos começar!')
+        this.endDemo()
+    }
+
+    /** N2: a Kika entra na lama de pneu liso e patina; para, põe CRAVOS e passa. Depois chove na lama. */
+    private async mudDemo(gen: number) {
+        const mud = this.level.mud[0]
+        this.startDemo(mud.from - 1300)
+        await this.say(gen, GUIDE.mud, this.carRect())
+        await this.holdPedal('gas')
+        await this.until(() => this.d > mud.from + 200, gen)
         await FX.wait(this, 500)
         if (gen !== this.gen) return
-        const r = this.carts.rect(need)
-        await this.hand.press({ x: r.x, y: r.y })
-        void this.carts.press(need)
-        await this.onPick(need)
+        this.hand.hide()
+        await this.say(gen, GUIDE.mudSlow, this.carRect())
+        await this.scriptedStop(gen, ['cravos'])
+        if (gen !== this.gen) return
+        if (!(await this.driveFor(gen, 1400))) return
+        this.changeWeather('chuva')
+        await FX.wait(this, 1200)
         if (gen !== this.gen) return
         this.hand.hide()
-        this.caption.say(CAPTION.yourTurn, C.yes, TIMING.caption)
+        await this.say(gen, GUIDE.mudFirst, this.carRect())
+        await this.say(gen, GUIDE.yourTurn, this.carRect(), 'Vamos começar!')
+        this.endDemo()
+    }
+
+    /** N3: na trilha estreita só a moto cabe; começa a chover e a parada tem duas etapas: veículo, depois pneu. */
+    private async narrowDemo(gen: number) {
+        this.startDemo(this.level.boxes[0] + this.level.lap - 1500)
+        await this.say(gen, GUIDE.narrow, this.carRect())
+        if (!(await this.driveFor(gen, 600))) return
+        this.changeWeather('chuva')
         await FX.wait(this, 1200)
-        this.demoing = false
-        this.state = 'intro'
+        if (gen !== this.gen) return
+        this.hand.hide()
+        await this.say(gen, GUIDE.thenSky, SKY.rect)
+        await this.scriptedStop(gen, ['moto', 'motoChuva'])
+        if (gen !== this.gen) return
+        await FX.wait(this, 500)
+        await this.say(gen, GUIDE.yourTurn, this.carRect(), 'Vamos começar!')
+        this.endDemo()
     }
 
     // ───────────────────────────────────────────── ajuda
@@ -780,12 +955,17 @@ export class GameScene extends Phaser.Scene {
         this.header.setHelpEnabled(false)
         if (inPit) this.carts.setEnabled(false)
         await teach(this, `${guideKey(this.level.level)}-help`, [
-            { text: this.level.help, ...spot(this.rule.rect()), balloonY: 440, buttonLabel: 'Continuar' },
+            inPit
+                ? { text: this.level.help, ...spot(this.carts.area()), balloonY: 300, buttonLabel: 'Continuar' }
+                : { text: this.level.help, ...spot(SKY.rect), balloonY: 440, buttonLabel: 'Continuar' },
         ])
         if (gen !== this.gen) return
         this.paused = false
         this.header.setHelpEnabled(true)
-        if (inPit && this.state === 'pit') this.carts.setEnabled(true)
+        if (inPit && this.state === 'pit') {
+            this.carts.setEnabled(true)
+            this.carts.read()
+        }
     }
 
     private onShowTutorial() {

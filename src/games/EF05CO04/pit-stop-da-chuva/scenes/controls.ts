@@ -60,13 +60,8 @@ export function createControls(scene: Phaser.Scene, onPit: () => void): Controls
             .text(0, 0, text, { fontFamily: FONT.black, fontSize: `${SIZE.control}px`, color: CSS.ink })
             .setOrigin(0.5)
             .setResolution(2)
-        if (which === 'pit') {
-            icon.setPosition(-spec.w / 2 + 50, -2)
-            label.setPosition(26, 0)
-        } else {
-            icon.setPosition(0, -16)
-            label.setPosition(0, spec.h / 2 - 24)
-        }
+        icon.setPosition(0, -16)
+        label.setPosition(0, spec.h / 2 - 24)
         const box = scene.add.container(spec.x, spec.y, [face, icon, label]).setDepth(DEPTH.controls)
         const zone = scene.add
             .zone(spec.x, spec.y, spec.w + 24, spec.h + 24)

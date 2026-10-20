@@ -46,6 +46,17 @@ export interface SocketDef {
     at: Vec
 }
 
+/**
+ * O conector de um aparelho sem cabo, medido na arte (célula de 256). `tip` é o
+ * lado em que ele fica; `reach` vai do centro ao meio do conector e `body` do
+ * centro à outra ponta, os dois em fração do tamanho do aparelho.
+ */
+export interface Dock {
+    tip: Vec
+    reach: number
+    body: number
+}
+
 export interface DeviceDef {
     id: DeviceId
     name: string
@@ -62,6 +73,8 @@ export interface DeviceDef {
     takes?: Payload[]
     /** Tomadas próprias: o aparelho leva mais cabos. */
     sockets?: SocketDef[]
+    /** Entra direto na tomada, sem cabo (pendrive, memória, cartão): a criança leva o próprio aparelho. */
+    dock?: Dock
     /** A frase do erro: a função dele, em palavra de criança. */
     why: string
 }

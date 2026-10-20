@@ -1,0 +1,708 @@
+{
+  "recovered": true,
+  "method": "Medições reconstruídas a partir dos PNGs finais; referência de flores reconstruída a partir do mesmo bruto original, com os parâmetros registrados no MANIFEST.",
+  "files": [
+    {
+      "file": "formigas.png",
+      "width": 1024,
+      "height": 512,
+      "grid": [
+        4,
+        2
+      ],
+      "cell": [
+        256,
+        256
+      ],
+      "sha256": "f57bb3a919e5d565d2c55e7f9dda8ff3e5571c31348ae31409214070440cc274",
+      "sourceSha256": "daecfa6749efab147ec00ffcf8899e72ae261a9846431c78b05f5c7bf723dcf7",
+      "nonzeroRGBatAlphaZero": 0,
+      "lowAlpha1to47": 0,
+      "cells": [
+        {
+          "cell": 0,
+          "bounds": {
+            "x": 28,
+            "y": 41,
+            "width": 201,
+            "height": 215
+          },
+          "boundsAnyAlpha": {
+            "x": 28,
+            "y": 41,
+            "width": 201,
+            "height": 215
+          }
+        },
+        {
+          "cell": 1,
+          "bounds": {
+            "x": 23,
+            "y": 41,
+            "width": 211,
+            "height": 215
+          },
+          "boundsAnyAlpha": {
+            "x": 23,
+            "y": 41,
+            "width": 211,
+            "height": 215
+          }
+        },
+        {
+          "cell": 2,
+          "bounds": {
+            "x": 27,
+            "y": 41,
+            "width": 203,
+            "height": 215
+          },
+          "boundsAnyAlpha": {
+            "x": 27,
+            "y": 41,
+            "width": 203,
+            "height": 215
+          }
+        },
+        {
+          "cell": 3,
+          "bounds": {
+            "x": 30,
+            "y": 41,
+            "width": 197,
+            "height": 215
+          },
+          "boundsAnyAlpha": {
+            "x": 30,
+            "y": 41,
+            "width": 197,
+            "height": 215
+          }
+        },
+        {
+          "cell": 4,
+          "bounds": {
+            "x": 23,
+            "y": 41,
+            "width": 211,
+            "height": 215
+          },
+          "boundsAnyAlpha": {
+            "x": 23,
+            "y": 41,
+            "width": 211,
+            "height": 215
+          }
+        },
+        {
+          "cell": 5,
+          "bounds": {
+            "x": 27,
+            "y": 41,
+            "width": 202,
+            "height": 215
+          },
+          "boundsAnyAlpha": {
+            "x": 27,
+            "y": 41,
+            "width": 202,
+            "height": 215
+          }
+        },
+        {
+          "cell": 6,
+          "bounds": {
+            "x": 21,
+            "y": 134,
+            "width": 215,
+            "height": 122
+          },
+          "boundsAnyAlpha": {
+            "x": 21,
+            "y": 134,
+            "width": 215,
+            "height": 122
+          }
+        },
+        {
+          "cell": 7,
+          "bounds": {
+            "x": 23,
+            "y": 41,
+            "width": 211,
+            "height": 215
+          },
+          "boundsAnyAlpha": {
+            "x": 23,
+            "y": 41,
+            "width": 211,
+            "height": 215
+          }
+        }
+      ]
+    },
+    {
+      "file": "zuzu.png",
+      "width": 768,
+      "height": 512,
+      "grid": [
+        3,
+        2
+      ],
+      "cell": [
+        256,
+        256
+      ],
+      "sha256": "6df527e51e82de151e428d56a3dcf601c71b302b42ffd621d595e619595802cd",
+      "sourceSha256": "f5bea7d023d00286a3f36356c787f61201207ddf38f62d0cc6395d3c9f1a47a5",
+      "nonzeroRGBatAlphaZero": 0,
+      "lowAlpha1to47": 0,
+      "cells": [
+        {
+          "cell": 0,
+          "bounds": {
+            "x": 21,
+            "y": 23,
+            "width": 215,
+            "height": 210
+          },
+          "boundsAnyAlpha": {
+            "x": 21,
+            "y": 23,
+            "width": 215,
+            "height": 210
+          }
+        },
+        {
+          "cell": 1,
+          "bounds": {
+            "x": 21,
+            "y": 40,
+            "width": 215,
+            "height": 177
+          },
+          "boundsAnyAlpha": {
+            "x": 21,
+            "y": 40,
+            "width": 215,
+            "height": 177
+          }
+        },
+        {
+          "cell": 2,
+          "bounds": {
+            "x": 42,
+            "y": 21,
+            "width": 172,
+            "height": 215
+          },
+          "boundsAnyAlpha": {
+            "x": 42,
+            "y": 21,
+            "width": 172,
+            "height": 215
+          }
+        },
+        {
+          "cell": 3,
+          "bounds": {
+            "x": 21,
+            "y": 21,
+            "width": 215,
+            "height": 214
+          },
+          "boundsAnyAlpha": {
+            "x": 21,
+            "y": 21,
+            "width": 215,
+            "height": 214
+          }
+        },
+        {
+          "cell": 4,
+          "bounds": {
+            "x": 21,
+            "y": 30,
+            "width": 215,
+            "height": 197
+          },
+          "boundsAnyAlpha": {
+            "x": 21,
+            "y": 30,
+            "width": 215,
+            "height": 197
+          }
+        },
+        {
+          "cell": 5,
+          "bounds": {
+            "x": 21,
+            "y": 25,
+            "width": 215,
+            "height": 206
+          },
+          "boundsAnyAlpha": {
+            "x": 21,
+            "y": 25,
+            "width": 215,
+            "height": 206
+          }
+        }
+      ]
+    },
+    {
+      "file": "flores.png",
+      "width": 768,
+      "height": 768,
+      "grid": [
+        3,
+        3
+      ],
+      "cell": [
+        256,
+        256
+      ],
+      "sha256": "067282857fe33e393db66631ab7161f2ec08e88b054c10f028c6b5adfa90694c",
+      "sourceSha256": "e87019818ecbfa407d82319436591a1cf89185a689b5f83b9df6a9567e18e36f",
+      "nonzeroRGBatAlphaZero": 0,
+      "lowAlpha1to47": 0,
+      "cells": [
+        {
+          "cell": 0,
+          "bounds": {
+            "x": 37,
+            "y": 41,
+            "width": 182,
+            "height": 215
+          },
+          "boundsAnyAlpha": {
+            "x": 37,
+            "y": 41,
+            "width": 182,
+            "height": 215
+          }
+        },
+        {
+          "cell": 1,
+          "bounds": {
+            "x": 36,
+            "y": 41,
+            "width": 184,
+            "height": 215
+          },
+          "boundsAnyAlpha": {
+            "x": 36,
+            "y": 41,
+            "width": 184,
+            "height": 215
+          }
+        },
+        {
+          "cell": 2,
+          "bounds": {
+            "x": 37,
+            "y": 41,
+            "width": 182,
+            "height": 215
+          },
+          "boundsAnyAlpha": {
+            "x": 37,
+            "y": 41,
+            "width": 182,
+            "height": 215
+          }
+        },
+        {
+          "cell": 3,
+          "bounds": {
+            "x": 55,
+            "y": 41,
+            "width": 146,
+            "height": 215
+          },
+          "boundsAnyAlpha": {
+            "x": 55,
+            "y": 41,
+            "width": 146,
+            "height": 215
+          }
+        },
+        {
+          "cell": 4,
+          "bounds": {
+            "x": 55,
+            "y": 41,
+            "width": 147,
+            "height": 215
+          },
+          "boundsAnyAlpha": {
+            "x": 55,
+            "y": 41,
+            "width": 147,
+            "height": 215
+          }
+        },
+        {
+          "cell": 5,
+          "bounds": {
+            "x": 55,
+            "y": 41,
+            "width": 146,
+            "height": 215
+          },
+          "boundsAnyAlpha": {
+            "x": 55,
+            "y": 41,
+            "width": 146,
+            "height": 215
+          }
+        },
+        {
+          "cell": 6,
+          "bounds": {
+            "x": 38,
+            "y": 41,
+            "width": 181,
+            "height": 215
+          },
+          "boundsAnyAlpha": {
+            "x": 38,
+            "y": 41,
+            "width": 181,
+            "height": 215
+          }
+        },
+        {
+          "cell": 7,
+          "bounds": {
+            "x": 38,
+            "y": 41,
+            "width": 181,
+            "height": 215
+          },
+          "boundsAnyAlpha": {
+            "x": 38,
+            "y": 41,
+            "width": 181,
+            "height": 215
+          }
+        },
+        {
+          "cell": 8,
+          "bounds": {
+            "x": 37,
+            "y": 41,
+            "width": 182,
+            "height": 215
+          },
+          "boundsAnyAlpha": {
+            "x": 37,
+            "y": 41,
+            "width": 182,
+            "height": 215
+          }
+        }
+      ]
+    },
+    {
+      "file": "objetos.png",
+      "width": 1024,
+      "height": 512,
+      "grid": [
+        4,
+        2
+      ],
+      "cell": [
+        256,
+        256
+      ],
+      "sha256": "b052a32a36f09884f0e34218530e80f5d12abb4e7b35d00b1990551834c729fc",
+      "sourceSha256": "810bb194dacb8e2ebfa537ff6c9d15ab23e019625f296cdb443d5d6c9b6fde61",
+      "nonzeroRGBatAlphaZero": 0,
+      "lowAlpha1to47": 0,
+      "cells": [
+        {
+          "cell": 0,
+          "bounds": {
+            "x": 53,
+            "y": 20,
+            "width": 151,
+            "height": 217
+          },
+          "boundsAnyAlpha": {
+            "x": 53,
+            "y": 20,
+            "width": 151,
+            "height": 217
+          }
+        },
+        {
+          "cell": 1,
+          "bounds": {
+            "x": 87,
+            "y": 20,
+            "width": 83,
+            "height": 217
+          },
+          "boundsAnyAlpha": {
+            "x": 87,
+            "y": 20,
+            "width": 83,
+            "height": 217
+          }
+        },
+        {
+          "cell": 2,
+          "bounds": {
+            "x": 20,
+            "y": 41,
+            "width": 217,
+            "height": 174
+          },
+          "boundsAnyAlpha": {
+            "x": 20,
+            "y": 41,
+            "width": 217,
+            "height": 174
+          }
+        },
+        {
+          "cell": 3,
+          "bounds": {
+            "x": 39,
+            "y": 42,
+            "width": 179,
+            "height": 172
+          },
+          "boundsAnyAlpha": {
+            "x": 39,
+            "y": 42,
+            "width": 179,
+            "height": 172
+          }
+        },
+        {
+          "cell": 4,
+          "bounds": {
+            "x": 77,
+            "y": 86,
+            "width": 102,
+            "height": 84
+          },
+          "boundsAnyAlpha": {
+            "x": 77,
+            "y": 86,
+            "width": 102,
+            "height": 84
+          }
+        },
+        {
+          "cell": 5,
+          "bounds": {
+            "x": 71,
+            "y": 90,
+            "width": 115,
+            "height": 76
+          },
+          "boundsAnyAlpha": {
+            "x": 71,
+            "y": 90,
+            "width": 115,
+            "height": 76
+          }
+        },
+        {
+          "cell": 6,
+          "bounds": {
+            "x": 64,
+            "y": 74,
+            "width": 128,
+            "height": 108
+          },
+          "boundsAnyAlpha": {
+            "x": 64,
+            "y": 74,
+            "width": 128,
+            "height": 108
+          }
+        },
+        {
+          "cell": 7,
+          "bounds": {
+            "x": 58,
+            "y": 78,
+            "width": 141,
+            "height": 100
+          },
+          "boundsAnyAlpha": {
+            "x": 58,
+            "y": 78,
+            "width": 141,
+            "height": 100
+          }
+        }
+      ]
+    },
+    {
+      "file": "pipa.png",
+      "width": 1024,
+      "height": 640,
+      "grid": [
+        4,
+        2
+      ],
+      "cell": [
+        256,
+        320
+      ],
+      "sha256": "251080893f33c4737b651cf5be4276805385e4898b2c788a0653bc7ba8ef05c0",
+      "sourceSha256": "91e40a3f5fe4bcf6ba4b9d95894b0fd85c58e02cf22ea7ea26808477bd4694f5",
+      "nonzeroRGBatAlphaZero": 0,
+      "lowAlpha1to47": 0,
+      "cells": [
+        {
+          "cell": 0,
+          "bounds": {
+            "x": 21,
+            "y": 85,
+            "width": 215,
+            "height": 235
+          },
+          "boundsAnyAlpha": {
+            "x": 21,
+            "y": 85,
+            "width": 215,
+            "height": 235
+          }
+        },
+        {
+          "cell": 1,
+          "bounds": {
+            "x": 21,
+            "y": 98,
+            "width": 215,
+            "height": 222
+          },
+          "boundsAnyAlpha": {
+            "x": 21,
+            "y": 98,
+            "width": 215,
+            "height": 222
+          }
+        },
+        {
+          "cell": 2,
+          "bounds": {
+            "x": 21,
+            "y": 92,
+            "width": 215,
+            "height": 228
+          },
+          "boundsAnyAlpha": {
+            "x": 21,
+            "y": 92,
+            "width": 215,
+            "height": 228
+          }
+        },
+        {
+          "cell": 3,
+          "bounds": {
+            "x": 21,
+            "y": 114,
+            "width": 215,
+            "height": 206
+          },
+          "boundsAnyAlpha": {
+            "x": 21,
+            "y": 114,
+            "width": 215,
+            "height": 206
+          }
+        },
+        {
+          "cell": 4,
+          "bounds": {
+            "x": 21,
+            "y": 84,
+            "width": 215,
+            "height": 236
+          },
+          "boundsAnyAlpha": {
+            "x": 21,
+            "y": 84,
+            "width": 215,
+            "height": 236
+          }
+        },
+        {
+          "cell": 5,
+          "bounds": {
+            "x": 21,
+            "y": 107,
+            "width": 215,
+            "height": 213
+          },
+          "boundsAnyAlpha": {
+            "x": 21,
+            "y": 107,
+            "width": 215,
+            "height": 213
+          }
+        },
+        {
+          "cell": 6,
+          "bounds": {
+            "x": 21,
+            "y": 88,
+            "width": 215,
+            "height": 232
+          },
+          "boundsAnyAlpha": {
+            "x": 21,
+            "y": 88,
+            "width": 215,
+            "height": 232
+          }
+        },
+        {
+          "cell": 7,
+          "bounds": {
+            "x": 21,
+            "y": 132,
+            "width": 215,
+            "height": 188
+          },
+          "boundsAnyAlpha": {
+            "x": 21,
+            "y": 132,
+            "width": 215,
+            "height": 188
+          }
+        }
+      ]
+    }
+  ],
+  "backgrounds": [
+    {
+      "file": "bg-trilha.png",
+      "width": 1672,
+      "height": 941,
+      "sha256": "55ef3dbc788d863605a6ebf210228f10cb8f95980d29c4d63597bfdd5d1664cd",
+      "identicalToRaw": true
+    },
+    {
+      "file": "bg-jardim.png",
+      "width": 1672,
+      "height": 941,
+      "sha256": "ae7c9f4e8c61dd6f9db4e29e66801ec7f837c2ab9a7bef885c27417468bd64fd",
+      "identicalToRaw": true
+    }
+  ],
+  "flowerColorPreservation": {
+    "creamPixels": 12794,
+    "changedCream": 0,
+    "greenPixels": 19745,
+    "changedGreen": 0
+  }
+}

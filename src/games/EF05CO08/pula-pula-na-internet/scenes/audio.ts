@@ -2,7 +2,6 @@ type Wave = 'sine' | 'square' | 'triangle' | 'sawtooth'
 
 export interface Audio {
     boing(): void
-    bump(): void
     collect(): void
     open(): void
     tick(): void
@@ -11,7 +10,7 @@ export interface Audio {
     save(): void
     block(): void
     oops(): void
-    cloud(): void
+    zone(): void
     glitch(): void
     lose(): void
     win(): void
@@ -99,10 +98,6 @@ export function createAudio(): Audio {
             lastBoing = now
             tone(260 + Math.random() * 40, 140, { wave: 'sine', gain: 0.05, to: 560 })
         },
-        bump() {
-            tone(200, 120, { wave: 'triangle', gain: 0.07, to: 120 })
-            noise(80, 0.05, 0, 600, 'lowpass')
-        },
         collect() {
             notes([784, 988, 1319], 70, { wave: 'triangle', gain: 0.09 })
         },
@@ -129,7 +124,7 @@ export function createAudio(): Audio {
         oops() {
             tone(330, 260, { wave: 'triangle', gain: 0.09, to: 220 })
         },
-        cloud() {
+        zone() {
             noise(420, 0.05, 0, 900, 'bandpass')
             notes([392, 523, 659, 784], 80, { wave: 'sine', gain: 0.08, delay: 120 })
         },

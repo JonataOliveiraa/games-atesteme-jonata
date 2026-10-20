@@ -5,7 +5,8 @@ export type BallEvent =
     | { type: 'none' }
     | { type: 'bounce' }
     | { type: 'spring'; spring: number }
-    | { type: 'hole'; hole: number }
+    | { type: 'tunnel'; tunnel: number }
+    | { type: 'device'; device: number }
     | { type: 'cloud'; cloud: number }
     | { type: 'miss' }
 
@@ -71,6 +72,13 @@ export function step(b: BallState, dt: number, world: World, clouds: Array<{ x: 
     }
     if (b.y > 780) return { type: 'miss' }
 
+    for (let i = 0; i < map.devices.length; i++) {
+        const box = world.deviceBox(i)
+        const nx = Math.max(box.x - box.w / 2, Math.min(b.x, box.x + box.w / 2))
+        const ny = Math.max(box.y - box.h / 2, Math.min(b.y, box.y + box.h / 2))
+        if (Math.hypot(b.x - nx, b.y - ny) < r) return { type: 'device', device: i }
+    }
+
     for (let i = 0; i < map.platforms.length; i++) {
         const p = map.platforms[i]
         const left = p.x - p.w / 2
@@ -103,9 +111,9 @@ export function step(b: BallState, dt: number, world: World, clouds: Array<{ x: 
     }
     if (typeof b.on === 'number') return NONE
 
-    const hole = world.holeAt(b.x)
-    if (hole !== null && b.y + r * 0.4 >= world.holeTop(hole)) return { type: 'hole', hole }
-    if (hole !== null && b.on === 'ground') {
+    const tunnel = world.tunnelAt(b.x)
+    if (tunnel !== null && b.y + r * 0.4 >= world.tunnelTop(tunnel)) return { type: 'tunnel', tunnel }
+    if (tunnel !== null && b.on === 'ground') {
         b.on = 'air'
         b.vy = 0
         return NONE
@@ -136,19 +144,22 @@ export function step(b: BallState, dt: number, world: World, clouds: Array<{ x: 
     return land(b, ground, 'ground')
 }
 
-/** os pontinhos da mira: só o começo do voo, para a criança ainda ter de calcular */
-export function preview(world: World, x: number, y: number, vx: number, vy: number) {
+/**
+ * A mira: o voo inteiro até o primeiro toque (chão, tábua, mola, buraco ou nuvem), com a mesma física
+ * do arquivo de verdade. O último ponto é onde ele aterrissa.
+ */
+export function preview(world: World, x: number, y: number, vx: number, vy: number, clouds: Array<{ x: number; y: number }> = []) {
     const dots: Array<{ x: number; y: number }> = []
-    let px = x
-    let py = y
-    let pvy = vy
-    for (let i = 0; i < PHYS.previewDots; i++) {
-        pvy += PHYS.gravity * PHYS.previewDt
-        px += vx * PHYS.previewDt
-        py += pvy * PHYS.previewDt
-        const ground = world.groundAt(px)
-        if (ground !== null && py > ground) break
-        dots.push({ x: px, y: py })
+    const b = launch(x, y, vx, vy)
+    const dt = 1 / 180
+    const every = Math.round(PHYS.previewDt / dt)
+    for (let i = 1; i < PHYS.previewMax / dt; i++) {
+        const event = step(b, dt, world, clouds)
+        if (event.type !== 'none' || b.on !== 'air') {
+            dots.push({ x: b.x, y: b.y })
+            break
+        }
+        if (i % every === 0) dots.push({ x: b.x, y: b.y })
     }
     return dots
 }

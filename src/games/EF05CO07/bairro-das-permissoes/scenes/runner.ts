@@ -1,7 +1,7 @@
 import Phaser from 'phaser'
 import { FX } from '../../../../shared/effects/FX'
 import { KID_FOOT, KID_FRAME, cellKey } from '../data/files'
-import { CARRY, DEPTH, FENCE, KID, RUN } from '../data/layout'
+import { DEPTH, FENCE, KID, RUN } from '../data/layout'
 import { C } from '../data/theme'
 import { TIMING } from '../data/timing'
 import type { Solid, Vec } from '../types'
@@ -24,8 +24,6 @@ export interface Runner {
     place(at: Vec): void
     visible(on: boolean): void
     drop(): Promise<void>
-    carry(icon: number | null): void
-    carryAt(): Vec
     cheer(): void
     destroy(): void
 }
@@ -52,17 +50,6 @@ export function createRunner(scene: Phaser.Scene, view: View, start: Vec, world:
             .setDepth(sortDepth(pos.y)),
     )
     const base = sprite.scaleX
-
-    const tagArt = scene.add.graphics()
-    tagArt.fillStyle(C.shadow, 0.22)
-    tagArt.fillCircle(3, 5, CARRY.size * 0.62)
-    tagArt.fillStyle(C.white, 1)
-    tagArt.fillCircle(0, 0, CARRY.size * 0.62)
-    tagArt.lineStyle(5, C.yes, 1)
-    tagArt.strokeCircle(0, 0, CARRY.size * 0.62)
-    const tagIcon = scene.add.image(0, 0, 'icones', cellKey(0)).setDisplaySize(CARRY.size * 0.86, CARRY.size * 0.86)
-    const tag = view.world(scene.add.container(pos.x, pos.y - CARRY.lift, [tagArt, tagIcon]).setDepth(DEPTH.label + 3).setVisible(false))
-    let carrying = false
 
     const minX = FENCE.inset + RUN.radius + 8
     const minY = FENCE.inset + RUN.radius + 8
@@ -149,7 +136,6 @@ export function createRunner(scene: Phaser.Scene, view: View, start: Vec, world:
         sprite.setFrame(cellKey(frame)).setFlipX(flip)
         sprite.setPosition(pos.x, pos.y).setDepth(sortDepth(pos.y))
         shadow.setPosition(pos.x, pos.y)
-        if (carrying) tag.setPosition(pos.x, pos.y - CARRY.lift + Math.sin(scene.time.now / 160) * 5)
     }
 
     const runner: Runner = {
@@ -226,7 +212,6 @@ export function createRunner(scene: Phaser.Scene, view: View, start: Vec, world:
         visible(on) {
             sprite.setVisible(on)
             shadow.setVisible(on)
-            tag.setVisible(on && carrying)
         },
         async drop() {
             runner.visible(true)
@@ -235,18 +220,6 @@ export function createRunner(scene: Phaser.Scene, view: View, start: Vec, world:
             scene.tweens.add({ targets: sprite, scaleX: base * 1.2, scaleY: base * 0.8, duration: 110, yoyo: true })
             paint(0, false)
         },
-        carry(icon) {
-            carrying = icon !== null
-            scene.tweens.killTweensOf(tag)
-            if (icon === null) {
-                tag.setVisible(false)
-                return
-            }
-            tagIcon.setFrame(cellKey(icon)).setDisplaySize(CARRY.size * 0.86, CARRY.size * 0.86)
-            tag.setPosition(pos.x, pos.y - CARRY.lift).setVisible(true).setScale(0)
-            scene.tweens.add({ targets: tag, scale: 1, duration: 320, ease: 'Back.easeOut' })
-        },
-        carryAt: () => ({ x: tag.x, y: tag.y }),
         cheer() {
             facing = 'down'
             flip = false
@@ -268,10 +241,9 @@ export function createRunner(scene: Phaser.Scene, view: View, start: Vec, world:
             })
         },
         destroy() {
-            scene.tweens.killTweensOf([sprite, tag])
+            scene.tweens.killTweensOf(sprite)
             sprite.destroy()
             shadow.destroy()
-            tag.destroy()
         },
     }
     paint(0, false)

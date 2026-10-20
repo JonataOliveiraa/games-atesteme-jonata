@@ -1,5 +1,5 @@
 import Phaser from 'phaser'
-import { DEPTH, MARKER, VIEW } from '../data/layout'
+import { DEPTH, MARKER } from '../data/layout'
 import { C } from '../data/theme'
 import type { DeviceId, Vec } from '../types'
 import type { View } from './view'
@@ -33,15 +33,16 @@ export function createMarkers(scene: Phaser.Scene, view: View): Markers {
         return box
     }
 
-    const left = VIEW.x + MARKER.inset
-    const right = VIEW.x + VIEW.w - MARKER.inset
-    const top = VIEW.y + MARKER.inset
-    const bottom = VIEW.y + VIEW.h - MARKER.inset
-    const cx = VIEW.x + VIEW.w / 2
-    const cy = VIEW.y + VIEW.h / 2
-
     return {
         update(targets) {
+            // A janela do mapa cresce quando o cabeçalho sobe: as bordas são medidas agora.
+            const r = view.rect()
+            const left = r.x + MARKER.inset
+            const right = r.x + r.w - MARKER.inset
+            const top = r.y + MARKER.inset
+            const bottom = r.y + r.h - MARKER.inset
+            const cx = r.x + r.w / 2
+            const cy = r.y + r.h / 2
             const keep = new Set<DeviceId>()
             targets.forEach(({ id, at }) => {
                 if (view.inView(at, 40)) return

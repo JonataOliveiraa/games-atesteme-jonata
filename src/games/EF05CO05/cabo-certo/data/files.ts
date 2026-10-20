@@ -15,11 +15,7 @@ export const SHEETS = [DEVICE_SHEET, PIECE_SHEET]
 
 export const PC_KEY = 'computador'
 export const FLOOR_KEY = 'chao'
-export const HAND_KEY = 'mao'
-export const IMAGES = [PC_KEY, FLOOR_KEY, HAND_KEY]
-
-/** A ponta do dedo da mãozinha, em fração da imagem: é o ponto do toque. */
-export const HAND_TIP = { x: 0.34, y: 0.07 } as const
+export const IMAGES = [PC_KEY, FLOOR_KEY]
 
 export const PIECE_CELL = { plug: 0, entrada: 1, saida: 2, armazenamento: 3, memoria: 4 } as const
 

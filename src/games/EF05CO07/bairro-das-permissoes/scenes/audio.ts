@@ -16,6 +16,8 @@ export interface Audio {
     wake(): void
     pop(): void
     zap(): void
+    tick(): void
+    release(): void
     good(): void
     lose(): void
     win(): void
@@ -149,6 +151,14 @@ export function createAudio(): Audio {
         zap() {
             noise(260, 0.12, 0, 3200)
             tone(220, 260, { wave: 'sawtooth', gain: 0.05, to: 90 })
+        },
+        tick() {
+            tone(1400, 40, { wave: 'square', gain: 0.04 })
+            tone(1050, 40, { wave: 'square', gain: 0.035, delay: 160 })
+        },
+        release() {
+            tone(1100, 420, { wave: 'sine', gain: 0.08, to: 380 })
+            noise(380, 0.06, 0, 1200, 'bandpass')
         },
         good() {
             notes([523, 659, 784], 90, { wave: 'triangle', gain: 0.1 })

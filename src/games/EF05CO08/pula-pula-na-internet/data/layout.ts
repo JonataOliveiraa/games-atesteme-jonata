@@ -3,20 +3,22 @@ export const H = 720
 
 export const DEPTH = {
     sky: 0,
-    net: 1,
+    stars: 1,
+    far: 2,
+    mid: 3,
+    near: 4,
     platform: 10,
     summit: 11,
     item: 14,
     phone: 18,
-    cloud: 22,
     fx: 26,
     panel: 40,
     pad: 44,
+    alarm: 60,
     card: 90,
     header: 100,
     hud: 106,
     caption: 140,
-    hand: 150,
 } as const
 
 export const HEADER = {
@@ -47,11 +49,11 @@ export const COLUMN = { left: 250, right: 1030, w: 780, x: 640 } as const
 
 export const CAMERA = {
     anchor: 440,
-    reveal: 600,
     start: H - 40,
     respawn: H - 190,
     fall: 80,
     follow: 0.18,
+    peek: 320,
 } as const
 
 export const PAD = {
@@ -70,9 +72,10 @@ export const PLATFORM = {
 } as const
 
 export const ITEM = {
-    size: 112,
-    lift: 82,
+    size: 118,
+    lift: 86,
     reach: 74,
+    warn: 150,
 } as const
 
 export const CARD = {
@@ -95,6 +98,6 @@ export const CARD = {
     photoH: 140,
 } as const
 
-export const CAPTION = { x: 640, y: 640 } as const
+export const CAPTION = { x: 640, y: 170 } as const
 
-export const HAND = { size: 150 } as const
+export const MISS = { x: 640, y: 380 } as const

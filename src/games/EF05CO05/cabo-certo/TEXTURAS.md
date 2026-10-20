@@ -161,6 +161,8 @@ DO NOT INCLUDE: anything in the middle of the floor, devices, plugs, sockets, ca
 
 ## 7. `mao.png` — 256 × 256, alfa
 
+> **Fora do jogo desde 20/10/2026**: a mão foi trocada por uma bolinha em Graphics (`scenes/touch.ts`), a pedido do usuário. O arquivo fica guardado, mas não é carregado.
+
 Mãozinha de criança em desenho chibi: indicador para cima, três dedos dobrados, polegar cruzado na palma, punho saindo para baixo. Pele clara chapada e traço marrom quente fino a médio; **uma borda branca grossa externa** por contrato de legibilidade. Sem manga, rosto ou marcas de clique. Ponta do indicador em **(87, 18)** no final; ajustar sem cortar a ponta ou afinar a borda.
 
 ~~~text

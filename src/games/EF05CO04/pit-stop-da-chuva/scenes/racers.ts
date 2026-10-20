@@ -1,8 +1,7 @@
 import Phaser from 'phaser'
-import { CAR_X, DEPTH, LANES, W } from '../data/layout'
-import { nextBox, situationAt, totalOf, vehicleAt } from '../data/levels'
+import { CAR_X, DEPTH, W, laneOf } from '../data/layout'
+import { groundAt, needOf, nextBox, totalOf, vehicleAt } from '../data/levels'
 import { DRIVE, GUST, RIVALS, RIVAL_AI } from '../data/physics'
-import { tireFor } from '../data/rules'
 import { TIMING } from '../data/timing'
 import type { Lane, LevelDef, TireId, Vehicle, Weather } from '../types'
 import { createCar, type Car } from './car'
@@ -10,8 +9,9 @@ import type { View } from './view'
 
 /**
  * Os dois rivais. A equipe deles segue a MESMA regra: quando o pneu deixa de
- * servir, eles demoram um pouco para perceber, param na próxima tenda e voltam
- * com o pneu certo. A corrida deles não para enquanto a Kika está no box.
+ * servir, eles demoram para perceber (e às vezes nem trocam), param na próxima
+ * tenda e voltam com o pneu certo. Na pista estreita eles também trocam para a
+ * moto, e isso eles nunca esquecem. A corrida deles não para enquanto a Kika está no box.
  */
 export interface Racers {
     update(dt: number, playerD: number, weather: Weather): void
@@ -34,6 +34,9 @@ interface Rival {
     vehicle: Vehicle
     state: 'race' | 'toPit' | 'pit'
     wrongMs: number
+    need: TireId
+    reactMs: number
+    ignoring: boolean
     pitMs: number
     box: number
     lane: Lane
@@ -49,15 +52,18 @@ export function createRacers(scene: Phaser.Scene, view: View, level: LevelDef): 
     let playerFinish = Infinity
 
     const rivals: Rival[] = RIVALS.map(def => ({
-        car: createCar(scene, view, { vehicle: level.vehicles[0], cell: def.cell }),
-        factor: def.factor,
+        car: createCar(scene, view, { vehicle: vehicleAt(level, def.start), cell: def.cell }),
+        factor: def.factor * (level.rivalPace ?? 1),
         spot: def.spot,
         d: def.start,
         v: 0,
         tire: 'liso',
-        vehicle: level.vehicles[0],
+        vehicle: vehicleAt(level, def.start),
         state: 'race',
         wrongMs: 0,
+        need: 'liso',
+        reactMs: 0,
+        ignoring: false,
         pitMs: 0,
         box: 0,
         lane: 'back',
@@ -65,13 +71,23 @@ export function createRacers(scene: Phaser.Scene, view: View, level: LevelDef): 
         finished: false,
     }))
 
+    const needFor = (r: Rival, weather: Weather) => needOf(level, { weather, ground: groundAt(level, r.d), narrow: r.vehicle === 'moto' }, r.vehicle)
+
     const laneY = (r: Rival) => {
-        const from = r.lane === 'pit' ? LANES.back : LANES.pit
-        const to = LANES[r.lane]
+        const moto = r.vehicle === 'moto'
+        const from = laneOf(r.lane === 'pit' ? 'back' : 'pit', moto)
+        const to = laneOf(r.lane, moto)
         return {
             ground: Phaser.Math.Linear(from.ground, to.ground, r.laneK),
             scale: Phaser.Math.Linear(from.scale, to.scale, r.laneK),
         }
+    }
+
+    const notice = (r: Rival, need: TireId) => {
+        r.need = need
+        r.wrongMs = 0
+        r.reactMs = Phaser.Math.Between(RIVAL_AI.reactMin, RIVAL_AI.reactMax)
+        r.ignoring = need !== r.tire && Math.random() < RIVAL_AI.ignore
     }
 
     const setLane = (r: Rival, lane: Lane) => {
@@ -90,12 +106,12 @@ export function createRacers(scene: Phaser.Scene, view: View, level: LevelDef): 
             rivals.forEach((r, i) => {
                 r.d = RIVALS[i].start
                 r.v = 0
-                r.vehicle = level.vehicles[0]
+                r.vehicle = vehicleAt(level, r.d)
                 r.car.setVehicle(r.vehicle)
-                r.tire = tireFor(level.rule, situationAt(level, r.d, level.start, r.vehicle))
+                r.tire = needFor(r, level.start)
                 r.car.setTire(r.tire)
                 r.state = 'race'
-                r.wrongMs = 0
+                notice(r, r.tire)
                 r.lane = 'back'
                 r.laneK = 1
                 r.finished = false
@@ -115,11 +131,12 @@ export function createRacers(scene: Phaser.Scene, view: View, level: LevelDef): 
             rivals.forEach(r => {
                 if (!active) return
                 const due = vehicleAt(level, r.d)
-                const need = tireFor(level.rule, situationAt(level, r.d, weather, r.vehicle))
+                const need = needFor(r, weather)
                 const relay = due !== r.vehicle && !r.finished
                 if (r.state === 'race' && !r.finished) {
-                    r.wrongMs = need !== r.tire ? r.wrongMs + ms : 0
-                    if (relay || r.wrongMs > RIVAL_AI.react) {
+                    if (need !== r.need) notice(r, need)
+                    if (need !== r.tire) r.wrongMs += ms
+                    if (relay || (need !== r.tire && !r.ignoring && r.wrongMs > r.reactMs)) {
                         r.box = nextBox(level, r.d - r.spot, RIVAL_AI.minAhead) + r.spot
                         r.state = 'toPit'
                         setLane(r, 'pit')
@@ -131,10 +148,10 @@ export function createRacers(scene: Phaser.Scene, view: View, level: LevelDef): 
                     if (r.pitMs <= 0) {
                         r.vehicle = vehicleAt(level, r.d)
                         r.car.setVehicle(r.vehicle)
-                        r.tire = tireFor(level.rule, situationAt(level, r.d, weather, r.vehicle))
+                        r.tire = needFor(r, weather)
                         r.car.setTire(r.tire)
                         r.state = 'race'
-                        r.wrongMs = 0
+                        notice(r, r.tire)
                         setLane(r, 'back')
                     }
                 } else {
