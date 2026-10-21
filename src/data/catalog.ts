@@ -131,11 +131,12 @@ import coverPitStopDaChuva from "../assets/games/EF05CO04/pit-stop-da-chuva/cove
 import coverRotaDaMadrugada from "../assets/games/EF05CO11/rota-da-madrugada/cover-rota-da-madrugada.png";
 import coverOperacaoFormiga from "../assets/games/EF15CO04/operacao-formiga/cover-operacao-formiga.png";
 import coverCircuitoDeBolinha from "../assets/games/EF15CO02/circuito-de-bolinha/cover-circuito-de-bolinha.png";
-import coverCaboCerto from"../assets/games/EF05CO05/cabo-certo/cover-cabo-certo.png";
+import coverCaboCerto from "../assets/games/EF05CO05/cabo-certo/cover-cabo-certo.png";
 import coverBairroDasPermissoes from "../assets/games/EF05CO07/bairro-das-permissoes/cover-bairro-das-permissoes.png";
 import coverRadioDaEscola from "../assets/games/EF05CO09/radio-da-escola/cover-radio-da-escola.png";
 import coverPulaPulaNaInternet from "../assets/games/EF05CO08/pula-pula-na-internet/cover-pula-pula-na-internet.png";
 import coverPescadoresDoTempo from "../assets/games/EF05CO10/pescadores-do-tempo/cover-pescadores-do-tempo.png";
+import coverVentaniaNaFloresta from "../assets/games/EF15CO01/ventania-na-floresta/cover-ventania-na-floresta.png";
 /**
  * 1. `id` nunca muda e nunca é reaproveitado. Se um jogo for removido,
  *    marque status "draft" — não devolva o id para a fila.
@@ -2427,6 +2428,7 @@ export const catalog: Game[] = [
     category: "Pensamento Computacional",
     points: 40,
     icon: "🍃",
+    thumbnail: coverVentaniaNaFloresta,
   },
   {
     id: "132",

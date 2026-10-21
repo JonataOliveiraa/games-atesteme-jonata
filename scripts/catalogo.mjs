@@ -26,7 +26,7 @@ const CATALOGO = resolve(RAIZ, "src/data/catalog.ts");
 /** `import nomeDaVariavel from "../assets/games/…png"` */
 function lerImportacoes(fonte) {
   const mapa = new Map();
-  const re = /import\s+(\w+)\s+from\s+"(\.\.\/assets\/[^"]+)"/g;
+  const re = /import\s+(\w+)\s+from\s*"(\.\.\/assets\/[^"]+)"/g;
 
   for (const [, nome, caminho] of fonte.matchAll(re)) {
     // o caminho é relativo a `src/data/`, onde o catálogo mora
