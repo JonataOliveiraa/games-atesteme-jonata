@@ -1,0 +1,869 @@
+{
+  "formiga": {
+    "width": 768,
+    "height": 384,
+    "cell": [
+      192,
+      192
+    ],
+    "cells": [
+      {
+        "index": 0,
+        "box": {
+          "x": 18,
+          "y": 22,
+          "width": 156,
+          "height": 161,
+          "pixels": 12528
+        },
+        "name": "parada",
+        "source": "formiga.png",
+        "sourceBox": [
+          58,
+          21,
+          385,
+          398
+        ],
+        "base": 182
+      },
+      {
+        "index": 1,
+        "box": {
+          "x": 17,
+          "y": 22,
+          "width": 157,
+          "height": 161,
+          "pixels": 12290
+        },
+        "name": "andando A",
+        "source": "formiga.png",
+        "sourceBox": [
+          496,
+          22,
+          386,
+          397
+        ],
+        "base": 182
+      },
+      {
+        "index": 2,
+        "box": {
+          "x": 19,
+          "y": 22,
+          "width": 154,
+          "height": 161,
+          "pixels": 12113
+        },
+        "name": "andando B",
+        "source": "formiga.png",
+        "sourceBox": [
+          952,
+          24,
+          378,
+          395
+        ],
+        "base": 182
+      },
+      {
+        "index": 3,
+        "box": {
+          "x": 20,
+          "y": 28,
+          "width": 130,
+          "height": 155,
+          "pixels": 12667
+        },
+        "name": "carregando parada",
+        "source": "formiga-carregando.png",
+        "sourceBox": [
+          74,
+          72,
+          563,
+          577
+        ],
+        "handCenter": [
+          110,
+          40
+        ],
+        "base": 182
+      },
+      {
+        "index": 4,
+        "box": {
+          "x": 22,
+          "y": 28,
+          "width": 130,
+          "height": 155,
+          "pixels": 11895
+        },
+        "name": "carregando A",
+        "source": "formiga-carregando.png",
+        "sourceBox": [
+          794,
+          80,
+          550,
+          578
+        ],
+        "handCenter": [
+          110,
+          39
+        ],
+        "base": 182
+      },
+      {
+        "index": 5,
+        "box": {
+          "x": 25,
+          "y": 28,
+          "width": 130,
+          "height": 155,
+          "pixels": 12197
+        },
+        "name": "carregando B",
+        "source": "formiga-carregando.png",
+        "sourceBox": [
+          1530,
+          80,
+          528,
+          578
+        ],
+        "handCenter": [
+          110,
+          40
+        ],
+        "base": 182
+      },
+      {
+        "index": 6,
+        "box": {
+          "x": 19,
+          "y": 22,
+          "width": 154,
+          "height": 161,
+          "pixels": 13490
+        },
+        "name": "feliz",
+        "source": "formiga.png",
+        "sourceBox": [
+          964,
+          465,
+          363,
+          381
+        ],
+        "base": 182
+      },
+      {
+        "index": 7,
+        "box": {
+          "x": 15,
+          "y": 45,
+          "width": 161,
+          "height": 138,
+          "pixels": 11736
+        },
+        "name": "esforco",
+        "source": "formiga.png",
+        "sourceBox": [
+          1383,
+          504,
+          387,
+          330
+        ],
+        "base": 182
+      }
+    ]
+  },
+  "amigas": {
+    "width": 768,
+    "height": 384,
+    "cell": [
+      192,
+      192
+    ],
+    "cells": [
+      {
+        "index": 0,
+        "box": {
+          "x": 15,
+          "y": 83,
+          "width": 161,
+          "height": 100,
+          "pixels": 10927
+        },
+        "name": "cochilando",
+        "source": "amigas.png",
+        "sourceBox": [
+          22,
+          173,
+          400,
+          248
+        ],
+        "base": 182
+      },
+      {
+        "index": 1,
+        "box": {
+          "x": 35,
+          "y": 22,
+          "width": 121,
+          "height": 161,
+          "pixels": 12720
+        },
+        "name": "acordando",
+        "source": "amigas.png",
+        "sourceBox": [
+          516,
+          21,
+          299,
+          400
+        ],
+        "base": 182
+      },
+      {
+        "index": 2,
+        "box": {
+          "x": 15,
+          "y": 23,
+          "width": 161,
+          "height": 160,
+          "pixels": 15252
+        },
+        "name": "andando A",
+        "source": "amigas.png",
+        "sourceBox": [
+          923,
+          51,
+          373,
+          370
+        ],
+        "base": 182
+      },
+      {
+        "index": 3,
+        "box": {
+          "x": 17,
+          "y": 22,
+          "width": 158,
+          "height": 161,
+          "pixels": 15153
+        },
+        "name": "andando B",
+        "source": "amigas.png",
+        "sourceBox": [
+          1371,
+          50,
+          363,
+          371
+        ],
+        "base": 182
+      },
+      {
+        "index": 4,
+        "box": {
+          "x": 21,
+          "y": 28,
+          "width": 134,
+          "height": 155,
+          "pixels": 12385
+        },
+        "name": "carregando A",
+        "source": "amigas-carregando.png",
+        "sourceBox": [
+          782,
+          69,
+          569,
+          594
+        ],
+        "handCenter": [
+          110,
+          40
+        ],
+        "base": 182
+      },
+      {
+        "index": 5,
+        "box": {
+          "x": 22,
+          "y": 28,
+          "width": 130,
+          "height": 155,
+          "pixels": 12782
+        },
+        "name": "carregando B",
+        "source": "amigas-carregando.png",
+        "sourceBox": [
+          1487,
+          69,
+          562,
+          594
+        ],
+        "handCenter": [
+          110,
+          41
+        ],
+        "base": 182
+      },
+      {
+        "index": 6,
+        "box": {
+          "x": 25,
+          "y": 22,
+          "width": 142,
+          "height": 161,
+          "pixels": 15395
+        },
+        "name": "feliz",
+        "source": "amigas.png",
+        "sourceBox": [
+          938,
+          480,
+          325,
+          368
+        ],
+        "base": 182
+      },
+      {
+        "index": 7,
+        "box": {
+          "x": 15,
+          "y": 45,
+          "width": 161,
+          "height": 138,
+          "pixels": 13798
+        },
+        "name": "empurrando",
+        "source": "amigas.png",
+        "sourceBox": [
+          1367,
+          521,
+          388,
+          333
+        ],
+        "base": 182
+      }
+    ]
+  },
+  "rainha": {
+    "width": 768,
+    "height": 256,
+    "cell": [
+      256,
+      256
+    ],
+    "cells": [
+      {
+        "index": 0,
+        "box": {
+          "x": 20,
+          "y": 38,
+          "width": 215,
+          "height": 209,
+          "pixels": 24937
+        },
+        "name": "calma",
+        "source": "rainha.png",
+        "sourceBox": [
+          149,
+          113,
+          533,
+          518
+        ],
+        "base": 246
+      },
+      {
+        "index": 1,
+        "box": {
+          "x": 20,
+          "y": 41,
+          "width": 215,
+          "height": 206,
+          "pixels": 24967
+        },
+        "name": "pedindo",
+        "source": "rainha.png",
+        "sourceBox": [
+          810,
+          113,
+          547,
+          524
+        ],
+        "base": 246
+      },
+      {
+        "index": 2,
+        "box": {
+          "x": 23,
+          "y": 32,
+          "width": 210,
+          "height": 215,
+          "pixels": 26340
+        },
+        "name": "feliz",
+        "source": "rainha.png",
+        "sourceBox": [
+          1531,
+          110,
+          509,
+          521
+        ],
+        "base": 246
+      }
+    ]
+  },
+  "cenario": {
+    "width": 1024,
+    "height": 512,
+    "cell": [
+      256,
+      256
+    ],
+    "cells": [
+      {
+        "index": 0,
+        "box": {
+          "x": 13,
+          "y": 122,
+          "width": 230,
+          "height": 125,
+          "pixels": 20002
+        },
+        "name": "formigueiro",
+        "source": "cenario.png",
+        "sourceBox": [
+          55,
+          196,
+          370,
+          224
+        ],
+        "base": 246
+      },
+      {
+        "index": 1,
+        "box": {
+          "x": 28,
+          "y": 97,
+          "width": 200,
+          "height": 150,
+          "pixels": 23426
+        },
+        "name": "pedra A",
+        "source": "cenario.png",
+        "sourceBox": [
+          526,
+          203,
+          309,
+          203
+        ],
+        "base": 246
+      },
+      {
+        "index": 2,
+        "box": {
+          "x": 43,
+          "y": 67,
+          "width": 170,
+          "height": 180,
+          "pixels": 22258
+        },
+        "name": "pedra B",
+        "source": "cenario.png",
+        "sourceBox": [
+          963,
+          132,
+          295,
+          299
+        ],
+        "base": 246
+      },
+      {
+        "index": 3,
+        "box": {
+          "x": 23,
+          "y": 117,
+          "width": 210,
+          "height": 130,
+          "pixels": 21620
+        },
+        "name": "pedra C",
+        "source": "cenario.png",
+        "sourceBox": [
+          1388,
+          225,
+          332,
+          193
+        ],
+        "base": 246
+      },
+      {
+        "index": 4,
+        "box": {
+          "x": 20,
+          "y": 24,
+          "width": 215,
+          "height": 208,
+          "pixels": 35632
+        },
+        "name": "prato",
+        "source": "cenario.png",
+        "sourceBox": [
+          72,
+          495,
+          322,
+          311
+        ]
+      },
+      {
+        "index": 5,
+        "box": {
+          "x": 20,
+          "y": 49,
+          "width": 215,
+          "height": 198,
+          "pixels": 31707
+        },
+        "name": "arbusto",
+        "source": "cenario.png",
+        "sourceBox": [
+          517,
+          501,
+          333,
+          307
+        ],
+        "base": 246
+      },
+      {
+        "index": 6,
+        "box": {
+          "x": 20,
+          "y": 79,
+          "width": 215,
+          "height": 168,
+          "pixels": 22791
+        },
+        "name": "tufo",
+        "source": "cenario.png",
+        "sourceBox": [
+          959,
+          543,
+          340,
+          265
+        ],
+        "base": 246
+      },
+      {
+        "index": 7,
+        "box": {
+          "x": 40,
+          "y": 32,
+          "width": 175,
+          "height": 215,
+          "pixels": 27834
+        },
+        "name": "dente-de-leao",
+        "source": "cenario.png",
+        "sourceBox": [
+          1432,
+          496,
+          258,
+          317
+        ],
+        "base": 246
+      }
+    ]
+  },
+  "sujeira": {
+    "width": 512,
+    "height": 128,
+    "cell": [
+      128,
+      128
+    ],
+    "cells": [
+      {
+        "index": 0,
+        "box": {
+          "x": 19,
+          "y": 21,
+          "width": 90,
+          "height": 86,
+          "pixels": 6201
+        },
+        "name": "gota",
+        "source": "sujeira.png",
+        "sourceBox": [
+          77,
+          178,
+          404,
+          388
+        ]
+      },
+      {
+        "index": 1,
+        "box": {
+          "x": 19,
+          "y": 19,
+          "width": 90,
+          "height": 89,
+          "pixels": 6020
+        },
+        "name": "terra",
+        "source": "sujeira.png",
+        "sourceBox": [
+          620,
+          171,
+          424,
+          418
+        ]
+      },
+      {
+        "index": 2,
+        "box": {
+          "x": 13,
+          "y": 9,
+          "width": 101,
+          "height": 110,
+          "pixels": 3353
+        },
+        "name": "raminho",
+        "source": "sujeira.png",
+        "sourceBox": [
+          1143,
+          103,
+          484,
+          527
+        ]
+      },
+      {
+        "index": 3,
+        "box": {
+          "x": 16,
+          "y": 18,
+          "width": 95,
+          "height": 91,
+          "pixels": 5936
+        },
+        "name": "petala",
+        "source": "sujeira.png",
+        "sourceBox": [
+          1724,
+          209,
+          378,
+          364
+        ]
+      }
+    ]
+  },
+  "folha-gigante": {
+    "width": 1024,
+    "height": 768,
+    "cell": [
+      1024,
+      768
+    ],
+    "cells": [
+      {
+        "index": 0,
+        "box": {
+          "x": 32,
+          "y": 84,
+          "width": 960,
+          "height": 600,
+          "pixels": 362382
+        },
+        "name": "folha gigante",
+        "source": "folha-gigante.png",
+        "sourceBox": [
+          14,
+          133,
+          1421,
+          813
+        ]
+      }
+    ]
+  },
+  "frutas": {
+    "width": 1536,
+    "height": 512,
+    "cell": [
+      512,
+      512
+    ],
+    "cells": [
+      {
+        "index": 0,
+        "box": {
+          "x": 67,
+          "y": 51,
+          "width": 378,
+          "height": 410,
+          "pixels": 118940
+        },
+        "name": "morango",
+        "source": "frutas.png",
+        "sourceBox": [
+          69,
+          52,
+          602,
+          637
+        ],
+        "polygon": {
+          "form": "egg",
+          "a": 185,
+          "b": 205,
+          "e": 0.22,
+          "vertices": 64,
+          "center": [
+            256,
+            256
+          ]
+        },
+        "coveredPixels": 118940,
+        "missingSourcePixels": 0
+      },
+      {
+        "index": 1,
+        "box": {
+          "x": 26,
+          "y": 26,
+          "width": 460,
+          "height": 460,
+          "pixels": 165916
+        },
+        "name": "laranja",
+        "source": "frutas.png",
+        "sourceBox": [
+          766,
+          27,
+          639,
+          644
+        ],
+        "polygon": {
+          "form": "egg",
+          "a": 230,
+          "b": 230,
+          "e": 0,
+          "vertices": 64,
+          "center": [
+            256,
+            256
+          ]
+        },
+        "coveredPixels": 165916,
+        "missingSourcePixels": 0
+      },
+      {
+        "index": 2,
+        "box": {
+          "x": 50,
+          "y": 62,
+          "width": 412,
+          "height": 388,
+          "pixels": 124734
+        },
+        "name": "maca",
+        "source": "frutas.png",
+        "sourceBox": [
+          1487,
+          59,
+          624,
+          617
+        ],
+        "polygon": {
+          "form": "egg",
+          "a": 205,
+          "b": 194,
+          "e": 0.08,
+          "vertices": 64,
+          "center": [
+            256,
+            256
+          ]
+        },
+        "coveredPixels": 124734,
+        "missingSourcePixels": 0
+      }
+    ]
+  },
+  "folhas": {
+    "width": 1024,
+    "height": 1280,
+    "cell": [
+      1024,
+      640
+    ],
+    "cells": [
+      {
+        "index": 0,
+        "box": {
+          "x": 112,
+          "y": 95,
+          "width": 800,
+          "height": 450,
+          "pixels": 279748
+        },
+        "name": "folha verde",
+        "source": "folhas.png",
+        "sourceBox": [
+          113,
+          120,
+          926,
+          543
+        ],
+        "polygon": {
+          "form": "leaf",
+          "a": 400,
+          "b": 223,
+          "e": 0.12,
+          "vertices": 64,
+          "center": [
+            512,
+            320
+          ]
+        },
+        "coveredPixels": 279748,
+        "missingSourcePixels": 0
+      },
+      {
+        "index": 1,
+        "box": {
+          "x": 72,
+          "y": 58,
+          "width": 880,
+          "height": 524,
+          "pixels": 358828
+        },
+        "name": "folha grande",
+        "source": "folhas.png",
+        "sourceBox": [
+          59,
+          734,
+          1021,
+          593
+        ],
+        "polygon": {
+          "form": "leaf",
+          "a": 440,
+          "b": 260,
+          "e": 0.12,
+          "vertices": 64,
+          "center": [
+            512,
+            320
+          ]
+        },
+        "coveredPixels": 358828,
+        "missingSourcePixels": 0
+      }
+    ]
+  },
+  "jardim": {
+    "width": 1672,
+    "height": 941,
+    "opaque": true
+  },
+  "cover-operacao-formiga": {
+    "width": 1672,
+    "height": 941,
+    "opaque": true
+  }
+}

@@ -24,6 +24,7 @@ export const SD = {
     piece: 5,
     box: 6,
     nico: 7,
+    cat: 7.5,
     marble: 8,
     fx: 9,
 } as const
@@ -55,6 +56,8 @@ export const HUD = {
 
 export const CELL = 100
 
+export const cellFor = (rows: number) => Math.min(CELL, Math.floor((TABLE.top - HEADER.h - 24) / rows))
+
 export const TABLE = {
     cx: 520,
     top: 440,
@@ -64,28 +67,47 @@ export const TABLE = {
 } as const
 
 export const RAMP = {
-    hi: { x: 0.06, y: 0.05 },
-    lo: { x: 0.95, y: 0.79 },
+    groove: [
+        { x: 0.081, y: 0.089 },
+        { x: 0.177, y: 0.208 },
+        { x: 0.306, y: 0.339 },
+        { x: 0.435, y: 0.452 },
+        { x: 0.565, y: 0.565 },
+        { x: 0.694, y: 0.685 },
+        { x: 0.823, y: 0.81 },
+        { x: 0.935, y: 0.833 },
+    ],
+    sink: 0.75,
 } as const
 
 export const BELL = {
     h: 92,
-    cup: { x: -0.31, y: 0.11 },
+    cup: { x: -0.32, y: 0.18 },
 } as const
 
 export const MARBLE = { r: 15 } as const
 
+export const CAT = {
+    w: 0.95,
+    out: 0.18,
+    head: 0.62,
+    enterX: 1380,
+    bob: 5,
+} as const
+
 export const GHOST = {
-    rim: 4,
-    rimAlpha: 0.4,
-    fillAlpha: 0.75,
+    rim: 7,
+    rimAlpha: 0.9,
+    fillAlpha: 0.92,
+    choiceAlpha: 0.95,
+    ask: 64,
 } as const
 
 export const NICO = {
     x: 105,
     y: 534,
     h: 250,
-    hands: { x: 78, y: -150 },
+    hands: { x: 80, y: -154 },
     head: { x: 20, y: -200 },
 } as const
 
@@ -98,9 +120,27 @@ export const BOX = {
 export const CARD = {
     w: 168,
     h: 116,
-    inner: { w: 140, h: 76, y: 6 },
+    inner: { w: 146, h: 88, y: 4 },
     hover: 1.04,
     pulse: 6,
+    stamp: { x: 58, y: -34, r: 21 },
+} as const
+
+export const MINI = {
+    rim: 2,
+    rimAlpha: 0.6,
+    pop: 1.12,
+} as const
+
+export const IF = {
+    w: 264,
+    h: 132,
+    word: { x: 0, y: -44 },
+    photo: { y: -112, w: 210, h: 96, angle: -3 },
+    pockets: { yes: 0.275, no: 0.725 },
+    pocketY: 0.64,
+    scale: 0.6,
+    labelY: 77,
 } as const
 
 export const TRAY = {
@@ -145,6 +185,20 @@ export const BANNER = {
     h: 84,
 } as const
 
-export const slotX = (count: number, i: number) => MANUAL.slotCx + (i - (count - 1) / 2) * (CARD.w + MANUAL.gap)
+const SLOTS_LEFT = 16
+const SLOTS_RIGHT = BUILD.x - BUILD.w / 2 - 14
+
+export function slotXs(widths: number[]) {
+    const sum = widths.reduce((a, b) => a + b, 0)
+    const room = SLOTS_RIGHT - SLOTS_LEFT
+    const gap = widths.length > 1 ? Math.min(MANUAL.gap, (room - sum) / (widths.length - 1)) : 0
+    const total = sum + gap * (widths.length - 1)
+    let x = Math.min(Math.max(MANUAL.slotCx - total / 2, SLOTS_LEFT), SLOTS_RIGHT - total)
+    return widths.map(w => {
+        const center = x + w / 2
+        x += w + gap
+        return center
+    })
+}
 
 export const trayPos = (i: number) => ({ x: TRAY.cols[i % 2], y: TRAY.rows[Math.floor(i / 2)] })

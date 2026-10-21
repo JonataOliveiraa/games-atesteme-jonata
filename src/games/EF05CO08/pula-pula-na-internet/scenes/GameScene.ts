@@ -150,7 +150,7 @@ export class GameScene extends Phaser.Scene {
         runtimeGameBridge.emit({ type: 'GAME_READY', gameId: GAME_ID })
         this.emitCheckpoint()
 
-        this.introduce = !seen(this, guideKey(this.level.level))
+        this.introduce = this.level.level === 1 && !seen(this, guideKey(1))
         void this.openLevel()
     }
 
@@ -368,24 +368,21 @@ export class GameScene extends Phaser.Scene {
 
     private async intro(gen: number) {
         const key = guideKey(this.level.level)
-        const first = !seen(this, guideKey(1))
         const alive = () => gen === this.gen
         this.frozen = true
 
-        if (first) {
-            const startTop = this.view.top()
-            const at = this.world.itemAt(0)
-            await this.view.panTo(at.y - CAMERA.peek, TIMING.pan)
-            if (!alive()) return
-            const itemRect = { x: at.x, y: at.y - this.view.top(), w: ITEM.size + 50, h: ITEM.size + 50 }
-            await teach(this, key, [{ text: TUTOR.collect, ...spot(itemRect), buttonLabel: TUTOR.see, balloonY: 520 }])
-            if (!alive()) return
-            await this.view.panTo(startTop, TIMING.pan)
-            if (!alive()) return
-        }
+        const startTop = this.view.top()
+        const at = this.world.itemAt(0)
+        await this.view.panTo(at.y - CAMERA.peek, TIMING.pan)
+        if (!alive()) return
+        const itemRect = { x: at.x, y: at.y - this.view.top(), w: ITEM.size + 50, h: ITEM.size + 50 }
+        await teach(this, key, [{ text: TUTOR.collect, ...spot(itemRect), buttonLabel: TUTOR.see, balloonY: 520 }])
+        if (!alive()) return
+        await this.view.panTo(startTop, TIMING.pan)
+        if (!alive()) return
 
         await this.showDemo(gen, this.level.demos[0])
-        if (!alive() || !first) return
+        if (!alive()) return
 
         this.frozen = false
         for (const dir of [1, -1] as const) {
@@ -640,7 +637,7 @@ export class GameScene extends Phaser.Scene {
         this.header.setLevel(this.level.level)
         this.header.ask(this.goal())
         this.emitCheckpoint()
-        this.introduce = !seen(this, guideKey(this.level.level))
+        this.introduce = false
         void this.openLevel()
     }
 

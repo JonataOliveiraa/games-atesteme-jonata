@@ -158,25 +158,85 @@ export const WEB = {
     floor: 560,
 } as const
 
-export const WHIRL = {
-    x: 640,
-    y: 268,
-    size: 330,
-    piece: { x: 640, y: 404 },
-    pieceW: 140,
-    houseY: 556,
-    houseW: 186,
-    gap: 270,
-    pillY: 666,
-    hit: 230,
-    leaves: 6,
+export const JEITO = {
+    plates: { y: 628, gap: 340, h: 96, k: 1.3, hitW: 300, hitH: 120 },
+    shape: { w: 70, h: 44 },
+    wrong: { x: 640, y: 450, k: 4, item: 74 },
+    ground: 700,
+    look: 1700,
 } as const
 
-export const PIECE_TEXT_AT: Record<string, { x: number; y: number; size: number }> = {
-    badge: { x: 0.2, y: -0.02, size: 0.24 },
-    number: { x: 0, y: 0.02, size: 0.4 },
-    word: { x: 0, y: -0.06, size: 0.3 },
-}
+export const DUCK = {
+    mom: { x: 200, y: 592 },
+    momW: 200,
+    w: 150,
+    sizes: [1, 0.8, 0.62],
+    slots: [370, 512, 634],
+    y: 592,
+    scatter: [
+        { x: 520, y: 370 },
+        { x: 790, y: 310 },
+        { x: 1060, y: 380 },
+    ],
+    hit: 160,
+} as const
+
+export const SHROOM = {
+    x: 690,
+    y: 482,
+    cell: 140,
+    gap: 16,
+    h: 112,
+    rowStake: 90,
+    icon: 78,
+    hold: { x: 1070, y: 320 },
+    pile: { x: 1070, y: 590 },
+    scatter: [
+        { x: 420, y: 340 },
+        { x: 640, y: 290 },
+        { x: 860, y: 350 },
+        { x: 1080, y: 300 },
+    ],
+} as const
+
+export const FISH = {
+    xs: [350, 640, 930],
+    shellY: 440,
+    shellW: 150,
+    sitY: 392,
+    cardY: 492,
+    cardW: 190,
+    cardH: 140,
+    row: 52,
+    w: 140,
+    hold: { x: 1080, y: 190 },
+    scatter: [
+        { x: 400, y: 240 },
+        { x: 640, y: 200 },
+        { x: 880, y: 250 },
+    ],
+} as const
+
+export const FLY = {
+    center: { x: 640, y: 400 },
+    rx: 370,
+    ry: 180,
+    angles: [-90, -30, 30, 90, 150, 210],
+    w: 110,
+    hit: 150,
+    card: { x: 640, y: 150, w: 220, h: 78 },
+    line: 8,
+} as const
+
+export const SNAIL = {
+    x: 170,
+    y: 610,
+    w: 210,
+    pebble: { x: 360, y: 612 },
+    pebbleW: 120,
+    fly: { x: 640, y: 330 },
+    basket: { x: 960, y: 640, w: 210 },
+} as const
 
 export const BUBBLE = {
     w: 400,
@@ -191,7 +251,7 @@ export const BANNER = {
     gridY: 664,
     nestY: 664,
     webY: 664,
-    whirlY: 168,
+    jeitoY: 168,
     w: 760,
     h: 84,
 } as const

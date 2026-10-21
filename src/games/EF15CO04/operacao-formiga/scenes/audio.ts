@@ -16,6 +16,10 @@ export interface Audio {
     step(): void
     lose(): void
     win(): void
+    scrub(): void
+    wake(): void
+    heavy(): void
+    yuck(): void
     setMuted(on: boolean): void
     destroy(): void
 }
@@ -150,6 +154,21 @@ export function createAudio(): Audio {
         },
         win() {
             notes([523, 659, 784, 1047, 1319], 120, { wave: 'triangle', gain: 0.12 })
+        },
+        scrub() {
+            noise(70, 0.07, 0, 2200, 'bandpass', 3600)
+        },
+        wake() {
+            tone(440, 140, { wave: 'sine', gain: 0.08, to: 330 })
+            notes([523, 784], 90, { wave: 'triangle', gain: 0.09, delay: 160 })
+        },
+        heavy() {
+            tone(150, 260, { wave: 'triangle', gain: 0.14, to: 110 })
+            tone(200, 200, { wave: 'sine', gain: 0.06, delay: 220, to: 160 })
+        },
+        yuck() {
+            tone(300, 220, { wave: 'sawtooth', gain: 0.05, to: 200 })
+            tone(240, 320, { wave: 'sawtooth', gain: 0.05, delay: 200, to: 150 })
         },
         setMuted(on) {
             muted = on

@@ -1,0 +1,77 @@
+{
+  "ok": true,
+  "pairs": [
+    {
+      "source": "C:\\Users\\teste123\\.codex\\generated_images\\01a159bf-1ac5-78f3-8e09-cc27f7ed96dc\\exec-4d82348a-5c34-4d81-a9c2-48c5b312dfd4.png",
+      "destination": "D:/Documentos/Atesteme Jogos Fund 1/outputs/operacao-formiga/raw/jardim.png",
+      "sourceHash": "d949ea6ef47a11163b6bac5a1f9653809ac15bf1350e664de3f50e027091ea12",
+      "destinationHash": "d949ea6ef47a11163b6bac5a1f9653809ac15bf1350e664de3f50e027091ea12"
+    },
+    {
+      "source": "C:\\Users\\teste123\\.codex\\generated_images\\01a159bf-1ac5-78f3-8e09-cc27f7ed96dc\\exec-d804512d-f74e-4bd1-992c-7723aafbfd50.png",
+      "destination": "D:/Documentos/Atesteme Jogos Fund 1/outputs/operacao-formiga/qa/formiga-antes-correcao.png",
+      "sourceHash": "72ae65fbe4b6ebae7b2324c9fcab6baa8ec4cc04ff97a67a49d6334217f338a5",
+      "destinationHash": "72ae65fbe4b6ebae7b2324c9fcab6baa8ec4cc04ff97a67a49d6334217f338a5"
+    },
+    {
+      "source": "C:\\Users\\teste123\\.codex\\generated_images\\01a159bf-1ac5-78f3-8e09-cc27f7ed96dc\\exec-0d4261ca-5078-4a9f-aab6-c820149955df.png",
+      "destination": "D:/Documentos/Atesteme Jogos Fund 1/outputs/operacao-formiga/raw/formiga-carregando.png",
+      "sourceHash": "1d1b16c428b2df69ba12b07fe977a3ada4847384a299f7f11d5417fb3dc5d079",
+      "destinationHash": "1d1b16c428b2df69ba12b07fe977a3ada4847384a299f7f11d5417fb3dc5d079"
+    },
+    {
+      "source": "C:\\Users\\teste123\\.codex\\generated_images\\01a159bf-1ac5-78f3-8e09-cc27f7ed96dc\\exec-557db803-6eae-47ab-92d2-ec6b12e10ece.png",
+      "destination": "D:/Documentos/Atesteme Jogos Fund 1/outputs/operacao-formiga/raw/rainha.png",
+      "sourceHash": "9fa0c5ebd963c16ed75fd985a72e8bbf38cd69dab4325bb7f85a7e74411c8a78",
+      "destinationHash": "9fa0c5ebd963c16ed75fd985a72e8bbf38cd69dab4325bb7f85a7e74411c8a78"
+    },
+    {
+      "source": "C:\\Users\\teste123\\.codex\\generated_images\\01a159bf-1ac5-78f3-8e09-cc27f7ed96dc\\exec-1dd33209-f798-43bb-836a-c379a9de2dca.png",
+      "destination": "D:/Documentos/Atesteme Jogos Fund 1/outputs/operacao-formiga/raw/frutas.png",
+      "sourceHash": "6d1602360831ebe05a3a3e3838c257a0863e366b61912eae509d41c64effc5f8",
+      "destinationHash": "6d1602360831ebe05a3a3e3838c257a0863e366b61912eae509d41c64effc5f8"
+    },
+    {
+      "source": "C:\\Users\\teste123\\.codex\\generated_images\\01a159bf-1ac5-78f3-8e09-cc27f7ed96dc\\exec-d47925c7-585f-42f0-83d3-97feacfcd602.png",
+      "destination": "D:/Documentos/Atesteme Jogos Fund 1/outputs/operacao-formiga/raw/cenario.png",
+      "sourceHash": "b943014926e6d4c44c2b1b3268680ac2e5f136a1aea1e2290c78b4eebaa17cb0",
+      "destinationHash": "b943014926e6d4c44c2b1b3268680ac2e5f136a1aea1e2290c78b4eebaa17cb0"
+    },
+    {
+      "source": "C:\\Users\\teste123\\.codex\\generated_images\\01a159bf-1ac5-78f3-8e09-cc27f7ed96dc\\exec-5eaeffa7-695c-499b-b4b4-8b3a8b37da9c.png",
+      "destination": "D:/Documentos/Atesteme Jogos Fund 1/outputs/operacao-formiga/raw/folhas.png",
+      "sourceHash": "f3d9bce5377b89ea7d5fcc15962958d5d706cf44db67d30fff662fab992d00bf",
+      "destinationHash": "f3d9bce5377b89ea7d5fcc15962958d5d706cf44db67d30fff662fab992d00bf"
+    },
+    {
+      "source": "C:\\Users\\teste123\\.codex\\generated_images\\01a159bf-1ac5-78f3-8e09-cc27f7ed96dc\\exec-b78e194f-51b1-4a96-ad0d-68073fd75eb0.png",
+      "destination": "D:/Documentos/Atesteme Jogos Fund 1/outputs/operacao-formiga/raw/folha-gigante.png",
+      "sourceHash": "62dab66fcd99132e038cb526036734900df37124b7d4a6d2ca32442f75b7565c",
+      "destinationHash": "62dab66fcd99132e038cb526036734900df37124b7d4a6d2ca32442f75b7565c"
+    },
+    {
+      "source": "C:\\Users\\teste123\\.codex\\generated_images\\01a159bf-1ac5-78f3-8e09-cc27f7ed96dc\\exec-77850c5c-5d3b-47dc-a6e7-db8daac0459b.png",
+      "destination": "D:/Documentos/Atesteme Jogos Fund 1/outputs/operacao-formiga/raw/sujeira.png",
+      "sourceHash": "488b4f11e0f275a7156aa28c59ccefd6ab579f608f15f6fe6f48f00c704db7cf",
+      "destinationHash": "488b4f11e0f275a7156aa28c59ccefd6ab579f608f15f6fe6f48f00c704db7cf"
+    },
+    {
+      "source": "C:\\Users\\teste123\\.codex\\generated_images\\01a159bf-1ac5-78f3-8e09-cc27f7ed96dc\\exec-e0fca7b4-9a87-4181-9611-b4e94c2f3f3a.png",
+      "destination": "D:/Documentos/Atesteme Jogos Fund 1/outputs/operacao-formiga/qa/amigas-antes-correcao.png",
+      "sourceHash": "ff3b7af8d8bea688df9a2ec81fbfd57891e18e565a64f6a459e3734d2dbb3159",
+      "destinationHash": "ff3b7af8d8bea688df9a2ec81fbfd57891e18e565a64f6a459e3734d2dbb3159"
+    },
+    {
+      "source": "C:\\Users\\teste123\\.codex\\generated_images\\01a159bf-1ac5-78f3-8e09-cc27f7ed96dc\\exec-3ddcc873-9b2d-47d9-ae46-786f8af1c04b.png",
+      "destination": "D:/Documentos/Atesteme Jogos Fund 1/outputs/operacao-formiga/raw/amigas-carregando.png",
+      "sourceHash": "164e8d669282470751e0ee4823d413de190f08d4545dcc552bf2f4c38c5d19ff",
+      "destinationHash": "164e8d669282470751e0ee4823d413de190f08d4545dcc552bf2f4c38c5d19ff"
+    },
+    {
+      "source": "C:\\Users\\teste123\\.codex\\generated_images\\01a159bf-1ac5-78f3-8e09-cc27f7ed96dc\\exec-a295d0c1-889b-4072-95ba-1e4a5a5c2684.png",
+      "destination": "D:/Documentos/Atesteme Jogos Fund 1/outputs/operacao-formiga/raw/cover-operacao-formiga.png",
+      "sourceHash": "756ff1261ddf36d764510bc385150a96b22008823c63ab78979e54bc47153bde",
+      "destinationHash": "756ff1261ddf36d764510bc385150a96b22008823c63ab78979e54bc47153bde"
+    }
+  ]
+}

@@ -1,11 +1,11 @@
 import Phaser from 'phaser'
 import { FX } from '../../../../shared/effects/FX'
 import { createLives, type Lives } from '../../../../shared/hud/createLives'
-import { ANT_CELL, ANT_SHEET, BUG_SHEET, FLOWER_SHEET, PIECE_SHEET, bugCell, cellKey, flowerCell, pieceCell, sheetData } from '../data/files'
-import { DEPTH, HEADER, HUD, PIECE_TEXT_AT, REQUEST, W } from '../data/layout'
+import { ANT_CELL, ANT_SHEET, BUG_SHEET, FLOWER_SHEET, bugCell, cellKey, flowerCell, sheetData } from '../data/files'
+import { DEPTH, HEADER, HUD, REQUEST, W } from '../data/layout'
 import { C, CSS, FONT, SIZE, TONE, inkOn } from '../data/theme'
-import { HOME_LABEL, LABEL, PIECE_TEXT, RULE } from '../data/words'
-import type { Bug, Edge, Home, Piece, Rect, Structure } from '../types'
+import { HOME_LABEL, LABEL, RULE } from '../data/words'
+import type { Bug, Edge, Home, Rect, Structure } from '../types'
 import { paintImage } from './art'
 
 export interface Header {
@@ -14,8 +14,7 @@ export interface Header {
     celebrate(index: number): Promise<void>
     setRequest(type: Structure): void
     setPair(edge: Edge): void
-    setPiece(piece: Piece): void
-    lightHome(home: Home): Promise<void>
+    setJeito(home: Home | undefined, text: string): Promise<void>
     iconRect(): Rect
     bounceRequest(): Promise<void>
     requestRect(): Rect
@@ -226,41 +225,18 @@ export function createHeader(scene: Phaser.Scene, opts: HeaderOptions): Header {
         return { box: scene.add.container(0, 0, parts), w }
     }
 
-    const pieceIcon = (p?: Piece) => {
-        if (!p) return { box: scene.add.container(0, 0, []), w: 0 }
-        const img = scene.add.image(0, 0, PIECE_SHEET.key, cellKey(pieceCell(p)))
-        img.setScale(Math.min(96 / img.width, 66 / img.height))
-        const size = img.displayWidth
-        img.setX(size / 2)
-        const parts: Phaser.GameObjects.GameObject[] = [img]
-        const at = PIECE_TEXT_AT[p]
-        const text = (PIECE_TEXT as Record<string, string>)[p]
-        if (at && text)
-            parts.push(
-                scene.add
-                    .text(size / 2 + at.x * img.displayWidth, at.y * img.displayHeight, text, {
-                        fontFamily: FONT.black,
-                        fontSize: `${Math.round(at.size * size)}px`,
-                        color: CSS.ink,
-                    })
-                    .setOrigin(0.5)
-                    .setResolution(2),
-            )
-        return { box: scene.add.container(0, 0, parts), w: size }
-    }
-
     let chip: Phaser.GameObjects.Container | undefined
     let kind: Structure = 'fila'
     let lit: Home | undefined
     let pair: Edge | undefined
-    let piece: Piece | undefined
+    let jeitoText = ''
     let iconBox: Rect = { x: REQUEST.x, y: REQUEST.y, w: 100, h: HEADER.h - 16 }
 
     const compose = () => {
         request.removeAll(true)
         chip = undefined
         const parts: { box: Phaser.GameObjects.Container | Phaser.GameObjects.Text; w: number; icon?: boolean }[] = []
-        if (kind !== 'redemoinho') {
+        if (kind !== 'jeito') {
             const c = chipOf(LABEL[kind])
             parts.push(c)
             chip = c.box
@@ -278,10 +254,10 @@ export function createHeader(scene: Phaser.Scene, opts: HeaderOptions): Header {
                     ? fichaIcon()
                     : kind === 'teia'
                       ? pairIcon(pair)
-                      : pieceIcon(piece)
+                      : { box: scene.add.container(0, 0, []), w: 0 }
         if (icon.w > 0) parts.push({ ...icon, icon: true })
         const text = scene.add
-            .text(0, 0, RULE[kind], { fontFamily: FONT.black, fontSize: `${SIZE.request}px`, color: CSS.inkSoft })
+            .text(0, 0, kind === 'jeito' ? jeitoText : RULE[kind], { fontFamily: FONT.black, fontSize: `${SIZE.request}px`, color: CSS.inkSoft })
             .setOrigin(0, 0.5)
             .setResolution(2)
         parts.push({ box: text, w: text.width })
@@ -363,22 +339,18 @@ export function createHeader(scene: Phaser.Scene, opts: HeaderOptions): Header {
             kind = type
             lit = undefined
             pair = undefined
-            piece = undefined
+            jeitoText = RULE[type]
             compose()
         },
         setPair(edge) {
             pair = edge
             compose()
         },
-        setPiece(next) {
-            piece = next
-            lit = undefined
-            compose()
-        },
-        async lightHome(home) {
+        async setJeito(home, text) {
             lit = home
+            jeitoText = text
             compose()
-            await header.bounceRequest()
+            if (home) await header.bounceRequest()
         },
         async bounceRequest() {
             if (!chip) return

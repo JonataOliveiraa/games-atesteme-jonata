@@ -1,4 +1,4 @@
-import type { Literal, Miss, Pin, Term } from '../types'
+import type { Miss, Op, Pin, Sentence, Term } from '../types'
 import { has } from './logic'
 
 export const OPENING = {
@@ -11,6 +11,9 @@ export const TEACH = {
     goal: 'Derrube só quem tem sono!',
     build: 'Monte a frase da bola.',
     not: 'O NÃO troca a resposta.',
+    e: 'O E quer as duas.',
+    ou: 'O OU quer uma ou outra.',
+    nots: 'Cada NÃO vira a sua parte.',
     go: 'Sua vez!',
 } as const
 
@@ -39,8 +42,11 @@ export const chipText = (t: Term) => `${VERB[t.attr]} ${wordOf(t).toUpperCase()}
 
 const said = (t: Term) => `${VERB[t.attr]} ${wordOf(t)}`
 
-const fact = (pin: Pin, l: Literal) => (has(pin, l.term) ? said(l.term) : `não ${said(l.term)}`)
+export const opText = (op: Op) => (op === 'e' ? LABEL.e : LABEL.ou)
 
-export function why(pin: Pin, l: Literal, miss: Miss): string {
-    return miss === 'knocked' ? `Ele ${fact(pin, l)}, mas não tinha sono!` : `Ele ${fact(pin, l)}, mas queria deitar!`
+const fact = (pin: Pin, t: Term) => (has(pin, t) ? said(t) : `não ${said(t)}`)
+
+export function why(pin: Pin, s: Sentence, miss: Miss): string {
+    const facts = s.right ? `${fact(pin, s.left.term)} e ${fact(pin, s.right.term)}` : fact(pin, s.left.term)
+    return miss === 'knocked' ? `Ele ${facts}, mas não tinha sono!` : `Ele ${facts}, mas queria deitar!`
 }

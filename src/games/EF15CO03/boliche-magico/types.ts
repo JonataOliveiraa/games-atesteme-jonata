@@ -36,18 +36,17 @@ export interface Sentence {
     right?: Literal
 }
 
-export interface Rack {
-    pins: Pin[]
-    cards: Term[]
-    not: boolean
-}
+export type Rack =
+    | { kind: 'one'; pins: Pin[]; cards: Term[]; not: boolean }
+    | { kind: 'join'; pins: Pin[]; left: Term; right: Term }
+    | { kind: 'nots'; pins: Pin[]; left: Term; right: Term; op: Op }
 
 export interface Demo {
     rack: Rack
     script: Sentence
 }
 
-export type Teach = 'build' | 'not'
+export type Teach = 'build' | 'not' | 'e' | 'ou' | 'nots'
 
 export interface PhaseDef {
     id: string
@@ -67,7 +66,9 @@ export type State = 'intro' | 'demo' | 'build' | 'roll' | 'error' | 'help' | 'do
 
 export type Face = 'awake' | 'sleepy' | 'asleep' | 'dizzy'
 
-export type BallFace = 'normal' | 'rolling' | 'happy' | 'oops'
+export type BallFace = 'normal' | 'rolling' | 'happy' | 'oops' | 'power'
+
+export type Power = 'weak' | 'good' | 'max'
 
 export type Miss = 'knocked' | 'stayed'
 

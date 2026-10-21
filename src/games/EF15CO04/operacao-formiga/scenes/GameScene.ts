@@ -8,21 +8,23 @@ import { faseInicial } from '../../../../shared/level/faseInicial'
 import { FX } from '../../../../shared/effects/FX'
 import type { TutorialStep } from '../../../../shared/tutorial/createTutorial'
 
-import { blows, fits } from '../data/cutting'
-import { FRUITS, WIND_MIN } from '../data/fruits'
-import { ANT, CUT, FRUIT_AT, HOLE, JOY, LENS, MAP, PHERO, QUEEN, WALL, WIND } from '../data/layout'
+import { blows, fits, lifts } from '../data/cutting'
+import { ITEMS, LIFT, WIND_AREA } from '../data/fruits'
+import { ANT, BANNER, CUT, FRIEND, FRUIT_AT, GIANT, HOLE, JOY, LENS, MAP, PHERO, QUEEN, WALL, WIDE, WIND } from '../data/layout'
 import { GAUGE_KEY, LEVELS, OPENING_KEY, POINTS, STUCK_KEY, guideKey } from '../data/levels'
 import { C, CSS } from '../data/theme'
 import { TIMING } from '../data/timing'
-import { BLOWN, HELP, SAY } from '../data/words'
-import type { CutKind, LevelDef, PhaseDef, State, Vec } from '../types'
+import { BLOWN, DIRTY, HELP, SAY } from '../data/words'
+import type { CutKind, CutPhase, GiantPhase, LevelDef, PhaseDef, Rect, State, Vec } from '../types'
 
 import { createAnt, type Ant } from './ant'
 import { createAudio, type Audio } from './audio'
 import { createBanner, type Banner } from './banner'
 import { createCaption, type Caption } from './caption'
 import { createCutter, type Cutter } from './cutter'
+import { createFriends, type Friends } from './friends'
 import { createGarden, type Garden } from './garden'
+import { createGiant, type Giant } from './giant'
 import { spot, teach } from './guide'
 import { createHand, type Hand } from './hand'
 import { createHeader, type Header } from './header'
@@ -44,15 +46,26 @@ export class GameScene extends Phaser.Scene {
     private introduce = false
     private opening = false
 
-    /** A fruta já passou pelo modo de corte sob o arbusto. */
+    /** O item já passou pelo modo de corte sob o arbusto. */
     private treeDone = false
     private carried: Piece | null = null
     private cutKind: CutKind = 'tree'
-    /** Os pedaços da sessão de corte aberta (a fruta, ou o pedaço entalado e o que saiu dele). */
+    /** Os pedaços da sessão de corte aberta (o item, ou o pedaço entalado/pesado e o que saiu dele). */
     private group: Piece[] = []
+    private cutFrom: Vec = { x: 0, y: 0 }
     private cutsHere = 0
     private walked = 0
     private finishing = false
+    /** Depois de um empurrão (PESADA!), a formiga precisa se afastar antes de empurrar de novo. */
+    private lock: { at: Vec; r: number } | null = null
+
+    /** N3: a folha gigante está erguida pelo grupo. */
+    private lifted = false
+    private leafLock = false
+    private narrowLock = false
+    private scrubTold = false
+    private rubSound = 0
+    private groupDir: 1 | -1 = -1
 
     private score = 0
     private hits = 0
@@ -64,6 +77,8 @@ export class GameScene extends Phaser.Scene {
     private garden!: Garden
     private queen!: Queen
     private pieces!: Pieces
+    private giant!: Giant
+    private friends!: Friends
     private ant!: Ant
     private joystick!: Joystick
     private cutter!: Cutter
@@ -77,6 +92,18 @@ export class GameScene extends Phaser.Scene {
 
     private get phase(): PhaseDef {
         return this.level.phases[this.phaseIndex]
+    }
+
+    private get cutPhase(): CutPhase {
+        const p = this.phase
+        if (p.type !== 'cut') throw new Error('not a cut phase')
+        return p
+    }
+
+    private get giantPhase(): GiantPhase {
+        const p = this.phase
+        if (p.type !== 'giant') throw new Error('not a giant phase')
+        return p
     }
 
     constructor() {
@@ -98,6 +125,12 @@ export class GameScene extends Phaser.Scene {
         this.cutsHere = 0
         this.walked = 0
         this.finishing = false
+        this.lock = null
+        this.lifted = false
+        this.leafLock = false
+        this.narrowLock = false
+        this.scrubTold = false
+        this.rubSound = 0
         this.score = data?.points ?? 0
         this.hits = 0
         this.errors = 0
@@ -113,6 +146,8 @@ export class GameScene extends Phaser.Scene {
         this.garden = createGarden(this, this.view)
         this.queen = createQueen(this, this.view)
         this.pieces = createPieces(this, this.view)
+        this.giant = createGiant(this, this.view)
+        this.friends = createFriends(this, this.view)
         this.ant = createAnt(this, this.view, this.garden, () => this.audio.step())
         this.cutter = createCutter(this, this.view)
         this.joystick = createJoystick(this)
@@ -144,8 +179,8 @@ export class GameScene extends Phaser.Scene {
         const key = guideKey(this.level.level)
         this.introduce = !this.registry.get(key)
         this.registry.set(key, true)
-        this.opening = !this.registry.get(OPENING_KEY)
-        this.registry.set(OPENING_KEY, true)
+        this.opening = this.level.level === 1 && !this.registry.get(OPENING_KEY)
+        if (this.level.level === 1) this.registry.set(OPENING_KEY, true)
         void this.startPhase(++this.gen, 0)
     }
 
@@ -161,6 +196,8 @@ export class GameScene extends Phaser.Scene {
         this.joystick?.destroy()
         this.cutter?.destroy()
         this.ant?.destroy()
+        this.friends?.destroy()
+        this.giant?.destroy()
         this.pieces?.destroy()
         this.queen?.destroy()
         this.garden?.destroy()
@@ -177,6 +214,10 @@ export class GameScene extends Phaser.Scene {
         this.view?.sort()
         if (this.state !== 'walk') return
         const dt = Math.min(delta, 50) / 1000
+        if (this.phase.type === 'giant') {
+            this.walkGiant(dt)
+            return
+        }
         const v = this.joystick.vector()
         const gate = !!this.carried && !fits(this.carried.area)
         const before = { x: this.ant.x, y: this.ant.y }
@@ -203,13 +244,21 @@ export class GameScene extends Phaser.Scene {
         this.garden.trail(this.ant.x, this.ant.y - 2)
     }
 
+    private reachesItem(x: number, y: number) {
+        const def = this.pieces.def()
+        const s = MAP.scale
+        const dy = y - ANT.body - FRUIT_AT.y
+        if (def.form === 'leaf') return ((x - FRUIT_AT.x) / (def.a * s + ANT.r)) ** 2 + (dy / (def.b * s + ANT.r)) ** 2 < 1
+        return Math.hypot(x - FRUIT_AT.x, dy) < Math.max(def.a, def.b) * s + ANT.r
+    }
+
     private checkSpots() {
         const gen = this.gen
         const x = this.ant.x
         const y = this.ant.y
         const p = this.carried
         if (p) {
-            if (this.garden.inWind(x) && blows(p.area, this.pieces.whole())) {
+            if (this.garden.inWind(x) && blows(p.area)) {
                 void this.onBlown(gen, p)
                 return
             }
@@ -220,18 +269,37 @@ export class GameScene extends Phaser.Scene {
             return
         }
         if (!this.treeDone) {
-            const def = FRUITS[this.pieces.kind()]
-            const reach = Math.max(def.a, def.b) * MAP.scale + ANT.r
-            if (Math.hypot(x - FRUIT_AT.x, y - ANT.body - FRUIT_AT.y) < reach) void this.openCut(gen, 'tree', this.pieces.live(), false)
+            if (this.reachesItem(x, y)) void this.openTree(gen)
             return
         }
+        if (this.lock && Math.hypot(x - this.lock.at.x, y - ANT.body - this.lock.at.y) > this.lock.r) this.lock = null
+        const heavy = (q: Piece) => this.cutPhase.lift && !lifts(q.area)
         // o corpo da formiga fica acima do pé: é com ele que ela "passa por cima" do pedaço
-        const near = this.pieces.nearest(x, y - ANT.body)
-        if (near) this.pick(near)
+        const near = this.pieces.nearest(x, y - ANT.body, q => !this.lock || !heavy(q))
+        if (!near) return
+        if (heavy(near)) void this.onHeavy(gen, near)
+        else this.pick(near)
+    }
+
+    /** Embaixo da folha: no corte, a formiga não fica na frente dela. */
+    private leafStop(): Vec {
+        const def = this.pieces.def()
+        return { x: Phaser.Math.Clamp(this.ant.x, FRUIT_AT.x - 60, FRUIT_AT.x + 60), y: FRUIT_AT.y + def.b * MAP.scale * 1.12 + 64 }
+    }
+
+    private async openTree(gen: number) {
+        if (this.pieces.def().form === 'leaf') {
+            this.state = 'intro'
+            this.joystick.setEnabled(false)
+            this.joystick.release()
+            await this.ant.walkTo([this.leafStop()])
+            if (gen !== this.gen) return
+        }
+        await this.openCut(gen, 'tree', this.pieces.live(), false)
     }
 
     private pick(p: Piece) {
-        this.pieces.carry(p)
+        this.pieces.carry(p, this.phase.type === 'cut' && this.cutPhase.lift ? ANT.carryMax : undefined)
         this.carried = p
         this.ant.setCarrying(true)
         this.audio.pick()
@@ -240,9 +308,8 @@ export class GameScene extends Phaser.Scene {
 
     // ───────────────────────────────────────────── fase
 
-    private async startPhase(gen: number, index: number) {
+    private resetPhase(index: number) {
         this.phaseIndex = index
-        const phase = this.phase
         this.state = 'intro'
         this.finishing = false
         this.header.setHelpEnabled(false)
@@ -253,24 +320,44 @@ export class GameScene extends Phaser.Scene {
         this.treeDone = false
         this.carried = null
         this.group = []
+        this.lock = null
+        this.lifted = false
+        this.leafLock = false
+        this.narrowLock = false
         this.ant.setCarrying(false)
+        this.ant.setPace(1)
         if (index === 0) {
             this.ant.place(ANT.start.x, ANT.start.y)
             this.ant.face(-1)
         }
+    }
 
-        this.garden.setWind(phase.wind)
-        this.pieces.start(phase.fruit, FRUIT_AT)
-        const fruit = this.pieces.live()[0]
-        if (fruit) {
-            fruit.img.setAlpha(0).setY(fruit.pos.y - 160)
-            void FX.to(this, fruit.img, { y: fruit.pos.y, alpha: 1 }, { duration: TIMING.drop, ease: 'Bounce.easeOut' })
+    private async startPhase(gen: number, index: number) {
+        this.resetPhase(index)
+        const phase = this.phase
+        const kind = phase.type === 'giant' ? 'gigante' : phase.item
+        this.garden.setWind(phase.type === 'cut' && phase.wind)
+        this.garden.setWide(phase.type === 'giant')
+        if (phase.type === 'giant') {
+            this.pieces.clear()
+            this.giant.build(phase.dirt)
+            this.friends.spawn(phase.friends)
+            void this.giant.drop()
+        } else {
+            this.giant.clear()
+            this.friends.clear()
+            this.pieces.start(phase.item, FRUIT_AT)
+            const fruit = this.pieces.live()[0]
+            if (fruit) {
+                fruit.img.setAlpha(0).setY(fruit.pos.y - 160)
+                void FX.to(this, fruit.img, { y: fruit.pos.y, alpha: 1 }, { duration: TIMING.drop, ease: 'Bounce.easeOut' })
+            }
         }
-        this.queen.outline(phase.fruit)
-        this.header.order(phase.fruit)
+        this.queen.outline(kind)
+        this.header.order(kind, phase.type === 'cut' && phase.lift)
 
-        const opened = index === 0 && this.opening
-        if (opened) {
+        const teachIt = this.introduce ? phase.teach : undefined
+        if (this.opening && index === 0) {
             this.header.visible(false)
             this.joystick.visible(false)
             await this.playOpening(gen)
@@ -279,14 +366,14 @@ export class GameScene extends Phaser.Scene {
             await FX.wait(this, TIMING.beat)
             if (gen !== this.gen) return
             this.audio.order()
-            await this.queen.ask(phase.fruit)
+            await this.queen.ask(kind)
             if (gen !== this.gen) return
+            if (teachIt === 'leaf' || teachIt === 'giant') this.caption.say(SAY.order(kind), C.butter, TIMING.caption)
             await FX.wait(this, TIMING.order)
             if (gen !== this.gen) return
         }
 
-        const teachIt = this.introduce ? phase.teach : undefined
-        if (teachIt === 'all' && phase.demo) {
+        if (teachIt === 'all') {
             await this.demoAll(gen)
             if (gen !== this.gen) return
             this.caption.say(SAY.you, C.butter, TIMING.caption)
@@ -294,6 +381,18 @@ export class GameScene extends Phaser.Scene {
             this.caption.say(SAY.youCut, C.butter, TIMING.caption)
         } else if (teachIt === 'wind') {
             await this.windDemo(gen)
+            if (gen !== this.gen) return
+        } else if (teachIt === 'leaf') {
+            await this.demoLeaf(gen)
+            if (gen !== this.gen) return
+            this.caption.say(SAY.you, C.butter, TIMING.caption)
+        } else if (teachIt === 'giant') {
+            await this.giantOpening(gen)
+            if (gen !== this.gen) return
+            this.caption.say(SAY.you, C.butter, TIMING.caption)
+        } else if (phase.type === 'giant') {
+            this.audio.snap()
+            await this.header.tasks(phase.friends.length)
             if (gen !== this.gen) return
         }
         this.play()
@@ -307,7 +406,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     private async playOpening(gen: number) {
-        const kind = this.phase.fruit
+        const kind = this.cutPhase.item
         await FX.wait(this, 450)
         if (gen !== this.gen) return
         this.audio.whoosh()
@@ -345,16 +444,23 @@ export class GameScene extends Phaser.Scene {
         this.header.setHelpEnabled(false)
         this.ant.setPose(this.carried ? 'carry' : 'idle')
         const at = kind === 'tree' ? { ...FRUIT_AT } : { ...group[0].pos }
+        this.cutFrom = { ...at }
+        const box = this.pieces.rectOf(group)
+        const halfW = Math.max(box.x + box.w / 2 - at.x, at.x - (box.x - box.w / 2))
+        const zoom = Math.min(CUT.zoom, 640 / box.w)
         this.pieces.raise(this.group, true)
         this.audio.whoosh()
+        const phase = this.cutPhase
         this.cutter.open({
             at,
-            windMin: this.phase.wind ? this.pieces.whole() * WIND_MIN : 0,
+            windMin: phase.wind ? WIND_AREA : 0,
+            lift: phase.lift ? LIFT : 0,
+            halfW,
             done: kind === 'tree',
             onSwipe: (a, b) => this.swipe(a, b),
             onDone: () => void this.closeCut(this.gen),
         })
-        await this.view.focus(at, CUT.zoom, CUT.at, TIMING.cutIn)
+        await this.view.focus(at, zoom, CUT.at, TIMING.cutIn)
         if (gen !== this.gen || demo) return
         // o corte vale desde já; as dicas correm junto, sem segurar o dedo da criança
         if (this.state === 'cut') this.cutter.setInput(true)
@@ -364,7 +470,7 @@ export class GameScene extends Phaser.Scene {
             this.caption.say(SAY.gauge, C.white, TIMING.caption + 400)
             void this.cutter.pulseGauge()
         }
-        if (kind === 'stuck') {
+        if (kind !== 'tree') {
             const h = this.pieces.hintFor(group[0])
             this.cutter.hint(h.a, h.b)
             this.caption.say(SAY.cutAgain, C.butter, TIMING.caption)
@@ -387,7 +493,7 @@ export class GameScene extends Phaser.Scene {
             const cut = new Set(res.pairs.map(p => p.from))
             this.group = [...this.group.filter(p => !cut.has(p.id)), ...res.made]
             this.pieces.raise(this.group, true)
-            if (this.cutKind === 'stuck') {
+            if (this.cutKind !== 'tree') {
                 this.cutter.clearHint()
                 this.cutter.setDone(true)
                 res.pairs.forEach(pair => void this.header.replace(pair.from, pair.kids))
@@ -417,6 +523,8 @@ export class GameScene extends Phaser.Scene {
         if (this.cutKind === 'tree') {
             this.treeDone = true
             await FX.all(this.pieces.spread(group, FRUIT_AT), this.header.split(group.map(p => ({ id: p.id, poly: p.poly }))))
+        } else if (this.cutKind === 'heavy') {
+            await this.pieces.spread(group, this.cutFrom)
         } else {
             const first = group[0]
             const from = { x: first ? first.pos.x + 40 : WALL.x, y: (WALL.gapTop + WALL.gapBottom) / 2 }
@@ -431,9 +539,9 @@ export class GameScene extends Phaser.Scene {
         this.play()
     }
 
-    // ───────────────────────────────────────────── a fresta, o vento, a entrega
+    // ───────────────────────────────────────────── a fresta, o peso, o vento, a entrega
 
-    private async onStuck(gen: number, p: Piece) {
+    private async onStuck(gen: number, p: Piece, demo = false) {
         this.state = 'stuck'
         this.stucks += 1
         p.stuck = true
@@ -450,11 +558,37 @@ export class GameScene extends Phaser.Scene {
         await this.pieces.drop(p, at)
         if (gen !== this.gen) return
         // a formiga recua para baixo do pedaço, para não ficar na frente dele no corte
-        await this.ant.walkTo([{ x: at.x - 6, y: Phaser.Math.Clamp(y + 104, MAP.top + 30, MAP.bottom - 30) }])
+        const below = this.cutPhase.lift ? Math.max(104, this.pieces.rectOf([p]).h / 2 + ANT.body + 60) : 104
+        await this.ant.walkTo([{ x: at.x - 6, y: Phaser.Math.Clamp(y + below, MAP.top + 30, MAP.bottom - 30) }])
         if (gen !== this.gen) return
         await FX.wait(this, TIMING.stuck - 600)
         if (gen !== this.gen) return
-        await this.openCut(gen, 'stuck', [p], false)
+        await this.openCut(gen, 'stuck', [p], demo)
+    }
+
+    /** PESADA!: a formiga empurra, o pedaço não sai do chão, e o corte abre ali mesmo. Não é erro. */
+    private async onHeavy(gen: number, p: Piece) {
+        this.state = 'stuck'
+        this.joystick.setEnabled(false)
+        this.joystick.release()
+        this.audio.heavy()
+        this.caption.say(SAY.heavy, C.oops, TIMING.caption)
+        this.ant.face(p.pos.x >= this.ant.x ? 1 : -1)
+        void FX.to(this, p.img, { x: p.pos.x + 4 * (p.pos.x >= this.ant.x ? 1 : -1) }, { duration: 70, yoyo: true, repeat: 4 })
+        await this.ant.strain()
+        if (gen !== this.gen) return
+        const r = Math.sqrt(p.area / Math.PI) * MAP.scale
+        this.lock = { at: { ...p.pos }, r: r + 60 }
+        const dx = this.ant.x - p.pos.x
+        const dy = this.ant.y - ANT.body - p.pos.y
+        const len = Math.hypot(dx, dy) || 1
+        const back = r + 46
+        const left = p.pos.x < WALL.x
+        const x = Phaser.Math.Clamp(p.pos.x + (dx / len) * back, MAP.left + ANT.r, left ? WALL.x - WALL.half - ANT.r - 2 : MAP.right - ANT.r)
+        const y = Phaser.Math.Clamp(p.pos.y + ANT.body + (dy / len) * back, MAP.top + ANT.r + 10, MAP.bottom - ANT.r)
+        await this.ant.walkTo([{ x, y }])
+        if (gen !== this.gen) return
+        await this.openCut(gen, 'heavy', [p], false)
     }
 
     private async onBlown(gen: number, p: Piece) {
@@ -507,6 +641,10 @@ export class GameScene extends Phaser.Scene {
         void this.ant.cheer()
         await FX.all(this.queen.cheer(), this.header.join())
         if (gen !== this.gen) return
+        await this.completePhase(gen)
+    }
+
+    private async completePhase(gen: number) {
         this.queen.setPose('calm')
         this.score += POINTS
         this.cleared += 1
@@ -521,6 +659,201 @@ export class GameScene extends Phaser.Scene {
         await FX.wait(this, TIMING.beat)
         if (gen !== this.gen) return
         await this.startPhase(gen, this.phaseIndex + 1)
+    }
+
+    // ───────────────────────────────────────────── N3: a folha gigante
+
+    private walkGiant(dt: number) {
+        const v = this.joystick.vector()
+        const before = { x: this.ant.x, y: this.ant.y }
+        const step = this.ant.step(v.x, v.y, dt, this.lifted)
+        if (step.moved) this.friends.record(this.ant.x, this.ant.y)
+        this.dropTrail(before)
+        const x = this.ant.x
+        const y = this.ant.y
+        if (this.narrowLock && Math.hypot(x - WALL.x, y - (WALL.gapTop + WALL.gapBottom) / 2) > 150) this.narrowLock = false
+
+        if (this.lifted) {
+            if (Math.abs(v.x) > 0.05) this.groupDir = v.x > 0 ? 1 : -1
+            this.friends.carry(x, y, this.groupDir, step.moved, dt)
+            this.giant.follow(x, y - GIANT.lift, this.ant.depth() + FRIEND.ring[2].y + 10)
+            if (step.gate && !this.narrowLock) void this.onNarrow()
+            if (Math.hypot(x - HOLE.x, y - HOLE.y) < HOLE.r) void this.deliverGiant(this.gen)
+            return
+        }
+        this.friends.follow(dt)
+        const sleeper = this.friends.nearSleeping(x, y)
+        if (sleeper >= 0) void this.onWake(this.gen, sleeper)
+        const body = y - ANT.body
+        if (this.leafLock && !this.giant.touches(x, body, GIANT.touch + GIANT.rearm)) this.leafLock = false
+        if (!this.leafLock && this.giant.touches(x, body)) void this.onLeaf(this.gen)
+    }
+
+    private async onWake(gen: number, index: number) {
+        this.audio.wake()
+        this.header.lightFriend(index)
+        await this.friends.wake(index)
+        if (gen !== this.gen) return
+        if (this.friends.allAwake()) {
+            this.hits += 1
+            this.emitCheckpoint()
+        }
+    }
+
+    private async onLeaf(gen: number) {
+        this.leafLock = true
+        if (this.giant.dirty() > 0) {
+            await this.openScrub(gen)
+            return
+        }
+        if (this.friends.allAwake()) {
+            await this.liftLeaf(gen)
+            return
+        }
+        this.state = 'stuck'
+        this.joystick.setEnabled(false)
+        this.joystick.release()
+        this.audio.heavy()
+        this.caption.say(SAY.heavy, C.oops, TIMING.caption)
+        this.ant.face(GIANT.at.x >= this.ant.x ? 1 : -1)
+        this.header.blinkFriends(this.friends.sleeping())
+        await this.ant.strain()
+        if (gen !== this.gen) return
+        this.play()
+    }
+
+    private async liftLeaf(gen: number) {
+        this.state = 'intro'
+        this.joystick.setEnabled(false)
+        this.joystick.release()
+        this.header.setHelpEnabled(false)
+        this.audio.pick()
+        await this.friends.gather(this.ant.x, this.ant.y)
+        if (gen !== this.gen) return
+        this.ant.setCarrying(true)
+        this.ant.setPace(FRIEND.pace)
+        this.friends.carry(this.ant.x, this.ant.y, this.groupDir, false, 0)
+        await this.giant.lift(this.ant.x, this.ant.y - GIANT.lift, this.ant.depth() + FRIEND.ring[2].y + 10)
+        if (gen !== this.gen) return
+        this.lifted = true
+        this.play()
+    }
+
+    private async onNarrow() {
+        this.narrowLock = true
+        this.audio.bonk()
+        this.caption.say(SAY.narrow, C.oops, TIMING.caption)
+        await this.garden.lightPath()
+    }
+
+    private async openScrub(gen: number) {
+        this.state = 'scrub'
+        this.joystick.setEnabled(false)
+        this.joystick.release()
+        this.joystick.visible(false)
+        this.header.setHelpEnabled(false)
+        this.giant.raise(true)
+        this.audio.whoosh()
+        const at = this.giant.center()
+        this.cutter.open({
+            at,
+            windMin: 0,
+            lift: 0,
+            halfW: 0,
+            done: true,
+            scrub: true,
+            onSwipe: () => undefined,
+            onDone: () => void this.closeScrub(this.gen, false),
+        })
+        await this.view.focus(at, Math.min(GIANT.zoom, 640 / GIANT.w), CUT.at, TIMING.cutIn)
+        if (gen !== this.gen || this.state !== 'scrub') return
+        this.cutter.setInput(true)
+        this.giant.startScrub(
+            left => {
+                this.audio.snap()
+                if (left === 0) void this.closeScrub(this.gen, true)
+            },
+            () => {
+                const now = this.time.now
+                if (now - this.rubSound < 90) return
+                this.rubSound = now
+                this.audio.scrub()
+            },
+        )
+        if (!this.scrubTold) {
+            this.scrubTold = true
+            this.caption.say(SAY.clean, C.butter, TIMING.caption)
+        }
+    }
+
+    private async closeScrub(gen: number, clean: boolean) {
+        if (this.state !== 'scrub') return
+        this.state = 'intro'
+        this.giant.stopScrub()
+        this.cutter.close()
+        if (!clean) this.audio.press()
+        if (clean) {
+            this.caption.say(SAY.shiny, C.yes, TIMING.caption)
+            this.audio.whole()
+            this.header.light('clean')
+            this.hits += 1
+            this.emitCheckpoint()
+            await this.giant.shine()
+            if (gen !== this.gen) return
+        }
+        await this.view.open(TIMING.cutOut)
+        if (gen !== this.gen) return
+        this.giant.raise(false)
+        // pronto sem terminar: com todas as amigas, o grupo ergue a folha suja ali mesmo
+        if (!clean && this.giant.dirty() > 0 && this.friends.allAwake()) {
+            await this.liftLeaf(gen)
+            return
+        }
+        this.play()
+    }
+
+    private async deliverGiant(gen: number) {
+        if (this.state !== 'walk') return
+        this.state = 'done'
+        this.lifted = false
+        this.joystick.setEnabled(false)
+        this.joystick.release()
+        this.header.setHelpEnabled(false)
+        this.ant.setCarrying(false)
+        this.ant.setPace(1)
+        this.queen.hush()
+        await this.giant.place()
+        if (gen !== this.gen) return
+        this.audio.snap()
+        if (this.giant.dirty() > 0) {
+            await this.onDirty(gen)
+            return
+        }
+        this.hits += 1
+        this.header.light('carry')
+        this.emitCheckpoint()
+        this.audio.whole()
+        this.caption.say(SAY.whole, C.yes, TIMING.caption)
+        void this.queen.glow()
+        void this.ant.cheer()
+        await FX.all(this.queen.cheer(), this.friends.cheer())
+        if (gen !== this.gen) return
+        await this.header.join()
+        if (gen !== this.gen) return
+        await this.friends.away()
+        if (gen !== this.gen) return
+        await this.completePhase(gen)
+    }
+
+    private async onDirty(gen: number) {
+        this.state = 'error'
+        this.audio.yuck()
+        this.banner.say(DIRTY, BANNER.lowY)
+        await FX.all(this.queen.yuck(), this.giant.showDirt())
+        if (gen !== this.gen) return
+        await FX.wait(this, TIMING.error)
+        if (gen !== this.gen) return
+        this.lose()
     }
 
     // ───────────────────────────────────────────── demonstrações
@@ -546,8 +879,27 @@ export class GameScene extends Phaser.Scene {
         await this.hand.lift()
     }
 
+    /** A mãozinha corta pelos traços de roteiro (px de arte do item) e aperta o ✓. */
+    private async demoCuts(gen: number, cuts: { a: Vec; b: Vec }[]) {
+        for (const s of cuts) {
+            await FX.wait(this, TIMING.beat)
+            if (gen !== this.gen) return
+            const a = this.view.toScreen(s.a.x, s.a.y)
+            const b = this.view.toScreen(s.b.x, s.b.y)
+            await this.hand.swipe(a, b, TIMING.swipe * 1.4, at => this.cutter.drawTrail(a, at))
+            if (gen !== this.gen) return
+            this.cutter.clearTrail()
+            this.swipe(s.a, s.b)
+        }
+        await FX.wait(this, TIMING.beat)
+        if (gen !== this.gen) return
+        await this.hand.press(this.cutter.doneAt())
+        if (gen !== this.gen) return
+        await this.closeCut(gen)
+    }
+
     private async demoAll(gen: number) {
-        const phase = this.phase
+        const phase = this.cutPhase
         if (!phase.demo) return
         this.state = 'demo'
         this.joystick.visible(true)
@@ -569,23 +921,10 @@ export class GameScene extends Phaser.Scene {
         if (gen !== this.gen) return
         this.state = 'demo'
         this.caption.say(SAY.cut, C.white)
-        for (const s of phase.demo) {
-            await FX.wait(this, TIMING.beat)
-            if (gen !== this.gen) return
-            const wa = this.pieces.worldOf(s.from)
-            const wb = this.pieces.worldOf(s.to)
-            const a = this.view.toScreen(wa.x, wa.y)
-            const b = this.view.toScreen(wb.x, wb.y)
-            await this.hand.swipe(a, b, TIMING.swipe * 1.4, at => this.cutter.drawTrail(a, at))
-            if (gen !== this.gen) return
-            this.cutter.clearTrail()
-            this.swipe(wa, wb)
-        }
-        await FX.wait(this, TIMING.beat)
-        if (gen !== this.gen) return
-        await this.hand.press(this.cutter.doneAt())
-        if (gen !== this.gen) return
-        await this.closeCut(gen)
+        await this.demoCuts(
+            gen,
+            phase.demo.map(s => ({ a: this.pieces.worldOf(s.from), b: this.pieces.worldOf(s.to) })),
+        )
         if (gen !== this.gen) return
 
         // 3. levar um pedaço até a rainha
@@ -607,12 +946,82 @@ export class GameScene extends Phaser.Scene {
         await this.deliver(gen, target)
     }
 
+    /** N2: corta a folha em 3, o terço entala, é cortado de novo, e uma metade vai à rainha. */
+    private async demoLeaf(gen: number) {
+        const phase = this.cutPhase
+        if (!phase.demo) return
+        this.state = 'demo'
+        this.joystick.visible(true)
+        const gapY = (WALL.gapTop + WALL.gapBottom) / 2
+
+        this.caption.say(SAY.walk, C.white)
+        await this.autoWalk(gen, [
+            { x: WALL.x + 80, y: gapY },
+            { x: WALL.x - 80, y: gapY },
+            this.leafStop(),
+        ])
+        if (gen !== this.gen) return
+        this.caption.hide()
+
+        await this.openCut(gen, 'tree', this.pieces.live(), true)
+        if (gen !== this.gen) return
+        this.state = 'demo'
+        this.caption.say(SAY.cut, C.white)
+        await this.demoCuts(
+            gen,
+            phase.demo.map(s => ({ a: this.pieces.worldOf(s.from), b: this.pieces.worldOf(s.to) })),
+        )
+        if (gen !== this.gen) return
+
+        // o terço da direita levanta, mas entala na fresta
+        this.state = 'demo'
+        const third = this.pieces.live().reduce((a, b) => (b.pos.x > a.pos.x ? b : a))
+        await this.autoWalk(gen, [{ x: third.pos.x + 10, y: third.pos.y + 30 }])
+        if (gen !== this.gen) return
+        this.pick(third)
+        await FX.wait(this, 260)
+        if (gen !== this.gen) return
+        await this.autoWalk(gen, [{ x: WALL.x - WALL.half - ANT.r - 6, y: gapY }])
+        if (gen !== this.gen) return
+        this.registry.set(STUCK_KEY, true)
+        await this.onStuck(gen, third, true)
+        if (gen !== this.gen) return
+
+        this.state = 'demo'
+        const h = this.pieces.hintFor(third)
+        this.cutter.hint(h.a, h.b)
+        this.caption.say(SAY.cutAgain, C.butter)
+        await this.demoCuts(gen, [h])
+        if (gen !== this.gen) return
+
+        // uma das metades atravessa e vai para o prato
+        this.state = 'demo'
+        this.caption.say(SAY.carry, C.white)
+        const half = this.pieces
+            .live()
+            .filter(p => p.state === 'ground' && p.stuck)
+            .reduce((a, b) => (b.pos.y < a.pos.y ? b : a))
+        await this.autoWalk(gen, [{ x: half.pos.x, y: half.pos.y + 30 }])
+        if (gen !== this.gen) return
+        this.pick(half)
+        await FX.wait(this, 260)
+        if (gen !== this.gen) return
+        await this.autoWalk(gen, [
+            { x: WALL.x - 90, y: gapY },
+            { x: WALL.x + 90, y: gapY },
+            { x: HOLE.x - 30, y: HOLE.y - 10 },
+        ])
+        if (gen !== this.gen) return
+        this.caption.hide()
+        await this.deliver(gen, half)
+    }
+
     private async windDemo(gen: number) {
         this.audio.whoosh()
         const center = { x: (WIND.left + WIND.right) / 2, y: 330 }
         await this.view.focus(center, LENS.zoom, LENS.at)
         if (gen !== this.gen) return
-        const def = FRUITS[this.phase.fruit]
+        const def = ITEMS[this.cutPhase.item]
         const crumb = this.add.graphics()
         crumb.fillStyle(def.pulp, 1)
         crumb.fillCircle(0, 0, 9)
@@ -636,6 +1045,58 @@ export class GameScene extends Phaser.Scene {
         await this.view.open()
     }
 
+    /** N3: o pedido se parte em 3 tarefas, e a câmera passa por cada uma. */
+    private async giantOpening(gen: number) {
+        this.state = 'demo'
+        this.joystick.visible(false)
+        await FX.wait(this, 500)
+        if (gen !== this.gen) return
+        this.audio.snap()
+        await this.header.tasks(this.giantPhase.friends.length)
+        if (gen !== this.gen) return
+
+        // limpar: a mãozinha esfrega uma sujeira, que some (conta)
+        const dirt = this.giant.dirtAt()
+        if (dirt) {
+            void this.header.pulse('clean')
+            this.audio.whoosh()
+            await this.view.focus(dirt, LENS.zoom, LENS.at)
+            if (gen !== this.gen) return
+            this.caption.say(SAY.clean, C.butter)
+            const c = this.view.toScreen(dirt.x, dirt.y)
+            for (const side of [1, -1, 1]) {
+                let last = { x: c.x - 46 * side, y: c.y - 8 }
+                await this.hand.swipe(last, { x: c.x + 46 * side, y: c.y + 8 }, 360, at => {
+                    if (this.giant.rub(last, at).touched) this.audio.scrub()
+                    last = at
+                })
+                if (gen !== this.gen) return
+            }
+            await FX.wait(this, 700)
+            if (gen !== this.gen) return
+        }
+
+        // chamar: zoom numa amiga dormindo
+        void this.header.pulse('friends')
+        this.audio.whoosh()
+        await this.view.focus(this.friends.pos(0), LENS.zoom, LENS.at)
+        if (gen !== this.gen) return
+        this.caption.say(SAY.wake, C.butter)
+        await FX.wait(this, 2000)
+        if (gen !== this.gen) return
+
+        // levar: o caminho largo
+        void this.header.pulse('carry')
+        this.audio.whoosh()
+        await this.view.focus({ x: WALL.x, y: (MAP.top + WIDE.bottom) / 2 + 60 }, LENS.zoom, LENS.at)
+        if (gen !== this.gen) return
+        this.caption.say(SAY.together, C.butter)
+        await this.garden.lightPath()
+        if (gen !== this.gen) return
+        this.caption.hide()
+        await this.view.open()
+    }
+
     // ───────────────────────────────────────────── erro
 
     private lose() {
@@ -653,6 +1114,40 @@ export class GameScene extends Phaser.Scene {
 
     // ───────────────────────────────────────────── ajuda
 
+    private queenSpot(): Rect {
+        const q = this.queen.rect()
+        const plate = this.queen.plateRect()
+        const left = Math.min(q.x - q.w / 2, plate.x - plate.w / 2)
+        const right = Math.max(q.x + q.w / 2, plate.x + plate.w / 2)
+        const topY = Math.min(q.y - q.h / 2, plate.y - plate.h / 2)
+        const bottom = Math.max(q.y + q.h / 2, HOLE.y + 40)
+        return { x: (left + right) / 2, y: (topY + bottom) / 2, w: right - left, h: bottom - topY }
+    }
+
+    private helpSteps(): TutorialStep[] {
+        const next = (text: string, r: Rect, pad: number, balloonY: number): TutorialStep => ({ text, ...spot(r, pad), balloonY, buttonLabel: 'Próximo' })
+        const steps: TutorialStep[] = [next(HELP.walk, this.joystick.rect(), 4, 300)]
+        const phase = this.phase
+        if (phase.type === 'giant') {
+            const leaf = this.giant.rect()
+            if (!this.lifted) steps.push(next(HELP.scrub, leaf, 16, 560))
+            const sleeping = this.friends.sleeping()
+            if (sleeping.length) steps.push(next(HELP.wake, this.friends.rect(sleeping[0]), 6, 560))
+            steps.push(next(HELP.wide, this.garden.wideRect(), 0, 560))
+            steps.push({ text: HELP.giantQueen, ...spot(this.queenSpot(), 6), balloonY: 600, buttonLabel: 'Continuar' })
+            return steps
+        }
+        const fruitRect = this.treeDone
+            ? this.pieces.rectOf(this.pieces.live().filter(p => p.state === 'ground'))
+            : this.pieces.rectOf(this.pieces.live())
+        if (fruitRect.w > 0) steps.push(next(phase.lift ? HELP.leafCut : HELP.cut, fruitRect, 16, 560))
+        if (phase.lift) steps.push(next(HELP.heavy, this.ant.rect(), 10, 560))
+        steps.push(next(HELP.gap, this.garden.gapRect(), 0, 600))
+        if (this.garden.windOn()) steps.push(next(HELP.wind, this.garden.windRect(), 0, 300))
+        steps.push({ text: HELP.queen, ...spot(this.queenSpot(), 6), balloonY: 600, buttonLabel: 'Continuar' })
+        return steps
+    }
+
     private async explain() {
         if (this.state !== 'walk') return
         const gen = this.gen
@@ -660,28 +1155,7 @@ export class GameScene extends Phaser.Scene {
         this.joystick.setEnabled(false)
         this.joystick.release()
         this.header.setHelpEnabled(false)
-        const fruitRect = this.treeDone
-            ? this.pieces.rectOf(this.pieces.live().filter(p => p.state === 'ground'))
-            : this.pieces.rectOf(this.pieces.live())
-        const steps: TutorialStep[] = [
-            { text: HELP.walk, ...spot(this.joystick.rect(), 4), balloonY: 300, buttonLabel: 'Próximo' },
-        ]
-        if (fruitRect.w > 0) steps.push({ text: HELP.cut, ...spot(fruitRect, 16), balloonY: 560, buttonLabel: 'Próximo' })
-        steps.push({ text: HELP.gap, ...spot(this.garden.gapRect(), 0), balloonY: 600, buttonLabel: 'Próximo' })
-        if (this.garden.windOn()) steps.push({ text: HELP.wind, ...spot(this.garden.windRect(), 0), balloonY: 300, buttonLabel: 'Próximo' })
-        const q = this.queen.rect()
-        const plate = this.queen.plateRect()
-        const left = Math.min(q.x - q.w / 2, plate.x - plate.w / 2)
-        const right = Math.max(q.x + q.w / 2, plate.x + plate.w / 2)
-        const topY = Math.min(q.y - q.h / 2, plate.y - plate.h / 2)
-        const bottom = Math.max(q.y + q.h / 2, HOLE.y + 40)
-        steps.push({
-            text: HELP.queen,
-            ...spot({ x: (left + right) / 2, y: (topY + bottom) / 2, w: right - left, h: bottom - topY }, 6),
-            balloonY: 600,
-            buttonLabel: 'Continuar',
-        })
-        await teach(this, `${guideKey(this.level.level)}-help`, steps)
+        await teach(this, `${guideKey(this.level.level)}-help`, this.helpSteps())
         if (gen !== this.gen) return
         this.play()
     }
@@ -698,7 +1172,7 @@ export class GameScene extends Phaser.Scene {
         this.header.setHelpEnabled(false)
         this.joystick.setEnabled(false)
         this.audio.win()
-        void FX.confetti(this, { colors: [C.butter, C.sky, C.lilac, FRUITS.morango.skin, FRUITS.laranja.skin, FRUITS.maca.skin] })
+        void FX.confetti(this, { colors: [C.butter, C.sky, C.lilac, ITEMS.morango.skin, ITEMS.laranja.skin, ITEMS.folha.skin] })
         await FX.wait(this, TIMING.finale)
         if (gen !== this.gen) return
 
@@ -713,7 +1187,8 @@ export class GameScene extends Phaser.Scene {
         this.emitCheckpoint()
         this.state = 'done'
         const last = this.level.level >= LEVELS.length
-        const stars = this.stucks === 0 ? 3 : this.stucks <= 2 ? 2 : 1
+        // no N2 o entalo é o caminho natural; no N2 e no N3, quem completa ganha 3
+        const stars = this.level.level > 1 || this.stucks === 0 ? 3 : this.stucks <= 2 ? 2 : 1
         showLevelComplete(this, {
             accent: C.accent,
             panelColor: C.cream,

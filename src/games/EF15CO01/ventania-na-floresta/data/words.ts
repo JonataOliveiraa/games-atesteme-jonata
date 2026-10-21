@@ -1,4 +1,4 @@
-import type { Bird, Bug, Cor, Field, Home, Kind, Structure, Tone } from '../types'
+import type { Bird, Bug, Cap, Cor, Field, Fish, FishField, Glow, Group, Home, Hue, Kind, Structure, Tone } from '../types'
 
 export const OPENING = {
     hello: 'Oi! Eu cuido da floresta.',
@@ -13,7 +13,10 @@ export const TEACH = {
     card: 'A ficha diz como é.',
     labels: 'Olhe o nome de cada linha.',
     web: 'O fio liga os dois.',
-    homes: 'Cada coisa tem sua casa.',
+    look: 'Olhe como eles estão!',
+    ask: 'Como eles estavam?',
+    cap: 'A linha diz o chapéu.',
+    duck: 'Do maior para o menor!',
     go: 'Sua vez!',
 } as const
 
@@ -33,19 +36,39 @@ export const HOME_LABEL: Record<Home, string> = {
     solto: 'SOLTO',
 }
 
+export const MEET: Record<Home, string> = {
+    fila: 'FILA: um atrás do outro.',
+    grade: 'GRADE: linhas e colunas.',
+    ficha: 'FICHA: cada valor tem nome.',
+    teia: 'TEIA: fios ligando as coisas.',
+    solto: 'SOLTO: uma coisa sozinha.',
+}
+
 export const RULE: Record<Structure, string> = {
     fila: 'da maior para a menor',
     grade: 'linha da flor, coluna da cor',
     ficha: 'leia o nome de cada linha',
     teia: 'o fio liga os dois',
-    redemoinho: 'Onde mora?',
+    jeito: 'Olhe bem!',
 }
 
-export const PIECE_TEXT = {
-    badge: '6',
-    number: '7',
-    word: 'OI',
-} as const
+export const ASK: Record<Group, string> = {
+    patos: 'Como eles estavam?',
+    cogumelos: 'Como eles estavam?',
+    peixes: 'Como eles estavam?',
+    vagalumes: 'Como eles estavam?',
+    caracol: 'Como o 7 estava?',
+}
+
+export const JEITO_RULE: Record<Group, string> = {
+    patos: 'do maior para o menor',
+    cogumelos: 'linha do chapéu, coluna da cor',
+    peixes: 'leia o nome de cada linha',
+    vagalumes: 'o fio liga os dois',
+    caracol: 'uma coisa sozinha',
+}
+
+export const PEBBLE_TEXT = '7'
 
 const KIND_NAME: Record<Kind, string> = {
     margarida: 'margarida',
@@ -81,13 +104,15 @@ const edgeWhy = (a: Bug, b: Bug) => {
     return `O fio liga ${from.fem ? 'a' : 'o'} ${from.name} ${to.fem ? 'à' : 'ao'} ${to.name}!`
 }
 
-const HOME_WHY: Record<Home, string> = {
-    fila: 'Isso tem ordem: é uma FILA!',
-    grade: 'Isso tem linha e coluna: é uma GRADE!',
-    ficha: 'Cada valor tem um nome: é uma FICHA!',
-    teia: 'Isso liga um ao outro: é uma TEIA!',
-    solto: 'Isso está sozinho: é SOLTO!',
+const WAY_WHY: Record<Group, string> = {
+    patos: 'Eles andam um atrás do outro: é FILA!',
+    cogumelos: 'Tem linha e coluna: é GRADE!',
+    peixes: 'Cada valor tem nome: é FICHA!',
+    vagalumes: 'Os fios ligam um ao outro: é TEIA!',
+    caracol: 'Um número sozinho: é SOLTO!',
 }
+
+const FISH_FIELD_NAME: Record<FishField, string> = { corpo: 'CORPO', rabo: 'RABO' }
 
 export const WHY = {
     line: 'Tem uma formiga maior!',
@@ -95,5 +120,10 @@ export const WHY = {
     col: (t: Tone) => `Aqui é lugar de flor ${TONE_NAME[t]}!`,
     field: fieldWhy,
     edge: edgeWhy,
-    home: (h: Home) => HOME_WHY[h],
+    way: (g: Group) => WAY_WHY[g],
+    duck: 'Tem um patinho maior!',
+    cap: (c: Cap) => `Aqui é lugar de chapéu ${c}!`,
+    hue: (h: Hue) => `Aqui é lugar de cogumelo ${h}!`,
+    fish: (f: FishField, home: Fish) => `Nessa ficha, o ${FISH_FIELD_NAME[f]} é ${COR_MASC[home[f]]}!`,
+    glow: (a: Glow, b: Glow) => `O fio liga o ${a} ao ${b}!`,
 } as const

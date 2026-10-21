@@ -6,18 +6,47 @@
 
 export type PieceKind = 'block' | 'ramp'
 
+export type Side = 'left' | 'right'
+
+export type Pocket = 'yes' | 'no'
+
 export interface Piece {
     id: string
     kind: PieceKind
+    c: number
+    r: number
+    left?: boolean
+}
+
+export interface PiecePage {
+    id: string
+    kind: 'piece'
+    piece: Piece
+}
+
+export interface RepeatPage {
+    id: string
+    kind: 'repeat'
+    c: number
+    n: number
+}
+
+export type Page = PiecePage | RepeatPage
+
+export interface Cell {
     c: number
     r: number
 }
 
 export interface PhaseDef {
     id: string
-    pieces: Piece[]
-    bell: number
-    tray: string[]
+    model: Piece[]
+    bells: number[]
+    tray: Page[]
+    slots: number
+    ifSlot?: number
+    cond?: Side
+    choice?: Cell
 }
 
 export interface LevelDef {
@@ -27,12 +56,44 @@ export interface LevelDef {
     phases: PhaseDef[]
 }
 
-export type State = 'intro' | 'play' | 'build' | 'roll' | 'error' | 'help' | 'done' | 'finale'
-
-export interface BuildStep {
-    piece: Piece
-    ok: boolean
+export interface Tape {
+    slots: Array<Page | undefined>
+    yes?: Page
+    no?: Page
 }
+
+export type Why = 'under' | 'extra' | 'blocked' | 'missing' | 'cat'
+
+export interface Act {
+    slot: number
+    pocket?: Pocket
+    piece: Piece
+    count: number
+    total: number
+    ok: boolean
+    land: number
+}
+
+export interface Fail {
+    why: Why
+    piece: Piece
+    slot?: number
+    pocket?: Pocket
+}
+
+export interface Path {
+    ramps: Piece[]
+    bell: number
+}
+
+export interface Outcome {
+    acts: Act[]
+    built: Map<string, Piece>
+    fail?: Fail
+    path?: Path
+}
+
+export type State = 'intro' | 'play' | 'build' | 'roll' | 'error' | 'help' | 'done' | 'finale'
 
 export interface Vec {
     x: number

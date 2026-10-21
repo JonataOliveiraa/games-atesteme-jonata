@@ -3,27 +3,36 @@ import { FX } from '../../../../shared/effects/FX'
 import { BENCH, DEPTH, H, SIGN, W } from '../data/layout'
 import { C, CSS, FONT, SIZE, inkOn } from '../data/theme'
 import { LABEL, chipText } from '../data/words'
-import type { Rack, Rect, Term, Vec } from '../types'
+import type { Op, Rack, Rect, Term, Vec } from '../types'
 import { paintImage } from './art'
 import { termIcon } from './icons'
+import { OP_TONE, type Side } from './sign'
 
 export interface BenchHandlers {
     onCard(index: number): void
-    onNot(): void
+    onNot(side: Side): void
+    onOp(op: Op): void
     onPlay(): void
 }
 
+export interface BenchState {
+    card: number | null
+    not: Record<Side, boolean>
+    op: Op | null
+}
+
+export type Target = { kind: 'card'; index: number } | { kind: 'not'; side: Side } | { kind: 'op'; op: Op } | { kind: 'play' }
+
 export interface Bench {
     build(rack: Rack): void
-    paint(card: number | null, not: boolean): void
+    paint(state: BenchState): void
     enable(handlers: BenchHandlers): void
     disable(): void
-    cardPos(index: number): Vec
-    notPos(): Vec
-    playPos(): Vec
-    press(target: 'card' | 'not' | 'play', index?: number): void
+    pos(target: Target): Vec
+    press(target: Target): void
     rect(): Rect
     notRect(): Rect | null
+    opRect(): Rect | null
     show(): Promise<void>
     hide(): Promise<void>
     destroy(): void
@@ -69,6 +78,9 @@ function ringArt(scene: Phaser.Scene, w: number, h: number, r: number) {
     })
 }
 
+const SIDES: Side[] = ['left', 'right']
+const OPS: Op[] = ['e', 'ou']
+
 export function createBench(scene: Phaser.Scene): Bench {
     const root = scene.add.container(0, 0).setDepth(DEPTH.bench)
     const band = paintImage(scene, W, H - BENCH.top + 10, g => {
@@ -86,14 +98,25 @@ export function createBench(scene: Phaser.Scene): Bench {
 
     let buttons: Button[] = []
     let cards: Button[] = []
-    let notBtn: Button | undefined
+    let notBtns: Partial<Record<Side, Button>> = {}
+    let opBtns: Partial<Record<Op, Button>> = {}
     let playBtn: Button | undefined
     let handlers: BenchHandlers | undefined
     let active = false
     let shown = true
-    let state = { card: null as number | null, not: false }
+    let kind: Rack['kind'] = 'one'
+    let state: BenchState = { card: null, not: { left: false, right: false }, op: null }
 
-    const makeButton = (x: number, w: number, h: number, content: (face: Phaser.GameObjects.Container) => void, tone: { on: number; onRim: number; off: number; offRim: number; line?: number }, sink = true): Button => {
+    const tag = (o: Phaser.GameObjects.GameObject & { y: number }) => o.setData('y', o.y)
+
+    const makeButton = (
+        x: number,
+        w: number,
+        h: number,
+        content: (face: Phaser.GameObjects.Container) => void,
+        tone: { on: number; onRim: number; off: number; offRim: number; line?: number },
+        sink = true,
+    ): Button => {
         const y = BENCH.y
         const off = plate(scene, w, h, tone.off, tone.offRim, 22, tone.line)
         const on = plate(scene, w, h, tone.on, tone.onRim, 22, tone.line).setVisible(false)
@@ -117,16 +140,27 @@ export function createBench(scene: Phaser.Scene): Bench {
         return b
     }
 
+    const label = (text: string, size: number, color: string = CSS.white) =>
+        scene.add.text(0, 0, text, { fontFamily: FONT.black, fontSize: `${size}px`, color }).setOrigin(0.5).setResolution(2)
+
+    const fitRow = (face: Phaser.GameObjects.Container, parts: (Phaser.GameObjects.Image | Phaser.GameObjects.Text)[], room: number) => {
+        const gap = 10
+        const widths = parts.map(p => p.displayWidth)
+        const total = widths.reduce((s, w) => s + w, 0) + gap * (parts.length - 1)
+        const s = Math.min(1, room / total)
+        let x = (-total * s) / 2
+        parts.forEach((p, i) => {
+            p.setScale(p.scale * s)
+            p.setX(x + (widths[i] * s) / 2)
+            x += (widths[i] + gap) * s
+            face.add(tag(p))
+        })
+    }
+
     const stopPulse = (b: Button) => {
         b.pulse?.stop()
         b.pulse = undefined
         b.ring.setVisible(false).setAlpha(1)
-    }
-
-    const startPulse = (b: Button) => {
-        if (b.pulse) return
-        b.ring.setVisible(true).setAlpha(0.35)
-        b.pulse = scene.tweens.add({ targets: b.ring, alpha: 1, duration: 620, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
     }
 
     const setPressed = (b: Button, pressed: boolean) => {
@@ -138,26 +172,32 @@ export function createBench(scene: Phaser.Scene): Bench {
         })
     }
 
+    const ready = () => (kind === 'one' ? state.card !== null : kind === 'join' ? state.op !== null : true)
+
     const refresh = () => {
         cards.forEach((b, i) => setPressed(b, state.card === i))
-        if (notBtn) setPressed(notBtn, state.not)
-        const ready = state.card !== null
+        SIDES.forEach(side => {
+            const b = notBtns[side]
+            if (b) setPressed(b, state.not[side])
+        })
+        OPS.forEach(op => {
+            const b = opBtns[op]
+            if (b) setPressed(b, state.op === op)
+        })
+        const go = ready()
         if (playBtn) {
-            playBtn.off.setVisible(!ready)
-            playBtn.on.setVisible(ready)
+            playBtn.off.setVisible(!go)
+            playBtn.on.setVisible(go)
             playBtn.face.list.forEach(o => {
-                if (o instanceof Phaser.GameObjects.Text) o.setColor(ready ? inkOn(C.play) : CSS.white).setAlpha(ready ? 1 : 0.75)
+                if (o instanceof Phaser.GameObjects.Text) o.setColor(go ? inkOn(C.play) : CSS.white).setAlpha(go ? 1 : 0.75)
             })
         }
         buttons.forEach(b => {
-            const can = active && shown && (b !== playBtn || ready)
+            const can = active && shown && (b !== playBtn || go)
             if (b.zone.input) b.zone.input.enabled = can
-            if (can) startPulse(b)
-            else stopPulse(b)
+            stopPulse(b)
         })
     }
-
-    const tag = (o: Phaser.GameObjects.GameObject & { y: number }) => o.setData('y', o.y)
 
     const clear = () => {
         buttons.forEach(b => {
@@ -167,92 +207,113 @@ export function createBench(scene: Phaser.Scene): Bench {
         })
         buttons = []
         cards = []
-        notBtn = undefined
+        notBtns = {}
+        opBtns = {}
         playBtn = undefined
     }
 
-    const center = (b: Button): Vec => ({ x: b.x, y: b.y })
+    const center = (b: Button | undefined, fallback: Vec): Vec => (b ? { x: b.x, y: b.y } : fallback)
+
+    const find = (t: Target) =>
+        t.kind === 'card' ? cards[t.index] : t.kind === 'not' ? notBtns[t.side] : t.kind === 'op' ? opBtns[t.op] : playBtn
+
+    const around = (list: Button[]): Rect | null => {
+        if (!list.length) return null
+        const left = Math.min(...list.map(b => b.x - b.w / 2))
+        const right = Math.max(...list.map(b => b.x + b.w / 2))
+        return { x: (left + right) / 2, y: BENCH.y + 3, w: right - left + 30, h: BENCH.cardH + 30 }
+    }
+
+    const notButton = (x: number, w: number, side: Side, term?: Term) => {
+        const b = makeButton(
+            x,
+            w,
+            BENCH.cardH,
+            face => {
+                const word = label(LABEL.not, SIGN.text + 4)
+                if (!term) {
+                    face.add(tag(word))
+                    return
+                }
+                const ic = paintImage(scene, BENCH.icon, BENCH.icon, g => termIcon(g, term, BENCH.icon))
+                const text = label(chipText(term), SIZE.card - 2)
+                fitRow(face, [word, ic, text], w - 30)
+            },
+            { on: C.notDark, onRim: 0x4f2aa8, off: C.not, offRim: C.notDark },
+        )
+        b.zone.on('pointerdown', () => {
+            if (active) handlers?.onNot(side)
+        })
+        notBtns[side] = b
+    }
 
     const bench: Bench = {
         build(rack) {
             clear()
-            state = { card: null, not: false }
-            const xs = rack.cards.length > 1 ? BENCH.cardXs2 : BENCH.cardXs1
-            rack.cards.forEach((term: Term, i) => {
-                const b = makeButton(
-                    xs[i],
-                    BENCH.cardW,
-                    BENCH.cardH,
-                    face => {
-                        const text = scene.add
-                            .text(0, 0, chipText(term), { fontFamily: FONT.black, fontSize: `${SIZE.card}px`, color: CSS.ink })
-                            .setOrigin(0, 0.5)
-                            .setResolution(2)
-                        const inner = BENCH.icon + 12 + text.width
-                        const ic = paintImage(scene, BENCH.icon, BENCH.icon, g => termIcon(g, term, BENCH.icon))
-                        ic.setPosition(-inner / 2 + BENCH.icon / 2, 0)
-                        text.setX(-inner / 2 + BENCH.icon + 12)
-                        if (inner > BENCH.cardW - 30) {
-                            const s = (BENCH.cardW - 30) / inner
-                            text.setScale(s).setX(-inner * s / 2 + BENCH.icon * s + 12 * s)
-                            ic.setScale(s).setX(-inner * s / 2 + (BENCH.icon * s) / 2)
-                        }
-                        face.add([tag(ic), tag(text)])
-                    },
-                    { on: C.cardOn, onRim: C.creamDark, off: C.card, offRim: C.cardRim, line: C.chipRim },
-                )
-                b.zone.on('pointerdown', () => {
-                    if (!active) return
-                    handlers?.onCard(i)
+            kind = rack.kind
+            state = { card: null, not: { left: false, right: false }, op: null }
+            if (rack.kind === 'one') {
+                const xs = rack.cards.length > 1 ? BENCH.cardXs2 : BENCH.cardXs1
+                rack.cards.forEach((term: Term, i) => {
+                    const b = makeButton(
+                        xs[i],
+                        BENCH.cardW,
+                        BENCH.cardH,
+                        face => {
+                            const ic = paintImage(scene, BENCH.icon, BENCH.icon, g => termIcon(g, term, BENCH.icon))
+                            const text = label(chipText(term), SIZE.card, CSS.ink)
+                            fitRow(face, [ic, text], BENCH.cardW - 30)
+                        },
+                        { on: C.cardOn, onRim: C.creamDark, off: C.card, offRim: C.cardRim, line: C.chipRim },
+                    )
+                    b.zone.on('pointerdown', () => {
+                        if (active) handlers?.onCard(i)
+                    })
+                    cards.push(b)
                 })
-                cards.push(b)
-            })
-            if (rack.not) {
-                notBtn = makeButton(
-                    BENCH.notX,
-                    BENCH.notW,
-                    BENCH.cardH,
-                    face => {
-                        const label = scene.add
-                            .text(0, 0, LABEL.not, { fontFamily: FONT.black, fontSize: `${SIGN.text + 4}px`, color: CSS.white })
-                            .setOrigin(0.5)
-                            .setResolution(2)
-                        face.add(tag(label))
-                    },
-                    { on: C.notDark, onRim: 0x4f2aa8, off: C.not, offRim: C.notDark },
-                )
-                notBtn.zone.on('pointerdown', () => {
-                    if (!active) return
-                    handlers?.onNot()
+                if (rack.not) notButton(BENCH.notX, BENCH.notW, 'left')
+            } else if (rack.kind === 'join') {
+                OPS.forEach((op, i) => {
+                    const tone = OP_TONE[op]
+                    const b = makeButton(
+                        BENCH.opXs[i],
+                        BENCH.opW,
+                        BENCH.cardH,
+                        face => face.add(tag(label(op === 'e' ? LABEL.e : LABEL.ou, SIZE.play + 10))),
+                        { on: tone.dark, onRim: tone.dark, off: tone.fill, offRim: tone.dark },
+                    )
+                    b.zone.on('pointerdown', () => {
+                        if (active) handlers?.onOp(op)
+                    })
+                    opBtns[op] = b
                 })
+            } else {
+                notButton(BENCH.notXs[0], BENCH.notWide, 'left', rack.left)
+                notButton(BENCH.notXs[1], BENCH.notWide, 'right', rack.right)
             }
             playBtn = makeButton(
                 BENCH.playX,
                 BENCH.playW,
                 BENCH.playH,
                 face => {
-                    const label = scene.add
-                        .text(-14, 0, LABEL.play, { fontFamily: FONT.black, fontSize: `${SIZE.play}px`, color: CSS.white })
-                        .setOrigin(0.5)
-                        .setResolution(2)
+                    const text = label(LABEL.play, SIZE.play).setX(-14)
                     const arrow = paintImage(scene, 30, 34, g => {
                         g.fillStyle(C.white, 1)
                         g.fillTriangle(2, 2, 2, 32, 28, 17)
                     })
-                    arrow.setPosition(label.x + label.width / 2 + 24, 0)
-                    face.add([tag(label), tag(arrow)])
+                    arrow.setPosition(text.x + text.width / 2 + 24, 0)
+                    face.add([tag(text), tag(arrow)])
                 },
                 { on: C.play, onRim: C.playDark, off: C.off, offRim: C.offDark },
                 false,
             )
             playBtn.zone.on('pointerdown', () => {
-                if (!active || state.card === null) return
-                handlers?.onPlay()
+                if (active && ready()) handlers?.onPlay()
             })
             refresh()
         },
-        paint(card, not) {
-            state = { card, not }
+        paint(next) {
+            state = { card: next.card, not: { ...next.not }, op: next.op }
             refresh()
         },
         enable(h) {
@@ -265,23 +326,21 @@ export function createBench(scene: Phaser.Scene): Bench {
             buttons.forEach(b => b.face.setY(0))
             refresh()
         },
-        cardPos: i => center(cards[i] ?? cards[0]),
-        notPos: () => (notBtn ? center(notBtn) : { x: BENCH.notX, y: BENCH.y }),
-        playPos: () => (playBtn ? center(playBtn) : { x: BENCH.playX, y: BENCH.y }),
-        press(target, index = 0) {
-            const b = target === 'card' ? cards[index] : target === 'not' ? notBtn : playBtn
-            if (!b) return
-            void FX.press(scene, b.root)
+        pos(t) {
+            const fallback = t.kind === 'not' ? { x: BENCH.notX, y: BENCH.y } : { x: BENCH.playX, y: BENCH.y }
+            return center(find(t), fallback)
+        },
+        press(t) {
+            const b = find(t)
+            if (b) void FX.press(scene, b.root)
         },
         rect() {
             const left = Math.min(...buttons.map(b => b.x - b.w / 2))
             const right = Math.max(...buttons.map(b => b.x + b.w / 2))
             return { x: (left + right) / 2, y: BENCH.y + 3, w: right - left + 40, h: BENCH.playH + 34 }
         },
-        notRect() {
-            if (!notBtn) return null
-            return { x: notBtn.x, y: notBtn.y + 3, w: notBtn.w + 30, h: notBtn.h + 30 }
-        },
+        notRect: () => around(SIDES.flatMap(side => (notBtns[side] ? [notBtns[side] as Button] : []))),
+        opRect: () => around(OPS.flatMap(op => (opBtns[op] ? [opBtns[op] as Button] : []))),
         async show() {
             shown = true
             scene.tweens.killTweensOf(root)

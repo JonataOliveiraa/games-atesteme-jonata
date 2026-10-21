@@ -172,6 +172,10 @@ function extraCell(g: G, i: number) {
         g.fillCircle(86, 196, 4)
         return
     }
+    if (i === 2) {
+        pillow(g)
+        return
+    }
     ;[76, 116].forEach(x => {
         g.fillStyle(C.lens, 0.35)
         g.fillCircle(x, 74, 18)
@@ -182,11 +186,33 @@ function extraCell(g: G, i: number) {
     g.lineBetween(93, 71, 99, 71)
 }
 
+function pillow(g: G) {
+    const x = 96 - 75
+    const y = 150 - 40
+    g.fillStyle(C.pillowDark, 1)
+    g.fillRoundedRect(x, y + 6, 150, 78, 30)
+    g.fillStyle(C.pillow, 1)
+    g.fillRoundedRect(x, y, 150, 74, 30)
+    ;[
+        [52, 128],
+        [96, 120],
+        [140, 130],
+        [70, 162],
+        [122, 164],
+    ].forEach(([px, py]) => {
+        g.fillStyle(C.pillowDot, 1)
+        g.fillCircle(px, py, 6)
+    })
+    star(g, 96, 146, 9, C.star, 0)
+    g.lineStyle(LW, INK, 1)
+    g.strokeRoundedRect(x, y, 150, 74, 30)
+}
+
 // ───────────────────────────────────────────── bola
 
 function ballCell(g: G, i: number) {
     if (i === 0) ballBody(g)
-    else if (i <= 4) ballFace(g, i - 1)
+    else if (i <= 5) ballFace(g, i - 1)
 }
 
 function ballBody(g: G) {
@@ -258,6 +284,16 @@ function ballFace(g: G, f: number) {
         g.closePath()
         g.strokePath()
         cheek()
+    } else if (f === 4) {
+        ;[100, 156].forEach((x, k) => {
+            const d = k ? -1 : 1
+            g.lineBetween(x - 14 * d, 124, x + 10 * d, 136)
+            g.lineBetween(x + 10 * d, 136, x - 14 * d, 148)
+        })
+        g.fillStyle(C.vermelho, 0.85)
+        g.fillCircle(74, 166, 20)
+        g.fillCircle(182, 166, 20)
+        g.lineBetween(116, 172, 140, 172)
     } else {
         ;[100, 156].forEach(x => {
             g.fillStyle(C.white, 1)

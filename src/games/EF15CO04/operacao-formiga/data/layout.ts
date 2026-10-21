@@ -63,6 +63,14 @@ export const CARD = {
     gap: 10,
     pad: 14,
     crown: 30,
+    /** O cartão em árvore (N2): a mãe em cima, as filhas penduradas embaixo. */
+    treeH: 88,
+    tslot: 32,
+    tgap: 6,
+    groupGap: 16,
+    floor: 21,
+    /** O cartão das tarefas (N3): a gota, as amigas e a folhinha. */
+    taskGap: 24,
 } as const
 
 export const MAP = {
@@ -120,6 +128,8 @@ export const ANT = {
     /** Onde fica o centro do pedaço carregado, em px da célula. */
     hold: { x: 110, y: 34 },
     step: 0.13,
+    /** N2: o maior lado do pedaço na cabeça, para a formiga não sumir embaixo dele. */
+    carryMax: 70,
 } as const
 
 export const DECOR = {
@@ -170,6 +180,8 @@ export const CAPTION = {
 export const BANNER = {
     x: 640,
     y: 176,
+    /** A faixa da folha suja fica embaixo do prato, para a sujeira aparecer. */
+    lowY: 430,
     w: 900,
     h: 84,
 } as const
@@ -198,4 +210,65 @@ export const LENS = {
     /** Zoom das cenas de abertura e demonstração. */
     zoom: 1.75,
     at: { x: 640, y: 420 },
+} as const
+
+/** O N3: a folha gigante, vista de cima, no lugar da fruta. */
+export const GIANT = {
+    at: { x: 282, y: 334 },
+    /** A folha (960 × 600 de arte, numa imagem de 1024 × 768) aparece com esta largura no mundo. */
+    w: 240,
+    leafW: 960,
+    leafH: 600,
+    imageW: 1024,
+    imageH: 768,
+    /** A sujeira, em px do mundo. */
+    dirtW: 54,
+    /** Quanto o dedo passa por cima de uma sujeira até ela sumir, em px de tela. */
+    rub: 70,
+    /** O raio da sujeira para o dedo, em px do mundo. */
+    hit: 26,
+    zoom: 2.6,
+    /** A folha erguida fica com o centro esta altura acima do pé da formiga. */
+    lift: 112,
+    touch: 22,
+    rearm: 40,
+} as const
+
+export const FRIEND = {
+    w: 82,
+    wake: 52,
+    /** A distância entre uma amiga e a seguinte na fila, pelo rastro. */
+    gap: 50,
+    speed: 330,
+    pace: 0.7,
+    /** Onde cada amiga fica em volta da formiga, carregando a folha. */
+    ring: [
+        { x: -58, y: 4 },
+        { x: 58, y: 4 },
+        { x: 0, y: 30 },
+    ],
+    zzz: { dx: 20, dy: -58 },
+} as const
+
+/** O caminho largo do N3: sem as duas pedras de cima, o muro só começa aqui. */
+export const WIDE = {
+    bottom: 300,
+    skip: [168, 250],
+    dots: [
+        { x: 640, y: 440 },
+        { x: 628, y: 392 },
+        { x: 620, y: 344 },
+        { x: 622, y: 296 },
+        { x: 640, y: 252 },
+        { x: 684, y: 222 },
+        { x: 740, y: 212 },
+        { x: 796, y: 222 },
+        { x: 840, y: 252 },
+        { x: 858, y: 296 },
+    ],
+} as const
+
+export const GAUGE = {
+    /** O medidor fica a esta folga, em px do mundo, da borda direita do item. */
+    gap: 26,
 } as const

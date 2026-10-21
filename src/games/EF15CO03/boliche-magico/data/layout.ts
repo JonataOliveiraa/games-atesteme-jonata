@@ -72,6 +72,7 @@ export const LANE = {
 
 export const PIN = {
     xs: [440, 650, 860, 1070],
+    xs5: [400, 572, 744, 916, 1088],
     cellW: 192,
     cellH: 288,
     foot: 278,
@@ -82,8 +83,10 @@ export const PIN = {
     zzDY: 236,
     hop: 150,
     fallX: -14,
-    lieBack: 26,
-    lieScale: 0.9,
+    lieBack: 34,
+    lieScale: 0.64,
+    lieScale5: 0.56,
+    pillow: 0.5,
     shadowW: 96,
     shadowH: 16,
 } as const
@@ -98,6 +101,18 @@ export const BALL = {
     mouthX: 132,
 } as const
 
+export const GAUGE = {
+    x: 210,
+    y: 384,
+    r: 104,
+    band: 26,
+    sweep: 820,
+    auto: 4200,
+    weak: 0.55,
+    max: 0.84,
+    back: 30,
+} as const
+
 export const BENCH = {
     top: 588,
     y: 654,
@@ -106,6 +121,10 @@ export const BENCH = {
     cardXs2: [196, 490],
     cardXs1: [343],
     notX: 768,
+    opXs: [372, 650],
+    opW: 196,
+    notXs: [300, 652],
+    notWide: 300,
     notW: 150,
     playX: 1086,
     playW: 236,

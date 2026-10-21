@@ -25,9 +25,19 @@ export type Poly = Vertex[]
 
 export type FruitKind = 'morango' | 'laranja' | 'maca'
 
-export interface FruitDef {
-    kind: FruitKind
-    /** Semi-eixos e "ovo" da silhueta, em px de arte (célula de 512). */
+export type LeafKind = 'folha' | 'folhaGrande'
+
+/** O que a criança corta: as frutas do N1 e as folhas do N2. */
+export type ItemKind = FruitKind | LeafKind
+
+/** O que a rainha pede: um item cortável, ou a folha gigante do N3. */
+export type OrderKind = ItemKind | 'gigante'
+
+export interface ItemDef {
+    kind: ItemKind
+    /** `egg`: fruta com a parte larga em cima; `leaf`: folha deitada, cabinho à esquerda. */
+    form: 'egg' | 'leaf'
+    /** Semi-eixos e "ovo" da silhueta, em px de arte. */
     a: number
     b: number
     e: number
@@ -37,22 +47,46 @@ export interface FruitDef {
     skin: number
 }
 
-/** Um corte de roteiro, em px de arte da fruta (centro em 0, 0). */
+/** Um corte de roteiro, em px de arte do item (centro em 0, 0). */
 export interface Swipe {
     from: Vec
     to: Vec
 }
 
-export type Teach = 'all' | 'cut' | 'wind'
+export type Teach = 'all' | 'cut' | 'wind' | 'leaf' | 'giant'
 
-export interface PhaseDef {
+export interface CutPhase {
     id: string
-    fruit: FruitKind
+    type: 'cut'
+    item: ItemKind
     wind: boolean
+    /** O peso: pedaço maior que `LIFT` não sai do chão (N2). */
+    lift: boolean
     teach?: Teach
-    /** Os cortes da demonstração (só na fase que ensina tudo). */
+    /** Os cortes da demonstração. */
     demo?: Swipe[]
 }
+
+export type DirtKind = 'drop' | 'soil' | 'twig' | 'petal'
+
+/** Uma sujeira na folha gigante, em px de arte da folha (centro em 0, 0). */
+export interface Dirt {
+    kind: DirtKind
+    x: number
+    y: number
+    angle: number
+}
+
+export interface GiantPhase {
+    id: string
+    type: 'giant'
+    dirt: Dirt[]
+    /** Onde as amigas cochilam, no mundo. */
+    friends: Vec[]
+    teach?: Teach
+}
+
+export type PhaseDef = CutPhase | GiantPhase
 
 export interface LevelDef {
     level: number
@@ -61,11 +95,13 @@ export interface LevelDef {
     phases: PhaseDef[]
 }
 
-export type State = 'intro' | 'demo' | 'walk' | 'cut' | 'stuck' | 'help' | 'error' | 'done' | 'finale'
+export type State = 'intro' | 'demo' | 'walk' | 'cut' | 'scrub' | 'stuck' | 'help' | 'error' | 'done' | 'finale'
 
 export type AntPose = 'idle' | 'walkA' | 'walkB' | 'carry' | 'carryA' | 'carryB' | 'happy' | 'push'
 
+export type FriendPose = 'sleep' | 'wake' | 'walkA' | 'walkB' | 'carryA' | 'carryB' | 'happy' | 'push'
+
 export type QueenPose = 'calm' | 'ask' | 'happy'
 
-/** De onde vem o modo de corte: a fruta sob o arbusto, ou o pedaço entalado na fresta. */
-export type CutKind = 'tree' | 'stuck'
+/** De onde vem o modo de corte: a fruta sob o arbusto, o pedaço entalado na fresta ou o pesado demais. */
+export type CutKind = 'tree' | 'stuck' | 'heavy'

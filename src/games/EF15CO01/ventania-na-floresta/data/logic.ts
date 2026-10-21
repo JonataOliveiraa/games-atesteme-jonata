@@ -1,4 +1,4 @@
-import type { Bird, Bug, Cell, Edge, Field, Flower, GridPhase, Home, Piece } from '../types'
+import type { Bird, Cell, Field, Fish, FishField, Flower, GridPhase, Group, Home, Shroom } from '../types'
 
 export const nextRank = (left: number[]) => Math.min(...left)
 
@@ -25,20 +25,22 @@ export const nestFits = (nest: Bird, bird: Bird, fields: Field[]) => firstMismat
 
 export const nestOf = (nests: Bird[], bird: Bird, fields: Field[]) => nests.findIndex(n => nestFits(n, bird, fields))
 
-export const edgeFits = (edge: Edge, from: Bug, to: Bug) => (edge[0] === from && edge[1] === to) || (edge[0] === to && edge[1] === from)
+export const edgeFits = <T>(edge: [T, T], from: T, to: T) => (edge[0] === from && edge[1] === to) || (edge[0] === to && edge[1] === from)
 
-const PIECE_HOME: Record<Piece, Home> = {
-    pebbles: 'fila',
-    list: 'fila',
-    grid: 'grade',
-    weather: 'grade',
-    card: 'ficha',
-    badge: 'ficha',
-    pair: 'teia',
-    map: 'teia',
-    number: 'solto',
-    word: 'solto',
-    yes: 'solto',
+const GROUP_WAY: Record<Group, Home> = {
+    patos: 'fila',
+    cogumelos: 'grade',
+    peixes: 'ficha',
+    vagalumes: 'teia',
+    caracol: 'solto',
 }
 
-export const homeOfPiece = (piece: Piece): Home => PIECE_HOME[piece]
+export const wayOf = (group: Group): Home => GROUP_WAY[group]
+
+export const shroomHome = (rows: Shroom['cap'][], cols: Shroom['hue'][], s: Shroom): Cell => ({ r: rows.indexOf(s.cap), c: cols.indexOf(s.hue) })
+
+export const FISH_FIELDS: FishField[] = ['corpo', 'rabo']
+
+export const fishMismatch = (home: Fish, fish: Fish): FishField | undefined => FISH_FIELDS.find(f => home[f] !== fish[f])
+
+export const fishHome = (homes: Fish[], fish: Fish) => homes.findIndex(h => fishMismatch(h, fish) === undefined)

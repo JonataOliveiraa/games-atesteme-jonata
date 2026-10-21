@@ -13,18 +13,21 @@ export const PIECES_SHEET: Sheet = { key: 'pecas', cols: 4, rows: 2, cellW: 256,
 export const NICO_SHEET: Sheet = { key: 'nico', cols: 4, rows: 2, cellW: 256, cellH: 320, crop: false }
 export const BOX_SHEET: Sheet = { key: 'caixa', cols: 2, rows: 1, cellW: 384, cellH: 320, crop: true }
 export const UI_SHEET: Sheet = { key: 'ui', cols: 2, rows: 2, cellW: 256, cellH: 192, crop: true }
+export const PIPOCA_SHEET: Sheet = { key: 'pipoca', cols: 3, rows: 1, cellW: 320, cellH: 256, crop: false }
 
-export const SHEETS = [PIECES_SHEET, NICO_SHEET, BOX_SHEET, UI_SHEET]
+export const SHEETS = [PIECES_SHEET, NICO_SHEET, BOX_SHEET, UI_SHEET, PIPOCA_SHEET]
 
 export const ROOM_KEY = 'quarto'
 export const TABLE_KEY = 'mesa'
-export const IMAGES = [ROOM_KEY, TABLE_KEY]
+export const IF_KEY = 'pagina-se'
+export const IMAGES = [ROOM_KEY, TABLE_KEY, IF_KEY]
 
 export const PIECE_CELL = { yellow: 0, blue: 1, green: 2, coral: 3, rampRight: 4, rampLeft: 5, bell: 6, marble: 7 } as const
 export const BLOCK_CELLS = [PIECE_CELL.yellow, PIECE_CELL.blue, PIECE_CELL.green, PIECE_CELL.coral]
 export const NICO_CELL = { idle: 0, box: 1, place: 2, cheer: 3, oops: 4, read: 5, release: 6, think: 7 } as const
 export const BOX_CELL = { closed: 0, open: 1 } as const
 export const UI_CELL = { page: 0, slot: 1, buildOn: 2, buildOff: 3 } as const
+export const PIPOCA_CELL = { sleep: 0, wake: 1, walk: 2 } as const
 
 export const cellKey = (index: number) => `c${index}`
 

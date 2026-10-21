@@ -1,0 +1,426 @@
+{
+  "date": "2026-10-21",
+  "threshold": 96,
+  "sheets": {
+    "turma": {
+      "width": 1024,
+      "height": 1024,
+      "lowAlphaPixels": 0,
+      "hiddenRGBPixels": 0,
+      "cells": [
+        {
+          "index": 0,
+          "box": [
+            28,
+            21,
+            201,
+            215
+          ],
+          "lastY": 235,
+          "components": [
+            26096
+          ]
+        },
+        {
+          "index": 1,
+          "box": [
+            38,
+            21,
+            181,
+            215
+          ],
+          "lastY": 235,
+          "components": [
+            24491
+          ]
+        },
+        {
+          "index": 2,
+          "box": [
+            21,
+            48,
+            215,
+            188
+          ],
+          "lastY": 235,
+          "components": [
+            30968
+          ]
+        },
+        {
+          "index": 3,
+          "box": [
+            21,
+            50,
+            215,
+            157
+          ],
+          "lastY": 206,
+          "components": [
+            26845
+          ]
+        },
+        {
+          "index": 4,
+          "box": [
+            21,
+            26,
+            215,
+            205
+          ],
+          "lastY": 230,
+          "components": [
+            31378
+          ]
+        },
+        {
+          "index": 5,
+          "box": [
+            21,
+            26,
+            215,
+            205
+          ],
+          "lastY": 230,
+          "components": [
+            31378
+          ]
+        },
+        {
+          "index": 6,
+          "box": [
+            29,
+            21,
+            199,
+            215
+          ],
+          "lastY": 235,
+          "components": [
+            24995
+          ]
+        },
+        {
+          "index": 7,
+          "box": [
+            29,
+            21,
+            199,
+            215
+          ],
+          "lastY": 235,
+          "components": [
+            24995
+          ]
+        },
+        {
+          "index": 8,
+          "box": [
+            21,
+            37,
+            215,
+            183
+          ],
+          "lastY": 219,
+          "components": [
+            25215
+          ]
+        },
+        {
+          "index": 9,
+          "box": [
+            21,
+            37,
+            215,
+            183
+          ],
+          "lastY": 219,
+          "components": [
+            25215
+          ]
+        },
+        {
+          "index": 10,
+          "box": [
+            21,
+            37,
+            215,
+            183
+          ],
+          "lastY": 219,
+          "components": [
+            25215
+          ]
+        },
+        {
+          "index": 11,
+          "box": [
+            21,
+            37,
+            215,
+            183
+          ],
+          "lastY": 219,
+          "components": [
+            25215
+          ]
+        },
+        {
+          "index": 12,
+          "box": [
+            21,
+            26,
+            215,
+            204
+          ],
+          "lastY": 229,
+          "components": [
+            32316
+          ]
+        },
+        {
+          "index": 13,
+          "box": [
+            21,
+            59,
+            215,
+            138
+          ],
+          "lastY": 196,
+          "components": [
+            22112
+          ],
+          "exactGrayPixels": 18513
+        },
+        {
+          "index": 14,
+          "box": [
+            33,
+            21,
+            191,
+            215
+          ],
+          "lastY": 235,
+          "components": [
+            27630
+          ],
+          "exactGrayPixels": 22696
+        },
+        {
+          "index": 15,
+          "box": [
+            24,
+            21,
+            208,
+            215
+          ],
+          "lastY": 235,
+          "components": [
+            30980
+          ]
+        }
+      ]
+    },
+    "peixes": {
+      "width": 768,
+      "height": 768,
+      "lowAlphaPixels": 0,
+      "hiddenRGBPixels": 0,
+      "cells": [
+        {
+          "index": 0,
+          "box": [
+            21,
+            47,
+            215,
+            162
+          ],
+          "lastY": 208,
+          "components": [
+            23062
+          ],
+          "exactBodyPixels": 7970,
+          "exactTailPixels": 2251,
+          "bodyHex": "#f08a3c",
+          "tailHex": "#f08a3c"
+        },
+        {
+          "index": 1,
+          "box": [
+            21,
+            47,
+            215,
+            162
+          ],
+          "lastY": 208,
+          "components": [
+            23062
+          ],
+          "exactBodyPixels": 7970,
+          "exactTailPixels": 2295,
+          "bodyHex": "#f08a3c",
+          "tailHex": "#5dbb63"
+        },
+        {
+          "index": 2,
+          "box": [
+            21,
+            47,
+            215,
+            162
+          ],
+          "lastY": 208,
+          "components": [
+            23062
+          ],
+          "exactBodyPixels": 7970,
+          "exactTailPixels": 2318,
+          "bodyHex": "#f08a3c",
+          "tailHex": "#9b7bd8"
+        },
+        {
+          "index": 3,
+          "box": [
+            21,
+            47,
+            215,
+            162
+          ],
+          "lastY": 208,
+          "components": [
+            23062
+          ],
+          "exactBodyPixels": 8018,
+          "exactTailPixels": 2251,
+          "bodyHex": "#5dbb63",
+          "tailHex": "#f08a3c"
+        },
+        {
+          "index": 4,
+          "box": [
+            21,
+            47,
+            215,
+            162
+          ],
+          "lastY": 208,
+          "components": [
+            23062
+          ],
+          "exactBodyPixels": 8018,
+          "exactTailPixels": 2295,
+          "bodyHex": "#5dbb63",
+          "tailHex": "#5dbb63"
+        },
+        {
+          "index": 5,
+          "box": [
+            21,
+            47,
+            215,
+            162
+          ],
+          "lastY": 208,
+          "components": [
+            23062
+          ],
+          "exactBodyPixels": 8018,
+          "exactTailPixels": 2318,
+          "bodyHex": "#5dbb63",
+          "tailHex": "#9b7bd8"
+        },
+        {
+          "index": 6,
+          "box": [
+            21,
+            47,
+            215,
+            162
+          ],
+          "lastY": 208,
+          "components": [
+            23062
+          ],
+          "exactBodyPixels": 8034,
+          "exactTailPixels": 2250,
+          "bodyHex": "#9b7bd8",
+          "tailHex": "#f08a3c"
+        },
+        {
+          "index": 7,
+          "box": [
+            21,
+            47,
+            215,
+            162
+          ],
+          "lastY": 208,
+          "components": [
+            23062
+          ],
+          "exactBodyPixels": 8034,
+          "exactTailPixels": 2295,
+          "bodyHex": "#9b7bd8",
+          "tailHex": "#5dbb63"
+        },
+        {
+          "index": 8,
+          "box": [
+            21,
+            47,
+            215,
+            162
+          ],
+          "lastY": 208,
+          "components": [
+            23062
+          ],
+          "exactBodyPixels": 8034,
+          "exactTailPixels": 2318,
+          "bodyHex": "#9b7bd8",
+          "tailHex": "#9b7bd8"
+        }
+      ]
+    }
+  },
+  "backgrounds": {
+    "bg-lagoa": {
+      "width": 1672,
+      "height": 941,
+      "channels": 3
+    },
+    "bg-noite": {
+      "width": 1672,
+      "height": 941,
+      "channels": 3
+    }
+  },
+  "prior_pngs_unchanged": [
+    "bg-jardim.png",
+    "bg-ninhos.png",
+    "bg-redemoinho.png",
+    "bg-teia.png",
+    "bg-trilha.png",
+    "bichos.png",
+    "casas.png",
+    "cover-ventania-na-floresta.png",
+    "filhotes.png",
+    "flores.png",
+    "formigas.png",
+    "ninho.png",
+    "objetos.png",
+    "objetos2.png",
+    "pedacos.png",
+    "pipa.png",
+    "tece.png",
+    "zuzu.png"
+  ],
+  "checks": [
+    "25 células com arte; ordem conferida visualmente",
+    "pata e patinho à esquerda; caracol à direita; todos os peixes à esquerda",
+    "pedra sem escrita; ícones 13 e 14 cinza",
+    "peixes: linha=corpo, coluna=rabo; hex exatos verificados separadamente",
+    "nove silhuetas/posições de peixes idênticas",
+    "fundos sem animais; noite sem vaga-lumes ou luzes na clareira",
+    "alfa 1–47 ausente; alfa 0 com RGB 0; margens e bases verificadas"
+  ]
+}

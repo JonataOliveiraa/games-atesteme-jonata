@@ -1,0 +1,27 @@
+{
+  "scale": [
+    1280,
+    720
+  ],
+  "method": "Retângulos contidos na superfície por segmentação de cor a 1280x720, conferidos visualmente; caixas úteis conservadoras, tolerância visual de 5–10 px.",
+  "regions": {
+    "agua": [
+      306,
+      160,
+      763,
+      195
+    ],
+    "areia": [
+      324,
+      566,
+      677,
+      154
+    ],
+    "clareira": [
+      310,
+      113,
+      667,
+      388
+    ]
+  }
+}

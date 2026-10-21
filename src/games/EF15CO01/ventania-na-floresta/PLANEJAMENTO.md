@@ -35,7 +35,7 @@ Da ficha ficaram a escada dos níveis (N1 fila × grade, N2 ficha e teia, N3 a c
 | **registro** | a ficha do filhote de passarinho: cada valor tem um rótulo ao lado (N2) |
 | **grafo** | a teia da aranha: o fio diz quem se liga com quem (N2) |
 | **não estruturada** | a coisa solta que o vento trouxe sozinha (um número, uma palavra, um sim) (N3) |
-| **identificar** | o redemoinho do N3 mistura as peças; cada uma volta para o bicho cuja forma combina com ela |
+| **identificar** | no N3 a criança vê uma turma nova organizada e, depois da ventania, diz o jeito dela (FILA, GRADE, FICHA, TEIA ou SOLTO) |
 
 O exemplo oficial da BNCC (*"organizar personagens por tamanho…, figuras por cor, por tipo"*) é literalmente o N1: formigas por **tamanho** e flores por **tipo e cor**.
 
@@ -196,40 +196,40 @@ Assunto: **quando a organização não é pela posição**. Na ficha, cada valor
 - **Teia (fase 3):** recorte no cartão do par: *"O fio liga os dois."* [Ver]. **Demonstração:** a Tecê vai ao 1º bicho; a bolinha toca no 2º; o fio estica. *"Sua vez!"*
 - `?`: repete a fala da estrutura da tela.
 
-### N3 — O REDEMOINHO
+### N3 — COMO ELES ESTAVAM?
 
-Assunto: **identificar**. O redemoinho misturou pedaços das organizações e trouxe também **coisas soltas** (não estruturadas). Cada pedaço cai no meio da tela, e a criança toca na **casa** para onde ele vai.
+Refeito em 21/10/2026. O redemoinho (classificar figurinhas soltas nas casas) foi reprovado duas vezes como confuso: os pedaços eram desenhos que a criança nunca tinha visto funcionar. Agora a criança **vê a organização viva antes do vento** e depois diz o jeito dela.
 
-- **As casas** (`casas.png`), na beira de baixo, em fila: **formigueiro** (FILA), **canteiro** (GRADE), **ninho com ficha** (FICHA), **teia** (TEIA) e **cesta da Pipa** (SOLTO). Cada casa tem o nome numa pílula embaixo (as palavras que o jogo já ensinou), e no máximo **4 casas por fase**.
-- **Os pedaços** (`pedacos.png`) se entregam pela **forma**, sem legenda:
+Assunto: **identificar** o jeito de organizar. O gesto novo é um só: tocar numa de **duas placas**. O conserto que vem depois repete os gestos do N1/N2.
 
-| Pedaço | Forma | Casa |
-|---|---|---|
-| 3 pedrinhas da maior para a menor, em fila | ordem | FILA |
-| a lista de coisas da Pipa (folha com noz, bolota, semente uma embaixo da outra, com setinhas) | ordem | FILA (pegadinha: parece ficha) |
-| uma gradinha 2 × 2 com flores | cruzamento | GRADE |
-| o tempo da semana (tabelinha: 3 dias × sol/chuva, marquinhas nos cruzamentos) | cruzamento | GRADE (pegadinha: parece lista) |
-| um cartãozinho com 2 linhas de ícone + valor (como a ficha dos filhotes) | rótulo + valor | FICHA |
-| o crachá do grilo (ícone de pata = 6, ícone de cor = verde) | rótulo + valor | FICHA |
-| dois bichinhos ligados por um fio | ligação | TEIA |
-| um mapinha de 4 pedrinhas ligadas por trilhas | ligação | TEIA |
-| uma pedrinha com **um número** sozinho (o 7) | solto | SOLTO |
-| um balão de fala com **uma palavra** sozinha (OI) | solto | SOLTO |
-| um **sim** sozinho (um sol nascendo com um ✓) | solto | SOLTO |
+**O laço de cada fase:**
 
-- **Fases:**
+1. **Olhe bem.** Uma turma nova da floresta aparece organizada e se mexe um pouco (o cabeçalho diz *"Olhe bem!"*).
+2. **Ventania.** A turma se espalha, e o que mostra a estrutura (estacas, fichas, fios) voa junto. Quem é dono da turma (a pata, as conchas, o caracol) fica.
+3. **Como eles estavam?** Duas placas na beira de baixo, cada uma com o **desenho do jeito** e o nome: FILA ●›●›•, GRADE uma gradinha 3 × 2, FICHA duas linhas rótulo ▸ valor, TEIA quatro pontos ligados, SOLTO um ponto sozinho. O desenho é sempre o mesmo e define o jeito, sem apontar a resposta. A placa certa troca de lado entre as fases.
+4. **Errou:** a turma tenta entrar no desenho errado, ampliado no meio da tela (os cogumelos em fila sobram, o 7 cai numa ficha sem nome), treme e cai; a placa escolhida apaga, a certa pula; faixa com o porquê; `WRONG_ANSWER` + `lose()`.
+5. **Acertou:** o cabeçalho vira a pílula do jeito + a regra, o que o vento levou volta, e a criança **conserta** com o gesto do N1/N2.
+6. **Completa:** a turma comemora (os patos marcham embora, os cogumelos balançam, os peixes pulam, os vaga-lumes acendem juntos, o caracol pula).
 
-| Fase | Casas | Pedaços (ordem) | Ensina |
-|---|---|---|---|
-| 1 | FILA · GRADE · SOLTO | pedrinhas · número · gradinha | o redemoinho (demonstração) |
-| 2 | FICHA · TEIA · SOLTO | dois bichos · cartãozinho · palavra · mapinha | — |
-| 3 | FILA · GRADE · FICHA · TEIA | lista da Pipa · crachá · tempo da semana · dois bichos | — |
-| 4 | FILA · FICHA · TEIA · SOLTO | o sim · mapinha · cartãozinho · pedrinhas | — |
+| Fase | Turma | Placas | Conserto (gesto do N1/N2) | Ensina |
+|---|---|---|---|---|
+| 1 | **patinhos** atrás da pata | FILA · GRADE | tocar o patinho que vem agora, do maior para o menor (3) | o jeito (demonstração) |
+| 2 | **cogumelos** num canteiro: linha = chapéu (redondo, pontudo), coluna = cor (vermelho, azul) | FILA · GRADE | o cogumelo da vez flutua; tocar a casinha (4) | as estacas (balão) |
+| 3 | **peixinhos** em conchas, cada concha com uma ficha CORPO ▸ cor, RABO ▸ cor | FICHA · TEIA | o peixe da vez espera; tocar a concha da ficha certa (3) | a ficha (balão) |
+| 4 | **vaga-lumes** ligados por fios de luz; o vento troca os lugares | FICHA · TEIA | o cartão mostra o par, o 1º segura a ponta; tocar o outro (3) | o par (balão) |
+| 5 | **o caracol** com uma pedrinha escrita 7 | SOLTO · FICHA | nada a consertar: o 7 cai na cesta da Pipa | — |
 
-- **O laço:** o redemoinho gira no meio (riscos de vento em espiral, folhinhas); ele **cospe um pedaço**, que fica girando devagar no ar acima das casas. A criança toca numa casa; o pedaço voa até ela.
-- **Certo:** a casa reage do jeito dela (o formigueiro solta uma formiguinha que dá tchau, o canteiro brota, o ninho pia, a teia brilha, a cesta balança) e o pedaço entra. **Errado:** o pedaço **não cabe**: bate na casa e quica para fora, a casa treme, e a casa certa acende de leve; faixa com o porquê: *"Isso tem ordem: é uma FILA!"* · *"Isso tem linha e coluna: é uma GRADE!"* · *"Cada valor tem um nome: é uma FICHA!"* · *"Isso liga um ao outro: é uma TEIA!"* · *"Isso está sozinho: é SOLTO!"*.
-- **Tutorial (fase 1):** recorte nas casas: *"Cada coisa tem sua casa."* [Ver]. **Demonstração:** o redemoinho cospe as pedrinhas; a fila do pedaço e a casa FILA piscam juntas; a bolinha toca na casa. *"Sua vez!"*
-- **Dados** (validação): até 4 casas por fase, todas com pedaço que vai para elas; cada pedaço vai para uma casa que está na fase; o 1º pedaço não vai na casa da ponta esquerda; nenhuma casa recebe dois pedaços seguidos.
+**Faixas do erro de jeito:** *"Eles andam um atrás do outro: é FILA!"* · *"Tem linha e coluna: é GRADE!"* · *"Cada valor tem nome: é FICHA!"* · *"Os fios ligam um ao outro: é TEIA!"* · *"Um número sozinho: é SOLTO!"*.
+
+**Faixas do conserto:** *"Tem um patinho maior!"* · *"Aqui é lugar de chapéu redondo!"* / *"…de cogumelo azul!"* · *"Nessa ficha, o CORPO é laranja!"* (a 1ª linha que não bate; a linha treme e a concha certa acende) · *"O fio liga o amarelo ao azul!"* (o fio cai, o vaga-lume certo pisca).
+
+**Tutorial (fase 1, uma vez por sessão):** recorte na turma: *"Olhe como eles estão!"* [Ver] → vento → cada placa nova se apresenta com recorte nela: *"FILA: um atrás do outro."* · *"GRADE: linhas e colunas."* → recorte nas duas: *"Como eles estavam?"* [Ver] → **demonstração:** a bolinha toca em FILA, a turma volta ao jeito, e a bolinha põe o maior patinho atrás da pata → *"Sua vez!"*. Nas fases seguintes, toda placa que aparece pela 1ª vez se apresenta antes da decisão (*"FICHA: cada valor tem nome."*, *"TEIA: fios ligando as coisas."*, *"SOLTO: uma coisa sozinha."*), e todo conserto novo ganha o balão dele na 1ª vez (*"A linha diz o chapéu."* + *"A coluna diz a cor."*; *"A ficha diz como é."* + *"Olhe o nome de cada linha."*; *"O fio liga os dois."*). O `?` repete as placas na decisão e o balão do conserto no conserto.
+
+**Cabeçalho:** *"Olhe bem!"* → *"Como eles estavam?"* (*"Como o 7 estava?"* no caracol) → pílula do jeito + regra (*do maior para o menor*, *linha do chapéu, coluna da cor*, *leia o nome de cada linha*, *o fio liga os dois*, *uma coisa sozinha*). Sem número de fase escrito.
+
+**Dados** (`validateLevels`): duas placas diferentes, uma delas o jeito da turma (`wayOf`); a placa certa aparece dos dois lados no nível; patinhos 0..2 sem o maior na ponta esquerda; cogumelos um por casinha, o 1º fora do canto de cima à esquerda; peixes um por concha, um par de conchas com corpo e rabo trocados, cada peixe combina com uma concha só, o 1º fora da ponta esquerda; vaga-lumes mudam de lugar, todo vaga-lume tem fio, sem par repetido, o mesmo vaga-lume não começa duas vezes seguidas. A resposta sai de `data/logic.ts` (`wayOf`, `isNext`, `shroomHome`, `fishMismatch`, `edgeFits`) no instante do toque.
+
+**Arte:** tudo em Graphics (`scenes/fallback.ts`) nas folhas `turma` (4 × 4) e `peixes` (3 × 3) e nos fundos `bg-lagoa` e `bg-noite`; patos, cogumelos e caracol usam `bg-redemoinho` (a clareira). As placas e o desenho grande do erro são do código (`scenes/shapes.ts`). Os prompts estão no TEXTURAS §11.11–11.14.
 
 ### O que mudou do rascunho anterior
 
@@ -237,7 +237,6 @@ Assunto: **identificar**. O redemoinho misturou pedaços das organizações e tr
 |---|---|---|
 | ficha: tocar no campo de cada valor solto | ler a ficha e levar o filhote ao ninho certo | encaixar valor no campo do mesmo desenho é só casar figuras; com duas cores (pena e bico) é o **rótulo** que decide |
 | teia: tocar nos dois pontos do par | a Tecê já está no 1º; a criança toca só no 2º | um toque por decisão, como no N1 |
-| redemoinho com 5 bichos ao mesmo tempo | no máximo 4 casas por fase | teto de alvos no celular |
 
 ## 12. O que mudou da ficha, e por quê
 
@@ -249,7 +248,7 @@ Assunto: **identificar**. O redemoinho misturou pedaços das organizações e tr
 | TRAVA com cadeado, +15/+5, a certa balança depois de 2 travas | o estrago acontece e a partida acaba (`WRONG_ANSWER` + `lose()`) | errou, perdeu; nada pulsa entregando a resposta |
 | inventário e álbum no fim | as formigas entram no formigueiro, o canteiro balança | sem quadro de resumo |
 | TÍTULO → exemplo 5 s → JOGO → RESULTADO | abertura com a Pipa, demonstração e `?` | fluxo da plataforma |
-| CAIXA LIVRE no N3 | a cesta da Pipa no N3 | a ficha manda; o N1 não tem coisa solta |
+| CAIXA LIVRE no N3 | a cesta da Pipa, na fase do caracol | a ficha manda; o N1 não tem coisa solta |
 
 ## 13. Dados e arquivos
 
@@ -257,7 +256,7 @@ Assunto: **identificar**. O redemoinho misturou pedaços das organizações e tr
 index.ts  types.ts
 data/   files.ts layout.ts theme.ts timing.ts logic.ts levels.ts words.ts
 scenes/ BootScene.ts GameScene.ts fallback.ts art.ts audio.ts header.ts
-        line.ts garden.ts nests.ts web.ts whirl.ts
+        line.ts garden.ts nests.ts web.ts crew.ts shapes.ts
         wind.ts pipa.ts touch.ts guide.ts bubble.ts banner.ts
 ```
 
@@ -267,8 +266,9 @@ scenes/ BootScene.ts GameScene.ts fallback.ts art.ts audio.ts header.ts
 | `garden.ts` | GRADE: canteiro, estacas, Zuzu |
 | `nests.ts` | FICHA: galho, ninhos, fichas (linhas montadas com ícone + valor), filhotes, montinho, a Pipa segurando o filhote |
 | `web.ts` | TEIA: galhinhos, bichos, a Tecê, fios (uma textura de fio assada, esticada por escala) |
-| `whirl.ts` | N3: redemoinho (espiral assada girando por tween + 6 folhinhas), casas com a pílula, o pedaço da vez |
-| `data/logic.ts` | `nextRank`/`fits` (N1), `nestFits`/`firstMismatch` (FICHA), `edgeFits` (TEIA), `homeOfPiece` (N3): a resposta certa sai daqui no toque, nunca dos dados da fase |
+| `crew.ts` | N3: as cinco turmas (montar, olhar, espalhar, consertar, comemorar), as duas placas, o erro de jeito |
+| `shapes.ts` | o desenho de cada jeito (placas, cabeçalho do erro), igual em todo lugar |
+| `data/logic.ts` | `nextRank`/`fits` (N1), `nestFits`/`firstMismatch` (FICHA), `edgeFits` (TEIA e vaga-lumes), `wayOf`/`shroomHome`/`fishMismatch` (N3): a resposta certa sai daqui no toque, nunca dos dados da fase |
 
 **Arte:** os três níveis rodam inteiros com a **arte de reserva** em Graphics, assada nas mesmas folhas, grades e ordem de células do TEXTURAS (`scenes/fallback.ts`, incluindo as folhas do §11). Um PNG com o mesmo nome em `src/assets/games/EF15CO01/ventania-na-floresta/` substitui a reserva sem mudar código. Posições que dependem do desenho e se ajustam ao PNG: `NEST.beak`/`NEST.crest` (onde pisca o bico e onde vai o topete, em fração do filhote) e `PIECE_TEXT_AT` (onde o código escreve 6, 7 e OI nos pedaços).
 
@@ -279,6 +279,10 @@ scenes/ BootScene.ts GameScene.ts fallback.ts art.ts audio.ts header.ts
 3. **A ordem das flores é do jogo.** A Zuzu escolhe qual flor vem; a criança só escolhe o lugar. Se ficar fácil no fim (a última casinha é óbvia), a última flor pode ser plantada sozinha.
 
 ## Histórico
+
+- 21/10/2026 (tarde): *"n3 continua bem confuso, vc tem alguma ideia pro n3? msm que seja repitindo nao tem problema"*. Propus três caminhos; o usuário escolheu o das turmas (*"planeje e faça o n3. faça usando graphics mesmo"*). O redemoinho saiu (`whirl.ts`, `casas`, `pedacos`), entrou o N3 de cinco fases acima, com toda a arte em Graphics. Jogado no Browser pane com cliques no canvas: o tutorial inteiro da fase 1 (olhar, placas, demonstração, *Sua vez!*), as cinco fases até "Nível 3 completo!" (`GAME_COMPLETED`), o erro de jeito nos cogumelos (FILA: três cogumelos no desenho da fila e um sobrando, *"Tem linha e coluna: é GRADE!"*, um `WRONG_ANSWER` + `GAME_OVER`) e o erro da ficha nos peixes (*"Nessa ficha, o CORPO é laranja!"*). Ajustes depois de ver: silhuetas dos chapéus maiores nas estacas, balões do conserto sem cair no recorte (em cima, embaixo ou do lado), o 7 por cima da cesta, o vaga-lume sem brilho desenhado na arte (o halo é do código), a placa certa acende no erro.
+
+- 21/10/2026: o usuário achou o N3 *"mt confuso… precisa ser mais claro tanto textualmente quanto visualmente"*. Pelo código: nada dizia como decidir (só *"Onde mora?"* e *"Cada coisa tem sua casa."*), as casas eram só uma palavra, FICHA e TEIA estreavam na fase 2 sem apresentação, o pedaço era pequeno e balançava girando por cima do redemoinho, e o sim não se lia. Ficou: placa com o desenho do jeito em cada casa, apresentação de cada casa (fase 1 e casas novas), a demonstração diz o porquê, pedaço maior num cartão parado, redemoinho apagado na decisão, cabeçalho *"Leve para a casa do mesmo jeito"*, SIM escrito. Não foi jogado na tela.
 
 - 20/10/2026: N2 e N3 em código (Ferro), `LEVELS = [N1, N2, N3]`, com a arte de reserva das folhas do §11. Dados escolhidos: FICHA 1 com ninhos laranja/verde · verde/laranja · roxo/laranja; FICHA 2 com 4 ninhos (roxo/verde com e sem topete, verde/roxo, laranja/roxo); TEIA 1 triângulo joaninha–grilo–borboleta; TEIA 2 o ciclo de 4; as casas do N3 nem sempre na mesma ordem, para o 1º pedaço não ir na ponta esquerda. A abertura da Pipa ficou só no N1. Jogado com cliques reais (Chrome headless pelo CDP): N2 inteiro (tutorial e demonstração da ficha e da teia, as quatro fases, `?` na teia, o fim do N2 passando sozinho para o N3), N3 inteiro até "Nível 3 completo!" (`GAME_COMPLETED`, JOGAR DE NOVO), `?` no N3, e um erro de cada tipo, cada um com um `WRONG_ANSWER` + `GAME_OVER` só: ficha (*"Nessa ficha, a PENA é roxa!"*), teia (*"O fio liga o grilo à borboleta!"*) e redemoinho (*"Isso tem linha e coluna: é uma GRADE!"*). A abertura do N1 continua igual.
 - 20/10/2026: N2 (ficha + teia) e N3 (redemoinho) planejados no §11 e despachados ao time, junto com as texturas (pedido do usuário).

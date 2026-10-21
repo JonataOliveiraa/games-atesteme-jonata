@@ -1,3 +1,5 @@
+import type { Power } from '../types'
+
 type Wave = 'sine' | 'square' | 'triangle' | 'sawtooth'
 
 export interface Audio {
@@ -22,6 +24,9 @@ export interface Audio {
     win(): void
     pop(): void
     whoosh(): void
+    charge(t: number): void
+    launch(power: Power): void
+    boom(): void
     setMuted(on: boolean): void
     destroy(): void
 }
@@ -188,6 +193,18 @@ export function createAudio(): Audio {
         },
         whoosh() {
             tone(300, 260, { wave: 'sine', gain: 0.08, to: 900 })
+        },
+        charge(t) {
+            tone(260 + t * 520, 50, { wave: 'triangle', gain: 0.05 })
+        },
+        launch(power) {
+            if (power === 'max') notes([523, 659, 784, 1047], 60, { wave: 'triangle', gain: 0.1 })
+            else if (power === 'good') notes([440, 587], 70, { wave: 'triangle', gain: 0.09 })
+            else tone(330, 160, { wave: 'sine', gain: 0.08, to: 420 })
+        },
+        boom() {
+            tone(140, 220, { wave: 'triangle', gain: 0.14, to: 60 })
+            tone(900, 120, { wave: 'triangle', gain: 0.06, delay: 40, to: 1400 })
         },
         setMuted(on) {
             muted = on

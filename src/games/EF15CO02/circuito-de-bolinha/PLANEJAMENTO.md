@@ -158,47 +158,61 @@ O sino toca, faíscas sobre ele, o Nico comemora, a bolinha da fase acende (`COR
 
 Na última fase do nível: confete, `GAME_COMPLETED` (`stage` = nível, `totalStages: LEVELS.length`) e `showLevelComplete`. Com mais níveis, o painel passa sozinho (`autoAdvance`); no último, JOGAR DE NOVO. Sem quadro de resumo.
 
-## 11. N2 e N3 (planejados; feitos só quando pedido)
+## 11. N2 e N3
+
+Feitos em 21/10/2026 com as decisões do Orquestrador (A–H). O pedido no alto muda por nível: N1 *"Em que ordem o Nico monta?"*, N2 *"Quantas vezes o Nico repete?"*, N3 *"E se a Pipoca estiver no sino?"*.
+
+**A simulação é uma só para os três níveis** (`data/logic.ts`): `run(fase, fita, lado?)` executa a fita página por página e devolve cada ação (`Act`: qual peça, de qual espaço/bolso, contador `k de n`, se ficou e onde pousa) e o motivo da queda (`under`, `extra`, `blocked`, `missing`, `cat`); `again(...)` é a 2ª descida do N3. Depois da última página o modelo é comparado com a foto: bloco sobrando tomba (*"Bloco demais!"*), peça faltando pisca no fantasma (*"Faltou uma rampa!"* / *"Faltou um bloco!"*). A bolinha segue as rampas montadas (`descend`), para a direita ou para a esquerda. Nenhuma fase guarda resposta: `×N` e SE são páginas, e o resultado sai da simulação.
+
+**Altura:** a célula encolhe por fase para o topo ficar abaixo do cabeçalho de 96 com a mesa no lugar: `cellFor(linhas) = min(100, (440 − 96 − 24) / linhas)` → 100 px com 3 andares (N1, N3) e 80 px com 4 (N2). Sino, bolinha, quedas e a miniatura das páginas acompanham. A grade começa à direita da caixa (`x0 ≥ 353`), então as 5 colunas do N3 cabem na mesa.
 
 ### O N2 — A PÁGINA QUE REPETE
 
-Assunto: **repetição**. A fita fica **menor que o número de peças**, então a pilha de blocos não cabe página por página. Entra a página **×**: um bloco com o selo *×2*, *×3* ou *×4*. O Nico põe aquele bloco e repete, cada um em cima do anterior, e o selo gira o contador (1… 2… 3…) a cada bloco.
+A página **bloco ×N** mostra a foto da fase com **um** bloco aceso no pé da coluna e o selo azul *×N* no canto. O Nico põe N blocos, cada um em cima do topo da coluna; a cada bloco o selo vira e mostra 1, 2, 3… (com um tique que sobe de tom) e volta a *×N* no fim. A fita é **menor** que o total de peças.
 
-A bandeja traz a mesma página com contagens diferentes (*×2*, *×3*, *×4*) e a criança escolhe a que bate com a altura da torre na foto. Contar errado tem consequência na mesa:
+- **Pouco** (×2 numa torre de 3): a rampa de cima chega sem bloco embaixo e cai — *"Faltou um bloco!"*.
+- **Demais** (×4): o 4º bloco ocupa o lugar da rampa; a rampa pousa em cima dele, bate e cai — *"Bloco demais!"*. Um bloco acima da altura da foto naquela coluna já tomba na hora (*"Bloco demais!"*), para a torre nunca furar a tela.
 
-- **pouco** (*×2* numa torre de 3): a rampa de cima fica sem bloco embaixo e cai: *"Faltou um bloco!"*;
-- **demais** (*×4*): o 4º bloco ocupa o lugar da rampa, e a rampa bate e cai: *"Bloco demais!"*.
+| Fase | Foto (coluna: peças) | Sino | Fita | Bandeja (ordem de leitura) |
+|---|---|---|---|---|
+| 1 · torre-de-tres | c0: 3 blocos + rampa (0,3) · c1: rampa (1,0) | 2 | 3 | ×2 c0 · ×3 c0 · ×4 c0 · rampa (0,3) · rampa (1,0) |
+| 2 · duas-torres | c0: 3 blocos + rampa (0,3) · c1: 2 blocos + rampa (1,2) | 2 | 4 | ×2 c0 · ×3 c0 · ×4 c0 · ×2 c1 · rampa (0,3) · rampa (1,2) |
+| 3 · escada | c0: 3 + rampa (0,3) · c1: 2 + rampa (1,2) · c2: rampa (2,0) | 3 | 5 | ×3 c0 · ×2 c0 · ×2 c1 · rampa (0,3) · rampa (1,2) · rampa (2,0) |
 
-| Fase | Torres | Fita | Bandeja |
-|---|---|---|---|
-| 1 | torre de 3 + rampa no topo · rampa (1,0) | 3 | bloco ×2 · bloco ×3 · bloco ×4 · rampa (0,3) · rampa (1,0) |
-| 2 | torres de 3 e de 2, cada uma com rampa no topo | 4 | ×2, ×3 e ×4 da coluna 0 · ×2 da coluna 1 · as duas rampas |
-| 3 | escada de 3, 2 e 1, com rampa em cada uma | 5 | ×3 e ×2 com vizinhos errados (×2/×4, ×1/×3) · as três rampas |
+Na F3 o ×2 da coluna 0 é a armadilha: parece a página da coluna 1 (o bloco aceso é amarelo, não azul).
 
-Validação extra: a fita é menor que o total de peças; cada coluna tem uma contagem só que dá certo e pelo menos uma vizinha que dá errado; a soma das peças executadas tem de bater com o modelo.
-
-Tutorial do N2 (estreia do ×): o Nico executa uma página *bloco ×3* com o contador girando. *"×3 é fazer 3 vezes."* [Ver] → a torre sobe → *"Sua vez!"*.
+**Tutorial do N2** (uma vez, `ef15co02-circuito-l2`): antes da foto da fase, a fita sobe com uma página de demonstração *bloco ×3* (de uma coluna que não é a torre da F1), a bolinha de toque a põe no espaço 1 e o recorte acende a página: *"×3 é fazer 3 vezes."* [Ver]. O Nico executa com o contador girando, a torre sobe, ele comemora, tudo volta para a caixa; a foto e as páginas reais entram e vem *"Sua vez!"* [Vamos!] com o recorte na bandeja inteira.
 
 ### O N3 — A PÁGINA SE
 
-Assunto: **seleção**. O gato da casa, a Pipoca, gosta de dormir **na frente de um dos dois sinos**, e cada descida ela escolhe um. O circuito tem uma torre no meio e um sino de cada lado; a rampa do alto pode descer para a esquerda ou para a direita.
+A mesa tem **dois sinos**, um em cada ponta (o da esquerda espelhado, com o copinho para dentro). A célula do SE aparece na foto com as **duas rampas sobrepostas**, clarinhas. A **página SE** fica fixa na fita (no espaço indicado pela fase), mais larga (264 × 132, arte `pagina-se.png`): no alto *SE* + a foto da condição (os dois sinos e a Pipoca dormindo no da condição), embaixo os bolsos **SIM** (verde) e **SENÃO** (laranja), com o nome escrito sob cada bolso. Tocar numa página da bandeja a leva para o primeiro lugar vazio na ordem da fita, e os bolsos contam como dois lugares em sequência; no bolso a página encolhe para 60 %. O MONTAR só liga com tudo cheio.
 
-A página **SE** tem a foto da condição (a Pipoca no sino da direita) e dois bolsos: **SE sim** e **SENÃO**. A criança põe uma página de rampa em cada bolso. O MONTAR só liga com os dois bolsos cheios.
+Ao tocar MONTAR, a Pipoca entra andando pela direita e dorme num dos sinos (o lado da 1ª descida é sorteado). O Nico executa a fita; na página SE ela acende, ele faz a pose de pensar, olha a gata e o bolso que vale sobe. Depois a bolinha desce:
 
-Cada fase tem **duas descidas**, em ordem sorteada: numa a Pipoca dorme no sino da direita, na outra no da esquerda. Antes de cada descida ela entra andando e se enrola no lugar, à vista. O Nico lê a página SE, olha a Pipoca e monta o bolso que vale. Decorar não funciona: o manual tem de servir para os dois casos.
+- **Sino livre:** toca, o Nico comemora. A Pipoca anda até o outro sino, o Nico **tira só a rampa do SE** (ela volta para a mão dele), lê a página SE de novo e põe a do outro bolso; segunda descida. As duas certas = `CORRECT_ANSWER`.
+- **Sino da Pipoca:** a bolinha cai em cima dela, ela pula (*"Miau!"*), a bolinha quica para fora da mesa, a página SE e o bolso usado ficam laranja e tremem: *"A Pipoca estava nesse sino!"* → `lose()`.
 
-- **Bolso certo:** a bolinha desce para o lado livre e toca o sino. Na 2ª descida, a Pipoca troca de lado, o Nico tira só a rampa do alto e lê a página SE de novo.
-- **Bolso errado:** a bolinha rola para o lado da Pipoca, bate nela, ela acorda num pulo (*Miau!*) e a bolinha cai da mesa: *"A Pipoca estava nesse sino!"*. `lose()`.
+| Fase | Foto | Sinos | SE (célula) | Condição da página | Fita (SE no espaço) | Bandeja |
+|---|---|---|---|---|---|---|
+| 1 · pipoca-no-sino | c1: 2 blocos | 0 e 2 | (1,2) | Pipoca no sino da **direita** | 3 (SE no 3º) | rampa ◣ SE · bloco (1,1) · rampa ◢ SE · bloco (1,0) |
+| 2 · rampas-do-lado | c2: 1 bloco · rampa ◣ (1,0) · rampa ◢ (3,0) | 0 e 4 | (2,1) | **direita** | 4 (SE no 2º) | rampa ◢ SE · bloco (2,0) · rampa ◣ (1,0) · rampa ◣ SE · rampa ◢ (3,0) |
+| 3 · torre-alta | c2: 2 blocos · rampa ◣ (1,0) · rampa ◢ (3,0) | 0 e 4 | (2,2) | Pipoca no sino da **esquerda** | 5 (SE no 3º) | rampa ◣ SE · rampa ◢ (3,0) · bloco (2,1) · rampa ◣ (1,0) · bloco (2,0) · rampa ◢ SE |
 
-| Fase | Onde fica o SE | Fita |
-|---|---|---|
-| 1 | a rampa do alto da torre do meio | bloco · bloco · SE |
-| 2 | a rampa do meio, com uma rampa fixa em cima dela | 4 |
-| 3 | o SE no meio do manual, com páginas comuns antes e depois | 5 |
+(◢ desce para a direita, ◣ desce para a esquerda — célula `rampLeft` de `pecas.png`.) A F2 traz duas páginas de rampa para a esquerda que só diferem no lugar (a do SE e a do lado), e a F3 vira a condição para o outro sino, para *SIM* não virar sinônimo de "rampa para a esquerda". A "rampa fixa em cima" do rascunho virou as rampas dos lados: uma rampa acima do SE na mesma coluna é impossível (nada vai em cima de rampa) e uma rampa vizinha mais alta bloquearia um dos lados.
 
-Validação extra: as duas descidas são possíveis; trocar os bolsos derruba a bolinha nas duas; nenhuma fase pode ser vencida com a mesma rampa nos dois bolsos.
+**Tutorial do N3** (uma vez, `ef15co02-circuito-l3`): foto da fase; sobe uma página SE **de demonstração com a condição invertida** (para não entregar o bolso da F1) e duas páginas de rampa na bandeja. A Pipoca entra e dorme no sino da condição da demonstração; recorte no sino: *"Se a Pipoca estiver aqui…"* [Próximo]. A bolinha de toque põe a rampa que foge dela no SIM e a outra no SENÃO; o Nico monta a torre, lê o SE, põe a rampa do SIM; recorte na mesa: *"…vai pelo outro lado."* [Ver]; a bolinha desce até o sino livre. Tudo volta para a caixa, a Pipoca sai, as páginas reais entram e vem *"Sua vez!"* [Vamos!] (recorte na bandeja inteira).
 
-Tutorial do N3 (estreia do SE): a Pipoca entra e dorme num sino. *"Se a Pipoca estiver aqui…"* [Próximo] → a bolinha de toque põe a rampa no bolso SE sim → *"…a bolinha vai pelo outro lado."* [Ver] → descida → *"Sua vez!"*.
+### Ajuda (`?`) por nível
+
+N1 *"Peça sem bloco embaixo cai."* · N2 *"Conte os blocos da torre."* · N3 *"A Pipoca muda de sino."*
+
+### Validação (`validateLevels`, só em DEV, os 3 níveis)
+
+Para toda fase: células únicas, apoio e nada em cima de rampa no modelo; nenhuma peça na coluna de um sino; a bolinha chega a um sino (no N3, a rampa do SE para cada lado leva a um sino **diferente**); bandeja ≤ 6, fita ≤ 5; copiar a bandeja em ordem **não** vence; **todas** as arrumações da bandeja na fita são simuladas (até 720) e pelo menos uma vence.
+
+- **N1:** um sino, só páginas de uma peça, todas usadas, 3 a 5.
+- **N2:** fita menor que o total de peças; todas as soluções usam o mesmo conjunto de páginas (uma contagem só por coluna); há pelo menos uma contagem errada na bandeja, e trocar a contagem certa por cada errada da mesma coluna perde.
+- **N3:** dois sinos, condição e SE definidos; todas as páginas usadas; vencer = as duas descidas certas nas duas ordens; em toda solução, **trocar os bolsos perde nas duas descidas** e **a mesma rampa nos dois bolsos não vence**.
 
 ## 12. O que mudou da ficha, e por quê
 
@@ -221,12 +235,12 @@ Tutorial do N3 (estreia do SE): a Pipoca entra e dorme num sino. *"Se a Pipoca e
 index.ts  types.ts
 data/   files.ts layout.ts theme.ts timing.ts logic.ts levels.ts words.ts
 scenes/ BootScene.ts GameScene.ts fallback.ts art.ts audio.ts
-        room.ts board.ts pages.ts nico.ts header.ts guide.ts bubble.ts banner.ts tap.ts
+        room.ts board.ts pages.ts nico.ts pipoca.ts header.ts guide.ts bubble.ts banner.ts tap.ts
 ```
 
-- `logic.ts` — `build(pieces, order)` devolve onde cada peça parou e qual caiu; `path(phase)` devolve os pontos da descida. A resposta certa nunca fica nos dados.
+- `logic.ts` — `run(fase, fita, lado?)` e `again(...)` simulam a montagem (ações, queda e motivo); `descend` acha o caminho da bolinha. A resposta certa nunca fica nos dados.
 - `levels.ts` — os níveis e `validateLevels`.
-- **Arte:** o N1 roda inteiro com a **arte de reserva** em Graphics, assada nas mesmas folhas, grades e ordem de células do TEXTURAS (`scenes/fallback.ts`). Um PNG com o mesmo nome em `src/assets/games/EF15CO02/circuito-de-bolinha/` substitui a reserva sem mudar código. O fantasma e as miniaturas das páginas são as mesmas imagens das peças (tingidas e reduzidas), então funcionam igual com a arte nova.
+- **Arte:** os três níveis rodam inteiros com a **arte de reserva** (inclusive `pipoca.png`, 3 × 1 de 320 × 256, e `pagina-se.png`, 512 × 256) em Graphics, assada nas mesmas folhas, grades e ordem de células do TEXTURAS (`scenes/fallback.ts`). Um PNG com o mesmo nome em `src/assets/games/EF15CO02/circuito-de-bolinha/` substitui a reserva sem mudar código. O fantasma e as miniaturas das páginas são as mesmas imagens das peças (tingidas e reduzidas), então funcionam igual com a arte nova.
 
 ## 14. Dúvidas
 
@@ -239,3 +253,5 @@ scenes/ BootScene.ts GameScene.ts fallback.ts art.ts audio.ts
 - 20/10/2026: plano completo e N1 em Graphics. Id 133 no catálogo, `NEXT_FREE_ID` = 134. Servidor `jogos-dev-circuito` (porta 5317).
 - Jogado no Chrome headless (o Browser pane travou em "policy check"): a abertura inteira (close, caixa, fantasma, páginas, a demonstração da regra), as três fases até "Nível 1 completo!" (`CORRECT_ANSWER` por fase e `GAME_COMPLETED` `stage: 1`), o erro na fase 2 (*"Faltou um bloco embaixo do bloco!"*, `WRONG_ANSWER` + `GAME_OVER`) e o `?`.
 - Ajustes depois de ver: o fantasma ganhou contorno marrom (branco puro sumia na parede), a peça que cai fica deitada em cima da mesa (antes sumia atrás do manual), o balão do Nico ficou mais estreito e acima da cabeça dele para não cobrir a mesa, e o balão do `?` desceu para baixo da mesa.
+- 21/10/2026: N2 (página ×N, fita menor, célula de 80 px) e N3 (página SE com bolsos, dois sinos, Pipoca, duas descidas) feitos com as decisões A–H do Orquestrador; `LEVELS = [N1, N2, N3]`. Jogado no Chrome headless: tutorial do N2 (×3 com contador), N2 F1–F2 certas e F2 com ×4 (*"Bloco demais!"*, `WRONG_ANSWER`); tutorial do N3 (condição invertida), N3 F1–F2 com as duas descidas certas (a Pipoca troca de sino, o Nico tira só a rampa do SE) e F3 com os bolsos trocados (*"Miau!"*, *"A Pipoca estava nesse sino!"*, `WRONG_ANSWER`); N1 F1 certa e errada de novo.
+- 21/10/2026 (tarde): integração dos 9 PNGs da Tesoura pelo MANIFEST — a bolinha segue a canaleta CURVA da rampa (8 pontos em `RAMP.groove`, relativos à caixa alfa 4,88,248,168), copinho do sino em `BELL.cup` (-0,32; 0,18), mãos do Nico na pose 2 em (80,-154); fantasma com contorno marrom forte (rim 7 px, 0,9) e preenchimento branco 0,92; a célula do SE virou um quadrado tracejado com "?" (some enquanto a rampa do SE está montada); miniaturas das páginas enchem a página (146 × 88), peça da página 12 % maior com contorno e moldura; a foto da condição do SE virou um retrato grande (210 × 96) preso no alto da página SE. Conferido no Chrome headless com o rastro da bolinha desenhado.

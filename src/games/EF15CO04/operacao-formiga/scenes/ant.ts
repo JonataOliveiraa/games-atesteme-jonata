@@ -22,6 +22,8 @@ export interface Ant {
     cheer(): Promise<void>
     strain(): Promise<void>
     face(dir: 1 | -1): void
+    /** O passo do grupo carregando a folha gigante (1 = normal). */
+    setPace(k: number): void
     rect(): Rect
     destroy(): void
 }
@@ -42,6 +44,7 @@ export function createAnt(scene: Phaser.Scene, view: View, garden: Garden, onStr
     let stride = 0
     let busy = false
     let pose: AntPose = 'idle'
+    let pace = 1
 
     const show = (p: AntPose) => {
         pose = p
@@ -87,7 +90,7 @@ export function createAnt(scene: Phaser.Scene, view: View, garden: Garden, onStr
             sync()
         },
         step(vx, vy, dt, gate) {
-            const speed = carrying ? ANT.carrySpeed : ANT.speed
+            const speed = (carrying ? ANT.carrySpeed : ANT.speed) * pace
             const dx = vx * speed * dt
             const dy = vy * speed * dt
             let moved = false
@@ -113,7 +116,7 @@ export function createAnt(scene: Phaser.Scene, view: View, garden: Garden, onStr
             for (const p of path) {
                 const dist = Math.hypot(p.x - x, p.y - y)
                 if (dist < 1) continue
-                const speed = carrying ? ANT.carrySpeed : ANT.speed
+                const speed = (carrying ? ANT.carrySpeed : ANT.speed) * pace
                 const from = { x, y }
                 if (Math.abs(p.x - x) > 2) dir = p.x > x ? 1 : -1
                 const t = { v: 0 }
@@ -173,6 +176,9 @@ export function createAnt(scene: Phaser.Scene, view: View, garden: Garden, onStr
         face(d) {
             dir = d
             sync()
+        },
+        setPace(k) {
+            pace = k
         },
         rect: () => ({ x, y: y - 36, w: ANT.w + 30, h: 100 }),
         destroy() {

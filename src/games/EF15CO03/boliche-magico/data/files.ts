@@ -10,7 +10,7 @@ export interface Sheet {
 }
 
 export const PINS_SHEET: Sheet = { key: 'pinos', cols: 4, rows: 2, cellW: 192, cellH: 288 }
-export const EXTRAS_SHEET: Sheet = { key: 'enfeites', cols: 2, rows: 1, cellW: 192, cellH: 288 }
+export const EXTRAS_SHEET: Sheet = { key: 'enfeites', cols: 3, rows: 1, cellW: 192, cellH: 288 }
 export const BALL_SHEET: Sheet = { key: 'bola', cols: 3, rows: 2, cellW: 256, cellH: 256 }
 
 export const SHEETS = [PINS_SHEET, EXTRAS_SHEET, BALL_SHEET]
@@ -20,9 +20,10 @@ export const IMAGES = [BG_KEY]
 
 const BODY_CELL: Record<Color, number> = { azul: 0, verde: 1, vermelho: 2 }
 const FACE_CELL: Record<Face, number> = { awake: 4, sleepy: 5, asleep: 6, dizzy: 7 }
-const BALL_FACE_CELL: Record<BallFace, number> = { normal: 1, rolling: 2, happy: 3, oops: 4 }
+const BALL_FACE_CELL: Record<BallFace, number> = { normal: 1, rolling: 2, happy: 3, oops: 4, power: 5 }
 
-export const EXTRA_CELL = { star: 0, glasses: 1 } as const
+export const EXTRA_CELL = { star: 0, glasses: 1, pillow: 2 } as const
+export const PILLOW_Y = 150
 export const BALL_BODY_CELL = 0
 
 export const bodyCell = (c: Color) => BODY_CELL[c]

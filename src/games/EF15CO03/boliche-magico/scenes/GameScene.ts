@@ -10,22 +10,23 @@ import type { TutorialStep } from '../../../../shared/tutorial/createTutorial'
 
 import { BALL } from '../data/layout'
 import { LEVELS, OPENING_KEY, POINTS, guideKey } from '../data/levels'
-import { has, holds, sameTerm } from '../data/logic'
+import { has, holds, literals, sameTerm } from '../data/logic'
 import { C, CSS } from '../data/theme'
 import { TIMING } from '../data/timing'
 import { OPENING, TEACH, why } from '../data/words'
-import type { Demo, LevelDef, Miss, PhaseDef, Rack, Rect, Sentence, State, Teach } from '../types'
+import type { Demo, LevelDef, Miss, Op, PhaseDef, Power, Rack, Sentence, State, Teach } from '../types'
 
 import { createAudio, type Audio } from './audio'
 import { createBall, type Ball } from './ball'
 import { createBanner, type Banner } from './banner'
-import { createBench, type Bench } from './bench'
+import { createBench, type Bench, type BenchState, type Target } from './bench'
 import { createBubble, type Bubble } from './bubble'
+import { createGauge, type Gauge } from './gauge'
 import { spot, teach } from './guide'
 import { createHeader, type Header } from './header'
 import { createLane, type Lane } from './lane'
 import { createPins, type Pins } from './pins'
-import { createSign, type Sign } from './sign'
+import { createSign, type Side, type Sign } from './sign'
 import { createTouch, type Touch } from './touch'
 import { createView, type View } from './view'
 
@@ -47,7 +48,8 @@ export class GameScene extends Phaser.Scene {
 
     private rack!: Rack
     private pick: number | null = null
-    private notOn = false
+    private nots: Record<Side, boolean> = { left: false, right: false }
+    private op: Op | null = null
 
     private score = 0
     private hits = 0
@@ -64,6 +66,7 @@ export class GameScene extends Phaser.Scene {
     private bubble!: Bubble
     private banner!: Banner
     private touch!: Touch
+    private gauge!: Gauge
     private audio!: Audio
 
     private unsubPlatform?: () => void
@@ -87,7 +90,8 @@ export class GameScene extends Phaser.Scene {
         this.opening = false
         this.busy = false
         this.pick = null
-        this.notOn = false
+        this.nots = { left: false, right: false }
+        this.op = null
         this.score = data?.points ?? 0
         this.hits = 0
         this.errors = 0
@@ -116,6 +120,7 @@ export class GameScene extends Phaser.Scene {
         this.bubble = createBubble(this)
         this.banner = createBanner(this)
         this.touch = createTouch(this)
+        this.gauge = createGauge(this)
         this.header.setHelpEnabled(false)
 
         this.game.canvas.addEventListener('pointerdown', this.focusGame)
@@ -141,6 +146,7 @@ export class GameScene extends Phaser.Scene {
     private shutdownScene() {
         this.gen++
         this.game.canvas?.removeEventListener('pointerdown', this.focusGame)
+        this.gauge?.destroy()
         this.touch?.destroy()
         this.banner?.destroy()
         this.bubble?.destroy()
@@ -166,8 +172,9 @@ export class GameScene extends Phaser.Scene {
     private async setRack(rack: Rack) {
         this.rack = rack
         this.pick = null
-        this.notOn = false
-        this.sign.reset()
+        this.nots = { left: false, right: false }
+        this.op = null
+        this.sign.reset(rack)
         this.bench.build(rack)
         this.bench.disable()
         await this.pins.set(rack.pins)
@@ -180,6 +187,7 @@ export class GameScene extends Phaser.Scene {
         this.header.setHelpEnabled(false)
         this.header.setPhase(index)
         this.banner.clear()
+        this.ball.setPower(null)
         this.ball.place(BALL.x)
         this.ball.setFace('normal')
         const demo = this.introduce ? phase.demo : undefined
@@ -198,7 +206,9 @@ export class GameScene extends Phaser.Scene {
         }
 
         if (demo && phase.teach) {
-            await teach(this, guideKey(this.level.level), this.teachSteps(phase.teach, 'Ver'))
+            await this.bench.show()
+            if (gen !== this.gen) return
+            await teach(this, guideKey(this.level.level), this.teachSteps(phase.teach, 'Ver', index === 0))
             if (gen !== this.gen) return
             await this.demo(gen, demo)
             if (gen !== this.gen) return
@@ -219,14 +229,17 @@ export class GameScene extends Phaser.Scene {
         this.play()
     }
 
-    private teachSteps(topic: Teach, last: string): TutorialStep[] {
+    private teachSteps(topic: Teach, last: string, first: boolean): TutorialStep[] {
         const steps: TutorialStep[] = []
-        if (topic === 'build') {
-            steps.push({ text: TEACH.goal, ...spot(this.pins.sleepyRect(), 10), balloonY: 568, buttonLabel: 'Próximo' })
-            steps.push({ text: TEACH.build, ...spot(this.bench.rect(), 6), balloonY: 300, buttonLabel: last })
-        } else {
-            steps.push({ text: TEACH.not, ...spot(this.bench.notRect() ?? this.bench.rect(), 6), balloonY: 300, buttonLabel: last })
-        }
+        if (first) steps.push({ text: TEACH.goal, ...spot(this.pins.sleepyRect(), 10), balloonY: 568, buttonLabel: 'Próximo' })
+        const bench = this.bench.rect()
+        const step = (text: string, r = bench): TutorialStep => ({ text, ...spot(r, 6), balloonY: 300, buttonLabel: 'Próximo' })
+        if (topic === 'build') steps.push(step(TEACH.build))
+        else if (topic === 'not') steps.push(step(TEACH.not, this.bench.notRect() ?? bench))
+        else if (topic === 'e') steps.push(step(TEACH.e, this.bench.opRect() ?? bench))
+        else if (topic === 'ou') steps.push(step(TEACH.ou, this.bench.opRect() ?? bench))
+        else steps.push(step(TEACH.nots, this.bench.notRect() ?? bench))
+        steps[steps.length - 1].buttonLabel = last
         return steps
     }
 
@@ -264,104 +277,174 @@ export class GameScene extends Phaser.Scene {
         this.busy = false
         this.header.setHelpEnabled(true)
         void this.bench.show()
-        this.bench.paint(this.pick, this.notOn)
+        this.paintBench()
         this.bench.enable({
             onCard: i => void this.onCard(i),
-            onNot: () => void this.onNot(),
+            onNot: side => void this.onNot(side),
+            onOp: op => void this.onOp(op),
             onPlay: () => void this.onPlay(),
         })
+    }
+
+    private paintBench() {
+        const state: BenchState = { card: this.pick, not: this.nots, op: this.op }
+        this.bench.paint(state)
     }
 
     // ───────────────────────────────────────────── montar a frase
 
     private sentence(): Sentence | null {
-        if (this.pick === null) return null
-        return { left: { not: this.notOn, term: this.rack.cards[this.pick] } }
+        const rack = this.rack
+        if (rack.kind === 'one') {
+            if (this.pick === null) return null
+            return { left: { not: this.nots.left, term: rack.cards[this.pick] } }
+        }
+        if (rack.kind === 'join') {
+            if (!this.op) return null
+            return { left: { not: false, term: rack.left }, op: this.op, right: { not: false, term: rack.right } }
+        }
+        return { left: { not: this.nots.left, term: rack.left }, op: rack.op, right: { not: this.nots.right, term: rack.right } }
     }
 
     private async pickCard(index: number) {
-        if (this.pick === index) return
+        if (this.rack.kind !== 'one' || this.pick === index) return
         this.pick = index
-        this.bench.paint(this.pick, this.notOn)
+        this.paintBench()
         this.audio.pick()
-        await this.sign.setTerm(this.rack.cards[index], this.bench.cardPos(index))
+        await this.sign.setTerm(this.rack.cards[index], this.bench.pos({ kind: 'card', index }))
     }
 
-    private async toggleNot() {
-        this.notOn = !this.notOn
-        this.bench.paint(this.pick, this.notOn)
-        if (this.notOn) this.audio.pick()
+    private async toggleNot(side: Side) {
+        const on = !this.nots[side]
+        this.nots = { ...this.nots, [side]: on }
+        this.paintBench()
+        if (on) this.audio.pick()
         else this.audio.unpick()
-        await this.sign.setNot(this.notOn, this.bench.notPos())
+        await this.sign.setNot(side, on, this.bench.pos({ kind: 'not', side }))
     }
 
-    private async onCard(index: number) {
+    private async pickOp(op: Op) {
+        if (this.op === op) return
+        this.op = op
+        this.paintBench()
+        this.audio.pick()
+        await this.sign.setOp(op, this.bench.pos({ kind: 'op', op }))
+    }
+
+    private async act(target: Target, run: () => Promise<void>) {
         if (this.state !== 'build' || this.busy) return
         this.busy = true
-        this.bench.press('card', index)
-        await this.pickCard(index)
+        this.bench.press(target)
+        await run()
         this.busy = false
     }
 
-    private async onNot() {
-        if (this.state !== 'build' || this.busy) return
-        this.busy = true
-        this.bench.press('not')
-        await this.toggleNot()
-        this.busy = false
+    private onCard(index: number) {
+        return this.act({ kind: 'card', index }, () => this.pickCard(index))
+    }
+
+    private onNot(side: Side) {
+        return this.act({ kind: 'not', side }, () => this.toggleNot(side))
+    }
+
+    private onOp(op: Op) {
+        return this.act({ kind: 'op', op }, () => this.pickOp(op))
     }
 
     private async onPlay() {
-        if (this.state !== 'build' || this.busy || this.pick === null) return
+        if (this.state !== 'build' || this.busy || !this.sentence()) return
         const gen = this.gen
         this.state = 'roll'
-        this.bench.press('play')
+        this.bench.press({ kind: 'play' })
         this.bench.disable()
         this.header.setHelpEnabled(false)
         this.audio.play()
-        const outcome = await this.roll(gen)
+        const outcome = await this.launch(gen, false)
         if (gen !== this.gen) return
-        if (outcome.ok) await this.finishPhase(gen)
-        else await this.miss(gen, outcome.index, outcome.miss)
+        if ('index' in outcome) await this.miss(gen, outcome.index, outcome.miss)
+        else await this.finishPhase(gen)
     }
 
     // ───────────────────────────────────────────── a jogada
 
-    private async roll(gen: number): Promise<Outcome> {
-        const s = this.sentence()
-        if (!s) return { ok: true }
-        const lit = s.left
+    private async launch(gen: number, demo: boolean): Promise<Outcome> {
         await this.bench.hide()
         if (gen !== this.gen) return { ok: true }
+        this.pins.freeze()
+        await this.ball.windUp()
+        if (gen !== this.gen) return { ok: true }
+        let bucket = -1
+        const power = await this.gauge.charge({
+            onTick: t => {
+                this.ball.wobble(t)
+                const b = Math.floor(t * 8)
+                if (b === bucket) return
+                bucket = b
+                this.audio.charge(t)
+            },
+            demoTap: demo ? at => this.touch.tap(at) : undefined,
+        })
+        if (gen !== this.gen) return { ok: true }
+        if (demo) this.touch.stop()
+        this.ball.setPower(power)
         this.ball.setFace('rolling')
+        this.audio.launch(power)
+        return this.roll(gen, power)
+    }
+
+    private async check(gen: number, s: Sentence, index: number) {
+        const v = this.pins.list()[index]
+        const lits = literals(s)
+        const sides: Side[] = lits.length > 1 ? ['left', 'right'] : ['left']
+        const values = lits.map(l => has(v.def, l.term))
+        const verdict = holds(s, v.def)
+        if (sides.length === 1) {
+            if (values[0]) this.audio.yes()
+            else this.audio.no()
+        } else this.audio.pop()
+        await FX.all(...sides.map((side, k) => this.sign.mark(side, values[k])))
+        if (gen !== this.gen) return verdict
+        await FX.wait(this, TIMING.mark)
+        if (gen !== this.gen) return verdict
+        const flips = sides.flatMap((side, k) => (lits[k].not ? [{ side, value: !values[k] }] : []))
+        if (flips.length) {
+            this.audio.flip()
+            await FX.all(...flips.map(f => this.sign.flip(f.side, f.value)))
+            if (gen !== this.gen) return verdict
+            await FX.wait(this, TIMING.mark)
+            if (gen !== this.gen) return verdict
+        }
+        if (sides.length > 1) {
+            if (verdict) this.audio.yes()
+            else this.audio.no()
+            await this.sign.merge(verdict)
+            if (gen !== this.gen) return verdict
+            await FX.wait(this, TIMING.mark)
+        }
+        return verdict
+    }
+
+    private async roll(gen: number, power: Power): Promise<Outcome> {
+        const s = this.sentence()
+        if (!s) return { ok: true }
         const list = this.pins.list()
         for (let i = 0; i < list.length; i++) {
             const v = list[i]
+            const next = list[i + 1]
             await this.ball.rollTo(v.x - BALL.stopGap, i === 0 ? TIMING.approach * 1.4 : TIMING.approach)
             if (gen !== this.gen) return { ok: true }
             await FX.wait(this, TIMING.pause)
             if (gen !== this.gen) return { ok: true }
             await FX.all(this.sign.bounce(), this.pins.bounce(i))
             if (gen !== this.gen) return { ok: true }
-            const value = has(v.def, lit.term)
-            if (value) this.audio.yes()
-            else this.audio.no()
-            await this.sign.mark(value)
+            const verdict = await this.check(gen, s, i)
             if (gen !== this.gen) return { ok: true }
-            await FX.wait(this, TIMING.mark)
-            if (gen !== this.gen) return { ok: true }
-            if (lit.not) {
-                this.audio.flip()
-                await this.sign.flip(!value)
-                if (gen !== this.gen) return { ok: true }
-                await FX.wait(this, TIMING.mark)
-                if (gen !== this.gen) return { ok: true }
-            }
-            if (holds(s, v.def)) {
+            if (verdict) {
                 await this.ball.rollTo(v.x - BALL.r - 18, TIMING.hit, 'Quad.easeIn')
                 if (gen !== this.gen) return { ok: true }
                 this.audio.knock()
-                const knocked = this.pins.knock(i)
+                if (power === 'max') this.audio.boom()
+                const knocked = this.pins.knock(i, power)
                 if (!v.def.sleepy) {
                     await knocked
                     this.audio.dizzy()
@@ -375,7 +458,8 @@ export class GameScene extends Phaser.Scene {
                 const hop = this.pins.hop(i, TIMING.hop)
                 await FX.wait(this, TIMING.hop * 0.15)
                 if (gen !== this.gen) return { ok: true }
-                await this.ball.rollTo(v.x + BALL.r + 34, TIMING.pass * 0.7, 'Linear')
+                const past = v.x + BALL.r + 34
+                await this.ball.rollTo(next ? Math.min(past, next.x - BALL.stopGap) : past, TIMING.pass * 0.7, 'Linear')
                 if (gen !== this.gen) return { ok: true }
                 await hop
                 if (gen !== this.gen) return { ok: true }
@@ -393,34 +477,42 @@ export class GameScene extends Phaser.Scene {
         return { ok: true }
     }
 
+    private async demoTap(gen: number, target: Target, run: () => Promise<void>) {
+        await FX.wait(this, TIMING.beat)
+        if (gen !== this.gen) return false
+        await this.touch.tap(this.bench.pos(target))
+        if (gen !== this.gen) return false
+        this.bench.press(target)
+        await run()
+        return gen === this.gen
+    }
+
     private async demo(gen: number, demo: Demo) {
         this.state = 'demo'
-        const lit = demo.script.left
-        const index = this.rack.cards.findIndex(t => sameTerm(t, lit.term))
-        await FX.wait(this, TIMING.beat)
-        if (gen !== this.gen) return
-        await this.touch.tap(this.bench.cardPos(index))
-        if (gen !== this.gen) return
-        this.bench.press('card', index)
-        await this.pickCard(index)
-        if (gen !== this.gen) return
-        if (lit.not) {
-            await FX.wait(this, TIMING.beat)
-            if (gen !== this.gen) return
-            await this.touch.tap(this.bench.notPos())
-            if (gen !== this.gen) return
-            this.bench.press('not')
-            await this.toggleNot()
-            if (gen !== this.gen) return
+        const script = demo.script
+        const rack = this.rack
+        if (rack.kind === 'one') {
+            const index = rack.cards.findIndex(t => sameTerm(t, script.left.term))
+            if (!(await this.demoTap(gen, { kind: 'card', index }, () => this.pickCard(index)))) return
+        }
+        if (rack.kind === 'join' && script.op) {
+            const op = script.op
+            if (!(await this.demoTap(gen, { kind: 'op', op }, () => this.pickOp(op)))) return
+        }
+        const sides: Side[] = rack.kind === 'nots' ? ['left', 'right'] : ['left']
+        for (const side of sides) {
+            const lit = side === 'left' ? script.left : script.right
+            if (!lit?.not) continue
+            if (!(await this.demoTap(gen, { kind: 'not', side }, () => this.toggleNot(side)))) return
         }
         await FX.wait(this, TIMING.beat)
         if (gen !== this.gen) return
-        await this.touch.tap(this.bench.playPos())
+        await this.touch.tap(this.bench.pos({ kind: 'play' }))
         if (gen !== this.gen) return
-        this.bench.press('play')
+        this.bench.press({ kind: 'play' })
         this.audio.play()
         this.touch.stop()
-        const outcome = await this.roll(gen)
+        const outcome = await this.launch(gen, true)
         if (gen !== this.gen || !outcome.ok) return
         await this.party(gen)
     }
@@ -430,6 +522,7 @@ export class GameScene extends Phaser.Scene {
         this.sign.clearMarks()
         await FX.all(this.pins.celebrate(), this.ball.comeBack())
         if (gen !== this.gen) return
+        this.ball.setPower(null)
         this.ball.setFace('happy')
         await this.ball.cheer()
         if (gen !== this.gen) return
@@ -443,7 +536,7 @@ export class GameScene extends Phaser.Scene {
         await this.lane.sweep(x => this.pins.push(x))
         if (gen !== this.gen) return
         this.pins.clear()
-        this.sign.reset()
+        this.sign.clearMarks()
     }
 
     private async finishPhase(gen: number) {
@@ -471,12 +564,12 @@ export class GameScene extends Phaser.Scene {
 
     private async miss(gen: number, index: number, miss: Miss) {
         this.state = 'error'
-        const lit = this.sentence()?.left
+        const s = this.sentence()
         const v = this.pins.list()[index]
-        if (!lit || !v) return
-        this.sign.blame(lit.not)
+        if (!s || !v) return
+        this.sign.blame(s.right ? ['left', 'right'] : ['left'], !!s.right)
         this.ball.setFace('oops')
-        this.banner.say(why(v.def, lit, miss))
+        this.banner.say(why(v.def, s, miss))
         await FX.wait(this, TIMING.error)
         if (gen !== this.gen) return
         this.lose()
@@ -502,12 +595,10 @@ export class GameScene extends Phaser.Scene {
         this.state = 'help'
         this.bench.disable()
         this.header.setHelpEnabled(false)
-        const steps: TutorialStep[] = [
-            { text: TEACH.goal, ...spot(this.pins.sleepyRect(), 10), balloonY: 568, buttonLabel: 'Próximo' },
-            { text: TEACH.build, ...spot(this.bench.rect(), 6), balloonY: 300, buttonLabel: 'Próximo' },
-        ]
-        const notRect: Rect | null = this.bench.notRect()
-        if (notRect) steps.push({ text: TEACH.not, ...spot(notRect, 6), balloonY: 300, buttonLabel: 'Próximo' })
+        const kind = this.rack.kind
+        const steps = this.teachSteps(kind === 'one' ? 'build' : kind === 'join' ? 'e' : 'nots', 'Próximo', true)
+        if (kind === 'one' && this.rack.not) steps.push(...this.teachSteps('not', 'Próximo', false))
+        if (kind === 'join') steps.push(...this.teachSteps('ou', 'Próximo', false))
         steps[steps.length - 1].buttonLabel = 'Continuar'
         await teach(this, `${guideKey(this.level.level)}-help`, steps)
         if (gen !== this.gen) return

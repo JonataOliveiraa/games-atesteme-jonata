@@ -275,6 +275,12 @@ Pedido do usuário (20/10/2026), junto com o N2 e o N3 (PLANEJAMENTO §11). As m
 | `objetos2.png` | 4 × 2 | 256 | 1024 × 512 | sim | ninho, ficha, galhinho, topete, ícones dos rótulos, montinho de folhas |
 | `casas.png` | 3 × 2 | 256 | 768 × 512 | sim | as 5 casas do N3 (a 6ª célula fica vazia) |
 | `pedacos.png` | 4 × 3 | 256 | 1024 × 768 | sim | os 11 pedaços do redemoinho (a 12ª fica vazia) |
+| `bg-lagoa.png` | — | — | 1672 × 941 | opaco | N3 novo, PEIXES: a lagoa com a margem de areia (§11.11) |
+| `bg-noite.png` | — | — | 1672 × 941 | opaco | N3 novo, VAGA-LUMES: a clareira à noite (§11.12) |
+| `turma.png` | 4 × 4 | 256 | 1024 × 1024 | sim | N3 novo: patos, caracol, pedrinha, cogumelos, vaga-lumes, concha, ícones, cesta (§11.13) |
+| `peixes.png` | 3 × 3 | 256 | 768 × 768 | sim | N3 novo: peixe, linha = cor do CORPO, coluna = cor do RABO (§11.14) |
+
+**O N3 foi refeito em 21/10/2026** (redemoinho → cinco turmas da floresta: patinhos, cogumelos, peixes, vaga-lumes, caracol). `casas.png` e `pedacos.png` ficaram sem uso; o N3 usa `bg-redemoinho` (patos, cogumelos, caracol), `bg-lagoa`, `bg-noite`, `turma` e `peixes`.
 
 **Cores fixas do N2:** a PENA e o BICO dos filhotes usam só **laranja `#F08A3C`**, **verde `#5DBB63`** e **roxo `#9B7BD8`**, chapados e bem distintos. Nada mais na cena do N2 usa essas três cores como cor principal.
 
@@ -508,6 +514,121 @@ A game sprite sheet on a fully TRANSPARENT background: a grid of 4 columns x 3 r
 12. (empty cell)
 
 DO NOT INCLUDE: text, letters, numbers, words, writing inside the balloon, writing on the pebble, writing in the badge box, characters with big faces (the tiny cricket face on the badge is fine), extra objects, objects in the twelfth cell, items crossing cell borders, items cut by the cell edge, ground, shadows on the ground, the characters from the reference image (Genshin Impact fan-art boys: a dark-teal-haired boy with a diamond forehead mark and purple scarf, a dark-haired boy with braids, a white flower and a green cape, a white-and-red-haired samurai boy, a red-haired boy with a long coat), slimes, cloud creatures, floating clouds, rainbows, speech bubbles with symbols, watermarks, signatures, @handles, website names, harsh pure-black outlines, western cartoon style, sketchy rough lines, painterly realistic rendering, 3D render, photorealistic.
+~~~
+
+### 11.11 `bg-lagoa.png` — 1672 × 941, opaco
+
+Fase dos PEIXES: cada peixe mora numa concha com uma ficha embaixo; as conchas ficam em fila na areia molhada, e a água fica acima delas.
+
+| Região (% da imagem) | O que tem |
+|---|---|
+| alto, 0–15 % | céu e copas, a margem de longe |
+| 15–65 % da altura | água da lagoa, calma e clara, **vazia** (os peixes nadam ali) |
+| 65–100 % da altura, 10–90 % da largura | margem de areia molhada, lisa, **vazia** (conchas e fichas ficam ali) |
+| bordas esquerda e direita | taboas, folhas de junco, pedrinhas |
+
+### Prompt copiável
+
+~~~text
+STYLE — USE THE ATTACHED IMAGE AS THE ART STYLE REFERENCE, and match its rendering exactly: cute chibi anime sticker-comic illustration; clean, smooth lineart of medium weight drawn in a darker tone of each area's own color (dark green, deep brown, dark teal — never pure black); flat cel shading with ONE soft shadow tone and almost no gradients; small white "+" sparkle marks on shiny surfaces; soft pastel palette (mint, leaf green, cream, warm brown, soft sky blue) with a few clear saturated accents; soft rounded chunky shapes. Take ONLY the art style: do NOT copy its characters, outfits, clouds, slimes, rainbow, speech bubbles or framing.
+
+A background for a children's game, 16:9 (1672 x 941), opaque, NO white sticker keyline here — this is a full scene, not a sticker. A calm forest POND seen from a gentle 3/4 angle, crisp shapes, no painterly brushwork. The top 15% is the far shore: a soft pale sky and calm round treetops. From 15% to 65% of the height, the pond water fills the whole width: clear soft sky-blue water (#86CDEA) with a slightly deeper band in the middle, a few gentle ripple rings and small white sparkles, completely EMPTY. From 65% down to the bottom, between 10% and 90% of the width, a smooth light SAND shore (wet beige sand), flat and completely EMPTY. Only on the left and right edges: cattails, reeds, round lily leaves near the shore, smooth pebbles. Bright, cheerful daylight.
+
+DO NOT INCLUDE: fish, frogs, ducks, birds, shells, nests, lily pads in the middle of the water, objects in the middle of the water, objects on the sand band, boats, bridges, docks, text, letters, numbers, signs, people, characters, animals, orange, green or purple fish-like shapes, strong perspective, night, storm, scary or dark elements, frames around the picture, the characters from the reference image (Genshin Impact fan-art boys: a dark-teal-haired boy with a diamond forehead mark and purple scarf, a dark-haired boy with braids, a white flower and a green cape, a white-and-red-haired samurai boy, a red-haired boy with a long coat), slimes, cloud creatures, floating clouds, rainbows, speech bubbles with symbols, white sticker keyline, watermarks, signatures, @handles, website names, harsh pure-black outlines, western cartoon style, sketchy rough lines, painterly realistic rendering, 3D render, photorealistic.
+~~~
+
+### 11.12 `bg-noite.png` — 1672 × 941, opaco
+
+Fase dos VAGA-LUMES: eles brilham numa roda no meio da tela e os fios de luz são do código. O fundo é **escuro e calmo** para as quatro luzes (amarela, verde, azul, rosa) saltarem.
+
+| Região (% da imagem) | O que tem |
+|---|---|
+| alto, 0–40 % | céu azul-noite com estrelinhas e uma lua crescente no canto direito |
+| 20–80 % da largura, 15–80 % da altura | clareira escura e lisa, **vazia** (a roda dos vaga-lumes) |
+| 83–100 % da altura | grama escura baixa |
+| bordas esquerda e direita | troncos e copas em silhueta azul-escura |
+
+### Prompt copiável
+
+~~~text
+STYLE — USE THE ATTACHED IMAGE AS THE ART STYLE REFERENCE, and match its rendering exactly: cute chibi anime sticker-comic illustration; clean, smooth lineart of medium weight drawn in a darker tone of each area's own color (deep navy, dark indigo, dark teal — never pure black); flat cel shading with ONE soft shadow tone and almost no gradients; small white "+" sparkle marks; soft rounded chunky shapes. Take ONLY the art style: do NOT copy its characters, outfits, clouds, slimes, rainbow, speech bubbles or framing.
+
+A background for a children's game, 16:9 (1672 x 941), opaque, NO white sticker keyline here — this is a full scene, not a sticker. A cozy, friendly forest clearing at NIGHT, crisp shapes, no painterly brushwork. Deep calm navy-blue sky (#223156) with small white stars and a soft cream crescent moon in the top right corner. Along the left and right edges and along the top: tree trunks and round treetops as darker blue silhouettes (#141D38). The center (from 20% to 80% of the width, from 15% to 80% of the height) is open dark night air over a soft lawn, smooth and completely EMPTY, with no glowing things. The bottom 17% is short dark blue-green grass. Peaceful, sleepy, not scary.
+
+DO NOT INCLUDE: fireflies, glowing dots, glowing lights, lanterns, campfire, light beams, glowing mushrooms, yellow, green, light-blue or pink glows, eyes in the dark, owls, animals, characters, objects in the center, text, letters, numbers, signs, people, scary or spooky elements, ghosts, frames around the picture, the characters from the reference image (Genshin Impact fan-art boys: a dark-teal-haired boy with a diamond forehead mark and purple scarf, a dark-haired boy with braids, a white flower and a green cape, a white-and-red-haired samurai boy, a red-haired boy with a long coat), slimes, cloud creatures, floating clouds, rainbows, speech bubbles with symbols, white sticker keyline, watermarks, signatures, @handles, website names, harsh pure-black outlines, western cartoon style, sketchy rough lines, painterly realistic rendering, 3D render, photorealistic.
+~~~
+
+### 11.13 `turma.png` — 4 × 4 células de 256 (1024 × 1024), alfa
+
+A turma do N3 numa folha só. Os bichos pisam no fundo da célula; o resto fica centrado.
+
+| Célula | Peça | Direção / detalhe |
+|---|---|---|
+| 0 | pata-mãe, branca-creme, bico e patas laranja | virada para a **esquerda** (os filhotes seguem atrás, à direita) |
+| 1 | patinho amarelo com tufinho na cabeça | virado para a **esquerda**; o código faz três tamanhos |
+| 2 | caracol de casca marrom em espiral | virado para a **direita** |
+| 3 | pedrinha lisa, cinza-claro, achatada | **lisa**: o código escreve um número em cima |
+| 4 | cogumelo de chapéu **redondo vermelho** `#E8574A`, com carinha no pé | |
+| 5 | cogumelo de chapéu **redondo azul** `#5AA9F0` | o mesmo cogumelo, só o chapéu muda |
+| 6 | cogumelo de chapéu **pontudo vermelho** | chapéu em cone |
+| 7 | cogumelo de chapéu **pontudo azul** | |
+| 8 | vaga-lume, barriga acesa **amarela** `#FFE45C` | o mesmo vaga-lume nas 4, só a luz muda |
+| 9 | vaga-lume, luz **verde** `#8FF06A` | |
+| 10 | vaga-lume, luz **azul** `#6FD2FF` | |
+| 11 | vaga-lume, luz **rosa** `#FF8FD2` | |
+| 12 | concha aberta em leque, rosa-pêssego | a "casa" do peixe |
+| 13 | ícone cinza: corpo de peixe (oval com olho, sem rabo) | rótulo CORPO da ficha |
+| 14 | ícone cinza: rabo de peixe sozinho (barbatana em V) | rótulo RABO da ficha |
+| 15 | cesta de vime aberta, vazia | |
+
+### Prompt copiável
+
+~~~text
+STYLE — USE THE ATTACHED IMAGE AS THE ART STYLE REFERENCE, and match its rendering exactly: cute chibi anime sticker-comic illustration; clean, smooth lineart of medium weight drawn in a darker tone of each area's own color (deep brown, dark green, dark teal — never pure black); flat cel shading with ONE soft shadow tone and almost no gradients; small white "+" sparkle marks on shiny surfaces; big glossy expressive eyes with a bright highlight; rosy cheeks; soft rounded chunky shapes; a thin white sticker keyline around the whole silhouette. Take ONLY the art style: do NOT copy its characters, outfits, clouds, slimes, rainbow, speech bubbles or framing.
+
+A game sprite sheet on a fully TRANSPARENT background: a grid of 4 columns x 4 rows, each cell 256 x 256 (total 1024 x 1024), read left to right, top row first. Sixteen separate pieces, one per cell, each about 75% of its cell with clear empty margin; animals stand with their feet near the bottom of the cell, objects are centered.
+ROW 1:
+1. A MOTHER DUCK, cream-white feathers, orange beak and orange webbed feet, side view, walking, FACING LEFT, proud happy face.
+2. A tiny round yellow DUCKLING with a little tuft on the head, orange beak and feet, side view, FACING LEFT, happy.
+3. A cute SNAIL with a brown spiral shell and a cream body, side view, FACING RIGHT, happy.
+4. A plain smooth flat light-grey PEBBLE, oval, seen from the front, with an EMPTY smooth face (nothing drawn on it).
+ROW 2 — the SAME cute mushroom with a cream stem that has a tiny happy face (two dots and a smile), only the cap changes:
+5. ROUND dome cap, RED (#E8574A) with white spots.
+6. ROUND dome cap, BLUE (#5AA9F0) with white spots.
+7. POINTED cone cap, RED (#E8574A) with white spots.
+8. POINTED cone cap, BLUE (#5AA9F0) with white spots.
+ROW 3 — the SAME cute chibi FIREFLY in all four, front view, chocolate-brown body, big glossy eyes, two little antennas, clear white wings, its round BELLY LANTERN filled with a flat bright color and NO halo or glow drawn around it (the game adds the glow); only the lantern color changes:
+9. YELLOW light (#FFE45C). 10. GREEN light (#8FF06A). 11. LIGHT-BLUE light (#6FD2FF). 12. PINK light (#FF8FD2).
+ROW 4:
+13. An open fan-shaped SEASHELL, soft peach-pink (#F7C9B0), ribbed, seen from the front, like a little house.
+14. A flat solid GREY icon (#8A9095) of a fish BODY only: a plain oval with one eye dot, NO tail, NO fins, NO face details.
+15. A flat solid GREY icon (#8A9095) of a fish TAIL only: one V-shaped tail fin, nothing else.
+16. An open woven wicker BASKET with a handle, warm honey color, EMPTY.
+
+DO NOT INCLUDE: text, letters, numbers, writing on the pebble, colored icons in cells 14 and 15, faces on the icons, different mushroom stems, different firefly bodies, scary bugs, realistic insect anatomy, extra animals, fish, ponds, water, grass under the pieces, items crossing cell borders, items cut by the cell edge, ground, shadows on the ground, the characters from the reference image (Genshin Impact fan-art boys: a dark-teal-haired boy with a diamond forehead mark and purple scarf, a dark-haired boy with braids, a white flower and a green cape, a white-and-red-haired samurai boy, a red-haired boy with a long coat), slimes, cloud creatures, floating clouds, rainbows, speech bubbles with symbols, watermarks, signatures, @handles, website names, harsh pure-black outlines, western cartoon style, sketchy rough lines, painterly realistic rendering, 3D render, photorealistic.
+~~~
+
+### 11.14 `peixes.png` — 3 × 3 células de 256 (768 × 768), alfa
+
+Linha = cor do **corpo**, coluna = cor do **rabo**; o mesmo peixe nas nove, virado para a **esquerda**. São as cores do N2 (laranja, verde, roxo), e de novo é o rótulo da ficha que decide: *corpo laranja + rabo verde* é outro peixe que *corpo verde + rabo laranja*.
+
+| | rabo laranja | rabo verde | rabo roxo |
+|---|---|---|---|
+| **corpo laranja** | 0 | 1 | 2 |
+| **corpo verde** | 3 | 4 | 5 |
+| **corpo roxo** | 6 | 7 | 8 |
+
+### Prompt copiável
+
+~~~text
+STYLE — USE THE ATTACHED IMAGE AS THE ART STYLE REFERENCE, and match its rendering exactly: cute chibi anime sticker-comic illustration; clean, smooth lineart of medium weight drawn in a darker tone of each area's own color (deep brown, dark green, dark teal — never pure black); flat cel shading with ONE soft shadow tone and almost no gradients; small white "+" sparkle marks on shiny surfaces; big glossy expressive eyes with a bright highlight; rosy cheeks; soft rounded chunky shapes; a thin white sticker keyline around the whole silhouette. Take ONLY the art style: do NOT copy its characters, outfits, clouds, slimes, rainbow, speech bubbles or framing.
+
+A game sprite sheet on a fully TRANSPARENT background: a grid of 3 columns x 3 rows, each cell 256 x 256 (total 768 x 768), read left to right, top row first. The SAME cute round chibi FISH in all nine cells, in exactly the same pose and scale, side view, FACING LEFT, centered, about 75% of the cell width: a round chubby body with a small top fin, a big glossy eye on the left side, rosy cheek, small happy smile, and a big clearly separate V-shaped TAIL fin on the right.
+ROW 1 = ORANGE body (#F08A3C), ROW 2 = GREEN body (#5DBB63), ROW 3 = PURPLE body (#9B7BD8). The small top fin follows the body color.
+COLUMN 1 = ORANGE tail (#F08A3C), COLUMN 2 = GREEN tail (#5DBB63), COLUMN 3 = PURPLE tail (#9B7BD8).
+The tail is big enough to read its color at a glance and keeps its color even when it matches the body: a thin darker outline separates the tail from the body so an orange tail on an orange body still reads as a tail. No stripes, no patterns, no belly of another color.
+
+DO NOT INCLUDE: stripes, spots, patterns, two-colored bodies, other colors, yellow or blue fish, different poses, different sizes, fish facing right, bubbles, water, seaweed, shells, text, letters, numbers, items crossing cell borders, items cut by the cell edge, ground, shadows, the characters from the reference image (Genshin Impact fan-art boys: a dark-teal-haired boy with a diamond forehead mark and purple scarf, a dark-haired boy with braids, a white flower and a green cape, a white-and-red-haired samurai boy, a red-haired boy with a long coat), slimes, cloud creatures, floating clouds, rainbows, speech bubbles with symbols, watermarks, signatures, @handles, website names, harsh pure-black outlines, western cartoon style, sketchy rough lines, painterly realistic rendering, 3D render, photorealistic.
 ~~~
 
 ### 11.10 Na entrega (N2/N3)

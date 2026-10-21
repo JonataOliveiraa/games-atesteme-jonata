@@ -1,60 +1,80 @@
 import Phaser from 'phaser'
 import { FX } from '../../../../shared/effects/FX'
-import { UI_CELL, UI_SHEET, cellKey } from '../data/files'
-import { BELL, BUILD, CARD, CELL, DEPTH, H, MANUAL, W, slotX, trayPos } from '../data/layout'
-import { columns, height, pieceById } from '../data/logic'
+import { IF_KEY, PIPOCA_CELL, PIPOCA_SHEET, UI_CELL, UI_SHEET, cellKey } from '../data/files'
+import { BELL, BUILD, CARD, CELL, DEPTH, H, IF, MANUAL, MINI, W, slotXs, trayPos } from '../data/layout'
+import { columns, height, positions, tapeOf, type Position } from '../data/logic'
 import { C, CSS, FONT, SIZE } from '../data/theme'
 import { TIMING } from '../data/timing'
-import { LABEL } from '../data/words'
-import type { PhaseDef, Piece, Rect, Vec } from '../types'
+import { IF_WORDS, LABEL } from '../data/words'
+import type { Page, PhaseDef, Piece, Rect, Tape, Vec } from '../types'
 import { paintImage } from './art'
 import type { Audio } from './audio'
-import { bellImage, pieceImage, type From } from './board'
+import { askImage, askMark, bellFlipped, bellImage, pieceImage, type From } from './board'
 
 type Mark = 'none' | 'pulse' | 'current' | 'blame'
 
 interface Card {
     id: string
-    piece: Piece
+    page: Page
     root: Phaser.GameObjects.Container
     ring: Phaser.GameObjects.Graphics
     mini: Phaser.GameObjects.Image
+    stamp?: Phaser.GameObjects.Text
     home: Vec
-    slot: number
+    holder?: Holder
     busy: boolean
     mark: Mark
     pulse?: Phaser.Tweens.Tween
 }
 
-interface Slot {
+interface Holder extends Position {
     x: number
-    image: Phaser.GameObjects.Image
+    y: number
+    scale: number
+    card?: Card
+}
+
+interface Slot {
+    image?: Phaser.GameObjects.Image
     badge: Phaser.GameObjects.Arc
     number: Phaser.GameObjects.Text
-    card?: Card
+}
+
+interface IfCard {
+    root: Phaser.GameObjects.Container
+    ring: Phaser.GameObjects.Graphics
 }
 
 export interface Pages {
     setPhase(phase: PhaseDef): void
     enter(from: Vec): Promise<void>
+    leave(to: Vec): Promise<void>
     setPlayable(on: boolean): void
     tap(id: string): Promise<void>
-    tapSlot(i: number): Promise<void>
+    tapAt(at: Position): Promise<void>
     cardAt(id: string): Vec
-    slotAt(i: number): Vec
-    order(): Piece[]
-    lift(i: number): Promise<void>
-    take(i: number): From
-    done(i: number): void
-    blame(i: number): Promise<void>
+    cardRect(id: string): Rect
+    holderAt(at: Position): Vec
+    order(): Tape
+    lift(at: Position): Promise<void>
+    take(at: Position): From
+    restore(at: Position): void
+    count(at: Position, n: number): void
+    done(at: Position): void
+    blame(at: Position): Promise<void>
     trayRect(): Rect
     manualRect(): Rect
     destroy(): void
 }
 
+const stampText = (n: number) => `×${n}`
+
 export function createPages(scene: Phaser.Scene, audio: Audio, onBuild: () => void): Pages {
+    let phase: PhaseDef | undefined
     let cards: Card[] = []
+    let holders: Holder[] = []
     let slots: Slot[] = []
+    let ifCard: IfCard | undefined
     let playable = false
     let enabled = false
     let bandIn = false
@@ -117,7 +137,7 @@ export function createPages(scene: Phaser.Scene, audio: Audio, onBuild: () => vo
     }
 
     const refresh = () => {
-        const next = playable && slots.length > 0 && slots.every(s => s.card) && cards.every(c => !c.busy)
+        const next = playable && holders.length > 0 && holders.every(h => h.card) && cards.every(c => !c.busy)
         if (next === enabled) return
         enabled = next
         paintButton()
@@ -149,26 +169,41 @@ export function createPages(scene: Phaser.Scene, audio: Audio, onBuild: () => vo
             card.pulse = scene.tweens.add({ targets: g, alpha: { from: 0.25, to: 1 }, duration: 600, yoyo: true, repeat: -1 })
     }
 
+    const paintIf = (mark: Mark) => {
+        if (!ifCard) return
+        const g = ifCard.ring
+        g.clear()
+        if (mark === 'none') return
+        g.lineStyle(6, mark === 'blame' ? C.oops : C.ring, 1)
+        g.strokeRoundedRect(-IF.w / 2 - CARD.pulse, -IF.h / 2 - CARD.pulse, IF.w + CARD.pulse * 2, IF.h + CARD.pulse * 2, 24)
+    }
+
     const paintRings = () =>
         cards.forEach(card => {
             if (card.mark === 'current' || card.mark === 'blame') return
-            paintRing(card, playable && card.slot < 0 && !card.busy ? 'pulse' : 'none')
+            paintRing(card, playable && !card.holder && !card.busy ? 'pulse' : 'none')
         })
 
-    const slotAt = (i: number): Vec => ({ x: slots[i]?.x ?? MANUAL.slotCx, y: MANUAL.slotY })
+    const same = (a: Position, b: Position) => a.slot === b.slot && a.pocket === b.pocket
+
+    const holderOf = (at: Position) => holders.find(h => same(h, at))
+
+    const baseScale = (card: Card) => card.holder?.scale ?? 1
 
     const move = async (card: Card) => {
         if (card.busy) return
         let to: Vec
-        if (card.slot < 0) {
-            const i = slots.findIndex(s => !s.card)
-            if (i < 0) return
-            slots[i].card = card
-            card.slot = i
-            to = slotAt(i)
+        let scale = 1
+        if (!card.holder) {
+            const free = holders.find(h => !h.card)
+            if (!free) return
+            free.card = card
+            card.holder = free
+            to = free
+            scale = free.scale
         } else {
-            slots[card.slot].card = undefined
-            card.slot = -1
+            card.holder.card = undefined
+            card.holder = undefined
             to = card.home
         }
         card.busy = true
@@ -176,8 +211,11 @@ export function createPages(scene: Phaser.Scene, audio: Audio, onBuild: () => vo
         refresh()
         audio.paper()
         scene.tweens.killTweensOf(card.root)
-        card.root.setScale(1).setDepth(DEPTH.cardFlying)
-        await FX.arcTo(scene, card.root, to, { height: 70, duration: TIMING.card })
+        card.root.setDepth(DEPTH.cardFlying)
+        await FX.all(
+            FX.arcTo(scene, card.root, to, { height: 70, duration: TIMING.card }),
+            FX.to(scene, card.root, { scale }, { duration: TIMING.card }),
+        )
         if (!card.root.active) return
         card.root.setDepth(DEPTH.card)
         card.busy = false
@@ -185,9 +223,12 @@ export function createPages(scene: Phaser.Scene, audio: Audio, onBuild: () => vo
         refresh()
     }
 
-    const buildCard = (next: PhaseDef, piece: Piece, home: Vec): Card => {
-        const page = scene.add.image(0, 0, UI_SHEET.key, cellKey(UI_CELL.page))
-        page.setDisplaySize(CARD.w, CARD.h)
+    const highlight = (page: Page): Piece =>
+        page.kind === 'piece' ? page.piece : { id: page.id, kind: 'block', c: page.c, r: 0 }
+
+    const buildCard = (next: PhaseDef, page: Page, home: Vec): Card => {
+        const art = scene.add.image(0, 0, UI_SHEET.key, cellKey(UI_CELL.page))
+        art.setDisplaySize(CARD.w, CARD.h)
         const cols = columns(next)
         const rows = Math.max(2, height(next))
         const s = Math.min(CARD.inner.w / (cols * CELL), CARD.inner.h / (rows * CELL))
@@ -195,36 +236,129 @@ export function createPages(scene: Phaser.Scene, audio: Audio, onBuild: () => vo
         const left = (-cols * cell) / 2
         const base = CARD.inner.y + CARD.inner.h / 2
         const line = scene.add.rectangle(0, base + 2, cols * cell + 18, 5, C.woodDark).setOrigin(0.5, 0)
-        const ghosts = next.pieces.map(p =>
-            pieceImage(scene, p, cell)
-                .setPosition(left + (p.c + 0.5) * cell, base - p.r * cell)
-                .setTintFill(C.ghostMini)
-                .setAlpha(0.95),
+        const ghosts: Phaser.GameObjects.GameObject[] = next.model.flatMap(p => {
+            const x = left + (p.c + 0.5) * cell
+            const y = base - p.r * cell
+            return [
+                pieceImage(scene, p, cell + MINI.rim * 2)
+                    .setPosition(x, y + MINI.rim)
+                    .setTintFill(C.headerLine)
+                    .setAlpha(MINI.rimAlpha),
+                pieceImage(scene, p, cell).setPosition(x, y).setTintFill(C.ghostMini),
+            ]
+        })
+        if (next.choice) {
+            const x = left + (next.choice.c + 0.5) * cell
+            const y = base - next.choice.r * cell
+            ghosts.push(askImage(scene, cell).setPosition(x, y), askMark(scene, cell * 0.62).setPosition(x, y - cell / 2))
+        }
+        const bells = next.bells.map(c =>
+            bellImage(scene, BELL.h * s)
+                .setPosition(left + (c + 0.5) * cell, base)
+                .setFlipX(bellFlipped(next, c)),
         )
-        const bell = bellImage(scene, BELL.h * s).setPosition(left + (next.bell + 0.5) * cell, base)
+        const piece = highlight(page)
         const at = { x: left + (piece.c + 0.5) * cell, y: base - piece.r * cell }
-        const glow = scene.add.rectangle(at.x, at.y - cell / 2, cell + 12, cell + 12, C.butter, 0.75)
-        const mini = pieceImage(scene, piece, cell).setPosition(at.x, at.y)
+        const big = cell * MINI.pop
+        const glow = scene.add.rectangle(at.x, at.y - big / 2, big + 12, big + 12, C.butter, 0.9).setStrokeStyle(3, C.ring)
+        const outline = pieceImage(scene, piece, big + MINI.rim * 2)
+            .setPosition(at.x, at.y + MINI.rim)
+            .setTintFill(C.headerLine)
+        const mini = pieceImage(scene, piece, big).setPosition(at.x, at.y)
         const ring = scene.add.graphics()
+        const parts: Phaser.GameObjects.GameObject[] = [ring, art, line, ...ghosts, ...bells, glow, outline, mini]
+        let stamp: Phaser.GameObjects.Text | undefined
+        if (page.kind === 'repeat') {
+            const disc = scene.add.circle(CARD.stamp.x, CARD.stamp.y, CARD.stamp.r, C.accent).setStrokeStyle(4, C.white)
+            stamp = scene.add
+                .text(CARD.stamp.x, CARD.stamp.y + 1, stampText(page.n), {
+                    fontFamily: FONT.black,
+                    fontSize: `${SIZE.stamp}px`,
+                    color: CSS.white,
+                })
+                .setOrigin(0.5)
+                .setResolution(2)
+            parts.push(disc, stamp)
+        }
         const root = scene.add
-            .container(home.x, home.y, [ring, page, line, ...ghosts, bell, glow, mini])
+            .container(home.x, home.y, parts)
             .setDepth(DEPTH.card)
             .setSize(CARD.w, CARD.h)
             .setInteractive({ useHandCursor: true })
-        const card: Card = { id: piece.id, piece, root, ring, mini, home, slot: -1, busy: false, mark: 'none' }
+        const card: Card = { id: page.id, page, root, ring, mini, stamp, home, busy: false, mark: 'none' }
         root.on('pointerdown', () => {
             if (!playable) return
             void move(card)
         })
         root.on('pointerover', () => {
             if (!playable || card.busy) return
-            void FX.to(scene, root, { scale: CARD.hover }, { duration: 120 })
+            void FX.to(scene, root, { scale: baseScale(card) * CARD.hover }, { duration: 120 })
         })
         root.on('pointerout', () => {
             if (card.busy) return
-            void FX.to(scene, root, { scale: 1 }, { duration: 120 })
+            void FX.to(scene, root, { scale: baseScale(card) }, { duration: 120 })
         })
         return card
+    }
+
+    const photo = (next: PhaseDef) => {
+        const { w, h } = IF.photo
+        const frame = scene.add.graphics()
+        frame.fillStyle(C.shadow, 0.25)
+        frame.fillRoundedRect(-w / 2 + 4, -h / 2 + 6, w, h, 12)
+        frame.fillStyle(C.white, 1)
+        frame.fillRoundedRect(-w / 2, -h / 2, w, h, 12)
+        frame.fillStyle(C.wall, 1)
+        frame.fillRoundedRect(-w / 2 + 8, -h / 2 + 8, w - 16, h - 16, 8)
+        frame.fillStyle(C.wood, 1)
+        frame.fillRect(-w / 2 + 8, h / 2 - 22, w - 16, 14)
+        frame.lineStyle(4, C.headerLine, 1)
+        frame.strokeRoundedRect(-w / 2, -h / 2, w, h, 12)
+        const parts: Phaser.GameObjects.GameObject[] = [frame]
+        const floor = h / 2 - 20
+        const sides = ['left', 'right'] as const
+        sides.forEach(side => {
+            const out = side === 'left' ? -1 : 1
+            const x = out * w * 0.26
+            parts.push(bellImage(scene, h * 0.6).setPosition(x, floor).setFlipX(side === 'left'))
+            if (side !== next.cond) return
+            const cat = scene.add.image(x + out * 16, floor + 2, PIPOCA_SHEET.key, cellKey(PIPOCA_CELL.sleep))
+            cat.setOrigin(0.5, 1).setScale((w * 0.36) / cat.width)
+            parts.push(cat)
+        })
+        return scene.add.container(0, IF.photo.y, parts).setAngle(IF.photo.angle)
+    }
+
+    const buildIf = (next: PhaseDef, x: number): IfCard => {
+        const art = scene.add.image(0, 0, IF_KEY).setDisplaySize(IF.w, IF.h)
+        const ring = scene.add.graphics()
+        const word = scene.add
+            .text(IF.word.x, IF.word.y, IF_WORDS.if, { fontFamily: FONT.black, fontSize: `${SIZE.seWord}px`, color: CSS.ink })
+            .setOrigin(0.5)
+            .setResolution(2)
+        const label = (text: string, k: number, color: string) =>
+            scene.add
+                .text((k - 0.5) * IF.w, IF.labelY, text, {
+                    fontFamily: FONT.black,
+                    fontSize: `${SIZE.pocket}px`,
+                    color: CSS.white,
+                    stroke: color,
+                    strokeThickness: 6,
+                })
+                .setOrigin(0.5)
+                .setResolution(2)
+        const root = scene.add
+            .container(x, MANUAL.slotY, [
+                ring,
+                art,
+                word,
+                photo(next),
+                label(IF_WORDS.yes, IF.pockets.yes, CSS.yes),
+                label(IF_WORDS.no, IF.pockets.no, CSS.no),
+            ])
+            .setDepth(DEPTH.card - 2)
+            .setVisible(false)
+        return { root, ring }
     }
 
     const clear = () => {
@@ -234,29 +368,41 @@ export function createPages(scene: Phaser.Scene, audio: Audio, onBuild: () => vo
             card.root.destroy()
         })
         slots.forEach(slot => {
-            slot.image.destroy()
+            slot.image?.destroy()
             slot.badge.destroy()
             slot.number.destroy()
         })
+        if (ifCard) {
+            scene.tweens.killTweensOf(ifCard.root)
+            ifCard.root.destroy()
+        }
+        ifCard = undefined
         cards = []
+        holders = []
         slots = []
     }
 
     const rowsUsed = () => Math.ceil(cards.length / 2)
 
+    const slotVisuals = () => [...slots.flatMap(s => [s.image, s.badge, s.number]), ifCard?.root].filter(o => !!o)
+
     const pages: Pages = {
         setPhase(next) {
             clear()
+            phase = next
             playable = false
             enabled = false
             paintButton()
-            const count = next.pieces.length
-            slots = Array.from({ length: count }, (_, i) => {
-                const x = slotX(count, i)
-                const image = scene.add.image(x, MANUAL.slotY, UI_SHEET.key, cellKey(UI_CELL.slot)).setDepth(DEPTH.manual + 1)
-                image.setDisplaySize(CARD.w, CARD.h).setVisible(false)
-                const bx = x - CARD.w / 2 + 8
-                const by = MANUAL.slotY - CARD.h / 2 + 8
+            const widths = Array.from({ length: next.slots }, (_, i) => (i === next.ifSlot ? IF.w : CARD.w))
+            const xs = slotXs(widths)
+            slots = xs.map((x, i) => {
+                const isIf = i === next.ifSlot
+                const image = isIf
+                    ? undefined
+                    : scene.add.image(x, MANUAL.slotY, UI_SHEET.key, cellKey(UI_CELL.slot)).setDepth(DEPTH.manual + 1).setVisible(false)
+                image?.setDisplaySize(CARD.w, CARD.h)
+                const bx = x - widths[i] / 2 + 8
+                const by = MANUAL.slotY - (isIf ? IF.h : CARD.h) / 2 + 8
                 const badge = scene.add
                     .circle(bx, by, MANUAL.badgeR, C.white)
                     .setStrokeStyle(4, C.manualDark)
@@ -268,12 +414,21 @@ export function createPages(scene: Phaser.Scene, audio: Audio, onBuild: () => vo
                     .setResolution(2)
                     .setDepth(DEPTH.card + 3)
                     .setVisible(false)
-                return { x, image, badge, number }
+                if (isIf) ifCard = buildIf(next, x)
+                return { image, badge, number }
             })
-            cards = next.tray.map((id, i) => {
-                const piece = pieceById(next, id)
-                if (!piece) throw new Error(`página ${id} sem peça`)
-                const card = buildCard(next, piece, trayPos(i))
+            holders = positions(next).map(at => {
+                const x = xs[at.slot]
+                if (!at.pocket) return { ...at, x, y: MANUAL.slotY, scale: 1 }
+                return {
+                    ...at,
+                    x: x + (IF.pockets[at.pocket] - 0.5) * IF.w,
+                    y: MANUAL.slotY + (IF.pocketY - 0.5) * IF.h,
+                    scale: IF.scale,
+                }
+            })
+            cards = next.tray.map((page, i) => {
+                const card = buildCard(next, page, trayPos(i))
                 card.root.setVisible(false)
                 return card
             })
@@ -290,8 +445,9 @@ export function createPages(scene: Phaser.Scene, audio: Audio, onBuild: () => vo
             await FX.all(
                 ...slots.map((slot, i) =>
                     FX.wait(scene, i * 70).then(() => {
-                        ;[slot.image, slot.badge, slot.number].forEach(o => o.setVisible(true))
-                        return FX.popIn(scene, slot.image, { from: 0.6, duration: 260 })
+                        ;[slot.image, slot.badge, slot.number].forEach(o => o?.setVisible(true))
+                        const pop = slot.image ?? (i === phase?.ifSlot ? ifCard?.root.setVisible(true) : undefined)
+                        return pop ? FX.popIn(scene, pop, { from: 0.6, duration: 260 }) : Promise.resolve()
                     }),
                 ),
             )
@@ -309,6 +465,26 @@ export function createPages(scene: Phaser.Scene, audio: Audio, onBuild: () => vo
                 ),
             )
         },
+        async leave(to) {
+            playable = false
+            paintRings()
+            refresh()
+            await FX.all(
+                ...cards.map((card, i) =>
+                    FX.wait(scene, i * 80).then(async () => {
+                        scene.tweens.killTweensOf(card.root)
+                        card.root.setDepth(DEPTH.cardFlying)
+                        audio.paper()
+                        await FX.all(
+                            FX.arcTo(scene, card.root, to, { height: 110, duration: TIMING.cardIn }),
+                            FX.to(scene, card.root, { scale: 0.3, alpha: 0 }, { duration: TIMING.cardIn }),
+                        )
+                    }),
+                ),
+                ...slotVisuals().map(o => FX.to(scene, o, { alpha: 0 }, { duration: 260 })),
+            )
+            clear()
+        },
         setPlayable(on) {
             playable = on
             paintRings()
@@ -318,39 +494,82 @@ export function createPages(scene: Phaser.Scene, audio: Audio, onBuild: () => vo
             const card = cards.find(c => c.id === id)
             return card ? move(card) : Promise.resolve()
         },
-        tapSlot(i) {
-            const card = slots[i]?.card
+        tapAt(at) {
+            const card = holderOf(at)?.card
             return card ? move(card) : Promise.resolve()
         },
         cardAt(id) {
             const card = cards.find(c => c.id === id)
             return card ? { x: card.root.x, y: card.root.y } : { x: 0, y: 0 }
         },
-        slotAt,
-        order: () => slots.map(s => s.card?.piece).filter((p): p is Piece => !!p),
-        async lift(i) {
-            const card = slots[i]?.card
-            if (!card) return
+        cardRect(id) {
+            const card = cards.find(c => c.id === id)
+            const s = card ? card.root.scale : 1
+            return { x: card?.root.x ?? 0, y: card?.root.y ?? 0, w: CARD.w * s, h: CARD.h * s }
+        },
+        holderAt(at) {
+            const h = holderOf(at)
+            return h ? { x: h.x, y: h.y } : { x: MANUAL.slotCx, y: MANUAL.slotY }
+        },
+        order: () => (phase ? tapeOf(phase, holders.map(h => h.card?.page)) : { slots: [] }),
+        async lift(at) {
+            const holder = holderOf(at)
+            if (!holder && phase?.ifSlot === at.slot) {
+                paintIf('current')
+                audio.paper()
+                if (ifCard) await FX.impact(scene, ifCard.root, 0.06)
+                return
+            }
+            const card = holder?.card
+            if (!card || !holder) return
             paintRing(card, 'current')
             audio.paper()
-            await FX.to(scene, card.root, { y: MANUAL.slotY - MANUAL.lift, scale: 1.06 }, { duration: TIMING.pageLift, ease: 'Back.easeOut' })
+            await FX.to(
+                scene,
+                card.root,
+                { y: holder.y - MANUAL.lift * holder.scale, scale: holder.scale * 1.06 },
+                { duration: TIMING.pageLift, ease: 'Back.easeOut' },
+            )
         },
-        take(i) {
-            const card = slots[i]?.card
-            if (!card) return { x: slotAt(i).x, y: slotAt(i).y, w: CELL * 0.3 }
+        take(at) {
+            const holder = holderOf(at)
+            const card = holder?.card
+            if (!card || !holder) return { x: holder?.x ?? MANUAL.slotCx, y: MANUAL.slotY, w: CELL * 0.3 }
             const s = card.root.scale
             const from = { x: card.root.x + card.mini.x * s, y: card.root.y + card.mini.y * s, w: card.mini.displayWidth * s }
             card.mini.setAlpha(0.2)
             return from
         },
-        done(i) {
-            const card = slots[i]?.card
-            if (!card) return
-            paintRing(card, 'none')
-            void FX.to(scene, card.root, { y: MANUAL.slotY, scale: 1, alpha: 0.8 }, { duration: TIMING.pageLift })
+        restore(at) {
+            holderOf(at)?.card?.mini.setAlpha(1)
         },
-        async blame(i) {
-            const card = slots[i]?.card
+        count(at, n) {
+            const stamp = holderOf(at)?.card?.stamp
+            if (!stamp) return
+            audio.tick(n)
+            scene.tweens.killTweensOf(stamp)
+            stamp.setScale(1, 1)
+            void FX.to(scene, stamp, { scaleX: 0 }, { duration: TIMING.count / 2, ease: 'Quad.easeIn' }).then(() => {
+                if (!stamp.active) return
+                stamp.setText(`${n}`)
+                return FX.to(scene, stamp, { scaleX: 1 }, { duration: TIMING.count / 2, ease: 'Quad.easeOut' })
+            })
+        },
+        done(at) {
+            const holder = holderOf(at)
+            if (!holder && phase?.ifSlot === at.slot) {
+                paintIf('none')
+                return
+            }
+            const card = holder?.card
+            if (!card || !holder) return
+            paintRing(card, 'none')
+            if (card.stamp && card.page.kind === 'repeat') card.stamp.setText(stampText(card.page.n))
+            void FX.to(scene, card.root, { y: holder.y, scale: holder.scale, alpha: 0.8 }, { duration: TIMING.pageLift })
+        },
+        async blame(at) {
+            if (at.pocket) paintIf('blame')
+            const card = holderOf(at)?.card
             if (!card) return
             paintRing(card, 'blame')
             card.mini.setAlpha(1)
@@ -365,8 +584,8 @@ export function createPages(scene: Phaser.Scene, audio: Audio, onBuild: () => vo
             return { x: (leftX + rightX) / 2, y: (topY + bottomY) / 2, w: rightX - leftX, h: bottomY - topY }
         },
         manualRect() {
-            const n = Math.max(1, slots.length)
-            const leftX = slotX(n, 0) - CARD.w / 2 - 14
+            const xs = holders.map(h => h.x)
+            const leftX = Math.min(MANUAL.slotCx, ...xs) - CARD.w / 2 - 14
             const rightX = BUILD.x + BUILD.w / 2 + 14
             return { x: (leftX + rightX) / 2, y: MANUAL.slotY, w: rightX - leftX, h: CARD.h + 30 }
         },

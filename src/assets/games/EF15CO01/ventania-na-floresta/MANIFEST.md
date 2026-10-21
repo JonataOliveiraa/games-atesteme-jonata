@@ -423,3 +423,92 @@ Verificação automática concluída: 39 células medidas, dimensões finais e g
 | pipa.png | `251080893f33c4737b651cf5be4276805385e4898b2c788a0653bc7ba8ef05c0` |
 
 Escopo: dezessete PNGs do N1, N2/N3 e capa, e este MANIFEST. Brutos e conferências ficam em outputs. Nenhum código foi editado e nenhum commit foi criado.
+
+
+## Entrega N3 — 21/10/2026
+
+Quatro texturas novas das seções 11.11–11.14 de TEXTURAS.md, geradas com a ferramenta integrada **image_gen.imagegen**, usando cada Prompt copiável inteiro. Referência de estilo anexada: `references/35-chibi-voador.webp`; consistência conferida com `filhotes.png`, `bichos.png` e `tece.png` publicados. Brutos em `outputs/ventania-na-floresta/raw/`, incluindo versões anteriores de noite e peixes preservadas com sufixo `-v1`. Prompts completos arquivados em [prompts-n3.json](../../../../../outputs/ventania-na-floresta/qa/prompts-n3.json).
+
+| Arquivo novo | Dimensões | Modo | Grade / célula | Bytes |
+|---|---|---|---|---:|
+| [bg-lagoa.png](bg-lagoa.png) | 1672 × 941 | RGB opaco | — | 2175489 |
+| [bg-noite.png](bg-noite.png) | 1672 × 941 | RGB opaco | — | 1261307 |
+| [turma.png](turma.png) | 1024 × 1024 | RGBA transparente | 4 × 4 / 256 × 256 | 760922 |
+| [peixes.png](peixes.png) | 768 × 768 | RGBA transparente | 3 × 3 / 256 × 256 | 200982 |
+
+### Processamento e conferência
+
+Mesmo processamento da entrega de 20/10: peças isoladas globalmente pelo alfa antes de separar a grade, evitando recortes nas divisões nominais dos brutos. Alfa <160 eliminado; suporte restante tornado opaco; redução Lanczos3, seguida de corte de alfa <48. Alfa 0 sempre tem RGB (0,0,0). Peças com limite de 215 × 215 px e aproximadamente 8% de margem; turma 0, 1 e 2 ancoradas em **y=235**, demais peças centradas. As duas folhas foram inspecionadas sobre fundo claro e escuro.
+
+Cogumelos de cada formato compartilham o desenho e mudam a cor do chapéu, preservando o pé; os quatro vaga-lumes compartilham o desenho e mudam a luz. Os nove peixes usam a mesma peça-mestre, silhueta, posição e escala; corpo e rabo receberam remapeamento separado para os hex contratados, preservando olhos, boca, bochecha, brilhos e sombras derivadas. A barriga creme do primeiro bruto dos peixes foi removida na geração corrigida. Ícones 13 e 14 têm preenchimento #8A9095, com olho e keyline preservados. Pedra sem letras, números ou símbolos escritos.
+
+Pata-mãe e patinho à esquerda; caracol à direita; todos os peixes à esquerda. Ordem conferida célula a célula. Noite sem vaga-lumes, lanternas, fachos ou luzes na clareira; lua e estrelas decorativas ficam fora da área útil medida. Nenhum código do jogo foi editado. **18 PNGs já existentes foram conferidos por SHA-256 e permanecem idênticos.**
+
+### Caixas reais por célula — alfa >96
+
+Coordenadas locais da célula de 256 × 256, índices iniciando em zero, ordem da esquerda para a direita e de cima para baixo. Formato **(x, y, largura, altura)**. Extremos inclusivos: último y = y + altura − 1.
+
+#### turma.png
+
+| Índice | Peça | Caixa real, px | Base / posição |
+|---:|---|---|---|
+| 0 | pata-mãe, esquerda | **(28, 21, 201, 215)** | y=235 |
+| 1 | patinho com tufo, esquerda | **(38, 21, 181, 215)** | y=235 |
+| 2 | caracol, direita | **(21, 48, 215, 188)** | y=235 |
+| 3 | pedrinha lisa sem escrita | **(21, 50, 215, 157)** | centrada |
+| 4 | cogumelo redondo vermelho | **(21, 26, 215, 205)** | centrada |
+| 5 | cogumelo redondo azul | **(21, 26, 215, 205)** | centrada |
+| 6 | cogumelo pontudo vermelho | **(29, 21, 199, 215)** | centrada |
+| 7 | cogumelo pontudo azul | **(29, 21, 199, 215)** | centrada |
+| 8 | vaga-lume amarelo | **(21, 37, 215, 183)** | centrada |
+| 9 | vaga-lume verde | **(21, 37, 215, 183)** | centrada |
+| 10 | vaga-lume azul | **(21, 37, 215, 183)** | centrada |
+| 11 | vaga-lume rosa | **(21, 37, 215, 183)** | centrada |
+| 12 | concha rosa-pêssego | **(21, 26, 215, 204)** | centrada |
+| 13 | ícone cinza: corpo de peixe | **(21, 59, 215, 138)** | centrada |
+| 14 | ícone cinza: rabo de peixe | **(33, 21, 191, 215)** | centrada |
+| 15 | cesta vazia | **(24, 21, 208, 215)** | centrada |
+
+#### peixes.png
+
+Linha = corpo; coluna = rabo. Cores base exatas presentes nas respectivas áreas, com sombras e contornos derivados. Todas as nove caixas e máscaras de alfa são idênticas.
+
+| Índice | Corpo | Rabo | Caixa real, px | Pixels hex exato corpo / rabo |
+|---:|---|---|---|---:|
+| 0 | laranja #F08A3C | laranja #F08A3C | **(21, 47, 215, 162)** | 7970 / 2251 |
+| 1 | laranja #F08A3C | verde #5DBB63 | **(21, 47, 215, 162)** | 7970 / 2295 |
+| 2 | laranja #F08A3C | roxo #9B7BD8 | **(21, 47, 215, 162)** | 7970 / 2318 |
+| 3 | verde #5DBB63 | laranja #F08A3C | **(21, 47, 215, 162)** | 8018 / 2251 |
+| 4 | verde #5DBB63 | verde #5DBB63 | **(21, 47, 215, 162)** | 8018 / 2295 |
+| 5 | verde #5DBB63 | roxo #9B7BD8 | **(21, 47, 215, 162)** | 8018 / 2318 |
+| 6 | roxo #9B7BD8 | laranja #F08A3C | **(21, 47, 215, 162)** | 8034 / 2250 |
+| 7 | roxo #9B7BD8 | verde #5DBB63 | **(21, 47, 215, 162)** | 8034 / 2295 |
+| 8 | roxo #9B7BD8 | roxo #9B7BD8 | **(21, 47, 215, 162)** | 8034 / 2318 |
+
+### Faixas vazias dos fundos — escala 1280 × 720
+
+Arquivos finais permanecem em **1672 × 941 RGB opaco**. Coordenadas abaixo na tela 1280 × 720 (X=1280/1672; Y=720/941), sem desenhar marcações nos arquivos publicados. Retângulos úteis conservadores medidos por segmentação de cor e conferência visual; tolerância visual de aproximadamente 5–10 px. A água conserva ondulações e brilhos decorativos.
+
+| Fundo / região | Caixa (x, y, largura, altura), px | Referência |
+|---|---|---|
+| bg-lagoa — água livre | **(306, 160, 763, 195)** | x=306–1068; y=160–354 |
+| bg-lagoa — areia livre | **(324, 566, 677, 154)** | x=324–1000; y=566–719 |
+| bg-noite — clareira vazia | **(310, 113, 667, 388)** | x=310–976; y=113–500 |
+
+Pranchas medidas: [lagoa](../../../../../outputs/ventania-na-floresta/qa/bg-lagoa-coordenadas-1280x720.png), [noite](../../../../../outputs/ventania-na-floresta/qa/bg-noite-coordenadas-1280x720.png). Dados: [cenarios-n3-1280x720.json](../../../../../outputs/ventania-na-floresta/qa/cenarios-n3-1280x720.json).
+
+### Validação e rastreabilidade N3
+
+**25 células com arte** validadas: dimensões e grades exatas; margens respeitadas; bases dos três bichos em y=235; alfa 1–47 ausente; zero RGB oculto em alfa 0; nenhuma ilha menor que 4 px no limiar alfa >96; hex dos corpos e rabos dos peixes conferidos separadamente; máscaras de alfa dos nove peixes idênticas.
+
+- [Turma, fundo claro](../../../../../outputs/ventania-na-floresta/qa/turma-claro-n3.png) e [fundo escuro](../../../../../outputs/ventania-na-floresta/qa/turma-escuro-n3.png).
+- [Peixes, fundo claro](../../../../../outputs/ventania-na-floresta/qa/peixes-claro-n3.png) e [fundo escuro](../../../../../outputs/ventania-na-floresta/qa/peixes-escuro-n3.png).
+- [Caixas finais e peças de origem](../../../../../outputs/ventania-na-floresta/qa/medidas-n3.json).
+- [Validação detalhada](../../../../../outputs/ventania-na-floresta/qa/validation-n3.json).
+
+| Arquivo | SHA-256 final |
+|---|---|
+| bg-lagoa.png | `3233e9b6651c3fad93c8cb4fafcf013a162b87862b1dc2542a720b3ef62bfc2b` |
+| bg-noite.png | `d48e7e5e717d43580e50cd9ae63eb1843e7f6c4aa18c478a45ca101a1dd2760f` |
+| turma.png | `c2af25c3899751e2085cad899a9bdd3dabbc2ddd135142d841d348b09f380ad6` |
+| peixes.png | `e4f4772022c16b0662250f738368eaf199393f54a9e64ee23a3ad1e15431da4e` |

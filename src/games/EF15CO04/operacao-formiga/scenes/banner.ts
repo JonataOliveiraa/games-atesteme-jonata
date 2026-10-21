@@ -5,7 +5,7 @@ import { C, CSS, FONT, SIZE } from '../data/theme'
 
 /** A faixa do erro, a única frase inteira fora do `?`. */
 export interface Banner {
-    say(text: string): void
+    say(text: string, y?: number): void
     clear(): void
     destroy(): void
 }
@@ -31,8 +31,9 @@ export function createBanner(scene: Phaser.Scene): Banner {
     }
 
     return {
-        say(text) {
+        say(text, y = BANNER.y) {
             hide()
+            box.setY(y)
             label.setText(text).setScale(1)
             if (label.width > w - 70) label.setScale((w - 70) / label.width)
             box.setVisible(true).setScale(1).setAlpha(1)

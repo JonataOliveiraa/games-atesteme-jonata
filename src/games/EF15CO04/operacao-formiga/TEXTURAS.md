@@ -22,7 +22,7 @@ Planejamento: [PLANEJAMENTO.md](./PLANEJAMENTO.md) (§3 o laço, §5 a tela, §6
 
 **A ordem das células é contrato com o código.** O tamanho pode variar, porque o jogo mede cada célula na carga, mas a grade, a ordem, o conteúdo e a **direção** de cada peça não podem mudar.
 
-**Para o N1 bastam:** `jardim`, `formiga`, `rainha`, `frutas` e `cenario`. A capa vem por último. As folhas do N2 e do N3 estão no §9.
+**Para o N1 bastam:** `jardim`, `formiga`, `rainha`, `frutas` e `cenario`. A capa vem por último. As folhas do N2 e do N3 (`folhas`, `folha-gigante`, `sujeira`, `amigas`) estão no §9.
 
 ## 2. Regras deste jogo
 
@@ -180,13 +180,90 @@ DO NOT INCLUDE: any other text, misspelled title, extra letters, subtitles, digi
 
 ---
 
-## 9. N2 e N3 (só quando o nível for feito)
+## 9. N2 e N3 (PLANEJAMENTO §11)
 
-| Arquivo | Grade | Célula | Nível | Conteúdo |
-|---|---|---|---|---|
-| `folhas.png` | 2 × 1 | 768 | N2 | duas folhas grandes vistas bem de cima, inteiras, **silhueta é contrato** como as frutas (convexas, o polígono vai para `data/fruits.ts` quando o N2 for desenhado) |
-| `folha-gigante.png` | — | 1024 × 768 | N3 | a folha gigante limpa, vista de cima |
-| `sujeira.png` | 4 × 1 | 128 | N3 | gota de orvalho, grão de terra, raminho seco, pétala murcha, para pôr por cima da folha (a raspadinha apaga) |
-| `amigas.png` | 4 × 2 | 192 | N3 | uma formiga amiga (outra cor, `#6E8B3D`): cochilando, acordando, andando A/B, carregando A/B, feliz, empurrando |
+| Arquivo | Grade | Célula | Tamanho final | Alfa | Nível | Uso |
+|---|---|---|---|---|---|---|
+| `folhas.png` | 1 × 2 | 1024 × 640 | 1024 × 1280 | sim | N2 | as duas folhas que a criança corta (**silhueta é contrato**, como as frutas) |
+| `folha-gigante.png` | — | — | 1024 × 768 | sim | N3 | a folha gigante, limpa, vista bem de cima |
+| `sujeira.png` | 4 × 1 | 128 | 512 × 128 | sim | N3 | a sujeira que o código espalha por cima da folha gigante |
+| `amigas.png` | 4 × 2 | 192 | 768 × 384 | sim | N3 | a formiga amiga em 8 poses, virada para a **direita** |
 
-Os prompts saem quando cada nível for planejado em detalhe, no mesmo formato dos de cima.
+O fundo, a rainha, a formiguinha e o cenário são os mesmos do N1. O caminho largo do N3 é o mesmo muro com duas pedras a menos (código).
+
+### 9.1 `folhas.png` — 1 × 2 células de 1024 × 640 (1024 × 1280), alfa — **silhueta é contrato**
+
+As folhas **vistas bem de cima (90°)**, inteiras, deitadas na horizontal, com o **cabinho à esquerda** e a **ponta à direita**. Cada uma fica centrada em **(512, 320)** da sua célula. O código corta cada pedaço pelo polígono, então a arte tem de **encher exatamente** a silhueta, sem nada para fora (o cabinho fica **dentro** do contorno, na base).
+
+| Célula | Folha | Silhueta (px da célula) | Cores |
+|---|---|---|---|
+| 0 | **folha verde** | oval de 800 × 446 (x 112–912, y 97–543), a base da esquerda um pouco mais larga que a ponta da direita | verde-folha `#6CC24A`, nervura central clara de ponta a ponta e nervurinhas laterais suaves |
+| 1 | **folha grande** | oval de 880 × 520 (x 72–952, y 60–580), mesmo formato | verde-limão `#A8C93A`, mesma nervura |
+
+- O polígono exato vai em `data/fruits.ts`: x = −a·cos t, y = b·sen t·(1 + 0,12·cos t), com (a, b) = folha verde (400, 223) e folha grande (440, 260).
+- **Contorno escuro** em volta, como as frutas. **Sem buraco, sem mordida, sem dobra para fora da silhueta.** A polpa clara das bordas cortadas é do código.
+- Se a geração sair com outra proporção, a Tesoura estica a folha até encostar na silhueta (é uma folha: esticar um pouco não aparece) e apaga o que passar.
+
+~~~text
+STYLE — USE THE ATTACHED IMAGE AS THE ART STYLE REFERENCE, and match its rendering exactly: cute chibi anime sticker-comic illustration; clean, smooth lineart of medium weight drawn in a darker tone of each area's own color (never pure black); flat cel shading with ONE soft shadow tone and almost no gradients; small white "+" sparkle marks on shiny surfaces; soft rounded chunky shapes. Take ONLY the art style: do NOT copy its characters, outfits, clouds, slimes, rainbow, speech bubbles or framing.
+
+Sprite sheet on a fully transparent background, 1 column by 2 rows, 1024x640 px per cell (1024x1280 px total), no grid lines drawn. Two whole big leaves seen STRAIGHT FROM ABOVE (top view, 90 degrees), lying flat and HORIZONTAL, each centred at x 512, y 320 of its cell, each filling its exact oval silhouette with a dark green outline. The stem end is on the LEFT and the tip on the RIGHT; the left half is a little wider than the right half; the short stem is drawn INSIDE the silhouette at the left end, nothing sticking out. Cell 1 (top): a leaf-green #6CC24A leaf, an oval about 800 px wide and 446 px tall, with a light central vein running from the stem to the tip and soft thin side veins. Cell 2 (bottom): a bigger lime-green #A8C93A leaf, an oval about 880 px wide and 520 px tall, the same shape and veins. Whole smooth leaves only.
+
+DO NOT INCLUDE: torn leaves, holes, bites, cut edges, curled or folded edges, serrated or jagged edges, lobes, long stems sticking out of the silhouette, branches, dew drops, dirt, insects, ants, faces on the leaves, plates, shadows, floor, background colour, white backing behind transparent areas, white sticker keyline, side view, perspective, tilted leaves, text, letters, numbers, icons, frames, user interface, grid lines, visible sprite-sheet borders, cell borders, cropped edges, the characters from the reference image (Genshin Impact fan-art boys), slimes, clouds, rainbows, painterly lineless illustration, soft airbrushed gradients, heavy rendering, western cartoon style, rough sketchy lines, 3D render, photorealistic.
+~~~
+
+### 9.2 `folha-gigante.png` — 1024 × 768, alfa
+
+Uma folha **gigante e limpa**, vista bem de cima, deitada na horizontal (cabinho à esquerda), ocupando a imagem com ~6 % de margem: um oval largo de ~960 × 600, centrado. Verde-escuro `#4FA83D`, nervura central e nervuras laterais bem marcadas, borda um pouco ondulada (aqui pode, porque a folha gigante não é cortada). A sujeira é posta pelo código por cima, então a folha vem **limpa**.
+
+~~~text
+STYLE — USE THE ATTACHED IMAGE AS THE ART STYLE REFERENCE, and match its rendering exactly: cute chibi anime sticker-comic illustration; clean, smooth lineart of medium weight drawn in a darker tone of each area's own color (never pure black); flat cel shading with ONE soft shadow tone and almost no gradients; small white "+" sparkle marks on shiny surfaces; soft rounded chunky shapes. Take ONLY the art style: do NOT copy its characters, outfits, clouds, slimes, rainbow, speech bubbles or framing.
+
+One single object on a fully transparent background, 1024x768 px. A GIANT clean leaf seen STRAIGHT FROM ABOVE (top view, 90 degrees), lying flat and HORIZONTAL, centred, a wide oval about 960 px wide and 600 px tall, the stem end on the LEFT and the pointed tip on the RIGHT, the short stem drawn inside the image. Deep green #4FA83D with a dark green outline, a strong light central vein and clear side veins, a gently wavy edge, a few small white "+" sparkles. Clean and fresh, nothing on top of it.
+
+DO NOT INCLUDE: dew drops, water, dirt, soil grains, twigs, petals, insects, ants, holes, bites, torn or cut edges, faces on the leaf, plates, shadows, floor, background colour, white backing behind transparent areas, white sticker keyline, side view, perspective, tilted leaf, text, letters, numbers, icons, frames, user interface, cropped edges, the characters from the reference image (Genshin Impact fan-art boys), slimes, clouds, rainbows, painterly lineless illustration, soft airbrushed gradients, heavy rendering, western cartoon style, rough sketchy lines, 3D render, photorealistic.
+~~~
+
+### 9.3 `sujeira.png` — 4 × 1 células de 128 (512 × 128), alfa
+
+Coisinhas que sujam a folha, vistas de cima, cada uma centrada com ~10 % de margem, todas com o **mesmo peso visual** (nenhuma pode parecer mais importante).
+
+| Célula | Peça | Notas |
+|---|---|---|
+| 0 | **gota de orvalho** | gota d'água azul-clara `#9FD8F5`, brilhante, redonda, ~90 px |
+| 1 | **grão de terra** | torrãozinho marrom `#8A5A3C`, irregular e fofo, ~90 px |
+| 2 | **raminho seco** | gravetinho marrom-claro com duas pontinhas, deitado na diagonal, ~110 px |
+| 3 | **pétala murcha** | pétala rosa-amarronzada `#C98B8B`, enrugadinha, ~95 px |
+
+~~~text
+STYLE — USE THE ATTACHED IMAGE AS THE ART STYLE REFERENCE, and match its rendering exactly: cute chibi anime sticker-comic illustration; clean, smooth lineart of medium weight drawn in a darker tone of each area's own color (never pure black); flat cel shading with ONE soft shadow tone and almost no gradients; small white "+" sparkle marks on shiny surfaces; soft rounded chunky shapes; a thin white sticker keyline around every silhouette. Take ONLY the art style: do NOT copy its characters, outfits, clouds, slimes, rainbow, speech bubbles or framing.
+
+Sprite sheet on a fully transparent background, 4 columns by 1 row, 128x128 px per cell (512x128 px total), no grid lines drawn. Four small bits of mess that land on a leaf, seen from ABOVE, each one alone and centred in its cell with about 10% margin, all with the same visual weight. Cell 1: a round shiny DEW DROP of water, light blue #9FD8F5 with a white highlight, about 90 px. Cell 2: a fluffy irregular CLUMP OF SOIL, brown #8A5A3C with a couple of tiny grains next to it, about 90 px. Cell 3: a small DRY TWIG, light brown, lying diagonally, with two tiny forks, about 110 px long. Cell 4: a WILTED PETAL, dusty pink-brown #C98B8B, a little wrinkled, about 95 px.
+
+DO NOT INCLUDE: faces on the items, eyes, insects, ants, leaves under the items, a leaf background, puddles, splashes, shadows, floor, background colour, white backing behind transparent areas, text, letters, numbers, icons, frames, user interface, grid lines, visible sprite-sheet borders, cell borders, cropped edges, the characters from the reference image (Genshin Impact fan-art boys), slimes, clouds, rainbows, painterly lineless illustration, soft airbrushed gradients, heavy rendering, western cartoon style, rough sketchy lines, 3D render, photorealistic.
+~~~
+
+### 9.4 `amigas.png` — 4 × 2 células de 192 (768 × 384), alfa
+
+A **formiga amiga**: a mesma espécie e o mesmo desenho da formiguinha do §4, mas **verde-oliva** `#6E8B3D`, com um **laço amarelo** `#FFC93C` numa antena para não ser confundida com a formiga da criança. **Sempre virada para a DIREITA**, pisando a 10 px do fundo da célula.
+
+| Célula | Pose |
+|---|---|
+| 0 | cochilando: deitada encolhidinha, olhos fechados, bochecha corada (o "zzz" é do código) |
+| 1 | acordando: sentada, espreguiçando, uma patinha esfregando o olho, boca em bocejo |
+| 2 | andando, passo A |
+| 3 | andando, passo B |
+| 4 | carregando, passo A: as duas patinhas da frente **levantadas acima da cabeça**, mãos vazias |
+| 5 | carregando, passo B, mesmas patinhas levantadas |
+| 6 | feliz: olhos fechados em arco, boca aberta, patinhas para cima |
+| 7 | empurrando: olhos apertados, gotinha de suor, corpo inclinado para frente |
+
+**Contrato do carregar:** nas células 4 e 5, as patinhas levantadas terminam em torno de **(110, 40)** da célula, e nada passa acima de y 28 (igual à formiguinha).
+
+~~~text
+STYLE — USE THE ATTACHED IMAGE AS THE ART STYLE REFERENCE, and match its rendering exactly: cute chibi anime sticker-comic illustration; clean, smooth lineart of medium weight drawn in a darker tone of each area's own color (never pure black); flat cel shading with ONE soft shadow tone and almost no gradients; big glossy expressive eyes with a bright highlight; tiny cartoon emotion marks (a sweat drop); a thin white sticker keyline around every silhouette. Take ONLY the art style: do NOT copy its characters, outfits, clouds, slimes, rainbow, speech bubbles or framing.
+
+Sprite sheet on a fully transparent background, 4 columns by 2 rows, 192x192 px per cell (768x384 px total), no grid lines drawn. The SAME cute chibi ant in 8 poses, always facing RIGHT, seen from the side at a slight 3/4 top-down angle, feet resting 10 px above the bottom of each cell. The ant is olive green #6E8B3D, with a big round head, huge shiny eyes, two antennae ending in little balls and a small yellow #FFC93C ribbon bow tied on one antenna, three clearly separated body parts and six short stubby legs. Cell 1: sleeping, curled up lying on the ground, eyes closed, rosy cheeks. Cell 2: waking up, sitting, stretching, rubbing one eye with a front leg, yawning mouth. Cell 3: walking, step A (legs alternating). Cell 4: walking, step B. Cell 5: CARRYING while walking step A, the two front legs raised high above the head with EMPTY hands, as if holding something big on top, nothing above y 28 of the cell. Cell 6: carrying, walking step B, same raised front legs. Cell 7: happy, eyes closed in happy arcs, open laughing mouth, front legs up. Cell 8: pushing hard, squeezed eyes, one sweat drop, body leaning forward.
+
+DO NOT INCLUDE: objects in the hands, leaves, fruits, crumbs, crowns, clothes, hats, scarves, wings, extra legs, a second ant, "zzz" letters, shadows on the ground, floor, background colour, white backing behind transparent areas, text, letters, numbers, speech bubbles, icons, frames, user interface, grid lines, visible sprite-sheet borders, cell borders, cropped edges, scary insect realism, angry faces, crying faces, the characters from the reference image (Genshin Impact fan-art boys), slimes, clouds, rainbows, painterly lineless illustration, soft airbrushed gradients, heavy rendering, western cartoon style, rough sketchy lines, 3D render, photorealistic.
+~~~

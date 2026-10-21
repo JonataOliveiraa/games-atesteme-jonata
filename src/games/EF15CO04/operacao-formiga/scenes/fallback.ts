@@ -1,10 +1,10 @@
 import Phaser from 'phaser'
-import { ANT_SHEET, BG_KEY, FRUIT_SHEET, PROPS_SHEET, QUEEN_SHEET, type Sheet } from '../data/files'
-import { FRUITS, fruitPoly } from '../data/fruits'
+import { ANT_SHEET, BG_KEY, DIRT_SHEET, FRIEND_SHEET, FRUIT_SHEET, GIANT_KEY, LEAF_SHEET, PROPS_SHEET, QUEEN_SHEET, type Sheet } from '../data/files'
+import { ITEMS, itemPoly } from '../data/fruits'
 import { contains } from '../data/geometry'
-import { H, W } from '../data/layout'
+import { GIANT, H, W } from '../data/layout'
 import { C } from '../data/theme'
-import type { FruitKind } from '../types'
+import type { FruitKind, LeafKind } from '../types'
 import { starPoints } from './art'
 
 /**
@@ -46,6 +46,10 @@ export function ensureArt(scene: Phaser.Scene) {
     bakeSheet(scene, FRUIT_SHEET, fruitCell)
     bakeSheet(scene, PROPS_SHEET, propCell)
     bakeImage(scene, BG_KEY, W, H, background)
+    bakeSheet(scene, LEAF_SHEET, leafCell)
+    bakeImage(scene, GIANT_KEY, GIANT.imageW, GIANT.imageH, giantLeaf)
+    bakeSheet(scene, DIRT_SHEET, dirtCell)
+    bakeSheet(scene, FRIEND_SHEET, friendCell)
 }
 
 /** Um sorteio que dá sempre a mesma sequência (a arte não muda de uma carga para outra). */
@@ -140,47 +144,88 @@ function closedEye(g: G, x: number, y: number, r: number) {
 // ───────────────────────────────────────────── a formiga (virada para a direita)
 
 type Legs = { near: [number, number, number]; far: [number, number, number]; raise: boolean }
+type Face = 'open' | 'happy' | 'push' | 'sleep' | 'yawn'
+type Pal = { body: number; light: number; dark: number }
 
-const ANT_POSE: Legs[] = [
-    { near: [0, 0, 0], far: [0, 0, 0], raise: false },
-    { near: [12, -12, 12], far: [-12, 12, -12], raise: false },
-    { near: [-12, 12, -12], far: [12, -12, 12], raise: false },
-    { near: [0, 0, 0], far: [0, 0, 0], raise: true },
-    { near: [12, -12, 0], far: [-12, 12, 0], raise: true },
-    { near: [-12, 12, 0], far: [12, -12, 0], raise: true },
-    { near: [0, 0, 0], far: [0, 0, 0], raise: true },
-    { near: [-16, -8, 6], far: [-20, -10, 4], raise: false },
+const STILL: Legs = { near: [0, 0, 0], far: [0, 0, 0], raise: false }
+const STEP_A: Legs = { near: [12, -12, 12], far: [-12, 12, -12], raise: false }
+const STEP_B: Legs = { near: [-12, 12, -12], far: [12, -12, 12], raise: false }
+const HOLD: Legs = { near: [0, 0, 0], far: [0, 0, 0], raise: true }
+const HOLD_A: Legs = { near: [12, -12, 0], far: [-12, 12, 0], raise: true }
+const HOLD_B: Legs = { near: [-12, 12, 0], far: [12, -12, 0], raise: true }
+const LEAN: Legs = { near: [-16, -8, 6], far: [-20, -10, 4], raise: false }
+
+const RED: Pal = { body: C.ant, light: C.antLight, dark: C.antDark }
+const OLIVE: Pal = { body: C.friend, light: C.friendLight, dark: C.friendDark }
+
+const ANT_LOOK: [Legs, Face][] = [
+    [STILL, 'open'],
+    [STEP_A, 'open'],
+    [STEP_B, 'open'],
+    [HOLD, 'open'],
+    [HOLD_A, 'open'],
+    [HOLD_B, 'open'],
+    [HOLD, 'happy'],
+    [LEAN, 'push'],
+]
+
+const FRIEND_LOOK: [Legs, Face][] = [
+    [STILL, 'sleep'],
+    [STILL, 'yawn'],
+    [STEP_A, 'open'],
+    [STEP_B, 'open'],
+    [HOLD_A, 'open'],
+    [HOLD_B, 'open'],
+    [HOLD, 'happy'],
+    [LEAN, 'push'],
 ]
 
 function antCell(g: G, i: number) {
-    const pose = ANT_POSE[i]
-    const push = i === 7
-    const happy = i === 6
+    const [legs, face] = ANT_LOOK[i]
+    antFigure(g, legs, face, RED, false)
+}
+
+function friendCell(g: G, i: number) {
+    const [legs, face] = FRIEND_LOOK[i]
+    antFigure(g, legs, face, OLIVE, true)
+}
+
+function antFigure(g: G, pose: Legs, face: Face, pal: Pal, bow: boolean) {
+    const push = face === 'push'
+    const sleep = face === 'sleep'
     g.save()
     if (push) {
         g.translateCanvas(96, 182)
         g.rotateCanvas(0.14)
         g.translateCanvas(-96, -182)
     }
+    if (sleep) {
+        // deitada: o corpo encosta no chão e as perninhas se encolhem
+        g.translateCanvas(96, 182)
+        g.rotateCanvas(-0.08)
+        g.translateCanvas(-96, -166)
+    }
     const hips = [92, 103, 114]
     const feet = [66, 103, 140]
+    const tuck = sleep ? 0.45 : 1
+    const footY = (y: number) => 142 + (y - 142) * tuck
 
     // as pernas de trás (o outro lado), mais escuras
     hips.forEach((hx, k) => {
         if (pose.raise && k === 2) {
-            limb(g, [{ x: hx + 8, y: 128 }, { x: hx + 18, y: 82 }, { x: 122, y: 44 }], C.antDark, 7)
+            limb(g, [{ x: hx + 8, y: 128 }, { x: hx + 18, y: 82 }, { x: 122, y: 44 }], pal.dark, 7)
             return
         }
-        const fx = feet[k] + 8 + pose.far[k]
-        limb(g, [{ x: hx + 8, y: 140 }, { x: (hx + fx) / 2 + 6, y: 150 }, { x: fx, y: 176 }], C.antDark, 7)
+        const fx = hx + 8 + (feet[k] + pose.far[k] - hx) * tuck
+        limb(g, [{ x: hx + 8, y: 140 }, { x: (hx + fx) / 2 + 6, y: footY(150) }, { x: fx, y: footY(176) }], pal.dark, 7)
     })
 
     // o corpo, numa silhueta só: contorno de tudo, depois o recheio
     const parts: [number, number, number, number, number][] = [
-        [54, 132, 86, 70, C.ant],
-        [86, 136, 20, 18, C.antDark],
-        [105, 130, 46, 38, C.ant],
-        [140, 102, 78, 76, C.ant],
+        [54, 132, 86, 70, pal.body],
+        [86, 136, 20, 18, pal.dark],
+        [105, 130, 46, 38, pal.body],
+        [140, 102, 78, 76, pal.body],
     ]
     g.lineStyle(LW * 2, INK, 1)
     parts.forEach(([x, y, w, h]) => g.strokeEllipse(x, y, w, h))
@@ -189,24 +234,30 @@ function antCell(g: G, i: number) {
         g.fillEllipse(x, y, w, h)
     })
     // brilhos
-    g.fillStyle(C.antLight, 1)
+    g.fillStyle(pal.light, 1)
     g.fillEllipse(44, 116, 34, 18)
     g.fillEllipse(128, 80, 30, 18)
     g.fillStyle(C.white, 0.7)
     g.fillEllipse(40, 112, 12, 7)
     g.fillEllipse(124, 76, 10, 6)
     // listrinhas do abdômen
-    arc(g, 54, 132, 30, -0.9, 0.9, 3, C.antDark)
-    arc(g, 54, 132, 18, -0.8, 0.8, 3, C.antDark)
+    arc(g, 54, 132, 30, -0.9, 0.9, 3, pal.dark)
+    arc(g, 54, 132, 18, -0.8, 0.8, 3, pal.dark)
 
     // antenas
-    limb(g, [{ x: 130, y: 70 }, { x: 140, y: 44 }, { x: 160, y: 30 }], C.antDark, 5)
-    limb(g, [{ x: 150, y: 70 }, { x: 166, y: 48 }, { x: 180, y: 42 }], C.antDark, 5)
-    oval(g, 162, 28, 14, 14, C.ant, 3)
-    oval(g, 181, 40, 12, 12, C.ant, 3)
+    limb(g, [{ x: 130, y: 70 }, { x: 140, y: 44 }, { x: 160, y: 30 }], pal.dark, 5)
+    limb(g, [{ x: 150, y: 70 }, { x: 166, y: 48 }, { x: 180, y: 42 }], pal.dark, 5)
+    oval(g, 162, 28, 14, 14, pal.body, 3)
+    oval(g, 181, 40, 12, 12, pal.body, 3)
+    if (bow) {
+        // o laço amarelo na antena
+        shape(g, [{ x: 166, y: 50 }, { x: 150, y: 40 }, { x: 152, y: 60 }], C.bow, 2)
+        shape(g, [{ x: 166, y: 50 }, { x: 182, y: 58 }, { x: 176, y: 70 }], C.bow, 2)
+        oval(g, 166, 51, 10, 10, C.bowDark, 2)
+    }
 
     // o rosto
-    if (happy) {
+    if (face === 'happy') {
         closedEye(g, 136, 98, 9)
         closedEye(g, 160, 100, 11)
         g.fillStyle(C.mouth, 1)
@@ -224,6 +275,19 @@ function antCell(g: G, i: number) {
         g.fillCircle(116, 78, 6)
         g.lineStyle(2, INK, 1)
         g.strokeCircle(116, 78, 6)
+    } else if (sleep || face === 'yawn') {
+        arc(g, 134, 94, 8, 0.2, Math.PI - 0.2, 4, INK)
+        arc(g, 160, 96, 10, 0.2, Math.PI - 0.2, 4, INK)
+        g.fillStyle(C.cheek, 1)
+        g.fillEllipse(173, 114, 12, 8)
+        g.fillEllipse(124, 112, 10, 7)
+        if (sleep) arc(g, 156, 120, 6, 0.3, Math.PI - 0.3, 3, INK)
+        else {
+            g.fillStyle(C.mouth, 1)
+            g.fillEllipse(154, 124, 16, 20)
+            g.lineStyle(3, INK, 1)
+            g.strokeEllipse(154, 124, 16, 20)
+        }
     } else {
         eye(g, 134, 98, 16, 24, 2)
         eye(g, 160, 100, 22, 28, 3)
@@ -235,11 +299,16 @@ function antCell(g: G, i: number) {
     // as pernas da frente (deste lado)
     hips.forEach((hx, k) => {
         if (pose.raise && k === 2) {
-            limb(g, [{ x: hx, y: 130 }, { x: hx - 6, y: 84 }, { x: 104, y: 46 }], C.ant, 8)
+            limb(g, [{ x: hx, y: 130 }, { x: hx - 6, y: 84 }, { x: 104, y: 46 }], pal.body, 8)
             return
         }
-        const fx = feet[k] + pose.near[k]
-        limb(g, [{ x: hx, y: 142 }, { x: (hx + fx) / 2 - 4, y: 156 }, { x: fx, y: 180 }], C.ant, 8)
+        if (face === 'yawn' && k === 2) {
+            // a patinha esfregando o olho
+            limb(g, [{ x: hx, y: 130 }, { x: hx + 10, y: 112 }, { x: 128, y: 98 }], pal.body, 8)
+            return
+        }
+        const fx = hx + (feet[k] + pose.near[k] - hx) * tuck
+        limb(g, [{ x: hx, y: 142 }, { x: (hx + fx) / 2 - 4, y: footY(156) }, { x: fx, y: footY(180) }], pal.body, 8)
     })
     g.restore()
 }
@@ -339,8 +408,8 @@ const FRUIT_ORDER: FruitKind[] = ['morango', 'laranja', 'maca']
 function fruitCell(g: G, i: number) {
     const kind = FRUIT_ORDER[i]
     if (!kind) return
-    const def = FRUITS[kind]
-    const poly = fruitPoly(def)
+    const def = ITEMS[kind]
+    const poly = itemPoly(def)
     const pts = poly.map(p => ({ x: 256 + p.x, y: 256 + p.y }))
     const inside = (x: number, y: number, pad = 0) =>
         contains(poly, { x: x - 256, y: y - 256 }) &&
@@ -576,5 +645,136 @@ function background(g: G) {
             g.fillCircle(x - 5, y - 2, 2.5)
             g.fillCircle(x + 5, y - 3, 2)
         } else oval(g, x, y, 14 + r() * 10, 9 + r() * 6, C.stoneLight, 2)
+    }
+}
+
+// ───────────────────────────────────────────── as folhas do N2 (vistas de cima, cabinho à esquerda)
+
+const LEAF_ORDER: LeafKind[] = ['folha', 'folhaGrande']
+
+function veins(g: G, cx: number, cy: number, a: number, b: number, color: number, width: number, wave = 0) {
+    // a nervura central, de ponta a ponta, e as nervurinhas que saem dela em diagonal
+    g.lineStyle(width, color, 1)
+    g.lineBetween(cx - a * 0.94, cy, cx + a * 0.9, cy)
+    for (let k = -3; k <= 3; k++) {
+        const x = cx + k * a * 0.24
+        const span = b * Math.sqrt(Math.max(0, 1 - ((x - cx) / a) ** 2)) * 0.72
+        ;[-1, 1].forEach(side => {
+            const tip = { x: x + a * 0.2, y: cy + side * span }
+            g.lineStyle(width * 0.55, color, 1)
+            g.lineBetween(x, cy, tip.x, tip.y + Math.sin(k + side) * wave)
+        })
+    }
+}
+
+function leafCell(g: G, i: number) {
+    const kind = LEAF_ORDER[i]
+    if (!kind) return
+    const def = ITEMS[kind]
+    const cx = LEAF_SHEET.cellW / 2
+    const cy = LEAF_SHEET.cellH / 2
+    const pts = itemPoly(def).map(p => ({ x: cx + p.x, y: cy + p.y }))
+    g.fillStyle(def.skin, 1)
+    g.fillPoints(pts, true, true)
+    g.fillStyle(def.pulpDark, 0.4)
+    g.fillPoints(pts.map(p => ({ x: cx + (p.x - cx) * 0.9 + 16, y: cy + (p.y - cy) * 0.88 + 18 })), true, true)
+    g.fillStyle(def.skin, 1)
+    g.fillPoints(pts.map(p => ({ x: cx + (p.x - cx) * 0.86 - 8, y: cy + (p.y - cy) * 0.84 - 8 })), true, true)
+    veins(g, cx, cy, def.a, def.b, def.pulp, 10)
+    // o cabinho, dentro da silhueta, na base
+    stroke(g, [{ x: cx - def.a + 18, y: cy + 4 }, { x: cx - def.a + 92, y: cy }], 18, INK)
+    stroke(g, [{ x: cx - def.a + 18, y: cy + 4 }, { x: cx - def.a + 92, y: cy }], 10, 0x8a6a2b)
+    g.fillStyle(C.white, 0.7)
+    g.fillEllipse(cx - def.a * 0.4, cy - def.b * 0.5, def.a * 0.3, def.b * 0.12)
+    g.lineStyle(14, INK, 1)
+    g.strokePoints(pts, true, true)
+}
+
+function giantLeaf(g: G) {
+    const cx = GIANT.imageW / 2
+    const cy = GIANT.imageH / 2
+    const a = GIANT.leafW / 2
+    const b = GIANT.leafH / 2
+    const pts: P[] = []
+    for (let k = 0; k < 120; k++) {
+        const t = (k / 120) * Math.PI * 2
+        const wave = 1 - 0.025 * (1 + Math.sin(t * 14))
+        // a ponta à direita um pouco mais fina, a base à esquerda mais cheia
+        const fat = 0.96 + 0.06 * Math.cos(t)
+        pts.push({ x: cx - a * Math.cos(t) * wave, y: cy + b * Math.sin(t) * wave * fat })
+    }
+    shape(g, pts, C.giant, 6)
+    g.fillStyle(C.giantDark, 0.35)
+    g.fillPoints(pts.map(p => ({ x: cx + (p.x - cx) * 0.9 + 18, y: cy + (p.y - cy) * 0.86 + 20 })), true, true)
+    g.fillStyle(C.giant, 1)
+    g.fillPoints(pts.map(p => ({ x: cx + (p.x - cx) * 0.86 - 8, y: cy + (p.y - cy) * 0.82 - 8 })), true, true)
+    g.fillStyle(C.giantLight, 0.6)
+    g.fillEllipse(cx - a * 0.35, cy - b * 0.45, a * 0.7, b * 0.3)
+    veins(g, cx, cy, a, b, C.vein, 14, 10)
+    stroke(g, [{ x: cx - a + 10, y: cy + 4 }, { x: cx - a + 110, y: cy }], 24, INK)
+    stroke(g, [{ x: cx - a + 10, y: cy + 4 }, { x: cx - a + 110, y: cy }], 14, 0x8a6a2b)
+    ;[
+        [cx - a * 0.55, cy - b * 0.55],
+        [cx + a * 0.4, cy - b * 0.4],
+        [cx + a * 0.1, cy + b * 0.55],
+    ].forEach(([x, y]) => {
+        g.fillStyle(C.white, 0.9)
+        g.fillRect(x - 3, y - 14, 6, 28)
+        g.fillRect(x - 14, y - 3, 28, 6)
+    })
+}
+
+// ───────────────────────────────────────────── a sujeira (vista de cima)
+
+function dirtCell(g: G, i: number) {
+    const c = 64
+    if (i === 0) {
+        oval(g, c, c + 4, 80, 76, C.dew, 3)
+        g.fillStyle(C.dewDark, 0.45)
+        g.fillEllipse(c + 8, c + 14, 54, 40)
+        g.fillStyle(C.dew, 1)
+        g.fillEllipse(c - 2, c + 2, 60, 54)
+        g.fillStyle(C.white, 0.95)
+        g.fillEllipse(c - 16, c - 14, 22, 14)
+        g.fillCircle(c + 16, c + 18, 4)
+    } else if (i === 1) {
+        shape(g, blob(c, c + 4, 40, 34, 0.35, 61, 12), C.soil, 3)
+        g.fillStyle(C.soilDark, 1)
+        g.fillPoints(blob(c + 8, c + 12, 22, 16, 0.4, 62, 10), true, true)
+        ;[
+            [c - 26, c - 22, 7],
+            [c + 30, c - 24, 6],
+            [c + 34, c + 30, 5],
+        ].forEach(([x, y, r]) => oval(g, x, y, r * 2, r * 1.6, C.soil, 2))
+        g.fillStyle(C.white, 0.35)
+        g.fillEllipse(c - 12, c - 8, 18, 9)
+    } else if (i === 2) {
+        const main = [{ x: 18, y: 104 }, { x: 64, y: 62 }, { x: 110, y: 22 }]
+        stroke(g, main, 14, INK)
+        stroke(g, [{ x: 58, y: 68 }, { x: 40, y: 34 }], 11, INK)
+        stroke(g, [{ x: 84, y: 46 }, { x: 108, y: 58 }], 11, INK)
+        stroke(g, main, 8, C.twig)
+        stroke(g, [{ x: 58, y: 68 }, { x: 40, y: 34 }], 6, C.twig)
+        stroke(g, [{ x: 84, y: 46 }, { x: 108, y: 58 }], 6, C.twig)
+        g.lineStyle(2, C.twigDark, 1)
+        g.lineBetween(30, 96, 54, 74)
+    } else {
+        const petal = smooth(
+            [
+                { x: c - 40, y: c + 10 },
+                { x: c - 20, y: c - 34 },
+                { x: c + 22, y: c - 38 },
+                { x: c + 42, y: c - 6 },
+                { x: c + 18, y: c + 36 },
+                { x: c - 16, y: c + 34 },
+            ],
+            2,
+        )
+        shape(g, petal, C.petal, 3)
+        g.lineStyle(3, C.petalDark, 1)
+        g.lineBetween(c - 30, c + 8, c + 30, c - 10)
+        g.lineBetween(c - 14, c - 20, c + 6, c + 24)
+        g.fillStyle(C.white, 0.35)
+        g.fillEllipse(c - 6, c - 22, 22, 9)
     }
 }

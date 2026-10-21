@@ -8,18 +8,19 @@ import { faseInicial } from '../../../../shared/level/faseInicial'
 import { FX } from '../../../../shared/effects/FX'
 import type { TutorialStep } from '../../../../shared/tutorial/createTutorial'
 
-import { BG_OF, PIPA_CELL, TRAIL_KEY } from '../data/files'
+import { BG_OF, BG_OF_GROUP, PIPA_CELL, TRAIL_KEY } from '../data/files'
 import { BANNER, DEPTH, H, W, WEB } from '../data/layout'
 import { LEVELS, OPENING_KEY, POINTS, guideKey } from '../data/levels'
-import { colFits, edgeFits, firstMismatch, fits, homeOf, homeOfPiece, isNext, nestOf, rowFits } from '../data/logic'
+import { colFits, edgeFits, firstMismatch, fits, homeOf, isNext, nestOf, rowFits, wayOf } from '../data/logic'
 import { C, CSS } from '../data/theme'
 import { TIMING } from '../data/timing'
-import { OPENING, TEACH, WHY } from '../data/words'
-import type { Bug, Cell, FichaPhase, Flower, GridPhase, Home, LevelDef, PhaseDef, RedemoinhoPhase, State, TeiaPhase } from '../types'
+import { ASK, JEITO_RULE, MEET, OPENING, TEACH, WHY } from '../data/words'
+import type { Bug, Cell, FichaPhase, Flower, GridPhase, Home, JeitoPhase, LevelDef, PhaseDef, Rect, State, TeiaPhase } from '../types'
 
 import { createAudio, type Audio } from './audio'
 import { createBanner, type Banner } from './banner'
 import { createBubble, type Bubble } from './bubble'
+import { createCrew, type Crew } from './crew'
 import { createGarden, type Garden } from './garden'
 import { spot, teach } from './guide'
 import { createHeader, type Header } from './header'
@@ -28,7 +29,6 @@ import { createNests, type Nests } from './nests'
 import { createPipa, type Pipa } from './pipa'
 import { createTouch, type Touch } from './touch'
 import { createWeb, type Web } from './web'
-import { createWhirl, type Whirl } from './whirl'
 import { createWind, type Wind } from './wind'
 
 const GAME_ID = 'ventania-na-floresta'
@@ -36,7 +36,7 @@ const GRID_BALLOON_X = 1056
 const GRID_BALLOON_W = 420
 const NEST_BALLOON = { x: 980, y: 590 }
 const WEB_BALLOON = { x: 640, y: 420 }
-const WHIRL_BALLOON = { x: 640, y: 330 }
+const PLATE_BALLOON_Y = 440
 
 export class GameScene extends Phaser.Scene {
     private livesTotal = 1
@@ -48,6 +48,7 @@ export class GameScene extends Phaser.Scene {
     private gen = 0
     private brought = 0
     private opening = false
+    private deciding = false
 
     private score = 0
     private hits = 0
@@ -59,7 +60,7 @@ export class GameScene extends Phaser.Scene {
     private garden!: Garden
     private nests!: Nests
     private web!: Web
-    private whirl!: Whirl
+    private crew!: Crew
     private pipa!: Pipa
     private wind!: Wind
     private touch!: Touch
@@ -104,7 +105,7 @@ export class GameScene extends Phaser.Scene {
         this.pipa = createPipa(this)
         this.nests = createNests(this, this.pipa)
         this.web = createWeb(this)
-        this.whirl = createWhirl(this)
+        this.crew = createCrew(this)
         this.wind = createWind(this)
         this.touch = createTouch(this)
         this.header = createHeader(this, {
@@ -145,7 +146,7 @@ export class GameScene extends Phaser.Scene {
         this.header?.destroy()
         this.touch?.destroy()
         this.wind?.destroy()
-        this.whirl?.destroy()
+        this.crew?.destroy()
         this.web?.destroy()
         this.nests?.destroy()
         this.pipa?.destroy()
@@ -172,22 +173,26 @@ export class GameScene extends Phaser.Scene {
         this.header.setPhase(index)
         this.header.setRequest(phase.type)
         this.banner.clear()
-        this.bg.setTexture(BG_OF[phase.type]).setDisplaySize(W, H)
+        this.bg.setTexture(phase.type === 'jeito' ? BG_OF_GROUP[phase.group] : BG_OF[phase.type]).setDisplaySize(W, H)
         this.line.hide()
         this.garden.hide()
         this.nests.hide()
         this.web.hide()
-        this.whirl.hide()
+        this.crew.hide()
         this.pipa.hide()
         if (phase.type === 'fila') this.line.build(phase)
         else if (phase.type === 'grade') this.garden.build(phase)
         else if (phase.type === 'ficha') this.nests.build(phase)
         else if (phase.type === 'teia') this.web.build(phase)
-        else this.whirl.build(phase)
+        else this.crew.build(phase)
 
         if (index > 0) {
             await this.fade(false)
             if (gen !== this.gen) return
+        }
+        if (phase.type === 'jeito') {
+            await this.openJeito(gen, phase)
+            return
         }
 
         const teaching = !!phase.teach && !this.registry.get(guideKey(phase.type))
@@ -203,8 +208,7 @@ export class GameScene extends Phaser.Scene {
             if (phase.type === 'fila') await this.teachLine(gen)
             else if (phase.type === 'grade') await this.teachGrid(gen, phase)
             else if (phase.type === 'ficha') await this.teachFicha(gen, phase)
-            else if (phase.type === 'teia') await this.teachTeia(gen, phase)
-            else await this.teachWhirl(gen, phase)
+            else await this.teachTeia(gen, phase)
             if (gen !== this.gen) return
         } else {
             await FX.wait(this, TIMING.beat)
@@ -215,12 +219,6 @@ export class GameScene extends Phaser.Scene {
 
     private async blowAway(gen: number) {
         const phase = this.phase
-        if (phase.type === 'redemoinho') {
-            this.audio.whirl()
-            void this.wind.gust(TIMING.gust)
-            await this.whirl.spin()
-            return
-        }
         if (phase.type === 'fila') await this.line.march(TIMING.march)
         else await FX.wait(this, TIMING.march * 0.7)
         if (gen !== this.gen) return
@@ -343,12 +341,6 @@ export class GameScene extends Phaser.Scene {
                 if (gen !== this.gen) return
             }
         }
-        if (phase.type === 'redemoinho' && !this.whirl.current()) {
-            this.audio.spit()
-            await this.whirl.spit(this.brought)
-            if (gen !== this.gen) return
-            this.header.setPiece(phase.pieces[this.brought])
-        }
         this.waitPick()
     }
 
@@ -366,7 +358,8 @@ export class GameScene extends Phaser.Scene {
         this.header.setHelpEnabled(true)
         if (type === 'ficha') this.nests.activate(i => void this.onNest(i))
         else if (type === 'teia') this.web.activate(b => void this.onBug(b))
-        else this.whirl.activate(h => void this.onHome(h))
+        else if (this.deciding) this.crew.activatePlates(h => void this.onPlate(h))
+        else this.crew.activate(t => void this.onFix(t))
     }
 
     private waitAnt() {
@@ -386,7 +379,7 @@ export class GameScene extends Phaser.Scene {
         this.garden.deactivate()
         this.nests.deactivate()
         this.web.deactivate()
-        this.whirl.deactivate()
+        this.crew.deactivate()
     }
 
     // ───────────────────────────────────────────── fila
@@ -640,74 +633,198 @@ export class GameScene extends Phaser.Scene {
         await this.play(gen)
     }
 
-    // ───────────────────────────────────────────── redemoinho
+    // ───────────────────────────────────────────── jeito (N3)
 
-    private async teachWhirl(gen: number, phase: RedemoinhoPhase) {
-        await teach(this, guideKey('redemoinho-rule'), this.whirlRuleSteps('Ver'))
-        if (gen !== this.gen) return
-        this.state = 'demo'
-        this.audio.spit()
-        await this.whirl.spit(this.brought)
-        if (gen !== this.gen) return
-        const piece = phase.pieces[this.brought]
-        this.header.setPiece(piece)
-        const home = homeOfPiece(piece)
-        await this.whirl.pulse(home)
-        if (gen !== this.gen) return
-        await this.touch.tap(this.whirl.houseCenter(home))
-        if (gen !== this.gen) return
-        await this.whirl.send(home)
-        if (gen !== this.gen) return
-        await this.acceptPiece(home)
-        if (gen !== this.gen) return
-        this.brought += 1
+    private async openJeito(gen: number, phase: JeitoPhase) {
+        const teaching = !!phase.teach && !this.registry.get(guideKey('jeito'))
+        if (teaching) this.registry.set(guideKey('jeito'), true)
+        this.deciding = false
         await FX.wait(this, TIMING.beat)
         if (gen !== this.gen) return
-        await teach(this, guideKey('redemoinho-go'), [
-            { text: TEACH.go, ...spot(this.whirl.housesRect(), 4), balloonX: WHIRL_BALLOON.x, balloonY: WHIRL_BALLOON.y, buttonLabel: 'Vamos!' },
-        ])
-    }
-
-    private whirlRuleSteps(last: string): TutorialStep[] {
-        return [{ text: TEACH.homes, ...spot(this.whirl.housesRect(), 4), balloonX: WHIRL_BALLOON.x, balloonY: WHIRL_BALLOON.y, buttonLabel: last }]
-    }
-
-    private acceptPiece(home: Home) {
+        await this.crew.look()
+        if (gen !== this.gen) return
+        if (teaching) {
+            await teach(this, guideKey('jeito-look'), [{ text: TEACH.look, ...this.balloonFor(this.crew.groupRect()), buttonLabel: 'Ver' }], GRID_BALLOON_W)
+            if (gen !== this.gen) return
+        }
+        await this.crew.look()
+        if (gen !== this.gen) return
+        this.audio.wind()
+        void this.wind.gust(TIMING.gust)
+        await FX.wait(this, 260)
+        if (gen !== this.gen) return
+        this.audio.tumble()
+        await this.crew.scatter()
+        if (gen !== this.gen) return
+        void this.header.setJeito(undefined, ASK[phase.group])
+        await FX.wait(this, TIMING.beat)
+        if (gen !== this.gen) return
+        await this.crew.showPlates()
+        if (gen !== this.gen) return
+        await this.meetPlates(phase, teaching ? 'Próximo' : 'Vamos!')
+        if (gen !== this.gen) return
+        if (!teaching) {
+            this.waitPlate()
+            return
+        }
+        await teach(this, guideKey('jeito-ask'), [{ text: TEACH.ask, ...spot(this.crew.platesRect(), 6), balloonY: PLATE_BALLOON_Y, buttonLabel: 'Ver' }])
+        if (gen !== this.gen) return
+        this.state = 'demo'
+        const way = wayOf(phase.group)
+        await this.touch.tap(this.center(this.crew.plateRect(way)))
+        if (gen !== this.gen) return
+        if (!(await this.chooseWay(gen, way))) return
+        await FX.wait(this, TIMING.beat)
+        if (gen !== this.gen) return
+        this.registry.set(guideKey(`fix-${phase.group}`), true)
+        await this.crew.step()
+        if (gen !== this.gen) return
+        const t = this.crew.answer()
+        await this.touch.tap(this.crew.targetCenter(t))
+        if (gen !== this.gen) return
+        this.audio.pop()
+        await this.crew.apply(t)
+        if (gen !== this.gen) return
         this.audio.join(this.brought)
-        void this.header.lightHome(home)
-        return this.whirl.accept(home)
+        this.brought += 1
+        await this.crew.settle(t)
+        if (gen !== this.gen) return
+        await FX.wait(this, TIMING.beat)
+        if (gen !== this.gen) return
+        await this.crew.step()
+        if (gen !== this.gen) return
+        await teach(this, guideKey('jeito-go'), [{ text: TEACH.go, ...this.balloonFor(this.crew.targetsRect()), buttonLabel: 'Vamos!' }], GRID_BALLOON_W)
+        if (gen !== this.gen) return
+        this.waitPick()
     }
 
-    private async onHome(home: Home) {
+    private center(r: Rect) {
+        return { x: r.x, y: r.y }
+    }
+
+    // A narrow balloon above the spot, below it, or beside it, so neither it nor its button lands inside.
+    private balloonFor(r: Rect, pad = 6): Pick<TutorialStep, 'shape' | 'x' | 'y' | 'w' | 'h' | 'balloonX' | 'balloonY'> {
+        const top = r.y - r.h / 2 - pad
+        const bottom = r.y + r.h / 2 + pad
+        const x = Phaser.Math.Clamp(r.x, 260, W - 260)
+        if (top - 150 >= 120) return { ...spot(r, pad), balloonX: x, balloonY: top - 150 }
+        if (bottom + 80 <= H - 120) return { ...spot(r, pad), balloonX: x, balloonY: bottom + 80 }
+        const side = r.x < W / 2 ? Math.min(r.x + r.w / 2 + 250, W - 230) : Math.max(r.x - r.w / 2 - 250, 230)
+        return { ...spot(r, pad), balloonX: side, balloonY: Phaser.Math.Clamp(r.y - 40, 170, H - 160) }
+    }
+
+    private plateSteps(homes: Home[], last: string): TutorialStep[] {
+        return homes.map((home, i) => {
+            const r = this.crew.plateRect(home)
+            return {
+                text: MEET[home],
+                ...spot(r, 6),
+                balloonX: Phaser.Math.Clamp(r.x, 330, W - 330),
+                balloonY: PLATE_BALLOON_Y,
+                buttonLabel: i === homes.length - 1 ? last : 'Próximo',
+            }
+        })
+    }
+
+    private fixSteps(last: string): TutorialStep[] {
+        const steps = this.crew.teachSteps()
+        return steps.map((s, i) => ({ text: s.text, ...this.balloonFor(s.rect), buttonLabel: i === steps.length - 1 ? last : 'Próximo' }))
+    }
+
+    private async meetPlates(phase: JeitoPhase, last: string) {
+        const fresh = phase.options.filter(h => !this.registry.get(guideKey(`casa-${h}`)))
+        if (!fresh.length) return
+        fresh.forEach(h => this.registry.set(guideKey(`casa-${h}`), true))
+        await teach(this, guideKey('casas'), this.plateSteps(fresh, last))
+    }
+
+    private waitPlate() {
+        this.state = 'play'
+        this.deciding = true
+        this.header.setHelpEnabled(true)
+        this.crew.activatePlates(h => void this.onPlate(h))
+    }
+
+    private async onPlate(home: Home) {
         if (this.state !== 'play') return
         const gen = this.gen
-        const phase = this.phase as RedemoinhoPhase
-        const piece = this.whirl.current()
-        if (!piece) return
         this.state = 'busy'
         this.deactivateAll()
         this.header.setHelpEnabled(false)
-        await this.whirl.send(home)
-        if (gen !== this.gen) return
-        const right = homeOfPiece(piece)
-        if (home !== right) {
+        if (!(await this.chooseWay(gen, home))) return
+        if (this.crew.done()) {
+            await this.structureDone(gen, () => this.crew.celebrate())
+            return
+        }
+        await this.nextFix(gen)
+    }
+
+    private async chooseWay(gen: number, home: Home) {
+        const phase = this.phase as JeitoPhase
+        this.deciding = false
+        this.audio.pop()
+        await this.crew.choose(home)
+        if (gen !== this.gen) return false
+        if (home !== wayOf(phase.group)) {
             this.audio.bonk()
-            this.banner.say(WHY.home(right), BANNER.whirlY)
-            await this.whirl.reject(home, right)
+            this.banner.say(WHY.way(phase.group), BANNER.jeitoY)
+            await this.crew.misfit(home)
+            if (gen !== this.gen) return false
+            await FX.wait(this, TIMING.error)
+            if (gen !== this.gen) return false
+            this.lose()
+            return false
+        }
+        this.audio.good()
+        void this.header.setJeito(home, JEITO_RULE[phase.group])
+        await this.crew.prepare()
+        return gen === this.gen
+    }
+
+    private async nextFix(gen: number) {
+        const phase = this.phase as JeitoPhase
+        this.state = 'busy'
+        await this.crew.step()
+        if (gen !== this.gen) return
+        const key = guideKey(`fix-${phase.group}`)
+        if (!this.registry.get(key)) {
+            this.registry.set(key, true)
+            const steps = this.fixSteps('Vamos!')
+            if (steps.length) await teach(this, key, steps, GRID_BALLOON_W)
+            if (gen !== this.gen) return
+        }
+        this.waitPick()
+    }
+
+    private async onFix(target: number) {
+        if (this.state !== 'play') return
+        const gen = this.gen
+        this.state = 'busy'
+        this.deactivateAll()
+        this.header.setHelpEnabled(false)
+        const why = this.crew.judge(target)
+        this.audio.pop()
+        await this.crew.apply(target)
+        if (gen !== this.gen) return
+        if (why) {
+            this.audio.bonk()
+            this.banner.say(why, BANNER.jeitoY)
+            await this.crew.oops(target)
             if (gen !== this.gen) return
             await FX.wait(this, TIMING.error)
             if (gen !== this.gen) return
             this.lose()
             return
         }
-        await this.acceptPiece(home)
-        if (gen !== this.gen) return
+        this.audio.join(this.brought)
         this.brought += 1
-        if (this.brought >= phase.pieces.length) {
-            await this.structureDone(gen, () => this.whirl.celebrate())
+        await this.crew.settle(target)
+        if (gen !== this.gen) return
+        if (this.crew.done()) {
+            await this.structureDone(gen, () => this.crew.celebrate())
             return
         }
-        await this.play(gen)
+        await this.nextFix(gen)
     }
 
     private async structureDone(gen: number, celebrate: () => Promise<void>) {
@@ -774,7 +891,8 @@ export class GameScene extends Phaser.Scene {
         if (type === 'grade') return this.gridRuleSteps('Continuar')
         if (type === 'ficha') return this.fichaRuleSteps(0, 'Continuar')
         if (type === 'teia') return this.teiaRuleSteps('Continuar')
-        return this.whirlRuleSteps('Continuar')
+        if (this.deciding) return this.plateSteps((this.phase as JeitoPhase).options, 'Continuar')
+        return this.fixSteps('Continuar')
     }
 
     private gridRuleSteps(last: string): TutorialStep[] {
@@ -790,7 +908,8 @@ export class GameScene extends Phaser.Scene {
         this.state = 'help'
         this.deactivateAll()
         this.header.setHelpEnabled(false)
-        await teach(this, guideKey('help'), this.helpSteps(), this.phase.type === 'grade' ? GRID_BALLOON_W : undefined)
+        const narrow = this.phase.type === 'grade' || (this.phase.type === 'jeito' && !this.deciding)
+        await teach(this, guideKey('help'), this.helpSteps(), narrow ? GRID_BALLOON_W : undefined)
         if (gen !== this.gen) return
         this.waitPick()
     }

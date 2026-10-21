@@ -1,0 +1,9 @@
+Aquarela + Tesoura: publicadas as 4 texturas NOVAS do N3 em src/assets/games/EF15CO01/ventania-na-floresta/: bg-lagoa.png e bg-noite.png 1672x941 RGB opacos; turma.png 1024x1024 RGBA 4x4; peixes.png 768x768 RGBA 3x3. Prompts integrais 11.11 a 11.14 e referencia 35-chibi-voador.webp utilizados com image_gen integrado. Brutos em outputs/ventania-na-floresta/raw/. MANIFEST.md recebeu secao Entrega N3 - 21/10/2026 com caixas, faixas vazias e hashes. Nenhum codigo do jogo editado; 18 PNGs anteriores intactos por SHA-256.
+
+Caixas locais (x,y,w,h), alfa>96, indices zero:
+TURMA: 0=(28,21,201,215); 1=(38,21,181,215); 2=(21,48,215,188); 3=(21,50,215,157); 4=(21,26,215,205); 5=(21,26,215,205); 6=(29,21,199,215); 7=(29,21,199,215); 8=(21,37,215,183); 9=(21,37,215,183); 10=(21,37,215,183); 11=(21,37,215,183); 12=(21,26,215,204); 13=(21,59,215,138); 14=(33,21,191,215); 15=(24,21,208,215). Bichos 0/1/2 terminam em y=235.
+PEIXES: indices 0..8 todos (21,47,215,162), silhueta, pose e escala identicas. Linha=corpo e coluna=rabo, laranja #F08A3C / verde #5DBB63 / roxo #9B7BD8, hex exatos validados em ambas as partes.
+
+Fundos em coordenadas 1280x720, areas uteis conservadoras: agua da lagoa (306,160,763,195); areia da lagoa (324,566,677,154); clareira da noite (310,113,667,388). Segmentadas por cor e conferidas visualmente, tolerancia 5-10 px. Pranchas bg-lagoa-coordenadas-1280x720.png e bg-noite-coordenadas-1280x720.png em outputs/ventania-na-floresta/qa/.
+
+Conferido: pata e patinho esquerda, caracol direita, peixes esquerda; pedra sem escrita; icones 13/14 cinza #8A9095; noite sem vaga-lumes/luzes na clareira. 25 celulas com alfa limpo, alfa 1-47 ausente e alfa0 RGB0; margem ~8%; fundos RGB opacos. Validacao detalhada em outputs/ventania-na-floresta/qa/validation-n3.json. Entrega concluida; este e o reporte solicitado pelo usuario.

@@ -1,12 +1,13 @@
 import Phaser from 'phaser'
-import { FRUIT_SHEET, cellKey } from '../data/files'
-import { CRUMB, FRUITS, FRUIT_CELL, MAX_PIECES, fruitPoly } from '../data/fruits'
+import { hintLine } from '../data/cutting'
+import { ITEM_ART, cellKey } from '../data/files'
+import { CRUMB, ITEMS, MAX_PIECES, itemPoly, plateScale } from '../data/fruits'
 import { area, bounds, centroid, crosses, split } from '../data/geometry'
 import { CUT, MAP, PLATE, WD } from '../data/layout'
 import { C } from '../data/theme'
 import { TIMING } from '../data/timing'
 import { FX } from '../../../../shared/effects/FX'
-import type { FruitDef, FruitKind, Poly, Rect, Vec } from '../types'
+import type { ItemDef, ItemKind, Poly, Rect, Vec } from '../types'
 import type { View } from './view'
 
 /**
@@ -26,6 +27,8 @@ export interface Piece {
     pos: Vec
     state: PieceState
     stuck: boolean
+    /** Na cabeça da formiga: a escala menor e quanto o pedaço sobe para ela continuar à vista. */
+    held?: { k: number; up: number }
     img: Phaser.GameObjects.Image
     key: string
 }
@@ -37,9 +40,9 @@ export type Cut =
     | { kind: 'miss' }
 
 export interface Pieces {
-    start(kind: FruitKind, at: Vec): void
-    kind(): FruitKind
-    def(): FruitDef
+    start(kind: ItemKind, at: Vec): void
+    kind(): ItemKind
+    def(): ItemDef
     whole(): number
     all(): Piece[]
     live(): Piece[]
@@ -48,8 +51,9 @@ export interface Pieces {
     /** Os pedaços que saíram da mesma origem do corte (para o modo de corte da fresta). */
     raise(list: Piece[], on: boolean): void
     spread(list: Piece[], from: Vec): Promise<void>
-    nearest(x: number, y: number): Piece | undefined
-    carry(p: Piece): void
+    nearest(x: number, y: number, accept?: (p: Piece) => boolean): Piece | undefined
+    /** `cap`: o maior lado do pedaço na cabeça, em px do mundo (N2). */
+    carry(p: Piece, cap?: number): void
     follow(p: Piece, x: number, y: number, depth: number): void
     drop(p: Piece, at: Vec): Promise<void>
     place(p: Piece): Promise<void>
@@ -67,7 +71,8 @@ let serial = 0
 
 export function createPieces(scene: Phaser.Scene, view: View): Pieces {
     let list: Piece[] = []
-    let fruit: FruitKind = 'morango'
+    let fruit: ItemKind = 'morango'
+    let ps: number = MAP.scale
     let origin: Vec = { x: 0, y: 0 }
     let whole = 1
     let ghost: Phaser.GameObjects.Image | undefined
@@ -77,7 +82,7 @@ export function createPieces(scene: Phaser.Scene, view: View): Pieces {
 
     /** Desenha a fruta recortada pelo polígono, com polpa nas bordas de corte. */
     const paint = (poly: Poly): { key: string; ox: number; oy: number } => {
-        const def = FRUITS[fruit]
+        const def = ITEMS[fruit]
         const b = bounds(poly)
         const pad = 10
         const w = Math.ceil(b.w + pad * 2)
@@ -94,11 +99,13 @@ export function createPieces(scene: Phaser.Scene, view: View): Pieces {
             poly.forEach((v, i) => (i ? ctx.lineTo(v.x + dx, v.y + dy) : ctx.moveTo(v.x + dx, v.y + dy)))
             ctx.closePath()
             ctx.clip()
-            const tex = scene.textures.get(FRUIT_SHEET.key)
-            const frame = tex.get(cellKey(FRUIT_CELL[fruit]))
+            const art = ITEM_ART[fruit]
+            const tex = scene.textures.get(art.sheet.key)
+            const frame = tex.get(cellKey(art.cell))
             const src = tex.getSourceImage() as HTMLImageElement | HTMLCanvasElement
-            const cw = FRUIT_SHEET.cellW
-            ctx.drawImage(src, frame.cutX, frame.cutY, frame.cutWidth, frame.cutHeight, dx - cw / 2, dy - cw / 2, cw, cw)
+            const cw = art.sheet.cellW
+            const ch = art.sheet.cellH
+            ctx.drawImage(src, frame.cutX, frame.cutY, frame.cutWidth, frame.cutHeight, dx - cw / 2, dy - ch / 2, cw, ch)
             const edge = (width: number, color: number) => {
                 ctx.lineWidth = width
                 ctx.lineCap = 'round'
@@ -155,8 +162,9 @@ export function createPieces(scene: Phaser.Scene, view: View): Pieces {
         start(kind, at) {
             pieces.clear()
             fruit = kind
+            ps = plateScale(kind)
             origin = { ...at }
-            const poly = fruitPoly(FRUITS[kind])
+            const poly = itemPoly(ITEMS[kind])
             whole = area(poly)
             const p = make(poly, { x: at.x, y: at.y }, 'tree')
             const c = p.c
@@ -164,7 +172,7 @@ export function createPieces(scene: Phaser.Scene, view: View): Pieces {
             p.img.setPosition(p.pos.x, p.pos.y)
         },
         kind: () => fruit,
-        def: () => FRUITS[fruit],
+        def: () => ITEMS[fruit],
         whole: () => whole,
         all: () => list,
         live: () => list.filter(p => p.state !== 'gone'),
@@ -235,11 +243,11 @@ export function createPieces(scene: Phaser.Scene, view: View): Pieces {
             targets.forEach(p => p.img.setDepth(WD.actor + p.pos.y))
             view.restack()
         },
-        nearest(x, y) {
+        nearest(x, y, accept) {
             let best: Piece | undefined
             let bestD = Infinity
             list.forEach(p => {
-                if (p.state !== 'ground') return
+                if (p.state !== 'ground' || (accept && !accept(p))) return
                 const reach = 24 + Math.sqrt(p.area / Math.PI) * s * 0.8
                 const d = Math.hypot(p.pos.x - x, p.pos.y - y)
                 if (d < reach && d < bestD) {
@@ -249,30 +257,39 @@ export function createPieces(scene: Phaser.Scene, view: View): Pieces {
             })
             return best
         },
-        carry(p) {
+        carry(p, cap) {
             p.state = 'carried'
             scene.tweens.killTweensOf(p.img)
+            p.held = undefined
+            if (!cap) return
+            const b = bounds(p.poly)
+            const k = Math.min(s, cap / Math.max(b.w, b.h))
+            p.held = { k, up: Math.max(0, (b.y + b.h - p.c.y) * k - 10) }
+            p.img.setScale(k)
         },
         follow(p, x, y, depth) {
             p.pos = { x, y }
-            p.img.setPosition(x, y).setDepth(depth)
+            p.img.setPosition(x, y - (p.held?.up ?? 0)).setDepth(depth)
         },
         async drop(p, at) {
             p.state = 'ground'
             p.pos = { ...at }
-            await FX.to(scene, p.img, { x: at.x, y: at.y }, { duration: 260, ease: 'Quad.easeOut' })
+            p.held = undefined
+            await FX.to(scene, p.img, { x: at.x, y: at.y, scale: s }, { duration: 260, ease: 'Quad.easeOut' })
             p.img.setDepth(WD.actor + at.y)
             view.restack()
         },
         async place(p) {
             p.state = 'placed'
-            const to = { x: PLATE.x + p.c.x * s, y: PLATE.y + p.c.y * s }
+            p.held = undefined
+            const to = { x: PLATE.x + p.c.x * ps, y: PLATE.y + p.c.y * ps }
             p.pos = to
             p.img.setDepth(WD.placed)
             view.restack()
+            if (ps !== s) void FX.to(scene, p.img, { scale: ps }, { duration: TIMING.fly })
             await FX.arcTo(scene, p.img, to, { height: 90, duration: TIMING.fly })
-            await FX.to(scene, p.img, { scale: s * 1.12 }, { duration: TIMING.snap / 2, yoyo: true })
-            p.img.setScale(s)
+            await FX.to(scene, p.img, { scale: ps * 1.12 }, { duration: TIMING.snap / 2, yoyo: true })
+            p.img.setScale(ps)
         },
         async blow(p) {
             p.state = 'gone'
@@ -282,18 +299,18 @@ export function createPieces(scene: Phaser.Scene, view: View): Pieces {
         },
         async join() {
             clearGhost()
-            const poly = fruitPoly(FRUITS[fruit])
+            const poly = itemPoly(ITEMS[fruit])
             const art = paint(poly)
             ghostKey = art.key
             const src = scene.textures.get(art.key).getSourceImage()
             const c = centroid(poly)
-            ghost = scene.add.image(PLATE.x + c.x * s, PLATE.y + c.y * s, art.key)
-            ghost.setOrigin((c.x + art.ox) / src.width, (c.y + art.oy) / src.height).setScale(s).setAlpha(0)
+            ghost = scene.add.image(PLATE.x + c.x * ps, PLATE.y + c.y * ps, art.key)
+            ghost.setOrigin((c.x + art.ox) / src.width, (c.y + art.oy) / src.height).setScale(ps).setAlpha(0)
             view.add(ghost, WD.placed + 1)
             await FX.to(scene, ghost, { alpha: 1 }, { duration: TIMING.join, ease: 'Sine.easeInOut' })
             list.filter(p => p.state === 'placed').forEach(p => p.img.setVisible(false))
-            await FX.to(scene, ghost, { scale: s * 1.18 }, { duration: 200, yoyo: true, ease: 'Sine.easeOut' })
-            ghost.setScale(s)
+            await FX.to(scene, ghost, { scale: ps * 1.18 }, { duration: 200, yoyo: true, ease: 'Sine.easeOut' })
+            ghost.setScale(ps)
         },
         worldOf: local => ({ x: origin.x + local.x * s, y: origin.y + local.y * s }),
         rectOf(targets) {
@@ -311,11 +328,9 @@ export function createPieces(scene: Phaser.Scene, view: View): Pieces {
             return { x: (x0 + x1) / 2, y: (y0 + y1) / 2, w: x1 - x0, h: y1 - y0 }
         },
         hintFor(p) {
-            // corta atravessado ao lado mais comprido, pelo centro
-            const b = bounds(p.poly)
-            const reach = (Math.max(b.w, b.h) / 2 + 40) * s
-            if (b.w >= b.h) return { a: { x: p.pos.x, y: p.pos.y - reach }, b: { x: p.pos.x, y: p.pos.y + reach } }
-            return { a: { x: p.pos.x - reach, y: p.pos.y }, b: { x: p.pos.x + reach, y: p.pos.y } }
+            const h = hintLine(p.poly)
+            const at = (v: Vec) => ({ x: p.pos.x + (v.x - p.c.x) * s, y: p.pos.y + (v.y - p.c.y) * s })
+            return { a: at(h.a), b: at(h.b) }
         },
         sort() {
             view.restack()

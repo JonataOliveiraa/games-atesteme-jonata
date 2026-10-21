@@ -1,0 +1,128 @@
+{
+  "formiga": {
+    "width": 768,
+    "height": 384,
+    "channels": 4,
+    "sizeOK": true,
+    "hiddenRGB": 0,
+    "lowAlpha": 0,
+    "sha256": "178516690219c7a6ae6321e355f67c722334fb2b6798e8f07875699707d10dcf"
+  },
+  "amigas": {
+    "width": 768,
+    "height": 384,
+    "channels": 4,
+    "sizeOK": true,
+    "hiddenRGB": 0,
+    "lowAlpha": 0,
+    "sha256": "10cf0182192718b717026405142bd53af4df29eaada1f5179a5f5e24ad481d69"
+  },
+  "rainha": {
+    "width": 768,
+    "height": 256,
+    "channels": 4,
+    "sizeOK": true,
+    "hiddenRGB": 0,
+    "lowAlpha": 0,
+    "sha256": "c72bf06edcb0cab50d47fa4a5ad24150c4d20f8ca10a3d8fea9f943f2413926f"
+  },
+  "cenario": {
+    "width": 1024,
+    "height": 512,
+    "channels": 4,
+    "sizeOK": true,
+    "hiddenRGB": 0,
+    "lowAlpha": 0,
+    "sha256": "6d453a9a8d4c050b4e32c3a29413a88f1d268d2404ec2ff6938da590b755d775"
+  },
+  "sujeira": {
+    "width": 512,
+    "height": 128,
+    "channels": 4,
+    "sizeOK": true,
+    "hiddenRGB": 0,
+    "lowAlpha": 0,
+    "sha256": "9a870f0322f6ef6c6ef327095ad826ad8355e261cb90b422e41df7396f40c7c6"
+  },
+  "folha-gigante": {
+    "width": 1024,
+    "height": 768,
+    "channels": 4,
+    "sizeOK": true,
+    "hiddenRGB": 0,
+    "lowAlpha": 0,
+    "sha256": "602cb813ce11cb253ad8ef6a18ad316d4f1845f6844e079b52bdb437e9fafb13"
+  },
+  "frutas": {
+    "width": 1536,
+    "height": 512,
+    "channels": 4,
+    "sizeOK": true,
+    "hiddenRGB": 0,
+    "lowAlpha": 0,
+    "sha256": "728dee15d26d51832285940ad742eeeee3e3d449bd217c0f3ac2c2335742da7d",
+    "silhouettes": [
+      {
+        "index": 0,
+        "insideCount": 118940,
+        "outsidePixels": 0,
+        "unfilledPixels": 0
+      },
+      {
+        "index": 1,
+        "insideCount": 165916,
+        "outsidePixels": 0,
+        "unfilledPixels": 0
+      },
+      {
+        "index": 2,
+        "insideCount": 124734,
+        "outsidePixels": 0,
+        "unfilledPixels": 0
+      }
+    ]
+  },
+  "folhas": {
+    "width": 1024,
+    "height": 1280,
+    "channels": 4,
+    "sizeOK": true,
+    "hiddenRGB": 0,
+    "lowAlpha": 0,
+    "sha256": "76eb528a3101f5e1421f655da04669f52f65e40343d6e313856002bfa756699f",
+    "silhouettes": [
+      {
+        "index": 0,
+        "insideCount": 279748,
+        "outsidePixels": 0,
+        "unfilledPixels": 0
+      },
+      {
+        "index": 1,
+        "insideCount": 358828,
+        "outsidePixels": 0,
+        "unfilledPixels": 0
+      }
+    ]
+  },
+  "jardim": {
+    "width": 1672,
+    "height": 941,
+    "channels": 3,
+    "sizeOK": true,
+    "hiddenRGB": 0,
+    "lowAlpha": 0,
+    "sha256": "fc9e4de24c5967781180cf09ebf49c624db91328e5c0b7acabf8d0c7dc823a02",
+    "opaque": true
+  },
+  "cover-operacao-formiga": {
+    "width": 1672,
+    "height": 941,
+    "channels": 3,
+    "sizeOK": true,
+    "hiddenRGB": 0,
+    "lowAlpha": 0,
+    "sha256": "8d2ab0ec2050395fba0a2268309006f54eeccc3e91de94c55727876575e1291f",
+    "opaque": true
+  }
+}

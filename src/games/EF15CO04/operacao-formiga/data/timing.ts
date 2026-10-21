@@ -19,4 +19,11 @@ export const TIMING = {
     swipe: 520,
     tap: 520,
     finale: 1500,
+    wake: 520,
+    gather: 520,
+    raise: 420,
+    rubOut: 260,
+    shine: 700,
+    yuck: 2600,
+    dots: 90,
 } as const

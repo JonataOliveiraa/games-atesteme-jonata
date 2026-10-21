@@ -65,17 +65,41 @@ export interface TeiaPhase {
 }
 
 export type Home = 'fila' | 'grade' | 'ficha' | 'teia' | 'solto'
-export type Piece = 'pebbles' | 'list' | 'grid' | 'weather' | 'card' | 'badge' | 'pair' | 'map' | 'number' | 'word' | 'yes'
+export type Group = 'patos' | 'cogumelos' | 'peixes' | 'vagalumes' | 'caracol'
+export type Cap = 'redondo' | 'pontudo'
+export type Hue = 'vermelho' | 'azul'
+export type Glow = 'amarelo' | 'verde' | 'azul' | 'rosa'
 
-export interface RedemoinhoPhase {
+export interface Shroom {
+    cap: Cap
+    hue: Hue
+}
+
+export interface Fish {
+    corpo: Cor
+    rabo: Cor
+}
+
+export type FishField = keyof Fish
+export type GlowEdge = [Glow, Glow]
+
+interface JeitoBase {
     id: string
-    type: 'redemoinho'
-    homes: Home[]
-    pieces: Piece[]
+    type: 'jeito'
+    options: Home[]
     teach?: boolean
 }
 
-export type PhaseDef = LinePhase | GridPhase | FichaPhase | TeiaPhase | RedemoinhoPhase
+export type JeitoPhase = JeitoBase &
+    (
+        | { group: 'patos'; scattered: number[] }
+        | { group: 'cogumelos'; rows: Cap[]; cols: Hue[]; bring: Shroom[] }
+        | { group: 'peixes'; homes: Fish[]; bring: Fish[] }
+        | { group: 'vagalumes'; glows: Glow[]; before: number[]; after: number[]; edges: GlowEdge[] }
+        | { group: 'caracol' }
+    )
+
+export type PhaseDef = LinePhase | GridPhase | FichaPhase | TeiaPhase | JeitoPhase
 export type Structure = PhaseDef['type']
 
 export interface LevelDef {

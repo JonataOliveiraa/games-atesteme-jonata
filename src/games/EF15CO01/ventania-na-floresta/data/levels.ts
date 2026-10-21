@@ -1,5 +1,5 @@
-import type { Bird, Cor, FichaPhase, Flower, GridPhase, Kind, LevelDef, LinePhase, RedemoinhoPhase, Structure, TeiaPhase, Tone } from '../types'
-import { homeOf, homeOfPiece, nestFits, sameCell } from './logic'
+import type { Bird, Cap, Cor, FichaPhase, Fish, Flower, GridPhase, Hue, JeitoPhase, Kind, LevelDef, LinePhase, Shroom, Structure, TeiaPhase, Tone } from '../types'
+import { fishHome, fishMismatch, homeOf, nestFits, sameCell, shroomHome, wayOf } from './logic'
 
 export const POINTS = 10
 
@@ -7,6 +7,8 @@ export const guideKey = (topic: string) => `ef15co01-ventania-${topic}`
 export const OPENING_KEY = 'ef15co01-ventania-opening'
 
 const fl = (kind: Kind, tone: Tone): Flower => ({ kind, tone })
+const shroom = (cap: Cap, hue: Hue): Shroom => ({ cap, hue })
+const fish = (corpo: Cor, rabo: Cor): Fish => ({ corpo, rabo })
 const bird = (pena: Cor, bico: Cor, topete?: boolean): Bird => (topete === undefined ? { pena, bico } : { pena, bico, topete })
 
 const N1: LevelDef = {
@@ -92,19 +94,48 @@ const N2: LevelDef = {
 
 const N3: LevelDef = {
     level: 3,
-    title: 'O redemoinho',
-    message: 'Fila, grade, ficha e teia organizam as coisas. O que fica sozinho, sem organização, é solto.',
+    title: 'Como eles estavam?',
+    message: 'Fila, grade, ficha e teia são jeitos de organizar. Uma coisa sozinha, sem organização, é solta.',
     phases: [
-        { id: 'redemoinho-1', type: 'redemoinho', teach: true, homes: ['grade', 'fila', 'solto'], pieces: ['pebbles', 'number', 'grid'] },
-        { id: 'redemoinho-2', type: 'redemoinho', homes: ['ficha', 'teia', 'solto'], pieces: ['pair', 'card', 'word', 'map'] },
-        { id: 'redemoinho-3', type: 'redemoinho', homes: ['grade', 'fila', 'ficha', 'teia'], pieces: ['list', 'badge', 'weather', 'pair'] },
-        { id: 'redemoinho-4', type: 'redemoinho', homes: ['fila', 'ficha', 'teia', 'solto'], pieces: ['yes', 'map', 'card', 'pebbles'] },
+        { id: 'patos', type: 'jeito', group: 'patos', teach: true, options: ['fila', 'grade'], scattered: [1, 0, 2] },
+        {
+            id: 'cogumelos',
+            type: 'jeito',
+            group: 'cogumelos',
+            options: ['fila', 'grade'],
+            rows: ['redondo', 'pontudo'],
+            cols: ['vermelho', 'azul'],
+            bring: [shroom('pontudo', 'vermelho'), shroom('redondo', 'azul'), shroom('pontudo', 'azul'), shroom('redondo', 'vermelho')],
+        },
+        {
+            id: 'peixes',
+            type: 'jeito',
+            group: 'peixes',
+            options: ['ficha', 'teia'],
+            homes: [fish('laranja', 'verde'), fish('verde', 'laranja'), fish('roxo', 'verde')],
+            bring: [fish('verde', 'laranja'), fish('roxo', 'verde'), fish('laranja', 'verde')],
+        },
+        {
+            id: 'vagalumes',
+            type: 'jeito',
+            group: 'vagalumes',
+            options: ['ficha', 'teia'],
+            glows: ['amarelo', 'verde', 'azul', 'rosa'],
+            before: [0, 1, 3, 4],
+            after: [2, 4, 5, 1],
+            edges: [
+                ['amarelo', 'azul'],
+                ['verde', 'rosa'],
+                ['azul', 'verde'],
+            ],
+        },
+        { id: 'caracol', type: 'jeito', group: 'caracol', options: ['solto', 'ficha'] },
     ],
 }
 
 export const LEVELS: LevelDef[] = [N1, N2, N3]
 
-const LEVEL_TYPES: Record<number, Structure[]> = { 1: ['fila', 'grade'], 2: ['ficha', 'teia'], 3: ['redemoinho'] }
+const LEVEL_TYPES: Record<number, Structure[]> = { 1: ['fila', 'grade'], 2: ['ficha', 'teia'], 3: ['jeito'] }
 
 const sameBird = (a: Bird, b: Bird, phase: FichaPhase) => nestFits(a, b, phase.fields)
 
@@ -152,20 +183,53 @@ function checkTeia(tag: string, phase: TeiaPhase, problems: string[]) {
     })
 }
 
-function checkWhirl(tag: string, phase: RedemoinhoPhase, problems: string[]) {
-    const { homes, pieces } = phase
-    if (homes.length > 4) problems.push(`${tag}: no máximo 4 casas`)
-    if (new Set(homes).size !== homes.length) problems.push(`${tag}: casa repetida`)
-    if (new Set(pieces).size !== pieces.length) problems.push(`${tag}: pedaço repetido`)
-    const targets = pieces.map(homeOfPiece)
-    homes.forEach(h => {
-        if (!targets.includes(h)) problems.push(`${tag}: a casa ${h} não recebe pedaço`)
-    })
-    targets.forEach((h, i) => {
-        if (!homes.includes(h)) problems.push(`${tag}: o pedaço ${pieces[i]} não tem casa na fase`)
-        if (i > 0 && targets[i - 1] === h) problems.push(`${tag}: a casa ${h} duas vezes seguidas`)
-    })
-    if (targets[0] === homes[0]) problems.push(`${tag}: o 1º pedaço não vai na casa da ponta esquerda`)
+function checkJeito(tag: string, phase: JeitoPhase, problems: string[]) {
+    const way = wayOf(phase.group)
+    if (phase.options.length !== 2 || new Set(phase.options).size !== 2) problems.push(`${tag}: duas placas diferentes`)
+    if (!phase.options.includes(way)) problems.push(`${tag}: falta a placa ${way}`)
+    if (phase.group === 'patos') {
+        const n = phase.scattered.length
+        if (n !== 3 || [...phase.scattered].sort((x, y) => x - y).some((r, i) => r !== i)) problems.push(`${tag}: tamanhos 0..2`)
+        if (phase.scattered[0] === 0) problems.push(`${tag}: o maior não fica na ponta esquerda`)
+    } else if (phase.group === 'cogumelos') {
+        const { rows, cols, bring } = phase
+        if (bring.length !== rows.length * cols.length) problems.push(`${tag}: um cogumelo por casinha`)
+        const homes = bring.map(sh => shroomHome(rows, cols, sh))
+        homes.forEach((h, i) => {
+            if (h.r < 0 || h.c < 0) problems.push(`${tag}: o cogumelo ${i + 1} não tem casinha`)
+            if (homes.findIndex(o => sameCell(o, h)) !== i) problems.push(`${tag}: dois cogumelos na mesma casinha`)
+        })
+        if (homes[0] && homes[0].r === 0 && homes[0].c === 0) problems.push(`${tag}: o 1º cogumelo não vai no canto de cima à esquerda`)
+    } else if (phase.group === 'peixes') {
+        const { homes, bring } = phase
+        if (homes.length !== 3) problems.push(`${tag}: três tocas`)
+        if (bring.length !== homes.length) problems.push(`${tag}: um peixe por toca`)
+        const swapped = homes.some((x, i) => homes.some((y, j) => j > i && x.corpo === y.rabo && x.rabo === y.corpo && x.corpo !== x.rabo))
+        if (!swapped) problems.push(`${tag}: falta um par de tocas com corpo e rabo trocados`)
+        const at = bring.map((f, i) => {
+            const matches = homes.filter(h => fishMismatch(h, f) === undefined).length
+            if (matches !== 1) problems.push(`${tag}: o peixe ${i + 1} combina com ${matches} tocas`)
+            return fishHome(homes, f)
+        })
+        if (new Set(at).size !== at.length) problems.push(`${tag}: dois peixes na mesma toca`)
+        if (at[0] === 0) problems.push(`${tag}: o 1º peixe não vai na toca da ponta esquerda`)
+    } else if (phase.group === 'vagalumes') {
+        const { glows, before, after, edges } = phase
+        if (before.length !== glows.length || after.length !== glows.length) problems.push(`${tag}: um lugar antes e depois para cada vagalume`)
+        if (new Set(before).size !== before.length || new Set(after).size !== after.length) problems.push(`${tag}: dois vagalumes no mesmo lugar`)
+        glows.forEach((g, i) => {
+            if (before[i] === after[i]) problems.push(`${tag}: o ${g} precisa mudar de lugar`)
+            if (!edges.some(e => e.includes(g))) problems.push(`${tag}: o ${g} sem fio`)
+        })
+        const seen = new Set<string>()
+        edges.forEach(([x, y], i) => {
+            const key = [x, y].sort().join('-')
+            if (x === y || seen.has(key)) problems.push(`${tag}: fio ${i + 1} repetido ou sozinho`)
+            seen.add(key)
+            if (!glows.includes(x) || !glows.includes(y)) problems.push(`${tag}: fio ${i + 1} com vagalume de fora`)
+            if (i > 0 && edges[i - 1][0] === x) problems.push(`${tag}: o mesmo vagalume começa duas vezes seguidas`)
+        })
+    }
 }
 
 function checkLine(tag: string, phase: LinePhase, problems: string[]) {
@@ -211,8 +275,13 @@ export function validateLevels(levels: LevelDef[] = LEVELS) {
             else if (phase.type === 'grade') checkGrid(tag, phase, problems)
             else if (phase.type === 'ficha') checkFicha(tag, phase, problems)
             else if (phase.type === 'teia') checkTeia(tag, phase, problems)
-            else checkWhirl(tag, phase, problems)
+            else checkJeito(tag, phase, problems)
         })
+        const jeitos = level.phases.filter((ph): ph is JeitoPhase => ph.type === 'jeito')
+        if (jeitos.length) {
+            const sides = jeitos.map(ph => ph.options.indexOf(wayOf(ph.group)))
+            if (!sides.includes(0) || !sides.includes(1)) problems.push(`N${level.level}: a placa certa troca de lado`)
+        }
         if (level.phases.length > 5) problems.push(`N${level.level}: no máximo 5 fases`)
     })
     if (problems.length) throw new Error(`Ventania na Floresta — níveis inválidos:\n${problems.join('\n')}`)

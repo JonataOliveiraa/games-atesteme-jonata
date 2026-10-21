@@ -1,6 +1,8 @@
 import Phaser from 'phaser'
 import { BG_KEY, PROPS_SHEET, PROP, cellKey, sheetScale } from '../data/files'
-import { BUSH_AT, DECOR, H, MAP, MOUND, PHERO, PLATE, W, WALL, WD, WIND } from '../data/layout'
+import { FX } from '../../../../shared/effects/FX'
+import { BUSH_AT, DECOR, H, MAP, MOUND, PHERO, PLATE, W, WALL, WD, WIDE, WIND } from '../data/layout'
+import { TIMING } from '../data/timing'
 import { C } from '../data/theme'
 import type { Rect, Vec } from '../types'
 import { baked } from './art'
@@ -23,6 +25,11 @@ export interface Garden {
     gapRect(): Rect
     windRect(): Rect
     gapCenter(): Vec
+    /** O caminho largo do N3: o muro sem as duas pedras de cima. */
+    setWide(on: boolean): void
+    wideRect(): Rect
+    /** Os pontinhos acendem o caminho largo, da fresta até o outro lado. */
+    lightPath(): Promise<void>
     destroy(): void
 }
 
@@ -31,6 +38,7 @@ const STREAK = 'of-streak'
 type Box = { x0: number; x1: number; y0: number; y1: number }
 
 const WALL_TOP: Box = { x0: WALL.x - WALL.half, x1: WALL.x + WALL.half, y0: -200, y1: WALL.gapTop }
+const WALL_SHORT: Box = { ...WALL_TOP, y0: WIDE.bottom }
 const WALL_BOTTOM: Box = { x0: WALL.x - WALL.half, x1: WALL.x + WALL.half, y0: WALL.gapBottom, y1: H + 200 }
 const GATE: Box = { x0: WALL.x - WALL.half, x1: WALL.x + WALL.half, y0: WALL.gapTop, y1: WALL.gapBottom }
 
@@ -71,7 +79,8 @@ export function createGarden(scene: Phaser.Scene, view: View): Garden {
     prop(PROP.plate, PLATE.x, PLATE.y, PLATE.r * 2.16, WD.plate, 0.5)
     // o arbusto fica no chão: os pedaços que se espalham para cima não podem sumir atrás dele
     prop(PROP.bush, BUSH_AT.x, BUSH_AT.y, 190, WD.decor + 3)
-    WALL.stones.forEach(s => prop(s.cell, s.x, s.y, s.w, WD.actor + s.y))
+    const stones = WALL.stones.map(s => ({ y: s.y as number, img: prop(s.cell, s.x, s.y, s.w, WD.actor + s.y) }))
+    let wide = false
 
     // o vento: listras brancas descendo pela faixa, e dois dentes-de-leão marcando onde ele sopra
     const puffs = WIND.puffs.map(p => prop(PROP.puff, p.x, p.y, 74, WD.actor + p.y))
@@ -122,7 +131,7 @@ export function createGarden(scene: Phaser.Scene, view: View): Garden {
     return {
         blocked(x, y, r, gate) {
             if (x - r < MAP.left || x + r > MAP.right || y - r < MAP.top || y + r > MAP.bottom) return true
-            if (hits(WALL_TOP, x, y, r) || hits(WALL_BOTTOM, x, y, r)) return true
+            if (hits(wide ? WALL_SHORT : WALL_TOP, x, y, r) || hits(WALL_BOTTOM, x, y, r)) return true
             return gate && hits(GATE, x, y, r)
         },
         atGate: (x, y, r) => hits(GATE, x, y, r + 3),
@@ -147,6 +156,25 @@ export function createGarden(scene: Phaser.Scene, view: View): Garden {
         gapRect: () => ({ x: WALL.x, y: (WALL.gapTop + WALL.gapBottom) / 2, w: WALL.half * 2 + 120, h: WALL.gapBottom - WALL.gapTop + 150 }),
         windRect: () => ({ x: (WIND.left + WIND.right) / 2, y: (MAP.top + H) / 2, w: WIND.right - WIND.left + 30, h: H - MAP.top }),
         gapCenter: () => ({ x: WALL.x, y: (WALL.gapTop + WALL.gapBottom) / 2 }),
+        setWide(on) {
+            wide = on
+            stones.forEach(s => s.img.setVisible(!on || !(WIDE.skip as readonly number[]).includes(s.y)))
+        },
+        wideRect: () => ({ x: WALL.x, y: (MAP.top + WIDE.bottom) / 2, w: WALL.half * 2 + 160, h: WIDE.bottom - MAP.top + 10 }),
+        async lightPath() {
+            const lit = WIDE.dots.map(d => {
+                const dot = scene.add.circle(d.x, d.y, PHERO.r * 2.6, C.hint, 1).setStrokeStyle(2, C.phero, 1).setScale(0)
+                view.add(dot, WD.wind - 1)
+                return dot
+            })
+            for (const dot of lit) {
+                void FX.to(scene, dot, { scale: 1 }, { duration: 200, ease: 'Back.easeOut' })
+                await FX.wait(scene, TIMING.dots)
+            }
+            await FX.wait(scene, 1400)
+            await FX.to(scene, lit, { alpha: 0 }, { duration: 500 })
+            lit.forEach(d => d.destroy())
+        },
         destroy() {
             streakTweens.forEach(t => t.stop())
             dots.forEach(d => d.destroy())

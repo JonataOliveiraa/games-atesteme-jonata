@@ -4,22 +4,24 @@ import {
     BEE_SHEET,
     BUG_SHEET,
     CHICK_SHEET,
+    CREW_SHEET,
+    FISH_SHEET,
     FLOWER_SHEET,
     GARDEN_KEY,
-    HOUSE_SHEET,
     NESTS_KEY,
     OBJECT2_SHEET,
     OBJECT_SHEET,
-    PIECE_SHEET,
     PIPA_SHEET,
     SPIDER_SHEET,
     TRAIL_KEY,
     WEB_KEY,
-    WHIRL_KEY,
+    GLADE_KEY,
+    NIGHT_KEY,
+    POND_KEY,
     type Sheet,
 } from '../data/files'
 import { H, W } from '../data/layout'
-import { C, COR, TONE } from '../data/theme'
+import { C, COR, GLOW, TONE } from '../data/theme'
 import type { Cor, Kind, Tone } from '../types'
 
 type G = Phaser.GameObjects.Graphics
@@ -73,11 +75,13 @@ export function ensureArt(scene: Phaser.Scene) {
     bakeSheet(scene, SPIDER_SHEET, 5, spider)
     bakeSheet(scene, BUG_SHEET, 5, bug)
     bakeSheet(scene, OBJECT2_SHEET, 5, object2)
-    bakeSheet(scene, HOUSE_SHEET, 5, house)
-    bakeSheet(scene, PIECE_SHEET, 5, piece)
+    bakeSheet(scene, CREW_SHEET, 5, crew)
+    bakeSheet(scene, FISH_SHEET, 5, fishArt)
     bakeImage(scene, NESTS_KEY, W, H, 4, nestsBg)
     bakeImage(scene, WEB_KEY, W, H, 4, webBg)
-    bakeImage(scene, WHIRL_KEY, W, H, 4, whirlBg)
+    bakeImage(scene, GLADE_KEY, W, H, 4, whirlBg)
+    bakeImage(scene, POND_KEY, W, H, 4, pondBg)
+    bakeImage(scene, NIGHT_KEY, W, H, 4, nightBg)
 }
 
 // ───────────────────────────────────────────── primitivas
@@ -876,225 +880,137 @@ function object2(g: G, i: number) {
     }
 }
 
-// ───────────────────────────────────────────── casas do N3
+// ───────────────────────────────────────────── turma do N3
 
-function tinyAnt(g: G, x: number, y: number, s: number) {
-    oval(g, x + 14 * s, y, 26 * s, 20 * s, C.ant, 3, C.antDark)
-    disc(g, x - 6 * s, y - 6 * s, 13 * s, C.ant, 3, C.antDark)
-    disc(g, x - 9 * s, y - 8 * s, 3 * s, C.eye, 0)
-}
-
-function miniFlower(g: G, x: number, y: number, fill: number) {
-    g.lineStyle(4, C.stemDark, 1)
-    g.lineBetween(x, y, x, y + 26)
-    for (let k = 0; k < 5; k++) {
-        const a = (k / 5) * Math.PI * 2
-        disc(g, x + Math.cos(a) * 11, y + Math.sin(a) * 11, 9, fill, 3, C.line)
-    }
-    disc(g, x, y, 7, C.center, 2, C.centerDark)
-}
-
-function webDisc(g: G, cx: number, cy: number, r: number) {
-    g.lineStyle(4, C.white, 1)
-    for (let k = 0; k < 8; k++) {
-        const a = (k / 8) * Math.PI * 2
-        g.lineBetween(cx, cy, cx + Math.cos(a) * r, cy + Math.sin(a) * r)
-    }
-    for (let ring = 1; ring <= 3; ring++) g.strokeCircle(cx, cy, (r * ring) / 3)
-}
-
-function house(g: G, i: number) {
-    if (i === 0) {
-        oval(g, 128, 176, 220, 130, C.mound, lw, C.moundDark)
-        oval(g, 128, 150, 140, 70, C.mound, 0)
-        oval(g, 128, 186, 56, 36, C.hole, 4, C.moundDark)
-        tinyAnt(g, 70, 222, 1.2)
-        tinyAnt(g, 120, 226, 0.95)
-        tinyAnt(g, 162, 228, 0.75)
-    } else if (i === 1) {
-        box(g, 30, 60, 196, 170, 24, C.grassDark, 0)
-        for (let r = 0; r < 2; r++)
-            for (let c = 0; c < 2; c++) {
-                box(g, 40 + c * 92, 70 + r * 78, 84, 70, 14, C.soil, 4, C.soilDark)
-                miniFlower(g, 82 + c * 92, 92 + r * 78, [C.amarela, C.azul, C.rosa, C.amarela][r * 2 + c])
-            }
-    } else if (i === 2) {
-        g.lineStyle(4, C.woodDark, 1)
-        g.lineBetween(128, 130, 128, 150)
-        oval(g, 128, 104, 200, 90, C.nest, lw, C.nestDark)
-        oval(g, 128, 82, 150, 36, C.nestDark, 0)
-        box(g, 78, 150, 100, 84, 12, C.board, 4, C.woodDark)
-        disc(g, 98, 174, 9, C.labelRing, 2, C.labelIcon)
-        disc(g, 148, 174, 9, C.laranja, 0)
-        disc(g, 98, 210, 9, C.labelRing, 2, C.labelIcon)
-        disc(g, 148, 210, 9, C.verde, 0)
-    } else if (i === 3) {
-        disc(g, 128, 128, 104, C.shade, lw, C.shadeDark)
-        webDisc(g, 128, 128, 92)
-        const dots = [pt(88, 92), pt(176, 110), pt(118, 182)]
-        g.lineStyle(5, C.butter, 1)
-        g.lineBetween(dots[0].x, dots[0].y, dots[1].x, dots[1].y)
-        g.lineBetween(dots[1].x, dots[1].y, dots[2].x, dots[2].y)
-        g.lineBetween(dots[2].x, dots[2].y, dots[0].x, dots[0].y)
-        dots.forEach(d => disc(g, d.x, d.y, 12, C.butter, 4, C.amarelaDark))
-    } else if (i === 4) {
-        poly(g, [pt(28, 110), pt(228, 110), pt(204, 230), pt(52, 230)], C.basket, lw, C.basketDark)
-        for (let k = 0; k < 4; k++) {
-            g.lineStyle(4, C.basketDark, 0.8)
-            g.lineBetween(36 + k * 4, 136 + k * 26, 220 - k * 4, 136 + k * 26)
-        }
-        oval(g, 128, 110, 200, 34, C.basketDark, lw, C.basketDark)
-        g.lineStyle(10, C.basketDark, 1)
-        g.beginPath()
-        g.arc(128, 110, 84, Math.PI, 0, false)
-        g.strokePath()
-        g.lineStyle(5, C.basket, 1)
-        g.beginPath()
-        g.arc(128, 110, 84, Math.PI, 0, false)
-        g.strokePath()
+function duck(g: G, body: number, dark: number, mom: boolean) {
+    limb(g, [pt(118, 216), pt(112, 240)], 7, C.beak, C.beakDark)
+    limb(g, [pt(150, 216), pt(156, 240)], 7, C.beak, C.beakDark)
+    poly(g, [pt(112, 241), pt(96, 246), pt(122, 246)], C.beak, 3, C.beakDark)
+    poly(g, [pt(150, 241), pt(140, 246), pt(166, 246)], C.beak, 3, C.beakDark)
+    poly(g, [pt(196, 150), pt(238, mom ? 104 : 118), pt(222, 170)], body, lw, dark)
+    oval(g, 146, 166, 176, 118, body, lw, dark)
+    rotated(g, 160, 160, -12, () => oval(g, 160, 160, 88, 54, body, lw, dark))
+    g.fillStyle(C.white, 0.45)
+    g.fillEllipse(124, 140, 60, 18)
+    disc(g, 88, 108, mom ? 50 : 54, body, lw, dark)
+    poly(g, [pt(48, 106), pt(14, 116), pt(48, 128)], C.beak, lw, C.beakDark)
+    eye(g, 76, 98, 16, 22, 'open')
+    cheeks(g, pt(62, 122), pt(108, 120), 8)
+    if (!mom) {
+        poly(g, [pt(86, 58), pt(94, 40), pt(100, 58)], body, 3, dark)
+    } else {
+        g.fillStyle(C.white, 0.8)
+        g.fillEllipse(100, 82, 30, 12)
     }
 }
 
-// ───────────────────────────────────────────── pedacos do redemoinho
-
-function arrow(g: G, x: number, y: number, deg: number) {
-    rotated(g, x, y, deg, () => {
-        g.lineStyle(5, C.inkSoft, 1)
-        g.lineBetween(x - 10, y, x + 8, y)
-        poly(g, [pt(x + 6, y - 8), pt(x + 16, y), pt(x + 6, y + 8)], C.inkSoft, 0)
-    })
-}
-
-function check(g: G, x: number, y: number, s: number, color: number = C.yesDark) {
-    g.lineStyle(8 * s, color, 1)
-    g.beginPath()
-    g.moveTo(x - 14 * s, y)
-    g.lineTo(x - 4 * s, y + 10 * s)
-    g.lineTo(x + 16 * s, y - 12 * s)
-    g.strokePath()
-}
-
-function sunIcon(g: G, x: number, y: number, r: number) {
-    g.lineStyle(4, C.sunDark, 1)
-    for (let k = 0; k < 8; k++) {
-        const a = (k / 8) * Math.PI * 2
-        g.lineBetween(x + Math.cos(a) * r * 1.3, y + Math.sin(a) * r * 1.3, x + Math.cos(a) * r * 1.75, y + Math.sin(a) * r * 1.75)
-    }
-    disc(g, x, y, r, C.sun, 3, C.sunDark)
-}
-
-function rainIcon(g: G, x: number, y: number, r: number) {
-    disc(g, x - r * 0.5, y, r * 0.7, C.rain, 3, C.rainDark)
-    disc(g, x + r * 0.4, y - r * 0.2, r * 0.85, C.rain, 3, C.rainDark)
-    g.fillStyle(C.rain, 1)
-    g.fillCircle(x - r * 0.5, y, r * 0.6)
-    g.lineStyle(3, C.rainDark, 1)
-    g.lineBetween(x - r * 0.6, y + r * 0.9, x - r * 0.8, y + r * 1.4)
-    g.lineBetween(x + r * 0.3, y + r * 0.9, x + r * 0.1, y + r * 1.4)
-}
-
-function piece(g: G, i: number) {
-    if (i === 0) {
-        oval(g, 52, 140, 70, 52, C.stone, lw, C.stoneDark)
-        arrow(g, 100, 140, 0)
-        oval(g, 140, 142, 52, 38, C.stone, lw, C.stoneDark)
-        arrow(g, 178, 142, 0)
-        oval(g, 210, 144, 36, 26, C.stone, lw, C.stoneDark)
-    } else if (i === 1) {
-        leafShape(g, 128, 128, 150, 230, 90, C.leafLight, C.leafDark)
-        disc(g, 128, 64, 20, C.nest, 4, C.nestDark)
-        arrow(g, 128, 98, 90)
-        oval(g, 128, 134, 30, 36, C.wood, 4, C.woodDark)
-        box(g, 108, 112, 40, 14, 6, C.woodDark, 0)
-        arrow(g, 128, 168, 90)
-        oval(g, 128, 200, 18, 26, C.dirtLight, 4, C.woodDark)
-    } else if (i === 2) {
-        box(g, 30, 30, 196, 196, 16, C.wood, lw, C.woodDark)
-        for (let r = 0; r < 2; r++)
-            for (let c = 0; c < 2; c++) {
-                box(g, 44 + c * 88, 44 + r * 88, 80, 80, 10, C.soil, 4, C.soilDark)
-                miniFlower(g, 84 + c * 88, 72 + r * 88, [C.amarela, C.azul, C.rosa, C.azul][r * 2 + c])
-            }
-    } else if (i === 3) {
-        box(g, 14, 50, 228, 156, 16, C.board, lw, C.woodDark)
-        g.lineStyle(3, C.creamDark, 1)
-        for (let c = 1; c <= 3; c++) g.lineBetween(14 + c * 57, 58, 14 + c * 57, 198)
-        g.lineBetween(20, 128, 236, 128)
-        sunIcon(g, 42, 90, 15)
-        rainIcon(g, 42, 166, 18)
-        check(g, 99, 90, 0.9)
-        check(g, 213, 90, 0.9)
-        check(g, 156, 166, 0.9)
-    } else if (i === 4) {
-        box(g, 36, 50, 184, 156, 16, C.board, lw, C.woodDark)
-        disc(g, 80, 96, 22, C.labelRing, 3, C.labelIcon)
-        feather(g, 80, 96, 0.3, C.labelIcon, 0x3c4146)
-        disc(g, 170, 96, 20, C.laranja, 4, C.laranjaDark)
-        disc(g, 80, 160, 22, C.labelRing, 3, C.labelIcon)
-        beakIcon(g, 82, 160, 0.3, C.labelIcon, 0x3c4146)
-        disc(g, 170, 160, 20, C.verde, 4, C.verdeDark)
-    } else if (i === 5) {
-        box(g, 28, 30, 200, 196, 16, C.board, lw, C.woodDark)
-        disc(g, 72, 70, 24, C.cricket, 4, C.cricketDark)
-        disc(g, 64, 66, 4, C.eye, 0)
-        disc(g, 80, 66, 4, C.eye, 0)
-        disc(g, 70, 128, 20, C.labelRing, 3, C.labelIcon)
-        disc(g, 70, 132, 7, C.labelIcon, 0)
-        ;[-9, 0, 9].forEach(dx => disc(g, 70 + dx, 120, 4, C.labelIcon, 0))
-        box(g, 112, 106, 76, 44, 12, C.white, 3, C.creamDark)
-        disc(g, 70, 186, 20, C.labelRing, 3, C.labelIcon)
-        poly(g, [pt(70, 172), pt(80, 190), pt(70, 198), pt(60, 190)], C.labelIcon, 0)
-        disc(g, 150, 186, 20, C.verde, 4, C.verdeDark)
-    } else if (i === 6) {
-        g.lineStyle(6, C.white, 1)
-        g.lineBetween(70, 128, 186, 128)
-        g.lineStyle(2, C.inkSoft, 0.6)
-        g.lineBetween(70, 131, 186, 131)
-        oval(g, 62, 128, 80, 66, C.ladybug, lw, C.ladybugDark)
-        disc(g, 52, 118, 8, C.eye, 0)
-        disc(g, 72, 140, 8, C.eye, 0)
-        disc(g, 196, 120, 34, C.shell, lw, C.shellDark)
-        oval(g, 196, 156, 92, 22, C.snail, 4, C.snailDark)
-    } else if (i === 7) {
-        const stones = [pt(56, 70), pt(196, 84), pt(70, 190), pt(190, 196)]
-        g.lineStyle(6, C.dirtDark, 1)
-        const dash = (a: P, b: P) => {
-            for (let t = 0; t < 1; t += 0.16) {
-                const x0 = Phaser.Math.Linear(a.x, b.x, t)
-                const y0 = Phaser.Math.Linear(a.y, b.y, t)
-                const x1 = Phaser.Math.Linear(a.x, b.x, t + 0.08)
-                const y1 = Phaser.Math.Linear(a.y, b.y, t + 0.08)
-                g.lineBetween(x0, y0, x1, y1)
-            }
-        }
-        dash(stones[0], stones[1])
-        dash(stones[0], stones[2])
-        dash(stones[1], stones[3])
-        dash(stones[2], stones[3])
-        dash(stones[0], stones[3])
-        stones.forEach(s => oval(g, s.x, s.y, 54, 40, C.stone, lw, C.stoneDark))
-    } else if (i === 8) {
-        oval(g, 128, 134, 196, 150, C.stone, lw, C.stoneDark)
-        g.fillStyle(C.white, 0.45)
-        g.fillEllipse(84, 92, 50, 18)
-    } else if (i === 9) {
-        box(g, 26, 50, 204, 130, 50, C.white, lw, C.line)
-        poly(g, [pt(70, 172), pt(58, 222), pt(110, 176)], C.white, 0)
-        g.lineStyle(lw, C.line, 1)
-        g.lineBetween(70, 176, 58, 222)
-        g.lineBetween(58, 222, 110, 179)
-    } else if (i === 10) {
-        sunIcon(g, 128, 150, 46)
-        g.fillStyle(C.grass, 1)
-        g.slice(128, 250, 130, Math.PI, 0, false)
+function capShape(g: G, cap: 'redondo' | 'pontudo', fill: number, dark: number) {
+    if (cap === 'redondo') {
+        g.fillStyle(fill, 1)
+        g.slice(128, 140, 98, Math.PI, 0, false)
         g.fillPath()
-        g.lineStyle(lw, C.grassDeep, 1)
+        g.lineStyle(lw, dark, 1)
         g.beginPath()
-        g.arc(128, 250, 130, Math.PI, 0, false)
+        g.arc(128, 140, 98, Math.PI, 0, false)
+        g.closePath()
         g.strokePath()
-        disc(g, 186, 70, 34, C.white, 4, C.yesDark)
-        check(g, 186, 72, 1)
+        ;[pt(84, 102), pt(132, 72), pt(176, 106)].forEach(p => disc(g, p.x, p.y, 13, C.white, 0))
+    } else {
+        poly(g, [pt(26, 142), pt(128, 18), pt(230, 142)], fill, lw, dark)
+        ;[pt(96, 116), pt(134, 74), pt(166, 120)].forEach(p => disc(g, p.x, p.y, 11, C.white, 0))
     }
+}
+
+function shroomArt(g: G, cap: 'redondo' | 'pontudo', fill: number, dark: number) {
+    box(g, 90, 136, 76, 104, 26, C.belly, lw, C.woodDark)
+    eye(g, 112, 176, 12, 18, 'open')
+    eye(g, 144, 176, 12, 18, 'open')
+    smile(g, 128, 198, 7, 'smile')
+    capShape(g, cap, fill, dark)
+}
+
+function firefly(g: G, light: number) {
+    oval(g, 86, 104, 70, 50, C.white, 3, 0xb9c6d8)
+    oval(g, 170, 104, 70, 50, C.white, 3, 0xb9c6d8)
+    oval(g, 128, 150, 86, 100, C.bug, lw, C.bugDark)
+    disc(g, 128, 186, 38, light, lw, C.bugDark)
+    g.fillStyle(C.white, 0.6)
+    g.fillEllipse(118, 176, 22, 12)
+    disc(g, 128, 92, 40, C.bug, lw, C.bugDark)
+    limb(g, [pt(114, 60), pt(100, 30)], 4, C.bugDark)
+    limb(g, [pt(142, 60), pt(156, 30)], 4, C.bugDark)
+    eye(g, 114, 92, 14, 20, 'open')
+    eye(g, 142, 92, 14, 20, 'open')
+    cheeks(g, pt(102, 110), pt(154, 110), 7)
+}
+
+function conch(g: G) {
+    const pts: P[] = []
+    for (let i = 0; i <= 20; i++) {
+        const a = Math.PI + (i / 20) * Math.PI
+        pts.push(pt(128 + Math.cos(a) * 110, 170 + Math.sin(a) * 96))
+    }
+    pts.push(pt(150, 214), pt(106, 214))
+    poly(g, pts, C.conch, lw, C.conchDark)
+    g.lineStyle(4, C.conchDark, 1)
+    for (let k = 1; k < 6; k++) {
+        const a = Math.PI + (k / 6) * Math.PI
+        g.lineBetween(128, 206, 128 + Math.cos(a) * 100, 170 + Math.sin(a) * 86)
+    }
+    g.fillStyle(C.white, 0.45)
+    g.fillEllipse(96, 110, 44, 16)
+}
+
+function basket(g: G) {
+    g.lineStyle(10, C.basketDark, 1)
+    g.beginPath()
+    g.arc(128, 128, 82, Math.PI * 1.05, Math.PI * 1.95, false)
+    g.strokePath()
+    box(g, 30, 120, 196, 112, 30, C.basket, lw, C.basketDark)
+    g.lineStyle(4, C.basketDark, 0.8)
+    for (let k = 1; k < 4; k++) g.lineBetween(34, 120 + k * 28, 222, 120 + k * 28)
+    for (let k = 1; k < 7; k++) g.lineBetween(30 + k * 28, 124, 30 + k * 28, 228)
+    box(g, 22, 112, 212, 26, 13, C.basket, lw, C.basketDark)
+}
+
+function crew(g: G, i: number) {
+    const grey = C.labelIcon
+    if (i === 0) duck(g, C.duck, C.duckDark, true)
+    else if (i === 1) duck(g, C.duckling, C.ducklingDark, false)
+    else if (i === 2) {
+        g.translateCanvas(256, 0)
+        g.scaleCanvas(-1, 1)
+        bug(g, 3)
+    } else if (i === 3) {
+        oval(g, 128, 160, 210, 150, C.stone, lw, C.stoneDark)
+        g.fillStyle(C.white, 0.4)
+        g.fillEllipse(88, 116, 60, 20)
+    } else if (i >= 4 && i < 8) {
+        const cap = i < 6 ? 'redondo' : 'pontudo'
+        const blue = (i - 4) % 2 === 1
+        shroomArt(g, cap, blue ? C.capBlue : C.cap, blue ? C.capBlueDark : C.capDark)
+    } else if (i >= 8 && i < 12) {
+        firefly(g, [GLOW.amarelo, GLOW.verde, GLOW.azul, GLOW.rosa][i - 8])
+    } else if (i === 12) conch(g)
+    else if (i === 13) {
+        oval(g, 120, 128, 170, 110, grey, lw, 0x3c4146)
+        disc(g, 74, 116, 10, C.white, 0)
+    } else if (i === 14) {
+        poly(g, [pt(70, 128), pt(196, 50), pt(170, 128), pt(196, 206)], grey, lw, 0x3c4146)
+    } else basket(g)
+}
+
+function fishArt(g: G, i: number) {
+    const corpo = COR[CORES[Math.floor(i / 3)]]
+    const rabo = COR[CORES[i % 3]]
+    poly(g, [pt(178, 128), pt(244, 64), pt(226, 128), pt(244, 192)], rabo.fill, lw, rabo.dark)
+    poly(g, [pt(104, 80), pt(140, 40), pt(160, 84)], corpo.fill, lw, corpo.dark)
+    oval(g, 112, 128, 180, 120, corpo.fill, lw, corpo.dark)
+    g.fillStyle(C.white, 0.4)
+    g.fillEllipse(100, 98, 64, 18)
+    eye(g, 62, 116, 20, 28, 'open')
+    cheeks(g, pt(54, 146), pt(98, 146), 8)
+    smile(g, 40, 140, 7, 'smile')
 }
 
 // ───────────────────────────────────────────── fundos do N2 e do N3
@@ -1172,4 +1088,51 @@ function whirlBg(g: G) {
     }
     mushroom(g, 40, 700, 0.9)
     mushroom(g, 1240, 690, 0.8)
+}
+
+function pondBg(g: G) {
+    g.fillStyle(C.sky, 1)
+    g.fillRect(0, 0, W, 130)
+    canopy(g, 17, -30)
+    g.fillStyle(C.water, 1)
+    g.fillRect(0, 110, W, H - 110)
+    g.fillStyle(C.white, 0.5)
+    g.fillRect(0, 110, W, 10)
+    g.fillStyle(C.waterDeep, 0.35)
+    g.fillRect(0, 300, W, 200)
+    g.fillStyle(C.dirtLight, 1)
+    g.fillRoundedRect(-40, 470, W + 80, 300, 80)
+    const rnd = seeded(71)
+    for (let k = 0; k < 40; k++) {
+        g.fillStyle(C.dirt, 0.6)
+        g.fillCircle(rnd() * W, 500 + rnd() * 210, 3 + rnd() * 4)
+    }
+    for (let k = 0; k < 14; k++) {
+        g.lineStyle(3, C.white, 0.5)
+        g.strokeCircle(rnd() * W, 150 + rnd() * 300, 5 + rnd() * 8)
+    }
+    ;[pt(60, 520), pt(110, 540), pt(1180, 520), pt(1230, 540)].forEach((p, k) => leafShape(g, p.x, p.y - 60, 150, 34, 82 + (k % 2) * 14, C.leaf, C.leafDark))
+}
+
+function nightBg(g: G) {
+    g.fillStyle(C.night, 1)
+    g.fillRect(0, 0, W, H)
+    const rnd = seeded(83)
+    for (let k = 0; k < 60; k++) {
+        g.fillStyle(C.white, 0.4 + rnd() * 0.5)
+        g.fillCircle(rnd() * W, rnd() * 420, 1.5 + rnd() * 2)
+    }
+    disc(g, 1100, 120, 50, C.butter, 0)
+    disc(g, 1120, 108, 44, C.night, 0)
+    g.fillStyle(C.nightLight, 1)
+    g.fillRoundedRect(-40, 600, W + 80, 200, 60)
+    box(g, -60, -40, 200, 800, 40, C.nightDark, 0)
+    box(g, 1140, -40, 200, 800, 40, C.nightDark, 0)
+    for (let k = 0; k < 14; k++) disc(g, (k / 13) * W, -20 + rnd() * 40, 70 + rnd() * 40, C.nightDark, 0)
+    for (let k = 0; k < 30; k++) {
+        const x = rnd() * W
+        const y = 620 + rnd() * 90
+        g.lineStyle(3, C.nightDark, 0.7)
+        g.lineBetween(x, y, x - 4, y - 12)
+    }
 }

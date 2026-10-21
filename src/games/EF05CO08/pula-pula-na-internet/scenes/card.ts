@@ -1,11 +1,11 @@
 import Phaser from 'phaser'
 import { FX } from '../../../../shared/effects/FX'
 import { CLUE_CELL, CLUE_SHEET, ITEM_CELL, ITEM_SHEET, cellKey, photoKey } from '../data/files'
-import { CARD, DEPTH, H, W } from '../data/layout'
+import { CARD, DEPTH, H, W, ZOOM } from '../data/layout'
 import { C, CSS, FONT, SIZE } from '../data/theme'
 import { TIMING } from '../data/timing'
 import { CLUE_LABEL, KIND_NAME, LABEL } from '../data/words'
-import type { ClueId, ItemDef, Rect, Vec } from '../types'
+import type { ClueId, ItemDef, PhotoId, Rect, Vec } from '../types'
 
 export interface Card {
     open(item: ItemDef, from: Vec, onPick?: (trust: boolean) => void, fast?: boolean): Promise<void>
@@ -30,6 +30,18 @@ interface Row {
     ok: boolean
 }
 
+interface Photo {
+    id: PhotoId
+    pic: Phaser.GameObjects.Image
+    badge: Phaser.GameObjects.Image
+}
+
+interface Zoom {
+    shade: Phaser.GameObjects.Rectangle
+    box: Phaser.GameObjects.Container
+    from: Vec
+}
+
 const CLUES: ClueId[] = ['quem', 'quando', 'onde']
 const MID = CARD.top + CARD.h / 2
 const local = (y: number) => y - MID
@@ -41,6 +53,8 @@ const KEY = {
     tick: (ok: boolean, r: number) => `marca-${ok ? 'ok' : 'no'}-${r}`,
     button: (trust: boolean) => `botao-${trust ? 'sim' : 'nao'}`,
     ring: 'botao-borda',
+    lens: 'foto-lupa',
+    close: 'foto-fechar',
 }
 
 function bake(scene: Phaser.Scene, key: string, w: number, h: number, paint: (g: Phaser.GameObjects.Graphics) => void) {
@@ -110,6 +124,33 @@ function bakeCardArt(scene: Phaser.Scene) {
         g.lineStyle(7, C.pulse, 1)
         g.strokeRoundedRect(4, 4, CARD.buttonW + 20, CARD.buttonH + 22, (CARD.buttonH + 22) / 2)
     })
+    const b = CARD.badgeR
+    bake(scene, KEY.lens, b * 2 + 8, b * 2 + 12, g => {
+        const c = b + 4
+        g.fillStyle(C.headerLine, 1)
+        g.fillCircle(c, c + 4, b)
+        g.fillStyle(C.accent, 1)
+        g.fillCircle(c, c, b)
+        g.lineStyle(3, C.white, 1)
+        g.strokeCircle(c, c, b)
+        g.lineStyle(4, C.white, 1)
+        g.strokeCircle(c - 3, c - 3, b * 0.4)
+        g.lineStyle(5, C.white, 1)
+        g.lineBetween(c + b * 0.22, c + b * 0.22, c + b * 0.52, c + b * 0.52)
+    })
+    const r = ZOOM.closeR
+    bake(scene, KEY.close, r * 2 + 8, r * 2 + 14, g => {
+        const c = r + 4
+        g.fillStyle(C.noDark, 1)
+        g.fillCircle(c, c + 6, r)
+        g.fillStyle(C.no, 1)
+        g.fillCircle(c, c, r)
+        g.lineStyle(5, C.white, 1)
+        g.strokeCircle(c, c, r)
+        g.lineStyle(9, C.white, 1)
+        g.lineBetween(c - r * 0.36, c - r * 0.36, c + r * 0.36, c + r * 0.36)
+        g.lineBetween(c - r * 0.36, c + r * 0.36, c + r * 0.36, c - r * 0.36)
+    })
 }
 
 export function createCard(scene: Phaser.Scene, sound: { tick(): void }): Card {
@@ -121,6 +162,8 @@ export function createCard(scene: Phaser.Scene, sound: { tick(): void }): Card {
     let rings: Phaser.GameObjects.Image[] = []
     let current: ItemDef | null = null
     let picked = false
+    let photo: Photo | null = null
+    let zoom: Zoom | null = null
 
     const text = (x: number, y: number, value: string, size: number, color: string, extra: Phaser.Types.GameObjects.Text.TextStyle = {}) =>
         scene.add.text(x, y, value, { fontFamily: FONT.black, fontSize: `${size}px`, color, ...extra }).setResolution(2)
@@ -154,11 +197,13 @@ export function createCard(scene: Phaser.Scene, sound: { tick(): void }): Card {
             border.fillStyle(C.white, 1)
             border.fillRoundedRect(px - CARD.photoW / 2 - 8, cy - CARD.photoH / 2 - 8, CARD.photoW + 16, CARD.photoH + 16, 10)
             const pic = scene.add.image(px, cy, photoKey(item.photo)).setDisplaySize(CARD.photoW, CARD.photoH)
+            const badge = scene.add.image(px + CARD.photoW / 2 - 4, cy + CARD.photoH / 2 - 2, KEY.lens).setVisible(false)
+            photo = { id: item.photo, pic, badge }
             const capX = px + CARD.photoW / 2 + 36
             const room = CARD.w / 2 - 40 - capX
             const cap = text(capX, cy, item.title, SIZE.title - 4, CSS.ink, { wordWrap: { width: room, useAdvancedWrap: true } }).setOrigin(0, 0.5)
             fit(cap, room, CARD.bodyH)
-            return [border, pic, cap]
+            return [border, pic, badge, cap]
         }
         if (item.kind === 'alerta') {
             const bw = CARD.w - 140
@@ -214,13 +259,81 @@ export function createCard(scene: Phaser.Scene, sound: { tick(): void }): Card {
         rings = []
     }
 
+    const onEsc = () => closeZoom()
+
+    const closeZoom = (instant = false) => {
+        const z = zoom
+        if (!z) return
+        zoom = null
+        scene.input.keyboard?.off('keydown-ESC', onEsc)
+        z.shade.disableInteractive()
+        const gone = () => {
+            z.shade.destroy()
+            z.box.destroy()
+        }
+        if (instant) {
+            scene.tweens.killTweensOf([z.shade, z.box])
+            gone()
+            return
+        }
+        sound.tick()
+        void FX.to(scene, z.shade, { alpha: 0 }, { duration: TIMING.zoomOut })
+        void FX.to(scene, z.box, { x: z.from.x, y: z.from.y, scale: CARD.photoW / ZOOM.w, alpha: 0 }, { duration: TIMING.zoomOut, ease: 'Cubic.easeIn' }).then(gone)
+    }
+
+    const openZoom = () => {
+        if (!photo || zoom || picked) return
+        sound.tick()
+        const from = { x: CARD.x + photo.pic.x, y: MID + photo.pic.y }
+        const shade = scene.add.rectangle(W / 2, H / 2, W, H, C.shadow, 0.82).setDepth(DEPTH.zoom).setAlpha(0).setInteractive()
+        shade.on('pointerdown', () => closeZoom())
+        const fw = ZOOM.w + ZOOM.frame * 2
+        const fh = ZOOM.h + ZOOM.frame * 2
+        const frame = scene.add.graphics()
+        frame.fillStyle(C.shadow, 0.35)
+        frame.fillRoundedRect(-fw / 2 + 10, -fh / 2 + 14, fw, fh, 22)
+        frame.fillStyle(C.white, 1)
+        frame.fillRoundedRect(-fw / 2, -fh / 2, fw, fh, 22)
+        const pic = scene.add.image(0, 0, photoKey(photo.id)).setDisplaySize(ZOOM.w, ZOOM.h).setInteractive()
+        const r = ZOOM.closeR
+        const close = scene.add
+            .image(fw / 2 - 14, -fh / 2 + 14, KEY.close)
+            .setOrigin(0.5, (r + 4) / (r * 2 + 14))
+            .setInteractive({ useHandCursor: true })
+        close.on('pointerdown', () => {
+            void FX.press(scene, close)
+            closeZoom()
+        })
+        const box = scene.add.container(from.x, from.y, [frame, pic, close]).setDepth(DEPTH.zoom + 1).setScale(CARD.photoW / ZOOM.w)
+        zoom = { shade, box, from }
+        scene.input.keyboard?.on('keydown-ESC', onEsc)
+        void FX.to(scene, shade, { alpha: 1 }, { duration: TIMING.zoomIn })
+        void FX.to(scene, box, { x: ZOOM.x, y: ZOOM.y, scale: 1 }, { duration: TIMING.zoomIn, ease: 'Back.easeOut' })
+    }
+
+    const enablePhoto = () => {
+        if (!photo) return
+        ;[photo.pic, photo.badge].forEach(o => o.setInteractive({ useHandCursor: true }).on('pointerdown', openZoom))
+        photo.badge.setVisible(true).setScale(0.4)
+        void FX.to(scene, photo.badge, { scale: 1 }, { duration: 220, ease: 'Back.easeOut' })
+    }
+
+    const disablePhoto = () => {
+        if (!photo) return
+        photo.pic.disableInteractive()
+        photo.badge.disableInteractive()
+        void FX.to(scene, photo.badge, { alpha: 0, scale: 0.6 }, { duration: 160 })
+    }
+
     const clear = () => {
+        closeZoom(true)
         stopRings()
         panel.list.forEach(o => scene.tweens.killTweensOf(o))
         panel.removeAll(true)
         rows = []
         buttons = []
         current = null
+        photo = null
     }
 
     const hide = () => {
@@ -270,6 +383,7 @@ export function createCard(scene: Phaser.Scene, sound: { tick(): void }): Card {
                 ...buttons.map((b, i) => FX.to(scene, b, { alpha: 1, scale: 1 }, { duration: pace.buttons, delay: i * 90, ease: 'Back.easeOut' })),
             )
             if (!onPick) return
+            enablePhoto()
             buttons.forEach((b, i) => {
                 const trust = i === 0
                 const ring = scene.add.image(b.x, b.y + 4, KEY.ring).setAlpha(0.9)
@@ -289,6 +403,8 @@ export function createCard(scene: Phaser.Scene, sound: { tick(): void }): Card {
         mark: markRows,
         async verdict(item, correct) {
             stopRings()
+            closeZoom(true)
+            disablePhoto()
             buttons.forEach(b => {
                 b.disableInteractive()
                 void FX.to(scene, b, { alpha: 0, scale: 0.8 }, { duration: 200 })

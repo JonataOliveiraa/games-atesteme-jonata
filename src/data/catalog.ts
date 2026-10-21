@@ -97,6 +97,7 @@ import coverGuildaDosCriadores from "../assets/games/EF05CO09/guilda-dos-criador
 import coverTrilhaDoAmanha from "../assets/games/EF05CO10/trilha-do-amanha/cover-trilha-do-amanha.png";
 import coverKitDoSolucionador from "../assets/games/EF05CO11/kit-do-solucionador/cover-kit-do-solucionador.png";
 import coverAchadosEPerdidos from "../assets/games/EF15CO03/achados-e-perdidos/cover-achados-e-perdidos.png";
+import coverBolicheMagico from "../assets/games/EF15CO03/boliche-magico/cover-boliche-magico.png";
 import coverCanteiroDeObras from "../assets/games/EF15CO04/canteiro-de-obras/cover-canteiro-de-obras.png";
 import coverGarraDosGrupos from "../assets/games/EF01CO01/garra-dos-grupos/cover-garra-dos-grupos.png";
 import coverSubidaDoDia from "../assets/games/EF01CO02/subida-do-dia/cover-subida-do-dia.png";
@@ -128,6 +129,8 @@ import coverCatapultaDoArquivo from "../assets/games/EF05CO06/catapulta-do-arqui
 import coverRioDeChocolate from "../assets/games/EF05CO03/rio-de-chocolate/cover-rio-de-chocolate.png";
 import coverPitStopDaChuva from "../assets/games/EF05CO04/pit-stop-da-chuva/cover-pit-stop-da-chuva.png";
 import coverRotaDaMadrugada from "../assets/games/EF05CO11/rota-da-madrugada/cover-rota-da-madrugada.png";
+import coverOperacaoFormiga from "../assets/games/EF15CO04/operacao-formiga/cover-operacao-formiga.png";
+import coverCircuitoDeBolinha from "../assets/games/EF15CO02/circuito-de-bolinha/cover-circuito-de-bolinha.png";
 import coverCaboCerto from"../assets/games/EF05CO05/cabo-certo/cover-cabo-certo.png";
 import coverBairroDasPermissoes from "../assets/games/EF05CO07/bairro-das-permissoes/cover-bairro-das-permissoes.png";
 import coverRadioDaEscola from "../assets/games/EF05CO09/radio-da-escola/cover-radio-da-escola.png";
@@ -1922,15 +1925,16 @@ export const catalog: Game[] = [
     module: "EF15CO03/boliche-magico",
     skill: "EF15CO03",
     years: [1, 2, 3, 4, 5],
-    tags: ["lógica", "não", "verdadeiro e falso", "montar frase", "boliche"],
+    tags: ["lógica", "não", "e", "ou", "verdadeiro e falso", "montar frase", "boliche"],
     order: 447,
     status: "published",
     title: "Boliche Mágico",
     description:
-      "Alguns pinos estão com sono! Monte a frase da Bola Mágica e ela derruba só quem a frase diz. Cuidado: o NÃO troca quem cai.",
+      "Alguns pinos estão com sono! Monte a frase da Bola Mágica com NÃO, E e OU, solte a bola com força e ela derruba só quem a frase diz.",
     category: "Pensamento Computacional",
     points: 30,
     icon: "🎳",
+    thumbnail: coverBolicheMagico,
   },
   {
     id: "045",
@@ -1998,6 +2002,7 @@ export const catalog: Game[] = [
     category: "Pensamento Computacional",
     points: 30,
     icon: "🐜",
+    thumbnail: coverOperacaoFormiga,
   },
   {
     id: "092",
@@ -2090,12 +2095,12 @@ export const catalog: Game[] = [
     module: "EF01CO07/labirinto-do-cofrinho",
     skill: "EF01CO07",
     years: [1],
-    tags: ["dados pessoais", "segurança", "labirinto", "arrastar"],
+    tags: ["dados pessoais", "segurança", "labirinto", "toque"],
     order: 72,
     status: "published",
     title: "Labirinto do Cofrinho",
     description:
-      "Arraste a Bia pelo labirinto, longe do ímã curioso, e guarde o cartão dos dados dela no cofre com quem cuida dela.",
+      "Toque no caminho para levar a Bia pelo labirinto, longe do ímã curioso, e guarde o cartão dos dados dela no cofre com quem cuida dela.",
     category: "Cultura Digital",
     points: 40,
     icon: "🔐",
@@ -2413,12 +2418,12 @@ export const catalog: Game[] = [
     module: "EF15CO01/ventania-na-floresta",
     skill: "EF15CO01",
     years: [1, 2, 3, 4, 5],
-    tags: ["estrutura de dados", "organização", "lista", "matriz", "natureza"],
+    tags: ["estrutura de dados", "organização", "lista", "matriz", "registro", "grafo", "natureza"],
     order: 422,
     status: "published",
     title: "Ventania na Floresta",
     description:
-      "O vento bagunçou a floresta! Ponha as formigas de volta na fila e o mel de volta no favo, cada coisa no seu lugar.",
+      "O vento bagunçou a floresta! Ponha as formigas de volta na fila, as flores na grade, os filhotes nos ninhos das fichas e os amigos na teia.",
     category: "Pensamento Computacional",
     points: 40,
     icon: "🍃",
@@ -2455,6 +2460,7 @@ export const catalog: Game[] = [
     category: "Pensamento Computacional",
     points: 40,
     icon: "🔔",
+    thumbnail: coverCircuitoDeBolinha,
   },
 ];
 

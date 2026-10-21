@@ -1,7 +1,8 @@
 import Phaser from 'phaser'
 import { FX } from '../../../../shared/effects/FX'
+import { ANT_SHEET, antCell, cellKey, sheetScale } from '../data/files'
 import { CAP, radiusOf } from '../data/fruits'
-import { CUT, DEPTH, H, HEADER, MAP, W, WD } from '../data/layout'
+import { CUT, DEPTH, GAUGE, H, HEADER, MAP, W, WD } from '../data/layout'
 import { C } from '../data/theme'
 import type { Rect, Vec } from '../types'
 import type { View } from './view'
@@ -16,7 +17,13 @@ export interface CutterOptions {
     at: Vec
     /** Área do vento em px² de arte, ou 0 sem vento. */
     windMin: number
+    /** Área do peso em px² de arte, ou 0 sem peso (o círculo com a formiguinha). */
+    lift: number
+    /** Meia largura do item no mundo: o medidor fica do lado de fora dele. */
+    halfW: number
     done: boolean
+    /** Esfregar (N3): sem medidor e sem traço, só o véu e o ✓. */
+    scrub?: boolean
     onSwipe(a: Vec, b: Vec): void
     onDone(): void
 }
@@ -45,7 +52,11 @@ export function createCutter(scene: Phaser.Scene, view: View): Cutter {
     const gauge = scene.add.container(0, 0).setVisible(false)
     view.add(gauge, WD.gauge)
     const gaugeArt = scene.add.graphics()
-    gauge.add(gaugeArt)
+    const liftAnt = scene.add
+        .image(0, 0, ANT_SHEET.key, cellKey(antCell('carry')))
+        .setOrigin(0.5, 0.9)
+        .setVisible(false)
+    gauge.add([gaugeArt, liftAnt])
 
     const hintArt = scene.add.graphics().setVisible(false)
     view.add(hintArt, WD.hint)
@@ -91,10 +102,21 @@ export function createCutter(scene: Phaser.Scene, view: View): Cutter {
         if (doneZone.input) doneZone.input.enabled = doneOn && input
     }
 
-    const paintGauge = (windMin: number) => {
+    const paintGauge = (windMin: number, lift: number) => {
         gaugeArt.clear()
         const s = MAP.scale
         gaugeR = radiusOf(CAP) * s
+        liftAnt.setVisible(lift > 0)
+        if (lift > 0) {
+            // até deste tamanho ela levanta: o círculo maior, em linha cheia, com a formiguinha dentro
+            const r = radiusOf(lift) * s
+            gaugeArt.fillStyle(C.lift, 0.14)
+            gaugeArt.fillCircle(0, 0, r)
+            gaugeArt.lineStyle(3, C.lift, 1)
+            gaugeArt.strokeCircle(0, 0, r)
+            const band = r - gaugeR
+            liftAnt.setPosition(0, r - 2).setScale((band * 1.5 / ANT_SHEET.cellW) * sheetScale(scene, ANT_SHEET))
+        }
         // as duas pedrinhas da fresta, uma de cada lado
         ;[-1, 1].forEach(side => {
             gaugeArt.fillStyle(C.stoneDark, 1)
@@ -153,7 +175,7 @@ export function createCutter(scene: Phaser.Scene, view: View): Cutter {
     }
 
     const onDown = (p: Phaser.Input.Pointer, over: Phaser.GameObjects.GameObject[]) => {
-        if (!opts || !input || owner !== null || over.length) return
+        if (!opts || opts.scrub || !input || owner !== null || over.length) return
         if (p.y < HEADER.h) return
         owner = p.id
         start = { x: p.x, y: p.y }
@@ -192,9 +214,11 @@ export function createCutter(scene: Phaser.Scene, view: View): Cutter {
             input = false
             veil.setVisible(true).setAlpha(0)
             void FX.to(scene, veil, { alpha: 1 }, { duration: 300 })
-            paintGauge(o.windMin)
-            gauge.setPosition(o.at.x + CUT.gaugeDX, o.at.y + CUT.gaugeDY).setVisible(true).setAlpha(0)
-            void FX.to(scene, gauge, { alpha: 1 }, { duration: 300, delay: 200 })
+            paintGauge(o.windMin, o.lift)
+            const outer = o.lift > 0 ? radiusOf(o.lift) * MAP.scale : gaugeR + 27
+            const dx = Math.max(CUT.gaugeDX, o.halfW + outer + GAUGE.gap)
+            gauge.setPosition(o.at.x + dx, o.at.y + CUT.gaugeDY).setVisible(!o.scrub).setAlpha(0)
+            if (!o.scrub) void FX.to(scene, gauge, { alpha: 1 }, { duration: 300, delay: 200 })
             done.setVisible(true)
             paintDone()
             void FX.popIn(scene, done, { from: 0.5, duration: 320 })

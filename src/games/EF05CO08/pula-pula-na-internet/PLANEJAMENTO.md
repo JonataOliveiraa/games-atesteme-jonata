@@ -175,14 +175,15 @@ Gerado com semente fixa (`data/course.ts`): sempre o mesmo para o mesmo nível. 
 
 ## 10. O tutorial (`createTutorial`), curto
 
-Pedido de 20/10/2026: *"faça o tutorial ser rapido, sem mtas delongas"*. Abre na primeira vez de cada nível (chave `ef05co08-pula-l<n>` no `__tutorialsSeen`); o celular fica parado.
+Pedido de 20/10/2026: *"faça o tutorial ser rapido, sem mtas delongas"*. Desde 21/10/2026 (*"remova o tutorial do n2 e n3"*) **só o N1 tem tutorial**, na primeira vez (chave `ef05co08-pula-l1` no `__tutorialsSeen`); o celular fica parado. N2 e N3 entram direto no jogo, venham da passagem contínua ou da fase inicial da plataforma.
 
 | Quando | O que roda | Toques |
 |---|---|---|
-| primeira vez no jogo (N1 nunca visto) | a câmera sobe até a 1ª notícia (0,5 s): **"Pegue todas! Nenhuma pode passar."** → volta; cartão de exemplo rápido (pistas a cada 0,14 s, já coloridas) com **"Pistas boas? PODE CONFIAR. Ruim? NÃO CONFIE."** → o jogo aperta PODE CONFIAR; os botões ◀ ▶ acendem e o celular anda (sem balão); **"Sua vez!"** | 3 |
-| primeira vez no N2 ou N3 | só o cartão de exemplo do nível: **"Gritou, mas tem as três pistas!"** (N2) ou **"Uma pista ruim já basta!"** (N3), e o jogo aperta o botão certo | 1 |
+| primeira vez no N1 | a câmera sobe até a 1ª notícia (0,5 s): **"Pegue todas! Nenhuma pode passar."** → volta; cartão de exemplo rápido (pistas a cada 0,14 s, já coloridas) com **"Pistas boas? PODE CONFIAR. Ruim? NÃO CONFIE."** → o jogo aperta PODE CONFIAR; os botões ◀ ▶ acendem e o celular anda (sem balão); **"Sua vez!"** | 3 |
 
-O balão *"O que você faz?"* na primeira decisão saiu (o exemplo já mostrou os dois botões). O **?** repete o cartão de exemplo do nível. Parado por 8 s, um anel acende o botão do lado da próxima aba.
+O balão *"O que você faz?"* na primeira decisão saiu (o exemplo já mostrou os dois botões). O **?** repete o cartão de exemplo do nível (no N2 *"Gritou, mas tem as três pistas!"*, no N3 *"Uma pista ruim já basta!"*). Parado por 8 s, um anel acende o botão do lado da próxima aba.
+
+**Foto ampliada** (pedido de 21/10/2026): quando os botões do cartão aparecem, a foto ganha uma lupinha no canto e passa a ser tocável. Tocar nela (ou na lupa) faz a foto crescer do cartão até 900 × 585 no meio da tela, sobre um véu escuro que cobre até o cabeçalho; o **X** vermelho no canto, o toque no véu ou o Esc fecham, e a foto encolhe de volta para o cartão. Enquanto ela está aberta os botões PODE CONFIAR / NÃO CONFIE não respondem. Depois da resposta a lupa some e a foto deixa de abrir. No cartão de exemplo (tutorial e **?**) a foto não abre.
 
 ## 11. Telemetria e pontos
 

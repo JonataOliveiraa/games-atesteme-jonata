@@ -18,6 +18,7 @@ export const DEPTH = {
     card: 90,
     header: 100,
     hud: 106,
+    zoom: 120,
     caption: 140,
 } as const
 
@@ -96,7 +97,10 @@ export const CARD = {
     buttonGap: 400,
     photoW: 216,
     photoH: 140,
+    badgeR: 22,
 } as const
+
+export const ZOOM = { x: 640, y: 372, w: 900, h: 585, frame: 16, closeR: 38 } as const
 
 export const CAPTION = { x: 640, y: 170 } as const
 

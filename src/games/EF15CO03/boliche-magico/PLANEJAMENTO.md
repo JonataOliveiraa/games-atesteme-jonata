@@ -44,10 +44,11 @@ Da ficha ficaram: a pista de boliche, os pinos com atributos bem visíveis (cor,
 1. **Os pinos descem** na pista, um a um, em fila. Os que estão com sono têm olhinhos fechando e um balão "Zz". Os outros estão bem acordados.
 2. **A placa começa vazia:** *"Derruba quem [ ? ]"*. Embaixo, na bancada, ficam as cartas de termo (*tem ESTRELA*, *tem ÓCULOS*…), o botão **NÃO** e o botão **JOGAR**.
 3. **A criança monta a frase.** Tocar numa carta manda a peça dela para a placa (outra carta troca a peça). Tocar no NÃO põe a pílula NÃO na frente da peça, e tocar de novo tira. Ela pode mudar quantas vezes quiser: só o JOGAR vale.
-4. **JOGAR:** a bancada desce e a bola rola. Diante de cada pino ela para; o pino e a peça da placa pulam juntos, aparece ✓ ou ✗, e o NÃO, se houver, vira a marca.
-   - **✓** a bola derruba o pino. Se ele tinha sono, deita e ronca.
+4. **JOGAR:** a bancada desce, a bola recua e prende o fôlego, e o **medidor de força** aparece em cima dela (ponteiro indo e voltando: azul fraca, verde boa, dourada MÁXIMA). Um toque em qualquer lugar (ou ESPAÇO) solta a bola; sem toque, ela vai sozinha em ~4 s com força boa. **A força nunca muda o resultado:** muda a velocidade, o rastro (nada, faíscas brancas, estrelas douradas) e o tamanho da queda (na MÁXIMA o pino dá uma pirueta e a tela treme).
+5. **A bola rola.** Diante de cada pino ela para; o pino e a peça da placa pulam juntos, aparece ✓ ou ✗, e o NÃO, se houver, vira a marca. No N2/N3 as duas peças ganham ✓/✗ ao mesmo tempo, os NÃOs viram as suas, e as duas marcas voam para o E/OU, que dá a marca final.
+   - **✓** a bola derruba o pino. Se ele tinha sono, um travesseiro mágico aparece com um "puf" embaixo da cabeça e ele ronca.
    - **✗** o pino pula e a bola passa por baixo. Se ele estava acordado, aterrissa contente.
-5. **Todos os com sono deitados e todos os acordados de pé:** os de pé fazem a dancinha, a bola volta pela canaleta, a bolinha da fase acende. O rastelo varre a pista e descem os pinos da próxima fase.
+6. **Todos os com sono deitados e todos os acordados de pé:** os de pé fazem a dancinha, a bola volta pela canaleta, a bolinha da fase acende. O rastelo varre a pista e descem os pinos da próxima fase.
 
 Não há relógio: a montagem espera o tempo que for.
 
@@ -57,11 +58,14 @@ Não há relógio: a montagem espera o tempo que for.
 |---|---|
 | as cartas de termo (1 ou 2) | tocar = essa peça vai para a placa |
 | o NÃO | tocar = põe ou tira o NÃO da frase |
-| o JOGAR | tocar = a bola rola com a frase da placa |
+| o JOGAR | tocar = a bola se prepara com a frase da placa |
+| N2: **E** · **OU** | tocar = esse operador vai para a vaga do meio da placa |
+| N3: **NÃO tem ÓCULOS** · **NÃO é VERMELHO** (um por parte) | tocar = põe ou tira o NÃO daquela parte |
+| a tela inteira, com o medidor aberto | tocar = solta a bola (a força é só espetáculo) |
 
 Montar não custa nada; só o JOGAR é julgado. O JOGAR fica desligado até a placa ter uma peça (resposta vazia não conta). Os pinos e a bola não são tocáveis. No computador, o mouse basta; o botão sob o ponteiro sobe um pouco, parado.
 
-**Teto de alvos:** no máximo 4 tocáveis ao mesmo tempo (2 cartas + NÃO + JOGAR), numa fileira limpa na bancada. As regiões tocáveis da tela são 2: a bancada e o `?`.
+**Teto de alvos:** no máximo 4 tocáveis ao mesmo tempo (N1: 2 cartas + NÃO + JOGAR; N2: E + OU + JOGAR; N3: 2 NÃOs + JOGAR), numa fileira limpa na bancada. Nada pulsa esperando toque. As regiões tocáveis da tela são 2: a bancada e o `?`.
 
 ## 5. A tela (1280 × 720), vista de lado
 
@@ -147,21 +151,41 @@ O `?` (em jogo) repete: *"Derrube só quem tem sono!"* (recorte nos pinos), *"Mo
 
 Acerto: os deitados roncam, os de pé dançam, a bola volta pela canaleta e sorri, a bolinha da fase acende (`CORRECT_ANSWER`, 10 pontos por fase). O rastelo desce, empurra os pinos para fora da pista e sobe; descem os da próxima fase.
 
-Na última fase: confete, `GAME_COMPLETED` (com `stage` = nível e `totalStages: LEVELS.length`) e `showLevelComplete`. Enquanto o jogo tem só o N1, o painel traz JOGAR DE NOVO. Sem quadro de resumo, sem placar de strikes e sem taxa por operador.
+Na última fase: confete, `GAME_COMPLETED` (com `stage` = nível e `totalStages: LEVELS.length`) e `showLevelComplete`. Nos níveis 1 e 2 o painel passa sozinho para o nível seguinte; no 3, traz JOGAR DE NOVO. Sem quadro de resumo, sem placar de strikes e sem taxa por operador.
 
-## 11. N2 e N3 (planejados; só entram quando o usuário pedir)
+## 11. N2 e N3 (feitos em 21/10/2026)
 
-### N2 — O E e o OU juntam duas partes
+5 pinos por fase (x 400 a 1088), 3 atributos mudando (entra o **tamanho**: pequeno = 72 %). A placa encolhe sozinha para caber no cabeçalho. Deitados, os pinos ficam menores (parecem mais longe) para não cobrir o vizinho.
 
-A placa já vem com as duas peças, e a vaga do meio está vazia: *"Derruba quem [é PEQUENO] [ ? ] [tem ÓCULOS]"*. Na bancada ficam **E**, **OU** e JOGAR. Na conferência, as duas peças ganham ✓/✗ e as marcas voam para o operador, que ganha a marca final (o letreiro do Rio de Chocolate). Nas fases finais, uma das peças também é escolhida entre duas cartas (2 cartas + E + OU + JOGAR = 5 tocáveis, numa fileira limpa). Pinos: 5, com 3 atributos mudando (entra o tamanho).
+### N2 — O E e o OU juntam duas partes (`kind: 'join'`)
 
-Armadilhas, garantidas na validação: no E, todo conjunto tem pino com só uma das partes (quem acha que E é OU deita um acordado); no OU, há pino certo só pela esquerda e só pela direita, e nenhum com as duas (quem acha que OU é E deixa um com sono de pé).
+A placa já vem com as duas peças e a vaga do meio vazia: *"Derruba quem [é PEQUENO] [ ? ] [tem ÓCULOS]"*. Bancada: **E** (âmbar), **OU** (rosa) e JOGAR. O JOGAR acende quando a vaga tem operador.
 
-Sentenças da ficha: *é pequeno E tem óculos*, *é verde OU tem estrela*, *é azul E NÃO é grande* (esta vai para o N3).
+| Fase | Frase que resolve | Ensina |
+|---|---|---|
+| 1 | é PEQUENO **E** tem ÓCULOS | "O E quer as duas." + demonstração |
+| 2 | é VERDE **OU** tem ESTRELA | "O OU quer uma ou outra." + demonstração |
+| 3 | é AZUL **OU** é PEQUENO | — |
+| 4 | tem ESTRELA **E** tem ÓCULOS | — |
+| 5 | tem ÓCULOS **OU** é VERMELHO | — |
 
-### N3 — O NÃO dentro do E e do OU
+Armadilhas (na validação): fase de E tem acordado só com a esquerda e acordado só com a direita; fase de OU tem com sono só pela esquerda e com sono só pela direita.
 
-As duas peças vêm na placa, cada uma com o seu botão NÃO embaixo, e o operador é escolhido: NÃO da esquerda + NÃO da direita + E/OU (um botão que alterna) + JOGAR = 4 tocáveis. Sentenças da ficha: *NÃO é verde E tem estrela*, *é grande OU NÃO tem óculos*, *é azul E NÃO é grande*. A validação exige que a frase certa tenha NÃO e que a mesma frase sem ele, ou com o operador trocado, erre.
+### N3 — O NÃO dentro do E e do OU (`kind: 'nots'`)
+
+O operador vem fixo na placa; a bancada tem um NÃO para cada parte (com o ícone e o texto dela: *NÃO tem ÓCULOS*) e o JOGAR, que já começa aceso (a frase sem NÃO também é uma frase).
+
+| Fase | Frase que resolve |
+|---|---|
+| 1 | **NÃO** é VERDE E tem ESTRELA ("Cada NÃO vira a sua parte." + demonstração) |
+| 2 | é GRANDE OU **NÃO** tem ÓCULOS |
+| 3 | é AZUL E **NÃO** é GRANDE |
+| 4 | **NÃO** tem ESTRELA OU é PEQUENO |
+| 5 | **NÃO** é VERMELHO E **NÃO** tem ÓCULOS |
+
+Validação: exatamente uma das 4 combinações resolve e ela tem NÃO; há fase com o NÃO só na esquerda e só na direita; E e OU aparecem; no máximo uma fase com dois NÃOs.
+
+O erro do N2/N3 diz o fato das duas partes: *"Ele é azul e não é pequeno, mas queria deitar!"*.
 
 ## 12. O que mudou da ficha, e por quê
 
@@ -197,6 +221,8 @@ scenes/ BootScene.ts GameScene.ts fallback.ts art.ts audio.ts view.ts
 3. **Fase 2 com uma carta só.** Ali a única escolha é pôr ou não o NÃO, de propósito (é o treino logo depois da demonstração). Se ficar fácil demais, ela ganha uma segunda carta.
 
 ## Histórico
+
+- 21/10/2026: "melhore a gameplay, faça n2 e n3 e as texturas". Entraram o **medidor de força** (arremesso que nunca muda o resultado), o rastro, a pirueta da força máxima, o **travesseiro mágico**, a vida parada dos pinos (os com sono cochilam e balançam, os acordados piscam e respiram), a conferência mais rápida e o fim do anel pulsando nos botões. N2 e N3 feitos (§11; dados do Ferro). Arte na linha chibi voador (`35`), gerada pelos dois Codex. Jogado no Chrome headless: abertura, N1 fase 1, demonstrações do N2 e do N3 e o erro do N2.
 
 - 20/10/2026: plano e N1 em Graphics. Id 134 no catálogo (order 447), `NEXT_FREE_ID` = 135. Servidor `jogos-dev-boliche` (porta 5321). `LEVELS = [N1]` por enquanto, então o painel final traz JOGAR DE NOVO.
 - Conferido sem navegador (o embutido não respondeu e o Chrome estava desconectado): `tsc` e `eslint` limpos, todos os módulos compilam no Vite, `validateLevels` passa e, para cada fase, cada frase errada cai na faixa esperada. **Ainda não jogado na tela.**

@@ -4,7 +4,7 @@ import { createLives, type Lives } from '../../../../shared/hud/createLives'
 import { DEPTH, HEADER, HUD, W } from '../data/layout'
 import { C, CSS, FONT, SIZE, inkOn } from '../data/theme'
 import { TIMING } from '../data/timing'
-import { LABEL, TITLE } from '../data/words'
+import { LABEL } from '../data/words'
 import type { Rect } from '../types'
 import { paintImage } from './art'
 
@@ -21,6 +21,7 @@ export interface Header {
 
 export interface HeaderOptions {
     level: number
+    title: string
     phases: number
     livesTotal: number
     livesLeft: number
@@ -78,7 +79,7 @@ export function createHeader(scene: Phaser.Scene, opts: HeaderOptions): Header {
     paint()
 
     const title = scene.add
-        .text(HUD.titleX, HUD.y, TITLE, { fontFamily: FONT.black, fontSize: `${SIZE.title}px`, color: CSS.ink })
+        .text(HUD.titleX, HUD.y, opts.title, { fontFamily: FONT.black, fontSize: `${SIZE.title}px`, color: CSS.ink })
         .setOrigin(0.5)
         .setResolution(2)
     if (title.width > HUD.titleMaxW) title.setScale(HUD.titleMaxW / title.width)

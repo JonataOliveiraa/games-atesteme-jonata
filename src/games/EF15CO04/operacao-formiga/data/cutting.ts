@@ -1,13 +1,16 @@
 import type { Poly, Vec } from '../types'
-import { CAP, CRUMB, MAX_PIECES, WIND_MIN } from './fruits'
-import { area, crosses, split } from './geometry'
+import { CAP, CRUMB, LIFT, MAX_PIECES, WIND_AREA } from './fruits'
+import { area, bounds, centroid, crosses, split } from './geometry'
 
 /** Folga do "passa na fresta", para a criança não entalar por um fio. */
 export const FIT_SLACK = 1.03
 
 export const fits = (a: number) => a <= CAP * FIT_SLACK
 
-export const blows = (a: number, whole: number) => a < whole * WIND_MIN
+/** A formiga levanta o pedaço (a mesma folga da fresta). */
+export const lifts = (a: number) => a <= LIFT * FIT_SLACK
+
+export const blows = (a: number) => a < WIND_AREA
 
 export type CutResult =
     | { kind: 'cut'; pieces: { from: number; parts: [Poly, Poly] }[] }
@@ -16,9 +19,9 @@ export type CutResult =
     | { kind: 'miss' }
 
 /**
- * Um traço sobre os pedaços `polys` (todos em px de arte da fruta inteira).
+ * Um traço sobre os pedaços `polys` (todos em px de arte do item inteiro).
  * Corta cada pedaço que ele atravessa de ponta a ponta, menos os cortes que
- * deixariam farelo. `whole` é a área da fruta inteira.
+ * deixariam farelo. `whole` é a área do item inteiro.
  */
 export function cutAll(polys: Poly[], a: Vec, b: Vec, whole: number): CutResult {
     const hit = polys.map((p, i) => ({ p, i })).filter(({ p }) => crosses(p, a, b))
@@ -51,4 +54,13 @@ export function applyCut(polys: Poly[], result: CutResult): Poly[] {
         else out.push(p)
     })
     return out
+}
+
+/** A linha sugerida para cortar de novo: atravessada ao lado mais comprido, pelo centro (px de arte). */
+export function hintLine(poly: Poly): { a: Vec; b: Vec } {
+    const c = centroid(poly)
+    const b = bounds(poly)
+    const reach = Math.max(b.w, b.h) / 2 + 40
+    if (b.w >= b.h) return { a: { x: c.x, y: c.y - reach }, b: { x: c.x, y: c.y + reach } }
+    return { a: { x: c.x - reach, y: c.y }, b: { x: c.x + reach, y: c.y } }
 }

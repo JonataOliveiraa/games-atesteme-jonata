@@ -89,6 +89,12 @@ export const C = {
     butter: 0xffe08a,
     sparkle: 0xfff4c2,
     dust: 0xe8d9bd,
+    cat: 0xf6a64a,
+    catDark: 0xd9822c,
+    catCream: 0xfbe3b8,
+    catEye: 0x5fbf6a,
+    catNose: 0xf59a9a,
+    pocket: 0xf3e6c8,
 } as const
 
 export const CSS = {
@@ -97,6 +103,8 @@ export const CSS = {
     white: '#ffffff',
     accent: '#2264a6',
     disabled: '#7b7584',
+    yes: '#2f9a5c',
+    no: '#c96320',
 } as const
 
 export const FONT = {
@@ -112,6 +120,11 @@ export const SIZE = {
     banner: 38,
     badge: 20,
     build: 30,
+    stamp: 21,
+    seWord: 26,
+    pocket: 18,
+    zzz: 26,
+    meow: 30,
 } as const
 
 export function inkOn(tone: number): string {

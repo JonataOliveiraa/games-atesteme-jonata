@@ -1,0 +1,144 @@
+{
+  "allApprovedCopiesStillMatch": true,
+  "remainingTaskCaches": [],
+  "files": [
+    {
+      "file": "jardim.png",
+      "width": 1672,
+      "height": 941,
+      "bytes": 1625558,
+      "alpha": false,
+      "promptBytes": 3349
+    },
+    {
+      "file": "formiga.png",
+      "width": 1774,
+      "height": 887,
+      "bytes": 1461533,
+      "alpha": true,
+      "promptBytes": 7378
+    },
+    {
+      "file": "rainha.png",
+      "width": 2172,
+      "height": 724,
+      "bytes": 988304,
+      "alpha": true,
+      "promptBytes": 2506
+    },
+    {
+      "file": "frutas.png",
+      "width": 2172,
+      "height": 724,
+      "bytes": 1196005,
+      "alpha": true,
+      "promptBytes": 3093
+    },
+    {
+      "file": "cenario.png",
+      "width": 1774,
+      "height": 887,
+      "bytes": 1033406,
+      "alpha": true,
+      "promptBytes": 2897
+    },
+    {
+      "file": "folhas.png",
+      "width": 1122,
+      "height": 1402,
+      "bytes": 1071026,
+      "alpha": true,
+      "promptBytes": 2848
+    },
+    {
+      "file": "folha-gigante.png",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 951473,
+      "alpha": true,
+      "promptBytes": 1602
+    },
+    {
+      "file": "sujeira.png",
+      "width": 2172,
+      "height": 724,
+      "bytes": 738730,
+      "alpha": true,
+      "promptBytes": 1798
+    },
+    {
+      "file": "amigas.png",
+      "width": 1774,
+      "height": 887,
+      "bytes": 1550794,
+      "alpha": true,
+      "promptBytes": 7068
+    },
+    {
+      "file": "cover-operacao-formiga.png",
+      "width": 1672,
+      "height": 941,
+      "bytes": 2112090,
+      "alpha": false,
+      "promptBytes": 3071
+    },
+    {
+      "file": "formiga-carregando.png",
+      "width": 2172,
+      "height": 724,
+      "bytes": 1064545,
+      "alpha": true,
+      "promptBytes": 3854
+    },
+    {
+      "file": "amigas-carregando.png",
+      "width": 2172,
+      "height": 724,
+      "bytes": 1111389,
+      "alpha": true,
+      "promptBytes": 3343
+    }
+  ],
+  "notes": [
+    {
+      "name": "jardim",
+      "notes": "Posição da trilha aproximada; pequenos tufos e decoração nas extremidades da faixa superior."
+    },
+    {
+      "name": "formiga",
+      "notes": "Células 4–6 substituídas por novas poses com duas patinhas dobradas, mãos abertas acima da cabeça e duas antenas. Outras cinco células idênticas. Escala corporal das poses de carga menor para caber no contrato de apoio."
+    },
+    {
+      "name": "rainha",
+      "notes": "3 poses para a esquerda; margens e base aproximadas no bruto."
+    },
+    {
+      "name": "frutas",
+      "notes": "Frutas de cima; sépalas/folhas/cabo internos. Silhuetas aproximadas, sem ajuste pixel a pixel aos polígonos."
+    },
+    {
+      "name": "cenario",
+      "notes": "8 itens na ordem correta, sem corte nas bordas; bases/margens aproximadas."
+    },
+    {
+      "name": "folhas",
+      "notes": "1x2, horizontais, cabinho interno à esquerda. Ovais aproximados, exigem encaixe exato no polígono na preparação."
+    },
+    {
+      "name": "folha-gigante",
+      "notes": "Limpa, horizontal, cabinho à esquerda, sem cortes; margem menor que a sugerida."
+    },
+    {
+      "name": "sujeira",
+      "notes": "4 itens na ordem pedida, sem texto; canvas bruto 3:1 em vez do 4:1 final, requer montagem nas células quadradas."
+    },
+    {
+      "name": "amigas",
+      "notes": "8 poses verde-oliva/laço amarelo para direita; 1 dormindo, 2 bocejando. Carga corrigida em faixa auxiliar, primeira linha recentrada. Escala das poses de carregar menor."
+    },
+    {
+      "name": "cover-operacao-formiga",
+      "notes": "Título conferido: Operação Formiga; operária para direita, rainha para esquerda, pedaço apoiado em duas palmas."
+    }
+  ]
+}

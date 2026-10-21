@@ -17,5 +17,7 @@ export const TIMING = {
     panelOut: 360,
     idle: 8000,
     blink: 260,
+    zoomIn: 280,
+    zoomOut: 200,
     demo: { cardIn: 280, clue: 140, buttons: 200 },
 } as const

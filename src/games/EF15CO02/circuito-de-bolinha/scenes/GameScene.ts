@@ -7,13 +7,13 @@ import { vidasIniciais } from '../../../../shared/level/vidasIniciais'
 import { faseInicial } from '../../../../shared/level/faseInicial'
 import { FX } from '../../../../shared/effects/FX'
 
-import { CELL, NICO } from '../data/layout'
-import { LEVELS, POINTS, guideKey } from '../data/levels'
-import { build } from '../data/logic'
+import { NICO } from '../data/layout'
+import { LEVELS, POINTS, SIDES, guideKey } from '../data/levels'
+import { again, bellOf, descend, other, run, spot as cellSpot, type Position } from '../data/logic'
 import { C, CSS } from '../data/theme'
 import { TIMING } from '../data/timing'
-import { FELL, HELP, LABEL, SAY, TEACH } from '../data/words'
-import type { LevelDef, PhaseDef, Piece, State } from '../types'
+import { BLOCKED, CAT, COUNT, FELL, HELP, LABEL, MISSING, SAY, TEACH, TITLE } from '../data/words'
+import type { Act, Fail, LevelDef, Outcome, Path, PhaseDef, Piece, Side, State, Vec } from '../types'
 
 import { createAudio, type Audio } from './audio'
 import { createBanner, type Banner } from './banner'
@@ -23,6 +23,7 @@ import { spot, teach } from './guide'
 import { createHeader, type Header } from './header'
 import { createNico, type Nico } from './nico'
 import { createPages, type Pages } from './pages'
+import { createPipoca, type Pipoca } from './pipoca'
 import { createRoom, type Room } from './room'
 import { createStage, type Stage } from './stage'
 import { createTap, type Tap } from './tap'
@@ -49,6 +50,7 @@ export class GameScene extends Phaser.Scene {
     private room!: Room
     private board!: Board
     private nico!: Nico
+    private pipoca!: Pipoca
     private pages!: Pages
     private header!: Header
     private bubble!: Bubble
@@ -87,9 +89,11 @@ export class GameScene extends Phaser.Scene {
         this.room = createRoom(this, this.stage)
         this.board = createBoard(this, this.stage, this.audio)
         this.nico = createNico(this, this.stage)
+        this.pipoca = createPipoca(this, this.stage, this.audio)
         this.pages = createPages(this, this.audio, () => void this.build())
         this.header = createHeader(this, {
             level: this.level.level,
+            title: TITLE[this.level.level],
             phases: this.level.phases.length,
             livesTotal: this.livesTotal,
             livesLeft: this.livesLeft,
@@ -128,6 +132,7 @@ export class GameScene extends Phaser.Scene {
         this.bubble?.destroy()
         this.header?.destroy()
         this.pages?.destroy()
+        this.pipoca?.destroy()
         this.nico?.destroy()
         this.board?.destroy()
         this.room?.destroy()
@@ -150,6 +155,7 @@ export class GameScene extends Phaser.Scene {
         this.header.setHelpEnabled(false)
         this.header.setPhase(index)
         this.banner.clear()
+        this.pipoca.hide()
         this.board.setPhase(this.phase)
         this.pages.setPhase(this.phase)
         this.nico.pose('idle')
@@ -159,7 +165,8 @@ export class GameScene extends Phaser.Scene {
             if (gen !== this.gen) return
         }
         if (index === 0 && this.introduce) {
-            await this.opening(gen)
+            const intro = this.level.level === 3 ? this.introIf(gen) : this.level.level === 2 ? this.introRepeat(gen) : this.opening(gen)
+            await intro
             if (gen !== this.gen) return
         } else {
             await this.board.showBox(true)
@@ -207,18 +214,25 @@ export class GameScene extends Phaser.Scene {
         if (gen !== this.gen) return
         await this.controlsDemo(gen)
         if (gen !== this.gen) return
-        await teach(this, guideKey(this.level.level), [
+        await this.yourTurn()
+    }
+
+    private yourTurn() {
+        return teach(this, guideKey(this.level.level), [
             { text: TEACH.go, ...spot(this.pages.trayRect(), 4), balloonX: 520, balloonY: 250, buttonLabel: LABEL.go },
         ])
     }
 
+    private fromBox() {
+        return { ...this.board.boxTop(), w: this.board.cell() * 0.4 }
+    }
+
     private async ruleDemo(gen: number) {
-        const top = this.phase.pieces.find(p => p.kind === 'ramp' && p.r > 0)
-        const base = top && this.phase.pieces.find(p => p.kind === 'block' && p.c === top.c && p.r === top.r - 1)
+        const top = this.phase.model.find(p => p.kind === 'ramp' && p.r > 0)
+        const base = top && this.phase.model.find(p => p.kind === 'block' && p.c === top.c && p.r === top.r - 1)
         if (!top || !base) return
-        const from = () => ({ ...this.board.boxTop(), w: CELL * 0.4 })
         this.nico.pose('place')
-        await this.board.fall(top, from())
+        await this.board.fall(top, this.fromBox())
         if (gen !== this.gen) return
         await this.nico.oops()
         if (gen !== this.gen) return
@@ -226,9 +240,9 @@ export class GameScene extends Phaser.Scene {
         if (gen !== this.gen) return
         this.board.clear()
         this.nico.pose('place')
-        await this.board.place(base, from())
+        await this.board.place(base, this.fromBox())
         if (gen !== this.gen) return
-        await this.board.place(top, from())
+        await this.board.place(top, this.fromBox())
         if (gen !== this.gen) return
         await this.nico.cheer()
         if (gen !== this.gen) return
@@ -238,23 +252,140 @@ export class GameScene extends Phaser.Scene {
         await this.board.putAway()
     }
 
-    private async controlsDemo(gen: number) {
-        const id = this.phase.tray[0]
-        const card = this.pages.cardAt(id)
-        void this.tap.press(card.x, card.y)
+    private async press(at: Vec) {
+        void this.tap.press(at.x, at.y)
         await FX.wait(this, 320 + TIMING.tapDown)
+    }
+
+    private async controlsDemo(gen: number) {
+        const id = this.phase.tray[0].id
+        await this.press(this.pages.cardAt(id))
         if (gen !== this.gen) return
         await this.pages.tap(id)
         if (gen !== this.gen) return
         await FX.wait(this, 500)
         if (gen !== this.gen) return
-        const slot = this.pages.slotAt(0)
-        void this.tap.press(slot.x, slot.y)
-        await FX.wait(this, 320 + TIMING.tapDown)
+        await this.press(this.pages.holderAt({ slot: 0 }))
         if (gen !== this.gen) return
-        await this.pages.tapSlot(0)
+        await this.pages.tapAt({ slot: 0 })
         if (gen !== this.gen) return
         await FX.wait(this, 400)
+    }
+
+    private async introRepeat(gen: number) {
+        const phase = this.phase
+        const c = Math.max(0, Math.min(...phase.bells) - 1)
+        const demo: PhaseDef = {
+            id: 'demo',
+            model: [0, 1, 2].map(r => ({ id: `demo${r}`, kind: 'block', c, r })),
+            bells: phase.bells,
+            slots: 1,
+            tray: [{ id: 'demo', kind: 'repeat', c, n: 3 }],
+        }
+        await this.board.showBox(true)
+        if (gen !== this.gen) return
+        await FX.wait(this, TIMING.beat)
+        if (gen !== this.gen) return
+        this.pages.setPhase(demo)
+        await this.pages.enter(this.board.boxTop())
+        if (gen !== this.gen) return
+        await this.press(this.pages.cardAt('demo'))
+        if (gen !== this.gen) return
+        await this.pages.tap('demo')
+        if (gen !== this.gen) return
+        await FX.wait(this, 300)
+        if (gen !== this.gen) return
+        await teach(this, guideKey(this.level.level), [
+            { text: TEACH.times, ...spot(this.pages.cardRect('demo'), 14), balloonX: 520, balloonY: 300, buttonLabel: LABEL.see },
+        ])
+        if (gen !== this.gen) return
+        if (!(await this.perform(gen, run(demo, this.pages.order()).acts))) return
+        await this.nico.cheer()
+        if (gen !== this.gen) return
+        this.nico.pose('idle')
+        await FX.wait(this, TIMING.beat)
+        if (gen !== this.gen) return
+        await FX.all(this.board.putAway(), this.pages.leave(this.board.boxTop()))
+        if (gen !== this.gen) return
+        this.pages.setPhase(phase)
+        await this.board.showGhost()
+        if (gen !== this.gen) return
+        await this.pages.enter(this.board.boxTop())
+        if (gen !== this.gen) return
+        await this.yourTurn()
+    }
+
+    private async introIf(gen: number) {
+        const phase = this.phase
+        const choice = phase.choice
+        if (!choice || !phase.cond) return
+        const side = other(phase.cond)
+        const ramp = (left: boolean): Piece => ({ id: left ? 'demo-l' : 'demo-r', kind: 'ramp', ...choice, ...(left ? { left } : {}) })
+        const demo: PhaseDef = {
+            ...phase,
+            id: 'demo',
+            cond: side,
+            slots: 1,
+            ifSlot: 0,
+            tray: [true, false].map(left => ({ id: ramp(left).id, kind: 'piece', piece: ramp(left) })),
+        }
+        const catBell = bellOf(phase, side)
+        const ends = (piece: Piece) => {
+            const built = new Map(phase.model.map(p => [cellSpot(p.c, p.r), p]))
+            built.set(cellSpot(piece.c, piece.r), piece)
+            return descend(built, phase.bells)
+        }
+        const away = [ramp(true), ramp(false)].find(p => ends(p)?.bell !== catBell) ?? ramp(true)
+        const near = away.left ? ramp(false) : ramp(true)
+        const path = ends(away)
+
+        await this.board.showBox(true)
+        if (gen !== this.gen) return
+        await FX.wait(this, TIMING.beat)
+        if (gen !== this.gen) return
+        await this.board.showGhost()
+        if (gen !== this.gen) return
+        this.pages.setPhase(demo)
+        await this.pages.enter(this.board.boxTop())
+        if (gen !== this.gen) return
+        await this.pipoca.enter(this.board.catSpot(catBell), this.board.cell())
+        if (gen !== this.gen) return
+        await teach(this, guideKey(this.level.level), [
+            { text: TEACH.ifHere, ...spot(this.board.bellRect(catBell), 14), balloonX: 640, balloonY: 200, buttonLabel: LABEL.next },
+        ])
+        if (gen !== this.gen) return
+        for (const id of [away.id, near.id]) {
+            await this.press(this.pages.cardAt(id))
+            if (gen !== this.gen) return
+            await this.pages.tap(id)
+            if (gen !== this.gen) return
+            await FX.wait(this, 300)
+            if (gen !== this.gen) return
+        }
+        this.nico.pose('place')
+        for (const piece of [...phase.model].sort((a, b) => a.r - b.r)) {
+            await this.board.place(piece, this.fromBox())
+            if (gen !== this.gen) return
+        }
+        const yes: Act = { slot: 0, pocket: 'yes', piece: away, count: 1, total: 1, ok: true, land: away.r }
+        if (!(await this.perform(gen, [yes]))) return
+        await teach(this, guideKey(this.level.level), [
+            { text: TEACH.ifAway, ...spot(this.board.ghostRect(), 10), balloonX: 640, balloonY: 600, buttonLabel: LABEL.see },
+        ])
+        if (gen !== this.gen) return
+        if (path) {
+            await this.roll(gen, path)
+            if (gen !== this.gen) return
+            await this.nico.cheer()
+            if (gen !== this.gen) return
+            this.nico.pose('idle')
+        }
+        await FX.all(this.board.putAway(), this.pages.leave(this.board.boxTop()), this.pipoca.leave())
+        if (gen !== this.gen) return
+        this.pages.setPhase(phase)
+        await this.pages.enter(this.board.boxTop())
+        if (gen !== this.gen) return
+        await this.yourTurn()
     }
 
     private nicoSays(text: string) {
@@ -274,48 +405,129 @@ export class GameScene extends Phaser.Scene {
     private async build() {
         if (this.state !== 'play') return
         const gen = this.gen
+        const phase = this.phase
         this.state = 'build'
         this.header.setHelpEnabled(false)
         this.pages.setPlayable(false)
         await FX.all(this.header.lift(true), this.room.focus(true))
         if (gen !== this.gen) return
 
-        const steps = build(this.pages.order())
-        for (const [i, step] of steps.entries()) {
-            await this.pages.lift(i)
-            if (gen !== this.gen) return
-            this.nico.pose('read')
-            await FX.wait(this, TIMING.read)
-            if (gen !== this.gen) return
-            this.nico.pose('place')
-            const from = this.pages.take(i)
-            if (!step.ok) {
-                await this.board.fall(step.piece, from)
-                if (gen !== this.gen) return
-                await this.fail(gen, i, step.piece)
-                return
-            }
-            await this.board.place(step.piece, from)
-            if (gen !== this.gen) return
-            this.pages.done(i)
-            this.nico.pose('idle')
-            await FX.wait(this, 180)
+        const tape = this.pages.order()
+        if (phase.ifSlot === undefined) {
+            if (!(await this.descent(gen, run(phase, tape)))) return
+            await this.success(gen)
+            return
+        }
+
+        const sides = Phaser.Utils.Array.Shuffle([...SIDES])
+        await this.pipoca.enter(this.board.catSpot(bellOf(phase, sides[0])), this.board.cell())
+        if (gen !== this.gen) return
+        const first = run(phase, tape, sides[0])
+        if (!(await this.descent(gen, first, sides[0]))) return
+        void this.nico.cheer()
+        this.audio.good()
+        await FX.wait(this, TIMING.party)
+        if (gen !== this.gen) return
+        this.board.stow()
+        this.state = 'build'
+        await this.pipoca.move(this.board.catSpot(bellOf(phase, sides[1])))
+        if (gen !== this.gen) return
+        this.nico.pose('place')
+        for (const act of first.acts.filter(a => a.pocket && a.ok)) {
+            await this.board.remove(act.piece, this.nico.hands())
             if (gen !== this.gen) return
         }
-        await this.roll(gen)
+        this.nico.pose('idle')
+        await FX.wait(this, TIMING.read)
+        if (gen !== this.gen) return
+        if (!(await this.descent(gen, again(phase, first, tape, sides[1]), sides[1]))) return
+        await this.success(gen)
     }
 
-    private async roll(gen: number) {
+    private async perform(gen: number, acts: Act[]): Promise<boolean> {
+        let current: Position | undefined
+        const close = (at: Position) => {
+            this.pages.done(at)
+            if (at.pocket) this.pages.done({ slot: at.slot })
+        }
+        for (const act of acts) {
+            const at: Position = { slot: act.slot, pocket: act.pocket }
+            if (!current || current.slot !== at.slot || current.pocket !== at.pocket) {
+                if (current) close(current)
+                current = at
+                if (at.pocket) {
+                    await this.pages.lift({ slot: at.slot })
+                    if (gen !== this.gen) return false
+                    this.nico.pose('think')
+                    await FX.wait(this, TIMING.think)
+                    if (gen !== this.gen) return false
+                }
+                await this.pages.lift(at)
+                if (gen !== this.gen) return false
+                this.nico.pose('read')
+                await FX.wait(this, TIMING.read)
+                if (gen !== this.gen) return false
+            }
+            if (act.total > 1) {
+                this.pages.count(at, act.count)
+                await FX.wait(this, TIMING.count)
+                if (gen !== this.gen) return false
+            }
+            this.nico.pose('place')
+            const from = this.pages.take(at)
+            if (!act.ok) {
+                await this.board.fall(act.piece, from, act.land)
+                return false
+            }
+            await this.board.place(act.piece, from)
+            if (gen !== this.gen) return false
+            if (act.count < act.total) this.pages.restore(at)
+            this.nico.pose('idle')
+            await FX.wait(this, 180)
+            if (gen !== this.gen) return false
+        }
+        if (current) close(current)
+        return true
+    }
+
+    private async descent(gen: number, out: Outcome, side?: Side): Promise<boolean> {
+        const placed = await this.perform(gen, out.acts)
+        if (gen !== this.gen) return false
+        const fail = out.fail
+        if (fail && fail.why !== 'cat') {
+            if (placed && fail.why === 'extra') await this.board.topple(fail.piece)
+            if (placed && fail.why === 'missing') {
+                this.nico.pose('think')
+                await this.board.flash(fail.piece)
+            }
+            if (gen !== this.gen) return false
+            await this.fail(gen, fail)
+            return false
+        }
+        if (!out.path) return false
+        const cat = fail && side ? this.pipoca.head() : undefined
+        await this.roll(gen, out.path, cat)
+        if (gen !== this.gen) return false
+        if (fail) {
+            await this.pipoca.wake()
+            if (gen !== this.gen) return false
+            await this.board.spill()
+            if (gen !== this.gen) return false
+            await this.fail(gen, fail)
+            return false
+        }
+        return true
+    }
+
+    private async roll(gen: number, path: Path, cat?: Vec) {
         this.state = 'roll'
         await FX.wait(this, TIMING.beat)
         if (gen !== this.gen) return
         this.nico.pose('release')
-        await this.board.release(this.nico.hands())
+        await this.board.release(this.nico.hands(), path)
         if (gen !== this.gen) return
         this.nico.pose('idle')
-        await this.board.roll()
-        if (gen !== this.gen) return
-        await this.success(gen)
+        await this.board.roll(path, cat)
     }
 
     private async success(gen: number) {
@@ -353,11 +565,26 @@ export class GameScene extends Phaser.Scene {
 
     // ───────────────────────────────────────────── erro
 
-    private async fail(gen: number, index: number, piece: Piece) {
+    private failText(fail: Fail) {
+        switch (fail.why) {
+            case 'under':
+                return this.level.level === 2 ? COUNT.few : FELL[fail.piece.kind]
+            case 'extra':
+                return COUNT.many
+            case 'blocked':
+                return BLOCKED
+            case 'missing':
+                return MISSING[fail.piece.kind]
+            case 'cat':
+                return CAT
+        }
+    }
+
+    private async fail(gen: number, fail: Fail) {
         this.state = 'error'
-        void this.pages.blame(index)
+        if (fail.slot !== undefined) void this.pages.blame({ slot: fail.slot, pocket: fail.pocket })
         void this.nico.oops()
-        this.banner.say(FELL[piece.kind])
+        this.banner.say(this.failText(fail))
         await FX.wait(this, TIMING.error)
         if (gen !== this.gen) return
         this.lose()
@@ -384,7 +611,7 @@ export class GameScene extends Phaser.Scene {
         this.pages.setPlayable(false)
         this.header.setHelpEnabled(false)
         await teach(this, `${guideKey(this.level.level)}-help`, [
-            { text: HELP.rule, ...spot(this.board.ghostRect(), 6), balloonX: 640, balloonY: 500, buttonLabel: LABEL.resume },
+            { text: HELP[this.level.level], ...spot(this.board.ghostRect(), 6), balloonX: 640, balloonY: 500, buttonLabel: LABEL.resume },
         ])
         if (gen !== this.gen) return
         this.play()

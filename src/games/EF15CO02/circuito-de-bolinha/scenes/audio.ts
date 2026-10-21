@@ -14,6 +14,9 @@ export interface Audio {
     lose(): void
     win(): void
     whoosh(): void
+    tick(n: number): void
+    meow(): void
+    purr(): void
     setMuted(on: boolean): void
     destroy(): void
 }
@@ -144,6 +147,16 @@ export function createAudio(): Audio {
         },
         whoosh() {
             tone(300, 260, { wave: 'sine', gain: 0.08, to: 900 })
+        },
+        tick(n) {
+            tone(620 + n * 90, 90, { wave: 'triangle', gain: 0.1, to: 760 + n * 90 })
+        },
+        meow() {
+            tone(620, 160, { wave: 'sawtooth', gain: 0.05, to: 980 })
+            tone(980, 260, { wave: 'triangle', gain: 0.09, delay: 140, to: 520 })
+        },
+        purr() {
+            for (let t = 0; t < 600; t += 90) noise(70, 0.03, t, 180, 'lowpass')
         },
         setMuted(on) {
             muted = on

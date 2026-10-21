@@ -1,5 +1,5 @@
 import Phaser from 'phaser'
-import { BOX_SHEET, NICO_CELL, NICO_SHEET, PIECES_SHEET, ROOM_KEY, TABLE_KEY, UI_SHEET, type Sheet } from '../data/files'
+import { BOX_SHEET, IF_KEY, NICO_CELL, NICO_SHEET, PIECES_SHEET, PIPOCA_CELL, PIPOCA_SHEET, ROOM_KEY, TABLE_KEY, UI_SHEET, type Sheet } from '../data/files'
 import { H, TABLE, W } from '../data/layout'
 import { C } from '../data/theme'
 import { dashedRoundRect } from './art'
@@ -36,6 +36,8 @@ export function ensureArt(scene: Phaser.Scene) {
     bakeSheet(scene, NICO_SHEET, nico)
     bakeSheet(scene, BOX_SHEET, box)
     bakeSheet(scene, UI_SHEET, ui)
+    bakeSheet(scene, PIPOCA_SHEET, pipoca)
+    bakeImage(scene, IF_KEY, 512, 256, ifPage)
 }
 
 // ───────────────────────────────────────────── quarto
@@ -528,4 +530,160 @@ function ui(g: G, i: number) {
         g.lineStyle(5, INK, on ? 1 : 0.4)
         g.strokeRoundedRect(x, y, w, h - 22, 30)
     }
+}
+
+// ───────────────────────────────────────────── Pipoca
+
+function catHead(g: G, x: number, y: number, r: number, look: 'shut' | 'open' | 'wide') {
+    g.fillStyle(C.cat, 1)
+    g.fillTriangle(x - r * 0.9, y - r * 0.35, x - r * 0.55, y - r * 1.25, x - r * 0.1, y - r * 0.75)
+    g.fillTriangle(x + r * 0.9, y - r * 0.35, x + r * 0.55, y - r * 1.25, x + r * 0.1, y - r * 0.75)
+    g.lineStyle(5, INK, 1)
+    g.strokeTriangle(x - r * 0.9, y - r * 0.35, x - r * 0.55, y - r * 1.25, x - r * 0.1, y - r * 0.75)
+    g.strokeTriangle(x + r * 0.9, y - r * 0.35, x + r * 0.55, y - r * 1.25, x + r * 0.1, y - r * 0.75)
+    g.fillStyle(C.catNose, 1)
+    g.fillTriangle(x - r * 0.72, y - r * 0.45, x - r * 0.55, y - r * 0.98, x - r * 0.3, y - r * 0.68)
+    g.fillStyle(C.cat, 1)
+    g.fillCircle(x, y, r)
+    g.fillStyle(C.catCream, 1)
+    g.fillEllipse(x - r * 0.25, y + r * 0.42, r * 1.2, r * 0.8)
+    g.fillStyle(C.catDark, 1)
+    g.fillRoundedRect(x - r * 0.1, y - r * 0.98, r * 0.16, r * 0.42, 4)
+    g.fillRoundedRect(x + r * 0.22, y - r * 0.9, r * 0.14, r * 0.34, 4)
+    g.lineStyle(5, INK, 1)
+    g.strokeCircle(x, y, r)
+    const ex = [x - r * 0.62, x - r * 0.05]
+    const ey = y - r * 0.05
+    if (look === 'shut') {
+        g.lineStyle(5, C.eye, 1)
+        ex.forEach(e => {
+            g.beginPath()
+            g.arc(e, ey - 4, r * 0.18, Math.PI * 0.15, Math.PI * 0.85)
+            g.strokePath()
+        })
+    } else {
+        const big = look === 'wide' ? 1.3 : 1
+        ex.forEach(e => {
+            g.fillStyle(C.white, 1)
+            g.fillEllipse(e, ey, r * 0.34 * big, r * 0.42 * big)
+            g.fillStyle(C.catEye, 1)
+            g.fillEllipse(e, ey, r * 0.26 * big, r * 0.36 * big)
+            g.fillStyle(C.eye, 1)
+            g.fillEllipse(e, ey, r * 0.1 * big, r * 0.26 * big)
+            g.fillStyle(C.white, 1)
+            g.fillCircle(e + 3, ey - 6, 3)
+        })
+    }
+    g.fillStyle(C.catNose, 1)
+    g.fillTriangle(x - r * 0.42, y + r * 0.2, x - r * 0.26, y + r * 0.2, x - r * 0.34, y + r * 0.32)
+    g.fillStyle(C.cheek, 0.7)
+    g.fillCircle(x - r * 0.82, y + r * 0.32, r * 0.13)
+    g.fillCircle(x + r * 0.2, y + r * 0.32, r * 0.13)
+    g.lineStyle(3, INK, 0.8)
+    g.lineBetween(x - r * 1.0, y + r * 0.25, x - r * 1.4, y + r * 0.15)
+    g.lineBetween(x - r * 1.0, y + r * 0.38, x - r * 1.4, y + r * 0.42)
+}
+
+function catBody(g: G, x: number, y: number, w: number, h: number) {
+    g.fillStyle(C.cat, 1)
+    g.fillEllipse(x, y, w, h)
+    g.fillStyle(C.catCream, 1)
+    g.fillEllipse(x - w * 0.08, y + h * 0.22, w * 0.7, h * 0.42)
+    g.fillStyle(C.catDark, 1)
+    ;[-0.1, 0.1, 0.28].forEach(k => g.fillEllipse(x + w * k, y - h * 0.3, w * 0.07, h * 0.36))
+    g.lineStyle(5, INK, 1)
+    g.strokeEllipse(x, y, w, h)
+}
+
+function catLeg(g: G, x0: number, y0: number, x1: number, y1: number) {
+    g.lineStyle(26, INK, 1)
+    g.lineBetween(x0, y0, x1, y1)
+    g.lineStyle(17, C.cat, 1)
+    g.lineBetween(x0, y0, x1, y1)
+    g.fillStyle(C.catCream, 1)
+    g.fillCircle(x1, y1, 10)
+    g.lineStyle(4, INK, 1)
+    g.strokeCircle(x1, y1, 10)
+}
+
+function catTail(g: G, points: Array<{ x: number; y: number }>) {
+    const curve = new Phaser.Curves.Spline(points.map(p => new Phaser.Math.Vector2(p.x, p.y)))
+    const pts = curve.getPoints(24)
+    g.lineStyle(28, INK, 1)
+    g.strokePoints(pts)
+    g.lineStyle(20, C.cat, 1)
+    g.strokePoints(pts)
+    const end = pts[pts.length - 1]
+    g.fillStyle(C.catDark, 1)
+    g.fillCircle(end.x, end.y, 10)
+}
+
+function pipoca(g: G, i: number) {
+    if (i === PIPOCA_CELL.sleep) {
+        catTail(g, [
+            { x: 262, y: 220 },
+            { x: 230, y: 244 },
+            { x: 140, y: 246 },
+            { x: 80, y: 238 },
+        ])
+        catBody(g, 180, 196, 190, 104)
+        catHead(g, 96, 190, 52, 'shut')
+        return
+    }
+    if (i === PIPOCA_CELL.wake) {
+        catTail(g, [
+            { x: 250, y: 120 },
+            { x: 290, y: 80 },
+            { x: 282, y: 30 },
+        ])
+        catLeg(g, 120, 150, 92, 206)
+        catLeg(g, 150, 156, 160, 214)
+        catLeg(g, 200, 156, 196, 214)
+        catLeg(g, 236, 146, 270, 200)
+        catBody(g, 180, 128, 184, 86)
+        g.fillStyle(C.cat, 1)
+        ;[140, 170, 200, 228].forEach(x => g.fillTriangle(x - 12, 92, x, 64, x + 12, 92))
+        catHead(g, 92, 102, 50, 'wide')
+        return
+    }
+    catTail(g, [
+        { x: 252, y: 150 },
+        { x: 290, y: 110 },
+        { x: 284, y: 54 },
+    ])
+    catLeg(g, 214, 186, 226, 244)
+    catLeg(g, 136, 186, 112, 226)
+    catLeg(g, 240, 182, 254, 244)
+    catLeg(g, 160, 188, 160, 244)
+    catBody(g, 190, 164, 176, 84)
+    catHead(g, 104, 132, 50, 'open')
+}
+
+// ───────────────────────────────────────────── página SE
+
+function ifPage(g: G) {
+    const w = 512
+    const h = 256
+    g.fillStyle(C.paperRim, 1)
+    g.fillRoundedRect(8, 14, w - 16, h - 20, 26)
+    g.fillStyle(C.paper, 1)
+    g.fillRoundedRect(8, 6, w - 16, h - 20, 26)
+    g.fillStyle(C.paperFold, 1)
+    g.fillTriangle(w - 64, 6, w - 8, 6, w - 8, 62)
+    g.lineStyle(5, C.paperRim, 1)
+    g.strokeRoundedRect(8, 6, w - 16, h - 20, 26)
+    const top = h * 0.36
+    const ph = h * 0.56
+    const pw = w * 0.43
+    ;[
+        { x: w * 0.055, rim: C.yes },
+        { x: w * 0.515, rim: C.oops },
+    ].forEach(({ x, rim }) => {
+        g.fillStyle(C.pocket, 1)
+        g.fillRoundedRect(x, top, pw, ph, 16)
+        g.fillStyle(C.paperRim, 0.7)
+        g.fillRect(x + 8, top + 2, pw - 16, 8)
+        g.lineStyle(7, rim, 1)
+        g.strokeRoundedRect(x, top, pw, ph, 16)
+    })
 }

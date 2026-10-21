@@ -1,5 +1,5 @@
 import type Phaser from 'phaser'
-import type { Bird, Bug, Cor, Home, Kind, Piece, Structure, Tone } from '../types'
+import type { Bird, Bug, Cor, Fish, Glow, Group, Kind, Shroom, Structure, Tone } from '../types'
 
 export interface Sheet {
     key: string
@@ -27,24 +27,34 @@ export const BUG_SHEET: Sheet = { key: 'bichos', cols: 4, rows: 2, cellW: 256, c
 export const OBJECT2_SHEET: Sheet = { key: 'objetos2', cols: 4, rows: 2, cellW: 256, cellH: 256 }
 // Both layers share the same canvas coordinates; trimming each one would misalign the rim.
 export const NEST_SHEET: Sheet = { key: 'ninho', cols: 1, rows: 2, cellW: 256, cellH: 256, trim: false }
-export const HOUSE_SHEET: Sheet = { key: 'casas', cols: 3, rows: 2, cellW: 256, cellH: 256 }
-export const PIECE_SHEET: Sheet = { key: 'pedacos', cols: 4, rows: 3, cellW: 256, cellH: 256 }
+export const CREW_SHEET: Sheet = { key: 'turma', cols: 4, rows: 4, cellW: 256, cellH: 256 }
+export const FISH_SHEET: Sheet = { key: 'peixes', cols: 3, rows: 3, cellW: 256, cellH: 256 }
 
-export const SHEETS = [ANT_SHEET, BEE_SHEET, FLOWER_SHEET, PIPA_SHEET, OBJECT_SHEET, CHICK_SHEET, SPIDER_SHEET, BUG_SHEET, OBJECT2_SHEET, NEST_SHEET, HOUSE_SHEET, PIECE_SHEET]
+export const SHEETS = [ANT_SHEET, BEE_SHEET, FLOWER_SHEET, PIPA_SHEET, OBJECT_SHEET, CHICK_SHEET, SPIDER_SHEET, BUG_SHEET, OBJECT2_SHEET, NEST_SHEET, CREW_SHEET, FISH_SHEET]
 
 export const TRAIL_KEY = 'bg-trilha'
 export const GARDEN_KEY = 'bg-jardim'
 export const NESTS_KEY = 'bg-ninhos'
 export const WEB_KEY = 'bg-teia'
-export const WHIRL_KEY = 'bg-redemoinho'
-export const IMAGES = [TRAIL_KEY, GARDEN_KEY, NESTS_KEY, WEB_KEY, WHIRL_KEY]
+export const GLADE_KEY = 'bg-redemoinho'
+export const POND_KEY = 'bg-lagoa'
+export const NIGHT_KEY = 'bg-noite'
+export const IMAGES = [TRAIL_KEY, GARDEN_KEY, NESTS_KEY, WEB_KEY, GLADE_KEY, POND_KEY, NIGHT_KEY]
 
 export const BG_OF: Record<Structure, string> = {
     fila: TRAIL_KEY,
     grade: GARDEN_KEY,
     ficha: NESTS_KEY,
     teia: WEB_KEY,
-    redemoinho: WHIRL_KEY,
+    jeito: GLADE_KEY,
+}
+
+export const BG_OF_GROUP: Record<Group, string> = {
+    patos: GLADE_KEY,
+    cogumelos: GLADE_KEY,
+    peixes: POND_KEY,
+    vagalumes: NIGHT_KEY,
+    caracol: GLADE_KEY,
 }
 
 export const SPIDER_CELL = { idle: 0, hang: 1, pull: 2, cheer: 3, fall: 4, dizzy: 5 } as const
@@ -57,11 +67,16 @@ export const chickCell = (b: Bird) => COR_INDEX[b.pena] * 3 + COR_INDEX[b.bico]
 const BUG_INDEX: Record<Bug, number> = { joaninha: 0, borboleta: 1, grilo: 2, caracol: 3 }
 export const bugCell = (b: Bug, scared = false) => BUG_INDEX[b] + (scared ? 4 : 0)
 
-const HOME_INDEX: Record<Home, number> = { fila: 0, grade: 1, ficha: 2, teia: 3, solto: 4 }
-export const houseCell = (h: Home) => HOME_INDEX[h]
+export const CREW_CELL = { duck: 0, duckling: 1, snail: 2, pebble: 3, shell: 12, corpo: 13, rabo: 14, basket: 15 } as const
 
-export const PIECES: Piece[] = ['pebbles', 'list', 'grid', 'weather', 'card', 'badge', 'pair', 'map', 'number', 'word', 'yes']
-export const pieceCell = (p: Piece) => PIECES.indexOf(p)
+const CAP_INDEX: Record<Shroom['cap'], number> = { redondo: 0, pontudo: 1 }
+const HUE_INDEX: Record<Shroom['hue'], number> = { vermelho: 0, azul: 1 }
+export const shroomCell = (s: Shroom) => 4 + CAP_INDEX[s.cap] * 2 + HUE_INDEX[s.hue]
+
+export const GLOWS: Glow[] = ['amarelo', 'verde', 'azul', 'rosa']
+export const glowCell = (g: Glow) => 8 + GLOWS.indexOf(g)
+
+export const fishCell = (f: Fish) => COR_INDEX[f.corpo] * 3 + COR_INDEX[f.rabo]
 
 export const ANT_CELL = { idle: 0, walkA: 1, walkB: 2, dizzy: 3, tumble: 4, startled: 5, trip: 6, cheer: 7 } as const
 export const BEE_CELL = { up: 0, down: 1, carry: 2, cheer: 3, startled: 4, sad: 5 } as const

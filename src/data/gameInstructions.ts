@@ -31,7 +31,9 @@ const POR_SLUG: Record<string, string[]> = {
     "Alguns pinos estão com sono e querem deitar. A Bola Mágica derruba quem a frase dela diz.",
     "Toque numa carta para pôr a parte dela na frase, como Derruba quem tem ESTRELA. Você pode trocar quantas vezes quiser.",
     "O NÃO troca a resposta: em Derruba quem NÃO tem ÓCULOS, cai quem está sem óculos.",
-    "Aperte JOGAR: a bola confere a frase em cada pino. Derrubar um pino acordado, ou deixar de pé um com sono, encerra a partida.",
+    "Aperte JOGAR e toque na tela quando o ponteiro chegar na estrela: a força deixa a jogada mais bonita, mas não muda quem cai.",
+    "No nível 2, escolha E (quer as duas partes) ou OU (quer uma ou outra). No nível 3, cada parte da frase tem o seu NÃO.",
+    "A bola confere a frase em cada pino. Derrubar um pino acordado, ou deixar de pé um com sono, encerra a partida.",
   ],
   "achados-e-perdidos": [
     "Um bichinho perdido chegou no balcão.",
@@ -79,7 +81,10 @@ const POR_SLUG: Record<string, string[]> = {
   "rota-da-madrugada": [
     "Você leva a encomenda da Dona Cida no carrinho elétrico, de noite. O carro anda sozinho.",
     "Quando aparece um problema, o carro para e espera. Leia o problema no alto da tela.",
-    "Toque na tecnologia do carro que resolve ESTE problema: BUZINA, FAROL, MENSAGEM ou LIMPADOR (ou as teclas 1, 2, 3 e 4). A tecnologia errada encerra a partida.",
+    "Toque, entre os 4 botões da central do carro, a tecnologia que resolve ESTE problema (ou as teclas 1, 2, 3 e 4). A tecnologia errada, ou exagerada, encerra a partida.",
+    "Nível 1, na vila: BUZINA, FAROL, MENSAGEM e LIMPADOR. Pense no que cada uma faz.",
+    "Nível 2, na serra: entram o GPS e o ALTO-FALANTE. A mensagem avisa só uma pessoa; o alto-falante avisa a vila toda.",
+    "Nível 3: GPS, MAPA, RÁDIO e MENSAGEM, e o sinal do celular some e volta. Sem sinal, o GPS e a mensagem não funcionam, mas o mapa de papel e o rádio sim. Com sinal, o GPS conhece até a rua nova.",
   ],
   "pula-pula-na-internet": [
     "O celular pula sozinho. Segure o lado esquerdo ou o direito da tela (ou as setas do teclado) para levá-lo até as abas mais altas: da floresta ao céu, e do céu ao espaço.",
@@ -459,8 +464,9 @@ const POR_SLUG: Record<string, string[]> = {
   ],
   "catapulta-do-arquivo": [
     "No alto aparece o pedido: guarde o arquivo num lugar LOCAL ou num lugar REMOTO.",
-    "Cada rodada tem um mapa diferente, maior que a tela: arraste a tela (ou toque no mapinha) para ver tudo e planejar. Depois puxe a catapulta para trás, mire e solte. O arquivo voa, quica nas molas, rola e cai num buraco (que leva a um aparelho embaixo da terra) ou entra numa nuvem.",
-    "LOCAL é o HD de dentro do computador. REMOTO é o que sai dele: pen drive, cartão de memória, HD externo e nuvem. Se o arquivo parar no chão, é só lançar de novo.",
+    "Cada rodada tem um mapa diferente, maior que a tela: arraste a tela (ou toque no mapinha) para achar os aparelhos. Depois puxe a catapulta para trás, mire e solte: a linha de bolinhas mostra onde o arquivo vai cair.",
+    "O arquivo voa, quica, rola e pula nas molas. Buraco no chão é um túnel: o arquivo passa por baixo da terra e sai rolando mais adiante. Encostou num aparelho, ou entrou numa nuvem, o arquivo fica guardado ali.",
+    "LOCAL é o HD de dentro do computador. REMOTO é o que sai dele: pen drive, cartão de memória, HD externo e nuvem. Se o arquivo parar no chão, é só lançar de novo. Guardar no tipo errado encerra a partida.",
     "No nível 2 o remoto se divide em dois: REMOVÍVEL (pen drive, cartão, HD externo) e INTERNET (a nuvem). No nível 3 o pedido conta uma situação, e você decide onde o arquivo precisa estar.",
   ],
   "raio-x-da-maquina": [
@@ -477,9 +483,11 @@ const POR_SLUG: Record<string, string[]> = {
     "Peça sem bloco embaixo cai, e a partida acaba. Se tudo ficar de pé, a bolinha desce até o sino.",
   ],
   "cabo-certo": [
-    "Leia o pedido no alto. Os dois aparelhos dele aparecem dos lados do computador.",
-    "Puxe o plugue que pisca até a tomada da função do aparelho: verde é ENTRADA, laranja é SAÍDA e roxa é ARMAZENAMENTO.",
+    "Leia o pedido no alto. Os aparelhos dele aparecem em volta do computador; arraste a mesa para ver os que ficaram fora da tela.",
+    "Puxe o plugue do aparelho até a tomada da função dele: verde é ENTRADA, laranja é SAÍDA, roxa é ARMAZENAMENTO e azul é MEMÓRIA. Pen drive, memória e cartão não têm cabo: leve o aparelho inteiro e encaixe.",
+    "A MEMÓRIA segura a informação só enquanto você usa; o ARMAZENAMENTO guarda para sempre.",
     "Com tudo ligado, toque no aparelho e veja a informação passar pelo processador.",
+    "No nível 3 o computador tem uma ENTRADA só: ligue o HUB nela para ganhar mais entradas, e ligue um aparelho dentro do outro.",
     "Cabo na tomada de outra função encerra a partida.",
   ],
   "bairro-das-permissoes": [
@@ -503,7 +511,7 @@ const POR_SLUG: Record<string, string[]> = {
   ],
   "pit-stop-da-chuva": [
     "Segure ACELERAR e FREIO para pilotar. Quando o céu ou a pista mudarem, toque em TROCAR PNEU, entre no box e pare no retângulo.",
-    "A regra da equipe fica no alto: SE estiver chovendo, pneu de CHUVA; SENÃO, pneu LISO. Nublado não é chuva: vale o SENÃO.",
+    "No box, cada botão traz a linha da regra em cima: SE estiver chovendo, pneu de CHUVA; SENÃO, pneu LISO. Nublado não é chuva: vale o SENÃO.",
     "Nível 2: a regra é lida de cima para baixo, e a lama vem primeiro. Na pista estreita, só a MOTO passa.",
     "Nível 3: primeiro escolha MOTO ou CARRO (pista estreita?), depois o pneu pelo céu. Escolha errada encerra a partida.",
   ],
@@ -516,8 +524,11 @@ const POR_SLUG: Record<string, string[]> = {
   ],
   "ventania-na-floresta": [
     "Uma ventania bagunçou a floresta! Cada bicho tem um jeito de se organizar, e você põe tudo de volta no lugar.",
-    "Na FILA, as formigas vão da maior para a menor: toque na formiga que vem agora e ela corre para o fim da fila.",
+    "Na FILA, as formigas vão da maior para a menor: toque na formiga que vem agora e ela corre para o próximo lugar da fila.",
     "Na GRADE, cada flor mora no cruzamento da linha do tipo dela com a coluna da cor dela: toque na casinha certa e a abelha Zuzu planta a flor.",
+    "Nível 2: na FICHA, cada ninho diz como é o seu filhote (PENA, BICO, TOPETE): toque no ninho do filhote que a Pipa segura. Na TEIA, o cartão mostra dois bichos que o fio liga: toque no outro bicho do par.",
+    "Nível 3: olhe bem a turma antes do vento. Depois toque na placa do jeito que ela estava organizada e conserte a turma.",
+    "Peça no lugar errado encerra a partida.",
   ],
   "rio-de-chocolate": [
     "A Mel precisa atravessar o rio de chocolate pulando nos doces que boiam. A placa no alto diz qual doce aguenta, como Aguenta o doce que tem GRANULADO.",

@@ -1,5 +1,5 @@
 import { FONT_JOGO } from '../../../../shared/fonts/gameFont'
-import type { Cor, Tone } from '../types'
+import type { Cor, Glow, Hue, Tone } from '../types'
 
 export const C = {
     grass: 0x8fd06b,
@@ -123,6 +123,27 @@ export const C = {
     sunDark: 0xd99a14,
     rain: 0x8fb6d8,
     rainDark: 0x5c86ad,
+    duck: 0xfffaf0,
+    duckDark: 0xbfae86,
+    duckling: 0xffd84a,
+    ducklingDark: 0xc99a14,
+    beak: 0xf59a3c,
+    beakDark: 0xc0621f,
+    cap: 0xe8574a,
+    capDark: 0xa83226,
+    capBlue: 0x5aa9f0,
+    capBlueDark: 0x2f7fcc,
+    water: 0x86cdea,
+    waterDark: 0x4a93bd,
+    waterDeep: 0x5aa8d0,
+    night: 0x223156,
+    nightDark: 0x141d38,
+    nightLight: 0x34497a,
+    bug: 0x5b4a3a,
+    bugDark: 0x2e241b,
+    conch: 0xf7c9b0,
+    conchDark: 0xc98a6e,
+    lightLine: 0xfff3a8,
 } as const
 
 export const COR: Record<Cor, { fill: number; dark: number }> = {
@@ -135,6 +156,18 @@ export const TONE: Record<Tone, { fill: number; dark: number }> = {
     amarela: { fill: C.amarela, dark: C.amarelaDark },
     azul: { fill: C.azul, dark: C.azulDark },
     rosa: { fill: C.rosa, dark: C.rosaDark },
+}
+
+export const HUE: Record<Hue, { fill: number; dark: number }> = {
+    vermelho: { fill: C.cap, dark: C.capDark },
+    azul: { fill: C.capBlue, dark: C.capBlueDark },
+}
+
+export const GLOW: Record<Glow, number> = {
+    amarelo: 0xffe45c,
+    verde: 0x8ff06a,
+    azul: 0x6fd2ff,
+    rosa: 0xff8fd2,
 }
 
 export const CSS = {

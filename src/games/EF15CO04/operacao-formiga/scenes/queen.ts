@@ -1,19 +1,21 @@
 import Phaser from 'phaser'
 import { FX } from '../../../../shared/effects/FX'
-import { FRUIT_SHEET, QUEEN_SHEET, cellKey, queenCell, sheetScale } from '../data/files'
-import { FRUITS, FRUIT_CELL, fruitPoly } from '../data/fruits'
-import { MAP, ORDER, PLATE, QUEEN, WD } from '../data/layout'
+import { QUEEN_SHEET, cellKey, orderIcon, queenCell, sheetScale } from '../data/files'
+import { ITEMS, orderPoly, plateScale } from '../data/fruits'
+import { ORDER, PLATE, QUEEN, WD } from '../data/layout'
 import { C } from '../data/theme'
-import type { FruitKind, QueenPose, Rect } from '../types'
+import type { OrderKind, QueenPose, Rect } from '../types'
 import type { View } from './view'
 
 /** A rainha, o balão do pedido (só o desenho da fruta) e o contorno tracejado no prato. */
 export interface Queen {
-    ask(kind: FruitKind): Promise<void>
+    ask(kind: OrderKind): Promise<void>
     hush(): void
     setPose(p: QueenPose): void
     cheer(): Promise<void>
-    outline(kind: FruitKind): void
+    outline(kind: OrderKind): void
+    /** A cara de nojo (folha suja): pose calma com uma tremidinha. */
+    yuck(): Promise<void>
     glow(): Promise<void>
     rect(): Rect
     plateRect(): Rect
@@ -50,7 +52,7 @@ export function createQueen(scene: Phaser.Scene, view: View): Queen {
     bubbleArt.fillTriangle(tail.a.x, tail.a.y, tail.tip.x, tail.tip.y, tail.b.x, tail.b.y)
     bubbleArt.lineBetween(tail.a.x, tail.a.y, tail.tip.x, tail.tip.y)
     bubbleArt.lineBetween(tail.b.x, tail.b.y, tail.tip.x, tail.tip.y)
-    const icon = scene.add.image(0, 0, FRUIT_SHEET.key, cellKey(0))
+    const icon = scene.add.image(0, 0, '__DEFAULT')
     const bubble = scene.add.container(bx, by, [bubbleArt, icon]).setVisible(false)
     view.add(bubble, WD.wind + 10)
 
@@ -64,8 +66,8 @@ export function createQueen(scene: Phaser.Scene, view: View): Queen {
     return {
         async ask(fruit) {
             setPose('ask')
-            const fk = sheetScale(scene, FRUIT_SHEET)
-            icon.setFrame(cellKey(FRUIT_CELL[fruit])).setScale(((ORDER.r * 1.5) / FRUIT_SHEET.cellW) * fk)
+            const art = orderIcon(scene, fruit, ORDER.r * 1.5)
+            icon.setTexture(art.key, art.frame).setScale(art.scale)
             bubble.setVisible(true).setScale(1)
             await FX.popIn(scene, bubble, { from: 0.4, duration: 360 })
         },
@@ -83,8 +85,10 @@ export function createQueen(scene: Phaser.Scene, view: View): Queen {
         outline(fruit) {
             line.clear()
             halo.clear().setAlpha(0)
-            const pts = fruitPoly(FRUITS[fruit]).map(p => ({ x: PLATE.x + p.x * MAP.scale, y: PLATE.y + p.y * MAP.scale }))
-            line.lineStyle(4, FRUITS[fruit].pulpDark, 0.85)
+            const ps = plateScale(fruit)
+            const pts = orderPoly(fruit).map(p => ({ x: PLATE.x + p.x * ps, y: PLATE.y + p.y * ps }))
+            const ink = fruit === 'gigante' || ITEMS[fruit].form === 'leaf' ? C.giantDark : ITEMS[fruit].pulpDark
+            line.lineStyle(4, ink, 0.85)
             // tracejado: anda pelo contorno contando o comprimento
             let carry = 0
             let on = true
@@ -115,6 +119,11 @@ export function createQueen(scene: Phaser.Scene, view: View): Queen {
                 true,
                 true,
             )
+        },
+        async yuck() {
+            setPose('calm')
+            await FX.to(scene, sprite, { x: QUEEN.x + 6, angle: -4 }, { duration: 70, yoyo: true, repeat: 5 })
+            sprite.setPosition(QUEEN.x, QUEEN.y).setAngle(0)
         },
         async glow() {
             line.clear()

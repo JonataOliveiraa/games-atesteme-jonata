@@ -24,4 +24,9 @@ export const TIMING = {
     tapDown: 140,
     tapHold: 260,
     finale: 1500,
+    count: 260,
+    think: 700,
+    walk: 0.32,
+    zzz: 900,
+    swap: 520,
 } as const
