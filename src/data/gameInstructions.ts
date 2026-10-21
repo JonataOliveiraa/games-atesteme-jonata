@@ -14,6 +14,13 @@
  */
 
 const POR_SLUG: Record<string, string[]> = {
+  "operacao-formiga": [
+    "A rainha quer uma fruta, mas a fruta inteira não passa na fresta entre as pedras.",
+    "Ande com o joystick (ou com as setas). Encoste na fruta para cortar.",
+    "Passe o dedo de um lado ao outro da fruta: o corte sai reto. Corte quantas vezes quiser e toque no ✓.",
+    "Passe por cima de um pedaço para pegar e leve até o formigueiro. Pedaço grande demais entala na fresta: corte de novo ali mesmo.",
+    "Cuidado com o vento: pedaço pequenininho voa, e isso encerra a partida.",
+  ],
   "canteiro-de-obras": [
     "A praça inteira é grande demais para fazer de uma vez.",
     "Toque na tesoura: o terreno se parte em pedaços.",

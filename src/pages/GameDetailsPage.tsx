@@ -47,6 +47,7 @@ const GAMES_WITH_IN_GAME_COMPLETION_SCREEN = new Set([
   "arvore-da-familia",
   "rio-de-chocolate",
   "boliche-magico",
+  "operacao-formiga",
   "circuito-de-bolinha",
   "ventania-na-floresta",
   "pit-stop-da-chuva",

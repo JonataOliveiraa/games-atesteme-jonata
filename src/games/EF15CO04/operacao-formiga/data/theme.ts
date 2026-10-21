@@ -1,0 +1,101 @@
+import { FONT_JOGO } from '../../../../shared/fonts/gameFont'
+
+export const C = {
+    grass: 0x9fd98a,
+    grassLight: 0xb7e6a0,
+    grassDark: 0x7fc06c,
+    grassLine: 0x5f9e55,
+    dirt: 0xe6c99a,
+    dirtLight: 0xf1dcb6,
+    dirtDark: 0xcfa874,
+    stone: 0xb9ada0,
+    stoneLight: 0xd6ccbf,
+    stoneDark: 0x8e8275,
+    moss: 0x8cc06a,
+    mound: 0xc08a55,
+    moundLight: 0xd9a670,
+    moundDark: 0x9a6a3c,
+    hole: 0x3b2618,
+    bush: 0x4f9a52,
+    bushLight: 0x6db86a,
+    bushDark: 0x3a7a3e,
+    plate: 0xc5e89a,
+    plateLight: 0xdaf3b6,
+    plateDark: 0x96c46c,
+    ant: 0xb5482f,
+    antLight: 0xd0664a,
+    antDark: 0x87321f,
+    queen: 0x8e3b2a,
+    queenLight: 0xab5440,
+    queenDark: 0x66271b,
+    crown: 0xffc93c,
+    crownDark: 0xd99a16,
+    cape: 0xb79ce6,
+    capeDark: 0x8f72c7,
+    seed: 0xffe27a,
+    sepal: 0x4fae4a,
+    sepalDark: 0x2f7f35,
+    leaf: 0x5cbf4f,
+    leafDark: 0x3a8f36,
+    puff: 0xffffff,
+    wind: 0xffffff,
+    phero: 0x9a5a34,
+    eye: 0x2b2018,
+    cheek: 0xff9f9f,
+    mouth: 0x7a2a2a,
+    line: 0x3a2a24,
+    ink: 0x2b2440,
+    inkSoft: 0x5c5470,
+    shadow: 0x2a1f30,
+    white: 0xffffff,
+    cream: 0xfff6e6,
+    creamDark: 0xead9bb,
+    accent: 0x2f9e6a,
+    accentDark: 0x1f7a4f,
+    accentYellow: 0xffd84a,
+    headerFace: 0xfff8ec,
+    headerSoft: 0xf3e8d2,
+    headerRim: 0xe8cfa4,
+    headerLine: 0x6b4a2f,
+    slot: 0xf6ead3,
+    slotRim: 0xc9ab7e,
+    yes: 0x49c27c,
+    yesDark: 0x2f9a5c,
+    oops: 0xff9d57,
+    oopsDark: 0xd9742e,
+    butter: 0xffe08a,
+    sky: 0x9ed3f0,
+    lilac: 0xc6b6ea,
+    gauge: 0x3a2a24,
+    veil: 0x1e2a1a,
+    knife: 0xffffff,
+    knifeEdge: 0x7fd0ff,
+    hint: 0xfff3a0,
+} as const
+
+export const CSS = {
+    ink: '#2b2440',
+    inkSoft: '#5c5470',
+    white: '#ffffff',
+    accent: '#1f7a4f',
+} as const
+
+export const FONT = {
+    black: FONT_JOGO.black,
+    body: FONT_JOGO.body,
+} as const
+
+export const SIZE = {
+    help: 40,
+    level: 22,
+    caption: 44,
+    banner: 36,
+} as const
+
+export function inkOn(tone: number): string {
+    const r = (tone >> 16) & 0xff
+    const g = (tone >> 8) & 0xff
+    const b = tone & 0xff
+    const light = 0.299 * r + 0.587 * g + 0.114 * b
+    return light > 160 ? CSS.ink : CSS.white
+}

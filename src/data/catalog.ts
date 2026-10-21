@@ -1984,6 +1984,22 @@ export const catalog: Game[] = [
     thumbnail: coverCanteiroDeObras,
   },
   {
+    id: "135",
+    slug: "operacao-formiga",
+    module: "EF15CO04/operacao-formiga",
+    skill: "EF15CO04",
+    years: [1, 2, 3, 4, 5],
+    tags: ["decomposição", "partes", "cortar", "joystick", "formiga"],
+    order: 457,
+    status: "published",
+    title: "Operação Formiga",
+    description:
+      "A rainha quer a fruta, mas ela não passa na fresta! Corte com o dedo, leve um pedaço de cada vez e veja a fruta inteira de novo.",
+    category: "Pensamento Computacional",
+    points: 30,
+    icon: "🐜",
+  },
+  {
     id: "092",
     slug: "subida-do-dia",
     module: "EF01CO02/subida-do-dia",
@@ -2449,7 +2465,7 @@ export const catalog: Game[] = [
  * saltado de 086 para 090; os oito jogos de 090 a 097 desceram três casas
  * (090→087 … 097→094) para fechar o 087–089.
  */
-export const NEXT_FREE_ID = "135";
+export const NEXT_FREE_ID = "136";
 
 /**
  * AS RODADAS DE PRODUÇÃO.
