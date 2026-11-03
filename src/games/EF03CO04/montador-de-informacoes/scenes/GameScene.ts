@@ -6,8 +6,18 @@ import { LEVELS, shufflePieces } from "../data/levels";
 import type { FieldId, InfoLevel, InfoPiece, InfoPieceId } from "../types";
 import { createLives, type Lives } from '../../../../shared/hud/createLives'
 import { vidasIniciais } from '../../../../shared/level/vidasIniciais'
+import { FX } from "../../../../shared/effects/FX";
+import type { TutorialStep } from "../../../../shared/tutorial/createTutorial";
+import { createTap, teach, type Tap } from "./guide";
 
 const GAME_ID = "montador-de-informacoes";
+const TUTORIAL_KEY = "ef03co04-montador-l1";
+const TUTORIAL_EXTRA: InfoPieceId = "date-place-extra";
+const FIELDS_SPOT: TutorialStep = { text: "", shape: "rect", x: 640, y: 286, w: 1176, h: 232 };
+const PIECES_SPOT: TutorialStep = { text: "", shape: "rect", x: 640, y: 514, w: 1176, h: 222 };
+const HELP_X = 1222;
+const HELP_Y = 42;
+const VALIDATE_Y = 654;
 const TIMER_BAR_W = 980;
 const TIMER_BAR_Y = 42;
 const CARD_W = 150;
@@ -24,6 +34,7 @@ const COLORS = {
   softOrange: 0xff8a2a,
   cream: 0xfff6e8,
   purple: 0x8b5cf6,
+  pink: 0xec4899,
   red: 0xef4444,
   ink: 0x102a43,
 };
@@ -57,6 +68,8 @@ export class GameScene extends Phaser.Scene {
   private timerBar?: Phaser.GameObjects.Graphics;
   private hasStartedTimer = false;
   private unsubscribePlatformCommands?: () => void;
+  private tap!: Tap;
+  private validateCue?: Phaser.GameObjects.Graphics;
 
   constructor() {
     super({ key: "GameScene" });
@@ -81,6 +94,7 @@ export class GameScene extends Phaser.Scene {
     this.timerEvent = undefined;
     this.timerBar = undefined;
     this.hasStartedTimer = false;
+    this.validateCue = undefined;
   }
 
   create() {
@@ -106,6 +120,91 @@ export class GameScene extends Phaser.Scene {
           stage: () => this.levelConfig.level,
       })
       this.events.once('shutdown', () => this.lives.destroy())
+
+    this.createHelpButton();
+    this.tap = createTap(this);
+    if (this.levelConfig.level === 1 && !this.registry.get(TUTORIAL_KEY)) void this.runTutorial();
+  }
+
+  private async runTutorial() {
+    this.registry.set(TUTORIAL_KEY, true);
+    this.commandLocked = true;
+    await teach(this, TUTORIAL_KEY, [{ ...FIELDS_SPOT, text: this.levelConfig.goal, buttonLabel: "Ver" }]);
+
+    const field = this.levelConfig.fields[0];
+    const record = this.cards.get(field.accepts);
+    const center = this.slotCenters.get(field.id);
+    if (record && center) {
+      record.card.setDepth(60);
+      await this.tap.carry(record.homeX, record.homeY, center.x, center.y, [record.card, record.hitbox]);
+      record.card.setDepth(20);
+      this.placeCardInSlot(record.id, field.id);
+    }
+    await FX.wait(this, 500);
+
+    const extra = this.cards.get(TUTORIAL_EXTRA);
+    const steps: TutorialStep[] = [{ text: "Sua vez!" }];
+    if (extra) {
+      this.tweens.add({ targets: extra.card, x: extra.homeX + 7, duration: 70, yoyo: true, repeat: 5, delay: 260 });
+      steps.unshift({
+        text: "Rua não é data. Sobra!",
+        shape: "rect",
+        x: extra.homeX,
+        y: extra.homeY,
+        w: CARD_W + 36,
+        h: CARD_H + 36,
+        balloonY: 300,
+        buttonLabel: "Próximo",
+      });
+    }
+    await teach(this, TUTORIAL_KEY, steps);
+    this.commandLocked = false;
+  }
+
+  private async showHelp() {
+    if (this.commandLocked) return;
+    this.commandLocked = true;
+    if (this.timerEvent) this.timerEvent.paused = true;
+    this.refreshValidateCue();
+    await teach(this, `${TUTORIAL_KEY}-help`, [
+      { ...FIELDS_SPOT, text: this.levelConfig.goal },
+      { ...PIECES_SPOT, text: "Tem dado que sobra!", balloonY: 290, buttonLabel: "Continuar" },
+    ]);
+    if (this.timerEvent) this.timerEvent.paused = false;
+    this.commandLocked = false;
+    this.refreshValidateCue();
+  }
+
+  private createHelpButton() {
+    const art = this.add.graphics();
+    art.fillStyle(0xffffff, 0.94);
+    art.fillCircle(0, 0, 26);
+    art.lineStyle(5, 0x1e3a8a, 1);
+    art.strokeCircle(0, 0, 26);
+    const text = this.addSharpText(0, 1, "?", {
+      fontSize: "32px",
+      fontFamily: "'DynaPuff Black', 'Arial Black', Arial, sans-serif",
+      color: "#1e3a8a",
+    }).setOrigin(0.5);
+    const help = this.add.container(HELP_X, HELP_Y, [art, text]).setDepth(50);
+    const zone = this.add.zone(HELP_X, HELP_Y, 72, 72).setDepth(100);
+    zone.setInteractive({ useHandCursor: true });
+    zone.on("pointerdown", () => {
+      if (this.commandLocked) return;
+      this.playClick();
+      this.tweens.add({ targets: help, scale: 0.9, duration: 70, yoyo: true });
+      void this.showHelp();
+    });
+  }
+
+  private refreshValidateCue() {
+    const cue = this.validateCue;
+    if (!cue) return;
+    const ready = !this.commandLocked && [...this.slots.values()].every(Boolean);
+    if (ready === cue.visible) return;
+    this.tweens.killTweensOf(cue);
+    cue.setVisible(ready).setAlpha(1);
+    if (ready) this.tweens.add({ targets: cue, alpha: 0.25, duration: 520, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
   }
 
   update() {
@@ -423,7 +522,10 @@ export class GameScene extends Phaser.Scene {
   }
 
   private createActionButton() {
-    this.createUiButton(640, 654, 360, 70, "Validar informação", COLORS.green, () => this.validateInformation());
+    this.createUiButton(640, VALIDATE_Y, 360, 70, "Validar informação", COLORS.green, () => this.validateInformation());
+    this.validateCue = this.add.graphics().setDepth(13).setVisible(false);
+    this.validateCue.lineStyle(6, 0xfacc15, 1);
+    this.validateCue.strokeRoundedRect(640 - 190, VALIDATE_Y - 45, 380, 90, 45);
   }
 
   private createDataCard(piece: InfoPiece, x: number, y: number, scale = 1) {
@@ -610,6 +712,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.commandLocked = true;
+    this.refreshValidateCue();
     this.hits += 1;
     this.playCorrect();
     runtimeGameBridge.emit({ type: "CORRECT_ANSWER", gameId: GAME_ID, stage: this.levelConfig.level, pointsEarned: 10 });
@@ -1075,6 +1178,7 @@ export class GameScene extends Phaser.Scene {
       hits: this.hits,
       errors: this.errors,
     });
+    this.refreshValidateCue();
   }
 
   private getScore() {

@@ -8,6 +8,7 @@ const palette = {
   red: 0xef4444,
   pink: 0xec4899,
   yellow: 0xfacc15,
+  cyan: 0x22d3ee,
 };
 
 export const LEVELS: InfoLevel[] = [
@@ -15,6 +16,7 @@ export const LEVELS: InfoLevel[] = [
     level: 1,
     title: "Convite da Festa",
     instruction: "Escolha os dados certos para completar o convite.",
+    goal: "Monte a data da festa!",
     timeLimit: 25,
     mode: "invite",
     fields: [
@@ -38,6 +40,7 @@ export const LEVELS: InfoLevel[] = [
     level: 2,
     title: "Envelope de Entrega",
     instruction: "Monte o endereço para a encomenda chegar ao destino.",
+    goal: "Monte o endereço da entrega!",
     timeLimit: 35,
     mode: "address",
     fields: [
@@ -65,6 +68,7 @@ export const LEVELS: InfoLevel[] = [
     level: 3,
     title: "Ficha da Luna",
     instruction: "Complete a ficha para conhecer a personagem.",
+    goal: "Complete a ficha da Luna!",
     timeLimit: 45,
     mode: "character",
     fields: [

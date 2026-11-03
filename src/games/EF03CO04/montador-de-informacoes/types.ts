@@ -49,6 +49,7 @@ export interface InfoLevel {
   level: 1 | 2 | 3;
   title: string;
   instruction: string;
+  goal: string;
   timeLimit: number;
   fields: InfoField[];
   pieces: InfoPiece[];
