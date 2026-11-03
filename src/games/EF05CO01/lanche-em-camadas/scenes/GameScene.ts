@@ -22,6 +22,7 @@ import { createBanner, type Banner } from './banner'
 import { createBubble, type Bubble } from './bubble'
 import { createControls, type Controls } from './controls'
 import { createDrops, type Drop, type Drops } from './drops'
+import { tutorialDone } from '../../../../shared/tutorial/createTutorial'
 import { spot, teach } from './guide'
 import { createHeader, type Header } from './header'
 import { createHelper, type Helper } from './helper'
@@ -278,6 +279,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     private play() {
+        tutorialDone(this)
         this.state = 'play'
         this.helper.pose(null)
         this.controls.setWalk(true)

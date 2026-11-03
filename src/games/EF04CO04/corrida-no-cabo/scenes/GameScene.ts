@@ -20,6 +20,7 @@ import { showBanner } from './banner'
 import { createCar, type Car } from './car'
 import { createControls, type Controls } from './controls'
 import { createDesk, type Desk } from './desk'
+import { tutorialDone } from '../../../../shared/tutorial/createTutorial'
 import { spot, teach, union } from './guide'
 import { createHeader } from './header'
 import { createHud, type Hud } from './hud'
@@ -292,6 +293,7 @@ export class GameScene extends Phaser.Scene {
             await this.lesson(gen, [{ text: TEACH.car, ...spot({ x: p.x, y: p.y, w: 200, h: 150 }), balloonX: 800, balloonY: 300, buttonLabel: 'Próximo' }])
             if (gen !== this.gen) return
         }
+        if (!this.demoing) tutorialDone(this)
         this.race.start()
         this.order.focus(0)
         this.mode = 'race'

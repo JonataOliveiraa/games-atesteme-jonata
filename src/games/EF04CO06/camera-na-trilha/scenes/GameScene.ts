@@ -20,6 +20,7 @@ import { createBanner, type Banner } from './banner'
 import { createCameraApp, type CameraApp } from './cameraApp'
 import { filmCard, photoCard, snap, type Card } from './capture'
 import { createDarkness, type Darkness } from './darkness'
+import { tutorialDone } from '../../../../shared/tutorial/createTutorial'
 import { spot, teach } from './guide'
 import { createHeader, type Header } from './header'
 import { createHero, type Hero } from './hero'
@@ -337,6 +338,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     private play() {
+        tutorialDone(this)
         this.state = 'play'
         this.controls(true)
     }

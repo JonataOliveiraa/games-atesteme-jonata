@@ -6,7 +6,7 @@ import { showLevelComplete } from '../../../../shared/level/showLevelComplete'
 import { vidasIniciais } from '../../../../shared/level/vidasIniciais'
 import { faseInicial } from '../../../../shared/level/faseInicial'
 import { FX } from '../../../../shared/effects/FX'
-import type { TutorialStep } from '../../../../shared/tutorial/createTutorial'
+import { tutorialDone, type TutorialStep } from '../../../../shared/tutorial/createTutorial'
 
 import { MEL_CELL } from '../data/files'
 import { MEL, MID_LANE } from '../data/layout'
@@ -281,6 +281,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     private play() {
+        tutorialDone(this)
         this.state = 'play'
         this.header.setHelpEnabled(true)
         this.sweets.activate(this.k, s => void this.onPick(s))

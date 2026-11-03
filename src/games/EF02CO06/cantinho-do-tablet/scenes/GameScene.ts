@@ -16,6 +16,7 @@ import type { LevelDef, Mode, Rect, SpotId, State, Vec } from '../types'
 import { createAudio, type Audio } from './audio'
 import { createCast, type Cast } from './cast'
 import { ensureArt } from './fallback'
+import { tutorialDone } from '../../../../shared/tutorial/createTutorial'
 import { spot, teach, union } from './guide'
 import { createHud, type Hud } from './hud'
 import { createRoom, type Room } from './room'
@@ -154,6 +155,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     private openSetup() {
+        tutorialDone(this)
         this.mode = 'setup'
         this.spots.enable(this.level.spots)
         this.spots.glow(this.level.spots)
@@ -399,6 +401,7 @@ export class GameScene extends Phaser.Scene {
             },
         ])
         if (gen !== this.gen) return false
+        tutorialDone(this)
         this.coach.show(grow(hit, 18), { x: hit.x, y: hit.y })
         this.spots.enable([id])
         await this.waitTap(id)

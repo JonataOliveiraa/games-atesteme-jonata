@@ -20,6 +20,7 @@ import { createBubble, type Bubble } from './bubble'
 import { createCrate, type Crate } from './crate'
 import { createCutin, type Cutin } from './cutin'
 import { createDisc, type Disc } from './disc'
+import { tutorialDone } from '../../../../shared/tutorial/createTutorial'
 import { spot, teach } from './guide'
 import { createHeader, type Header } from './header'
 import { createHighway, type Highway } from './highway'
@@ -415,6 +416,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     private choose(gen: number) {
+        tutorialDone(this)
         this.state = 'choose'
         this.header.setHelpEnabled(true)
         this.crate.enable(index => void this.pick(gen, index))

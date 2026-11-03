@@ -22,6 +22,7 @@ import { createClient, type Client } from './client'
 import { hideScreen, moveCamera, resetCamera } from './close'
 import { createControls, type Controls } from './controls'
 import { ensureArt } from './fallback'
+import { tutorialDone } from '../../../../shared/tutorial/createTutorial'
 import { beckon, spot, teach, union } from './guide'
 import { createHud, type Hud } from './hud'
 import { banner, createAirBar, createAsk, createBag, createMinimap, pin, screenCurtain, type AirBar, type Ask, type Bag, type Minimap } from './overlay'
@@ -317,6 +318,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     private play() {
+        tutorialDone(this)
         this.mode = 'play'
         this.controls.setEnabled(true)
         this.sonar.setEnabled('all')
@@ -613,6 +615,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     private async guideTap(gen: number, word: string) {
+        tutorialDone(this)
         this.sonar.setEnabled([word])
         const stop = beckon(this, grow(this.sonar.chipRect(word), 6))
         await this.waitFor(`chip:${word}`)

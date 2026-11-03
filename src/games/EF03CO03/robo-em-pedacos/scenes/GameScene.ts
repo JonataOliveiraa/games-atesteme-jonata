@@ -17,6 +17,7 @@ import type { LevelDef, Mode, ModuleDef, ModuleId, PhaseDef, Rect } from '../typ
 import { createAudio, type Audio } from './audio'
 import { createBench, type Bench } from './bench'
 import { ensureArt } from './fallback'
+import { tutorialDone } from '../../../../shared/tutorial/createTutorial'
 import { spot, teach, union } from './guide'
 import { createHud, type Hud } from './hud'
 import { createNina, type Nina } from './nina'
@@ -222,6 +223,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     private openRepair() {
+        tutorialDone(this)
         this.mode = 'repair'
         this.robot.enablePallets(this.unfixed())
         this.hud.setHelpEnabled(true)
@@ -448,6 +450,7 @@ export class GameScene extends Phaser.Scene {
         const pallet = this.robot.palletRect(first)
         this.mode = 'repair'
         this.robot.enablePallets([first])
+        tutorialDone(this)
         this.coach.show(grow(pallet, 6), { x: pallet.x, y: pallet.y })
         await this.waitTap(`pallet:${first}`)
         if (gen !== this.gen) return
@@ -472,6 +475,7 @@ export class GameScene extends Phaser.Scene {
         ])
         if (gen !== this.gen) return
         this.bench.enable([loose])
+        tutorialDone(this)
         this.coach.show(grow(lr, 8), { x: lr.x, y: lr.y })
         await this.waitTap(`point:${loose}`)
         if (gen !== this.gen) return

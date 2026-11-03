@@ -18,6 +18,7 @@ import { createBox, type Box } from './box'
 import { createBuilder, type Builder } from './builder'
 import { createFactory } from './factory'
 import { createFinale, type Finale } from './finale'
+import { tutorialDone } from '../../../../shared/tutorial/createTutorial'
 import { spot, tapAt, teach, union } from './guide'
 import { createHud, type Hud } from './hud'
 import { createStamp, type Stamp } from './stamp'
@@ -241,6 +242,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     private run() {
+        tutorialDone(this)
         this.mode = 'run'
         this.belt.setMoving(true)
         this.hud.setHelpEnabled(!this.guiding)

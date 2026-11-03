@@ -5,7 +5,7 @@ import type { PlatformCommand } from '../../../../shared/contracts/platformComma
 import { showLevelComplete } from '../../../../shared/level/showLevelComplete'
 import { createLives, type Lives } from '../../../../shared/hud/createLives'
 import { vidasIniciais } from '../../../../shared/level/vidasIniciais'
-import { createTutorial, type TutorialStep } from '../../../../shared/tutorial/createTutorial'
+import { createTutorial, tutorialDone, type TutorialStep } from '../../../../shared/tutorial/createTutorial'
 import { FX } from '../../../../shared/effects/FX'
 
 import {
@@ -586,6 +586,7 @@ export class GameScene extends Phaser.Scene {
             balloonWidth: 660,
             steps: [this.askStep()],
             onFinish: () => {
+                tutorialDone(this)
                 this.phase = back
                 this.applyInput()
             },

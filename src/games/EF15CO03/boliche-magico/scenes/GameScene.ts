@@ -6,7 +6,7 @@ import { showLevelComplete } from '../../../../shared/level/showLevelComplete'
 import { vidasIniciais } from '../../../../shared/level/vidasIniciais'
 import { faseInicial } from '../../../../shared/level/faseInicial'
 import { FX } from '../../../../shared/effects/FX'
-import type { TutorialStep } from '../../../../shared/tutorial/createTutorial'
+import { tutorialDone, type TutorialStep } from '../../../../shared/tutorial/createTutorial'
 
 import { BALL } from '../data/layout'
 import { LEVELS, OPENING_KEY, POINTS, guideKey } from '../data/levels'
@@ -273,6 +273,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     private play() {
+        tutorialDone(this)
         this.state = 'build'
         this.busy = false
         this.header.setHelpEnabled(true)

@@ -18,6 +18,7 @@ import { createAudio, type Audio } from './audio'
 import { launch, preview, step, type BallState } from './ball'
 import { showBanner } from './banner'
 import { createCatapult, type Catapult } from './catapult'
+import { tutorialDone } from '../../../../shared/tutorial/createTutorial'
 import { spot, teach, union } from './guide'
 import { createHud, type Hud } from './hud'
 import { createMinimap, type Minimap } from './minimap'
@@ -379,6 +380,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     private aim() {
+        tutorialDone(this)
         this.mode = 'aim'
         this.hud.setHelpEnabled(true)
         this.order.pulse()

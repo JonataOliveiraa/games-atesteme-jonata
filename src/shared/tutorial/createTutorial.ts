@@ -80,8 +80,163 @@ export interface TutorialOptions {
     textSize?: number
     /** Largura do balão. Cresce junto com `textSize`. */
     balloonWidth?: number
+    /** Mostra o botão "Pular". Padrão: sim. */
+    skippable?: boolean
+    /**
+     * O jogo chama `tutorialDone` ao devolver o controle à criança. Com isso o
+     * pulo não acaba por silêncio — só pelo jogo, pelo último balão ou pelo teto.
+     */
+    explicitEnd?: boolean
     onFinish: () => void
 }
+
+/*
+ * ── PULAR É AVANÇAR RÁPIDO, NÃO CORTAR ─────────────────────────────────────
+ *
+ * Quase todo jogo intercala balões e uma demonstração que mexe no jogo de
+ * verdade (a peça vai para o lugar e fica lá). Fechar só o balão deixaria a
+ * demonstração rodando e o próximo balão chegando. Então o "Pular":
+ *
+ *  - fecha o balão da vez e qualquer outro que esta cena pedir em seguida;
+ *  - roda a cena acelerada, muda e atrás de um véu, até a demonstração
+ *    terminar sozinha — o jogo para onde pararia sem o pulo.
+ *
+ * ACELERAR = o passo inteiro da cena (`sys.step`) 20 vezes por quadro. Assim
+ * anda junto tudo o que a cena move: relógio, sprites, física, o `update()`
+ * e quem escuta `events.on('update')`. Multiplicar o `delta` não servia:
+ * quase todo jogo corta o `delta` em 50 ms, e o carro seguia devagar. Só os
+ * tweens ficam de fora — eles medem o tempo pelo relógio da parede — e por
+ * isso andam pelo `tweens.timeScale`.
+ *
+ * O FIM vem do rótulo do último botão de cada chamada: "Ver", "Próximo" e
+ * "Ok" querem dizer que ainda vem mais coisa; qualquer outro ("Vamos!",
+ * "Continuar", o padrão "Vamos começar!") é o último balão. Se o jogo não
+ * chamar mais nenhum, um silêncio encerra; e o jogo pode encerrar à mão com
+ * `tutorialDone(scene)` — no ponto em que devolve o controle à criança.
+ *
+ * Depois do "Pular", todo balão com a MESMA chave daquele tutorial também é
+ * pulado, até a cena acabar — inclusive os que vêm depois de um toque guiado.
+ * Esse só fecha, sem acelerar nada: ele pode chegar no meio da jogada.
+ * A ajuda do "?" usa outra chave (`-help`) e continua abrindo.
+ *
+ * Há jogos que fecham uma chamada com "Vamos lá!" e emendam outra. Por isso,
+ * logo depois de um pulo (GRACE_MS), um balão novo também é pulado: a
+ * criança acabou de dizer que não quer o tutorial, e o jogo ainda nem andou.
+ *
+ * O silêncio e o teto se medem em tempo de JOGO, não pelo relógio da parede:
+ * num aparelho lento o quadro demora e a cena anda menos por segundo. Como os
+ * passos (`delta`) e os tweens (parede) podem andar em ritmos diferentes sob
+ * carga, conta o mais lento dos dois — assim o silêncio nunca corta uma
+ * animação que ainda não terminou.
+ */
+const FAST = 20
+const QUIET_MS = 40000
+const MAX_MS = 240000
+const HARD_MS = 30000
+const GRACE_MS = 2500
+const MORE_LABELS = new Set(['ver', 'proximo', 'ok'])
+
+interface Skip {
+    tweensScale: number
+    muted: boolean
+    step: Phaser.Scenes.Systems['step']
+    cover: Phaser.GameObjects.GameObject[]
+    explicit: boolean
+    quiet: number
+    total: number
+    started: number
+}
+
+const skipping = new WeakMap<Phaser.Scene, Skip>()
+const recent = new WeakMap<Phaser.Scene, number>()
+const skippedKeys = new WeakMap<Phaser.Scene, Set<string>>()
+
+function markSkipped(scene: Phaser.Scene, key: string) {
+    let keys = skippedKeys.get(scene)
+    if (!keys) {
+        keys = new Set()
+        skippedKeys.set(scene, keys)
+        scene.events.once('shutdown', () => skippedKeys.delete(scene))
+    }
+    keys.add(key)
+}
+
+function markRecent(scene: Phaser.Scene) {
+    if (!recent.has(scene)) scene.events.once('shutdown', () => recent.delete(scene))
+    recent.set(scene, performance.now())
+}
+
+function endsTutorial(steps: TutorialStep[]): boolean {
+    const label = steps[steps.length - 1]?.buttonLabel
+    if (!label) return true
+    const plain = label.normalize('NFD').replace(/[^a-zA-Z]/g, '').toLowerCase()
+    return !MORE_LABELS.has(plain)
+}
+
+function startSkip(scene: Phaser.Scene, explicit = false) {
+    if (skipping.has(scene)) return
+    const W = scene.scale.width || DESIGN_W
+    const H = scene.scale.height || DESIGN_H
+
+    const veil = scene.add.rectangle(W / 2, H / 2, W, H, 0x0b1220, 0.86)
+        .setDepth(9500).setScrollFactor(0).setInteractive()
+    const label = scene.add.text(W / 2, H / 2, 'Pulando…', {
+        fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif',
+        fontSize: '40px',
+        color: '#ffffff',
+    }).setOrigin(0.5).setDepth(9501).setScrollFactor(0).setResolution(2)
+
+    let wall = performance.now()
+    const watch = (delta: number) => {
+        const s = skipping.get(scene)
+        if (!s) return
+        const now = performance.now()
+        const advanced = Math.min(delta * FAST, (now - wall) * FAST)
+        wall = now
+        s.quiet += advanced
+        s.total += advanced
+        if (s.total > MAX_MS || now - s.started > HARD_MS) tutorialDone(scene, 'max')
+        else if (!s.explicit && s.quiet > QUIET_MS) tutorialDone(scene, 'quiet')
+    }
+
+    const step = scene.sys.step
+    skipping.set(scene, {
+        tweensScale: scene.tweens.timeScale,
+        muted: scene.sound.mute,
+        step,
+        cover: [veil, label],
+        explicit,
+        quiet: 0,
+        total: 0,
+        started: performance.now(),
+    })
+    scene.tweens.timeScale = FAST
+    scene.sound.mute = true
+    scene.sys.step = (time: number, delta: number) => {
+        step.call(scene.sys, time, delta)
+        for (let i = 1; i < FAST && skipping.has(scene); i++) step.call(scene.sys, time, delta)
+        watch(delta)
+    }
+    scene.events.once('shutdown', () => tutorialDone(scene, 'shutdown'))
+}
+
+/**
+ * O jogo devolveu o controle à criança: encerra o avanço rápido do "Pular"
+ * (se houver) e a carência depois dele. Fora de um pulo, não faz nada.
+ */
+export function tutorialDone(scene: Phaser.Scene, reason = 'game') {
+    if (reason === 'game') recent.delete(scene)
+    const s = skipping.get(scene)
+    if (!s) return
+    skipping.delete(scene)
+    scene.registry.set('__tutorialSkipEnd', reason)
+    if (reason !== 'shutdown' && reason !== 'game') markRecent(scene)
+    scene.tweens.timeScale = s.tweensScale
+    scene.sound.mute = s.muted
+    scene.sys.step = s.step
+    s.cover.forEach(o => o.destroy())
+}
+
 function ensureMasks(scene: Phaser.Scene) {
     if (!scene.textures.exists(MASK_CIRCLE)) {
         const g = scene.make.graphics({ x: 0, y: 0 }, false)
@@ -107,6 +262,25 @@ export function createTutorial(scene: Phaser.Scene, options: TutorialOptions) {
     const seen = getSeenSet(scene)
 
     if (once && seen.has(options.key)) {
+        options.onFinish()
+        return
+    }
+
+    const skip = skipping.get(scene)
+    if (skip) {
+        skip.quiet = 0
+        seen.add(options.key)
+        if (endsTutorial(options.steps)) tutorialDone(scene, 'label')
+        options.onFinish()
+        return
+    }
+
+    const since = recent.get(scene)
+    const graced = since !== undefined && performance.now() - since < GRACE_MS
+    if (graced || skippedKeys.get(scene)?.has(options.key)) {
+        seen.add(options.key)
+        if (graced && endsTutorial(options.steps)) markRecent(scene)
+        else if (graced) startSkip(scene, options.explicitEnd)
         options.onFinish()
         return
     }
@@ -357,8 +531,43 @@ export function createTutorial(scene: Phaser.Scene, options: TutorialOptions) {
     }
 
     let index = 0
+    let done = false
+
+    if (options.skippable ?? true) {
+        const skipBtn = keep(scene.add.container(W - 104, H - 46).setDepth(9012).setScrollFactor(0))
+        const skipBg = scene.add.graphics()
+        skipBg.fillStyle(0xffffff, 0.9)
+        skipBg.fillRoundedRect(-82, -24, 164, 48, 24)
+        const skipTxt = scene.add.text(-16, 0, 'Pular', {
+            fontFamily: '"DynaPuff Black", "Arial Black", Arial, sans-serif',
+            fontSize: '24px',
+            color: '#0f172a',
+        }).setOrigin(0.5).setResolution(2)
+        const chevrons = scene.add.graphics()
+        chevrons.fillStyle(0x0f172a, 1)
+        chevrons.fillTriangle(34, -10, 34, 10, 46, 0)
+        chevrons.fillTriangle(46, -10, 46, 10, 58, 0)
+        skipBtn.add([skipBg, skipTxt, chevrons])
+        skipBtn.setSize(180, 60)
+        skipBtn.setInteractive({ useHandCursor: true })
+        skipBtn.on('pointerdown', () => {
+            if (done) return
+            done = true
+            clearPointer()
+            objects.forEach(o => o.destroy())
+            seen.add(options.key)
+            markSkipped(scene, options.key)
+            if (endsTutorial(options.steps)) {
+                scene.registry.set('__tutorialSkipEnd', 'direct')
+                markRecent(scene)
+            } else startSkip(scene, options.explicitEnd)
+            options.onFinish()
+        })
+    }
 
     const finish = () => {
+        if (done) return
+        done = true
         scene.tweens.add({
             targets: objects,
             alpha: 0,
@@ -384,6 +593,7 @@ export function createTutorial(scene: Phaser.Scene, options: TutorialOptions) {
     }
 
     button.on('pointerdown', () => {
+        if (done) return
         scene.tweens.add({ targets: button, scale: 0.95, duration: 70, yoyo: true })
         index++
         if (index >= options.steps.length) finish()

@@ -16,6 +16,7 @@ import type { HotWord, LevelDef, Mode, PhaseDef, Rect } from '../types'
 import { createAudio, type Audio } from './audio'
 import { createBridge, type Bridge } from './bridge'
 import { createCritters, type Critters } from './critters'
+import { tutorialDone } from '../../../../shared/tutorial/createTutorial'
 import { spot, teach } from './guide'
 import { createHud, type Hud } from './hud'
 import { createCastor, createLever, type Castor, type Lever } from './keeper'
@@ -207,6 +208,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     private openSetup(gen: number) {
+        tutorialDone(this)
         this.mode = 'setup'
         this.critters.enable([0, 1, 2])
         this.hud.setHelpEnabled(true)
@@ -391,6 +393,7 @@ export class GameScene extends Phaser.Scene {
                 ])
                 if (gen !== this.gen) return
             }
+            tutorialDone(this)
             this.coach.show(grow(r, 16), { x: r.x, y: r.y + 20 })
             this.critters.enable([i])
             await this.waitTap(i)
@@ -415,6 +418,7 @@ export class GameScene extends Phaser.Scene {
         ])
         if (gen !== this.gen) return
         this.lever.setEnabled(true)
+        tutorialDone(this)
         this.coach.show(lever, at)
         await this.waitTap('lever')
         if (gen !== this.gen) return

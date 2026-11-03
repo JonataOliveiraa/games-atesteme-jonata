@@ -17,6 +17,7 @@ import type { FileDef, Format, LevelDef, Mode, Payload, PhaseDef, Rect, Vec } fr
 
 import { createAudio, type Audio } from './audio'
 import { ensureArt } from './fallback'
+import { tutorialDone } from '../../../../shared/tutorial/createTutorial'
 import { spot, teach, union } from './guide'
 import { createHud, type Hud } from './hud'
 import { createBox, type Box } from './props'
@@ -224,6 +225,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     private aimReady() {
+        tutorialDone(this)
         this.mode = 'aim'
         if (!this.guiding && !this.teaching) this.hud.setHelpEnabled(true)
     }

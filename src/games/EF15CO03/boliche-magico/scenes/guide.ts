@@ -30,6 +30,7 @@ export function teach(scene: Phaser.Scene, key: string, steps: TutorialStep[]): 
             textSize: TEXT_SIZE,
             accent: C.accent,
             safeTop: 100,
+            explicitEnd: true,
             onFinish: () => resolve(),
         })
     })

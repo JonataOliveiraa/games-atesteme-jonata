@@ -16,6 +16,7 @@ import type { ItemId, LevelDef, Mode, PhaseDef, Side } from '../types'
 
 import { createAudio, type Audio } from './audio'
 import { createFinale, type Finale } from './finale'
+import { tutorialDone } from '../../../../shared/tutorial/createTutorial'
 import { spot, teach, union } from './guide'
 import { createHud, type Hud } from './hud'
 import { createItem, createPlate, type ItemView, type Plate } from './item'
@@ -191,6 +192,7 @@ export class GameScene extends Phaser.Scene {
             return
         }
         this.current = view
+        tutorialDone(this)
         this.mode = 'choose'
         this.switcher.setInviting(true)
         this.hud.setHelpEnabled(true)
@@ -385,6 +387,7 @@ export class GameScene extends Phaser.Scene {
         ])
         this.guiding = false
         if (gen !== this.gen) return
+        tutorialDone(this)
         this.mode = 'choose'
         this.switcher.setInviting(true)
         this.hud.setHelpEnabled(true)

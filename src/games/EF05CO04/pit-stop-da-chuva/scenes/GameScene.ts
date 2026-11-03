@@ -25,6 +25,7 @@ import { createCarts, isVehicle, type Carts, type Pick } from './carts'
 import { createControls, type Controls, type Pedal } from './controls'
 import { createCrew, type Crew } from './crew'
 import { createEffects, type Effects } from './effects'
+import { tutorialDone } from '../../../../shared/tutorial/createTutorial'
 import { spot, teach } from './guide'
 import { createHand, type Hand } from './hand'
 import { createHeader, type Header } from './header'
@@ -747,6 +748,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     private async grid(gen: number) {
+        tutorialDone(this)
         this.state = 'grid'
         this.resetPlayer(0)
         this.racers.grid()

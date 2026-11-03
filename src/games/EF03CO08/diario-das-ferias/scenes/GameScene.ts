@@ -20,6 +20,7 @@ import { photoCard, snapPhoto, soundCard, type Card } from './cards'
 import { createDiary, type Diary } from './diary'
 import { createDuda, type Duda } from './duda'
 import { createEdges, type Edges } from './edges'
+import { tutorialDone } from '../../../../shared/tutorial/createTutorial'
 import { createCoach, spot, teach, union, type Coach, type Rect } from './guide'
 import { createHud, type Hud } from './hud'
 import { createJoystick, type Joystick } from './joystick'
@@ -325,6 +326,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     private play() {
+        tutorialDone(this)
         this.lock = null
         this.coachOn = null
         this.coach.ring(null)
@@ -341,6 +343,7 @@ export class GameScene extends Phaser.Scene {
 
         this.allowed = { photo: false, sound: false }
         this.controls(true)
+        tutorialDone(this)
         await lesson({ text: TEACH.look, ...spot(this.joystick.rect()), ...center })
         if (gen !== this.gen) return
         this.mode = 'play'
