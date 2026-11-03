@@ -26,6 +26,7 @@ bloco completo por arquivo (estilo + corpo + negativo). A linha de arte é
 | `bandeja.png` | — | — | 768 × 768 | sim | disco da bandeja visto **de cima**; gira dentro de um container achatado |
 | `maquina.png` | 4 × 2 | 320 × 320 | 1280 × 640 | sim | garra (3 estados), cadeado, caixinha (fundo e frente), laço, gota de cor |
 | `itens.png` | 4 × 4 | 256 × 256 | 1024 × 1024 | sim | 9 frutas, 3 formas neutras, cabo, dedo do guia |
+| `ursinho.png` | — | — | 256 × 256 | sim | pictograma do TAMANHO no visor: ursinho de pelúcia neutro, usado grande, pequeno e como sombra |
 | `cover-garra-dos-grupos.png` | — | — | 1672 × 941 | opaco | capa do catálogo (fora da cena) |
 
 **A ordem das células é contrato com o código** (`data/files.ts` e
@@ -186,7 +187,36 @@ Exact cells, left to right and then top to bottom:
 DO NOT INCLUDE: any character or recognizable cast member from the style reference, mixed-colour fruit, ambiguous colour, orange apple, orange banana, yellow-green apple, teal-green fruit, purple grapes, green calyx on the strawberry, green leaf on red or yellow fruit, coloured cheeks, chromatic colour in cells 8–10, hue shifts, gradients between hues, extra fruit, extra shapes, extra hands, extra fingers, missing fingers, click lines, radiating lines, motion marks, face or sleeve on the guide hand, object in cells 14 or 15, text, letters, words, labels, digits, numbers, captions, watermark, logo, title lettering, user interface, buttons, panels, frames, speech bubbles, arrows, icons, stars, HUD, question mark, grid lines, visible sprite-sheet borders, cell borders, gaps, white cell backing, cropped edges, ground, floor, drop shadow on the cell, painterly lineless illustration, soft airbrushed gradients, multiple shadow tones, heavy rendering, western cartoon style, rough sketchy lines, uneven brush outlines, muddy colours, 3D render, photorealism, blur, lens flare, heavy noise, sad faces, crying, angry faces, pointing at the viewer.
 ~~~
 
-## 7. `cover-garra-dos-grupos.png` — 1672 × 941, opaco
+## 7. `ursinho.png` — 256 × 256, alfa
+
+O pictograma da regra de TAMANHO (`GRANDES`, `NÃO GRANDES`). O código desenha
+dois deste ursinho lado a lado: o do tamanho pedido em cor e o outro como sombra
+lilás (`setTintFill`). Por isso o ursinho não pode ter nenhuma cor de resposta,
+nenhuma das formas da bandeja nem laço colorido. Hoje ele é uma reserva em
+`Graphics` (`scenes/icons.ts`). Com o arquivo na pasta, o `BootScene` carrega e
+o ícone troca sozinho.
+
+| Item | Contrato |
+|---|---|
+| pose | sentado, de frente, braços rentes ao corpo, pés para a frente; silhueta que se lê a 20 px |
+| cor | marrom-caramelo (#C8915F) com focinho, barriga, dentro da orelha e sola dos pés em creme (#FAE9CE); olhos e nariz azul-marinho |
+| pivô | a base dos pés em **y ≈ 236** (92% da célula); o ursinho ocupa **~84% da altura** (`BEAR_ART` em `data/files.ts`) |
+
+### Prompt copiável
+
+~~~text
+STYLE — USE THE ATTACHED IMAGE references/19-chibi-figurinhas.jpg AS THE ART STYLE REFERENCE, and match its rendering exactly: cute chibi sticker art; clean crisp line art of even weight in a dark desaturated navy colour, never pure black; SIMPLE rounded shapes with very few details; FLAT cel shading with exactly ONE hard-edged shadow tone and no gradients; tiny cute face with glossy navy eyes and one white highlight; short cohesive palette; a thin white sticker keyline around the complete silhouette. Take ONLY the art style from the attached image: do NOT copy its characters, clothes, poses, scenes, symbols or framing.
+
+Use case: stylized-concept
+Asset type: single UI pictogram sprite for a Phaser 3 educational game about sorting by size.
+Primary request: create ONE cute plush teddy bear, the classic prize of an arcade claw machine, on a transparent 256 × 256 px canvas. The bear sits upright facing the viewer, chibi proportions (big round head, small round body), two round ears, short arms resting against the body, two stubby feet pointing forward with round foot pads. Main fur colour warm caramel brown #C8915F with ONE slightly darker flat brown shadow; muzzle, belly patch, inner ears and foot pads in warm cream #FAE9CE. Small dark navy eyes, small dark navy nose, tiny closed smile. The silhouette must stay readable when the sprite is shown as small as 20 px tall and when it is filled with one flat colour.
+
+Composition and technical constraints: exactly 256 × 256 px, transparent background; the bear centred horizontally; the bottom of the feet at y ≈ 236 px; the bear (including the white keyline) about 215 px tall; at least 8% transparent margin on every side; nothing cropped; no ground, no cast shadow.
+
+DO NOT INCLUDE: any character or recognizable cast member from the style reference, ribbon, bow, scarf, clothes, heart patch, stitched patches, buttons, accessories, coloured cheeks or blush, red, yellow, green, blue or pink anywhere, orange fur, golden fur, a second bear, other toys, fruit, geometric shapes, circles or squares as decoration, claw, box, text, letters, words, labels, digits, numbers, captions, watermark, logo, user interface, frames, speech bubbles, arrows, icons, stars, sparkles, question mark, ground, floor, drop shadow, white backing, painterly lineless illustration, soft airbrushed gradients, multiple shadow tones, heavy rendering, western cartoon style, rough sketchy lines, uneven brush outlines, muddy colours, 3D render, photorealism, blur, heavy noise, cropped edges.
+~~~
+
+## 8. `cover-garra-dos-grupos.png` — 1672 × 941, opaco
 
 A capa do catálogo: a máquina de garra chibi segurando uma maçã vermelha sobre
 uma caixinha cheia de coisas vermelhas, com frutas e formas coloridas na
@@ -206,7 +236,7 @@ Composition and technical constraints: exact 1672 × 941 landscape cover; reserv
 DO NOT INCLUDE: any character or recognizable cast member from the style reference, people, mascot, astronaut, extra words, misspelled title, subtitle, punctuation, labels, digits, numbers, captions, watermark, logo, score, counter, HUD, buttons, question mark, speech bubbles, arrows, instructional icons, wrong-colour item inside the red group box, ambiguous orange-red apple, coloured box glass, white sticker keyline, painterly lineless illustration, soft airbrushed gradients, multiple shadow tones, heavy rendering, western cartoon style, rough sketchy lines, uneven brush outlines, muddy colours, 3D render, photorealism, blur, lens flare, heavy noise, cropped title, cropped claw, cropped apple, cropped box.
 ~~~
 
-## 8. O que conferir quando a arte chegar (Tesoura / Ferro)
+## 9. O que conferir quando a arte chegar (Tesoura / Ferro)
 
 - as grades exatas: 1280 × 640 e 1024 × 1024; `bandeja` 768 × 768;
 - o corte medido por colunas na folha inteira, sem objeto cruzando célula;
@@ -215,4 +245,7 @@ DO NOT INCLUDE: any character or recognizable cast member from the style referen
   sair laranja, ela volta;
 - as formas e a gota sem cor nenhuma (o `tint` precisa de base clara);
 - o `cable` emendando sem costura e a ponta do dedo em (128, 20);
-- o `MANIFEST.md` publicado com o pivô medido de cada célula.
+- o `MANIFEST.md` publicado com o pivô medido de cada célula;
+- o `ursinho.png`: medir a base dos pés e a altura ocupada e acertar `BEAR_ART`
+  (`foot`, `span`). Conferir que a sombra lilás (tint fill) ainda parece ursinho
+  e que nada nele lembra uma cor de resposta.

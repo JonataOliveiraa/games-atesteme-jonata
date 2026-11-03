@@ -25,10 +25,10 @@ export const VISOR = {
     h: 80,
     cx: 501,
     cy: 87,
-    dropX: 362,
+    dropX: 366,
     dropR: 28,
-    wordX: 532,
-    wordRoom: 290,
+    wordX: 545,
+    wordRoom: 262,
 } as const
 
 export const RAIL = {

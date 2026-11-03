@@ -246,8 +246,9 @@ novo não repete o guia.
 
 **Só no N1.** O guia roda uma vez, no N1·1 (`BoxDef.guide = ef01co01-l1`, e o
 `validateLevels` só aceita guia no N1). O N2 e o N3 entram sem demonstração,
-por decisão do usuário. O `?` repete o guia da regra atual em qualquer nível,
-com `drawNot` no NÃO.
+por decisão do usuário. O `?` repete o guia da regra atual em qualquer nível.
+No passo 1 o visor roda `visor.explain()`: o ursinho cresce no TAMANHO e o X se
+desenha no NÃO.
 
 ## 10. Feedback e áudio (WebAudio)
 
@@ -360,3 +361,21 @@ Nunca é entrega.
   só deve vir no N1, na fase como agora"*. O Orquestrador tirou as chaves
   `ef01co01-l2`/`-l3` do `levels.ts` e trocou a validação para "guia só no N1".
   O `?` continua repetindo o guia da regra atual (§9).
+- **22/10/2026, ícone do tamanho (pedido do usuário).** *"essa icone nao explica
+  exatamente oq é, fazendo jogadores ficarem confusos"*. O ícone antigo era um
+  quadrado dourado grande e um quadradinho vazado. Ele falava a língua das outras
+  regras: amarelo é cor e quadrado é forma, e parecia caixa de marcar. Agora são
+  **dois ursinhos de pelúcia** (o prêmio da máquina), um ao lado do outro, sobre
+  a mesma linha de chão e na proporção 2 : 1. O do tamanho pedido vem marrom, com
+  carinha e contorno, e o outro é só uma sombra lilás. Ursinho não tem nenhuma
+  cor de resposta, nenhuma forma da bandeja e não está na bandeja.
+  - Quando a regra aparece, os dois ursinhos entram do mesmo tamanho e o aceso
+    **cresce** (em PEQUENOS, encolheria). No NÃO GRANDES, depois de crescer, o X
+    se desenha por cima do ursinho grande, não do par inteiro. O visor espera
+    essa animação antes de a bandeja girar.
+  - O mesmo par aparece no cartão ≠ da caixinha e nas etiquetas do fim.
+  - O `drawNot` saiu do guia e da GameScene; o visor decide sozinho pelo
+    `explain()`. `VISOR.dropX`/`wordX`/`wordRoom` foram para 366/545/262, para a
+    palavra não encostar no ursinho-sombra.
+  - O ursinho está em `Graphics` como reserva. O PNG está pedido em
+    `TEXTURAS.md` §7 (`ursinho.png`) e entra sozinho quando o arquivo chegar.

@@ -16,8 +16,8 @@ export interface ClawGuidePlay {
 }
 
 export interface ClawGuide {
-    play(steps: ClawGuidePlay, options?: { drawNot?: boolean }): Promise<void>
-    replay(steps: Pick<ClawGuidePlay, 'aligned'>, options?: { drawNot?: boolean }): Promise<void>
+    play(steps: ClawGuidePlay): Promise<void>
+    replay(steps: Pick<ClawGuidePlay, 'aligned'>): Promise<void>
     readonly active: boolean
     destroy(): void
 }
@@ -37,14 +37,14 @@ export function createClawGuide(
 
     const column = (spot: Spot) => ({ x: spot.x, y: spot.y, w: 170, h: 170 })
 
-    const lookAtVisor = (drawNot = false) =>
+    const lookAtVisor = () =>
         guide.demo({
             target: deps.visor.rect,
             gesture: { kind: 'none' },
             pulse: deps.visor.drop,
             action: async () => {
-                if (drawNot) await deps.visor.drawNot()
-                await FX.wait(scene, drawNot ? 900 : 1600)
+                const moved = await deps.visor.explain()
+                await FX.wait(scene, moved ? 900 : 1600)
             },
         })
 
@@ -75,8 +75,8 @@ export function createClawGuide(
     }
 
     return {
-        async play({ aligned, grab, childGrab }, options = {}) {
-            if (!(await lookAtVisor(options.drawNot))) return
+        async play({ aligned, grab, childGrab }) {
+            if (!(await lookAtVisor())) return
             const spot = await waitAligned(aligned)
             if (!spot) return
             const flying = deps.tray.view(spot.index)
@@ -92,8 +92,8 @@ export function createClawGuide(
             await guide.waitFor({ target: SHOWCASE_RECT, until: childGrab })
             await guide.hide()
         },
-        async replay({ aligned }, options = {}) {
-            if (!(await lookAtVisor(options.drawNot))) return
+        async replay({ aligned }) {
+            if (!(await lookAtVisor())) return
             const spot = await waitAligned(aligned)
             if (!spot) return
             await guide.demo({ target: column(spot), action: () => stagedGrab(spot) })

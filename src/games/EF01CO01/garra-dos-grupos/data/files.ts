@@ -7,6 +7,12 @@ export const BG = 'bg-fliperama'
 export const TRAY_TEX = 'bandeja'
 export const MACHINE = 'maquina'
 export const ITEMS = 'itens'
+export const BEAR = 'ursinho'
+
+export const BEAR_ART = {
+    foot: 0.92,
+    span: 0.84,
+} as const
 
 export const MACHINE_CELL = {
     clawOpen: 0,

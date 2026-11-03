@@ -230,7 +230,7 @@ export class GameScene extends Phaser.Scene {
             aligned: () => this.aligned(),
             grab: () => this.grab(false),
             childGrab,
-        }, { drawNot: this.current.rule.not })
+        })
         this.guiding = false
         if (gen !== this.gen || this.over) return
 
@@ -445,7 +445,7 @@ export class GameScene extends Phaser.Scene {
         this.hud.setHelpEnabled(false)
         this.hud.setShowcaseEnabled(false)
 
-        await this.guide.replay({ aligned: () => this.aligned() }, { drawNot: this.current.rule.not })
+        await this.guide.replay({ aligned: () => this.aligned() })
         if (gen !== this.gen) return
 
         this.resume()

@@ -5,13 +5,13 @@ import { DEPTH, VISOR } from '../data/layout'
 import { C, CSS, FONT, SIZE, ruleWord } from '../data/theme'
 import type { GuideRect } from '../../../../shared/guide/createVisualGuide'
 import type { Rule } from '../types'
-import { CROSS, createRuleIcon, paintCross } from './icons'
+import { CROSS, LIT, LIT_FROM, createRuleIcon, paintCross } from './icons'
 
 export interface Visor {
     readonly container: Phaser.GameObjects.Container
     readonly rect: GuideRect
     readonly drop: Phaser.GameObjects.Container
-    drawNot(): Promise<void>
+    explain(): Promise<boolean>
     show(rule: Rule): Promise<void>
     destroy(): void
 }
@@ -45,6 +45,46 @@ export function createVisor(scene: Phaser.Scene): Visor {
 
     const container = scene.add.container(VISOR.cx, VISOR.cy, [frame, drop, word]).setDepth(DEPTH.visor)
 
+    const moving = () => {
+        const icon = drop.list[0]
+        const cross = icon instanceof Phaser.GameObjects.Container ? icon.getByName(CROSS) : null
+        const lit = icon instanceof Phaser.GameObjects.Container ? icon.getByName(LIT) : null
+        return {
+            crossed: cross instanceof Phaser.GameObjects.Graphics ? cross : null,
+            sized: lit instanceof Phaser.GameObjects.Container ? lit : null,
+        }
+    }
+
+    const rewind = () => {
+        const { crossed, sized } = moving()
+        if (crossed) paintCross(crossed, VISOR.dropR, 0)
+        sized?.setScale(sized.getData(LIT_FROM) as number)
+    }
+
+    const play = async () => {
+        const { crossed, sized } = moving()
+        if (!crossed && !sized) return false
+        if (sized) {
+            await FX.wait(scene, 200)
+            await FX.to(scene, sized, { scale: 1 }, { duration: 650, ease: 'Back.easeOut' })
+        }
+        if (crossed) {
+            const state = { p: 0 }
+            await FX.wait(scene, 250)
+            await new Promise<void>(resolve =>
+                scene.tweens.add({
+                    targets: state,
+                    p: 1,
+                    duration: 700,
+                    ease: 'Sine.easeInOut',
+                    onUpdate: () => paintCross(crossed, VISOR.dropR, state.p),
+                    onComplete: () => resolve(),
+                }),
+            )
+        }
+        return true
+    }
+
     return {
         container,
         rect: { x: VISOR.cx, y: VISOR.cy, w: VISOR.w, h: VISOR.h },
@@ -55,29 +95,17 @@ export function createVisor(scene: Phaser.Scene): Visor {
             drop.add(createRuleIcon(scene, rule, VISOR.dropR))
             word.setText(ruleWord(rule))
             word.setScale(Math.min(1, VISOR.wordRoom / Math.max(1, word.width)))
+            rewind()
             drop.setScale(0.4)
             await FX.all(
                 FX.to(scene, drop, { alpha: 1, scale: 1 }, { duration: 320, ease: 'Back.easeOut' }),
                 FX.to(scene, word, { alpha: 1 }, { duration: 260, delay: 80 }),
             )
+            await play()
         },
-        async drawNot() {
-            const icon = drop.list[0]
-            const cross = icon instanceof Phaser.GameObjects.Container ? icon.getByName(CROSS) : null
-            if (!(cross instanceof Phaser.GameObjects.Graphics)) return
-            const state = { p: 0 }
-            paintCross(cross, VISOR.dropR, 0)
-            await FX.wait(scene, 250)
-            await new Promise<void>(resolve =>
-                scene.tweens.add({
-                    targets: state,
-                    p: 1,
-                    duration: 700,
-                    ease: 'Sine.easeInOut',
-                    onUpdate: () => paintCross(cross, VISOR.dropR, state.p),
-                    onComplete: () => resolve(),
-                }),
-            )
+        explain() {
+            rewind()
+            return play()
         },
         destroy() {
             container.destroy()

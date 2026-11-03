@@ -6,6 +6,7 @@ export const C = {
     cabinetDark: 0x5f558f,
     cabinetLight: 0xc0b8d6,
     cream: 0xfae9ce,
+    bear: 0xc8915f,
     turquoise: 0x6abfd4,
     glass: 0xbfe6ff,
     glassDark: 0x1d2a52,
