@@ -640,9 +640,10 @@ const POR_SLUG: Record<string, string[]> = {
     "No cofre, toque em quem cuida da Bia para guardar o cartão.",
   ],
   "subida-do-dia": [
-    "O quadro mostra o problema; a nuvem no alto da escada mostra ele resolvido.",
-    "Toque na figura do próximo passo para montar o degrau que brilha.",
+    "O quadro mostra como está agora; a nuvem no alto da escada mostra o problema resolvido.",
+    "Toque na figura do próximo passo: ela vira degrau, a criança sobe e o passo acontece no quadro.",
     "Passo fora da ordem dá errado, e a criança escorrega da escada!",
+    "No nível 2 a escada tem 4 degraus: não pule o primeiro passo. No nível 3, uma das figuras é de outra tarefa.",
   ],
   "fabrica-de-carimbos": [
     "O carimbo no alto mostra o que importa: cada janelinha é uma característica.",

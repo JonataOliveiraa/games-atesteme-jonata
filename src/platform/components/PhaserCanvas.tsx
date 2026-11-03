@@ -2,7 +2,6 @@ import { useEffect, useRef } from "react";
 import Phaser from "phaser";
 import { EventBus } from "../../shared/EventBus";
 import { carregarFonteDoJogo } from "../../shared/fonts/gameFont";
-import { useFullscreen } from "../../hooks/useFullscreen";
 import { runtimeGameBridge } from "../../shared/bridge/runtimeGameBridge";
 import {
   pausarJogo,
@@ -20,7 +19,6 @@ interface PhaserCanvasProps {
 export default function PhaserCanvas({ config, gameId, stage }: PhaserCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const gameRef = useRef<Phaser.Game | null>(null);
-  const { isFullscreen, toggle } = useFullscreen();
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -149,27 +147,15 @@ export default function PhaserCanvas({ config, gameId, stage }: PhaserCanvasProp
     const el = containerRef.current;
     if (!el) return;
 
+    // em tela cheia a página por trás está parada (ver `GameStage`)
     const onWheel = (e: WheelEvent) => {
-      if (isFullscreen) return;
+      if (document.body.classList.contains("game-fullscreen-active")) return;
       window.scrollBy({ top: e.deltaY, left: e.deltaX, behavior: "auto" });
     };
 
     el.addEventListener("wheel", onWheel, { passive: true });
     return () => el.removeEventListener("wheel", onWheel);
-  }, [isFullscreen]);
-
-  useEffect(() => {
-    document.body.classList.toggle("game-fullscreen-active", isFullscreen);
-
-    const id = window.setTimeout(() => {
-      gameRef.current?.scale.refresh();
-    }, 140);
-
-    return () => {
-      window.clearTimeout(id);
-      document.body.classList.remove("game-fullscreen-active");
-    };
-  }, [isFullscreen]);
+  }, []);
 
   useEffect(() => {
     const onResize = () => gameRef.current?.scale.refresh();
@@ -198,21 +184,12 @@ export default function PhaserCanvas({ config, gameId, stage }: PhaserCanvasProp
   }, []);
 
   return (
-    <div className={`phaser-stage${isFullscreen ? " is-fullscreen" : ""}`}>
+    <div className="phaser-stage">
       <div
         id="game-root"
         ref={containerRef}
         className={`phaser-container phaser-container-${gameId}`}
       />
-
-      <button
-        type="button"
-        className="game-fullscreen-btn"
-        onClick={toggle}
-        aria-label={isFullscreen ? "Sair da tela cheia" : "Entrar em tela cheia"}
-      >
-        {isFullscreen ? "Sair da tela cheia" : "Tela cheia"}
-      </button>
     </div>
   );
 }

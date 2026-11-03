@@ -2975,71 +2975,174 @@ touch-action: none;
   position: relative;
 }
 
-.phaser-stage.is-fullscreen {
-  position: fixed;
-  inset: 0;
-  z-index: 900;
-  background: #000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
+/* ══════════════════════════════════════════════════════════════════════════
+   O PALCO DO JOGO E A TELA CHEIA (ver platform/components/GameStage.tsx)
 
-/* DEPOIS */
-.phaser-stage.is-fullscreen .phaser-container {
-  width: 100vw;
-  height: 100vh;
-  width: 100dvw;
-  height: 100dvh;
-  max-width: none;
-  aspect-ratio: auto;
-  border-radius: 0;
-  box-shadow: none;
-  background: #000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.phaser-stage.is-fullscreen .phaser-container canvas {
-  width: auto !important;
-  height: auto !important;
-  max-width: 100% !important;
-  max-height: 100% !important;
-  aspect-ratio: auto !important;
-  margin: 0 !important;
-}
+   Fora da tela cheia, o botão fica numa linha ACIMA do jogo, à direita — o
+   canto de dentro do jogo é do "?" da ajuda. Em tela cheia (botão, ou
+   celular deitado) o palco cobre a janela e o botão vai para a faixa preta,
+   na posição que o `GameStage` calcula.
+   ══════════════════════════════════════════════════════════════════════════ */
 
 body.game-fullscreen-active {
   overflow: hidden;
 }
 
-.game-fullscreen-btn {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  z-index: 20;
-  padding: 8px 14px;
-  border: none;
-  border-radius: 999px;
-  background: rgba(15, 23, 42, 0.72);
-  color: #fff;
-  font-size: 13px;
-  font-weight: 700;
+.game-stage {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.game-stage-quadro {
+  width: 100%;
+}
+
+.game-stage-botao {
+  width: 40px;
+  height: 40px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--white);
+  color: var(--text);
+  box-shadow: var(--shadow);
   cursor: pointer;
-  backdrop-filter: blur(4px);
+  transition: transform 0.15s ease, background 0.15s ease;
 }
 
-.game-fullscreen-btn:hover {
-  background: rgba(15, 23, 42, 0.9);
+.game-stage-botao svg {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
-@media (max-width: 640px) {
-  .game-fullscreen-btn {
-    font-size: 12px;
-    padding: 7px 12px;
+.game-stage-botao:hover {
+  transform: scale(1.06);
+}
+
+.game-stage-botao:focus-visible {
+  outline: 3px solid var(--primary-soft);
+  outline-offset: 2px;
+}
+
+/* ── em tela cheia ─────────────────────────────────────────────────────────
+ *
+ * `container-type: size` faz o palco ser a régua do quadro: `cqw`/`cqh` medem
+ * exatamente a área que o palco cobre, inclusive no celular, onde `100vh` e a
+ * barra do navegador nunca concordam. As linhas em `vw`/`vh` antes delas são
+ * para navegador que não conhece container.
+ *
+ * `--faixa-lado`/`--faixa-topo` são as faixas que o jogo abre quando a sobra
+ * natural não comporta o botão (o `GameStage` decide qual). A do alto é
+ * margem: empurra o jogo para baixo e o centro do flex divide o resto — no
+ * 16:10 o jogo só desce, sem encolher. */
+.game-stage.is-cheia {
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+  background: #000;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  container-type: size;
+}
+
+.game-stage.is-cheia .game-stage-quadro {
+  width: min(
+    calc(100vw - 2 * var(--faixa-lado, 0px)),
+    calc((100vh - var(--faixa-topo, 0px)) * 16 / 9)
+  );
+  width: min(
+    calc(100cqw - 2 * var(--faixa-lado, 0px)),
+    calc((100cqh - var(--faixa-topo, 0px)) * 16 / 9)
+  );
+  aspect-ratio: 16 / 9;
+  margin-top: var(--faixa-topo, 0px);
+}
+
+.game-stage.is-cheia .game-stage-botao {
+  position: absolute;
+  z-index: 1;
+  border-color: rgba(255, 255, 255, 0.28);
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  box-shadow: none;
+}
+
+.game-stage.is-cheia .game-stage-botao:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+/* O jogo preenche o quadro, que já tem a forma 16:9 — no iframe e no Phaser
+   montado direto na página (o modo "local"). */
+.game-stage.is-cheia .game-iframe,
+.game-stage.is-cheia .phaser-stage,
+.game-stage.is-cheia .phaser-container {
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  aspect-ratio: auto;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.game-stage.is-cheia .phaser-container canvas {
+  width: 100% !important;
+  height: 100% !important;
+  aspect-ratio: auto !important;
+}
+
+/* ── "vire o celular" ──────────────────────────────────────────────────────
+ *
+ * Em tela cheia com o celular em pé, o jogo vira uma tira no meio da tela. No
+ * Android a orientação trava sozinha; no iPhone não dá, então o aviso ocupa a
+ * faixa de baixo, sem cobrir nada. */
+.game-stage-gire {
+  display: none;
+}
+
+@media (orientation: portrait) and (pointer: coarse) {
+  .game-stage.is-cheia .game-stage-gire {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 12%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    color: #fff;
+    font-family: "DynaPuff", Arial, sans-serif;
+    font-size: 18px;
+    opacity: 0.85;
+    pointer-events: none;
+  }
+
+  .game-stage-gire svg {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2.6;
+    stroke-linecap: round;
+    animation: game-stage-gire 2.4s ease-in-out infinite;
   }
 }
+
+@keyframes game-stage-gire {
+  0%, 25% { transform: rotate(0deg); }
+  55%, 85% { transform: rotate(-90deg); }
+  100% { transform: rotate(0deg); }
+}
+
 /* ══════════════════════════════════════════════════════════════════════════
    MODO EMBED — o site inteiro é o jogo
 
@@ -3101,7 +3204,8 @@ body.embed-active {
 
 /* ── O JOGO EM TELA CHEIA, PELA MESMA RECEITA DO BOTÃO DE TELA CHEIA ───
  *
- * Esta é a receita que `.phaser-stage.is-fullscreen` já usava no site — e ela
+ * Esta é a receita que o antigo botão de tela cheia (`.phaser-stage.is-fullscreen`,
+ * hoje `GameStage`) usava no site — e ela
  * resolve o problema pelo lado certo, que não é o que eu tinha feito antes.
  *
  * A tentação é dar ao container a proporção 16:9 e mandar o canvas preencher
@@ -3189,17 +3293,6 @@ body.embed-active .embed-stage .game-screen {
   background-size: cover;
   background-position: center;
   padding: 0 !important;
-}
-
-/* O botão de tela cheia é do site, não da atividade: dentro da plataforma
-   quem controla a janela é ela.
-
-   Duas âncoras de propósito — a classe do palco E a do body. O palco cobre o
-   caso normal; o body cobre o instante em que a página ainda está montando e
-   o botão apareceria piscando no rodapé. */
-.embed-stage .game-fullscreen-btn,
-body.embed-active .game-fullscreen-btn {
-  display: none !important;
 }
 
 .embed-aviso {

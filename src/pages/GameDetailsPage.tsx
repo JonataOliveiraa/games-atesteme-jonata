@@ -7,6 +7,7 @@ import { formatLives } from "../context/formatLives";
 import { getGameBySlug, loadGameConfig } from "../data/gameIndex";
 import { getGameInstructions } from "../data/gameInstructions";
 import GameFrame from "../platform/components/GameFrame";
+import GameStage from "../platform/components/GameStage";
 import type { PlatformEvent } from "../shared/contracts/platformEvents";
 import type { GameEventPayload } from "../types/platform";
 import type Phaser from "phaser";
@@ -732,15 +733,17 @@ export default function GameDetailsPage() {
              * razão que a criou, porque nada no código a liga ao motivo.
              */
             hasStartedGame ? (
-              <GameFrame
-                gameId={game.id}
-                level={currentLevel}
-                points={points}
-                config={gameConfig}
-                onPlatformEvent={handlePlatformEvent}
-                mode={MODO_DO_JOGO}
-                src={srcDoJogo}
-              />
+              <GameStage>
+                <GameFrame
+                  gameId={game.id}
+                  level={currentLevel}
+                  points={points}
+                  config={gameConfig}
+                  onPlatformEvent={handlePlatformEvent}
+                  mode={MODO_DO_JOGO}
+                  src={srcDoJogo}
+                />
+              </GameStage>
             ) : (
               <div
                 className={`game-screen game-entry-cover game-entry-${game.slug} ${showInstructions ? "game-entry-instructions" : ""
