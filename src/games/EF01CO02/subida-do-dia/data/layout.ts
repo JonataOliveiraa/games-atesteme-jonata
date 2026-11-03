@@ -1,9 +1,89 @@
 export const W = 1280
 export const H = 720
 
+export const WORLD = {
+    h: 1480,
+    groundY: 1385,
+    ladderX: 680,
+    firstRung: 175,
+    rungGap: 230,
+    cloudAbove: 300,
+    viewAbove: 250,
+} as const
+
+export const rungYs = (count: number): number[] =>
+    Array.from({ length: count }, (_, i) => WORLD.groundY - WORLD.firstRung - i * WORLD.rungGap)
+
+export const cloudYFor = (count: number): number => WORLD.groundY - WORLD.firstRung - (count - 1) * WORLD.rungGap - WORLD.cloudAbove
+
+export const LADDER = {
+    railW: 320,
+    railCap: 40,
+    hit: 300,
+} as const
+
+export const RUNG = {
+    w: 250,
+    h: 150,
+    art: 172,
+    artW: 290,
+    artH: 175,
+} as const
+
+export const KID = {
+    startX: 430,
+    height: 175,
+    cell: 384,
+    footY: 360,
+    artH: 311,
+    sideX: WORLD.ladderX - 205,
+    feet: 58,
+    cloudX: WORLD.ladderX - 215,
+    cloudFeet: 78,
+    walkPxPerMs: 0.4,
+    climbMs: 520,
+    slideMs: 760,
+} as const
+
+export const CLOUD = {
+    w: 660,
+    h: 250,
+    artDX: 70,
+    art: 196,
+} as const
+
+export const PANEL = {
+    x: 180,
+    goalY: 140,
+    goalW: 236,
+    goalH: 168,
+    goalArt: 128,
+    arrowY: 262,
+    stateY: 458,
+    state: 296,
+    stateArt: 258,
+} as const
+
+export const STAGE = {
+    frameX: 790,
+    frameY: 380,
+    frameScale: 1.42,
+    iconX: 370,
+    iconY: 380,
+    icon: 230,
+    iconArt: 196,
+    arrowX: 560,
+} as const
+
+export const OPTIONS = {
+    x: 1095,
+    two: { ys: [290, 530], card: 212, art: 182 },
+    three: { ys: [208, 412, 616], card: 184, art: 156 },
+} as const
+
 export const HUD = {
-    pipsX: 208,
-    pipsY: 84,
+    pipsX: 1040,
+    pipsY: 42,
     pipGap: 40,
     pipR: 12,
     livesX: 40,
@@ -15,94 +95,37 @@ export const HUD = {
     helpHit: 100,
 } as const
 
-export const FRAME = {
-    x: 42,
-    y: 157,
-    w: 333,
-    h: 298,
-    cx: 208,
-    cy: 306,
-    art: 250,
-} as const
-
-export const CLOUD = {
-    cx: 792,
-    cy: 128,
-    w: 675,
-    h: 215,
-    artX: 792,
-    artY: 128,
-    art: 170,
-} as const
-
-export const GROUND_Y = 636
-
-export const KID = {
-    startX: 450,
-    groundY: GROUND_Y,
-    height: 150,
-    cell: 384,
-    footY: 360,
-    artH: 311,
-    railX: 660,
-    cheerX: 610,
-    cheerY: 205,
-    walkPxPerMs: 0.4,
-    climbMs: 460,
-    slideMs: 640,
-} as const
-
-export const LADDER = {
-    cx: 792,
-    top: 240,
-    bottom: GROUND_Y,
-    railGap: 220,
-    width: 300,
-} as const
-
-export const RUNG = {
-    w: 200,
-    h: 128,
-    art: 190,
-    artW: 290,
-    artH: 175,
-    ys: [570, 436, 302],
-} as const
-
-export const OPTIONS = {
-    x: 1120,
-    ys: [330, 540],
-    card: 190,
-    art: 170,
-    flyMs: 560,
-} as const
-
 export const INTRO = {
-    zoom: 1.5,
-    focusX: 420,
-    focusY: 400,
-    inMs: 900,
-    holdMs: 2200,
-    outMs: 800,
-    bubbleX: 580,
-    bubbleY: 404,
-    bubble: 128,
+    zoom: 1.7,
+    lookDX: 60,
+    lookUp: 150,
+    cardDX: -175,
+    cardUp: 140,
+    card: 172,
+    bubbleDX: 178,
+    bubbleUp: 255,
+    bubble: 150,
 } as const
 
 export const NEXT = {
-    x: 1120,
-    y: 440,
-    size: 130,
+    x: 1095,
+    y: 420,
+    size: 140,
 } as const
 
 export const DEPTH = {
     bg: 0,
-    board: 10,
+    decor: 2,
+    cloud: 25,
     ladder: 20,
-    options: 30,
     kid: 40,
     flying: 45,
-    replay: 50,
-    bubble: 60,
+    worldFx: 48,
+    panel: 60,
+    options: 70,
+    veil: 80,
+    stage: 82,
+    next: 90,
     hud: 100,
+    tap: 9500,
 } as const

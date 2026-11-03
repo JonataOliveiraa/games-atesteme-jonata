@@ -1,8 +1,7 @@
-export const BG = 'bg-papel'
 export const KID = 'crianca'
 export const STEPS = 'passos'
 export const PIECES = 'pecas'
-export const PROBLEM_SHEETS = ['problemas-1', 'problemas-2', 'problemas-3'] as const
+export const PROBLEM_SHEETS = ['problemas-1', 'problemas-2', 'problemas-3', 'problemas-4'] as const
 
 export const SHEETS: Record<string, { frameWidth: number; frameHeight: number }> = {
     [KID]: { frameWidth: 384, frameHeight: 384 },
@@ -24,6 +23,4 @@ export const PIECE_CELL = {
     rails: 0,
     rung: 1,
     rungHollow: 2,
-    lock: 3,
-    guideHand: 4,
 } as const

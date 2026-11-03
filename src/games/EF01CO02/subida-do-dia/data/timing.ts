@@ -1,0 +1,16 @@
+export const TIMING = {
+    beat: 450,
+    camera: 650,
+    cameraLong: 1500,
+    introHold: 2200,
+    introZoom: 900,
+    fly: 560,
+    stageIn: 380,
+    stageHold: 900,
+    stageFail: 1300,
+    stageOut: 360,
+    iconDive: 420,
+    replayStep: 560,
+    tapDown: 140,
+    tapHold: 260,
+} as const

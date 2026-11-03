@@ -367,6 +367,36 @@ etiquetas `trocou!`/`faltou!`, a setinha pontilhada do guia, as bolinhas, o
   passo diferente do degrau que acendeu.
 - `failsAt` é dado. Não calcule o ponto do erro na cena.
 
+## REFORMA DE 22/10/2026 — mundo alto, close do passo, N2 e N3 — vence tudo acima
+
+Pedido do usuário: *"ele está mt compacto e preso numa tela só, e as vezes fica dificil de entender por conta do estilo de arte unico. preciso que vc aprimore o jogo deixando mais claro noq está acontecendo, e adicione n2 e n3"*.
+
+**A tela.** Saiu o papel único de 1280 × 720. O mundo tem 1480 de altura: céu em degradê, chão de grama, a escada de madeira (trilhos e degraus de `pecas.png` tingidos de madeira) subindo até uma nuvem branca com a meta. A câmera sobe junto com a criança a cada degrau. Fixos na tela: à esquerda, a **meta** (nuvem pequena), uma seta para cima e o quadro **"agora"**; à direita, as figuras (2 ou 3, com a mesma borda amarela pulsando em todas); as bolinhas de fase e o `?` no alto à direita.
+
+**O passo acontece em close.** A cada escolha, a figura voa até o degrau e a criança sobe. Depois a tela escurece, o quadro "agora" vai grande para o centro, a figura do passo entra ao lado com uma seta e mergulha no quadro, e o quadro vira o resultado: o estado, ou o estrago tremendo. Só então o quadro volta ao painel. É isso que diz "o que está acontecendo", sem texto.
+
+**Abertura.** No início de cada nível, zoom na criança com o problema num cartão ao lado e a meta num balão de pensamento (pedido de 28/09). O cartão e a meta voam para o painel, a câmera sobe a escada até a nuvem e mostra a meta lá em cima, e depois desce. Nas fases seguintes, a câmera parte da nuvem com a meta nova e desce até a criança.
+
+**Os níveis (um assunto cada):**
+
+| Nível | Assunto | Degraus | Figuras | Problemas |
+|---|---|---|---|---|
+| 1 | o próximo passo | 3 | 2 (certo + fora da ordem) | lavar, feijão, vovó |
+| 2 | começar do começo: o passo que a gente esquece (torneira, buraquinho, abrir o pote) | 4 | 2 | lavar, feijão, sanduíche |
+| 3 | o intruso: uma figura é de outra tarefa (meia, telhado…) | 4 | 3 (certo + fora da ordem + intruso) | pintar, feijão, lavar |
+
+O intruso não muda o quadro: no degrau ele bate e cai, e no close bate no quadro e cai (tremido, sem estrago). Escolher o intruso também encerra a partida. A validação cobra: 3 problemas por nível, sem repetir; o intruso existe só no N3 e é de outra rotina; o errado do último degrau é um passo já feito; o nível não tem menos degraus que o anterior.
+
+**Tutorial (createTutorial, balões curtos):**
+- N1: "Esta é a meta." → "Agora está assim." → "Qual passo vem agora?" [Ver] → o jogo escolhe o errado (estrago e escorregão) → "Fora da ordem, dá errado!" → volta → escolhe o certo → "Na ordem, dá certo!" → próximo degrau: "Sua vez!".
+- N2: "Olhe bem o começo!" (recorte no quadro) → "Não pule nenhum passo!".
+- N3: "Um destes é de outra tarefa!" [Ver] → o jogo escolhe o intruso, que bate e cai → "Esse não é daqui!" → volta → "Sua vez!".
+- `?`: meta, agora, "Qual passo vem agora?" [Continuar].
+
+**Arte.** Lavar, feijão e vovó usam só o que já existe. **Falta `problemas-4.png`** (pintar e sanduíche, com as células 7 e 19 novas; prompt no TEXTURAS §6). Até ela chegar, o N2/3 do sanduíche e o N3/1 do pintar mostram caixas de reserva com o id. Céu, chão, nuvens e cartões são `Graphics` assados em textura (reserva aceitável de cenário; se o usuário quiser, uma folha `ceu.png` com nuvem e chão substitui).
+
+**Arquivos.** `board.ts` saiu; entraram `art.ts` (texturas assadas, vista de figura), `camera.ts` (câmera com limite e zoom), `world.ts` (céu, chão, nuvem da meta), `panel.ts` (meta, agora e o close do passo) e `data/timing.ts`.
+
 ## MECÂNICA NOVA — "MONTE A ESCADA" (usuário, 28/09/2026, depois de ver o jogo) — vence TUDO acima
 
 O usuário viu as 2 escadinhas lado a lado com figura + palavra e disse: *"essa

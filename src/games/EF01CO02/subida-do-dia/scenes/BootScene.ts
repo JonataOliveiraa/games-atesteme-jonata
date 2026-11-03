@@ -20,8 +20,8 @@ export class BootScene extends Phaser.Scene {
     preload() {
         createLoadingScreen(this, {
             title: 'Subida do Dia',
-            subtitle: 'Qual escadinha resolve?',
-            description: 'Montando as escadinhas...',
+            subtitle: 'Um passo de cada vez!',
+            description: 'Montando a escada...',
             theme: {
                 background: {
                     kind: 'dots',

@@ -1,7 +1,7 @@
 import Phaser from 'phaser'
 import { FX, Ease } from '../../../../shared/effects/FX'
 import { KID as KID_TEX, KID_CELL } from '../data/files'
-import { DEPTH, KID, LADDER } from '../data/layout'
+import { DEPTH, KID, WORLD } from '../data/layout'
 import { C } from '../data/theme'
 import type { Point } from '../types'
 
@@ -12,9 +12,13 @@ export interface Kid {
     climbTo(p: Point): Promise<void>
     slideDown(p: Point): Promise<void>
     oops(): void
+    idle(): void
     cheer(): Promise<void>
-    jumpToCloud(): Promise<void>
-    home(): Promise<void>
+    jumpTo(p: Point): Promise<void>
+    place(x: number, y: number): void
+    appear(): Promise<void>
+    vanish(): Promise<void>
+    head(): Point
     readonly container: Phaser.GameObjects.Container
     destroy(): void
 }
@@ -38,57 +42,35 @@ function paintFallback(g: Phaser.GameObjects.Graphics, pose: Pose) {
     g.fillStyle(C.blush, 1)
     g.fillEllipse(-headR * 0.55, headY + headR * 0.3, 12, 7)
     g.fillEllipse(headR * 0.55, headY + headR * 0.3, 12, 7)
-    g.fillStyle(C.ink, 1)
-    if (pose === 'slide') {
-        g.fillCircle(-headR * 0.35, headY, 4)
-        g.fillCircle(headR * 0.35, headY, 4)
-        g.fillRect(-4, headY + headR * 0.35, 8, 7)
-    } else {
-        g.lineStyle(3, C.ink, 1)
-        g.beginPath()
-        g.arc(-headR * 0.35, headY + 2, 5, Math.PI, 0)
-        g.strokePath()
-        g.beginPath()
-        g.arc(headR * 0.35, headY + 2, 5, Math.PI, 0)
-        g.strokePath()
-        g.beginPath()
-        g.arc(0, headY + headR * 0.32, pose === 'oops' ? 4 : 7, 0, Math.PI)
-        g.strokePath()
-    }
 }
 
 export function createKid(scene: Phaser.Scene): Kid {
-    const container = scene.add.container(KID.startX, KID.groundY).setDepth(DEPTH.kid)
+    const container = scene.add.container(KID.startX, WORLD.groundY).setDepth(DEPTH.kid)
     const hasArt = scene.textures.exists(KID_TEX)
+    const scale = KID.height / KID.artH
     const image = hasArt
-        ? scene.add
-              .image(0, 0, KID_TEX, KID_CELL.idle)
-              .setOrigin(0.5, KID.footY / KID.cell)
-              .setScale(KID.height / KID.artH)
+        ? scene.add.image(0, 0, KID_TEX, KID_CELL.idle).setOrigin(0.5, KID.footY / KID.cell).setScale(scale)
         : undefined
     const drawn = hasArt ? undefined : scene.add.graphics()
     const body: Phaser.GameObjects.Image | Phaser.GameObjects.Graphics = image ?? (drawn as Phaser.GameObjects.Graphics)
     const shadow = scene.add.graphics()
-    shadow.fillStyle(C.shadow, 0.12)
-    shadow.fillEllipse(0, 2, KID.height * 0.55, 12)
+    shadow.fillStyle(C.shadow, 0.14)
+    shadow.fillEllipse(0, 2, KID.height * 0.55, 14)
     container.add([shadow, body])
 
     let climbFlip = false
+    let onGround = true
 
     const setPose = (next: Pose) => {
-        if (image) image.setFrame(KID_CELL[next]).setFlipX(next === 'climbA' || next === 'climbB' ? image.flipX : false)
+        if (image) image.setFrame(KID_CELL[next])
         else if (drawn) paintFallback(drawn, next)
-        shadow.setVisible(next !== 'slide' && next !== 'climbA' && next !== 'climbB' && container.y >= KID.groundY - 4)
+        shadow.setVisible(onGround && next !== 'slide')
     }
     setPose('idle')
 
     const settle = () => {
         FX.kill(scene, body)
-        body.setPosition(0, 0).setAngle(0).setScale(image ? KID.height / KID.artH : 1)
-    }
-
-    const face = (dx: number) => {
-        if (image && dx !== 0) image.setFlipX(dx < 0)
+        body.setPosition(0, 0).setAngle(0).setScale(image ? scale : 1)
     }
 
     const walkTo = async (x: number) => {
@@ -96,8 +78,9 @@ export function createKid(scene: Phaser.Scene): Kid {
         settle()
         const dx = x - container.x
         if (Math.abs(dx) < 2) return
+        onGround = true
         setPose('idle')
-        face(dx)
+        if (image) image.setFlipX(dx < 0)
         const duration = Math.max(260, Math.abs(dx) / KID.walkPxPerMs)
         const hops = Math.max(2, Math.round(duration / 220))
         const bob = scene.tweens.add({
@@ -119,15 +102,18 @@ export function createKid(scene: Phaser.Scene): Kid {
         async climbTo(p) {
             FX.kill(scene, container)
             settle()
+            onGround = false
             climbFlip = !climbFlip
             setPose(climbFlip ? 'climbA' : 'climbB')
-            if (image) image.setFlipX(p.x < LADDER.cx)
+            if (image) image.setFlipX(true)
             await FX.to(scene, container, { x: p.x, y: p.y }, { duration: KID.climbMs, ease: Ease.back(1.2) })
         },
         async slideDown(p) {
             FX.kill(scene, container)
             settle()
+            onGround = false
             setPose('slide')
+            if (image) image.setFlipX(false)
             const wobble = scene.tweens.add({
                 targets: body,
                 angle: { from: -6, to: 6 },
@@ -135,9 +121,11 @@ export function createKid(scene: Phaser.Scene): Kid {
                 yoyo: true,
                 repeat: -1,
             })
-            await FX.to(scene, container, { x: p.x, y: p.y }, { duration: KID.slideMs, ease: 'Quad.easeIn' })
+            const far = Math.abs(p.y - container.y)
+            await FX.to(scene, container, { x: p.x, y: p.y }, { duration: Math.max(260, KID.slideMs * Math.min(1.6, far / 400)), ease: 'Quad.easeIn' })
             wobble.remove()
             settle()
+            onGround = true
             await FX.to(scene, body, { y: -12 }, { duration: 110, yoyo: true, ease: 'Sine.easeOut' })
             settle()
         },
@@ -146,49 +134,65 @@ export function createKid(scene: Phaser.Scene): Kid {
             setPose('oops')
             void FX.impact(scene, body, 0.12)
         },
+        idle() {
+            settle()
+            setPose('idle')
+        },
         async cheer() {
             settle()
             setPose('cheer')
             await FX.to(scene, body, { y: -34 }, { duration: 200, yoyo: true, repeat: 1, ease: 'Sine.easeOut' })
             settle()
         },
-        async jumpToCloud() {
+        async jumpTo(p) {
             FX.kill(scene, container)
             settle()
+            onGround = false
             setPose('cheer')
-            const x = KID.cheerX
-            const y = KID.cheerY
+            if (image) image.setFlipX(false)
             const fromX = container.x
             const fromY = container.y
-            const peak = Math.min(fromY, y) - 90
+            const peak = Math.min(fromY, p.y) - 110
             await new Promise<void>(resolve => {
                 scene.tweens.addCounter({
                     from: 0,
                     to: 1,
-                    duration: FX.ms(scene, 640),
+                    duration: FX.ms(scene, 700),
                     ease: 'Sine.easeInOut',
                     onUpdate: tween => {
                         const t = tween.getValue() ?? 0
-                        const lx = Phaser.Math.Linear(fromX, x, t)
-                        const ly = (1 - t) * (1 - t) * fromY + 2 * (1 - t) * t * peak + t * t * y
-                        if (container.active) container.setPosition(lx, ly)
+                        const x = Phaser.Math.Linear(fromX, p.x, t)
+                        const y = (1 - t) * (1 - t) * fromY + 2 * (1 - t) * t * peak + t * t * p.y
+                        if (container.active) container.setPosition(x, y)
                     },
                     onComplete: () => resolve(),
                     onStop: () => resolve(),
                 })
             })
-            container.setPosition(x, y)
+            container.setPosition(p.x, p.y)
             await FX.impact(scene, body, 0.14)
             settle()
         },
-        async home() {
+        place(x, y) {
             FX.kill(scene, container)
             settle()
-            if (container.y !== KID.groundY) {
-                container.setY(KID.groundY)
-            }
-            await walkTo(KID.startX)
+            container.setPosition(x, y).setAlpha(1).setScale(1)
+            onGround = y >= WORLD.groundY - 4
+            if (image) image.setFlipX(false)
             setPose('idle')
+        },
+        async appear() {
+            FX.kill(scene, container)
+            container.setAlpha(1)
+            await FX.popIn(scene, container, { from: 0.4 })
+        },
+        async vanish() {
+            FX.kill(scene, container)
+            await FX.to(scene, container, { alpha: 0, scale: 0.6 }, { duration: 260 })
+            container.setScale(1)
+        },
+        head() {
+            return { x: container.x, y: container.y - KID.height }
         },
         container,
         destroy() {

@@ -307,24 +307,25 @@ que aparece depois de um passo certo; *estrago* é a cena cômica da escadinha e
 
 | Célula | id | Quadro | Uso |
 |---|---|---|---|
-| 0 | `paint-table` | mesa vazia com um potinho de tinta fechado e um pincel | início (4 passos) |
-| 1 | `paint-paper` | a mesma, com uma folha em branco (um desenho de flor só em traço) | estado; início (3 passos) |
+| 0 | `paint-table` | mesa vazia com um potinho de tinta fechado e um pincel | início (N3) |
+| 1 | `paint-paper` | a mesma, com uma folha em branco (um desenho de flor só em traço) | estado |
 | 2 | `paint-open` | pote aberto | estado |
 | 3 | `paint-dipped` | pincel molhado de tinta azul | estado |
 | 4 | `paint-done` | a flor pintada de azul | **objetivo** |
-| 5 | `paint-fail-lid` | o pincel amassado na tampa fechada, tampa quicando | estrago (sem abrir a tinta) |
-| 6 | `paint-fail-dry` | um risco apagadinho, falhado, pincel seco com cerdas arrepiadas | estrago (sem molhar o pincel) |
-| 7–9 | — | vazias | |
-| 10 | `sandwich-closed` | prato vazio, pote de requeijão fechado | início (4 passos) |
-| 11 | `sandwich-open` | prato vazio, pote aberto | início (3 passos) |
-| 12 | `sandwich-bread-closed` | uma fatia de pão no prato, pote fechado | estado |
-| 13 | `sandwich-bread-open` | fatia no prato, pote aberto | estado |
+| 5 | `paint-fail-lid` | o pincel amassado na tampa fechada, tampa quicando | estrago (molhar o pincel com o pote fechado) |
+| 6 | `paint-fail-dry` | um risco apagadinho, falhado, pincel seco com cerdas arrepiadas | estrago (pintar sem molhar o pincel) |
+| 7 | `paint-fail-blob` | **NOVO (22/10)**: o pincel encharcado pingando, um borrão azul enorme tapando a flor | estrago (molhar de novo em vez de pintar) |
+| 8–9 | — | vazias | |
+| 10 | `sandwich-plate` | prato vazio, pote de requeijão fechado | início (N2) |
+| 11 | `sandwich-plate-open` | prato vazio, pote aberto | reserva |
+| 12 | `sandwich-slice` | uma fatia de pão no prato, pote fechado | estado |
+| 13 | `sandwich-slice-open` | fatia no prato, pote aberto | estado |
 | 14 | `sandwich-spread` | fatia com requeijão passado | estado |
 | 15 | `sandwich-done` | sanduíche fechado, bonito | **objetivo** |
-| 16 | `sandwich-fail-outside` | sanduíche fechado com requeijão lambuzado por cima e escorrendo | estrago (fechar antes de passar) |
-| 17 | `sandwich-fail-empty` | duas fatias fechadas sem nada, fininhas | estrago (sem requeijão); estado da trocada |
-| 18 | `sandwich-fail-lid` | a faquinha amassada contra a tampa fechada | estrago (sem abrir o pote) |
-| 19 | — | vazia | |
+| 16 | `sandwich-fail-outside` | sanduíche fechado com requeijão lambuzado por cima e escorrendo | reserva |
+| 17 | `sandwich-fail-empty` | duas fatias fechadas sem nada, fininhas | estrago (fechar sem passar) |
+| 18 | `sandwich-fail-lid` | a faquinha amassada contra a tampa fechada | estrago (passar com o pote fechado) |
+| 19 | `sandwich-fail-toomuch` | **NOVO (22/10)**: uma montanha de requeijão branco transbordando da fatia e escorrendo pelo prato | estrago (passar de novo em vez de fechar) |
 
 ### Prompt copiável — `problemas-1.png`
 
@@ -335,7 +336,7 @@ CONTENT COLOUR EXCEPTION — only these materials get ONE flat pale pastel fill 
 Use case: stylized-concept
 Asset type: exact problem-state vignette sprite sheet for a Phaser 3 educational game; each vignette shows the RESULT after a step, like frames of a tiny animation.
 Primary request: create ONE exact 5 columns × 4 rows sprite sheet on a transparent 1280 × 1024 px canvas. Every cell is exactly 256 × 256 px. Each vignette is complete, isolated and centred in its own cell with at least 8% transparent margin; the inside of each vignette is OPAQUE paper colour #FCF9C4 (or the listed pastel) and the outside is genuinely transparent. No white keyline. Nothing may cross a cell boundary. No drawn grid, border or divider. No hands of a person reaching in, except the child's own hands in cells 0–6.
-FRAMING LOCK: cells 0–6 are frames of ONE scene (a small sink with a tap and two small child hands) with the IDENTICAL camera, size and position of sink, tap and hands; only the described change differs. Cells 10–18 are frames of ONE scene (one small cup on a windowsill ledge) with the IDENTICAL camera, size and position of the cup; only the described change differs.
+FRAMING LOCK: cells 0–7 are frames of ONE scene (a small sink with a tap and two small child hands) with the IDENTICAL camera, size and position of sink, tap and hands; only the described change differs. Cells 10–19 are frames of ONE scene (one small cup on a windowsill ledge) with the IDENTICAL camera, size and position of the cup; only the described change differs.
 
 Exact cells, left to right and then top to bottom:
 0. small sink, tap CLOSED, two small child hands with blue paint stains.
@@ -444,7 +445,7 @@ CONTENT COLOUR EXCEPTION — only these materials get ONE flat pale pastel fill 
 Use case: stylized-concept
 Asset type: exact problem-state vignette sprite sheet for a Phaser 3 educational game; each vignette shows the RESULT after a step, like frames of a tiny animation.
 Primary request: create ONE exact 5 columns × 4 rows sprite sheet on a transparent 1280 × 1024 px canvas. Every cell is exactly 256 × 256 px. Each vignette is complete, isolated and centred in its own cell with at least 8% transparent margin; the inside of each vignette is OPAQUE paper colour #FCF9C4 (or the listed pastel) and the outside is genuinely transparent. No white keyline. Nothing may cross a cell boundary. No drawn grid, border or divider. No hands.
-FRAMING LOCK: cells 0–6 are frames of ONE scene (a small table top with a paint jar on the right and a paintbrush) with the IDENTICAL camera and positions; only the described change differs. Cells 10–18 are frames of ONE scene (a small round plate in the centre and a round cream cheese jar on the right) with the IDENTICAL camera and positions; only the described change differs.
+FRAMING LOCK: cells 0–7 are frames of ONE scene (a small table top with a paint jar on the right and a paintbrush) with the IDENTICAL camera and positions; only the described change differs. Cells 10–19 are frames of ONE scene (a small round plate in the centre and a round cream cheese jar on the right) with the IDENTICAL camera and positions; only the described change differs.
 
 Exact cells, left to right and then top to bottom:
 0. small table with a CLOSED paint jar and a clean paintbrush, no paper.
@@ -454,7 +455,7 @@ Exact cells, left to right and then top to bottom:
 4. same, the flower on the paper painted blue, with a tiny sparkle.
 5. same, the paintbrush squashed against the CLOSED jar lid, the lid bouncing, a tiny comic impact star — a funny mishap.
 6. same, a faint patchy broken dry stroke on the paper and a dry brush with frizzy bristles — a funny mishap.
-7. completely EMPTY and transparent.
+7. same, the paintbrush dripping wet with far too much blue paint and one huge blue paint blob covering the flower on the paper, a few drips — a funny mishap.
 8. completely EMPTY and transparent.
 9. completely EMPTY and transparent.
 10. empty plate, cream cheese jar CLOSED.
@@ -466,10 +467,12 @@ Exact cells, left to right and then top to bottom:
 16. a closed sandwich with white cream cheese smeared messily ON TOP and dripping down the sides — a funny mishap.
 17. a closed sandwich that is thin and empty inside, the two slices flat together, one tiny sweat drop.
 18. a rounded child's butter knife bent against the CLOSED jar lid, a tiny comic impact star — a funny mishap.
-19. completely EMPTY and transparent.
+19. the slice of bread on the plate buried under a huge tall mountain of white cream cheese overflowing the slice and sliding onto the plate, jar open — a funny mishap.
 
 DO NOT INCLUDE: the character from the style reference (a girl with a shoulder-length bob haircut and one curled antenna hair strand), people, hands, animals, sharp knife, background scenery, walls, floor, shadows, colours other than the listed pastels, other paint colours, cel shading, shadow tones, gradients, glossy rendering, screen tones, hatching, white sticker keyline, pure black lines, grey lines, thick uniform vector outlines, camera changes between frames of the same scene, jar labels, text, letters, words, labels, digits, numbers, captions, watermark, logo, title lettering, user interface, buttons, speech bubbles, arrows, icons, check marks, crosses, question mark, objects in empty cells, grid lines, visible sprite-sheet borders, cell borders, gaps, cropped edges, 3D render, photorealism, blur, heavy noise.
 ~~~
+
+**22/10/2026:** `problemas-4.png` é a única folha que falta para o N2 (sanduíche) e o N3 (pintar). Enquanto não chega, o jogo mostra caixas de reserva com o id do quadro.
 
 ## 7. `bg-papel.png` — 1280 × 720, opaco
 

@@ -1,8 +1,17 @@
-export type ProblemId = 'wash' | 'bean' | 'grandma'
+export type ProblemId = 'wash' | 'bean' | 'grandma' | 'paint' | 'sandwich'
+
+export type Routine = ProblemId | 'tangram' | 'hat' | 'shoes'
 
 export interface Point {
     x: number
     y: number
+}
+
+export interface Rect {
+    x: number
+    y: number
+    w: number
+    h: number
 }
 
 export interface Art {
@@ -13,7 +22,7 @@ export interface Art {
 
 export interface StepDef {
     id: string
-    problem: ProblemId
+    routine: Routine
     cell: number
 }
 
@@ -25,9 +34,10 @@ export interface ProblemDef {
 
 export interface RungDef {
     right: string
-    wrong: string
     state: string
+    wrong: string
     fail: string
+    stray?: string
 }
 
 export interface PhaseDef {
@@ -39,9 +49,11 @@ export interface PhaseDef {
 
 export interface LevelDef {
     level: number
-    options: 2
-    rungs: 3
+    options: 2 | 3
+    rungs: 3 | 4
     phases: PhaseDef[]
 }
+
+export type Choice = 'right' | 'wrong' | 'stray'
 
 export type Mode = 'intro' | 'guide' | 'choose' | 'busy' | 'replay' | 'panel' | 'done'

@@ -1,66 +1,97 @@
 import Phaser from 'phaser'
 import { FX } from '../../../../shared/effects/FX'
-import { createVisualGuide, type GuideRect } from '../../../../shared/guide/createVisualGuide'
-import { PIECE_CELL, PIECES } from '../data/files'
-import { OPTIONS } from '../data/layout'
+import { createTutorial, type TutorialStep } from '../../../../shared/tutorial/createTutorial'
+import { DEPTH } from '../data/layout'
 import { C } from '../data/theme'
-import type { Board } from './board'
-import type { Ladder } from './ladder'
-import type { Options } from './options'
+import { TIMING } from '../data/timing'
+import type { Rect } from '../types'
 
-export interface ClimbGuide {
-    pointAt(slot: number, until: Promise<unknown>): Promise<void>
-    help(rung?: number): Promise<void>
-    readonly active: boolean
+export const spot = (r: Rect, pad = 0): Pick<TutorialStep, 'shape' | 'x' | 'y' | 'w' | 'h'> => ({
+    shape: 'rect',
+    x: r.x,
+    y: r.y,
+    w: r.w + pad * 2,
+    h: r.h + pad * 2,
+})
+
+export function teach(scene: Phaser.Scene, key: string, steps: TutorialStep[]): Promise<void> {
+    return new Promise(resolve => {
+        createTutorial(scene, {
+            key,
+            steps,
+            once: false,
+            textSize: 32,
+            accent: C.gold,
+            safeTop: 90,
+            onFinish: () => resolve(),
+        })
+    })
+}
+
+export interface Tap {
+    press(x: number, y: number): Promise<void>
+    hide(): void
     destroy(): void
 }
 
-const TAP_DY = 34
+const R = 22
 
-export function createClimbGuide(
-    scene: Phaser.Scene,
-    deps: { board: Board; ladder: Ladder; options: Options },
-): ClimbGuide {
-    const guide = createVisualGuide(scene, {
-        veilColor: C.shadow,
-        rimColor: C.gold,
-        handTexture: { key: PIECES, frame: PIECE_CELL.guideHand, tipX: 80, tipY: 26, height: 130 },
-    })
+export function createTap(scene: Phaser.Scene): Tap {
+    const dot = scene.add
+        .circle(0, 0, R, C.gold)
+        .setStrokeStyle(5, C.ink)
+        .setScrollFactor(0)
+        .setDepth(DEPTH.tap)
+        .setVisible(false)
+    const waves = new Set<Phaser.GameObjects.Graphics>()
 
-    const lowTap = (r: GuideRect): GuideRect => ({ x: r.x, y: r.y + TAP_DY, w: r.w, h: r.h + TAP_DY * 2 })
-
-    const bothOptions: GuideRect = {
-        x: OPTIONS.x,
-        y: (OPTIONS.ys[0] + OPTIONS.ys[OPTIONS.ys.length - 1]) / 2,
-        w: OPTIONS.card,
-        h: OPTIONS.ys[OPTIONS.ys.length - 1] - OPTIONS.ys[0] + OPTIONS.card,
+    const ripple = (x: number, y: number, delay: number) => {
+        const g = scene.add.graphics().setScrollFactor(0).setDepth(DEPTH.tap - 1)
+        waves.add(g)
+        const t = { v: 0 }
+        scene.tweens.add({
+            targets: t,
+            v: 1,
+            delay,
+            duration: 520,
+            ease: 'Sine.easeOut',
+            onUpdate: () => {
+                if (!waves.has(g)) return
+                g.clear()
+                const r = R + t.v * 48
+                g.lineStyle(6, C.ink, 0.5 * (1 - t.v))
+                g.strokeCircle(x, y, r + 2)
+                g.lineStyle(4, C.gold, 1 - t.v)
+                g.strokeCircle(x, y, r)
+            },
+            onComplete: () => {
+                if (!waves.delete(g)) return
+                g.destroy()
+            },
+        })
     }
 
-    const look = (target: GuideRect, ms: number, pulse?: Phaser.GameObjects.Container) =>
-        guide.demo({ target, gesture: { kind: 'none' }, pulse, action: () => FX.wait(scene, ms) })
-
-    return {
-        async pointAt(slot, until) {
-            let met = false
-            void until.then(() => {
-                met = true
-            })
-            await guide.waitFor({ target: lowTap(deps.options.rect(slot)), until: () => met })
-            await guide.hide()
+    const tap: Tap = {
+        async press(x, y) {
+            dot.setPosition(x, y).setVisible(true).setAlpha(0).setScale(1)
+            await FX.to(scene, dot, { alpha: 1 }, { duration: 180 })
+            await FX.to(scene, dot, { scale: 0.72 }, { duration: TIMING.tapDown, ease: 'Quad.easeOut' })
+            ripple(x, y, 0)
+            ripple(x, y, 160)
+            await FX.wait(scene, TIMING.tapHold)
+            await FX.to(scene, dot, { scale: 1, alpha: 0 }, { duration: 200 })
+            dot.setVisible(false)
         },
-        async help(rung) {
-            if (!(await look(deps.board.frameRect, 1400))) return
-            if (!(await look(deps.board.cloudRect, 1400, deps.board.cloud))) return
-            const step = rung === undefined ? deps.ladder.rect : deps.ladder.rungRect(rung)
-            if (!(await look(step, 1200))) return
-            if (!(await look(bothOptions, 1400))) return
-            await guide.hide()
-        },
-        get active() {
-            return guide.active
+        hide() {
+            FX.kill(scene, dot)
+            dot.setVisible(false)
+            waves.forEach(g => g.destroy())
+            waves.clear()
         },
         destroy() {
-            guide.destroy()
+            tap.hide()
+            dot.destroy()
         },
     }
+    return tap
 }

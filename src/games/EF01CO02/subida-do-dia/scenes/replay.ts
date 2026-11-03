@@ -2,22 +2,22 @@ import Phaser from 'phaser'
 import { FX } from '../../../../shared/effects/FX'
 import { DEPTH, NEXT } from '../data/layout'
 import { C } from '../data/theme'
+import { TIMING } from '../data/timing'
 import type { Art } from '../types'
 import type { Audio } from './audio'
-import type { Board } from './board'
+import type { Cam } from './camera'
 import type { Ladder } from './ladder'
+import type { Panel } from './panel'
 
 export interface Replay {
-    play(states: Art[]): Promise<void>
+    play(start: Art, states: Art[], alive: () => boolean): Promise<void>
     waitNext(): Promise<void>
     destroy(): void
 }
 
-const STEP_MS = 520
-
 export function createReplay(
     scene: Phaser.Scene,
-    deps: { board: Board; ladder: Ladder; audio: Audio },
+    deps: { panel: Panel; ladder: Ladder; audio: Audio; cam: Cam },
 ): Replay {
     const r = NEXT.size / 2
     const art = scene.add.graphics()
@@ -35,11 +35,12 @@ export function createReplay(
     art.fillTriangle(-r * 0.28, -r * 0.42, -r * 0.28, r * 0.42, r * 0.46, 0)
     art.lineStyle(4, C.ink, 1)
     art.strokeTriangle(-r * 0.28, -r * 0.42, -r * 0.28, r * 0.42, r * 0.46, 0)
-    const button = scene.add.container(NEXT.x, NEXT.y, [art]).setDepth(DEPTH.replay).setVisible(false)
+    const button = scene.add.container(NEXT.x, NEXT.y, [art]).setDepth(DEPTH.next).setScrollFactor(0).setVisible(false)
 
     const zone = scene.add
         .zone(NEXT.x, NEXT.y, NEXT.size + 20, NEXT.size + 20)
-        .setDepth(DEPTH.replay + 1)
+        .setDepth(DEPTH.next + 1)
+        .setScrollFactor(0)
         .setInteractive({ useHandCursor: true })
     if (zone.input) zone.input.enabled = false
 
@@ -79,15 +80,16 @@ export function createReplay(
     scene.input.keyboard?.on('keydown', onKey)
 
     return {
-        async play(states) {
-            const { board, ladder, audio } = deps
+        async play(start, states, alive) {
+            const { panel, ladder, audio, cam } = deps
             ladder.unlight()
-            await FX.wait(scene, 300)
+            await FX.all(cam.look(ladder.rungPoint(0).y - 120, TIMING.camera), panel.setState(start, false))
+            if (!alive()) return
             for (let i = 0; i < states.length; i++) {
                 ladder.light(i)
                 audio.replay(i)
-                await board.setFrame(states[i])
-                await FX.wait(scene, STEP_MS - 370)
+                await FX.all(panel.setState(states[i]), cam.look(ladder.rungPoint(i).y - 120, TIMING.replayStep))
+                if (!alive()) return
             }
             await FX.wait(scene, 300)
         },

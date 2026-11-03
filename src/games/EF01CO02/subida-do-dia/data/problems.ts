@@ -44,6 +44,36 @@ export const PROBLEMS: Record<ProblemId, ProblemDef> = {
             'grandma-fail-gate': 5,
         },
     },
+    paint: {
+        id: 'paint',
+        sheet: 'problemas-4',
+        frames: {
+            'paint-table': 0,
+            'paint-paper': 1,
+            'paint-open': 2,
+            'paint-dipped': 3,
+            'paint-done': 4,
+            'paint-fail-lid': 5,
+            'paint-fail-dry': 6,
+            'paint-fail-blob': 7,
+        },
+    },
+    sandwich: {
+        id: 'sandwich',
+        sheet: 'problemas-4',
+        frames: {
+            'sandwich-plate': 10,
+            'sandwich-plate-open': 11,
+            'sandwich-slice': 12,
+            'sandwich-slice-open': 13,
+            'sandwich-spread': 14,
+            'sandwich-done': 15,
+            'sandwich-fail-outside': 16,
+            'sandwich-fail-empty': 17,
+            'sandwich-fail-lid': 18,
+            'sandwich-fail-toomuch': 19,
+        },
+    },
 }
 
 export const hasFrame = (problem: ProblemId, id: string): boolean => id in PROBLEMS[problem].frames
