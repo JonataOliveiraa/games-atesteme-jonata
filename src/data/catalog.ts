@@ -100,7 +100,7 @@ import coverAchadosEPerdidos from "../assets/games/EF15CO03/achados-e-perdidos/c
 import coverBolicheMagico from "../assets/games/EF15CO03/boliche-magico/cover-boliche-magico.png";
 import coverCanteiroDeObras from "../assets/games/EF15CO04/canteiro-de-obras/cover-canteiro-de-obras.png";
 import coverGarraDosGrupos from "../assets/games/EF01CO01/garra-dos-grupos/cover-garra-dos-grupos.png";
-import coverSubidaDoDia from "../assets/games/EF01CO02/subida-do-dia/cover-subida-do-dia.png";
+import coverCozinhaDoDia from "../assets/games/EF01CO02/cozinha-do-dia/cover-cozinha-do-dia.png";
 import coverDecolagemPassoAPasso from "../assets/games/EF01CO03/decolagem-passo-a-passo/cover-decolagem-passo-a-passo.png";
 import coverBalaoDoRecado from "../assets/games/EF01CO04/balao-do-recado/cover-balao-do-recado.png";
 import coverPescariaDosCodigos from "../assets/games/EF01CO05/pescaria-dos-codigos/cover-pescaria-dos-codigos.png";
@@ -2007,20 +2007,20 @@ export const catalog: Game[] = [
   },
   {
     id: "092",
-    slug: "subida-do-dia",
-    module: "EF01CO02/subida-do-dia",
+    slug: "cozinha-do-dia",
+    module: "EF01CO02/cozinha-do-dia",
     skill: "EF01CO02",
     years: [1],
-    tags: ["sequência", "passo a passo", "rotina", "toque"],
+    tags: ["sequência", "passo a passo", "receita", "toque"],
     order: 21,
     status: "published",
-    title: "Subida do Dia",
+    title: "Cozinha do Dia",
     description:
-      "Monte a escada passo a passo: toque na figura certa e veja o problema do dia se resolver.",
+      "Um animal está com fome! Siga a receita, um passo de cada vez, e veja a comida ficar pronta.",
     category: "Pensamento Computacional",
     points: 40,
-    icon: "🪜",
-    thumbnail: coverSubidaDoDia,
+    icon: "🍳",
+    thumbnail: coverCozinhaDoDia,
   },
   {
     id: "093",

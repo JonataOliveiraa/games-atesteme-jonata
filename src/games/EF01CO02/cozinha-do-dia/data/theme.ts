@@ -1,0 +1,125 @@
+import { FONT_JOGO } from '../../../../shared/fonts/gameFont'
+
+export const C = {
+    wall: 0xfdf3e1,
+    tile: 0xf7e8cd,
+    tileLine: 0xecd9b6,
+    sky: 0xbfe6f5,
+    frame: 0xd9a46d,
+    curtain: 0xf5b8a8,
+    shelf: 0xc99a68,
+    counterTop: 0xf3d9ae,
+    counterLine: 0xe6c591,
+    counterEdge: 0xc4935f,
+    counterEdgeDark: 0xa67945,
+
+    ink: 0x2b2440,
+    inkSoft: 0x5c5470,
+    line: 0x3a2f4a,
+    soft: 0xc99c6e,
+    softShadow: 0x8a5a30,
+    accent: 0xe8743b,
+    accentDark: 0xbf5522,
+    headerFace: 0xfff8ec,
+    headerSoft: 0xf6ead3,
+    headerRim: 0xeacfa2,
+    headerLine: 0x6b4a2f,
+    white: 0xffffff,
+    cream: 0xfff8e8,
+    creamDark: 0xe4d2ac,
+    shadow: 0x2a1f30,
+    yes: 0x49c27c,
+    oops: 0xffb36b,
+    butter: 0xffd447,
+    coral: 0xff8a6b,
+    pink: 0xf58fb0,
+    heartRim: 0xd9648a,
+    mint: 0x8fdcc6,
+    lilac: 0xc6b6ea,
+
+    catFur: 0xf4a94e,
+    catStripe: 0xcf7a22,
+    catLight: 0xfff0d8,
+    dogFur: 0xd8a56c,
+    dogDark: 0x9c6a3a,
+    dogLight: 0xfbeed6,
+    monkeyFur: 0x8a5a3a,
+    monkeyDark: 0x68412a,
+    monkeyFace: 0xf4cfa8,
+    nose: 0xe77a8c,
+    black: 0x2f2530,
+    tongue: 0xf0728a,
+    mouth: 0x7a2c3a,
+    cheek: 0xf59a9a,
+    sweat: 0x9fdcf5,
+
+    bowl: 0x6db2e8,
+    bowlDark: 0x3f86c2,
+    bowlIn: 0xd7ecfa,
+    mat: 0xbfe3da,
+    matDark: 0x93c9bb,
+    cereal: 0xeab54d,
+    cerealDark: 0xc98a26,
+    box: 0xf1684d,
+    boxDark: 0xc5482f,
+    milk: 0xfbf3e3,
+    carton: 0x5fa8e6,
+    plate: 0xffffff,
+    plateIn: 0xe6edf3,
+    bun: 0xf2b45c,
+    bunBack: 0xd8933f,
+    bunLight: 0xffd796,
+    sausage: 0xc4563c,
+    sausageDark: 0x93392a,
+    ketchup: 0xdc3a2c,
+    ketchupDark: 0xa82418,
+    banana: 0xf9dc4f,
+    bananaDark: 0xd4ae25,
+    bananaIn: 0xfff5c8,
+    blenderBase: 0x6f7f95,
+    blenderDark: 0x4e5b6e,
+    jar: 0xdff2fa,
+    lid: 0x46536a,
+    button: 0xf08a2e,
+    buttonDark: 0xbd6417,
+    smoothie: 0xecc98e,
+    smoothieDark: 0xd9b467,
+    straw: 0xf5689a,
+    bread: 0xf6e0b4,
+    crust: 0xc98f52,
+    cheese: 0xf7cf4a,
+    board: 0xc99a68,
+    glass: 0xe3f1f7,
+    scoop: 0xf7b6c8,
+    syrup: 0x7a3f1d,
+    cookie: 0xc98d52,
+    cream2: 0xfff4dc,
+    berry: 0xe0455a,
+} as const
+
+export const CSS = {
+    ink: '#2b2440',
+    inkSoft: '#5c5470',
+    white: '#ffffff',
+    accent: '#bf5522',
+} as const
+
+export const FONT = {
+    black: FONT_JOGO.black,
+    body: FONT_JOGO.body,
+} as const
+
+export const SIZE = {
+    help: 40,
+    level: 22,
+    number: 22,
+    banner: 40,
+} as const
+
+export function inkOn(tone: number): string {
+    const r = (tone >> 16) & 0xff
+    const g = (tone >> 8) & 0xff
+    const b = tone & 0xff
+    const light = 0.299 * r + 0.587 * g + 0.114 * b
+    return light > 160 ? CSS.ink : CSS.white
+}

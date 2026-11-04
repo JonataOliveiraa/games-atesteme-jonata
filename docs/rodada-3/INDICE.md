@@ -40,7 +40,7 @@ Código | Nome do jogo | Ano/Etapa | Eixo | Gênero | O jogo em 1 frase
 
 EF01CO01 | Garra dos Grupos | 1º ano | Pensamento Computacional | Máquina de garra (fliperama) | Toque no momento certo para a garra descer e pegar só os itens que combinam com a característica pedida no visor.
 
-EF01CO02 | Subida do Dia | 1º ano | Pensamento Computacional | Trilha de degraus (sobe-sobe) | Ajude o personagem a subir a escadinha do dia tocando sempre no degrau do PRÓXIMO passo da rotina.
+EF01CO02 | Cozinha do Dia | 1º ano | Pensamento Computacional | Cozinha (seguir a receita) | Um animal está com fome: siga a receita na parede, tocando nos objetos da bancada, um passo de cada vez, até ele comer.
 
 EF01CO03 | Decolagem Passo a Passo | 1º ano | Pensamento Computacional | Lançamento espacial (contagem regressiva) | Os passos do lançamento estão embaralhados no painel: toque neles NA ORDEM certa para o foguete decolar — a sequência pronta é o seu algoritmo.
 

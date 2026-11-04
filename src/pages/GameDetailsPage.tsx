@@ -53,7 +53,7 @@ const GAMES_WITH_IN_GAME_COMPLETION_SCREEN = new Set([
   "ventania-na-floresta",
   "pit-stop-da-chuva",
   "labirinto-do-cofrinho",
-  "subida-do-dia",
+  "cozinha-do-dia",
   "balao-do-recado",
   "decolagem-passo-a-passo",
   "canteiro-de-obras",

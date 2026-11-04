@@ -161,6 +161,15 @@ function markSkipped(scene: Phaser.Scene, key: string) {
     keys.add(key)
 }
 
+/**
+ * A criança tocou "Pular" num tutorial com esta chave, nesta cena. Para quem
+ * passa o tutorial de uma cena para outra (introdução → jogo) e quer levar o
+ * pulo junto.
+ */
+export function tutorialSkipped(scene: Phaser.Scene, key: string): boolean {
+    return skippedKeys.get(scene)?.has(key) ?? false
+}
+
 function markRecent(scene: Phaser.Scene) {
     if (!recent.has(scene)) scene.events.once('shutdown', () => recent.delete(scene))
     recent.set(scene, performance.now())

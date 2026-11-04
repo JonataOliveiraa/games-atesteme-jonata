@@ -639,11 +639,12 @@ const POR_SLUG: Record<string, string[]> = {
     "Se alguém no caminho pedir o cartão, não toque nele: siga em frente.",
     "No cofre, toque em quem cuida da Bia para guardar o cartão.",
   ],
-  "subida-do-dia": [
-    "O quadro mostra como está agora; a nuvem no alto da escada mostra o problema resolvido.",
-    "Toque na figura do próximo passo: ela vira degrau, a criança sobe e o passo acontece no quadro.",
-    "Passo fora da ordem dá errado, e a criança escorrega da escada!",
-    "No nível 2 a escada tem 4 degraus: não pule o primeiro passo. No nível 3, uma das figuras é de outra tarefa.",
+  "cozinha-do-dia": [
+    "O animal está com fome: a nuvem mostra o que ele quer comer.",
+    "A receita na parede mostra os passos em ordem, e o passo da vez fica aceso.",
+    "Toque na bancada no objeto do passo aceso. Para derramar, segure e arraste para acertar.",
+    "Fora da receita vira bagunça! Siga um passo de cada vez até o animal comer.",
+    "No nível 2, nada acende: o ✓ mostra o que já foi. No nível 3, há duas receitas e só uma faz o prato da nuvem.",
   ],
   "fabrica-de-carimbos": [
     "O carimbo no alto mostra o que importa: cada janelinha é uma característica.",
